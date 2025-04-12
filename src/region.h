@@ -24,6 +24,19 @@ namespace vbci
       return new Region(type);
     }
 
+    bool is_ancestor(Region* r)
+    {
+      while (Region* p = r->parent)
+      {
+        if (p == this)
+          return true;
+
+        r = p;
+      }
+
+      return false;
+    }
+
     bool enable_rc()
     {
       return !readonly && (r_type == RegionType::RegionRC);
@@ -39,6 +52,26 @@ namespace vbci
     {
       if (!readonly)
         stack_rc--;
+    }
+
+    void clear_parent()
+    {
+      assert(!readonly);
+      assert(parent != nullptr);
+
+      if (parent)
+      {
+        parent->children.erase(this);
+        parent = nullptr;
+      }
+    }
+
+    void set_parent(Region* p)
+    {
+      assert(!readonly);
+      assert(parent == nullptr);
+      parent = p;
+      p->children.insert(this);
     }
   };
 }

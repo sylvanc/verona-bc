@@ -40,13 +40,14 @@ namespace vbci
     NewHeap,
 
     // Allocates a new object in a new region. Arguments are invalidated.
+    // Region stack RC increment.
     // Arg0 = dst.
     // Arg1 = argument base.
     // Arg2 = region type.
     // Stream: 32 bit type ID.
     NewRegion,
 
-    // Copies the value.
+    // Copies the value. Object RC and region stack RC increment.
     // Arg0 = dst.
     // Arg1 = src.
     Copy,
@@ -56,22 +57,24 @@ namespace vbci
     // Arg1 = src.
     Move,
 
-    // Invalidates the value.
+    // Invalidates the value. Object RC and region stack RC decrement.
     // Arg0 = dst.
     Drop,
 
-    // Creates a reference to a field in a target object.
+    // Creates a reference to a field in a target object. Object RC and region
+    // stack RC increment.
     // Arg0 = dst.
     // Arg1 = src.
     // Stream: 32 bit field ID.
     Ref,
 
-    // Loads a value from a reference.
+    // Loads a value from a reference. Object RC and region stack RC increment.
     // Arg0 = dst.
     // Arg1 = src reference.
     Load,
 
     // Stores a value in a reference. The previous value is stored in dst.
+    // Possible region stack RC changes.
     // Arg0 = dst.
     // Arg1 = reference.
     // Arg2 = src.

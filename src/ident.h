@@ -19,6 +19,7 @@ namespace vbci
     BadRefTarget,
     BadLoadTarget,
     BadStoreTarget,
+    BadStore,
     BadMethodTarget,
     BadConditional,
     BadConversion,
