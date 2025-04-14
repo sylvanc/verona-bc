@@ -9,6 +9,7 @@ namespace vbci
   using Code = uint32_t;
   using GlobalId = uint32_t;
   using TypeId = uint32_t;
+  using ClassId = uint32_t;
   using FuncId = uint32_t;
   using FieldId = uint32_t;
 
@@ -196,7 +197,7 @@ namespace vbci
   // merge, freeze, extract
   // when
 
-  // need arrays. implement strings as arrays?
+  // need arrays. implement strings and containers on top of arrays.
   // stdio? FFI for files, sockets, etc? entropy?
   // some kind of dlopen system for adding FFI?
   // debug info that maps instructions to file:line:column?

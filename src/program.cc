@@ -91,25 +91,25 @@ namespace vbci
     auto num_primitives = static_cast<size_t>(ValueType::F64) + 1;
     primitives.resize(num_primitives);
 
-    for (auto& p : primitives)
+    for (auto& cls : primitives)
     {
-      if (!parse_type(p, pc))
+      if (!parse_class(cls, pc))
       {
-        logging::Error() << file << ": failed to parse primitive type"
+        logging::Error() << file << ": failed to parse primitive class"
                          << std::endl;
         return false;
       }
     }
 
-    // Build user-defined type descriptors.
-    auto num_types = load_u32(pc);
-    types.resize(num_types);
+    // Build user-defined classes.
+    auto num_classes = load_u32(pc);
+    classes.resize(num_classes);
 
-    for (auto& t : types)
+    for (auto& cls : classes)
     {
-      if (!parse_type(t, pc))
+      if (!parse_class(cls, pc))
       {
-        logging::Error() << file << ": failed to parse type" << std::endl;
+        logging::Error() << file << ": failed to parse class" << std::endl;
         return false;
       }
     }
@@ -117,20 +117,20 @@ namespace vbci
     return true;
   }
 
-  bool Program::parse_type(TypeDesc& t, PC& pc)
+  bool Program::parse_class(Class& cls, PC& pc)
   {
     auto num_fields = load_u16(pc);
-    t.fields.reserve(num_fields);
+    cls.fields.reserve(num_fields);
 
     for (FieldIdx i = 0; i < num_fields; i++)
     {
       // This creates a mapping from a field name to an index into the object.
       FieldId name = load_u32(pc);
-      t.fields.emplace(name, i);
+      cls.fields.emplace(name, i);
     }
 
     auto num_methods = load_u32(pc);
-    t.methods.reserve(num_methods);
+    cls.methods.reserve(num_methods);
 
     for (FuncId i = 0; i < num_methods; i++)
     {
@@ -144,7 +144,7 @@ namespace vbci
         return false;
       }
 
-      t.methods.emplace(name, &functions.at(idx));
+      cls.methods.emplace(name, &functions.at(idx));
     }
 
     return true;

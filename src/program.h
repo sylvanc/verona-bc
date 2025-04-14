@@ -24,10 +24,10 @@ namespace vbci
     std::vector<Function> functions;
 
     // Lookup ValueType as an index into this vector.
-    std::vector<TypeDesc> primitives;
+    std::vector<Class> primitives;
 
-    // Lookup TypeId as an index into this vector.
-    std::vector<TypeDesc> types;
+    // Lookup ClassId as an index into this vector.
+    std::vector<Class> classes;
 
     // Lookup GlobalId as an index into this vector.
     std::vector<Value> globals;
@@ -40,7 +40,7 @@ namespace vbci
 
     bool load(std::filesystem::path& path);
     bool parse();
-    bool parse_type(TypeDesc& t, PC& pc);
+    bool parse_class(Class& cls, PC& pc);
 
     Function* get_function(FuncId id)
     {

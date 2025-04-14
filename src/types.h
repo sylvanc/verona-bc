@@ -8,14 +8,17 @@
 namespace vbci
 {
   // TODO: more complex types?
+  // Unions of intersections of ClassId and mutability.
+  // No generics - monomorphized?
   struct Type
   {};
 
-  struct TypeDesc
+  struct Class
   {
     // TODO: supertypes?
 
     // Precalculate an offset into the object for each field name.
+    // TODO: field types?
     std::unordered_map<FieldId, FieldIdx> fields;
 
     // Precalculate a function pointer for each method name.

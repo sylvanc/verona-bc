@@ -43,7 +43,7 @@ namespace vbci
     }
 
     void step();
-    Value alloc(TypeId type_id, Location loc, Local arg_base);
+    Value alloc(ClassId class_id, Location loc, Local arg_base);
     void
     pushframe(Function* func, Local dst, Local arg_base, Condition condition);
     void popframe(Value& result, Condition condition);

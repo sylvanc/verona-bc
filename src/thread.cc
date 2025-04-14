@@ -425,12 +425,12 @@ namespace vbci
     }
   }
 
-  Value Thread::alloc(TypeId type_id, Location loc, Local arg_base)
+  Value Thread::alloc(ClassId class_id, Location loc, Local arg_base)
   {
     // TODO: error if loc is immortal or immutable?
 
-    auto fields = program->types.at(type_id).fields.size();
-    auto obj = Object::create(type_id, loc, fields);
+    auto fields = program->classes.at(class_id).fields.size();
+    auto obj = Object::create(class_id, loc, fields);
 
     for (FieldIdx i = 0; i < fields; i++)
       obj->fields[i] = std::move(frame->local(arg_base + i));

@@ -54,9 +54,9 @@ namespace vbci
     {
       case ValueType::Object:
       {
-        auto& type_desc = program->types[obj->type_id];
-        auto find = type_desc.fields.find(field);
-        if (find == type_desc.fields.end())
+        auto& cls = program->classes.at(obj->class_id);
+        auto find = cls.fields.find(field);
+        if (find == cls.fields.end())
           throw Value(Error::BadField);
 
         idx = find->second;
@@ -117,7 +117,7 @@ namespace vbci
   Function* Value::method(Program* program, FuncId w)
   {
     if (tag == ValueType::Object)
-      return program->types[obj->type_id].method(w);
+      return program->classes.at(obj->class_id).method(w);
 
     auto type_id = static_cast<size_t>(tag);
 
