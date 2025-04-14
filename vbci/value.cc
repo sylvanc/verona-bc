@@ -59,22 +59,15 @@ namespace vbci
         if (find == cls.fields.end())
           throw Value(Error::BadField);
 
-        idx = find->second;
-        tag = ValueType::Ref;
-        break;
+        return Value(obj, find->second);
       }
 
       case ValueType::Cown:
-      {
-        tag = ValueType::CownRef;
-        break;
-      }
+        return Value(cown, 0);
 
       default:
         throw Value(Error::BadRefTarget);
     }
-
-    return *this;
   }
 
   Value Value::load()

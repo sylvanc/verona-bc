@@ -27,28 +27,33 @@ namespace vbci
     // Stream: 16-64 bit primitive value if required.
     Const,
 
-    // Allocates a new object in the current frame. Arguments are invalidated.
+    // Converts src to the specified type.
     // Arg0 = dst.
-    // Arg1 = U8 argument base.
+    // Arg1 = src.
+    // Arg2 = destination ValueType.
+    Convert,
+
+    // Allocates a new object in the current frame. Fields are initialized with
+    // previously populated arguments.
+    // Arg0 = dst.
     // Stream: 32 bit class ID.
     Stack,
 
-    // Allocates a new object in the same region. Arguments are invalidated.
+    // Allocates a new object in the same region. Fields are initialized with
+    // previously populated arguments.
     // Arg0 = dst.
-    // Arg1 = U8 argument base.
-    // Arg2 = object in the target region.
+    // Arg1 = object in the target region.
     // Stream: 32 bit class ID.
     Heap,
 
-    // Allocates a new object in a new region. Arguments are invalidated.
-    // Region stack RC increment.
+    // Allocates a new object in a new region. Fields are initialized with
+    // previously populated arguments.
     // Arg0 = dst.
-    // Arg1 = argument base.
-    // Arg2 = region type.
+    // Arg1 = region type.
     // Stream: 32 bit class ID.
     Region,
 
-    // Copies the value. Object RC and region stack RC increment.
+    // Copies the value.
     // Arg0 = dst.
     // Arg1 = src.
     Copy,
@@ -58,30 +63,30 @@ namespace vbci
     // Arg1 = src.
     Move,
 
-    // Invalidates the value. Object RC and region stack RC decrement.
+    // Invalidates the value. This allows for prompt deallocation.
     // Arg0 = dst.
     Drop,
 
-    // Creates a reference to a field in a target object. Object RC and region
-    // stack RC increment.
+    // TODO: allow for src to be moved instead of copied?
+    // Creates a reference to a field in a target object.
     // Arg0 = dst.
     // Arg1 = src.
     // Stream: 32 bit field ID.
     Ref,
 
-    // Loads a value from a reference. Object RC and region stack RC increment.
+    // Loads a value from a reference.
     // Arg0 = dst.
     // Arg1 = src reference.
     Load,
 
-    // Stores a value in a reference. The previous value is stored in dst.
-    // Possible region stack RC changes.
+    // Moves a value into a reference. The previous value is moved into dst.
+    // Src is invalidated.
     // Arg0 = dst.
     // Arg1 = reference.
     // Arg2 = src.
     Store,
 
-    // Creates a function pointer. For a static call, the src object is ignored.
+    // Creates a function pointer. For a static call, src is ignored.
     // For a dynamic call, the method is looked up in the src object.
     // Arg0 = dst.
     // Arg1 = call type: function static or function dynamic.
@@ -100,7 +105,7 @@ namespace vbci
     // Arg1 = call type: function static, function dynamic, block static, block
     // dynamic, try static, try dynamic.
     // Arg2 = function value, ignored if static.
-    // Stream: 32 bit function ID, not loaded if dynamic.
+    // Stream: 32 bit function ID, for static calls.
     Call,
 
     // Replace the current frame with a new one.
@@ -156,12 +161,6 @@ namespace vbci
     // Arg1 = src.
     // Arg2 = math operator.
     MathOp,
-
-    // Converts src to the specified type.
-    // Arg0 = dst.
-    // Arg1 = src.
-    // Arg2 = target ValueType.
-    Convert,
 
     COUNT,
   };

@@ -18,6 +18,9 @@ namespace vbcc
 
   // Symbols.
   inline const auto Equals = TokenDef("=");
+  inline const auto LParen = TokenDef("(");
+  inline const auto RParen = TokenDef(")");
+  inline const auto Comma = TokenDef(",");
 
   // Primitive types.
   inline const auto None = TokenDef("none");
@@ -41,6 +44,7 @@ namespace vbcc
   // Op codes.
   inline const auto Global = TokenDef("global");
   inline const auto Const = TokenDef("const");
+  inline const auto Convert = TokenDef("convert");
   inline const auto Stack = TokenDef("stack");
   inline const auto Heap = TokenDef("heap");
   inline const auto Region = TokenDef("region");
@@ -115,10 +119,10 @@ namespace vbcc
   inline const auto Const_NaN = TokenDef("nan");
   inline const auto True = TokenDef("true");
   inline const auto False = TokenDef("false");
-  inline const auto Hex = TokenDef("hex", flag::print);
-  inline const auto Oct = TokenDef("oct", flag::print);
   inline const auto Bin = TokenDef("bin", flag::print);
+  inline const auto Oct = TokenDef("oct", flag::print);
+  inline const auto Hex = TokenDef("hex", flag::print);
   inline const auto Int = TokenDef("int", flag::print);
-  inline const auto HexFloat = TokenDef("hexfloat", flag::print);
   inline const auto Float = TokenDef("float", flag::print);
+  inline const auto HexFloat = TokenDef("hexfloat", flag::print);
 }

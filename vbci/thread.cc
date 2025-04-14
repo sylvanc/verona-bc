@@ -98,29 +98,26 @@ namespace vbci
         case Op::Stack:
         {
           auto& dst = frame->local(arg0(code));
-          auto arg_base = arg1(code);
           auto type_id = program->load_u32(frame->pc);
-          dst = alloc(type_id, frame->frame_id, arg_base);
+          dst = alloc(type_id, frame->frame_id);
           break;
         }
 
         case Op::Heap:
         {
           auto& dst = frame->local(arg0(code));
-          auto arg_base = arg1(code);
-          auto& src = frame->local(arg2(code));
+          auto& src = frame->local(arg1(code));
           auto type_id = program->load_u32(frame->pc);
-          dst = alloc(type_id, src.location(), arg_base);
+          dst = alloc(type_id, src.location());
           break;
         }
 
         case Op::Region:
         {
           auto& dst = frame->local(arg0(code));
-          auto arg_base = arg1(code);
-          auto region = Region::create(static_cast<RegionType>(arg2(code)));
+          auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto type_id = program->load_u32(frame->pc);
-          dst = alloc(type_id, Location(region), arg_base);
+          dst = alloc(type_id, Location(region));
           break;
         }
 
@@ -480,15 +477,14 @@ namespace vbci
     }
   }
 
-  Value Thread::alloc(ClassId class_id, Location loc, Local arg_base)
+  Value Thread::alloc(ClassId class_id, Location loc)
   {
     // TODO: error if loc is immortal or immutable?
-
     auto fields = program->classes.at(class_id).fields.size();
     auto obj = Object::create(class_id, loc, fields);
 
     for (FieldIdx i = 0; i < fields; i++)
-      obj->fields[i] = std::move(frame->local(arg_base + i));
+      obj->fields[i] = std::move(frame->arg(i));
 
     return Value(obj);
   }
@@ -588,6 +584,13 @@ namespace vbci
   void Thread::tailcall(Function* func)
   {
     assert(func);
+    frame->drop();
+
+    // Move arguments back to the current frame.
+    for (size_t i = 0; i < func->params.size(); i++)
+      frame->local(i) = std::move(frame->arg(i));
+
+    // Set the new function and program counter.
     frame->func = func;
     frame->pc = func->labels.at(0);
     frame->condition = Condition::Return;

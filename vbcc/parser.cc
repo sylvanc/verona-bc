@@ -10,9 +10,6 @@ namespace vbcc
 
     p("start",
       {
-        // Newlines terminate a statement.
-        "\r?\n" >> [](auto& m) { m.term(); },
-
         // Whitespace between tokens.
         "[[:blank:]]+" >> [](auto&) {},
 
@@ -43,6 +40,7 @@ namespace vbcc
         // Op codes.
         "global\\b" >> [](auto& m) { m.add(Global); },
         "const\\b" >> [](auto& m) { m.add(Const); },
+        "convert\\b" >> [](auto& m) { m.add(Convert); },
         "stack\\b" >> [](auto& m) { m.add(Stack); },
         "heap\\b" >> [](auto& m) { m.add(Heap); },
         "region\\b" >> [](auto& m) { m.add(Region); },
@@ -54,6 +52,9 @@ namespace vbcc
         "store\\b" >> [](auto& m) { m.add(Store); },
         "lookup\\b" >> [](auto& m) { m.add(Lookup); },
         "call\\b" >> [](auto& m) { m.add(Call); },
+
+        // Terminators.
+        "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },
         "return\\b" >> [](auto& m) { m.add(Return); },
         "cond\\b" >> [](auto& m) { m.add(Cond); },
         "jump\\b" >> [](auto& m) { m.add(Jump); },
@@ -114,9 +115,12 @@ namespace vbcc
 
         // Symbols.
         "=" >> [](auto& m) { m.add(Equals); },
+        "(" >> [](auto& m) { m.add(LParen); },
+        ")" >> [](auto& m) { m.add(RParen); },
+        "," >> [](auto& m) { m.add(Comma); },
 
         // Identifiers.
-        "%[_[:alnum:]]*" >> [](auto& m) { m.add(GlobalId); },
+        "@[_[:alnum:]]*" >> [](auto& m) { m.add(GlobalId); },
         "$[[:digit:]]*" >> [](auto& m) { m.add(LocalId); },
         "^[_[:alnum:]]*" >> [](auto& m) { m.add(LabelId); },
 
