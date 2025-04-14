@@ -25,10 +25,10 @@ namespace vbci
 
     Value store(Value& v)
     {
-     // TODO: type_check, safe_store
-     auto prev = std::move(content);
-     content = std::move(v);
-     return prev;
+      // TODO: type_check, safe_store
+      auto prev = std::move(content);
+      content = std::move(v);
+      return prev;
     }
   };
 }

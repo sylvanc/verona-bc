@@ -11,6 +11,7 @@ namespace vbci
     UnknownGlobal,
     UnknownFunction,
     UnknownPrimitiveType,
+    UnknownArgType,
     UnknownCallType,
     UnknownOpcode,
     UnknownMathOp,

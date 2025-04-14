@@ -44,10 +44,9 @@ namespace vbci
 
     void step();
     Value alloc(ClassId class_id, Location loc, Local arg_base);
-    void
-    pushframe(Function* func, Local dst, Local arg_base, Condition condition);
+    void pushframe(Function* func, Local dst, Condition condition);
     void popframe(Value& result, Condition condition);
-    void tailcall(Function* func, Local arg_base);
+    void tailcall(Function* func);
     void branch(Local label);
   };
 }

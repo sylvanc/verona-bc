@@ -34,7 +34,7 @@ namespace vbci
           break;
         }
 
-        case Op::NewPrimitive:
+        case Op::Const:
         {
           auto& dst = frame->local(arg0(code));
           ValueType t = static_cast<ValueType>(arg1(code));
@@ -95,7 +95,7 @@ namespace vbci
           break;
         }
 
-        case Op::NewStack:
+        case Op::Stack:
         {
           auto& dst = frame->local(arg0(code));
           auto arg_base = arg1(code);
@@ -104,7 +104,7 @@ namespace vbci
           break;
         }
 
-        case Op::NewHeap:
+        case Op::Heap:
         {
           auto& dst = frame->local(arg0(code));
           auto arg_base = arg1(code);
@@ -114,7 +114,7 @@ namespace vbci
           break;
         }
 
-        case Op::NewRegion:
+        case Op::Region:
         {
           auto& dst = frame->local(arg0(code));
           auto arg_base = arg1(code);
@@ -175,80 +175,135 @@ namespace vbci
         case Op::Lookup:
         {
           auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          dst = src.method(program, program->load_u32(frame->pc));
+          auto call_type = static_cast<CallType>(arg1(code));
+          auto func_id = program->load_u32(frame->pc);
+
+          switch (call_type)
+          {
+            case CallType::FunctionStatic:
+            {
+              dst = program->get_function(func_id);
+              break;
+            }
+
+            case CallType::FunctionDynamic:
+            {
+              auto& src = frame->local(arg2(code));
+              dst = src.method(program, func_id);
+              break;
+            }
+
+            default:
+              throw Value(Error::UnknownCallType);
+          }
+          break;
+        }
+
+        case Op::Arg:
+        {
+          auto& dst = frame->arg(arg0(code));
+          auto arg_type = static_cast<ArgType>(arg1(code));
+          auto& src = frame->local(arg2(code));
+
+          switch (arg_type)
+          {
+            case ArgType::Move:
+              dst = std::move(src);
+              break;
+
+            case ArgType::Copy:
+              dst = src;
+              break;
+
+            default:
+              throw Value(Error::UnknownArgType);
+          }
           break;
         }
 
         case Op::Call:
         {
           auto dst = arg0(code);
-          auto arg_base = arg1(code);
-          auto call_type = static_cast<CallType>(arg2(code));
-          auto func_id = program->load_u32(frame->pc);
+          auto call_type = static_cast<CallType>(arg1(code));
+          Function* func;
+          Condition cond;
 
           switch (call_type)
           {
             case CallType::FunctionStatic:
-              pushframe(
-                program->get_function(func_id),
-                dst,
-                arg_base,
-                Condition::Return);
+            {
+              func = program->get_function(program->load_u32(frame->pc));
+              cond = Condition::Return;
               break;
+            }
 
             case CallType::BlockStatic:
-              pushframe(
-                program->get_function(func_id),
-                dst,
-                arg_base,
-                Condition::Raise);
+            {
+              func = program->get_function(program->load_u32(frame->pc));
+              cond = Condition::Raise;
               break;
+            }
 
             case CallType::TryStatic:
-              pushframe(
-                program->get_function(func_id),
-                dst,
-                arg_base,
-                Condition::Throw);
+            {
+              func = program->get_function(program->load_u32(frame->pc));
+              cond = Condition::Throw;
               break;
-
-            case CallType::TailCallStatic:
-              tailcall(program->get_function(func_id), arg_base);
-              break;
+            }
 
             case CallType::FunctionDynamic:
-              pushframe(
-                frame->local(arg_base).method(program, func_id),
-                dst,
-                arg_base,
-                Condition::Return);
+            {
+              func = frame->local(arg2(code)).function();
+              cond = Condition::Return;
               break;
+            }
 
             case CallType::BlockDynamic:
-              pushframe(
-                frame->local(arg_base).method(program, func_id),
-                dst,
-                arg_base,
-                Condition::Raise);
+            {
+              func = frame->local(arg2(code)).function();
+              cond = Condition::Raise;
               break;
+            }
 
             case CallType::TryDynamic:
-              pushframe(
-                frame->local(arg_base).method(program, func_id),
-                dst,
-                arg_base,
-                Condition::Throw);
+            {
+              func = frame->local(arg2(code)).function();
+              cond = Condition::Throw;
               break;
-
-            case CallType::TailCallDynamic:
-              tailcall(
-                frame->local(arg_base).method(program, func_id), arg_base);
-              break;
+            }
 
             default:
               throw Value(Error::UnknownCallType);
           }
+
+          pushframe(func, dst, cond);
+          break;
+        }
+
+        case Op::Tailcall:
+        {
+          auto call_type = static_cast<CallType>(arg1(code));
+          Function* func;
+
+          switch (call_type)
+          {
+            case CallType::FunctionStatic:
+            {
+              func = program->get_function(program->load_u32(frame->pc));
+              break;
+            }
+
+            case CallType::FunctionDynamic:
+            {
+              func = frame->local(arg2(code)).function();
+              break;
+            }
+
+            default:
+              throw Value(Error::UnknownCallType);
+          }
+
+          tailcall(func);
           break;
         }
 
@@ -259,7 +314,7 @@ namespace vbci
           break;
         }
 
-        case Op::Conditional:
+        case Op::Cond:
         {
           auto& cond = frame->local(arg0(code));
           auto on_true = arg1(code);
@@ -438,30 +493,19 @@ namespace vbci
     return Value(obj);
   }
 
-  void Thread::pushframe(
-    Function* func, Local dst, Local arg_base, Condition condition)
+  void Thread::pushframe(Function* func, Local dst, Condition condition)
   {
     assert(func);
 
     // Set how we will handle non-local returns in the current frame.
     frame->condition = condition;
 
-    // Make sure there's enough register space.
-    auto args = func->params.size();
-    auto req_stack_size = (stack.size() + 1) * registers;
+    // Make sure there's enough register space. It's plus two to cover the frame
+    // we're pushing and space for that frame to put arguments.
+    auto req_stack_size = (stack.size() + 2) * registers;
 
     if (locals.size() < req_stack_size)
       locals.resize(req_stack_size);
-
-    // Move arguments to the new frame.
-    auto new_base = frame->base + registers;
-
-    for (Local i = 0; i < args; i++)
-    {
-      auto& arg = frame->local(arg_base + i);
-      auto& local = locals.at(new_base + i);
-      local = std::move(arg);
-    }
 
     // TODO: argument type checks
     stack.push_back({
@@ -484,7 +528,6 @@ namespace vbci
       throw Value(Error::BadReturnLocation);
 
     // TODO: check return type
-
     frame->drop();
     stack.pop_back();
 
@@ -502,7 +545,8 @@ namespace vbci
     {
       case Condition::Return:
       {
-        // Call: return (nothing), raise (pop as return), throw (pop)
+        // This unwraps a Raise.
+        // Return (nothing), raise (pop as return), throw (pop)
         switch (condition)
         {
           case Condition::Raise:
@@ -521,7 +565,8 @@ namespace vbci
 
       case Condition::Raise:
       {
-        // BlockCall: return (nothing), raise (pop), throw (pop)
+        // This does not unwrap a Raise.
+        // Return (nothing), raise (pop), throw (pop)
         if (condition != Condition::Return)
         {
           popframe(ret, condition);
@@ -540,17 +585,10 @@ namespace vbci
     frame->condition = Condition::Return;
   }
 
-  void Thread::tailcall(Function* func, Local arg_base)
+  void Thread::tailcall(Function* func)
   {
     assert(func);
-    auto args = func->params.size();
-
-    // Move args to the base.
-    for (Local i = 0; i < args; i++)
-      frame->local(i) = std::move(frame->local(arg_base + i));
-
     frame->func = func;
-    frame->drop(arg_base);
     frame->pc = func->labels.at(0);
     frame->condition = Condition::Return;
   }

@@ -1,5 +1,6 @@
 add_executable(vbcc
   main.cc
+  parser.cc
 )
 
 if(MSVC)

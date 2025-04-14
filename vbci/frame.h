@@ -27,9 +27,21 @@ namespace vbci
       return locals.at(idx);
     }
 
-    void drop(Local arg_base = 0)
+    Value& arg(Local idx)
     {
-      for (size_t i = arg_base; i < registers; i++)
+      idx += (base + registers);
+
+      if ((idx < base) || (idx >= locals.size()))
+        throw Value(Error::StackOutOfBounds);
+
+      return locals.at(idx);
+    }
+
+    void drop()
+    {
+      // TODO: this would be more efficient if we knew how many locals to drop.
+      // It would also let us have smaller value stacks.
+      for (size_t i = 0; i < registers; i++)
         locals[base + i].drop();
     }
   };

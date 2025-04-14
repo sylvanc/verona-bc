@@ -25,20 +25,20 @@ namespace vbci
     // Arg1 = value type.
     // Arg2 = primitive value if 8 bits or less.
     // Stream: 16-64 bit primitive value if required.
-    NewPrimitive,
+    Const,
 
     // Allocates a new object in the current frame. Arguments are invalidated.
     // Arg0 = dst.
     // Arg1 = U8 argument base.
     // Stream: 32 bit class ID.
-    NewStack,
+    Stack,
 
     // Allocates a new object in the same region. Arguments are invalidated.
     // Arg0 = dst.
     // Arg1 = U8 argument base.
     // Arg2 = object in the target region.
     // Stream: 32 bit class ID.
-    NewHeap,
+    Heap,
 
     // Allocates a new object in a new region. Arguments are invalidated.
     // Region stack RC increment.
@@ -46,7 +46,7 @@ namespace vbci
     // Arg1 = argument base.
     // Arg2 = region type.
     // Stream: 32 bit class ID.
-    NewRegion,
+    Region,
 
     // Copies the value. Object RC and region stack RC increment.
     // Arg0 = dst.
@@ -81,24 +81,33 @@ namespace vbci
     // Arg2 = src.
     Store,
 
-    // Creates a function pointer to a method in the target object.
+    // Creates a function pointer. For a static call, the src object is ignored.
+    // For a dynamic call, the method is looked up in the src object.
     // Arg0 = dst.
-    // Arg1 = src object.
+    // Arg1 = call type: function static or function dynamic.
+    // Arg2 = src, ignored if static.
     // Stream: 32 bit function ID.
     Lookup,
 
-    // Calls the function with the specified ID. Arguments are invalidated. A
-    // dynamic call looks up the method in the first argument. A tail call will
-    // replace the current frame. A function call will immediately return a
-    // Raise as a Return, and a Throw as a Throw. A block call will return a
-    // Raise as a Raise and a THrow as a Throw. A try call will not return a
-    // non-local return.
+    // Set a value as an argument index in the next frame. Use this to set up
+    // the arguments for a function call.
+    // Arg0 = argument index.
+    // Arg1 = src.
+    // Arg2 = move or copy.
+    Arg,
+
     // Arg0 = dst.
-    // Arg1 = argument base.
-    // Arg2 = call type: function static, function dynamic, block static, block
-    // dynamic, try static, try dynamic, tail call static, tail call dynamic.
-    // Stream: 32 bit function ID.
+    // Arg1 = call type: function static, function dynamic, block static, block
+    // dynamic, try static, try dynamic.
+    // Arg2 = function value, ignored if static.
+    // Stream: 32 bit function ID, not loaded if dynamic.
     Call,
+
+    // Replace the current frame with a new one.
+    // Arg0 = call type: function static or function dynamic.
+    // Arg1 = function value, ignored if static.
+    // Stream: 32 bit function ID, for static tail calls.
+    Tailcall,
 
     // Return from the current function, as a local return (Return), a non-local
     // return (Raise) or an exception (Throw).
@@ -110,7 +119,7 @@ namespace vbci
     // Arg0 = condition.
     // Arg1 = on-true label.
     // Arg2 = on-false label.
-    Conditional,
+    Cond,
 
     // Jump to a label.
     // Arg0 = label.
@@ -159,6 +168,7 @@ namespace vbci
 
   enum class MathOp : uint32_t
   {
+    // Unary operators.
     Neg,
     Not,
 
@@ -235,6 +245,12 @@ namespace vbci
     RegionArena
   };
 
+  enum class ArgType : uint8_t
+  {
+    Move,
+    Copy,
+  };
+
   enum class CallType : uint8_t
   {
     FunctionStatic,
@@ -243,8 +259,6 @@ namespace vbci
     BlockDynamic,
     TryStatic,
     TryDynamic,
-    TailCallStatic,
-    TailCallDynamic,
   };
 
   enum class Condition : uint8_t

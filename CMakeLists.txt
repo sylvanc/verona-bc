@@ -7,11 +7,9 @@ find_package(Threads REQUIRED)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# set(SNMALLOC_HEADER_ONLY_LIBRARY ON CACHE INTERNAL "Snmalloc header library")
 set(SNMALLOC_HEADER_ONLY_LIBRARY OFF CACHE INTERNAL "Snmalloc header library")
 set(SNMALLOC_BUILD_TESTING OFF CACHE INTERNAL "Turn off snmalloc tests")
-set(VERONA_RT_ONLY_HEADER_LIBRARY ON CACHE INTERNAL "Verona RT header library")
-set(TRIESTE_USE_SNMALLOC OFF)
+set(VERONA_RT_ONLY_HEADER_LIBRARY OFF CACHE INTERNAL "Verona RT header library")
 
 # Used to provide
 #  FetchContent_MakeAvailable_ExcludeFromAll
@@ -25,8 +23,9 @@ FetchContent_MakeAvailable(cmake_utils)
 
 FetchContent_Declare(
   verona-rt
-  GIT_REPOSITORY https://github.com/microsoft/verona-rt
-  GIT_TAG b0cab1d70c635ee1fc7cfa6df5500000e2bc1ae3
+  # GIT_REPOSITORY https://github.com/microsoft/verona-rt
+  GIT_REPOSITORY https://github.com/mjp41/verona-rt
+  GIT_TAG 8914bf9a6dec841053b82b6afe077fd124f56f0a
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
@@ -35,7 +34,6 @@ FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
   GIT_TAG 1de098a53e82a79c6b6e7143bb92caa83cc128e2
-  # GIT_TAG 370ad85aa31f316f8ac39dcaaf6f4218901242e4
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
