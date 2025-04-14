@@ -30,14 +30,14 @@ namespace vbci
     // Allocates a new object in the current frame. Arguments are invalidated.
     // Arg0 = dst.
     // Arg1 = U8 argument base.
-    // Stream: 32 bit type ID.
+    // Stream: 32 bit class ID.
     NewStack,
 
     // Allocates a new object in the same region. Arguments are invalidated.
     // Arg0 = dst.
     // Arg1 = U8 argument base.
     // Arg2 = object in the target region.
-    // Stream: 32 bit type ID.
+    // Stream: 32 bit class ID.
     NewHeap,
 
     // Allocates a new object in a new region. Arguments are invalidated.
@@ -45,7 +45,7 @@ namespace vbci
     // Arg0 = dst.
     // Arg1 = argument base.
     // Arg2 = region type.
-    // Stream: 32 bit type ID.
+    // Stream: 32 bit class ID.
     NewRegion,
 
     // Copies the value. Object RC and region stack RC increment.
@@ -202,6 +202,8 @@ namespace vbci
   // some kind of dlopen system for adding FFI?
   // debug info that maps instructions to file:line:column?
   // lower to LLVM IR and Cranelift?
+
+  // use trieste to go from text format to byte code.
 
   enum class ValueType : uint8_t
   {

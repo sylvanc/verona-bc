@@ -40,7 +40,8 @@ namespace vbci
 
     bool load(std::filesystem::path& path);
     bool parse();
-    bool parse_class(Class& cls, PC& pc);
+    bool parse_fields(Class& cls, PC& pc);
+    bool parse_methods(Class& cls, PC& pc);
 
     Function* get_function(FuncId id)
     {

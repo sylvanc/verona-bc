@@ -93,9 +93,9 @@ namespace vbci
 
     for (auto& cls : primitives)
     {
-      if (!parse_class(cls, pc))
+      if (!parse_methods(cls, pc))
       {
-        logging::Error() << file << ": failed to parse primitive class"
+        logging::Error() << file << ": failed to parse primitive methods"
                          << std::endl;
         return false;
       }
@@ -107,9 +107,15 @@ namespace vbci
 
     for (auto& cls : classes)
     {
-      if (!parse_class(cls, pc))
+      if (!parse_fields(cls, pc))
       {
-        logging::Error() << file << ": failed to parse class" << std::endl;
+        logging::Error() << file << ": failed to parse fields" << std::endl;
+        return false;
+      }
+
+      if (!parse_methods(cls, pc))
+      {
+        logging::Error() << file << ": failed to parse methods" << std::endl;
         return false;
       }
     }
@@ -117,7 +123,7 @@ namespace vbci
     return true;
   }
 
-  bool Program::parse_class(Class& cls, PC& pc)
+  bool Program::parse_fields(Class& cls, PC& pc)
   {
     auto num_fields = load_u16(pc);
     cls.fields.reserve(num_fields);
@@ -125,10 +131,16 @@ namespace vbci
     for (FieldIdx i = 0; i < num_fields; i++)
     {
       // This creates a mapping from a field name to an index into the object.
+      // TODO: field types
       FieldId name = load_u32(pc);
       cls.fields.emplace(name, i);
     }
 
+    return true;
+  }
+
+  bool Program::parse_methods(Class& cls, PC& pc)
+  {
     auto num_methods = load_u32(pc);
     cls.methods.reserve(num_methods);
 
