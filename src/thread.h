@@ -48,5 +48,6 @@ namespace vbci
     pushframe(Function* func, Local dst, Local arg_base, Condition condition);
     void popframe(Value& result, Condition condition);
     void tailcall(Function* func, Local arg_base);
+    void branch(Local label);
   };
 }

@@ -197,12 +197,10 @@ namespace vbci
   // when
 
   // need arrays. implement strings as arrays?
-  // loops as tailcalls?
   // stdio? FFI for files, sockets, etc? entropy?
   // some kind of dlopen system for adding FFI?
   // debug info that maps instructions to file:line:column?
   // lower to LLVM IR and Cranelift?
-  // if functions declare there local count we can use a smaller stack
 
   enum class ValueType : uint8_t
   {

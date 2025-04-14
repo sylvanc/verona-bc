@@ -15,6 +15,7 @@ namespace vbci
     UnknownOpcode,
     UnknownMathOp,
     StackOutOfBounds,
+    BadLabel,
     BadField,
     BadRefTarget,
     BadLoadTarget,

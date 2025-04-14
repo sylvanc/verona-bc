@@ -266,16 +266,15 @@ namespace vbci
           auto on_false = arg2(code);
 
           if (cond.get_bool())
-            frame->pc = frame->func->labels.at(on_true);
+            branch(on_true);
           else
-            frame->pc = frame->func->labels.at(on_false);
+            branch(on_false);
           break;
         }
 
         case Op::Jump:
         {
-          auto label = arg0(code);
-          frame->pc = frame->func->labels.at(label);
+          branch(arg0(code));
           break;
         }
 
@@ -554,5 +553,13 @@ namespace vbci
     frame->drop(arg_base);
     frame->pc = func->labels.at(0);
     frame->condition = Condition::Return;
+  }
+
+  void Thread::branch(Local label)
+  {
+    if (label >= frame->func->labels.size())
+      throw Value(Error::BadLabel);
+
+    frame->pc = frame->func->labels.at(label);
   }
 }
