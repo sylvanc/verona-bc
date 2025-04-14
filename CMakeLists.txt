@@ -17,31 +17,34 @@ FetchContent_Declare(
   cmake_utils
   GIT_REPOSITORY https://github.com/mjp41/cmake_utils
   GIT_TAG 28490f85c91053dc501f96a7f8224e8191156ec9
-  GIT_SHALLOW FALSE
 )
 
 FetchContent_MakeAvailable(cmake_utils)
 
 FetchContent_Declare(
   verona-rt
-  GIT_REPOSITORY https://github.com/mjp41/verona-rt
-  GIT_TAG eacf688be55b36ea761f3b5b54e429725e42fc80
-  GIT_SHALLOW TRUE
-  # GIT_REPOSITORY https://github.com/microsoft/verona-rt
-  # GIT_TAG 7deb5873937354e1fa64c9879c4e1e077b0f327d
-  # GIT_SHALLOW TRUE
+  GIT_REPOSITORY https://github.com/microsoft/verona-rt
+  GIT_TAG b0cab1d70c635ee1fc7cfa6df5500000e2bc1ae3
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
 
+# FetchContent_Declare(
+#   cli11
+#   GIT_REPOSITORY https://github.com/CLIUtils/CLI11
+#   GIT_TAG v2.5.0
+# )
+
+# FetchContent_MakeAvailable_ExcludeFromAll(cli11)
+
 FetchContent_Declare(
-  cli11
-  GIT_REPOSITORY https://github.com/CLIUtils/CLI11
-  GIT_TAG v2.5.0
-  GIT_SHALLOW TRUE
+  trieste
+  GIT_REPOSITORY https://github.com/microsoft/trieste
+  GIT_TAG 1de098a53e82a79c6b6e7143bb92caa83cc128e2
+  # GIT_TAG 370ad85aa31f316f8ac39dcaaf6f4218901242e4
 )
 
-FetchContent_MakeAvailable_ExcludeFromAll(cli11)
+FetchContent_MakeAvailable_ExcludeFromAll(trieste)
 
 # Use snmalloc clangformat target
 clangformat_targets()
@@ -63,4 +66,5 @@ install(CODE [[
   file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
   ]])
 
-add_subdirectory(src)
+add_subdirectory(vbcc)
+add_subdirectory(vbci)
