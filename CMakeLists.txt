@@ -7,9 +7,11 @@ find_package(Threads REQUIRED)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(SNMALLOC_HEADER_ONLY_LIBRARY ON CACHE INTERNAL "Snmalloc header library")
+# set(SNMALLOC_HEADER_ONLY_LIBRARY ON CACHE INTERNAL "Snmalloc header library")
+set(SNMALLOC_HEADER_ONLY_LIBRARY OFF CACHE INTERNAL "Snmalloc header library")
 set(SNMALLOC_BUILD_TESTING OFF CACHE INTERNAL "Turn off snmalloc tests")
 set(VERONA_RT_ONLY_HEADER_LIBRARY ON CACHE INTERNAL "Verona RT header library")
+set(TRIESTE_USE_SNMALLOC OFF)
 
 # Used to provide
 #  FetchContent_MakeAvailable_ExcludeFromAll
@@ -28,14 +30,6 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
-
-# FetchContent_Declare(
-#   cli11
-#   GIT_REPOSITORY https://github.com/CLIUtils/CLI11
-#   GIT_TAG v2.5.0
-# )
-
-# FetchContent_MakeAvailable_ExcludeFromAll(cli11)
 
 FetchContent_Declare(
   trieste
