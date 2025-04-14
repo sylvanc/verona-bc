@@ -9,10 +9,10 @@ namespace vbci
 {
   struct Frame
   {
+    Function* func;
     Location frame_id;
     std::vector<Value>& locals;
     size_t base;
-    Type return_type;
     PC pc;
     Local dst;
     Condition condition;

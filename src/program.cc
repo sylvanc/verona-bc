@@ -68,18 +68,23 @@ namespace vbci
 
     for (auto& f : functions)
     {
-      // 8 bits for params.
+      // 8 bits for labels, 8 bits for parameters.
       auto word = load_u32(pc);
+      auto labels = static_cast<size_t>(word & 0xFF);
 
-      if (word > registers)
+      if (!labels)
       {
-        logging::Error() << file << ": too many parameters" << std::endl;
+        logging::Error() << file << ": function has no labels" << std::endl;
         return false;
       }
 
+      f.labels.resize(labels);
+      for (auto& label : f.labels)
+        label = static_cast<PC>(load_u64(pc));
+
       // TODO: param types, return type
-      f.params.resize(word);
-      f.pc = load_u64(pc);
+      auto params = static_cast<size_t>((word >> 8) & 0xFF);
+      f.params.resize(params);
     }
 
     // Build primitive type descriptors.

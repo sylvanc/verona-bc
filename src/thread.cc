@@ -261,7 +261,21 @@ namespace vbci
 
         case Op::Conditional:
         {
-          // TODO: implement conditional
+          auto& cond = frame->local(arg0(code));
+          auto on_true = arg1(code);
+          auto on_false = arg2(code);
+
+          if (cond.get_bool())
+            frame->pc = frame->func->labels.at(on_true);
+          else
+            frame->pc = frame->func->labels.at(on_false);
+          break;
+        }
+
+        case Op::Jump:
+        {
+          auto label = arg0(code);
+          frame->pc = frame->func->labels.at(label);
           break;
         }
 
@@ -452,11 +466,11 @@ namespace vbci
 
     // TODO: argument type checks
     stack.push_back({
+      .func = func,
       .frame_id = frame->frame_id + 2,
       .locals = locals,
       .base = frame->base + registers,
-      .return_type = func->return_type,
-      .pc = func->pc,
+      .pc = func->labels.at(0),
       .dst = dst,
       .condition = Condition::Return,
     });
@@ -536,9 +550,9 @@ namespace vbci
     for (Local i = 0; i < args; i++)
       frame->local(i) = std::move(frame->local(arg_base + i));
 
+    frame->func = func;
     frame->drop(arg_base);
-    frame->return_type = func->return_type;
-    frame->pc = func->pc;
+    frame->pc = func->labels.at(0);
     frame->condition = Condition::Return;
   }
 }

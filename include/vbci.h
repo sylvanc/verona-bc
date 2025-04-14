@@ -105,8 +105,15 @@ namespace vbci
     // Arg1 = non-local status: Return, Raise, or Throw.
     Return,
 
-    // TODO: how does this work?
+    // Jump to a label depending on a boolean condition.
+    // Arg0 = condition.
+    // Arg1 = on-true label.
+    // Arg2 = on-false label.
     Conditional,
+
+    // Jump to a label.
+    // Arg0 = label.
+    Jump,
 
     // Binary operators.
     // Arg0 = dst.
@@ -193,6 +200,9 @@ namespace vbci
   // loops as tailcalls?
   // stdio? FFI for files, sockets, etc? entropy?
   // some kind of dlopen system for adding FFI?
+  // debug info that maps instructions to file:line:column?
+  // lower to LLVM IR and Cranelift?
+  // if functions declare there local count we can use a smaller stack
 
   enum class ValueType : uint8_t
   {

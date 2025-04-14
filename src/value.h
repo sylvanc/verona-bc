@@ -113,6 +113,14 @@ namespace vbci
       return *this;
     }
 
+    bool get_bool()
+    {
+      if (tag != ValueType::Bool)
+        throw Value(Error::BadConversion);
+
+      return b;
+    }
+
     void drop();
     Value makeref(Program* program, FieldId field);
     Value load();
