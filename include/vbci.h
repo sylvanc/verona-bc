@@ -67,7 +67,6 @@ namespace vbci
     // Arg0 = dst.
     Drop,
 
-    // TODO: allow for src to be moved instead of copied?
     // Creates a reference to a field in a target object.
     // Arg0 = dst.
     // Arg1 = src.
@@ -195,24 +194,11 @@ namespace vbci
     Atanh,
 
     // Constants don't use the src argument.
-    // TODO: numerical limits? specify a type for limits and constants?
     Const_E,
     Const_Pi,
     Const_Inf,
     Const_NaN,
   };
-
-  // typetest
-  // merge, freeze, extract
-  // when
-
-  // need arrays. implement strings and containers on top of arrays.
-  // stdio? FFI for files, sockets, etc? entropy?
-  // some kind of dlopen system for adding FFI?
-  // debug info that maps instructions to file:line:column?
-  // lower to LLVM IR and Cranelift?
-
-  // use trieste to go from text format to byte code.
 
   enum class ValueType : uint8_t
   {
