@@ -48,14 +48,14 @@ namespace vbci
   {
     PC pc = 0;
 
-    if (load_u32(pc) != 0xDEADBEEF)
+    if (load_u32(pc) != MagicNumber)
     {
       logging::Error() << file << ": does not start with the magic number"
                        << std::endl;
       return false;
     }
 
-    if (load_u32(pc) != 0)
+    if (load_u32(pc) != CurrentVersion)
     {
       logging::Error() << file << ": has an unknown version number"
                        << std::endl;
@@ -71,6 +71,7 @@ namespace vbci
       // 8 bits for labels, 8 bits for parameters.
       auto word = load_u32(pc);
       auto labels = static_cast<size_t>(word & 0xFF);
+      auto params = static_cast<size_t>((word >> 8) & 0xFF);
 
       if (!labels)
       {
@@ -83,13 +84,11 @@ namespace vbci
         label = static_cast<PC>(load_u64(pc));
 
       // TODO: param types, return type
-      auto params = static_cast<size_t>((word >> 8) & 0xFF);
       f.params.resize(params);
     }
 
     // Build primitive type descriptors.
-    auto num_primitives = static_cast<size_t>(ValueType::F64) + 1;
-    primitives.resize(num_primitives);
+    primitives.resize(NumPrimitiveClasses);
 
     for (auto& cls : primitives)
     {
@@ -125,7 +124,7 @@ namespace vbci
 
   bool Program::parse_fields(Class& cls, PC& pc)
   {
-    auto num_fields = load_u16(pc);
+    auto num_fields = load_u32(pc);
     cls.fields.reserve(num_fields);
 
     for (FieldIdx i = 0; i < num_fields; i++)
@@ -144,19 +143,19 @@ namespace vbci
     auto num_methods = load_u32(pc);
     cls.methods.reserve(num_methods);
 
-    for (FuncId i = 0; i < num_methods; i++)
+    for (size_t i = 0; i < num_methods; i++)
     {
       // This creates a mapping from a method name to a function pointer.
-      FuncId name = load_u32(pc);
-      size_t idx = load_u32(pc);
+      MethodId method_id = load_u32(pc);
+      FuncId func_id = load_u32(pc);
 
-      if (idx >= functions.size())
+      if (func_id >= functions.size())
       {
         logging::Error() << file << ": function ID out of bounds" << std::endl;
         return false;
       }
 
-      cls.methods.emplace(name, &functions.at(idx));
+      cls.methods.emplace(method_id, &functions.at(func_id));
     }
 
     return true;

@@ -22,9 +22,9 @@ namespace vbci
     std::unordered_map<FieldId, FieldIdx> fields;
 
     // Precalculate a function pointer for each method name.
-    std::unordered_map<FuncId, Function*> methods;
+    std::unordered_map<MethodId, Function*> methods;
 
-    Function* method(FuncId w)
+    Function* method(MethodId w)
     {
       auto find = methods.find(w);
       if (find == methods.end())

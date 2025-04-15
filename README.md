@@ -4,6 +4,7 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 ## To-Do List
 
+* Compile VIR to byte code.
 * VIR for "lambda" call and try.
 * Type checking in the byte code?
 * Object, cown, and region finalization and freeing.
@@ -19,5 +20,4 @@ This is an experimental byte code interpreter for the Verona operational semanti
 * File API? Seems like too much.
 * Some kind of `dlopen` system for adding FFI?
 * Debug info that maps instructions to file:line:column?
-* Compile VIR to byte code.
 * Compile byte code to LLVM IR and/or Cranelift.

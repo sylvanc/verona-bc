@@ -137,7 +137,8 @@ namespace vbcc
   // Structure.
   inline const auto Field = TokenDef("field");
   inline const auto Fields = TokenDef("fields");
-  inline const auto Funcs = TokenDef("funcs");
+  inline const auto Methods = TokenDef("methods");
+  inline const auto Method = TokenDef("method");
   inline const auto Param = TokenDef("param");
   inline const auto Params = TokenDef("params");
   inline const auto Type = TokenDef("type");
@@ -151,5 +152,15 @@ namespace vbcc
   inline const auto Rhs = TokenDef("rhs");
 
   Parse parser();
-  std::vector<Pass> passes();
+  PassDef statements();
+  PassDef labels();
+  PassDef bytecode();
+
+  struct Options : public trieste::Options
+  {
+    std::string bytecode_file;
+    void configure(CLI::App& cli) override;
+  };
+
+  Options& options();
 }

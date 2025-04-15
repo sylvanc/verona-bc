@@ -5,6 +5,10 @@
 
 int main(int argc, char** argv)
 {
-  trieste::Driver d("vbcc", nullptr, vbcc::parser(), vbcc::passes());
+  using namespace trieste;
+  using namespace vbcc;
+
+  Reader reader{"vbcc", {statements(), labels(), bytecode()}, parser()};
+  Driver d(reader);
   return d.run(argc, argv);
 }

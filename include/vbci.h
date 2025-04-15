@@ -12,6 +12,10 @@ namespace vbci
   using ClassId = uint32_t;
   using FuncId = uint32_t;
   using FieldId = uint32_t;
+  using MethodId = uint32_t;
+
+  inline const auto MagicNumber = Code(0xDEADBEEF);
+  inline const auto CurrentVersion = Code(0);
 
   enum class Op : uint8_t
   {
@@ -222,6 +226,9 @@ namespace vbci
     Error,
     Invalid,
   };
+
+  inline const auto NumPrimitiveClasses =
+    static_cast<size_t>(ValueType::F64) + 1;
 
   enum class RegionType : uint8_t
   {

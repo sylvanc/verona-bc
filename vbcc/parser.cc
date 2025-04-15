@@ -8,6 +8,15 @@ namespace vbcc
     Parse p(depth::subdirectories, wfParser);
     p.prefile([](auto&, auto& path) { return path.extension() == ".vir"; });
 
+    p.postparse([](auto&, auto& path, auto) {
+      auto& opt = options();
+
+      if (opt.bytecode_file.empty())
+        opt.bytecode_file = path.stem().replace_extension(".vbc");
+
+      return 0;
+    });
+
     p("start",
       {
         // Whitespace between tokens.

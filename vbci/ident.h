@@ -33,7 +33,7 @@ namespace vbci
 
   using PC = size_t;
   using Local = uint8_t;
-  using FieldIdx = uint16_t;
+  using FieldIdx = uint32_t;
   using Location = uintptr_t;
   using RC = uint32_t;
   using ARC = std::atomic<RC>;

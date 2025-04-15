@@ -53,11 +53,12 @@ namespace vbcc
       (Top <<=
         (Primitive | Class | Func | LabelId | wfStatement | wfTerminator)++)
     | (Type <<= wfPrimitiveType)
-    | (Primitive <<= Type * Funcs)
-    | (Class <<= GlobalId * Fields * Funcs)
+    | (Primitive <<= Type * Methods)
+    | (Class <<= GlobalId * Fields * Methods)
     | (Fields <<= Field++)
     | (Field <<= GlobalId * Type)
-    | (Funcs <<= GlobalId++)
+    | (Methods <<= Method++)
+    | (Method <<= (Lhs >>= GlobalId) * (Rhs >>= GlobalId))
     | (Func <<= GlobalId * Params * Type * Labels)
     | (Params <<= Param++)
     | (Param <<= LocalId * Type)
@@ -134,6 +135,7 @@ namespace vbcc
   // clang-format off
   inline const auto wfPassLabels =
       wfPassStatements
+    | (Top <<= (Primitive | Class | Func)++)
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfStatement++)
