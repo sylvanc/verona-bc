@@ -162,5 +162,6 @@ namespace vbcc
     void configure(CLI::App& cli) override;
   };
 
+  Node err(Node node, const std::string& msg);
   Options& options();
 }
