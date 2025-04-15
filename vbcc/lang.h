@@ -151,6 +151,81 @@ namespace vbcc
   inline const auto Lhs = TokenDef("lhs");
   inline const auto Rhs = TokenDef("rhs");
 
+  const auto IntType = T(I8, I16, I32, I64, U8, U16, U32, U64);
+  const auto FloatType = T(F32, F64);
+  const auto PrimitiveType = T(None, Bool) / IntType / FloatType;
+
+  const auto IntLiteral = T(Bin, Oct, Hex, Int);
+  const auto FloatLiteral = T(Float, HexFloat);
+
+  const auto Binop =
+    T(Add,
+      Sub,
+      Mul,
+      Div,
+      Mod,
+      Pow,
+      And,
+      Or,
+      Xor,
+      Shl,
+      Shr,
+      Eq,
+      Ne,
+      Lt,
+      Le,
+      Gt,
+      Ge,
+      Min,
+      Max,
+      LogBase,
+      Atan2);
+
+  const auto Unop =
+    T(Neg,
+      Not,
+      Abs,
+      Ceil,
+      Floor,
+      Exp,
+      Log,
+      Sqrt,
+      Cbrt,
+      IsInf,
+      IsNaN,
+      Sin,
+      Cos,
+      Tan,
+      Asin,
+      Acos,
+      Atan,
+      Sinh,
+      Cosh,
+      Tanh,
+      Asinh,
+      Acosh,
+      Atanh);
+
+  const auto Constant = T(Const_E, Const_Pi, Const_Inf, Const_NaN);
+
+  const auto Def = Unop / Binop / Constant /
+    T(Global,
+      Const,
+      Convert,
+      Stack,
+      Heap,
+      Region,
+      Copy,
+      Move,
+      Ref,
+      Load,
+      Store,
+      Lookup,
+      Call);
+
+  const auto Statement = Def / T(Drop, Arg);
+  const auto Terminator = T(Tailcall, Return, Cond, Jump);
+
   Parse parser();
   PassDef statements();
   PassDef labels();

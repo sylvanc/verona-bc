@@ -151,6 +151,13 @@ namespace vbcc
         return find->second;
       }
 
+      FuncState& get_func(Node id)
+      {
+        auto name = std::string(id->location().view());
+        auto find = func_ids.find(name);
+        return functions.at(find->second);
+      }
+
       FuncState& add_func(Node func)
       {
         auto name = std::string((func / GlobalId)->location().view());
@@ -297,6 +304,56 @@ namespace vbcc
 
           return NoChange;
         },
+
+        // Check that all labels in a function are defined.
+        T(LabelId)[LabelId] >> [state](Match& _) -> Node {
+          auto label = _(LabelId);
+          auto& func_state = state->get_func(label->parent(Func) / GlobalId);
+
+          if (!func_state.get_label_id(label))
+          {
+            state->error = true;
+            return err(label, "undefined label");
+          }
+
+          return NoChange;
+        },
+
+        // Define all destination registers.
+        Def[Body] >> [state](Match& _) -> Node {
+          auto stmt = _(Body);
+          auto dst = stmt / LocalId;
+          auto& func_state = state->get_func(dst->parent(Func) / GlobalId);
+
+          if (func_state.add_register(dst))
+          {
+            // Check that no register used in this statement was just defined.
+            for (auto& child : *stmt)
+            {
+              if ((&*dst != &*child) && dst->equals(child))
+              {
+                state->error = true;
+                return err(child, "register used before defined");
+              }
+            }
+          }
+
+          return NoChange;
+        },
+
+        // Check that all registers in a function are defined.
+        T(LocalId)[LocalId] >> [state](Match& _) -> Node {
+          auto id = _(LocalId);
+          auto& func_state = state->get_func(id->parent(Func) / GlobalId);
+
+          if (!func_state.get_register_id(id))
+          {
+            state->error = true;
+            return err(id, "undefined register");
+          }
+
+          return NoChange;
+        },
       }};
 
     p.post([state](auto) {
@@ -357,13 +414,16 @@ namespace vbcc
            (func_state.func / Labels)->size()));
 
         // TODO: 64 bit PC for each label.
+        // do all headers, then all code?
+        // or do header+code, and then we need to know the size of the code to
+        // find the next header?
 
-        for (auto label: *(func_state.func / Labels))
+        for (auto label : *(func_state.func / Labels))
         {
           auto pc = code.size();
           (void)pc;
 
-          for (auto stmt: *(label / Body))
+          for (auto stmt : *(label / Body))
           {
             // TODO:
           }
