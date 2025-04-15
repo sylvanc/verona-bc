@@ -381,12 +381,14 @@ namespace vbci
 
         case Op::MathOp:
         {
-          switch (static_cast<MathOp>(code))
+          auto& dst = frame->local(arg0(code));
+          auto mop = static_cast<MathOp>(arg1(code));
+
+          switch (mop)
           {
 #define do_unop(op) \
   { \
-    auto& dst = frame->local(arg0(code)); \
-    auto& src = frame->local(arg1(code)); \
+    auto& src = frame->local(arg2(code)); \
     dst = src.op_##op(); \
     break; \
   }
@@ -439,7 +441,6 @@ namespace vbci
 
 #define do_const(op) \
   { \
-    auto& dst = frame->local(arg0(code)); \
     dst = Value::op(); \
     break; \
   }
@@ -461,8 +462,8 @@ namespace vbci
         case Op::Convert:
         {
           auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          auto type_id = static_cast<ValueType>(arg2(code));
+          auto type_id = static_cast<ValueType>(arg1(code));
+          auto& src = frame->local(arg2(code));
           dst = src.convert(type_id);
           break;
         }

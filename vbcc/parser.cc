@@ -11,12 +11,17 @@ namespace vbcc
     p("start",
       {
         // Whitespace between tokens.
-        "[[:blank:]]+" >> [](auto&) {},
+        "[[:space:]]+" >> [](auto&) {},
 
         // Definition keywords.
         "primitive\\b" >> [](auto& m) { m.add(Primitive); },
         "class\\b" >> [](auto& m) { m.add(Class); },
         "func\\b" >> [](auto& m) { m.add(Func); },
+
+        // Region types.
+        "rc\\b" >> [](auto& m) { m.add(RegionRC); },
+        "gc\\b" >> [](auto& m) { m.add(RegionGC); },
+        "arena\\b" >> [](auto& m) { m.add(RegionArena); },
 
         // Primitive types.
         "none\\b" >> [](auto& m) { m.add(None); },
@@ -55,7 +60,7 @@ namespace vbcc
 
         // Terminators.
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },
-        "return\\b" >> [](auto& m) { m.add(Return); },
+        "ret\\b" >> [](auto& m) { m.add(Return); },
         "cond\\b" >> [](auto& m) { m.add(Cond); },
         "jump\\b" >> [](auto& m) { m.add(Jump); },
 
@@ -115,25 +120,26 @@ namespace vbcc
 
         // Symbols.
         "=" >> [](auto& m) { m.add(Equals); },
-        "(" >> [](auto& m) { m.add(LParen); },
-        ")" >> [](auto& m) { m.add(RParen); },
+        "\\(" >> [](auto& m) { m.add(LParen); },
+        "\\)" >> [](auto& m) { m.add(RParen); },
         "," >> [](auto& m) { m.add(Comma); },
+        ":" >> [](auto& m) { m.add(Colon); },
 
-        // Identifiers.
-        "@[_[:alnum:]]*" >> [](auto& m) { m.add(GlobalId); },
-        "$[[:digit:]]*" >> [](auto& m) { m.add(LocalId); },
-        "^[_[:alnum:]]*" >> [](auto& m) { m.add(LabelId); },
+        // // Identifiers.
+        "\\@[_[:alnum:]]*" >> [](auto& m) { m.add(GlobalId); },
+        "\\$[_[:alnum:]]*" >> [](auto& m) { m.add(LocalId); },
+        "\\^[_[:alnum:]]*" >> [](auto& m) { m.add(LabelId); },
 
         // Bool.
         "true\\b" >> [](auto& m) { m.add(True); },
         "false\\b" >> [](auto& m) { m.add(False); },
 
         // Hex float.
-        "(?:-)?0x[_[:xdigit:]]+\\.[_[:xdigit:]]+(?:p[+-][_[:digit:]]+)?\\b" >>
+        "[-]?0x[_[:xdigit:]]+\\.[_[:xdigit:]]+(?:p[+-][_[:digit:]]+)?\\b" >>
           [](auto& m) { m.add(HexFloat); },
 
         // Float.
-        "(?:-)[[:digit:]][_[:digit:]]*\\.[_[:digit:]]+(?:e[+-]?[_[:digit:]]+)?"
+        "[-]?[[:digit:]][_[:digit:]]*\\.[_[:digit:]]+(?:e[+-]?[_[:digit:]]+)?"
         "\\b" >>
           [](auto& m) { m.add(Float); },
 
@@ -147,7 +153,7 @@ namespace vbcc
         "0x[_[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
 
         // Int.
-        "(?:-)[[:digit:]][_[:digit:]]*\\b" >> [](auto& m) { m.add(Int); },
+        "[-]?[[:digit:]][_[:digit:]]*\\b" >> [](auto& m) { m.add(Int); },
 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},

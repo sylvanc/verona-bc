@@ -1,4 +1,5 @@
 add_executable(vbcc
+  lang.cc
   main.cc
   parser.cc
 )

@@ -29,8 +29,8 @@ namespace vbci
 
     // Converts src to the specified type.
     // Arg0 = dst.
-    // Arg1 = src.
-    // Arg2 = destination ValueType.
+    // Arg1 = destination ValueType.
+    // Arg2 = src.
     Convert,
 
     // Allocates a new object in the current frame. Fields are initialized with
@@ -97,8 +97,8 @@ namespace vbci
     // Set a value as an argument index in the next frame. Use this to set up
     // the arguments for a function call.
     // Arg0 = argument index.
-    // Arg1 = src.
-    // Arg2 = move or copy.
+    // Arg1 = move or copy.
+    // Arg2 = src.
     Arg,
 
     // Arg0 = dst.
@@ -158,8 +158,8 @@ namespace vbci
 
     // Math operator.
     // Arg0 = dst.
-    // Arg1 = src.
-    // Arg2 = math operator.
+    // Arg1 = math operator.
+    // Arg2 = src.
     MathOp,
 
     COUNT,

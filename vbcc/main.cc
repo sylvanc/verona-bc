@@ -1,9 +1,10 @@
+#include "lang.h"
 #include "vbci.h"
-#include "wf.h"
+
+#include <trieste/driver.h>
 
 int main(int argc, char** argv)
 {
-  (void)argc;
-  (void)argv;
-  return 0;
+  trieste::Driver d("vbcc", nullptr, vbcc::parser(), vbcc::passes());
+  return d.run(argc, argv);
 }

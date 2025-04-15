@@ -12,15 +12,21 @@ namespace vbcc
   inline const auto Func = TokenDef("func");
 
   // Identifiers.
-  inline const auto GlobalId = TokenDef("globalid");
-  inline const auto LocalId = TokenDef("localid");
-  inline const auto LabelId = TokenDef("labelid");
+  inline const auto GlobalId = TokenDef("globalid", flag::print);
+  inline const auto LocalId = TokenDef("localid", flag::print);
+  inline const auto LabelId = TokenDef("labelid", flag::print);
 
   // Symbols.
   inline const auto Equals = TokenDef("=");
   inline const auto LParen = TokenDef("(");
   inline const auto RParen = TokenDef(")");
   inline const auto Comma = TokenDef(",");
+  inline const auto Colon = TokenDef(":");
+
+  // Region types.
+  inline const auto RegionRC = TokenDef("rc");
+  inline const auto RegionGC = TokenDef("gc");
+  inline const auto RegionArena = TokenDef("arena");
 
   // Primitive types.
   inline const auto None = TokenDef("none");
@@ -58,7 +64,7 @@ namespace vbcc
   inline const auto Arg = TokenDef("arg");
   inline const auto Call = TokenDef("call");
 
-  // Block terminators.
+  // Terminators.
   inline const auto Tailcall = TokenDef("tailcall");
   inline const auto Return = TokenDef("ret");
   inline const auto Cond = TokenDef("cond");
@@ -117,6 +123,8 @@ namespace vbcc
   inline const auto Const_Pi = TokenDef("pi");
   inline const auto Const_Inf = TokenDef("inf");
   inline const auto Const_NaN = TokenDef("nan");
+
+  // Literals.
   inline const auto True = TokenDef("true");
   inline const auto False = TokenDef("false");
   inline const auto Bin = TokenDef("bin", flag::print);
@@ -125,4 +133,23 @@ namespace vbcc
   inline const auto Int = TokenDef("int", flag::print);
   inline const auto Float = TokenDef("float", flag::print);
   inline const auto HexFloat = TokenDef("hexfloat", flag::print);
+
+  // Structure.
+  inline const auto Field = TokenDef("field");
+  inline const auto Fields = TokenDef("fields");
+  inline const auto Funcs = TokenDef("funcs");
+  inline const auto Param = TokenDef("param");
+  inline const auto Params = TokenDef("params");
+  inline const auto Type = TokenDef("type");
+  inline const auto Label = TokenDef("label");
+  inline const auto Labels = TokenDef("labels");
+  inline const auto Args = TokenDef("args");
+  inline const auto Body = TokenDef("body");
+
+  // Convenient names.
+  inline const auto Lhs = TokenDef("lhs");
+  inline const auto Rhs = TokenDef("rhs");
+
+  Parse parser();
+  std::vector<Pass> passes();
 }
