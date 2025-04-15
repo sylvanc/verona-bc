@@ -29,7 +29,7 @@ namespace vbci
 
     Value& arg(Local idx)
     {
-      idx += (base + registers);
+      idx += (base + MaxRegisters);
 
       if ((idx < base) || (idx >= locals.size()))
         throw Value(Error::StackOutOfBounds);
@@ -41,7 +41,7 @@ namespace vbci
     {
       // TODO: this would be more efficient if we knew how many locals to drop.
       // It would also let us have smaller value stacks.
-      for (size_t i = 0; i < registers; i++)
+      for (size_t i = 0; i < MaxRegisters; i++)
         locals[base + i].drop();
     }
   };

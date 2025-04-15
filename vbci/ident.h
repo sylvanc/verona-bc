@@ -38,8 +38,6 @@ namespace vbci
   using RC = uint32_t;
   using ARC = std::atomic<RC>;
 
-  constexpr size_t registers = 256;
-
   struct Object;
   struct Cown;
   struct Function;

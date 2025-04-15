@@ -14,8 +14,9 @@ namespace vbci
   using FieldId = uint32_t;
   using MethodId = uint32_t;
 
-  inline const auto MagicNumber = Code(0xDEADBEEF);
+  inline const auto MagicNumber = Code(0xDEC0ADDE);
   inline const auto CurrentVersion = Code(0);
+  inline const auto MaxRegisters = size_t(256);
 
   enum class Op : uint8_t
   {

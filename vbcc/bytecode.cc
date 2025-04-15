@@ -1,5 +1,4 @@
 #include "lang.h"
-
 #include "vbci.h"
 #include "wf.h"
 
@@ -9,41 +8,73 @@ namespace vbcc
   {
     using namespace vbci;
 
+    struct FuncState
+    {
+      Node func;
+      std::unordered_map<std::string, uint8_t> label_idxs;
+      std::unordered_map<std::string, uint8_t> register_idxs;
+
+      FuncState(Node func) : func(func) {}
+
+      std::optional<uint8_t> get_label_id(Node id)
+      {
+        auto name = std::string(id->location().view());
+        auto find = label_idxs.find(name);
+
+        if (find == label_idxs.end())
+          return {};
+
+        return find->second;
+      }
+
+      bool add_label(Node id)
+      {
+        auto name = std::string(id->location().view());
+        auto find = label_idxs.find(name);
+
+        if (find != label_idxs.end())
+          return false;
+
+        label_idxs.insert({name, label_idxs.size()});
+        return true;
+      }
+
+      std::optional<uint8_t> get_register_id(Node id)
+      {
+        auto name = std::string(id->location().view());
+        auto find = register_idxs.find(name);
+
+        if (find == register_idxs.end())
+          return {};
+
+        return find->second;
+      }
+
+      bool add_register(Node id)
+      {
+        auto name = std::string(id->location().view());
+        auto find = register_idxs.find(name);
+
+        if (find != register_idxs.end())
+          return false;
+
+        register_idxs.insert({name, register_idxs.size()});
+        return true;
+      }
+    };
+
     struct State
     {
       bool error = false;
-      FuncId func_id = 0;
-      ClassId class_id = 0;
-      FieldId field_id = 0;
-      MethodId method_id = 0;
 
       std::unordered_map<std::string, FuncId> func_ids;
       std::unordered_map<std::string, ClassId> class_ids;
       std::unordered_map<std::string, FieldId> field_ids;
       std::unordered_map<std::string, MethodId> method_ids;
 
-      std::vector<Node> functions;
       std::vector<Node> primitives;
       std::vector<Node> classes;
-
-      std::optional<FuncId> get_func_id(Node id)
-      {
-        auto name = std::string(id->location().view());
-        auto find = func_ids.find(name);
-
-        if (find == func_ids.end())
-          return {};
-
-        return find->second;
-      }
-
-      void add_func(Node func)
-      {
-        auto name = std::string((func / GlobalId)->location().view());
-        func_ids.insert({name, func_id++});
-        functions.push_back(func);
-        assert(func_id == functions.size());
-      }
+      std::vector<FuncState> functions;
 
       std::optional<ClassId> get_class_id(Node id)
       {
@@ -56,12 +87,17 @@ namespace vbcc
         return find->second;
       }
 
-      void add_class(Node cls)
+      bool add_class(Node cls)
       {
         auto name = std::string((cls / GlobalId)->location().view());
-        class_ids.insert({name, class_id++});
+        auto find = class_ids.find(name);
+
+        if (find != class_ids.end())
+          return false;
+
+        class_ids.insert({name, class_ids.size()});
         classes.push_back(cls);
-        assert(class_id == classes.size());
+        return true;
       }
 
       std::optional<FieldId> get_field_id(Node id)
@@ -81,7 +117,7 @@ namespace vbcc
         auto find = field_ids.find(name);
 
         if (find == field_ids.end())
-          field_ids.insert({name, field_id++});
+          field_ids.insert({name, field_ids.size()});
       }
 
       std::optional<MethodId> get_method_id(Node id)
@@ -101,7 +137,26 @@ namespace vbcc
         auto find = method_ids.find(name);
 
         if (find == method_ids.end())
-          method_ids.insert({name, method_id++});
+          method_ids.insert({name, method_ids.size()});
+      }
+
+      std::optional<FuncId> get_func_id(Node id)
+      {
+        auto name = std::string(id->location().view());
+        auto find = func_ids.find(name);
+
+        if (find == func_ids.end())
+          return {};
+
+        return find->second;
+      }
+
+      FuncState& add_func(Node func)
+      {
+        auto name = std::string((func / GlobalId)->location().view());
+        func_ids.insert({name, func_ids.size()});
+        functions.push_back(func);
+        return functions.back();
       }
     };
 
@@ -113,20 +168,6 @@ namespace vbcc
       wfPassLabels,
       dir::topdown | dir::once,
       {
-        // Accumulate functions.
-        T(Func)[Func] >> [state](Match& _) -> Node {
-          auto func = _(Func);
-
-          if (state->get_func_id(func / GlobalId))
-          {
-            state->error = true;
-            return err(func / GlobalId, "duplicate function name");
-          }
-
-          state->add_func(func);
-          return NoChange;
-        },
-
         // Accumulate primitive classes.
         T(Primitive)[Primitive] >> [state](Match& _) -> Node {
           auto primitive = _(Primitive);
@@ -176,15 +217,11 @@ namespace vbcc
 
         // Accumulate user-defined classes.
         T(Class)[Class] >> [state](Match& _) -> Node {
-          auto cls = _(Class);
-
-          if (state->get_class_id(cls / GlobalId))
+          if (!state->add_class(_(Class)))
           {
             state->error = true;
-            return err(cls / GlobalId, "duplicate class name");
+            return err(_(Class) / GlobalId, "duplicate class name");
           }
-
-          state->add_class(cls);
           return NoChange;
         },
 
@@ -207,6 +244,59 @@ namespace vbcc
 
           return NoChange;
         },
+
+        // Accumulate functions.
+        T(Func)[Func] >> [state](Match& _) -> Node {
+          auto func = _(Func);
+
+          if (state->get_func_id(func / GlobalId))
+          {
+            state->error = true;
+            return err(func / GlobalId, "duplicate function name");
+          }
+
+          auto& func_state = state->add_func(func);
+
+          if ((func / Labels)->size() == 0)
+          {
+            state->error = true;
+            return err(func / GlobalId, "function has no labels");
+          }
+
+          if ((func / Labels)->size() >= MaxRegisters)
+          {
+            state->error = true;
+            return err(func / GlobalId, "function has too many labels");
+          }
+
+          if ((func / Params)->size() >= MaxRegisters)
+          {
+            state->error = true;
+            return err(func / GlobalId, "function has too many params");
+          }
+
+          // Register label names.
+          for (auto label : *(func / Labels))
+          {
+            if (!func_state.add_label(label / LabelId))
+            {
+              state->error = true;
+              return err(label / LabelId, "duplicate label name");
+            }
+          }
+
+          // Register parameter names.
+          for (auto param : *(func / Params))
+          {
+            if (!func_state.add_register(param / LocalId))
+            {
+              state->error = true;
+              return err(param / LocalId, "duplicate parameter name");
+            }
+          }
+
+          return NoChange;
+        },
       }};
 
     p.post([state](auto) {
@@ -216,16 +306,6 @@ namespace vbcc
       std::vector<Code> code;
       code.push_back(MagicNumber);
       code.push_back(CurrentVersion);
-
-      // Functions.
-      code.push_back(state->functions.size());
-
-      for (auto& f : state->functions)
-      {
-        // TODO: 8 bit label count, 8 bit param count.
-        // TODO: 64 bit PC for each label.
-        (void)f;
-      }
 
       // Primitive classes.
       for (auto& p : state->primitives)
@@ -263,6 +343,33 @@ namespace vbcc
         {
           code.push_back(state->get_method_id(method / Lhs).value());
           code.push_back(state->get_func_id(method / Rhs).value());
+        }
+      }
+
+      // Functions.
+      code.push_back(state->functions.size());
+
+      for (auto& func_state : state->functions)
+      {
+        // 8 bit label count, 8 bit param count.
+        code.push_back(
+          (((func_state.func / Params)->size() << 8) |
+           (func_state.func / Labels)->size()));
+
+        // TODO: 64 bit PC for each label.
+
+        for (auto label: *(func_state.func / Labels))
+        {
+          auto pc = code.size();
+          (void)pc;
+
+          for (auto stmt: *(label / Body))
+          {
+            // TODO:
+          }
+
+          auto term = label / Return;
+          (void)term;
         }
       }
 

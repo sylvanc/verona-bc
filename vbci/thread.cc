@@ -499,7 +499,7 @@ namespace vbci
 
     // Make sure there's enough register space. It's plus two to cover the frame
     // we're pushing and space for that frame to put arguments.
-    auto req_stack_size = (stack.size() + 2) * registers;
+    auto req_stack_size = (stack.size() + 2) * MaxRegisters;
 
     if (locals.size() < req_stack_size)
       locals.resize(req_stack_size);
@@ -509,7 +509,7 @@ namespace vbci
       .func = func,
       .frame_id = frame->frame_id + 2,
       .locals = locals,
-      .base = frame->base + registers,
+      .base = frame->base + MaxRegisters,
       .pc = func->labels.at(0),
       .dst = dst,
       .condition = Condition::Return,
