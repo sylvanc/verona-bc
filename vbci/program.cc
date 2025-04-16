@@ -62,23 +62,7 @@ namespace vbci
       return false;
     }
 
-    // Primitive classes.
-    primitives.resize(NumPrimitiveClasses);
-
-    for (auto& cls : primitives)
-      parse_methods(cls, pc);
-
-    // User-defined classes.
-    auto num_classes = load_u32(pc);
-    classes.resize(num_classes);
-
-    for (auto& cls : classes)
-    {
-      parse_fields(cls, pc);
-      parse_methods(cls, pc);
-    }
-
-    // Functions.
+    // Function headers.
     auto num_functions = load_u32(pc);
     functions.resize(num_functions);
 
@@ -101,6 +85,22 @@ namespace vbci
 
       // TODO: param types, return type
       f.params.resize(params);
+    }
+
+    // Primitive classes.
+    primitives.resize(NumPrimitiveClasses);
+
+    for (auto& cls : primitives)
+      parse_methods(cls, pc);
+
+    // User-defined classes.
+    auto num_classes = load_u32(pc);
+    classes.resize(num_classes);
+
+    for (auto& cls : classes)
+    {
+      parse_fields(cls, pc);
+      parse_methods(cls, pc);
     }
 
     return true;

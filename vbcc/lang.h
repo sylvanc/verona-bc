@@ -13,7 +13,7 @@ namespace vbcc
 
   // Identifiers.
   inline const auto GlobalId = TokenDef("globalid", flag::print);
-  inline const auto ClassId = TokenDef("globalid", flag::print);
+  inline const auto ClassId = TokenDef("classid", flag::print);
   inline const auto FieldId = TokenDef("fieldid", flag::print);
   inline const auto MethodId = TokenDef("methodid", flag::print);
   inline const auto FunctionId = TokenDef("functionid", flag::print);

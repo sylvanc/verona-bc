@@ -118,7 +118,8 @@ namespace vbcc
         (T(Primitive) << T(Type))[Primitive] * T(GlobalId)[Lhs] *
             T(GlobalId)[Rhs] >>
           [](Match& _) {
-            (_(Primitive) / Methods) << (Method << _(Lhs) << _(Rhs));
+            (_(Primitive) / Methods)
+              << (Method << (MethodId ^ _(Lhs)) << (FunctionId ^ _(Rhs)));
             return _(Primitive);
           },
 
@@ -128,7 +129,7 @@ namespace vbcc
             return Class << (ClassId ^ _(GlobalId)) << Fields << Methods;
           },
 
-        (T(Class) << T(GlobalId))[Class] * T(GlobalId)[GlobalId] * T(Colon) *
+        (T(Class) << T(ClassId))[Class] * T(GlobalId)[GlobalId] * T(Colon) *
             PrimitiveType[Type] >>
           [](Match& _) {
             (_(Class) / Fields)
@@ -136,8 +137,7 @@ namespace vbcc
             return _(Class);
           },
 
-        (T(Class) << T(GlobalId))[Class] * T(GlobalId)[Lhs] *
-            T(GlobalId)[Rhs] >>
+        (T(Class) << T(ClassId))[Class] * T(GlobalId)[Lhs] * T(GlobalId)[Rhs] >>
           [](Match& _) {
             (_(Class) / Methods)
               << (Method << (MethodId ^ _(Lhs)) << (FunctionId ^ _(Rhs)));
@@ -319,11 +319,9 @@ namespace vbcc
       dir::bottomup,
       {
         // Function.
-        (T(Func)[Func]
-         << (T(GlobalId) * T(Params) * T(Type) * T(Labels)[Labels])) *
-            T(Label)[Label] >>
+        T(Func)[Func] * T(Label)[Label] >>
           [](Match& _) {
-            _(Labels) << _(Label);
+            (_(Func) / Labels) << _(Label);
             return _(Func);
           },
 

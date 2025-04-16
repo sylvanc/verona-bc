@@ -304,7 +304,7 @@ namespace vbcc
 
       void add_method(Node method)
       {
-        auto name = std::string((method / Lhs)->location().view());
+        auto name = std::string((method / MethodId)->location().view());
         auto find = method_ids.find(name);
 
         if (find == method_ids.end())
@@ -393,7 +393,7 @@ namespace vbcc
           auto method = _(Method);
           state->add_method(method);
 
-          if (!state->get_func_id(method / Rhs))
+          if (!state->get_func_id(method / FunctionId))
           {
             state->error = true;
             return err(method / Rhs, "unknown function");
@@ -512,8 +512,21 @@ namespace vbcc
         return 0;
 
       std::vector<Code> code;
-      code.push_back(MagicNumber);
-      code.push_back(CurrentVersion);
+      code << MagicNumber;
+      code << CurrentVersion;
+
+      // Function headers.
+      code << uint32_t(state->functions.size());
+
+      for (auto& func_state : state->functions)
+      {
+        // 8 bit label count, 8 bit param count.
+        code << uint32_t((func_state.params << 8) | func_state.labels);
+
+        // Reserve space for a 64 bit PC for each label.
+        func_state.pcs = code.size();
+        code.insert(code.end(), func_state.labels * 2, 0);
+      }
 
       // Primitive classes.
       for (auto& p : state->primitives)
@@ -521,53 +534,42 @@ namespace vbcc
         if (p)
         {
           auto methods = p / Methods;
-          code.push_back(methods->size());
+          code << uint32_t(methods->size());
 
           for (auto& method : *methods)
           {
-            code.push_back(*state->get_method_id(method / Lhs));
-            code.push_back(*state->get_func_id(method / Rhs));
+            code << *state->get_method_id(method / MethodId);
+            code << *state->get_func_id(method / FunctionId);
           }
         }
         else
         {
-          code.push_back(0);
+          code << uint32_t(0);
         }
       }
 
       // Classes.
+      code << uint32_t(state->classes.size());
+
       for (auto& c : state->classes)
       {
         auto fields = c / Fields;
-        code.push_back(fields->size());
+        code << uint32_t(fields->size());
 
         for (auto& field : *fields)
-          code.push_back(*state->get_field_id(field / FieldId));
+          code << *state->get_field_id(field / FieldId);
 
         auto methods = c / Methods;
-        code.push_back(methods->size());
+        code << uint32_t(methods->size());
 
         for (auto& method : *methods)
         {
-          code.push_back(*state->get_method_id(method / MethodId));
-          code.push_back(*state->get_func_id(method / FunctionId));
+          code << *state->get_method_id(method / MethodId);
+          code << *state->get_func_id(method / FunctionId);
         }
       }
 
-      // Function headers.
-      code.push_back(state->functions.size());
-
-      for (auto& func_state : state->functions)
-      {
-        // 8 bit label count, 8 bit param count.
-        code.push_back((func_state.params << 8) | func_state.labels);
-
-        // Reserve space for a 64 bit PC for each label.
-        func_state.pcs = code.size();
-        code.insert(code.end(), func_state.labels * 2, 0);
-      }
-
-      // Function code bodies.
+      // Function bodies.
       for (auto& func_state : state->functions)
       {
         auto dst = [&func_state](Node stmt) {
