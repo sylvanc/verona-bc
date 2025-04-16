@@ -13,6 +13,82 @@ namespace vbcc
     return Error << (ErrorMsg ^ msg) << node;
   }
 
+  template<typename T>
+  Node check_int(Node value)
+  {
+    auto view = value->location().view();
+    auto first = view.data();
+    auto last = first + view.size();
+    std::from_chars_result r;
+    T t;
+
+    if (value == Bin)
+      r = std::from_chars(first + 2, last, t, 2);
+    else if (value == Oct)
+      r = std::from_chars(first + 2, last, t, 8);
+    else if (value == Hex)
+      r = std::from_chars(first + 2, last, t, 16);
+    else if (value == Int)
+      r = std::from_chars(first, last, t, 10);
+
+    if (r.ec == std::errc())
+      return {};
+
+    if (r.ec == std::errc::result_out_of_range)
+      return err(value, "Integer literal out of range.");
+
+    return err(value, "Invalid integer literal.");
+  }
+
+  template<typename T>
+  Node check_float(Node value)
+  {
+    auto view = value->location().view();
+    auto first = view.data();
+    auto last = first + view.size();
+    std::from_chars_result r;
+    T t;
+
+    if (value == Float)
+      r = std::from_chars(first, last, t);
+    else if (value == HexFloat)
+      r = std::from_chars(first + 2, last, t);
+
+    if (r.ec == std::errc())
+      return {};
+
+    if (r.ec == std::errc::result_out_of_range)
+      return err(value, "Floating point literal out of range.");
+
+    return err(value, "Invalid floating point literal.");
+  }
+
+  Node check_literal(Node ty, Node value)
+  {
+    if (ty == I8)
+      return check_int<int8_t>(value);
+    if (ty == I16)
+      return check_int<int16_t>(value);
+    if (ty == I32)
+      return check_int<int32_t>(value);
+    if (ty == I64)
+      return check_int<int64_t>(value);
+    if (ty == U8)
+      return check_int<uint8_t>(value);
+    if (ty == U16)
+      return check_int<uint16_t>(value);
+    if (ty == U32)
+      return check_int<uint32_t>(value);
+    if (ty == U64)
+      return check_int<uint64_t>(value);
+    if (ty == F32)
+      return check_float<float>(value);
+    if (ty == F64)
+      return check_float<double>(value);
+
+    return {};
+  }
+
   Options& options()
   {
     static Options opts;
@@ -104,11 +180,19 @@ namespace vbcc
 
         Dst * T(Const) * IntType[Type] * IntLiteral[Rhs] >>
           [](Match& _) {
+            auto r = check_literal(_(Type), _(Rhs));
+            if (r)
+              return r;
+
             return Const << _(LocalId) << (Type << _(Type)) << _(Rhs);
           },
 
         Dst * T(Const) * FloatType[Type] * FloatLiteral[Rhs] >>
           [](Match& _) {
+            auto r = check_literal(_(Type), _(Rhs));
+            if (r)
+              return r;
+
             return Const << _(LocalId) << (Type << _(Type)) << _(Rhs);
           },
 
