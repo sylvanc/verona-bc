@@ -730,30 +730,50 @@ namespace vbcc
             {
               code << e{Op::Store, dst(stmt), lhs(stmt), rhs(stmt)};
             }
+            else if (stmt == FnPointer)
+            {
+              code << e{Op::Lookup, dst(stmt), +CallType::CallStatic}
+                   << fn(stmt);
+            }
             else if (stmt == Lookup)
             {
               code << e{Op::Lookup,
                         dst(stmt),
-                        +CallType::FunctionDynamic,
+                        +CallType::CallDynamic,
                         src(stmt)}
                    << mth(stmt);
-            }
-            else if (stmt == FnPointer)
-            {
-              code << e{Op::Lookup, dst(stmt), +CallType::FunctionStatic}
-                   << fn(stmt);
             }
             else if (stmt == Call)
             {
               args(stmt);
-              code << e{Op::Call, dst(stmt), +CallType::FunctionStatic}
-                   << fn(stmt);
+              code << e{Op::Call, dst(stmt), +CallType::CallStatic} << fn(stmt);
             }
             else if (stmt == CallDyn)
             {
               args(stmt);
+              code << e{Op::Call, dst(stmt), +CallType::CallDynamic, src(stmt)};
+            }
+            else if (stmt == Subcall)
+            {
+              args(stmt);
+              code << e{Op::Call, dst(stmt), +CallType::SubcallStatic}
+                   << fn(stmt);
+            }
+            else if (stmt == SubcallDyn)
+            {
+              args(stmt);
               code << e{
-                Op::Call, dst(stmt), +CallType::FunctionDynamic, src(stmt)};
+                Op::Call, dst(stmt), +CallType::SubcallDynamic, src(stmt)};
+            }
+            else if (stmt == Try)
+            {
+              args(stmt);
+              code << e{Op::Call, dst(stmt), +CallType::TryStatic} << fn(stmt);
+            }
+            else if (stmt == TryDyn)
+            {
+              args(stmt);
+              code << e{Op::Call, dst(stmt), +CallType::TryDynamic, src(stmt)};
             }
             else if (stmt == Add)
             {
@@ -954,12 +974,12 @@ namespace vbcc
           if (term == Tailcall)
           {
             args(term);
-            code << e{Op::Tailcall, +CallType::FunctionStatic} << fn(term);
+            code << e{Op::Tailcall, +CallType::CallStatic} << fn(term);
           }
           else if (term == TailcallDyn)
           {
             args(term);
-            code << e{Op::Tailcall, +CallType::FunctionDynamic, src(term)};
+            code << e{Op::Tailcall, +CallType::CallDynamic, src(term)};
           }
           else if (term == Return)
           {

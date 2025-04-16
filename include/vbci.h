@@ -241,10 +241,10 @@ namespace vbci
 
   enum class CallType : uint8_t
   {
-    FunctionStatic,
-    FunctionDynamic,
-    BlockStatic,
-    BlockDynamic,
+    CallStatic,
+    CallDynamic,
+    SubcallStatic,
+    SubcallDynamic,
     TryStatic,
     TryDynamic,
   };

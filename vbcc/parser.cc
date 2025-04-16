@@ -66,6 +66,8 @@ namespace vbcc
         "store\\b" >> [](auto& m) { m.add(Store); },
         "lookup\\b" >> [](auto& m) { m.add(Lookup); },
         "call\\b" >> [](auto& m) { m.add(Call); },
+        "subcall\\b" >> [](auto& m) { m.add(Subcall); },
+        "try\\b" >> [](auto& m) { m.add(Try); },
 
         // Terminators.
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },

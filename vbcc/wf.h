@@ -25,7 +25,7 @@ namespace vbcc
 
   inline const auto wfStatement = Global | Const | Stack | Heap | Region |
     Copy | Move | Drop | Ref | Load | Store | Lookup | FnPointer | Arg | Call |
-    CallDyn | wfBinop | wfUnop | wfConst;
+    CallDyn | Subcall | SubcallDyn | Try | TryDyn | wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -79,6 +79,10 @@ namespace vbcc
     | (FnPointer <<= wfDst * FunctionId)
     | (Call <<= wfDst * FunctionId * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
+    | (Subcall <<= wfDst * FunctionId * Args)
+    | (SubcallDyn <<= wfDst * wfSrc * Args)
+    | (Try <<= wfDst * FunctionId * Args)
+    | (TryDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
     | (Tailcall <<= FunctionId * Args)

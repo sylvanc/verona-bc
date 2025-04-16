@@ -61,6 +61,8 @@ namespace vbcc
   inline const auto Store = TokenDef("store");
   inline const auto Lookup = TokenDef("lookup");
   inline const auto Call = TokenDef("call");
+  inline const auto Subcall = TokenDef("subcall");
+  inline const auto Try = TokenDef("try");
 
   // Terminators.
   inline const auto Tailcall = TokenDef("tailcall");
@@ -151,6 +153,8 @@ namespace vbcc
   inline const auto Body = TokenDef("body");
   inline const auto FnPointer = TokenDef("fnpointer");
   inline const auto CallDyn = TokenDef("calldyn");
+  inline const auto SubcallDyn = TokenDef("subcalldyn");
+  inline const auto TryDyn = TokenDef("trydyn");
   inline const auto TailcallDyn = TokenDef("tailcalldyn");
 
   // Convenient names.

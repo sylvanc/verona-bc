@@ -177,13 +177,13 @@ namespace vbci
 
           switch (call_type)
           {
-            case CallType::FunctionStatic:
+            case CallType::CallStatic:
             {
               dst = program->get_function(func_id);
               break;
             }
 
-            case CallType::FunctionDynamic:
+            case CallType::CallDynamic:
             {
               auto& src = frame->local(arg2(code));
               dst = src.method(program, func_id);
@@ -227,14 +227,14 @@ namespace vbci
 
           switch (call_type)
           {
-            case CallType::FunctionStatic:
+            case CallType::CallStatic:
             {
               func = program->get_function(program->load_u32(frame->pc));
               cond = Condition::Return;
               break;
             }
 
-            case CallType::BlockStatic:
+            case CallType::SubcallStatic:
             {
               func = program->get_function(program->load_u32(frame->pc));
               cond = Condition::Raise;
@@ -248,14 +248,14 @@ namespace vbci
               break;
             }
 
-            case CallType::FunctionDynamic:
+            case CallType::CallDynamic:
             {
               func = frame->local(arg2(code)).function();
               cond = Condition::Return;
               break;
             }
 
-            case CallType::BlockDynamic:
+            case CallType::SubcallDynamic:
             {
               func = frame->local(arg2(code)).function();
               cond = Condition::Raise;
@@ -284,13 +284,13 @@ namespace vbci
 
           switch (call_type)
           {
-            case CallType::FunctionStatic:
+            case CallType::CallStatic:
             {
               func = program->get_function(program->load_u32(frame->pc));
               break;
             }
 
-            case CallType::FunctionDynamic:
+            case CallType::CallDynamic:
             {
               func = frame->local(arg2(code)).function();
               break;

@@ -2,9 +2,22 @@
 
 This is an experimental byte code interpreter for the Verona operational semantics.
 
+## Non-Local Returns
+
+A function call can be made as a `call`, a `?`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
+
+If you make a `call` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `return` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+
+If you make a `?` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `raise` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+
+If you make a `try`, your destination register will have the returned value regardless of whether the function does a `return`, a `raise`, or a `throw`.
+
+One way to use this is to implement Smalltalk style non-local returns. To do so, functions `call` blocks and other functions, and `return` results, whereas blocks `?` functions and other blocks, and either `raise` to return from the calling function (popping all blocks), or `return` to return to the calling block or function.
+
+Another way to use this is to implement exceptions. To do so, `throw` exception values. Exceptions are caught by a `try`.
+
 ## To-Do List
 
-* VIR for "lambda" call and try.
 * What's the equivalent of `main`, and how does vbci find it?
   * Command line arguments?
 * Check that class/field/method/function IDs in operations are valid.

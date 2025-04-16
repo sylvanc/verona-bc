@@ -256,7 +256,6 @@ namespace vbcc
           },
 
         // Static call.
-        // TODO: return/raise/throw
         Dst * T(Call) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
             T(RParen) >>
           [](Match& _) {
@@ -269,6 +268,36 @@ namespace vbcc
             T(RParen) >>
           [](Match& _) {
             return CallDyn << _(LocalId) << _(Lhs) << (Args << _[Args]);
+          },
+
+        // Static subcall.
+        Dst * T(Subcall) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
+            T(RParen) >>
+          [](Match& _) {
+            return Subcall << _(LocalId) << (FunctionId ^ _(GlobalId))
+                           << (Args << _[Args]);
+          },
+
+        // Dynamic subcall.
+        Dst * T(Subcall) * T(LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
+            T(RParen) >>
+          [](Match& _) {
+            return SubcallDyn << _(LocalId) << _(Lhs) << (Args << _[Args]);
+          },
+
+        // Static try.
+        Dst * T(Try) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
+            T(RParen) >>
+          [](Match& _) {
+            return Try << _(LocalId) << (FunctionId ^ _(GlobalId))
+                       << (Args << _[Args]);
+          },
+
+        // Dynamic try.
+        Dst * T(Try) * T(LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
+            T(RParen) >>
+          [](Match& _) {
+            return TryDyn << _(LocalId) << _(Lhs) << (Args << _[Args]);
           },
 
         // Terminators.
