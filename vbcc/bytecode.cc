@@ -247,6 +247,13 @@ namespace vbcc
       std::vector<Node> classes;
       std::vector<FuncState> functions;
 
+      State()
+      {
+        // Reserve func_id 0 for `main`.
+        functions.push_back(FuncState(nullptr));
+        func_ids.insert({"@main", 0});
+      }
+
       std::optional<Id> get_class_id(Node id)
       {
         auto name = std::string(id->location().view());
@@ -319,7 +326,13 @@ namespace vbcc
         if (find == func_ids.end())
           return {};
 
-        return find->second;
+        // Pretend not to have an id if the function name is reserved.
+        auto func_id = find->second;
+
+        if (!functions.at(func_id).func)
+          return {};
+
+        return func_id;
       }
 
       FuncState& get_func(Node id)
@@ -332,13 +345,26 @@ namespace vbcc
       FuncState& add_func(Node func)
       {
         auto name = std::string((func / FunctionId)->location().view());
-        func_ids.insert({name, func_ids.size()});
-        functions.push_back(func);
+        auto find = func_ids.find(name);
+        Id func_id;
 
-        auto& func_state = functions.back();
+        if (find == func_ids.end())
+        {
+          // This is a fresh func_id.
+          func_id = func_ids.size();
+          func_ids.insert({name, func_id});
+          functions.push_back(func);
+        }
+        else
+        {
+          // This is a reserved func_id.
+          func_id = find->second;
+          functions.at(func_id).func = func;
+        }
+
+        auto& func_state = functions.at(func_id);
         func_state.params = (func / Params)->size();
         func_state.labels = (func / Labels)->size();
-
         return func_state;
       }
     };
@@ -507,9 +533,16 @@ namespace vbcc
         },
       }};
 
-    p.post([state](auto) {
+    p.post([state](auto top) {
       if (state->error)
         return 0;
+
+      if (!state->functions.at(0).func)
+      {
+        state->error = true;
+        top << err(Func, "missing main function");
+        return 0;
+      }
 
       std::vector<Code> code;
       code << MagicNumber;

@@ -18,8 +18,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## To-Do List
 
-* What's the equivalent of `main`, and how does vbci find it?
-  * Command line arguments?
 * Check that class/field/method/function IDs in operations are valid.
 * A register in a label may get initialized in a label that comes after it.
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
@@ -34,6 +32,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * Merge, freeze, extract.
 * When.
 * Arrays.
+* Command line arguments.
 * Standard IO? Does this need string support?
 * File API? Seems like too much.
 * Some kind of `dlopen` system for adding FFI?
