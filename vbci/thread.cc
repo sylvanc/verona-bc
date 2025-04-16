@@ -66,7 +66,7 @@ namespace vbci
               break;
 
             case ValueType::U8:
-              dst = Value(static_cast<uint8_t>(arg2(code)));
+              dst = Value(arg2(code));
               break;
 
             case ValueType::U16:

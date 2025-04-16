@@ -77,8 +77,11 @@ namespace vbcc
           [](Match& _) { return Param << _(LocalId) << (Type << _(Type)); },
 
         // Argument.
-        (T(Move, Copy) * T(LocalId))[Arg] >>
-          [](Match& _) { return Arg << _[Arg]; },
+        --T(Equals) * (T(Move) * T(LocalId)[LocalId]) >>
+          [](Match& _) { return Arg << ArgMove << _(LocalId); },
+
+        --T(Equals) * (T(Copy) * T(LocalId)[LocalId]) >>
+          [](Match& _) { return Arg << ArgCopy << _(LocalId); },
 
         // Strip commas between parameters and arguments.
         T(Param, Arg)[Lhs] * T(Comma) * T(Param, Arg)[Rhs] >>
@@ -155,10 +158,6 @@ namespace vbcc
           [](Match& _) {
             return Lookup << _(LocalId) << _(Rhs) << _(GlobalId);
           },
-
-        // Argument.
-        T(Arg) * T(Int)[Int] * T(Move, Copy)[Move] * T(LocalId)[Rhs] >>
-          [](Match& _) { return Arg << _(Int) << _(Move) << _(Rhs); },
 
         // Call.
         // TODO: return/raise/throw

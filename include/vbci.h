@@ -260,4 +260,39 @@ namespace vbci
     Raise,
     Throw,
   };
+
+  inline constexpr uint8_t operator+(Op op)
+  {
+    return static_cast<uint8_t>(op);
+  }
+
+  inline constexpr uint8_t operator+(MathOp op)
+  {
+    return static_cast<uint8_t>(op);
+  }
+
+  inline constexpr uint8_t operator+(ValueType v)
+  {
+    return static_cast<uint8_t>(v);
+  }
+
+  inline constexpr uint8_t operator+(RegionType r)
+  {
+    return static_cast<uint8_t>(r);
+  }
+
+  inline constexpr uint8_t operator+(ArgType a)
+  {
+    return static_cast<uint8_t>(a);
+  }
+
+  inline constexpr uint8_t operator+(CallType c)
+  {
+    return static_cast<uint8_t>(c);
+  }
+
+  inline constexpr uint8_t operator+(Condition c)
+  {
+    return static_cast<uint8_t>(c);
+  }
 }

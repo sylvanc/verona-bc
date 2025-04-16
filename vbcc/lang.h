@@ -18,8 +18,8 @@ namespace vbcc
 
   // Symbols.
   inline const auto Equals = TokenDef("=");
-  inline const auto LParen = TokenDef("(");
-  inline const auto RParen = TokenDef(")");
+  inline const auto LParen = TokenDef("lparen");
+  inline const auto RParen = TokenDef("rparen");
   inline const auto Comma = TokenDef(",");
   inline const auto Colon = TokenDef(":");
 
@@ -61,7 +61,6 @@ namespace vbcc
   inline const auto Load = TokenDef("load");
   inline const auto Store = TokenDef("store");
   inline const auto Lookup = TokenDef("lookup");
-  inline const auto Arg = TokenDef("arg");
   inline const auto Call = TokenDef("call");
 
   // Terminators.
@@ -144,7 +143,10 @@ namespace vbcc
   inline const auto Type = TokenDef("type");
   inline const auto Label = TokenDef("label");
   inline const auto Labels = TokenDef("labels");
+  inline const auto Arg = TokenDef("arg");
   inline const auto Args = TokenDef("args");
+  inline const auto ArgMove = TokenDef("argmove");
+  inline const auto ArgCopy = TokenDef("argcopy");
   inline const auto Body = TokenDef("body");
 
   // Convenient names.

@@ -4,10 +4,178 @@
 
 namespace vbcc
 {
+  using namespace vbci;
+
+  struct e
+  {
+    Op op;
+    uint8_t arg0 = 0;
+    uint8_t arg1 = 0;
+    uint8_t arg2 = 0;
+
+    operator Code() const
+    {
+      return Code(op) | (arg0 << 8) | (arg1 << 16) | (arg2 << 24);
+    }
+  };
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, e&& e)
+  {
+    code.push_back(e);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, int16_t v)
+  {
+    code.push_back(v);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, uint16_t v)
+  {
+    code.push_back(v);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, int32_t v)
+  {
+    code.push_back(v);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, uint32_t v)
+  {
+    code.push_back(v);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, int64_t v)
+  {
+    code.push_back(v & 0xFFFFFFFF);
+    code.push_back((v >> 32) & 0xFFFFFFFF);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, uint64_t v)
+  {
+    code.push_back(v & 0xFFFFFFFF);
+    code.push_back((v >> 32) & 0xFFFFFFFF);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, float v)
+  {
+    auto t = std::bit_cast<uint32_t>(v);
+    code.push_back(t);
+    return code;
+  }
+
+  inline std::vector<Code>& operator<<(std::vector<Code>& code, double v)
+  {
+    auto t = std::bit_cast<uint64_t>(v);
+    code.push_back(t);
+    return code;
+  }
+
+  inline std::optional<uint8_t> val(Node ptype)
+  {
+    if (ptype == Type)
+      ptype = ptype / Type;
+
+    if (ptype == None)
+      return +ValueType::None;
+    if (ptype == Bool)
+      return +ValueType::Bool;
+    if (ptype == I8)
+      return +ValueType::I8;
+    if (ptype == I16)
+      return +ValueType::I16;
+    if (ptype == I32)
+      return +ValueType::I32;
+    if (ptype == I64)
+      return +ValueType::I64;
+    if (ptype == U8)
+      return +ValueType::U8;
+    if (ptype == U16)
+      return +ValueType::U16;
+    if (ptype == U32)
+      return +ValueType::U32;
+    if (ptype == U64)
+      return +ValueType::U64;
+    if (ptype == F32)
+      return +ValueType::F32;
+    if (ptype == F64)
+      return +ValueType::F64;
+
+    return {};
+  }
+
+  inline uint8_t rgn(Node node)
+  {
+    if (node == RegionRC)
+      return +RegionType::RegionRC;
+    if (node == RegionGC)
+      return +RegionType::RegionGC;
+    if (node == RegionArena)
+      return +RegionType::RegionArena;
+
+    return uint8_t(-1);
+  }
+
+  template<typename T>
+  inline T lit(Node node)
+  {
+    auto view = node->location().view();
+    auto first = view.data();
+    auto last = first + view.size();
+    T t = 0;
+
+    if (node == Bin)
+      std::from_chars(first + 2, last, t, 2);
+    else if (node == Oct)
+      std::from_chars(first + 2, last, t, 8);
+    else if (node == Hex)
+      std::from_chars(first + 2, last, t, 16);
+    else if (node == Int)
+      std::from_chars(first, last, t, 10);
+
+    return t;
+  }
+
+  template<>
+  inline float lit<float>(Node node)
+  {
+    auto view = node->location().view();
+    auto first = view.data();
+    auto last = first + view.size();
+    float t = 0;
+
+    if (node == Float)
+      std::from_chars(first, last, t);
+    else if (node == HexFloat)
+      std::from_chars(first + 2, last, t);
+
+    return t;
+  }
+
+  template<>
+  inline double lit<double>(Node node)
+  {
+    auto view = node->location().view();
+    auto first = view.data();
+    auto last = first + view.size();
+    double t = 0;
+
+    if (node == Float)
+      std::from_chars(first, last, t);
+    else if (node == HexFloat)
+      std::from_chars(first + 2, last, t);
+
+    return t;
+  }
+
   PassDef bytecode()
   {
-    using namespace vbci;
-
     struct FuncState
     {
       Node func;
@@ -178,47 +346,21 @@ namespace vbcc
         // Accumulate primitive classes.
         T(Primitive)[Primitive] >> [state](Match& _) -> Node {
           auto primitive = _(Primitive);
-          auto ptype = primitive / Type / Type;
-          ValueType vtype;
+          auto vtype = val(primitive / Type);
 
-          if (ptype == None)
-            vtype = ValueType::None;
-          else if (ptype == Bool)
-            vtype = ValueType::Bool;
-          else if (ptype == I8)
-            vtype = ValueType::I8;
-          else if (ptype == I16)
-            vtype = ValueType::I16;
-          else if (ptype == I32)
-            vtype = ValueType::I32;
-          else if (ptype == I64)
-            vtype = ValueType::I64;
-          else if (ptype == U8)
-            vtype = ValueType::U8;
-          else if (ptype == U16)
-            vtype = ValueType::U16;
-          else if (ptype == U32)
-            vtype = ValueType::U32;
-          else if (ptype == U64)
-            vtype = ValueType::U64;
-          else if (ptype == F32)
-            vtype = ValueType::F32;
-          else if (ptype == F64)
-            vtype = ValueType::F64;
-          else
+          if (!vtype)
           {
             state->error = true;
-            return err(ptype, "unknown primitive type");
+            return err(primitive / Type, "unknown primitive type");
           }
 
-          auto idx = static_cast<size_t>(vtype);
-          if (state->primitives.at(idx))
+          if (state->primitives.at(*vtype))
           {
             state->error = true;
-            return err(ptype, "duplicate primitive class");
+            return err(primitive / Type, "duplicate primitive class");
           }
 
-          state->primitives[idx] = primitive;
+          state->primitives[*vtype] = primitive;
           return NoChange;
         },
 
@@ -374,8 +516,8 @@ namespace vbcc
 
           for (auto& method : *methods)
           {
-            code.push_back(state->get_method_id(method / Lhs).value());
-            code.push_back(state->get_func_id(method / Rhs).value());
+            code.push_back(*state->get_method_id(method / Lhs));
+            code.push_back(*state->get_func_id(method / Rhs));
           }
         }
         else
@@ -391,15 +533,15 @@ namespace vbcc
         code.push_back(fields->size());
 
         for (auto& field : *fields)
-          code.push_back(state->get_field_id(field / GlobalId).value());
+          code.push_back(*state->get_field_id(field / GlobalId));
 
         auto methods = c / Methods;
         code.push_back(methods->size());
 
         for (auto& method : *methods)
         {
-          code.push_back(state->get_method_id(method / Lhs).value());
-          code.push_back(state->get_func_id(method / Rhs).value());
+          code.push_back(*state->get_method_id(method / Lhs));
+          code.push_back(*state->get_func_id(method / Rhs));
         }
       }
 
@@ -414,22 +556,396 @@ namespace vbcc
            (func_state.func / Labels)->size()));
 
         // TODO: 64 bit PC for each label.
-        // do all headers, then all code?
+        // do all headers, then all code, and then we need to know where our
+        // header is to write our label values?
         // or do header+code, and then we need to know the size of the code to
         // find the next header?
+        auto dst = [&func_state](Node stmt) {
+          return *func_state.get_register_id(stmt / LocalId);
+        };
+
+        auto lhs = [&func_state](Node stmt) {
+          return *func_state.get_register_id(stmt / Lhs);
+        };
+
+        auto rhs = [&func_state](Node stmt) {
+          return *func_state.get_register_id(stmt / Rhs);
+        };
+
+        auto src = rhs;
+
+        auto cls = [state](Node stmt) {
+          return *state->get_class_id(stmt / GlobalId);
+        };
+
+        auto fld = [state](Node stmt) {
+          return *state->get_field_id(stmt / GlobalId);
+        };
+
+        auto mth = [state](Node stmt) {
+          return *state->get_method_id(stmt / Func);
+        };
+
+        auto fn = [state](Node stmt) {
+          return *state->get_func_id(stmt / Func);
+        };
 
         for (auto label : *(func_state.func / Labels))
         {
           auto pc = code.size();
+
+          // TODO: save the pc for this label
           (void)pc;
 
           for (auto stmt : *(label / Body))
           {
-            // TODO:
+            if (stmt == Const)
+            {
+              auto t = stmt / Type;
+              auto v = stmt / Rhs;
+
+              if (t == None)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)};
+              }
+              else if (t == Bool)
+              {
+                if ((stmt / Rhs) == True)
+                  code << e{Op::Const, dst(stmt), *val(t), true};
+                else
+                  code << e{Op::Const, dst(stmt), *val(t), false};
+              }
+              else if (t == I8)
+              {
+                code << e{
+                  Op::Const,
+                  dst(stmt),
+                  *val(t),
+                  static_cast<uint8_t>(lit<int8_t>(v))};
+              }
+              else if (t == U8)
+              {
+                code << e{Op::Const, dst(stmt), *val(t), lit<uint8_t>(v)};
+              }
+              else if (t == I16)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<int16_t>(v);
+              }
+              else if (t == U16)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<uint16_t>(v);
+              }
+              else if (t == I32)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<int32_t>(v);
+              }
+              else if (t == U32)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<uint32_t>(v);
+              }
+              else if (t == I64)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<int64_t>(v);
+              }
+              else if (t == U64)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<uint64_t>(v);
+              }
+              else if (t == F32)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<float>(v);
+              }
+              else if (t == F64)
+              {
+                code << e{Op::Const, dst(stmt), *val(t)} << lit<double>(v);
+              }
+            }
+            else if (stmt == Convert)
+            {
+              code << e{Op::Convert, dst(stmt), *val(stmt / Type), rhs(stmt)};
+            }
+            else if (stmt == Stack)
+            {
+              code << e{Op::Stack, dst(stmt)} << cls(stmt);
+            }
+            else if (stmt == Heap)
+            {
+              code << e{Op::Heap, dst(stmt), rhs(stmt)} << cls(stmt);
+            }
+            else if (stmt == Region)
+            {
+              code << e{Op::Region, dst(stmt), rgn(stmt / Type)} << cls(stmt);
+            }
+            else if (stmt == Copy)
+            {
+              code << e{Op::Copy, dst(stmt), src(stmt)};
+            }
+            else if (stmt == Move)
+            {
+              code << e{Op::Move, dst(stmt), src(stmt)};
+            }
+            else if (stmt == Drop)
+            {
+              code << e{Op::Drop, dst(stmt)};
+            }
+            else if (stmt == Ref)
+            {
+              code << e{Op::Ref, dst(stmt), src(stmt)} << fld(stmt);
+            }
+            else if (stmt == Load)
+            {
+              code << e{Op::Load, dst(stmt), rhs(stmt)};
+            }
+            else if (stmt == Store)
+            {
+              code << e{Op::Store, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Lookup)
+            {
+              if ((stmt / Rhs) == None)
+              {
+                // Static lookup.
+                code << e{Op::Lookup, dst(stmt), +CallType::FunctionStatic}
+                     << fn(stmt);
+              }
+              else
+              {
+                // Dynamic lookup.
+                code << e{Op::Lookup,
+                          dst(stmt),
+                          +CallType::FunctionDynamic,
+                          src(stmt)}
+                     << mth(stmt);
+              }
+            }
+            else if (stmt == Call)
+            {
+              // Set up the arguments.
+              auto args = stmt / Args;
+              uint8_t i = 0;
+
+              for (auto arg : *args)
+              {
+                ArgType t;
+
+                if ((arg / Type) == Move)
+                  t = ArgType::Move;
+                else
+                  t = ArgType::Copy;
+
+                code << e{Op::Arg, i++, +t, src(arg)};
+              }
+
+              if ((stmt / Func) == GlobalId)
+              {
+                // Static call.
+                code << e{Op::Call, dst(stmt), +CallType::FunctionStatic}
+                     << fn(stmt);
+              }
+              else
+              {
+                // Dynamic call.
+                code << e{
+                  Op::Call, dst(stmt), +CallType::FunctionDynamic, src(stmt)};
+              }
+            }
+            else if (stmt == Add)
+            {
+              code << e{Op::Add, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Sub)
+            {
+              code << e{Op::Sub, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Mul)
+            {
+              code << e{Op::Mul, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Div)
+            {
+              code << e{Op::Div, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Mod)
+            {
+              code << e{Op::Mod, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Pow)
+            {
+              code << e{Op::Pow, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == And)
+            {
+              code << e{Op::And, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Or)
+            {
+              code << e{Op::Or, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Xor)
+            {
+              code << e{Op::Xor, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Shl)
+            {
+              code << e{Op::Shl, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Shr)
+            {
+              code << e{Op::Shr, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Eq)
+            {
+              code << e{Op::Eq, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Ne)
+            {
+              code << e{Op::Ne, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Lt)
+            {
+              code << e{Op::Lt, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Le)
+            {
+              code << e{Op::Le, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Gt)
+            {
+              code << e{Op::Gt, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Ge)
+            {
+              code << e{Op::Ge, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Min)
+            {
+              code << e{Op::Min, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Max)
+            {
+              code << e{Op::Max, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == LogBase)
+            {
+              code << e{Op::LogBase, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Atan2)
+            {
+              code << e{Op::Atan2, dst(stmt), lhs(stmt), rhs(stmt)};
+            }
+            else if (stmt == Neg)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Neg, lhs(stmt)};
+            }
+            else if (stmt == Not)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Not, lhs(stmt)};
+            }
+            else if (stmt == Abs)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Abs, lhs(stmt)};
+            }
+            else if (stmt == Ceil)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Ceil, lhs(stmt)};
+            }
+            else if (stmt == Floor)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Floor, lhs(stmt)};
+            }
+            else if (stmt == Exp)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Exp, lhs(stmt)};
+            }
+            else if (stmt == Log)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Log, lhs(stmt)};
+            }
+            else if (stmt == Sqrt)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Sqrt, lhs(stmt)};
+            }
+            else if (stmt == Cbrt)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Cbrt, lhs(stmt)};
+            }
+            else if (stmt == IsInf)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::IsInf, lhs(stmt)};
+            }
+            else if (stmt == IsNaN)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::IsNaN, lhs(stmt)};
+            }
+            else if (stmt == Sin)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Sin, lhs(stmt)};
+            }
+            else if (stmt == Cos)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Cos, lhs(stmt)};
+            }
+            else if (stmt == Tan)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Tan, lhs(stmt)};
+            }
+            else if (stmt == Asin)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Asin, lhs(stmt)};
+            }
+            else if (stmt == Acos)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Acos, lhs(stmt)};
+            }
+            else if (stmt == Atan)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Atan, lhs(stmt)};
+            }
+            else if (stmt == Sinh)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Sinh, lhs(stmt)};
+            }
+            else if (stmt == Cosh)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Cosh, lhs(stmt)};
+            }
+            else if (stmt == Tanh)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Tanh, lhs(stmt)};
+            }
+            else if (stmt == Asinh)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Asinh, lhs(stmt)};
+            }
+            else if (stmt == Acosh)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Acosh, lhs(stmt)};
+            }
+            else if (stmt == Atanh)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Atanh, lhs(stmt)};
+            }
+            else if (stmt == Const_E)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Const_E};
+            }
+            else if (stmt == Const_Pi)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Const_Pi};
+            }
+            else if (stmt == Const_Inf)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Const_Inf};
+            }
+            else if (stmt == Const_NaN)
+            {
+              code << e{Op::MathOp, dst(stmt), +MathOp::Const_NaN};
+            }
           }
 
           auto term = label / Return;
           (void)term;
+          // TODO: tailcall, return, cond, jump.
         }
       }
 

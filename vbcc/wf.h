@@ -12,7 +12,7 @@ namespace vbcc
     None | Bool | I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | F32 | F64;
 
   inline const auto wfLiteral =
-    None | Bool | Bin | Oct | Hex | Int | Float | HexFloat;
+    None | True | False | Bin | Oct | Hex | Int | Float | HexFloat;
 
   inline const auto wfBinop = Add | Sub | Mul | Div | Mod | And | Or | Xor |
     Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
@@ -73,10 +73,11 @@ namespace vbcc
     | (Drop <<= LocalId)
     | (Ref <<= wfDst * wfSrc * GlobalId)
     | (Load <<= wfDst * wfSrc)
-    | (Store <<= wfDst * wfSrc * LocalId)
-    | (Lookup <<= wfDst * (Rhs >>= (LocalId | None)) * GlobalId)
-    | (Arg <<= Int * (Type >>= (Copy | Move)) * (Rhs >>= LocalId))
+    | (Store <<= wfDst * wfLhs * wfRhs)
+    | (Lookup <<= wfDst * (Rhs >>= (LocalId | None)) * (Func >>= GlobalId))
     | (Call <<= wfDst * (Func >>= (GlobalId | LocalId)) * Args)
+    | (Args <<= Arg++)
+    | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * (Rhs >>= LocalId))
     | (Tailcall <<= (Func >>= (GlobalId | LocalId)) * Args)
     | (Return <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))

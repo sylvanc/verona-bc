@@ -70,7 +70,7 @@ namespace vbci
     {
       auto lo = code.at(pc++);
       auto hi = code.at(pc++);
-      return (static_cast<int64_t>(hi) << 32) | lo;
+      return (int64_t(hi) << 32) | int64_t(lo);
     }
 
     uint16_t load_u16(PC& pc)
@@ -87,7 +87,7 @@ namespace vbci
     {
       auto lo = code.at(pc++);
       auto hi = code.at(pc++);
-      return (static_cast<uint64_t>(hi) << 32) | lo;
+      return (uint64_t(hi) << 32) | uint64_t(lo);
     }
 
     float load_f32(PC& pc)

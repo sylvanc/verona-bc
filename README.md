@@ -4,6 +4,9 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 ## To-Do List
 
+* Check constants are in-bounds with `from_chars`.
+* A register in a label may get initialized in a label that comes after it.
+  * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
 * Compile VIR to byte code.
 * VIR for "lambda" call and try.
 * Type checking in the byte code?
