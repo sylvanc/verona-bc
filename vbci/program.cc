@@ -115,7 +115,7 @@ namespace vbci
     {
       // This creates a mapping from a field name to an index into the object.
       // TODO: field types
-      FieldId name = load_u32(pc);
+      Id name = load_u32(pc);
       cls.fields.emplace(name, i);
     }
   }
@@ -128,8 +128,8 @@ namespace vbci
     for (size_t i = 0; i < num_methods; i++)
     {
       // This creates a mapping from a method name to a function pointer.
-      MethodId method_id = load_u32(pc);
-      FuncId func_id = load_u32(pc);
+      Id method_id = load_u32(pc);
+      Id func_id = load_u32(pc);
       cls.methods.emplace(method_id, &functions.at(func_id));
     }
   }

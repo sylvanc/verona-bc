@@ -8,7 +8,7 @@ namespace vbci
   struct Cown
   {
     // TODO: more complex type?
-    TypeId type_id;
+    Id type_id;
     ARC arc;
     Value content;
 

@@ -2,7 +2,7 @@
 
 namespace vbci
 {
-  Object* Object::create(ClassId class_id, Location loc, size_t fields)
+  Object* Object::create(Id class_id, Location loc, size_t fields)
   {
     auto obj =
       static_cast<Object*>(malloc(sizeof(Object) + (fields * sizeof(Value))));

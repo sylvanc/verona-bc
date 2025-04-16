@@ -19,12 +19,12 @@ namespace vbci
 
     // Precalculate an offset into the object for each field name.
     // TODO: field types?
-    std::unordered_map<FieldId, FieldIdx> fields;
+    std::unordered_map<Id, FieldIdx> fields;
 
     // Precalculate a function pointer for each method name.
-    std::unordered_map<MethodId, Function*> methods;
+    std::unordered_map<Id, Function*> methods;
 
-    Function* method(MethodId w)
+    Function* method(Id w)
     {
       auto find = methods.find(w);
       if (find == methods.end())

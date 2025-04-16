@@ -122,10 +122,10 @@ namespace vbci
     }
 
     void drop();
-    Value makeref(Program* program, FieldId field);
+    Value makeref(Program* program, Id field);
     Value load();
     Value store(Value& v);
-    Function* method(Program* program, MethodId w);
+    Function* method(Program* program, Id w);
     Value convert(ValueType to);
     Function* function();
     Location location();

@@ -4,7 +4,7 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 ## To-Do List
 
-* Check that global IDs in operations are valid.
+* Check that class/field/method/function IDs in operations are valid.
 * A register in a label may get initialized in a label that comes after it.
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
 * Compile VIR to byte code.

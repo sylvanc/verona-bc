@@ -13,6 +13,10 @@ namespace vbcc
 
   // Identifiers.
   inline const auto GlobalId = TokenDef("globalid", flag::print);
+  inline const auto ClassId = TokenDef("globalid", flag::print);
+  inline const auto FieldId = TokenDef("fieldid", flag::print);
+  inline const auto MethodId = TokenDef("methodid", flag::print);
+  inline const auto FunctionId = TokenDef("functionid", flag::print);
   inline const auto LocalId = TokenDef("localid", flag::print);
   inline const auto LabelId = TokenDef("labelid", flag::print);
 
@@ -41,11 +45,6 @@ namespace vbcc
   inline const auto U64 = TokenDef("u64");
   inline const auto F32 = TokenDef("f32");
   inline const auto F64 = TokenDef("f64");
-  // inline const auto Object = TokenDef("object");
-  // inline const auto Cown = TokenDef("cown");
-  // inline const auto Ref = TokenDef("ref");
-  // inline const auto CownRef = TokenDef("cownref");
-  // inline const auto Function = TokenDef("function");
 
   // Op codes.
   inline const auto Global = TokenDef("global");
@@ -150,6 +149,9 @@ namespace vbcc
   inline const auto ArgMove = TokenDef("argmove");
   inline const auto ArgCopy = TokenDef("argcopy");
   inline const auto Body = TokenDef("body");
+  inline const auto FnPointer = TokenDef("fnpointer");
+  inline const auto CallDyn = TokenDef("calldyn");
+  inline const auto TailcallDyn = TokenDef("tailcalldyn");
 
   // Convenient names.
   inline const auto Lhs = TokenDef("lhs");
@@ -225,10 +227,13 @@ namespace vbcc
       Load,
       Store,
       Lookup,
-      Call);
+      FnPointer,
+      Call,
+      CallDyn);
 
   const auto Statement = Def / T(Drop, Arg);
-  const auto Terminator = T(Tailcall, Return, Cond, Jump);
+  const auto Terminator =
+    T(Tailcall, TailcallDyn, Return, Raise, Throw, Cond, Jump);
 
   Parse parser();
   PassDef statements();

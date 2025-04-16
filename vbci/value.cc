@@ -48,7 +48,7 @@ namespace vbci
     tag = ValueType::Invalid;
   }
 
-  Value Value::makeref(Program* program, FieldId field)
+  Value Value::makeref(Program* program, Id field)
   {
     switch (tag)
     {
@@ -107,7 +107,7 @@ namespace vbci
     }
   }
 
-  Function* Value::method(Program* program, MethodId w)
+  Function* Value::method(Program* program, Id w)
   {
     if (tag == ValueType::Object)
       return program->classes.at(obj->class_id).method(w);

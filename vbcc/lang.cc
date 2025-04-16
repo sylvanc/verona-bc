@@ -124,19 +124,23 @@ namespace vbcc
 
         // User-defined class.
         (T(Class) << End) * T(GlobalId)[GlobalId] >>
-          [](Match& _) { return Class << _(GlobalId) << Fields << Methods; },
+          [](Match& _) {
+            return Class << (ClassId ^ _(GlobalId)) << Fields << Methods;
+          },
 
         (T(Class) << T(GlobalId))[Class] * T(GlobalId)[GlobalId] * T(Colon) *
             PrimitiveType[Type] >>
           [](Match& _) {
-            (_(Class) / Fields) << (Field << _(GlobalId) << (Type << _(Type)));
+            (_(Class) / Fields)
+              << (Field << (FieldId ^ _(GlobalId)) << (Type << _(Type)));
             return _(Class);
           },
 
         (T(Class) << T(GlobalId))[Class] * T(GlobalId)[Lhs] *
             T(GlobalId)[Rhs] >>
           [](Match& _) {
-            (_(Class) / Methods) << (Method << _(Lhs) << _(Rhs));
+            (_(Class) / Methods)
+              << (Method << (MethodId ^ _(Lhs)) << (FunctionId ^ _(Rhs)));
             return _(Class);
           },
 
@@ -144,7 +148,7 @@ namespace vbcc
         T(Func) * T(GlobalId)[GlobalId] * T(LParen) * T(Param)++[Param] *
             T(RParen) * T(Colon) * PrimitiveType[Type] >>
           [](Match& _) {
-            return Func << _(GlobalId) << (Params << _[Param])
+            return Func << (FunctionId ^ _(GlobalId)) << (Params << _[Param])
                         << (Type << _(Type)) << Labels;
           },
 
@@ -202,15 +206,19 @@ namespace vbcc
 
         // Allocation.
         Dst * T(Stack) * T(GlobalId)[GlobalId] >>
-          [](Match& _) { return Stack << _(LocalId) << _(GlobalId); },
+          [](Match& _) {
+            return Stack << _(LocalId) << (ClassId ^ _(GlobalId));
+          },
 
         Dst * T(Heap) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
-          [](Match& _) { return Heap << _(LocalId) << _(Rhs) << _(GlobalId); },
+          [](Match& _) {
+            return Heap << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId));
+          },
 
         Dst * T(Region) * T(RegionRC, RegionGC, RegionArena)[Rhs] *
             T(GlobalId)[GlobalId] >>
           [](Match& _) {
-            return Region << _(LocalId) << _(Rhs) << _(GlobalId);
+            return Region << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId));
           },
 
         // Register operations.
@@ -225,7 +233,9 @@ namespace vbcc
 
         // Reference operations.
         Dst * T(Ref) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
-          [](Match& _) { return Ref << _(LocalId) << _(Rhs) << _(GlobalId); },
+          [](Match& _) {
+            return Ref << _(LocalId) << _(Rhs) << (FieldId ^ _(GlobalId));
+          },
 
         Dst * T(Load) * T(LocalId)[Rhs] >>
           [](Match& _) { return Load << _(LocalId) << _(Rhs); },
@@ -235,26 +245,42 @@ namespace vbcc
 
         // Static lookup.
         Dst * T(Lookup) * T(GlobalId)[GlobalId] >>
-          [](Match& _) { return Lookup << _(LocalId) << None << _(GlobalId); },
+          [](Match& _) {
+            return FnPointer << _(LocalId) << (FunctionId ^ _(GlobalId));
+          },
 
         // Dynamic lookup.
         Dst * T(Lookup) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
           [](Match& _) {
-            return Lookup << _(LocalId) << _(Rhs) << _(GlobalId);
+            return Lookup << _(LocalId) << _(Rhs) << (MethodId ^ _(GlobalId));
           },
 
-        // Call.
+        // Static call.
         // TODO: return/raise/throw
-        Dst * T(Call) * T(GlobalId, LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
+        Dst * T(Call) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
             T(RParen) >>
           [](Match& _) {
-            return Call << _(LocalId) << _(Lhs) << (Args << _[Args]);
+            return Call << _(LocalId) << (FunctionId ^ _(GlobalId))
+                        << (Args << _[Args]);
+          },
+
+        // Dynamic call.
+        Dst * T(Call) * T(LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
+            T(RParen) >>
+          [](Match& _) {
+            return CallDyn << _(LocalId) << _(Lhs) << (Args << _[Args]);
           },
 
         // Terminators.
-        T(Tailcall) * T(GlobalId, LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
+        T(Tailcall) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
             T(RParen) >>
-          [](Match& _) { return Tailcall << _(Lhs) << (Args << _[Args]); },
+          [](Match& _) {
+            return Tailcall << (FunctionId ^ _(GlobalId)) << (Args << _[Args]);
+          },
+
+        T(Tailcall) * T(LocalId)[LocalId] * T(LParen) * T(Arg)++[Args] *
+            T(RParen) >>
+          [](Match& _) { return TailcallDyn << _(Lhs) << (Args << _[Args]); },
 
         T(Return) * T(LocalId)[LocalId] >>
           [](Match& _) { return Return << _(LocalId); },

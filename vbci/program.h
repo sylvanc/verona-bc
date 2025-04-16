@@ -19,17 +19,9 @@ namespace vbci
     std::filesystem::path file;
     std::vector<Code> code;
 
-    // Lookup FuncId as an index into this vector.
-    // FuncId indexes are unique to name plus arity.
     std::vector<Function> functions;
-
-    // Lookup ValueType as an index into this vector.
     std::vector<Class> primitives;
-
-    // Lookup ClassId as an index into this vector.
     std::vector<Class> classes;
-
-    // Lookup GlobalId as an index into this vector.
     std::vector<Value> globals;
 
     static Program& get()
@@ -38,7 +30,7 @@ namespace vbci
       return program;
     }
 
-    Function* get_function(FuncId id)
+    Function* get_function(Id id)
     {
       if (id >= functions.size())
         throw Value(Error::UnknownFunction);

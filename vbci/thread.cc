@@ -478,7 +478,7 @@ namespace vbci
     }
   }
 
-  Value Thread::alloc(ClassId class_id, Location loc)
+  Value Thread::alloc(Id class_id, Location loc)
   {
     // TODO: error if loc is immortal or immutable?
     auto fields = program->classes.at(class_id).fields.size();

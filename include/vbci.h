@@ -7,12 +7,7 @@ namespace vbci
   // Each instruction is 32 bits, with the first byte being the opcode, followed
   // by 3 8-bit register indices.
   using Code = uint32_t;
-  using GlobalId = uint32_t;
-  using TypeId = uint32_t;
-  using ClassId = uint32_t;
-  using FuncId = uint32_t;
-  using FieldId = uint32_t;
-  using MethodId = uint32_t;
+  using Id = uint32_t;
 
   inline const auto MagicNumber = Code(0xDEC0ADDE);
   inline const auto CurrentVersion = Code(0);
@@ -95,7 +90,7 @@ namespace vbci
     // Arg0 = dst.
     // Arg1 = call type: function static or function dynamic.
     // Arg2 = src, ignored if static.
-    // Stream: 32 bit function ID.
+    // Stream: 32 bit function ID (static) or method ID (dynamic).
     Lookup,
 
     // Set a value as an argument index in the next frame. Use this to set up

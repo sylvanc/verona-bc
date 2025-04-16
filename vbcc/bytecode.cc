@@ -238,16 +238,16 @@ namespace vbcc
     {
       bool error = false;
 
-      std::unordered_map<std::string, FuncId> func_ids;
-      std::unordered_map<std::string, ClassId> class_ids;
-      std::unordered_map<std::string, FieldId> field_ids;
-      std::unordered_map<std::string, MethodId> method_ids;
+      std::unordered_map<std::string, Id> func_ids;
+      std::unordered_map<std::string, Id> class_ids;
+      std::unordered_map<std::string, Id> field_ids;
+      std::unordered_map<std::string, Id> method_ids;
 
       std::vector<Node> primitives;
       std::vector<Node> classes;
       std::vector<FuncState> functions;
 
-      std::optional<ClassId> get_class_id(Node id)
+      std::optional<Id> get_class_id(Node id)
       {
         auto name = std::string(id->location().view());
         auto find = class_ids.find(name);
@@ -260,7 +260,7 @@ namespace vbcc
 
       bool add_class(Node cls)
       {
-        auto name = std::string((cls / GlobalId)->location().view());
+        auto name = std::string((cls / ClassId)->location().view());
         auto find = class_ids.find(name);
 
         if (find != class_ids.end())
@@ -271,7 +271,7 @@ namespace vbcc
         return true;
       }
 
-      std::optional<FieldId> get_field_id(Node id)
+      std::optional<Id> get_field_id(Node id)
       {
         auto name = std::string(id->location().view());
         auto find = field_ids.find(name);
@@ -284,14 +284,14 @@ namespace vbcc
 
       void add_field(Node field)
       {
-        auto name = std::string((field / GlobalId)->location().view());
+        auto name = std::string((field / FieldId)->location().view());
         auto find = field_ids.find(name);
 
         if (find == field_ids.end())
           field_ids.insert({name, field_ids.size()});
       }
 
-      std::optional<MethodId> get_method_id(Node id)
+      std::optional<Id> get_method_id(Node id)
       {
         auto name = std::string(id->location().view());
         auto find = method_ids.find(name);
@@ -311,7 +311,7 @@ namespace vbcc
           method_ids.insert({name, method_ids.size()});
       }
 
-      std::optional<FuncId> get_func_id(Node id)
+      std::optional<Id> get_func_id(Node id)
       {
         auto name = std::string(id->location().view());
         auto find = func_ids.find(name);
@@ -331,7 +331,7 @@ namespace vbcc
 
       FuncState& add_func(Node func)
       {
-        auto name = std::string((func / GlobalId)->location().view());
+        auto name = std::string((func / FunctionId)->location().view());
         func_ids.insert({name, func_ids.size()});
         functions.push_back(func);
 
@@ -377,7 +377,7 @@ namespace vbcc
           if (!state->add_class(_(Class)))
           {
             state->error = true;
-            return err(_(Class) / GlobalId, "duplicate class name");
+            return err(_(Class) / ClassId, "duplicate class name");
           }
           return NoChange;
         },
@@ -405,11 +405,12 @@ namespace vbcc
         // Accumulate functions.
         T(Func)[Func] >> [state](Match& _) -> Node {
           auto func = _(Func);
+          auto func_id = func / FunctionId;
 
-          if (state->get_func_id(func / GlobalId))
+          if (state->get_func_id(func_id))
           {
             state->error = true;
-            return err(func / GlobalId, "duplicate function name");
+            return err(func / FunctionId, "duplicate function name");
           }
 
           auto& func_state = state->add_func(func);
@@ -417,19 +418,19 @@ namespace vbcc
           if ((func / Labels)->size() == 0)
           {
             state->error = true;
-            return err(func / GlobalId, "function has no labels");
+            return err(func_id, "function has no labels");
           }
 
           if ((func / Labels)->size() >= MaxRegisters)
           {
             state->error = true;
-            return err(func / GlobalId, "function has too many labels");
+            return err(func_id, "function has too many labels");
           }
 
           if ((func / Params)->size() >= MaxRegisters)
           {
             state->error = true;
-            return err(func / GlobalId, "function has too many params");
+            return err(func_id, "function has too many params");
           }
 
           // Register label names.
@@ -458,7 +459,7 @@ namespace vbcc
         // Check that all labels in a function are defined.
         T(LabelId)[LabelId] >> [state](Match& _) -> Node {
           auto label = _(LabelId);
-          auto& func_state = state->get_func(label->parent(Func) / GlobalId);
+          auto& func_state = state->get_func(label->parent(Func) / FunctionId);
 
           if (!func_state.get_label_id(label))
           {
@@ -473,7 +474,7 @@ namespace vbcc
         Def[Body] >> [state](Match& _) -> Node {
           auto stmt = _(Body);
           auto dst = stmt / LocalId;
-          auto& func_state = state->get_func(dst->parent(Func) / GlobalId);
+          auto& func_state = state->get_func(dst->parent(Func) / FunctionId);
 
           if (func_state.add_register(dst))
           {
@@ -494,7 +495,7 @@ namespace vbcc
         // Check that all registers in a function are defined.
         T(LocalId)[LocalId] >> [state](Match& _) -> Node {
           auto id = _(LocalId);
-          auto& func_state = state->get_func(id->parent(Func) / GlobalId);
+          auto& func_state = state->get_func(id->parent(Func) / FunctionId);
 
           if (!func_state.get_register_id(id))
           {
@@ -541,15 +542,15 @@ namespace vbcc
         code.push_back(fields->size());
 
         for (auto& field : *fields)
-          code.push_back(*state->get_field_id(field / GlobalId));
+          code.push_back(*state->get_field_id(field / FieldId));
 
         auto methods = c / Methods;
         code.push_back(methods->size());
 
         for (auto& method : *methods)
         {
-          code.push_back(*state->get_method_id(method / Lhs));
-          code.push_back(*state->get_func_id(method / Rhs));
+          code.push_back(*state->get_method_id(method / MethodId));
+          code.push_back(*state->get_func_id(method / FunctionId));
         }
       }
 
@@ -584,19 +585,37 @@ namespace vbcc
         auto src = rhs;
 
         auto cls = [state](Node stmt) {
-          return *state->get_class_id(stmt / GlobalId);
+          return *state->get_class_id(stmt / ClassId);
         };
 
         auto fld = [state](Node stmt) {
-          return *state->get_field_id(stmt / GlobalId);
+          return *state->get_field_id(stmt / FieldId);
         };
 
         auto mth = [state](Node stmt) {
-          return *state->get_method_id(stmt / Func);
+          return *state->get_method_id(stmt / MethodId);
         };
 
         auto fn = [state](Node stmt) {
-          return *state->get_func_id(stmt / Func);
+          return *state->get_func_id(stmt / FunctionId);
+        };
+
+        auto args = [state, &code, &src](Node stmt) {
+          // Set up the arguments.
+          auto args = stmt / Args;
+          uint8_t i = 0;
+
+          for (auto arg : *args)
+          {
+            ArgType t;
+
+            if ((arg / Type) == Move)
+              t = ArgType::Move;
+            else
+              t = ArgType::Copy;
+
+            code << e{Op::Arg, i++, +t, src(arg)};
+          }
         };
 
         for (auto label : *(func_state.func / Labels))
@@ -711,52 +730,28 @@ namespace vbcc
             }
             else if (stmt == Lookup)
             {
-              if ((stmt / Rhs) == None)
-              {
-                // Static lookup.
-                code << e{Op::Lookup, dst(stmt), +CallType::FunctionStatic}
-                     << fn(stmt);
-              }
-              else
-              {
-                // Dynamic lookup.
-                code << e{Op::Lookup,
-                          dst(stmt),
-                          +CallType::FunctionDynamic,
-                          src(stmt)}
-                     << mth(stmt);
-              }
+              code << e{Op::Lookup,
+                        dst(stmt),
+                        +CallType::FunctionDynamic,
+                        src(stmt)}
+                   << mth(stmt);
+            }
+            else if (stmt == FnPointer)
+            {
+              code << e{Op::Lookup, dst(stmt), +CallType::FunctionStatic}
+                   << fn(stmt);
             }
             else if (stmt == Call)
             {
-              // Set up the arguments.
-              auto args = stmt / Args;
-              uint8_t i = 0;
-
-              for (auto arg : *args)
-              {
-                ArgType t;
-
-                if ((arg / Type) == Move)
-                  t = ArgType::Move;
-                else
-                  t = ArgType::Copy;
-
-                code << e{Op::Arg, i++, +t, src(arg)};
-              }
-
-              if ((stmt / Func) == GlobalId)
-              {
-                // Static call.
-                code << e{Op::Call, dst(stmt), +CallType::FunctionStatic}
-                     << fn(stmt);
-              }
-              else
-              {
-                // Dynamic call.
-                code << e{
-                  Op::Call, dst(stmt), +CallType::FunctionDynamic, src(stmt)};
-              }
+              args(stmt);
+              code << e{Op::Call, dst(stmt), +CallType::FunctionStatic}
+                   << fn(stmt);
+            }
+            else if (stmt == CallDyn)
+            {
+              args(stmt);
+              code << e{
+                Op::Call, dst(stmt), +CallType::FunctionDynamic, src(stmt)};
             }
             else if (stmt == Add)
             {

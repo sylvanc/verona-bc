@@ -24,11 +24,11 @@ namespace vbcc
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfStatement = Global | Const | Stack | Heap | Region |
-    Copy | Move | Drop | Ref | Load | Store | Lookup | Arg | Call | wfBinop |
-    wfUnop | wfConst;
+    Copy | Move | Drop | Ref | Load | Store | Lookup | FnPointer | Arg | Call |
+    CallDyn | wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
-    Tailcall | Return | Raise | Throw | Cond | Jump;
+    Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
 
   inline const auto wfParserTokens = Primitive | Class | Func | GlobalId |
     LocalId | LabelId | Equals | LParen | RParen | Comma | Colon |
@@ -55,31 +55,34 @@ namespace vbcc
         (Primitive | Class | Func | LabelId | wfStatement | wfTerminator)++)
     | (Type <<= wfPrimitiveType)
     | (Primitive <<= Type * Methods)
-    | (Class <<= GlobalId * Fields * Methods)
+    | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)
-    | (Field <<= GlobalId * Type)
+    | (Field <<= FieldId * Type)
     | (Methods <<= Method++)
-    | (Method <<= (Lhs >>= GlobalId) * (Rhs >>= GlobalId))
-    | (Func <<= GlobalId * Params * Type * Labels)
+    | (Method <<= MethodId * FunctionId)
+    | (Func <<= FunctionId * Params * Type * Labels)
     | (Params <<= Param++)
     | (Param <<= LocalId * Type)
     | (Global <<= wfDst * GlobalId)
     | (Const <<= wfDst * Type * (Rhs >>= wfLiteral))
-    | (Convert <<= wfDst * Type * (Rhs >>= LocalId))
-    | (Stack <<= wfDst * GlobalId)
-    | (Heap <<= wfDst * wfSrc * GlobalId)
-    | (Region <<= wfDst * (Type >>= wfRegionType) * GlobalId)
+    | (Convert <<= wfDst * Type * wfSrc)
+    | (Stack <<= wfDst * ClassId)
+    | (Heap <<= wfDst * wfSrc * ClassId)
+    | (Region <<= wfDst * (Type >>= wfRegionType) * ClassId)
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
-    | (Ref <<= wfDst * wfSrc * GlobalId)
+    | (Ref <<= wfDst * wfSrc * FieldId)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfLhs * wfRhs)
-    | (Lookup <<= wfDst * (Rhs >>= (LocalId | None)) * (Func >>= GlobalId))
-    | (Call <<= wfDst * (Func >>= (GlobalId | LocalId)) * Args)
+    | (Lookup <<= wfDst * wfSrc * MethodId)
+    | (FnPointer <<= wfDst * FunctionId)
+    | (Call <<= wfDst * FunctionId * Args)
+    | (CallDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
-    | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * (Rhs >>= LocalId))
-    | (Tailcall <<= (Func >>= (GlobalId | LocalId)) * Args)
+    | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
+    | (Tailcall <<= FunctionId * Args)
+    | (TailcallDyn <<= wfSrc * Args)
     | (Return <<= LocalId)
     | (Raise <<= LocalId)
     | (Throw <<= LocalId)

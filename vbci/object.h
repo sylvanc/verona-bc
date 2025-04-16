@@ -20,11 +20,11 @@ namespace vbci
       ARC arc;
     };
 
-    ClassId class_id;
+    Id class_id;
     Location loc;
     Value fields[0];
 
-    static Object* create(ClassId class_id, Location loc, size_t fields);
+    static Object* create(Id class_id, Location loc, size_t fields);
 
     static Region* region(Location loc)
     {
