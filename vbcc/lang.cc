@@ -259,6 +259,12 @@ namespace vbcc
         T(Return) * T(LocalId)[LocalId] >>
           [](Match& _) { return Return << _(LocalId); },
 
+        T(Raise) * T(LocalId)[LocalId] >>
+          [](Match& _) { return Raise << _(LocalId); },
+
+        T(Throw) * T(LocalId)[LocalId] >>
+          [](Match& _) { return Throw << _(LocalId); },
+
         (T(Cond) << End) * T(LocalId)[LocalId] * T(LabelId)[Lhs] *
             T(LabelId)[Rhs] >>
           [](Match& _) { return Cond << _(LocalId) << _(Lhs) << _(Rhs); },

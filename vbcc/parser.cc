@@ -70,6 +70,8 @@ namespace vbcc
         // Terminators.
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },
         "ret\\b" >> [](auto& m) { m.add(Return); },
+        "raise\\b" >> [](auto& m) { m.add(Raise); },
+        "throw\\b" >> [](auto& m) { m.add(Throw); },
         "cond\\b" >> [](auto& m) { m.add(Cond); },
         "jump\\b" >> [](auto& m) { m.add(Jump); },
 

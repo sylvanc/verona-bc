@@ -179,6 +179,9 @@ namespace vbcc
     struct FuncState
     {
       Node func;
+      uint8_t params;
+      uint8_t labels;
+      size_t pcs;
       std::unordered_map<std::string, uint8_t> label_idxs;
       std::unordered_map<std::string, uint8_t> register_idxs;
 
@@ -331,7 +334,12 @@ namespace vbcc
         auto name = std::string((func / GlobalId)->location().view());
         func_ids.insert({name, func_ids.size()});
         functions.push_back(func);
-        return functions.back();
+
+        auto& func_state = functions.back();
+        func_state.params = (func / Params)->size();
+        func_state.labels = (func / Labels)->size();
+
+        return func_state;
       }
     };
 
@@ -545,21 +553,22 @@ namespace vbcc
         }
       }
 
-      // Functions.
+      // Function headers.
       code.push_back(state->functions.size());
 
       for (auto& func_state : state->functions)
       {
         // 8 bit label count, 8 bit param count.
-        code.push_back(
-          (((func_state.func / Params)->size() << 8) |
-           (func_state.func / Labels)->size()));
+        code.push_back((func_state.params << 8) | func_state.labels);
 
-        // TODO: 64 bit PC for each label.
-        // do all headers, then all code, and then we need to know where our
-        // header is to write our label values?
-        // or do header+code, and then we need to know the size of the code to
-        // find the next header?
+        // Reserve space for a 64 bit PC for each label.
+        func_state.pcs = code.size();
+        code.insert(code.end(), func_state.labels * 2, 0);
+      }
+
+      // Function code bodies.
+      for (auto& func_state : state->functions)
+      {
         auto dst = [&func_state](Node stmt) {
           return *func_state.get_register_id(stmt / LocalId);
         };
@@ -592,10 +601,10 @@ namespace vbcc
 
         for (auto label : *(func_state.func / Labels))
         {
+          // Save the pc for this label.
           auto pc = code.size();
-
-          // TODO: save the pc for this label
-          (void)pc;
+          code.at(func_state.pcs++) = pc & 0xFFFFFFFF;
+          code.at(func_state.pcs++) = (pc >> 32) & 0xFFFFFFFF;
 
           for (auto stmt : *(label / Body))
           {
@@ -945,7 +954,7 @@ namespace vbcc
 
           auto term = label / Return;
           (void)term;
-          // TODO: tailcall, return, cond, jump.
+          // TODO: tailcall, return, raise, throw, cond, jump.
         }
       }
 

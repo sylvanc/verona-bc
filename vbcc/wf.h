@@ -27,7 +27,8 @@ namespace vbcc
     Copy | Move | Drop | Ref | Load | Store | Lookup | Arg | Call | wfBinop |
     wfUnop | wfConst;
 
-  inline const auto wfTerminator = Tailcall | Return | Cond | Jump;
+  inline const auto wfTerminator =
+    Tailcall | Return | Raise | Throw | Cond | Jump;
 
   inline const auto wfParserTokens = Primitive | Class | Func | GlobalId |
     LocalId | LabelId | Equals | LParen | RParen | Comma | Colon |
@@ -80,6 +81,8 @@ namespace vbcc
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * (Rhs >>= LocalId))
     | (Tailcall <<= (Func >>= (GlobalId | LocalId)) * Args)
     | (Return <<= LocalId)
+    | (Raise <<= LocalId)
+    | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
     | (Jump <<= LabelId)
     | (Add <<= wfDst * wfLhs * wfRhs)

@@ -66,6 +66,8 @@ namespace vbcc
   // Terminators.
   inline const auto Tailcall = TokenDef("tailcall");
   inline const auto Return = TokenDef("ret");
+  inline const auto Raise = TokenDef("raise");
+  inline const auto Throw = TokenDef("throw");
   inline const auto Cond = TokenDef("cond");
   inline const auto Jump = TokenDef("jump");
 
