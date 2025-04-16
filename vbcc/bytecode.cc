@@ -948,8 +948,39 @@ namespace vbcc
           }
 
           auto term = label / Return;
-          (void)term;
-          // TODO: tailcall, return, raise, throw, cond, jump.
+
+          if (term == Tailcall)
+          {
+            args(term);
+            code << e{Op::Tailcall, +CallType::FunctionStatic} << fn(term);
+          }
+          else if (term == TailcallDyn)
+          {
+            args(term);
+            code << e{Op::Tailcall, +CallType::FunctionDynamic, src(term)};
+          }
+          else if (term == Return)
+          {
+            code << e{Op::Return, dst(term), +Condition::Return};
+          }
+          else if (term == Raise)
+          {
+            code << e{Op::Return, dst(term), +Condition::Raise};
+          }
+          else if (term == Throw)
+          {
+            code << e{Op::Return, dst(term), +Condition::Throw};
+          }
+          else if (term == Cond)
+          {
+            auto t = *func_state.get_label_id(term / Lhs);
+            auto f = *func_state.get_label_id(term / Rhs);
+            code << e{Op::Cond, dst(term), t, f};
+          }
+          else if (term == Jump)
+          {
+            code << e{Op::Jump, *func_state.get_label_id(term / LabelId)};
+          }
         }
       }
 
