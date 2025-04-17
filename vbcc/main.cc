@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     "vbcc",
     {statements(), labels(), assignids(state), validids(state)},
     parser()};
-  Driver d(reader);
+  Driver d(reader, &options());
   auto r = d.run(argc, argv);
 
   if (r != 0)

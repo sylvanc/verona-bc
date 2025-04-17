@@ -39,5 +39,5 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * The DSO has an entry point that returns a list of function names, with their parameter counts.
   * These functions take vbci::Value arguments and return a vbci::Value.
 * Debug info that maps instructions to file:line:column?
-* Compile byte code to LLVM IR and/or Cranelift.
+* Compile to LLVM IR and/or Cranelift.
 * AST to IR output.

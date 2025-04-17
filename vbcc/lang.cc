@@ -50,7 +50,7 @@ namespace vbcc
 
   void Options::configure(CLI::App& cli)
   {
-    cli.add_flag(
+    cli.add_option(
       "-b,--bytecode", bytecode_file, "Output bytecode to this file.");
   }
 }
