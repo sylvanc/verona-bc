@@ -3,6 +3,7 @@ add_executable(vbcc
   passes/labels.cc
   passes/parser.cc
   passes/statements.cc
+  passes/validids.cc
   bytecode.cc
   lang.cc
   main.cc

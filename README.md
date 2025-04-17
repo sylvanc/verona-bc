@@ -18,7 +18,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## To-Do List
 
-* Check that class/field/method/function IDs in operations are valid.
 * A register in a label may get initialized in a label that comes after it.
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
 * PCs could be 32 bits, which gives up to 16 GB of code.

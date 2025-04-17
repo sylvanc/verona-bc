@@ -312,9 +312,6 @@ namespace vbcc
 
   void State::gen()
   {
-    if (error)
-      return;
-
     std::vector<Code> code;
     code << MagicNumber;
     code << CurrentVersion;

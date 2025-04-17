@@ -91,6 +91,7 @@ namespace vbcc
   PassDef statements();
   PassDef labels();
   PassDef assignids(std::shared_ptr<State> state);
+  PassDef validids(std::shared_ptr<State> state);
 
   struct Options : public trieste::Options
   {
