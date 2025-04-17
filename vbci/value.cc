@@ -48,9 +48,16 @@ namespace vbci
     tag = ValueType::Invalid;
   }
 
-  Value Value::makeref(Program* program, Id field)
+  Value Value::makeref(Program* program, ArgType arg_type, Id field)
   {
-    switch (tag)
+    auto ptag = tag;
+
+    if (arg_type == ArgType::Move)
+      tag = ValueType::Invalid;
+    else
+      inc();
+
+    switch (ptag)
     {
       case ValueType::Object:
       {

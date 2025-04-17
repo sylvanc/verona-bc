@@ -7,7 +7,7 @@ namespace vbcc
     return {
       "validids",
       wfPassLabels,
-      dir::topdown | dir::once,
+      dir::bottomup | dir::once,
       {
         T(ClassId)[ClassId] >> [state](Match& _) -> Node {
           auto id = state->get_class_id(_(ClassId));
@@ -64,6 +64,25 @@ namespace vbcc
           {
             state->error = true;
             return err(_(GlobalId), "unknown global");
+          }
+
+          return NoChange;
+        },
+
+        T(Stack, Heap, Region)[Stack] >> [state](Match& _) -> Node {
+          auto alloc = _(Stack);
+          auto id = state->get_class_id(alloc / ClassId);
+
+          if (!id)
+            return NoChange;
+
+          auto args = alloc / Args;
+          auto fields = state->classes.at(*id) / Fields;
+
+          if (args->size() != fields->size())
+          {
+            state->error = true;
+            return err(args, "wrong number of arguments");
           }
 
           return NoChange;

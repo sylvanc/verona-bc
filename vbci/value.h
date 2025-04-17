@@ -130,7 +130,7 @@ namespace vbci
     }
 
     void drop();
-    Value makeref(Program* program, Id field);
+    Value makeref(Program* program, ArgType arg_type, Id field);
     Value load();
     Value store(Value& v);
     Function* method(Program* program, Id w);

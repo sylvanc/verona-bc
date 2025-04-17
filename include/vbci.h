@@ -69,7 +69,8 @@ namespace vbci
 
     // Creates a reference to a field in a target object.
     // Arg0 = dst.
-    // Arg1 = src.
+    // Arg1 = move or copy.
+    // Arg2 = src.
     // Stream: 32 bit field ID.
     Ref,
 

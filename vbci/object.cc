@@ -8,7 +8,7 @@ namespace vbci
       static_cast<Object*>(malloc(sizeof(Object) + (fields * sizeof(Value))));
     obj->class_id = class_id;
     obj->loc = loc;
-    obj->rc = 0;
+    obj->rc = 1;
 
     for (size_t i = 0; i < fields; i++)
       obj->fields[i] = Value();

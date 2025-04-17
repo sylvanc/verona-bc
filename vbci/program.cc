@@ -2,6 +2,8 @@
 
 #include "thread.h"
 
+#include <verona.h>
+
 namespace vbci
 {
   bool Program::load(std::filesystem::path& path)
@@ -136,6 +138,10 @@ namespace vbci
 
   int Program::run()
   {
+    using namespace verona::rt;
+    auto& sched = Scheduler::get();
+    (void)sched;
+
     // TODO: this is hacked up single threaded execution
     Thread thread{.program = this};
     thread.pushframe(&functions.at(0), 0, Condition::Return);

@@ -18,14 +18,16 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## To-Do List
 
+* Tailcall args are always `move`.
+  * Remove the ability to move/copy the arg.
+  * Same for label arguments.
 * A register in a label may get initialized in a label that comes after it.
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
-* PCs could be 32 bits, which gives up to 16 GB of code.
+  * Switch to labels having parameters and disallow writing to an active register.
 * Type checking in the byte code?
 * Object, cown, and region finalization and freeing.
 * Stack allocation that's unwound when a frame is popped.
 * Initializing globals.
-* An opcode for creating a ref that consumes the source?
 * Math ops for numerical limits, by type?
 * Type test.
 * Merge, freeze, extract.
@@ -35,6 +37,10 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * Standard IO? Does this need string support?
 * File API? Seems like too much.
 * Some kind of `dlopen` system for adding FFI?
+  * Provide the DSO to vbcc as well as vbci.
+  * VIR specifies the DSOs to load.
+  * The DSO has an entry point that returns a list of function names, with their parameter counts.
+  * These functions take vbci::Value arguments and return a vbci::Value.
 * Debug info that maps instructions to file:line:column?
 * Compile byte code to LLVM IR and/or Cranelift.
 * AST to IR output.

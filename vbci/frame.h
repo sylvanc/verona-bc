@@ -19,22 +19,22 @@ namespace vbci
 
     Value& local(Local idx)
     {
-      idx += base;
+      auto i = base + idx;
 
-      if ((idx < base) || (idx >= locals.size()))
+      if ((i < base) || (i >= locals.size()))
         throw Value(Error::StackOutOfBounds);
 
-      return locals.at(idx);
+      return locals.at(i);
     }
 
     Value& arg(Local idx)
     {
-      idx += (base + MaxRegisters);
+      auto i = base + MaxRegisters + idx;
 
-      if ((idx < base) || (idx >= locals.size()))
+      if ((i < base) || (i >= locals.size()))
         throw Value(Error::StackOutOfBounds);
 
-      return locals.at(idx);
+      return locals.at(i);
     }
 
     void drop()

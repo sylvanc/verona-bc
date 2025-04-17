@@ -184,20 +184,25 @@ namespace vbcc
           [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },
 
         // Allocation.
-        Dst * T(Stack) * T(GlobalId)[GlobalId] >>
+        Dst * T(Stack) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
+            T(RParen) >>
           [](Match& _) {
-            return Stack << _(LocalId) << (ClassId ^ _(GlobalId));
+            return Stack << _(LocalId) << (ClassId ^ _(GlobalId))
+                         << (Args << _[Args]);
           },
 
-        Dst * T(Heap) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
+        Dst * T(Heap) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] * T(LParen) *
+            T(Arg)++[Args] * T(RParen) >>
           [](Match& _) {
-            return Heap << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId));
+            return Heap << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId))
+                        << (Args << _[Args]);
           },
 
         Dst * T(Region) * T(RegionRC, RegionGC, RegionArena)[Rhs] *
-            T(GlobalId)[GlobalId] >>
+            T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] * T(RParen) >>
           [](Match& _) {
-            return Region << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId));
+            return Region << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId))
+                          << (Args << _[Args]);
           },
 
         // Register operations.
@@ -211,7 +216,7 @@ namespace vbcc
           [](Match& _) { return Drop << _(LocalId); },
 
         // Reference operations.
-        Dst * T(Ref) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
+        Dst * T(Ref) * T(Arg)[Rhs] * T(GlobalId)[GlobalId] >>
           [](Match& _) {
             return Ref << _(LocalId) << _(Rhs) << (FieldId ^ _(GlobalId));
           },

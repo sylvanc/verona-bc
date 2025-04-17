@@ -141,6 +141,14 @@ namespace vbcc
     return t;
   }
 
+  ArgType argtype(Node arg)
+  {
+    if ((arg / Type) == ArgMove)
+      return ArgType::Move;
+    else
+      return ArgType::Copy;
+  }
+
   std::optional<uint8_t> FuncState::get_label_id(Node id)
   {
     auto name = std::string(id->location().view());
@@ -401,16 +409,7 @@ namespace vbcc
         uint8_t i = 0;
 
         for (auto arg : *args)
-        {
-          ArgType t;
-
-          if ((arg / Type) == Move)
-            t = ArgType::Move;
-          else
-            t = ArgType::Copy;
-
-          code << e{Op::Arg, i++, +t, src(arg)};
-        }
+          code << e{Op::Arg, i++, +argtype(arg), src(arg)};
       };
 
       for (auto label : *(func_state.func / Labels))
@@ -489,14 +488,17 @@ namespace vbcc
           }
           else if (stmt == Stack)
           {
+            args(stmt);
             code << e{Op::Stack, dst(stmt)} << cls(stmt);
           }
           else if (stmt == Heap)
           {
+            args(stmt);
             code << e{Op::Heap, dst(stmt), rhs(stmt)} << cls(stmt);
           }
           else if (stmt == Region)
           {
+            args(stmt);
             code << e{Op::Region, dst(stmt), rgn(stmt / Type)} << cls(stmt);
           }
           else if (stmt == Copy)
@@ -513,7 +515,8 @@ namespace vbcc
           }
           else if (stmt == Ref)
           {
-            code << e{Op::Ref, dst(stmt), src(stmt)} << fld(stmt);
+            auto arg = stmt / Arg;
+            code << e{Op::Ref, dst(stmt), +argtype(arg), src(arg)} << fld(stmt);
           }
           else if (stmt == Load)
           {

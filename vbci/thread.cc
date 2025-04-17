@@ -147,8 +147,9 @@ namespace vbci
         case Op::Ref:
         {
           auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          dst = src.makeref(program, program->load_u32(frame->pc));
+          auto arg_type = static_cast<ArgType>(arg1(code));
+          auto& src = frame->local(arg2(code));
+          dst = src.makeref(program, arg_type, program->load_u32(frame->pc));
           break;
         }
 

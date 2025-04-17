@@ -1,0 +1,10 @@
+class @A
+  @f: i32
+
+func @main(): i32
+^start
+  $i = const i32 99
+  $a = stack @A(move $i)
+  $ref = ref move $a @f
+  $j = load $ref
+  ret $j
