@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   if (state->error)
     return -1;
 
-  wf::push_back(wfPassLabels);
+  wf::push_back(wfIR);
   state->gen();
   wf::pop_front();
   return 0;

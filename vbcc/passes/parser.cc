@@ -2,6 +2,20 @@
 
 namespace vbcc
 {
+  const auto wfParserTokens = Primitive | Class | Func | GlobalId | LocalId |
+    LabelId | Equals | LParen | RParen | Comma | Colon | wfRegionType |
+    wfPrimitiveType | wfStatement | wfTerminator | wfBinop | wfUnop | wfConst |
+    wfLiteral;
+
+  // clang-format off
+  const auto wfParser =
+      (Top <<= (Directory | File)++)
+    | (Directory <<= (Directory | File)++)
+    | (File <<= Group)
+    | (Group <<= wfParserTokens++)
+    ;
+  // clang-format on
+
   Parse parser()
   {
     Parse p(depth::subdirectories, wfParser);

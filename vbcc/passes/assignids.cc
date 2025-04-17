@@ -6,7 +6,7 @@ namespace vbcc
   {
     PassDef p{
       "assignids",
-      wfPassLabels,
+      wfIR,
       dir::topdown | dir::once,
       {
         // Accumulate primitive classes.

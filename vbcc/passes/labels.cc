@@ -5,8 +5,8 @@ namespace vbcc
   PassDef labels()
   {
     return {
-      "labels",
-      wfPassLabels,
+      "VIR",
+      wfIR,
       dir::bottomup,
       {
         // Function.

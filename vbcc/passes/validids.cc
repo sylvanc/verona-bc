@@ -6,7 +6,7 @@ namespace vbcc
   {
     return {
       "validids",
-      wfPassLabels,
+      wfIR,
       dir::bottomup | dir::once,
       {
         T(ClassId)[ClassId] >> [state](Match& _) -> Node {

@@ -186,29 +186,18 @@ namespace vbcc
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
 
-  inline const auto wfParserTokens = Primitive | Class | Func | GlobalId |
-    LocalId | LabelId | Equals | LParen | RParen | Comma | Colon |
-    wfRegionType | wfPrimitiveType | wfStatement | wfTerminator | wfBinop |
-    wfUnop | wfConst | wfLiteral;
-
-  // clang-format off
-  inline const auto wfParser =
-      (Top <<= (Directory | File)++)
-    | (Directory <<= (Directory | File)++)
-    | (File <<= Group)
-    | (Group <<= wfParserTokens++)
-    ;
-  // clang-format on
-
   inline const auto wfDst = (LocalId >>= LocalId);
   inline const auto wfSrc = (Rhs >>= LocalId);
   inline const auto wfLhs = (Lhs >>= LocalId);
   inline const auto wfRhs = (Rhs >>= LocalId);
 
+  // Any language that can meet the wfIR definition can be compiled to byte
+  // code. A trieste file with the pass name "VIR" can be passed to `vbcc` as an
+  // input file. It will be checked, validated, and converted to byte code.
+
   // clang-format off
-  inline const auto wfPassStatements =
-      (Top <<=
-        (Primitive | Class | Func | LabelId | wfStatement | wfTerminator)++)
+  inline const auto wfIR =
+      (Top <<= (Primitive | Class | Func)++)
     | (Type <<= wfPrimitiveType)
     | (Primitive <<= Type * Methods)
     | (Class <<= ClassId * Fields * Methods)
@@ -219,6 +208,9 @@ namespace vbcc
     | (Func <<= FunctionId * Params * Type * Labels)
     | (Params <<= Param++)
     | (Param <<= LocalId * Type)
+    | (Labels <<= Label++)
+    | (Label <<= LabelId * Body * (Return >>= wfTerminator))
+    | (Body <<= wfStatement++)
     | (Global <<= wfDst * GlobalId)
     | (Const <<= wfDst * Type * (Rhs >>= wfLiteral))
     | (Convert <<= wfDst * Type * wfSrc)
@@ -296,16 +288,6 @@ namespace vbcc
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)
     | (Const_NaN <<= wfDst)
-    ;
-  // clang-format on
-
-  // clang-format off
-  inline const auto wfPassLabels =
-      wfPassStatements
-    | (Top <<= (Primitive | Class | Func)++)
-    | (Labels <<= Label++)
-    | (Label <<= LabelId * Body * (Return >>= wfTerminator))
-    | (Body <<= wfStatement++)
     ;
   // clang-format on
 }
