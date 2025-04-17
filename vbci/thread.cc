@@ -6,13 +6,13 @@
 
 namespace vbci
 {
-  void Thread::step()
+  bool Thread::step()
   {
     if (!frame)
     {
       // TODO: end thread
       // decrement our acquired cowns
-      return;
+      return false;
     }
 
     auto code = program->load_code(frame->pc);
@@ -476,6 +476,8 @@ namespace vbci
     {
       popframe(v, Condition::Throw);
     }
+
+    return true;
   }
 
   Value Thread::alloc(Id class_id, Location loc)
@@ -495,7 +497,15 @@ namespace vbci
     assert(func);
 
     // Set how we will handle non-local returns in the current frame.
-    frame->condition = condition;
+    Location frame_id = 0;
+    size_t base = 0;
+
+    if (frame)
+    {
+      frame->condition = condition;
+      frame_id = frame->frame_id + 2;
+      base = frame->base + MaxRegisters;
+    }
 
     // Make sure there's enough register space. It's plus two to cover the frame
     // we're pushing and space for that frame to put arguments.
@@ -507,9 +517,9 @@ namespace vbci
     // TODO: argument type checks
     stack.push_back({
       .func = func,
-      .frame_id = frame->frame_id + 2,
+      .frame_id = frame_id,
       .locals = locals,
-      .base = frame->base + MaxRegisters,
+      .base = base,
       .pc = func->labels.at(0),
       .dst = dst,
       .condition = Condition::Return,
@@ -530,8 +540,10 @@ namespace vbci
 
     if (stack.empty())
     {
-      auto prev = result->store(ret);
-      prev.drop();
+      // TODO: store to the result cown?
+      // auto prev = result->store(ret);
+      // prev.drop();
+      locals.at(0) = ret;
       frame = nullptr;
       return;
     }

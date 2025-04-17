@@ -31,5 +31,5 @@ int main(int argc, char** argv)
   if (!program.parse())
     return -1;
 
-  return 0;
+  return program.run();
 }

@@ -42,7 +42,7 @@ namespace vbci
       return (code >> 24) & 0xFF;
     }
 
-    void step();
+    bool step();
     Value alloc(Id class_id, Location loc);
     void pushframe(Function* func, Local dst, Condition condition);
     void popframe(Value& result, Condition condition);

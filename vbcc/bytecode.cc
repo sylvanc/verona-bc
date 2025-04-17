@@ -424,7 +424,7 @@ namespace vbcc
         {
           if (stmt == Const)
           {
-            auto t = stmt / Type;
+            auto t = stmt / Type / Type;
             auto v = stmt / Rhs;
 
             if (t == None)

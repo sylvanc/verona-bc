@@ -1,6 +1,6 @@
 #include "program.h"
 
-#include "object.h"
+#include "thread.h"
 
 namespace vbci
 {
@@ -132,5 +132,17 @@ namespace vbci
       Id func_id = load_u32(pc);
       cls.methods.emplace(method_id, &functions.at(func_id));
     }
+  }
+
+  int Program::run()
+  {
+    // TODO: this is hacked up single threaded execution
+    Thread thread{.program = this};
+    thread.pushframe(&functions.at(0), 0, Condition::Return);
+
+    while (thread.step())
+      ;
+
+    return thread.locals.at(0).get_i32();
   }
 }

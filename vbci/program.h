@@ -98,5 +98,6 @@ namespace vbci
     bool parse();
     void parse_fields(Class& cls, PC& pc);
     void parse_methods(Class& cls, PC& pc);
+    int run();
   };
 }

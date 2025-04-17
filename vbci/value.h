@@ -121,6 +121,14 @@ namespace vbci
       return b;
     }
 
+    int32_t get_i32()
+    {
+      if (tag != ValueType::I32)
+        throw Value(Error::BadConversion);
+
+      return i32;
+    }
+
     void drop();
     Value makeref(Program* program, Id field);
     Value load();
