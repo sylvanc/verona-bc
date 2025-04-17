@@ -18,9 +18,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## To-Do List
 
-* Tailcall args are always `move`.
-  * Remove the ability to move/copy the arg.
-  * Same for label arguments.
 * A register in a label may get initialized in a label that comes after it.
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
   * Switch to labels having parameters and disallow writing to an active register.

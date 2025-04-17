@@ -3,6 +3,8 @@
 namespace vbcc
 {
   const auto Dst = T(LocalId)[LocalId] * T(Equals);
+  const auto LabelArgs =
+    T(LParen) * ~(T(LocalId) * (T(Comma) * T(LocalId))++) * T(RParen);
 
   template<typename T>
   Node check_int(Node value)
@@ -78,6 +80,19 @@ namespace vbcc
       return check_float<double>(value);
 
     return {};
+  }
+
+  Node labelargs(NodeRange args)
+  {
+    Node r = Args;
+
+    for (auto& arg : args)
+    {
+      if (arg->type() == LocalId)
+        r << (Arg << ArgMove << arg);
+    }
+
+    return r;
   }
 
   PassDef statements()
@@ -285,15 +300,13 @@ namespace vbcc
           },
 
         // Terminators.
-        T(Tailcall) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        T(Tailcall) * T(GlobalId)[GlobalId] * LabelArgs[Args] >>
           [](Match& _) {
-            return Tailcall << (FunctionId ^ _(GlobalId)) << (Args << _[Args]);
+            return Tailcall << (FunctionId ^ _(GlobalId)) << labelargs(_[Args]);
           },
 
-        T(Tailcall) * T(LocalId)[LocalId] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
-          [](Match& _) { return TailcallDyn << _(Lhs) << (Args << _[Args]); },
+        T(Tailcall) * T(LocalId)[LocalId] * LabelArgs[Args] >>
+          [](Match& _) { return TailcallDyn << _(Lhs) << labelargs(_[Args]); },
 
         T(Return) * T(LocalId)[LocalId] >>
           [](Match& _) { return Return << _(LocalId); },
