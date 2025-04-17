@@ -498,19 +498,18 @@ namespace vbci
     assert(func);
 
     // Set how we will handle non-local returns in the current frame.
-    Location frame_id = 0;
+    Location frame_id = StackAlloc;
     size_t base = 0;
 
     if (frame)
     {
       frame->condition = condition;
       frame_id = frame->frame_id + 2;
-      base = frame->base + MaxRegisters;
+      base = frame->base + frame->func->registers;
     }
 
-    // Make sure there's enough register space. It's plus two to cover the frame
-    // we're pushing and space for that frame to put arguments.
-    auto req_stack_size = (stack.size() + 2) * MaxRegisters;
+    // Make sure there's enough register space.
+    auto req_stack_size = base + func->registers + MaxRegisters;
 
     if (locals.size() < req_stack_size)
       locals.resize(req_stack_size);

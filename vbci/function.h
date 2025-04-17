@@ -11,6 +11,7 @@ namespace vbci
   {
     std::vector<PC> labels;
     std::vector<Type> params;
+    Local registers;
     Type return_type;
   };
 }

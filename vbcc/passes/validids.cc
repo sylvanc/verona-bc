@@ -9,6 +9,20 @@ namespace vbcc
       wfIR,
       dir::bottomup | dir::once,
       {
+        T(Func)[Func] >> [state](Match& _) -> Node {
+          auto func = _(Func);
+          auto func_id = func / FunctionId;
+          auto& func_state = state->get_func(func_id);
+
+          if (func_state.register_idxs.size() >= MaxRegisters)
+          {
+            state->error = true;
+            return err(func_id, "function has too many registers");
+          }
+
+          return NoChange;
+        },
+
         T(ClassId)[ClassId] >> [state](Match& _) -> Node {
           auto id = state->get_class_id(_(ClassId));
 

@@ -70,10 +70,11 @@ namespace vbci
 
     for (auto& f : functions)
     {
-      // 8 bits for labels, 8 bits for parameters.
+      // 8 bits for labels, 8 bits for parameters, 8 bits for registers.
       auto word = load_code(pc);
       auto labels = word & 0xFF;
       auto params = (word >> 8) & 0xFF;
+      auto registers = (word >> 16) & 0xFF;
 
       if (labels == 0)
       {
@@ -87,6 +88,7 @@ namespace vbci
 
       // TODO: param types, return type
       f.params.resize(params);
+      f.registers = registers;
     }
 
     // Primitive classes.

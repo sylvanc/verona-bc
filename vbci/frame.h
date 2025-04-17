@@ -17,33 +17,9 @@ namespace vbci
     Local dst;
     Condition condition;
 
-    Value& local(Local idx)
-    {
-      auto i = base + idx;
-
-      if ((i < base) || (i >= locals.size()))
-        throw Value(Error::StackOutOfBounds);
-
-      return locals.at(i);
-    }
-
-    Value& arg(Local idx)
-    {
-      auto i = base + MaxRegisters + idx;
-
-      if ((i < base) || (i >= locals.size()))
-        throw Value(Error::StackOutOfBounds);
-
-      return locals.at(i);
-    }
-
-    void drop()
-    {
-      // TODO: this would be more efficient if we knew how many locals to drop.
-      // It would also let us have smaller value stacks.
-      for (size_t i = 0; i < MaxRegisters; i++)
-        locals[base + i].drop();
-    }
+    Value& local(Local idx);
+    Value& arg(Local idx);
+    void drop();
   };
 
   using Stack = std::vector<Frame>;

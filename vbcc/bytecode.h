@@ -10,9 +10,8 @@ namespace vbcc
   struct FuncState
   {
     Node func;
-    uint8_t params;
-    uint8_t labels;
     size_t pcs;
+    size_t params;
     std::unordered_map<std::string, uint8_t> label_idxs;
     std::unordered_map<std::string, uint8_t> register_idxs;
 

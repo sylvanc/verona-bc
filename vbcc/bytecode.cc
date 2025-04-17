@@ -314,7 +314,6 @@ namespace vbcc
 
     auto& func_state = functions.at(func_id);
     func_state.params = (func / Params)->size();
-    func_state.labels = (func / Labels)->size();
     return func_state;
   }
 
@@ -329,12 +328,15 @@ namespace vbcc
 
     for (auto& func_state : functions)
     {
-      // 8 bit label count, 8 bit param count.
-      code << uint32_t((func_state.params << 8) | func_state.labels);
+      // 8 bit label count, 8 bit param count, 8 bit register count.
+      auto labels = func_state.label_idxs.size();
+      code << uint32_t(
+        labels | (func_state.params << 8) |
+        (func_state.register_idxs.size() << 16));
 
       // Reserve space for a 64 bit PC for each label.
       func_state.pcs = code.size();
-      code.insert(code.end(), func_state.labels * 2, 0);
+      code.insert(code.end(), labels * 2, 0);
     }
 
     // Primitive classes.

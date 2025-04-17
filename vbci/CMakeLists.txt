@@ -1,4 +1,5 @@
 add_executable(vbci
+  frame.cc
   main.cc
   object.cc
   program.cc
