@@ -1,8 +1,11 @@
 add_executable(vbcc
+  passes/assignids.cc
+  passes/labels.cc
+  passes/parser.cc
+  passes/statements.cc
   bytecode.cc
   lang.cc
   main.cc
-  parser.cc
 )
 
 if(MSVC)

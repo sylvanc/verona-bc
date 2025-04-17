@@ -4,15 +4,15 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 ## Non-Local Returns
 
-A function call can be made as a `call`, a `?`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
+A function call can be made as a `call`, a `subcall`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
 
 If you make a `call` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `return` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
 
-If you make a `?` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `raise` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+If you make a `subcall` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `raise` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
 
 If you make a `try`, your destination register will have the returned value regardless of whether the function does a `return`, a `raise`, or a `throw`.
 
-One way to use this is to implement Smalltalk style non-local returns. To do so, functions `call` blocks and other functions, and `return` results, whereas blocks `?` functions and other blocks, and either `raise` to return from the calling function (popping all blocks), or `return` to return to the calling block or function.
+One way to use this is to implement Smalltalk style non-local returns. To do so, functions `call` blocks and other functions, and `return` results, whereas blocks `subcall` functions and other blocks, and either `raise` to return from the calling function (popping all blocks), or `return` to return to the calling block or function.
 
 Another way to use this is to implement exceptions. To do so, `throw` exception values. Exceptions are caught by a `try`.
 
@@ -38,3 +38,4 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * Some kind of `dlopen` system for adding FFI?
 * Debug info that maps instructions to file:line:column?
 * Compile byte code to LLVM IR and/or Cranelift.
+* AST to IR output.

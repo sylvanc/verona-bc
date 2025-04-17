@@ -1,5 +1,4 @@
-#include "lang.h"
-#include "wf.h"
+#include "../lang.h"
 
 namespace vbcc
 {

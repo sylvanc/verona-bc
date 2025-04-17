@@ -1,5 +1,5 @@
+#include "bytecode.h"
 #include "lang.h"
-#include "vbci.h"
 
 #include <trieste/driver.h>
 
@@ -8,7 +8,14 @@ int main(int argc, char** argv)
   using namespace trieste;
   using namespace vbcc;
 
-  Reader reader{"vbcc", {statements(), labels(), bytecode()}, parser()};
+  auto state = std::make_shared<State>();
+  Reader reader{"vbcc", {statements(), labels(), assignids(state)}, parser()};
   Driver d(reader);
-  return d.run(argc, argv);
+  auto r = d.run(argc, argv);
+
+  if (r != 0)
+    return r;
+
+  state->gen();
+  return 0;
 }
