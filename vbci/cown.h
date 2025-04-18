@@ -23,11 +23,16 @@ namespace vbci
       arc--;
     }
 
-    Value store(Value& v)
+    Value store(ArgType arg_type, Value& v)
     {
       // TODO: type_check, safe_store
       auto prev = std::move(content);
-      content = std::move(v);
+
+      if (arg_type == ArgType::Move)
+        content = std::move(v);
+      else
+        content = v;
+
       return prev;
     }
   };

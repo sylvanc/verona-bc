@@ -250,7 +250,7 @@ namespace vbcc
     | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
     | (Load <<= wfDst * wfSrc)
-    | (Store <<= wfDst * wfLhs * wfRhs)
+    | (Store <<= wfDst * wfSrc * Arg)
     | (Lookup <<= wfDst * wfSrc * MethodId)
     | (FnPointer <<= wfDst * FunctionId)
     | (Call <<= wfDst * FunctionId * Args)

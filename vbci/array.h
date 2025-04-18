@@ -24,13 +24,13 @@ namespace vbci
       return arr;
     }
 
-    Value store(size_t idx, Value& v)
+    Value store(ArgType arg_type, size_t idx, Value& v)
     {
       // TODO: type_check
       if (idx >= size)
         throw Value(Error::BadStore);
 
-      return base_store(data[idx], v);
+      return base_store(arg_type, data[idx], v);
     }
   };
 }

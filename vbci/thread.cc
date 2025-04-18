@@ -242,12 +242,21 @@ namespace vbci
           break;
         }
 
-        case Op::Store:
+        case Op::StoreMove:
         {
           auto& dst = frame->local(arg0(code));
           auto& ref = frame->local(arg1(code));
           auto& src = frame->local(arg2(code));
-          dst = ref.store(src);
+          dst = ref.store(ArgType::Move, src);
+          break;
+        }
+
+        case Op::StoreCopy:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto& ref = frame->local(arg1(code));
+          auto& src = frame->local(arg2(code));
+          dst = ref.store(ArgType::Copy, src);
           break;
         }
 

@@ -23,10 +23,10 @@ namespace vbci
       return obj;
     }
   
-    Value store(FieldIdx idx, Value& v)
+    Value store(ArgType arg_type, FieldIdx idx, Value& v)
     {
       // TODO: type_check
-      return base_store(fields[idx], v);
+      return base_store(arg_type, fields[idx], v);
     }
   };
 }

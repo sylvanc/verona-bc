@@ -573,7 +573,12 @@ namespace vbcc
           }
           else if (stmt == Store)
           {
-            code << e{Op::Store, dst(stmt), lhs(stmt), rhs(stmt)};
+            auto arg = stmt / Arg;
+
+            if (argtype(arg) == ArgType::Move)
+              code << e{Op::StoreMove, dst(stmt), src(stmt), src(arg)};
+            else
+              code << e{Op::StoreCopy, dst(stmt), src(stmt), src(arg)};
           }
           else if (stmt == FnPointer)
           {

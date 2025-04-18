@@ -162,7 +162,7 @@ namespace vbci
       return true;
     }
 
-    Value base_store(Value& dst, Value& src)
+    Value base_store(ArgType arg_type, Value& dst, Value& src)
     {
       if (!safe_store(src))
         throw Value(Error::BadStore);
@@ -195,7 +195,11 @@ namespace vbci
         }
       }
 
-      dst = std::move(src);
+      if (arg_type == ArgType::Move)
+        dst = std::move(src);
+      else
+        dst = src;
+
       return prev;
     }
   };

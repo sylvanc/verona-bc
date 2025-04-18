@@ -30,7 +30,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * Initializing globals.
 * Math ops for numerical limits, by type?
 * Type test.
-* `store` variant that copies `src` instead of moving it.
 * Merge, freeze, extract.
 * When.
 * Command line arguments.

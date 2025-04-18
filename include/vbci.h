@@ -143,7 +143,13 @@ namespace vbci
     // Arg0 = dst.
     // Arg1 = reference.
     // Arg2 = src.
-    Store,
+    StoreMove,
+
+    // Copies a value into a reference. The previous value is moved into dst.
+    // Arg0 = dst.
+    // Arg1 = reference.
+    // Arg2 = src.
+    StoreCopy,
 
     // Creates a function pointer. For a static call, src is ignored.
     // For a dynamic call, the method is looked up in the src object.

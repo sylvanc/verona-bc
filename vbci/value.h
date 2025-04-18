@@ -148,7 +148,7 @@ namespace vbci
     Value makeref(Program* program, ArgType arg_type, Id field);
     Value makearrayref(ArgType arg_type, size_t i);
     Value load();
-    Value store(Value& v);
+    Value store(ArgType arg_type, Value& v);
     Function* method(Program* program, Id w);
     Value convert(ValueType to);
     Function* function();

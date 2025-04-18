@@ -132,18 +132,18 @@ namespace vbci
     return v;
   }
 
-  Value Value::store(Value& v)
+  Value Value::store(ArgType arg_type, Value& v)
   {
     switch (tag)
     {
       case ValueType::Ref:
-        return obj->store(idx, v);
+        return obj->store(arg_type, idx, v);
 
       case ValueType::ArrayRef:
-        return arr->store(idx, v);
+        return arr->store(arg_type, idx, v);
 
       case ValueType::CownRef:
-        return cown->store(v);
+        return cown->store(arg_type, v);
 
       default:
         throw Value(Error::BadStoreTarget);

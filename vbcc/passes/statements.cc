@@ -309,7 +309,7 @@ namespace vbcc
         Dst * T(Load) * T(LocalId)[Rhs] >>
           [](Match& _) { return Load << _(LocalId) << _(Rhs); },
 
-        Dst * T(Store) * T(LocalId)[Lhs] * T(LocalId)[Rhs] >>
+        Dst * T(Store) * T(LocalId)[Lhs] * T(Arg)[Rhs] >>
           [](Match& _) { return Store << _(LocalId) << _(Lhs) << _(Rhs); },
 
         // Static lookup.
