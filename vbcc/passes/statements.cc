@@ -154,8 +154,11 @@ namespace vbcc
         (T(Func) << End) * T(GlobalId)[GlobalId] * T(LParen) *
             T(Param)++[Param] * T(RParen) * T(Type)[Type] >>
           [](Match& _) {
-            return Func << (FunctionId ^ _(GlobalId)) << (Params << _[Param])
-                        << _(Type) << Labels;
+            auto start = std::string(_(GlobalId)->location().view());
+            start.at(0) = '^';
+            return Seq << (Func << (FunctionId ^ _(GlobalId))
+                                << (Params << _[Param]) << _(Type) << Labels)
+                       << (LabelId ^ start);
           },
 
         // Parameter.
