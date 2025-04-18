@@ -39,6 +39,7 @@ namespace vbci
   using ARC = std::atomic<RC>;
 
   struct Object;
+  struct Array;
   struct Cown;
   struct Function;
   struct Program;

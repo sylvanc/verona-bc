@@ -79,11 +79,13 @@ namespace vbcc
 
   uint8_t rgn(Node node)
   {
-    if (node == RegionRC)
+    auto region = node / Region;
+
+    if (region == RegionRC)
       return +RegionType::RegionRC;
-    if (node == RegionGC)
+    if (region == RegionGC)
       return +RegionType::RegionGC;
-    if (node == RegionArena)
+    if (region == RegionArena)
       return +RegionType::RegionArena;
 
     return uint8_t(-1);
@@ -500,7 +502,35 @@ namespace vbcc
           else if (stmt == Region)
           {
             args(stmt / Args);
-            code << e{Op::Region, dst(stmt), rgn(stmt / Type)} << cls(stmt);
+            code << e{Op::Region, dst(stmt), rgn(stmt)} << cls(stmt);
+          }
+          else if (stmt == StackArray)
+          {
+            code << e{Op::StackArray, dst(stmt), rhs(stmt)};
+          }
+          else if (stmt == StackArrayConst)
+          {
+            code << e{Op::StackArrayConst, dst(stmt)}
+                 << lit<uint64_t>(stmt / Rhs);
+          }
+          else if (stmt == HeapArray)
+          {
+            code << e{Op::HeapArray, dst(stmt), lhs(stmt), rhs(stmt)}
+                 << rhs(stmt);
+          }
+          else if (stmt == HeapArrayConst)
+          {
+            code << e{Op::HeapArrayConst, dst(stmt), lhs(stmt)}
+                 << lit<uint64_t>(stmt / Rhs);
+          }
+          else if (stmt == RegionArray)
+          {
+            code << e{Op::RegionArray, dst(stmt), rgn(stmt), rhs(stmt)};
+          }
+          else if (stmt == RegionArrayConst)
+          {
+            code << e{Op::RegionArrayConst, dst(stmt), rgn(stmt)}
+                 << lit<uint64_t>(stmt / Rhs);
           }
           else if (stmt == Copy)
           {
@@ -518,6 +548,24 @@ namespace vbcc
           {
             auto arg = stmt / Arg;
             code << e{Op::Ref, dst(stmt), +argtype(arg), src(arg)} << fld(stmt);
+          }
+          else if (stmt == ArrayRef)
+          {
+            auto arg = stmt / Arg;
+            Op op;
+
+            if (argtype(arg) == ArgType::Move)
+              op = Op::ArrayRefMove;
+            else
+              op = Op::ArrayRefCopy;
+
+            code << e{op, dst(stmt), src(arg), rhs(stmt)};
+          }
+          else if (stmt == ArrayRefConst)
+          {
+            auto arg = stmt / Arg;
+            code << e{Op::ArrayRefConst, dst(stmt), +argtype(arg), src(arg)}
+                 << lit<uint64_t>(stmt / Rhs);
           }
           else if (stmt == Load)
           {

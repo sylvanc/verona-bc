@@ -23,7 +23,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * Switch to labels having parameters and disallow writing to an active register.
 * Type checking in the byte code.
   * Add ClassIds as types.
-  * Add union types?
+  * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work?
 * Object, cown, and region finalization and freeing.
 * Stack allocation that's unwound when a frame is popped.
@@ -33,7 +33,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * `store` variant that copies `src` instead of moving it.
 * Merge, freeze, extract.
 * When.
-* Arrays.
 * Command line arguments.
 * Standard IO? Does this need string support?
 * File API? Seems like too much.

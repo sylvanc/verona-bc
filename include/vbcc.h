@@ -25,6 +25,8 @@ namespace vbcc
   inline const auto Equals = TokenDef("=");
   inline const auto LParen = TokenDef("lparen");
   inline const auto RParen = TokenDef("rparen");
+  inline const auto LBracket = TokenDef("lbracket");
+  inline const auto RBracket = TokenDef("rbracket");
   inline const auto Comma = TokenDef(",");
   inline const auto Colon = TokenDef(":");
 
@@ -57,6 +59,12 @@ namespace vbcc
   inline const auto Stack = TokenDef("stack");
   inline const auto Heap = TokenDef("heap");
   inline const auto Region = TokenDef("region");
+  inline const auto StackArray = TokenDef("stackarray");
+  inline const auto StackArrayConst = TokenDef("stackarrayconst");
+  inline const auto HeapArray = TokenDef("heaparray");
+  inline const auto HeapArrayConst = TokenDef("heaparrayconst");
+  inline const auto RegionArray = TokenDef("regionarray");
+  inline const auto RegionArrayConst = TokenDef("regionarrayconst");
   inline const auto Copy = TokenDef("copy");
   inline const auto Move = TokenDef("move");
   inline const auto Drop = TokenDef("drop");
@@ -156,6 +164,8 @@ namespace vbcc
   inline const auto MoveArgs = TokenDef("moveargs");
   inline const auto ArgMove = TokenDef("argmove");
   inline const auto ArgCopy = TokenDef("argcopy");
+  inline const auto ArrayRef = TokenDef("arrayref");
+  inline const auto ArrayRefConst = TokenDef("arrayrefconst");
   inline const auto Body = TokenDef("body");
   inline const auto FnPointer = TokenDef("fnpointer");
   inline const auto CallDyn = TokenDef("calldyn");
@@ -173,9 +183,8 @@ namespace vbcc
     None | Bool | I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | F32 | F64;
 
   inline const auto wfBaseType = wfPrimitiveType | Dyn;
-
-  inline const auto wfLiteral =
-    None | True | False | Bin | Oct | Hex | Int | Float | HexFloat;
+  inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
+  inline const auto wfLiteral = None | True | wfIntLiteral | Float | HexFloat;
 
   inline const auto wfBinop = Add | Sub | Mul | Div | Mod | And | Or | Xor |
     Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
@@ -186,9 +195,11 @@ namespace vbcc
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
-  inline const auto wfStatement = Global | Const | Stack | Heap | Region |
-    Copy | Move | Drop | Ref | Load | Store | Lookup | FnPointer | Arg | Call |
-    CallDyn | Subcall | SubcallDyn | Try | TryDyn | wfBinop | wfUnop | wfConst;
+  inline const auto wfStatement = Global | Const | Convert | Stack | Heap |
+    Region | StackArray | StackArrayConst | HeapArray | HeapArrayConst |
+    RegionArray | RegionArrayConst | Copy | Move | Drop | Ref | ArrayRef |
+    ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
+    Subcall | SubcallDyn | Try | TryDyn | wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -197,6 +208,8 @@ namespace vbcc
   inline const auto wfSrc = (Rhs >>= LocalId);
   inline const auto wfLhs = (Lhs >>= LocalId);
   inline const auto wfRhs = (Rhs >>= LocalId);
+  inline const auto wfRgn = (Region >>= wfRegionType);
+  inline const auto wfLit = (Rhs >>= wfIntLiteral);
 
   // Any language that can meet the wfIR definition can be compiled to byte
   // code. A trieste file with the pass name "VIR" can be passed to `vbcc` as an
@@ -223,11 +236,19 @@ namespace vbcc
     | (Convert <<= wfDst * Type * wfSrc)
     | (Stack <<= wfDst * ClassId * Args)
     | (Heap <<= wfDst * wfSrc * ClassId * Args)
-    | (Region <<= wfDst * (Type >>= wfRegionType) * ClassId * Args)
+    | (Region <<= wfDst * wfRgn * ClassId * Args)
+    | (StackArray <<= wfDst * Type * wfRhs)
+    | (StackArrayConst <<= wfDst * Type * wfLit)
+    | (HeapArray <<= wfDst * wfLhs * Type * wfRhs)
+    | (HeapArrayConst <<= wfDst * wfLhs * Type * wfLit)
+    | (RegionArray <<=  wfDst * wfRgn * Type * wfRhs)
+    | (RegionArrayConst <<= wfDst * wfRgn * Type * wfLit)
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
     | (Ref <<= wfDst * Arg * FieldId)
+    | (ArrayRef <<= wfDst * Arg * wfSrc)
+    | (ArrayRefConst <<= wfDst * Arg * wfLit)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfLhs * wfRhs)
     | (Lookup <<= wfDst * wfSrc * MethodId)

@@ -1,0 +1,22 @@
+func @main(): i32
+^start
+  $i = const u64 10
+  $a = stack i32[$i]
+  $b = stack i32[10]
+  $a0 = ref copy $a 0
+  $idx = const u64 0
+  $b0 = ref copy $b $idx
+  $j0 = const i32 66
+  $j1 = const i32 67
+  $ignore0 = store $a0 $j0
+  $ignore1 = store $b0 $j1
+  $k0 = load $a0
+  $k1 = load $b0
+  $eq = eq $k0 $k1
+  cond $eq ^eq ^ne
+^eq
+  $r = const i32 1
+  ret $r
+^ne
+  $r = const i32 -1
+  ret $r

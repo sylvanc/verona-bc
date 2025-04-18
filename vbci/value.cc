@@ -1,3 +1,4 @@
+#include "array.h"
 #include "cown.h"
 #include "object.h"
 #include "program.h"
@@ -11,6 +12,11 @@ namespace vbci
       case ValueType::Object:
       case ValueType::Ref:
         obj->inc();
+        break;
+
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+        arr->inc();
         break;
 
       case ValueType::Cown:
@@ -32,6 +38,11 @@ namespace vbci
         obj->dec();
         break;
 
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+        arr->dec();
+        break;
+
       case ValueType::Cown:
       case ValueType::CownRef:
         cown->dec();
@@ -50,14 +61,7 @@ namespace vbci
 
   Value Value::makeref(Program* program, ArgType arg_type, Id field)
   {
-    auto ptag = tag;
-
-    if (arg_type == ArgType::Move)
-      tag = ValueType::Invalid;
-    else
-      inc();
-
-    switch (ptag)
+    switch (tag)
     {
       case ValueType::Object:
       {
@@ -66,15 +70,40 @@ namespace vbci
         if (find == cls.fields.end())
           throw Value(Error::BadField);
 
+        if (arg_type == ArgType::Move)
+          tag = ValueType::Invalid;
+        else
+          inc();
+
         return Value(obj, find->second);
       }
 
       case ValueType::Cown:
+      {
+        if (arg_type == ArgType::Move)
+          tag = ValueType::Invalid;
+        else
+          inc();
+
         return Value(cown, 0);
+      }
 
       default:
         throw Value(Error::BadRefTarget);
     }
+  }
+
+  Value Value::makearrayref(ArgType arg_type, size_t i)
+  {
+    if (tag != ValueType::Array)
+      throw Value(Error::BadRefTarget);
+
+    if (arg_type == ArgType::Move)
+      tag = ValueType::Invalid;
+    else
+      inc();
+
+    return Value(arr, i);
   }
 
   Value Value::load()
@@ -85,6 +114,10 @@ namespace vbci
     {
       case ValueType::Ref:
         v = obj->fields[idx];
+        break;
+
+      case ValueType::ArrayRef:
+        v = arr->data[idx];
         break;
 
       case ValueType::CownRef:
@@ -105,6 +138,9 @@ namespace vbci
     {
       case ValueType::Ref:
         return obj->store(idx, v);
+
+      case ValueType::ArrayRef:
+        return arr->store(idx, v);
 
       case ValueType::CownRef:
         return cown->store(v);
@@ -162,6 +198,10 @@ namespace vbci
       case ValueType::Object:
       case ValueType::Ref:
         return obj->loc;
+
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+        return arr->loc;
 
       case ValueType::Cown:
       case ValueType::CownRef:

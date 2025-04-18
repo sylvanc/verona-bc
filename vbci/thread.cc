@@ -1,5 +1,6 @@
 #include "thread.h"
 
+#include "array.h"
 #include "cown.h"
 #include "object.h"
 #include "program.h"
@@ -121,6 +122,58 @@ namespace vbci
           break;
         }
 
+        case Op::StackArray:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto& size = frame->local(arg1(code));
+          dst = Array::create(frame->frame_id, size.to_index());
+          break;
+        }
+
+        case Op::StackArrayConst:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto size = program->load_u64(frame->pc);
+          dst = Array::create(frame->frame_id, size);
+          break;
+        }
+
+        case Op::HeapArray:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto& src = frame->local(arg1(code));
+          auto& size = frame->local(arg2(code));
+          dst = Array::create(src.location(), size.to_index());
+          break;
+        }
+
+        case Op::HeapArrayConst:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto& src = frame->local(arg1(code));
+          auto size = program->load_u64(frame->pc);
+          dst = Array::create(src.location(), size);
+          break;
+        }
+
+        case Op::RegionArray:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto region = Region::create(static_cast<RegionType>(arg1(code)));
+          auto& size = frame->local(arg2(code));
+          dst = Array::create(Location(region), size.to_index());
+          break;
+        }
+
+        case Op::RegionArrayConst:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto region = Region::create(static_cast<RegionType>(arg1(code)));
+          auto size = program->load_u64(frame->pc);
+          dst = Array::create(Location(region), size);
+          break;
+        }
+
         case Op::Copy:
         {
           auto& dst = frame->local(arg0(code));
@@ -150,6 +203,34 @@ namespace vbci
           auto arg_type = static_cast<ArgType>(arg1(code));
           auto& src = frame->local(arg2(code));
           dst = src.makeref(program, arg_type, program->load_u32(frame->pc));
+          break;
+        }
+
+        case Op::ArrayRefMove:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto& src = frame->local(arg1(code));
+          auto& idx = frame->local(arg2(code));
+          dst = src.makearrayref(ArgType::Move, idx.to_index());
+          break;
+        }
+
+        case Op::ArrayRefCopy:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto& src = frame->local(arg1(code));
+          auto& idx = frame->local(arg2(code));
+          dst = src.makearrayref(ArgType::Copy, idx.to_index());
+          break;
+        }
+
+        case Op::ArrayRefConst:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto arg_type = static_cast<ArgType>(arg1(code));
+          auto& src = frame->local(arg2(code));
+          auto idx = program->load_u64(frame->pc);
+          dst = src.makearrayref(arg_type, idx);
           break;
         }
 

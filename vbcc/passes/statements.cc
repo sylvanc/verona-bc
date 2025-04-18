@@ -3,100 +3,18 @@
 namespace vbcc
 {
   const auto Dst = T(LocalId)[LocalId] * T(Equals);
+  const auto RegionType = T(RegionRC, RegionGC, RegionArena);
+  const auto CallArgs = T(LParen) * T(Arg)++[Args] * T(RParen);
+  const auto ArrayDynArg = T(LBracket) * T(LocalId)[Arg] * T(RBracket);
+  const auto ArrayConstArg = T(LBracket) * IntLiteral[Arg] * T(RBracket);
   const auto LabelArgs =
     T(LParen) * ~(T(LocalId) * (T(Comma) * T(LocalId))++) * T(RParen);
 
   // clang-format off
   const auto wfPassStatements =
-      (Top <<=
+      wfIR
+    | (Top <<=
         (Primitive | Class | Func | LabelId | wfStatement | wfTerminator)++)
-    | (Type <<= wfPrimitiveType)
-    | (Primitive <<= Type * Methods)
-    | (Class <<= ClassId * Fields * Methods)
-    | (Fields <<= Field++)
-    | (Field <<= FieldId * Type)
-    | (Methods <<= Method++)
-    | (Method <<= MethodId * FunctionId)
-    | (Func <<= FunctionId * Params * Type * Labels)
-    | (Params <<= Param++)
-    | (Param <<= LocalId * Type)
-    | (Global <<= wfDst * GlobalId)
-    | (Const <<= wfDst * Type * (Rhs >>= wfLiteral))
-    | (Convert <<= wfDst * Type * wfSrc)
-    | (Stack <<= wfDst * ClassId * Args)
-    | (Heap <<= wfDst * wfSrc * ClassId * Args)
-    | (Region <<= wfDst * (Type >>= wfRegionType) * ClassId * Args)
-    | (Copy <<= wfDst * wfSrc)
-    | (Move <<= wfDst * wfSrc)
-    | (Drop <<= LocalId)
-    | (Ref <<= wfDst * Arg * FieldId)
-    | (Load <<= wfDst * wfSrc)
-    | (Store <<= wfDst * wfLhs * wfRhs)
-    | (Lookup <<= wfDst * wfSrc * MethodId)
-    | (FnPointer <<= wfDst * FunctionId)
-    | (Call <<= wfDst * FunctionId * Args)
-    | (CallDyn <<= wfDst * wfSrc * Args)
-    | (Subcall <<= wfDst * FunctionId * Args)
-    | (SubcallDyn <<= wfDst * wfSrc * Args)
-    | (Try <<= wfDst * FunctionId * Args)
-    | (TryDyn <<= wfDst * wfSrc * Args)
-    | (Args <<= Arg++)
-    | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
-    | (Tailcall <<= FunctionId * Args)
-    | (TailcallDyn <<= wfSrc * Args)
-    | (Return <<= LocalId)
-    | (Raise <<= LocalId)
-    | (Throw <<= LocalId)
-    | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
-    | (Jump <<= LabelId)
-    | (Add <<= wfDst * wfLhs * wfRhs)
-    | (Sub <<= wfDst * wfLhs * wfRhs)
-    | (Mul <<= wfDst * wfLhs * wfRhs)
-    | (Div <<= wfDst * wfLhs * wfRhs)
-    | (Mod <<= wfDst * wfLhs * wfRhs)
-    | (Pow <<= wfDst * wfLhs * wfRhs)
-    | (And <<= wfDst * wfLhs * wfRhs)
-    | (Or <<= wfDst * wfLhs * wfRhs)
-    | (Xor <<= wfDst * wfLhs * wfRhs)
-    | (Shl <<= wfDst * wfLhs * wfRhs)
-    | (Shr <<= wfDst * wfLhs * wfRhs)
-    | (Eq <<= wfDst * wfLhs * wfRhs)
-    | (Ne <<= wfDst * wfLhs * wfRhs)
-    | (Lt <<= wfDst * wfLhs * wfRhs)
-    | (Le <<= wfDst * wfLhs * wfRhs)
-    | (Gt <<= wfDst * wfLhs * wfRhs)
-    | (Ge <<= wfDst * wfLhs * wfRhs)
-    | (Min <<= wfDst * wfLhs * wfRhs)
-    | (Max <<= wfDst * wfLhs * wfRhs)
-    | (LogBase <<= wfDst * wfLhs * wfRhs)
-    | (Atan2 <<= wfDst * wfLhs * wfRhs)
-    | (Neg <<= wfDst * wfSrc)
-    | (Not <<= wfDst * wfSrc)
-    | (Abs <<= wfDst * wfSrc)
-    | (Ceil <<= wfDst * wfSrc)
-    | (Floor <<= wfDst * wfSrc)
-    | (Exp <<= wfDst * wfSrc)
-    | (Log <<= wfDst * wfSrc)
-    | (Sqrt <<= wfDst * wfSrc)
-    | (Cbrt <<= wfDst * wfSrc)
-    | (IsInf <<= wfDst * wfSrc)
-    | (IsNaN <<= wfDst * wfSrc)
-    | (Sin <<= wfDst * wfSrc)
-    | (Cos <<= wfDst * wfSrc)
-    | (Tan <<= wfDst * wfSrc)
-    | (Asin <<= wfDst * wfSrc)
-    | (Acos <<= wfDst * wfSrc)
-    | (Atan <<= wfDst * wfSrc)
-    | (Sinh <<= wfDst * wfSrc)
-    | (Cosh <<= wfDst * wfSrc)
-    | (Tanh <<= wfDst * wfSrc)
-    | (Asinh <<= wfDst * wfSrc)
-    | (Acosh <<= wfDst * wfSrc)
-    | (Atanh <<= wfDst * wfSrc)
-    | (Const_E <<= wfDst)
-    | (Const_Pi <<= wfDst)
-    | (Const_Inf <<= wfDst)
-    | (Const_NaN <<= wfDst)
     ;
   // clang-format on
 
@@ -217,11 +135,11 @@ namespace vbcc
             return Class << (ClassId ^ _(GlobalId)) << Fields << Methods;
           },
 
-        (T(Class) << T(ClassId))[Class] * T(GlobalId)[GlobalId] * T(Colon) *
-            BaseType[Type] >>
+        (T(Class) << T(ClassId))[Class] * T(GlobalId)[GlobalId] *
+            T(Type)[Type] >>
           [](Match& _) {
             (_(Class) / Fields)
-              << (Field << (FieldId ^ _(GlobalId)) << (Type << _(Type)));
+              << (Field << (FieldId ^ _(GlobalId)) << _(Type));
             return _(Class);
           },
 
@@ -233,16 +151,16 @@ namespace vbcc
           },
 
         // Function.
-        T(Func) * T(GlobalId)[GlobalId] * T(LParen) * T(Param)++[Param] *
-            T(RParen) * T(Colon) * BaseType[Type] >>
+        (T(Func) << End) * T(GlobalId)[GlobalId] * T(LParen) *
+            T(Param)++[Param] * T(RParen) * T(Type)[Type] >>
           [](Match& _) {
             return Func << (FunctionId ^ _(GlobalId)) << (Params << _[Param])
-                        << (Type << _(Type)) << Labels;
+                        << _(Type) << Labels;
           },
 
         // Parameter.
-        T(LocalId)[LocalId] * T(Colon) * BaseType[Type] >>
-          [](Match& _) { return Param << _(LocalId) << (Type << _(Type)); },
+        In(Group) * T(LocalId)[LocalId] * T(Type)[Type] >>
+          [](Match& _) { return Param << _(LocalId) << _(Type); },
 
         // Argument.
         --T(Equals) * (T(Move) * T(LocalId)[LocalId]) >>
@@ -254,6 +172,9 @@ namespace vbcc
         // Strip commas between parameters and arguments.
         T(Param, Arg)[Lhs] * T(Comma) * T(Param, Arg)[Rhs] >>
           [](Match& _) { return Seq << _(Lhs) << _(Rhs); },
+
+        // Types.
+        T(Colon) * BaseType[Type] >> [](Match& _) { return Type << _(Type); },
 
         // Globals.
         Dst * T(Global) * T(GlobalId)[GlobalId] >>
@@ -290,28 +211,71 @@ namespace vbcc
 
         // Convert.
         Dst * T(Convert) * PrimitiveType[Type] * T(LocalId)[Rhs] >>
-          [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },
+          [](Match& _) {
+            return Convert << _(LocalId) << (Type << _(Type)) << _(Rhs);
+          },
 
         // Allocation.
-        Dst * T(Stack) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        Dst * T(Stack) * T(GlobalId)[GlobalId] * CallArgs >>
           [](Match& _) {
             return Stack << _(LocalId) << (ClassId ^ _(GlobalId))
                          << (Args << _[Args]);
           },
 
-        Dst * T(Heap) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] * T(LParen) *
-            T(Arg)++[Args] * T(RParen) >>
+        Dst * T(Heap) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] * CallArgs >>
           [](Match& _) {
             return Heap << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId))
                         << (Args << _[Args]);
           },
 
-        Dst * T(Region) * T(RegionRC, RegionGC, RegionArena)[Rhs] *
-            T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] * T(RParen) >>
+        Dst * T(Region) * RegionType[Rhs] * T(GlobalId)[GlobalId] * CallArgs >>
           [](Match& _) {
             return Region << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId))
                           << (Args << _[Args]);
+          },
+
+        Dst * T(Stack) * BaseType[Type] * ArrayDynArg >>
+          [](Match& _) {
+            return StackArray << _(LocalId) << (Type << _(Type)) << _(Arg);
+          },
+
+        Dst * T(Stack) * BaseType[Type] * ArrayConstArg >>
+          [](Match& _) {
+            auto r = check_literal(U64, _(Arg));
+            if (r)
+              return r;
+
+            return StackArrayConst << _(LocalId) << (Type << _(Type)) << _(Arg);
+          },
+
+        Dst * T(Heap) * T(LocalId)[Rhs] * BaseType[Type] * ArrayDynArg >>
+          [](Match& _) {
+            return HeapArray << _(LocalId) << _(Rhs) << (Type << _(Type))
+                             << _(Arg);
+          },
+
+        Dst * T(Heap) * T(LocalId)[Rhs] * BaseType[Type] * ArrayConstArg >>
+          [](Match& _) {
+            auto r = check_literal(U64, _(Arg));
+            if (r)
+              return r;
+
+            return HeapArrayConst << _(LocalId) << _(Rhs) << (Type << _(Type))
+                                  << _(Arg);
+          },
+
+        Dst * T(Region) * RegionType[Rhs] * BaseType[Type] * ArrayDynArg >>
+          [](Match& _) {
+            return RegionArray << _(LocalId) << (Type << _(Type)) << _(Arg);
+          },
+
+        Dst * T(Region) * RegionType[Rhs] * BaseType[Type] * ArrayConstArg >>
+          [](Match& _) {
+            auto r = check_literal(U64, _(Arg));
+            if (r)
+              return r;
+
+            return RegionArray << _(LocalId) << (Type << _(Type)) << _(Arg);
           },
 
         // Register operations.
@@ -321,13 +285,25 @@ namespace vbcc
         Dst * T(Move) * T(LocalId)[Rhs] >>
           [](Match& _) { return Move << _(LocalId) << _(Rhs); },
 
-        T(Drop) * T(LocalId)[LocalId] >>
+        (T(Drop) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Drop << _(LocalId); },
 
         // Reference operations.
-        Dst * T(Ref) * T(Arg)[Rhs] * T(GlobalId)[GlobalId] >>
+        Dst * T(Ref) * T(Arg)[Arg] * T(GlobalId)[GlobalId] >>
           [](Match& _) {
-            return Ref << _(LocalId) << _(Rhs) << (FieldId ^ _(GlobalId));
+            return Ref << _(LocalId) << _(Arg) << (FieldId ^ _(GlobalId));
+          },
+
+        Dst * T(Ref) * T(Arg)[Arg] * T(LocalId)[Rhs] >>
+          [](Match& _) { return ArrayRef << _(LocalId) << _(Arg) << _(Rhs); },
+
+        Dst * T(Ref) * T(Arg)[Arg] * IntLiteral[Rhs] >>
+          [](Match& _) {
+            auto r = check_literal(U64, _(Rhs));
+            if (r)
+              return r;
+
+            return ArrayRefConst << _(LocalId) << _(Arg) << _(Rhs);
           },
 
         Dst * T(Load) * T(LocalId)[Rhs] >>
@@ -349,66 +325,60 @@ namespace vbcc
           },
 
         // Static call.
-        Dst * T(Call) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        Dst * T(Call) * T(GlobalId)[GlobalId] * CallArgs >>
           [](Match& _) {
             return Call << _(LocalId) << (FunctionId ^ _(GlobalId))
                         << (Args << _[Args]);
           },
 
         // Dynamic call.
-        Dst * T(Call) * T(LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        Dst * T(Call) * T(LocalId)[Lhs] * CallArgs >>
           [](Match& _) {
             return CallDyn << _(LocalId) << _(Lhs) << (Args << _[Args]);
           },
 
         // Static subcall.
-        Dst * T(Subcall) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        Dst * T(Subcall) * T(GlobalId)[GlobalId] * CallArgs >>
           [](Match& _) {
             return Subcall << _(LocalId) << (FunctionId ^ _(GlobalId))
                            << (Args << _[Args]);
           },
 
         // Dynamic subcall.
-        Dst * T(Subcall) * T(LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        Dst * T(Subcall) * T(LocalId)[Lhs] * CallArgs >>
           [](Match& _) {
             return SubcallDyn << _(LocalId) << _(Lhs) << (Args << _[Args]);
           },
 
         // Static try.
-        Dst * T(Try) * T(GlobalId)[GlobalId] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        Dst * T(Try) * T(GlobalId)[GlobalId] * CallArgs >>
           [](Match& _) {
             return Try << _(LocalId) << (FunctionId ^ _(GlobalId))
                        << (Args << _[Args]);
           },
 
         // Dynamic try.
-        Dst * T(Try) * T(LocalId)[Lhs] * T(LParen) * T(Arg)++[Args] *
-            T(RParen) >>
+        Dst * T(Try) * T(LocalId)[Lhs] * CallArgs >>
           [](Match& _) {
             return TryDyn << _(LocalId) << _(Lhs) << (Args << _[Args]);
           },
 
         // Terminators.
-        T(Tailcall) * T(GlobalId)[GlobalId] * LabelArgs[Args] >>
+        (T(Tailcall) << End) * T(GlobalId)[GlobalId] * LabelArgs[Args] >>
           [](Match& _) {
             return Tailcall << (FunctionId ^ _(GlobalId)) << labelargs(_[Args]);
           },
 
-        T(Tailcall) * T(LocalId)[LocalId] * LabelArgs[Args] >>
+        (T(Tailcall) << End) * T(LocalId)[LocalId] * LabelArgs[Args] >>
           [](Match& _) { return TailcallDyn << _(Lhs) << labelargs(_[Args]); },
 
-        T(Return) * T(LocalId)[LocalId] >>
+        (T(Return) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Return << _(LocalId); },
 
-        T(Raise) * T(LocalId)[LocalId] >>
+        (T(Raise) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Raise << _(LocalId); },
 
-        T(Throw) * T(LocalId)[LocalId] >>
+        (T(Throw) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Throw << _(LocalId); },
 
         (T(Cond) << End) * T(LocalId)[LocalId] * T(LabelId)[Lhs] *

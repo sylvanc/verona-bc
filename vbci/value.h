@@ -4,13 +4,14 @@
 #include "vbci.h"
 
 #include <cmath>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <numbers>
 
 namespace vbci
 {
-  // A value is 16 bytes on a 64 bit system, 12 bytes on a 32 bit system.
+  // A value is 16 bytes.
   struct Value
   {
   private:
@@ -28,13 +29,14 @@ namespace vbci
       float f32;
       double f64;
       Object* obj;
+      Array* arr;
       Cown* cown;
       Error error;
       Function* func;
     };
 
-    FieldIdx idx;
-    ValueType tag;
+    uint64_t idx : 56;
+    ValueType tag : 8;
 
     Value(ValueType t) : tag(t) {}
 
@@ -52,8 +54,10 @@ namespace vbci
     Value(float f32) : f32(f32), tag(ValueType::F32) {}
     Value(double f64) : f64(f64), tag(ValueType::F64) {}
     Value(Object* obj) : obj(obj), tag(ValueType::Object) {}
+    Value(Array* arr) : arr(arr), tag(ValueType::Array) {}
     Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
-    Value(Object* obj, FieldIdx idx) : obj(obj), idx(idx), tag(ValueType::Ref)
+    Value(Object* obj, FieldIdx f) : obj(obj), idx(f), tag(ValueType::Ref) {}
+    Value(Array* arr, size_t idx) : arr(arr), idx(idx), tag(ValueType::ArrayRef)
     {}
     Value(Cown* cown, FieldIdx) : cown(cown), tag(ValueType::CownRef) {}
     Value(Error error) : error(error), tag(ValueType::Error) {}
@@ -71,10 +75,7 @@ namespace vbci
 
     Value(const Value& that)
     {
-      dec();
-      u64 = that.u64;
-      idx = that.idx;
-      tag = that.tag;
+      std::memcpy(this, &that, sizeof(Value));
       inc();
     }
 
@@ -84,19 +85,14 @@ namespace vbci
         return *this;
 
       dec();
-      u64 = that.u64;
-      idx = that.idx;
-      tag = that.tag;
+      std::memcpy(this, &that, sizeof(Value));
       inc();
       return *this;
     }
 
     Value(Value&& that)
     {
-      dec();
-      u64 = that.u64;
-      idx = that.idx;
-      tag = that.tag;
+      std::memcpy(this, &that, sizeof(Value));
       that.tag = ValueType::Invalid;
     }
 
@@ -106,9 +102,7 @@ namespace vbci
         return *this;
 
       dec();
-      u64 = that.u64;
-      idx = that.idx;
-      tag = that.tag;
+      std::memcpy(this, &that, sizeof(Value));
       that.tag = ValueType::Invalid;
       return *this;
     }
@@ -129,8 +123,30 @@ namespace vbci
       return i32;
     }
 
+    size_t to_index()
+    {
+      switch (tag)
+      {
+        case ValueType::U8:
+          return get<uint8_t>();
+
+        case ValueType::U16:
+          return get<uint16_t>();
+
+        case ValueType::U32:
+          return get<uint32_t>();
+
+        case ValueType::U64:
+          return get<uint64_t>();
+
+        default:
+          throw Value(Error::BadRefTarget);
+      }
+    }
+
     void drop();
     Value makeref(Program* program, ArgType arg_type, Id field);
+    Value makearrayref(ArgType arg_type, size_t i);
     Value load();
     Value store(Value& v);
     Function* method(Program* program, Id w);

@@ -42,7 +42,7 @@ namespace vbci
     // Allocates a new object in the same region. Fields are initialized with
     // previously populated arguments.
     // Arg0 = dst.
-    // Arg1 = object in the target region.
+    // Arg1 = allocation in the target region.
     // Stream: 32 bit class ID.
     Heap,
 
@@ -52,6 +52,46 @@ namespace vbci
     // Arg1 = region type.
     // Stream: 32 bit class ID.
     Region,
+
+    // Allocates a new array in the current frame. The array is uninitialized.
+    // Arg0 = dst.
+    // Arg1 = size.
+    // TODO: content type.
+    StackArray,
+
+    // Allocates a new array in the current frame. The array is uninitialized.
+    // Arg0 = dst.
+    // Stream: 64 bit static size.
+    // TODO: content type.
+    StackArrayConst,
+
+    // Allocates a new array in the same region. The array is uninitialized.
+    // Arg0 = dst.
+    // Arg1 = allocation in the target region.
+    // Arg2 = size.
+    // TODO: content type.
+    HeapArray,
+
+    // Allocates a new array in the same region. The array is uninitialized.
+    // Arg0 = dst.
+    // Arg1 = allocation in the target region.
+    // Stream: 64 bit static size.
+    // TODO: content type.
+    HeapArrayConst,
+
+    // Allocates a new array in a new region. The array is uninitialized.
+    // Arg0 = dst.
+    // Arg1 = region type.
+    // Arg2 = size.
+    // TODO: content type.
+    RegionArray,
+
+    // Allocates a new array in a new region. The array is uninitialized.
+    // Arg0 = dst.
+    // Arg1 = region type.
+    // Stream: 64 bit static size.
+    // TODO: content type.
+    RegionArrayConst,
 
     // Copies the value.
     // Arg0 = dst.
@@ -73,6 +113,25 @@ namespace vbci
     // Arg2 = src.
     // Stream: 32 bit field ID.
     Ref,
+
+    // Creates a reference to an array slot, invalidating the source.
+    // Arg0 = dst.
+    // Arg1 = src.
+    // Arg2 = index.
+    ArrayRefMove,
+
+    // Creates a reference to an array slot, copying the source.
+    // Arg0 = dst.
+    // Arg1 = src.
+    // Arg2 = index.
+    ArrayRefCopy,
+
+    // Creates a reference to an array slot from a constant index.
+    // Arg0 = dst.
+    // Arg1 = move or copy.
+    // Arg2 = src.
+    // Stream: 64 bit index.
+    ArrayRefConst,
 
     // Loads a value from a reference.
     // Arg0 = dst.
@@ -216,8 +275,10 @@ namespace vbci
     F32,
     F64,
     Object,
+    Array,
     Cown,
     Ref,
+    ArrayRef,
     CownRef,
     Function,
     Error,
