@@ -47,6 +47,9 @@ namespace vbcc
   inline const auto F32 = TokenDef("f32");
   inline const auto F64 = TokenDef("f64");
 
+  // Types.
+  inline const auto Dyn = TokenDef("dyn");
+
   // Op codes.
   inline const auto Global = TokenDef("global");
   inline const auto Const = TokenDef("const");
@@ -149,8 +152,8 @@ namespace vbcc
   inline const auto Labels = TokenDef("labels");
   inline const auto Arg = TokenDef("arg");
   inline const auto Args = TokenDef("args");
-  inline const auto MoveArg = TokenDef("arg");
-  inline const auto MoveArgs = TokenDef("args");
+  inline const auto MoveArg = TokenDef("movearg");
+  inline const auto MoveArgs = TokenDef("moveargs");
   inline const auto ArgMove = TokenDef("argmove");
   inline const auto ArgCopy = TokenDef("argcopy");
   inline const auto Body = TokenDef("body");
@@ -168,6 +171,8 @@ namespace vbcc
 
   inline const auto wfPrimitiveType =
     None | Bool | I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | F32 | F64;
+
+  inline const auto wfBaseType = wfPrimitiveType | Dyn;
 
   inline const auto wfLiteral =
     None | True | False | Bin | Oct | Hex | Int | Float | HexFloat;
@@ -200,8 +205,8 @@ namespace vbcc
   // clang-format off
   inline const auto wfIR =
       (Top <<= (Primitive | Class | Func)++)
-    | (Type <<= wfPrimitiveType)
-    | (Primitive <<= Type * Methods)
+    | (Type <<= wfBaseType)
+    | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)
     | (Field <<= FieldId * Type)

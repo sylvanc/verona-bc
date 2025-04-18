@@ -58,11 +58,9 @@ namespace vbcc
         "u64\\b" >> [](auto& m) { m.add(U64); },
         "f32\\b" >> [](auto& m) { m.add(F32); },
         "f64\\b" >> [](auto& m) { m.add(F64); },
-        // "object\\b" >> [](auto& m) { m.add(Object); },
-        // "cown\\b" >> [](auto& m) { m.add(Cown); },
-        // "ref\\b" >> [](auto& m) { m.add(Ref); },
-        // "cownref\\b" >> [](auto& m) { m.add(CownRef); },
-        // "function\\b" >> [](auto& m) { m.add(Function); },
+
+        // Types.
+        "dyn\\b" >> [](auto& m) { m.add(Dyn); },
 
         // Op codes.
         "global\\b" >> [](auto& m) { m.add(Global); },

@@ -21,12 +21,16 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * A register in a label may get initialized in a label that comes after it.
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
   * Switch to labels having parameters and disallow writing to an active register.
-* Type checking in the byte code?
+* Type checking in the byte code.
+  * Add ClassIds as types.
+  * Add union types?
+  * How do subtype checks work?
 * Object, cown, and region finalization and freeing.
 * Stack allocation that's unwound when a frame is popped.
 * Initializing globals.
 * Math ops for numerical limits, by type?
 * Type test.
+* `store` variant that copies `src` instead of moving it.
 * Merge, freeze, extract.
 * When.
 * Arrays.

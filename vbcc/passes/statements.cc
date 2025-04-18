@@ -201,7 +201,7 @@ namespace vbcc
 
         // Primitive class.
         (T(Primitive) << End) * PrimitiveType[Type] >>
-          [](Match& _) { return Primitive << (Type << _(Type)) << Methods; },
+          [](Match& _) { return Primitive << _(Type) << Methods; },
 
         (T(Primitive) << T(Type))[Primitive] * T(GlobalId)[Lhs] *
             T(GlobalId)[Rhs] >>
@@ -218,7 +218,7 @@ namespace vbcc
           },
 
         (T(Class) << T(ClassId))[Class] * T(GlobalId)[GlobalId] * T(Colon) *
-            PrimitiveType[Type] >>
+            BaseType[Type] >>
           [](Match& _) {
             (_(Class) / Fields)
               << (Field << (FieldId ^ _(GlobalId)) << (Type << _(Type)));
@@ -234,14 +234,14 @@ namespace vbcc
 
         // Function.
         T(Func) * T(GlobalId)[GlobalId] * T(LParen) * T(Param)++[Param] *
-            T(RParen) * T(Colon) * PrimitiveType[Type] >>
+            T(RParen) * T(Colon) * BaseType[Type] >>
           [](Match& _) {
             return Func << (FunctionId ^ _(GlobalId)) << (Params << _[Param])
                         << (Type << _(Type)) << Labels;
           },
 
         // Parameter.
-        T(LocalId)[LocalId] * T(Colon) * PrimitiveType[Type] >>
+        T(LocalId)[LocalId] * T(Colon) * BaseType[Type] >>
           [](Match& _) { return Param << _(LocalId) << (Type << _(Type)); },
 
         // Argument.

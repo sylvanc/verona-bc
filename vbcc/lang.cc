@@ -11,9 +11,6 @@ namespace vbcc
 
   std::optional<uint8_t> val(Node ptype)
   {
-    if (ptype == Type)
-      ptype = ptype / Type;
-
     if (ptype == None)
       return +ValueType::None;
     if (ptype == Bool)
