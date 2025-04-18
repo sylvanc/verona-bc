@@ -178,12 +178,12 @@ namespace vbcc
 
   Node labelargs(NodeRange args)
   {
-    Node r = Args;
+    Node r = MoveArgs;
 
     for (auto& arg : args)
     {
       if (arg->type() == LocalId)
-        r << (Arg << ArgMove << arg);
+        r << (MoveArg << ArgMove << arg);
     }
 
     return r;

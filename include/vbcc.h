@@ -149,6 +149,8 @@ namespace vbcc
   inline const auto Labels = TokenDef("labels");
   inline const auto Arg = TokenDef("arg");
   inline const auto Args = TokenDef("args");
+  inline const auto MoveArg = TokenDef("arg");
+  inline const auto MoveArgs = TokenDef("args");
   inline const auto ArgMove = TokenDef("argmove");
   inline const auto ArgCopy = TokenDef("argcopy");
   inline const auto Body = TokenDef("body");
@@ -233,8 +235,10 @@ namespace vbcc
     | (TryDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
-    | (Tailcall <<= FunctionId * Args)
-    | (TailcallDyn <<= wfSrc * Args)
+    | (Tailcall <<= FunctionId * MoveArgs)
+    | (TailcallDyn <<= wfSrc * MoveArgs)
+    | (MoveArgs <<= MoveArg++)
+    | (MoveArg <<= (Type >>= ArgMove) * wfSrc)
     | (Return <<= LocalId)
     | (Raise <<= LocalId)
     | (Throw <<= LocalId)

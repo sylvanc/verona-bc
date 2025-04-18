@@ -405,9 +405,8 @@ namespace vbcc
 
       auto fn = [&](Node stmt) { return *get_func_id(stmt / FunctionId); };
 
-      auto args = [&](Node stmt) {
+      auto args = [&](Node args) {
         // Set up the arguments.
-        auto args = stmt / Args;
         uint8_t i = 0;
 
         for (auto arg : *args)
@@ -490,17 +489,17 @@ namespace vbcc
           }
           else if (stmt == Stack)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Stack, dst(stmt)} << cls(stmt);
           }
           else if (stmt == Heap)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Heap, dst(stmt), rhs(stmt)} << cls(stmt);
           }
           else if (stmt == Region)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Region, dst(stmt), rgn(stmt / Type)} << cls(stmt);
           }
           else if (stmt == Copy)
@@ -539,34 +538,34 @@ namespace vbcc
           }
           else if (stmt == Call)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Call, dst(stmt), +CallType::CallStatic} << fn(stmt);
           }
           else if (stmt == CallDyn)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Call, dst(stmt), +CallType::CallDynamic, src(stmt)};
           }
           else if (stmt == Subcall)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Call, dst(stmt), +CallType::SubcallStatic}
                  << fn(stmt);
           }
           else if (stmt == SubcallDyn)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{
               Op::Call, dst(stmt), +CallType::SubcallDynamic, src(stmt)};
           }
           else if (stmt == Try)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Call, dst(stmt), +CallType::TryStatic} << fn(stmt);
           }
           else if (stmt == TryDyn)
           {
-            args(stmt);
+            args(stmt / Args);
             code << e{Op::Call, dst(stmt), +CallType::TryDynamic, src(stmt)};
           }
           else if (stmt == Add)
@@ -767,12 +766,12 @@ namespace vbcc
 
         if (term == Tailcall)
         {
-          args(term);
+          args(term / MoveArgs);
           code << e{Op::Tailcall, +CallType::CallStatic} << fn(term);
         }
         else if (term == TailcallDyn)
         {
-          args(term);
+          args(term / MoveArgs);
           code << e{Op::Tailcall, +CallType::CallDynamic, src(term)};
         }
         else if (term == Return)
