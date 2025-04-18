@@ -26,7 +26,6 @@ namespace vbci
 
     Value store(ArgType arg_type, size_t idx, Value& v)
     {
-      // TODO: type_check
       if (idx >= size)
         throw Value(Error::BadStore);
 

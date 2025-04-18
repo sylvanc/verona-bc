@@ -21,6 +21,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * A register in a label may get initialized in a label that comes after it.
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
   * Switch to labels having parameters and disallow writing to an active register.
+  * Implicit first label, with the name of the function, that takes the function parameters as arguments.
 * Type checking in the byte code.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
@@ -32,6 +33,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * Type test.
 * Merge, freeze, extract.
 * When.
+* Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * Command line arguments.
 * Standard IO? Does this need string support?
 * File API? Seems like too much.

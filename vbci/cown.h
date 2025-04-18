@@ -7,8 +7,7 @@ namespace vbci
 {
   struct Cown
   {
-    // TODO: more complex type?
-    Id type_id;
+    // TODO: cown content type
     ARC arc;
     Value content;
 
@@ -25,7 +24,7 @@ namespace vbci
 
     Value store(ArgType arg_type, Value& v)
     {
-      // TODO: type_check, safe_store
+      // TODO: safe_store
       auto prev = std::move(content);
 
       if (arg_type == ArgType::Move)

@@ -1,24 +1,19 @@
 #pragma once
 
-#include "value.h"
+#include "ident.h"
+#include "vbci.h"
 
 #include <unordered_map>
 #include <unordered_set>
 
 namespace vbci
 {
-  // TODO: more complex types?
-  // Unions of intersections of ClassId and mutability.
-  // No generics - monomorphized?
   struct Type
   {};
 
   struct Class
   {
-    // TODO: supertypes?
-
     // Precalculate an offset into the object for each field name.
-    // TODO: field types?
     std::unordered_map<Id, FieldIdx> fields;
 
     // Precalculate a function pointer for each method name.

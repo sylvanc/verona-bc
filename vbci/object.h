@@ -25,7 +25,6 @@ namespace vbci
   
     Value store(ArgType arg_type, FieldIdx idx, Value& v)
     {
-      // TODO: type_check
       return base_store(arg_type, fields[idx], v);
     }
   };

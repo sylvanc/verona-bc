@@ -86,7 +86,6 @@ namespace vbci
       for (auto& label : f.labels)
         label = load_pc(pc);
 
-      // TODO: param types, return type
       f.params.resize(params);
       f.registers = registers;
     }
@@ -118,7 +117,6 @@ namespace vbci
     for (FieldIdx i = 0; i < num_fields; i++)
     {
       // This creates a mapping from a field name to an index into the object.
-      // TODO: field types
       Id name = load_u32(pc);
       cls.fields.emplace(name, i);
     }

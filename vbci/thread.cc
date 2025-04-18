@@ -604,7 +604,6 @@ namespace vbci
     if (locals.size() < req_stack_size)
       locals.resize(req_stack_size);
 
-    // TODO: argument type checks
     stack.push_back({
       .func = func,
       .frame_id = frame_id,
@@ -624,7 +623,6 @@ namespace vbci
     if (ret.location() == frame->frame_id)
       throw Value(Error::BadReturnLocation);
 
-    // TODO: check return type
     frame->drop();
     stack.pop_back();
 
