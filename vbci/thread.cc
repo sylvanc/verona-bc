@@ -99,34 +99,38 @@ namespace vbci
         case Op::Stack:
         {
           auto& dst = frame->local(arg0(code));
-          auto type_id = program->load_u32(frame->pc);
-          dst = alloc(type_id, frame->frame_id);
+          auto& cls = program->classes.at(program->load_u32(frame->pc));
+          auto mem = stack.alloc(cls.size);
+          dst = Object::create(mem, cls, frame->frame_id);
           break;
         }
 
         case Op::Heap:
         {
           auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          auto type_id = program->load_u32(frame->pc);
-          dst = alloc(type_id, src.location());
+          auto& cls = program->classes.at(program->load_u32(frame->pc));
+          auto region = frame->local(arg1(code)).region();
+          auto mem = region->alloc(cls.size);
+          dst = Object::create(mem, cls, Location(region));
           break;
         }
 
         case Op::Region:
         {
           auto& dst = frame->local(arg0(code));
+          auto& cls = program->classes.at(program->load_u32(frame->pc));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
-          auto type_id = program->load_u32(frame->pc);
-          dst = alloc(type_id, Location(region));
+          auto mem = region->alloc(cls.size);
+          dst = Object::create(mem, cls, Location(region));
           break;
         }
 
         case Op::StackArray:
         {
           auto& dst = frame->local(arg0(code));
-          auto& size = frame->local(arg1(code));
-          dst = Array::create(frame->frame_id, size.to_index());
+          auto size = frame->local(arg1(code)).to_index();
+          auto mem = stack.alloc(Array::size_of(size));
+          dst = Array::create(mem, frame->frame_id, size);
           break;
         }
 
@@ -134,25 +138,28 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto size = program->load_u64(frame->pc);
-          dst = Array::create(frame->frame_id, size);
+          auto mem = stack.alloc(Array::size_of(size));
+          dst = Array::create(mem, frame->frame_id, size);
           break;
         }
 
         case Op::HeapArray:
         {
           auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          auto& size = frame->local(arg2(code));
-          dst = Array::create(src.location(), size.to_index());
+          auto region = frame->local(arg1(code)).region();
+          auto size = frame->local(arg2(code)).to_index();
+          auto mem = region->alloc(Array::size_of(size));
+          dst = Array::create(mem, Location(region), size);
           break;
         }
 
         case Op::HeapArrayConst:
         {
           auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
+          auto region = frame->local(arg1(code)).region();
           auto size = program->load_u64(frame->pc);
-          dst = Array::create(src.location(), size);
+          auto mem = region->alloc(Array::size_of(size));
+          dst = Array::create(mem, Location(region), size);
           break;
         }
 
@@ -160,8 +167,9 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
-          auto& size = frame->local(arg2(code));
-          dst = Array::create(Location(region), size.to_index());
+          auto size = frame->local(arg2(code)).to_index();
+          auto mem = region->alloc(Array::size_of(size));
+          dst = Array::create(mem, Location(region), size);
           break;
         }
 
@@ -170,7 +178,8 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto size = program->load_u64(frame->pc);
-          dst = Array::create(Location(region), size);
+          auto mem = region->alloc(Array::size_of(size));
+          dst = Array::create(mem, Location(region), size);
           break;
         }
 
@@ -571,18 +580,6 @@ namespace vbci
     return true;
   }
 
-  Value Thread::alloc(Id class_id, Location loc)
-  {
-    // TODO: error if loc is immortal or immutable?
-    auto fields = program->classes.at(class_id).fields.size();
-    auto obj = Object::create(class_id, loc, fields);
-
-    for (FieldIdx i = 0; i < fields; i++)
-      obj->fields[i] = std::move(frame->arg(i));
-
-    return Value(obj);
-  }
-
   void Thread::pushframe(Function* func, Local dst, Condition condition)
   {
     assert(func);
@@ -604,9 +601,10 @@ namespace vbci
     if (locals.size() < req_stack_size)
       locals.resize(req_stack_size);
 
-    stack.push_back({
+    frames.push_back({
       .func = func,
       .frame_id = frame_id,
+      .save = stack.save(),
       .locals = locals,
       .base = base,
       .pc = func->labels.at(0),
@@ -614,19 +612,21 @@ namespace vbci
       .condition = Condition::Return,
     });
 
-    frame = &stack.back();
+    frame = &frames.back();
   }
 
   void Thread::popframe(Value& ret, Condition condition)
   {
     // The return value can't be allocated in this frame.
     if (ret.location() == frame->frame_id)
-      throw Value(Error::BadReturnLocation);
+      throw Value(Error::BadStackEscape);
 
+    // TODO: run finalizers.
     frame->drop();
-    stack.pop_back();
+    stack.restore(frame->save);
+    frames.pop_back();
 
-    if (stack.empty())
+    if (frames.empty())
     {
       // TODO: store to the result cown?
       // auto prev = result->store(ret);
@@ -636,7 +636,7 @@ namespace vbci
       return;
     }
 
-    frame = &stack.back();
+    frame = &frames.back();
 
     switch (frame->condition)
     {
@@ -685,11 +685,22 @@ namespace vbci
   void Thread::tailcall(Function* func)
   {
     assert(func);
+
+    // TODO: run finalizers.
     frame->drop();
+    stack.restore(frame->save);
 
     // Move arguments back to the current frame.
     for (size_t i = 0; i < func->params.size(); i++)
-      frame->local(i) = std::move(frame->arg(i));
+    {
+      // Can't tailcall with stack allocations.
+      auto& arg = frame->arg(i);
+
+      if (arg.location() == frame->frame_id)
+        throw Value(Error::BadStackEscape);
+
+      frame->local(i) = std::move(arg);
+    }
 
     // Set the new function and program counter.
     frame->func = func;

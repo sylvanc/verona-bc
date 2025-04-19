@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stack.h"
 #include "types.h"
 #include "value.h"
 
@@ -11,6 +12,7 @@ namespace vbci
   {
     Function* func;
     Location frame_id;
+    Stack::Idx save;
     std::vector<Value>& locals;
     size_t base;
     PC pc;
@@ -21,6 +23,4 @@ namespace vbci
     Value& arg(Local idx);
     void drop();
   };
-
-  using Stack = std::vector<Frame>;
 }

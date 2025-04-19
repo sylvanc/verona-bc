@@ -2,6 +2,7 @@
 
 #include "frame.h"
 #include "program.h"
+#include "stack.h"
 
 #include <unordered_set>
 
@@ -10,6 +11,7 @@ namespace vbci
   struct Thread
   {
     Stack stack;
+    std::vector<Frame> frames;
     std::vector<Value> locals;
     std::unordered_set<Cown*> read;
     std::unordered_set<Cown*> write;
@@ -43,7 +45,6 @@ namespace vbci
     }
 
     bool step();
-    Value alloc(Id class_id, Location loc);
     void pushframe(Function* func, Local dst, Condition condition);
     void popframe(Value& result, Condition condition);
     void tailcall(Function* func);

@@ -13,19 +13,16 @@ namespace vbci
 
   struct Class
   {
+    size_t size;
+    Id class_id;
+
     // Precalculate an offset into the object for each field name.
     std::unordered_map<Id, FieldIdx> fields;
 
     // Precalculate a function pointer for each method name.
     std::unordered_map<Id, Function*> methods;
 
-    Function* method(Id w)
-    {
-      auto find = methods.find(w);
-      if (find == methods.end())
-        return nullptr;
-
-      return find->second;
-    }
+    void calc_size();
+    Function* method(Id w);
   };
 }

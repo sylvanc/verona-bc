@@ -42,113 +42,39 @@ namespace vbci
     Value(ValueType t) : tag(t) {}
 
   public:
-    Value() : tag(ValueType::Invalid) {}
-    Value(bool b) : b(b), tag(ValueType::Bool) {}
-    Value(uint8_t u8) : u8(u8), tag(ValueType::U8) {}
-    Value(uint16_t u16) : u16(u16), tag(ValueType::U16) {}
-    Value(uint32_t u32) : u32(u32), tag(ValueType::U32) {}
-    Value(uint64_t u64) : u64(u64), tag(ValueType::U64) {}
-    Value(int8_t i8) : i8(i8), tag(ValueType::I8) {}
-    Value(int16_t i16) : i16(i16), tag(ValueType::I16) {}
-    Value(int32_t i32) : i32(i32), tag(ValueType::I32) {}
-    Value(int64_t i64) : i64(i64), tag(ValueType::I64) {}
-    Value(float f32) : f32(f32), tag(ValueType::F32) {}
-    Value(double f64) : f64(f64), tag(ValueType::F64) {}
-    Value(Object* obj) : obj(obj), tag(ValueType::Object), readonly(0) {}
-    Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
-    Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
-    Value(Object* obj, FieldIdx f, bool ro)
-    : obj(obj), idx(f), tag(ValueType::Ref), readonly(ro)
-    {}
-    Value(Array* arr, size_t idx, bool ro)
-    : arr(arr), idx(idx), tag(ValueType::ArrayRef), readonly(ro)
-    {}
-    Value(Cown* cown, bool ro)
-    : cown(cown), tag(ValueType::CownRef), readonly(ro)
-    {}
-    Value(Error error) : error(error), tag(ValueType::Error) {}
+    Value();
+    Value(bool b);
+    Value(uint8_t u8);
+    Value(uint16_t u16);
+    Value(uint32_t u32);
+    Value(uint64_t u64);
+    Value(int8_t i8);
+    Value(int16_t i16);
+    Value(int32_t i32);
+    Value(int64_t i64);
+    Value(float f32);
+    Value(double f64);
+    Value(Object* obj);
+    Value(Array* arr);
+    Value(Cown* cown);
+    Value(Object* obj, FieldIdx f, bool ro);
+    Value(Array* arr, size_t idx, bool ro);
+    Value(Cown* cown, bool ro);
+    Value(Error error);
+    Value(Function* func);
+    Value(const Value& that);
+    Value(Value&& that);
+    Value& operator=(const Value& that);
+    Value& operator=(Value&& that);
 
-    Value(Function* func) : func(func), tag(ValueType::Function)
-    {
-      if (!func)
-        throw Value(Error::MethodNotFound);
-    }
+    static Value none();
 
-    static Value none()
-    {
-      return Value(ValueType::None);
-    }
+    bool get_bool();
+    int32_t get_i32();
+    size_t to_index();
 
-    Value(const Value& that)
-    {
-      std::memcpy(this, &that, sizeof(Value));
-      inc();
-    }
-
-    Value& operator=(const Value& that)
-    {
-      if (this == &that)
-        return *this;
-
-      dec();
-      std::memcpy(this, &that, sizeof(Value));
-      inc();
-      return *this;
-    }
-
-    Value(Value&& that)
-    {
-      std::memcpy(this, &that, sizeof(Value));
-      that.tag = ValueType::Invalid;
-    }
-
-    Value& operator=(Value&& that)
-    {
-      if (this == &that)
-        return *this;
-
-      dec();
-      std::memcpy(this, &that, sizeof(Value));
-      that.tag = ValueType::Invalid;
-      return *this;
-    }
-
-    bool get_bool()
-    {
-      if (tag != ValueType::Bool)
-        throw Value(Error::BadConversion);
-
-      return b;
-    }
-
-    int32_t get_i32()
-    {
-      if (tag != ValueType::I32)
-        throw Value(Error::BadConversion);
-
-      return i32;
-    }
-
-    size_t to_index()
-    {
-      switch (tag)
-      {
-        case ValueType::U8:
-          return get<uint8_t>();
-
-        case ValueType::U16:
-          return get<uint16_t>();
-
-        case ValueType::U32:
-          return get<uint32_t>();
-
-        case ValueType::U64:
-          return get<uint64_t>();
-
-        default:
-          throw Value(Error::BadRefTarget);
-      }
-    }
+    Location location();
+    Region* region();
 
     void drop();
     Value makeref(Program* program, ArgType arg_type, Id field);
@@ -158,7 +84,6 @@ namespace vbci
     Function* method(Program* program, Id w);
     Value convert(ValueType to);
     Function* function();
-    Location location();
 
 #define make_unop(name, func) \
   struct name \

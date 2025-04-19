@@ -6,22 +6,31 @@ namespace vbci
 {
   struct Array : public Header
   {
+  private:
     // TODO: array content type
     size_t size;
     Value data[0];
 
-    static Array* create(Location loc, size_t size)
+    Array(Location loc, size_t size) : Header(loc), size(size)
     {
-      auto arr =
-        static_cast<Array*>(malloc(sizeof(Array) + (size * sizeof(Value))));
-      arr->loc = loc;
-      arr->rc = 1;
-      arr->size = size;
-
       for (size_t i = 0; i < size; i++)
-        arr->data[i] = Value();
+        data[i] = Value();
+    }
 
-      return arr;
+  public:
+    static Array* create(void* mem, Location loc, size_t size)
+    {
+      return new (mem) Array(loc, size);
+    }
+
+    static size_t size_of(size_t size)
+    {
+      return sizeof(Array) + (size * sizeof(Value));
+    }
+
+    Value load(size_t idx)
+    {
+      return data[idx];
     }
 
     Value store(ArgType arg_type, size_t idx, Value& v)

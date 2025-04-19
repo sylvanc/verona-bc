@@ -26,6 +26,7 @@ FetchContent_Declare(
   # GIT_REPOSITORY https://github.com/microsoft/verona-rt
   GIT_REPOSITORY https://github.com/mjp41/verona-rt
   GIT_TAG 8914bf9a6dec841053b82b6afe077fd124f56f0a
+  # GIT_TAG 6549f0f7b7b36e9106a0457f3235f74799d9cce4
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)

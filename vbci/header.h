@@ -11,9 +11,9 @@ namespace vbci
   static constexpr auto Immortal = uintptr_t(-1);
   static constexpr auto StackAlloc = uintptr_t(0x1);
 
-  // A header is 8 bytes.
   struct Header
   {
+  private:
     union
     {
       RC rc;
@@ -49,92 +49,12 @@ namespace vbci
       return (loc != Immutable) && ((loc & StackAlloc) == 0);
     }
 
-    Region* region()
-    {
-      return region(loc);
-    }
-
-    bool no_rc()
-    {
-      return no_rc(loc);
-    }
-
-    bool is_immutable()
-    {
-      return is_immutable(loc);
-    }
-
-    bool is_stack()
-    {
-      return is_stack(loc);
-    }
-
-    bool is_region()
-    {
-      return is_region(loc);
-    }
-
-    void inc()
-    {
-      if (loc == Immutable)
-      {
-        arc++;
-      }
-      else if (no_rc())
-      {
-        // Do nothing.
-
-        // TODO: no RC for stack alloc?
-        // if so, need an actual bump allocator
-        // segmented stack, to avoid over-allocation
-      }
-      else
-      {
-        // RC inc comes from new values in registers. As such, it's paired with
-        // a stack RC increment for the containing region.
-        region()->stack_inc();
-
-        if (region()->enable_rc())
-          rc++;
-      }
-    }
-
-    void dec()
-    {
-      if (loc == Immutable)
-      {
-        // TODO: free at zero
-        arc--;
-      }
-      else if (no_rc())
-      {
-        // Do nothing.
-      }
-      else
-      {
-        // RC dec comes from invalidating values in registers. As such, it's
-        // paired with a stack RC decrement for the containing region.
-
-        if (region()->enable_rc())
-        {
-          if (--rc == 0)
-          {
-            logging::Debug() << "Free " << this << std::endl;
-            // TODO: finalize, decrement fields
-            // free(this);
-          };
-        }
-
-        region()->stack_dec();
-      }
-    }
-
     bool safe_store(Value& v)
     {
-      if (is_immutable())
+      if (is_immutable(loc))
         return false;
 
-      bool stack = is_stack();
+      bool stack = is_stack(loc);
       auto vloc = v.location();
       bool vstack = is_stack(vloc);
 
@@ -146,7 +66,7 @@ namespace vbci
       }
       else
       {
-        auto r = region();
+        auto r = region(loc);
 
         // Can't store if v is on the stack.
         if (vstack)
@@ -166,12 +86,15 @@ namespace vbci
       return true;
     }
 
+  protected:
+    Header(Location loc) : rc(1), loc(loc) {}
+
     Value base_store(ArgType arg_type, Value& dst, Value& src)
     {
       if (!safe_store(src))
         throw Value(Error::BadStore);
 
-      auto stack = is_stack();
+      auto stack = is_stack(loc);
       auto prev = std::move(dst);
       auto ploc = prev.location();
       auto vloc = src.location();
@@ -181,21 +104,26 @@ namespace vbci
         if (is_region(ploc))
         {
           // Increment the region stack RC.
-          region(ploc)->stack_inc();
+          auto pr = region(ploc);
+          pr->stack_inc();
 
           // Clear the parent if it's in a different region.
           if (!stack && (ploc != loc))
-            region(ploc)->clear_parent();
+            pr->clear_parent();
         }
 
         if (is_region(vloc))
         {
           // Decrement the region stack RC.
-          region(vloc)->stack_dec();
+          auto vr = region(vloc);
+          vr->stack_dec();
 
           // Set the parent if it's in a different region.
           if (!stack && (vloc != loc))
-            region(vloc)->set_parent(region());
+          {
+            auto r = region(loc);
+            vr->set_parent(r);
+          }
         }
       }
 
@@ -205,6 +133,77 @@ namespace vbci
         dst = src;
 
       return prev;
+    }
+
+  public:
+    Location location()
+    {
+      return loc;
+    }
+
+    Region* region()
+    {
+      if (!is_region(loc))
+        throw Value(Error::BadAllocTarget);
+
+      return region(loc);
+    }
+
+    void inc()
+    {
+      if (loc == Immutable)
+      {
+        arc++;
+      }
+      else if (no_rc(loc))
+      {
+        // Do nothing.
+
+        // TODO: no RC for stack alloc?
+        // if so, need an actual bump allocator
+        // segmented stack, to avoid over-allocation
+      }
+      else
+      {
+        // RC inc comes from new values in registers. As such, it's paired with
+        // a stack RC increment for the containing region.
+        auto r = region(loc);
+        r->stack_inc();
+
+        if (r->enable_rc())
+          rc++;
+      }
+    }
+
+    void dec()
+    {
+      if (loc == Immutable)
+      {
+        // TODO: free at zero
+        arc--;
+      }
+      else if (no_rc(loc))
+      {
+        // Do nothing.
+      }
+      else
+      {
+        // RC dec comes from invalidating values in registers. As such, it's
+        // paired with a stack RC decrement for the containing region.
+        auto r = region(loc);
+
+        if (r->enable_rc())
+        {
+          if (--rc == 0)
+          {
+            logging::Debug() << "Free " << this << std::endl;
+            // TODO: finalize, decrement fields
+            // free(this);
+          };
+        }
+
+        r->stack_dec();
+      }
     }
   };
 }

@@ -3,6 +3,7 @@ add_executable(vbci
   main.cc
   program.cc
   thread.cc
+  types.cc
   value.cc
 )
 

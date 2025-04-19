@@ -33,21 +33,18 @@ namespace vbci
     // Arg2 = src.
     Convert,
 
-    // Allocates a new object in the current frame. Fields are initialized with
-    // previously populated arguments.
+    // Allocates a new object in the current frame. Fields are uninitialized.
     // Arg0 = dst.
     // Stream: 32 bit class ID.
     Stack,
 
-    // Allocates a new object in the same region. Fields are initialized with
-    // previously populated arguments.
+    // Allocates a new object in the same region. Fields are uninitialized.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
     // Stream: 32 bit class ID.
     Heap,
 
-    // Allocates a new object in a new region. Fields are initialized with
-    // previously populated arguments.
+    // Allocates a new object in a new region. Fields are uninitialized.
     // Arg0 = dst.
     // Arg1 = region type.
     // Stream: 32 bit class ID.
@@ -109,12 +106,12 @@ namespace vbci
 
     // Creates a reference to a field in a target object.
     // Arg0 = dst.
-    // Arg1 = move or copy.
+    // Arg1 = move or copy the source.
     // Arg2 = src.
     // Stream: 32 bit field ID.
     Ref,
 
-    // Creates a reference to an array slot, invalidating the source.
+    // Creates a reference to an array slot, moving the source.
     // Arg0 = dst.
     // Arg1 = src.
     // Arg2 = index.
@@ -139,7 +136,6 @@ namespace vbci
     Load,
 
     // Moves a value into a reference. The previous value is moved into dst.
-    // Src is invalidated.
     // Arg0 = dst.
     // Arg1 = reference.
     // Arg2 = src.

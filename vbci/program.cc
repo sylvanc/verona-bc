@@ -99,11 +99,14 @@ namespace vbci
     // User-defined classes.
     auto num_classes = load_u32(pc);
     classes.resize(num_classes);
+    Id class_id = 0;
 
     for (auto& cls : classes)
     {
+      cls.class_id = class_id++;
       parse_fields(cls, pc);
       parse_methods(cls, pc);
+      cls.calc_size();
     }
 
     return true;

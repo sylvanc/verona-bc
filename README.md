@@ -23,13 +23,17 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * Switch to labels having parameters and disallow writing to an active register.
   * Implicit start label takes the function parameters as arguments.
   * Start label becomes a tailcall, can it be eliminated?
+  * If no allocations escape a label, the label stack can be reused.
+    * Explicit tail cond/jump?
+    * Otherwise, no `restore` on label jump.
 * Type checking in the byte code.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work?
+* Stack finalization.
 * Object, cown, and region finalization and freeing.
-* Stack allocation that's unwound when a frame is popped.
-  * Can finalize immediately on unwind.
+* Audit all the errors in `ident.h`.
+* Embedded fields.
 * Initializing globals.
 * Math ops for numerical limits, by type?
 * Type test.

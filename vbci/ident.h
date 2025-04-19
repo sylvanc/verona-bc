@@ -16,6 +16,7 @@ namespace vbci
     UnknownOpcode,
     UnknownMathOp,
     StackOutOfBounds,
+    BadAllocTarget,
     BadLabel,
     BadField,
     BadRefTarget,
@@ -28,7 +29,7 @@ namespace vbci
     BadOperand,
     MismatchedTypes,
     MethodNotFound,
-    BadReturnLocation,
+    BadStackEscape,
   };
 
   using PC = size_t;
@@ -38,6 +39,7 @@ namespace vbci
   using RC = uint32_t;
   using ARC = std::atomic<RC>;
 
+  struct Region;
   struct Object;
   struct Array;
   struct Cown;

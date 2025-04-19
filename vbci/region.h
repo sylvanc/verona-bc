@@ -20,6 +20,11 @@ namespace vbci
       return new Region(type);
     }
 
+    void* alloc(size_t size)
+    {
+      return std::malloc(size);
+    }
+
     bool is_ancestor(Region* r)
     {
       while (Region* p = r->parent)
