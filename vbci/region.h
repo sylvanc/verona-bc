@@ -13,11 +13,8 @@ namespace vbci
     Region* parent;
     RC stack_rc;
     RegionType r_type;
-    bool readonly;
 
-    Region(RegionType type)
-    : parent(nullptr), stack_rc(1), r_type(type), readonly(false)
-    {}
+    Region(RegionType type) : parent(nullptr), stack_rc(1), r_type(type) {}
 
     static Region* create(RegionType type)
     {
@@ -39,36 +36,38 @@ namespace vbci
 
     bool enable_rc()
     {
-      return !readonly && (r_type == RegionType::RegionRC);
+      return r_type == RegionType::RegionRC;
     }
 
     void stack_inc()
     {
-      if (!readonly)
-        stack_rc++;
+      stack_rc++;
     }
 
     void stack_dec()
     {
-      if (!readonly)
-        stack_rc--;
+      if ((--stack_rc == 0) && (parent != nullptr))
+      {
+        // TODO: free the region.
+      }
     }
 
     void clear_parent()
     {
-      assert(!readonly);
       assert(parent != nullptr);
+      parent->children.erase(this);
+      parent = nullptr;
 
-      if (parent)
+      if (stack_rc == 0)
       {
-        parent->children.erase(this);
-        parent = nullptr;
+        // TODO: free the region.
+        logging::Debug() << "Free region " << this << std::endl;
+        // TODO: finalize and free all objects in the region.
       }
     }
 
     void set_parent(Region* p)
     {
-      assert(!readonly);
       assert(parent == nullptr);
       parent = p;
       p->children.insert(this);

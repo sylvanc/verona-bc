@@ -22,6 +22,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
   * Switch to labels having parameters and disallow writing to an active register.
   * Implicit start label takes the function parameters as arguments.
+  * Start label becomes a tailcall, can it be eliminated?
 * Type checking in the byte code.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?

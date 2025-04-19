@@ -11,12 +11,14 @@ namespace vbci
     {
       case ValueType::Object:
       case ValueType::Ref:
-        obj->inc();
+        if (!readonly)
+          obj->inc();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        arr->inc();
+        if (!readonly)
+          arr->inc();
         break;
 
       case ValueType::Cown:
@@ -35,12 +37,14 @@ namespace vbci
     {
       case ValueType::Object:
       case ValueType::Ref:
-        obj->dec();
+        if (!readonly)
+          obj->dec();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        arr->dec();
+        if (!readonly)
+          arr->dec();
         break;
 
       case ValueType::Cown:
@@ -75,7 +79,7 @@ namespace vbci
         else
           inc();
 
-        return Value(obj, find->second);
+        return Value(obj, find->second, readonly);
       }
 
       case ValueType::Cown:
@@ -85,7 +89,7 @@ namespace vbci
         else
           inc();
 
-        return Value(cown, 0);
+        return Value(cown, false);
       }
 
       default:
@@ -103,7 +107,7 @@ namespace vbci
     else
       inc();
 
-    return Value(arr, i);
+    return Value(arr, i, readonly);
   }
 
   Value Value::load()
@@ -129,11 +133,18 @@ namespace vbci
     }
 
     v.inc();
+    v.readonly = readonly;
     return v;
   }
 
   Value Value::store(ArgType arg_type, Value& v)
   {
+    if (readonly)
+      throw Value(Error::BadStoreTarget);
+
+    if (v.readonly)
+      throw Value(Error::BadStore);
+
     switch (tag)
     {
       case ValueType::Ref:

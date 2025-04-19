@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ident.h"
+#include "logging.h"
 #include "region.h"
 #include "value.h"
 
@@ -114,14 +115,17 @@ namespace vbci
         // RC dec comes from invalidating values in registers. As such, it's
         // paired with a stack RC decrement for the containing region.
 
-        // TODO: what if the region is freed here?
-        region()->stack_dec();
-
         if (region()->enable_rc())
         {
-          // TODO: free at zero
-          rc--;
+          if (--rc == 0)
+          {
+            logging::Debug() << "Free " << this << std::endl;
+            // TODO: finalize, decrement fields
+            // free(this);
+          };
         }
+
+        region()->stack_dec();
       }
     }
 
@@ -144,17 +148,17 @@ namespace vbci
       {
         auto r = region();
 
-        // Can't store if we're readonly or if v is on the stack.
-        if (r->readonly || vstack)
+        // Can't store if v is on the stack.
+        if (vstack)
           return false;
 
         if (is_region(vloc))
         {
           auto vr = region(vloc);
 
-          // Can't store if they're readonly, or if they're in a different
-          // region that has a parent, or if they're an ancestor of this region.
-          if (vr->readonly || ((r != vr) && (vr->parent || vr->is_ancestor(r))))
+          // Can't store if they're in a different region that has a parent, or
+          // if they're an ancestor of this region.
+          if ((r != vr) && (vr->parent || vr->is_ancestor(r)))
             return false;
         }
       }

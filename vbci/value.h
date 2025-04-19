@@ -36,7 +36,8 @@ namespace vbci
     };
 
     uint64_t idx : 56;
-    ValueType tag : 8;
+    ValueType tag : 7;
+    uint8_t readonly : 1;
 
     Value(ValueType t) : tag(t) {}
 
@@ -53,13 +54,18 @@ namespace vbci
     Value(int64_t i64) : i64(i64), tag(ValueType::I64) {}
     Value(float f32) : f32(f32), tag(ValueType::F32) {}
     Value(double f64) : f64(f64), tag(ValueType::F64) {}
-    Value(Object* obj) : obj(obj), tag(ValueType::Object) {}
-    Value(Array* arr) : arr(arr), tag(ValueType::Array) {}
+    Value(Object* obj) : obj(obj), tag(ValueType::Object), readonly(0) {}
+    Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
     Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
-    Value(Object* obj, FieldIdx f) : obj(obj), idx(f), tag(ValueType::Ref) {}
-    Value(Array* arr, size_t idx) : arr(arr), idx(idx), tag(ValueType::ArrayRef)
+    Value(Object* obj, FieldIdx f, bool ro)
+    : obj(obj), idx(f), tag(ValueType::Ref), readonly(ro)
     {}
-    Value(Cown* cown, FieldIdx) : cown(cown), tag(ValueType::CownRef) {}
+    Value(Array* arr, size_t idx, bool ro)
+    : arr(arr), idx(idx), tag(ValueType::ArrayRef), readonly(ro)
+    {}
+    Value(Cown* cown, bool ro)
+    : cown(cown), tag(ValueType::CownRef), readonly(ro)
+    {}
     Value(Error error) : error(error), tag(ValueType::Error) {}
 
     Value(Function* func) : func(func), tag(ValueType::Function)
