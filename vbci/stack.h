@@ -14,11 +14,13 @@ namespace vbci
       size_t offset;
     };
 
+  private:
     static constexpr size_t ChunkSize = 1024;
     using Chunk = std::array<uint8_t, ChunkSize>;
     std::vector<Chunk> chunks;
     Idx top;
 
+  public:
     Idx save()
     {
       return top;

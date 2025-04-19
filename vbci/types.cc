@@ -8,6 +8,11 @@ namespace vbci
     size = sizeof(Object) + (fields.size() * sizeof(Value));
   }
 
+  Function* Class::finalizer()
+  {
+    return method(FinalMethodId);
+  }
+
   Function* Class::method(Id w)
   {
     auto find = methods.find(w);

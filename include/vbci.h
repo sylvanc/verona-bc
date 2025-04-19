@@ -12,6 +12,8 @@ namespace vbci
   inline const auto MagicNumber = Code(0xDEC0ADDE);
   inline const auto CurrentVersion = Code(0);
   inline const auto MaxRegisters = size_t(256);
+  inline const auto MainFuncId = Id(0);
+  inline const auto FinalMethodId = Id(0);
 
   enum class Op : uint8_t
   {
@@ -33,18 +35,21 @@ namespace vbci
     // Arg2 = src.
     Convert,
 
-    // Allocates a new object in the current frame. Fields are uninitialized.
+    // Allocates a new object in the current frame. Fields are initialized from
+    // arguments.
     // Arg0 = dst.
     // Stream: 32 bit class ID.
     Stack,
 
-    // Allocates a new object in the same region. Fields are uninitialized.
+    // Allocates a new object in the same region. Fields are initialized from
+    // arguments.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
     // Stream: 32 bit class ID.
     Heap,
 
-    // Allocates a new object in a new region. Fields are uninitialized.
+    // Allocates a new object in a new region. Fields are initialized from
+    // arguments.
     // Arg0 = dst.
     // Arg1 = region type.
     // Stream: 32 bit class ID.
@@ -156,7 +161,7 @@ namespace vbci
     Lookup,
 
     // Set a value as an argument index in the next frame. Use this to set up
-    // the arguments for a function call.
+    // the arguments for an object allocation or a function call.
     // Arg0 = argument index.
     // Arg1 = move or copy.
     // Arg2 = src.

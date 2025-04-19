@@ -39,6 +39,13 @@ namespace vbcc
             state->error = true;
             return err(_(Class) / ClassId, "duplicate class name");
           }
+
+          if ((_(Class) / Fields)->size() > MaxRegisters)
+          {
+            state->error = true;
+            return err(_(Class) / ClassId, "class has too many fields");
+          }
+
           return NoChange;
         },
 

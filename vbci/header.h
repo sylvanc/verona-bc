@@ -155,15 +155,7 @@ namespace vbci
       {
         arc++;
       }
-      else if (no_rc(loc))
-      {
-        // Do nothing.
-
-        // TODO: no RC for stack alloc?
-        // if so, need an actual bump allocator
-        // segmented stack, to avoid over-allocation
-      }
-      else
+      else if (!no_rc(loc))
       {
         // RC inc comes from new values in registers. As such, it's paired with
         // a stack RC increment for the containing region.
@@ -182,11 +174,7 @@ namespace vbci
         // TODO: free at zero
         arc--;
       }
-      else if (no_rc(loc))
-      {
-        // Do nothing.
-      }
-      else
+      else if (!no_rc(loc))
       {
         // RC dec comes from invalidating values in registers. As such, it's
         // paired with a stack RC decrement for the containing region.

@@ -101,7 +101,9 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto& cls = program->classes.at(program->load_u32(frame->pc));
           auto mem = stack.alloc(cls.size);
-          dst = Object::create(mem, cls, frame->frame_id);
+          auto obj = Object::create(frame, mem, cls, frame->frame_id);
+          frame->push_finalizer(obj, cls.finalizer());
+          dst = obj;
           break;
         }
 
@@ -111,7 +113,7 @@ namespace vbci
           auto& cls = program->classes.at(program->load_u32(frame->pc));
           auto region = frame->local(arg1(code)).region();
           auto mem = region->alloc(cls.size);
-          dst = Object::create(mem, cls, Location(region));
+          dst = Object::create(frame, mem, cls, Location(region));
           break;
         }
 
@@ -121,7 +123,7 @@ namespace vbci
           auto& cls = program->classes.at(program->load_u32(frame->pc));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto mem = region->alloc(cls.size);
-          dst = Object::create(mem, cls, Location(region));
+          dst = Object::create(frame, mem, cls, Location(region));
           break;
         }
 
@@ -587,12 +589,14 @@ namespace vbci
     // Set how we will handle non-local returns in the current frame.
     Location frame_id = StackAlloc;
     size_t base = 0;
+    size_t finalize_base = 0;
 
     if (frame)
     {
       frame->condition = condition;
       frame_id = frame->frame_id + 2;
       base = frame->base + frame->func->registers;
+      finalize_base = frame->finalize_top;
     }
 
     // Make sure there's enough register space.
@@ -601,16 +605,17 @@ namespace vbci
     if (locals.size() < req_stack_size)
       locals.resize(req_stack_size);
 
-    frames.push_back({
-      .func = func,
-      .frame_id = frame_id,
-      .save = stack.save(),
-      .locals = locals,
-      .base = base,
-      .pc = func->labels.at(0),
-      .dst = dst,
-      .condition = Condition::Return,
-    });
+    frames.emplace_back(
+      func,
+      frame_id,
+      stack.save(),
+      locals,
+      base,
+      finalize,
+      finalize_base,
+      func->labels.at(0),
+      dst,
+      Condition::Return);
 
     frame = &frames.back();
   }
@@ -621,9 +626,7 @@ namespace vbci
     if (ret.location() == frame->frame_id)
       throw Value(Error::BadStackEscape);
 
-    // TODO: run finalizers.
-    frame->drop();
-    stack.restore(frame->save);
+    teardown();
     frames.pop_back();
 
     if (frames.empty())
@@ -685,10 +688,7 @@ namespace vbci
   void Thread::tailcall(Function* func)
   {
     assert(func);
-
-    // TODO: run finalizers.
-    frame->drop();
-    stack.restore(frame->save);
+    teardown();
 
     // Move arguments back to the current frame.
     for (size_t i = 0; i < func->params.size(); i++)
@@ -706,6 +706,27 @@ namespace vbci
     frame->func = func;
     frame->pc = func->labels.at(0);
     frame->condition = Condition::Return;
+  }
+
+  void Thread::teardown()
+  {
+    auto depth = frames.size();
+    frame->drop();
+
+    for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
+    {
+      auto [obj, func] = frame->finalize.at(i);
+      frame->arg(0) = obj;
+      pushframe(func, 0, Condition::Throw);
+
+      while (depth != frames.size())
+        step();
+
+      logging::Error() << "Finalized!" << std::endl;
+      frame->local(0).drop();
+    }
+
+    stack.restore(frame->save);
   }
 
   void Thread::branch(Local label)

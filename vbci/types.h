@@ -23,6 +23,7 @@ namespace vbci
     std::unordered_map<Id, Function*> methods;
 
     void calc_size();
+    Function* finalizer();
     Function* method(Id w);
   };
 }

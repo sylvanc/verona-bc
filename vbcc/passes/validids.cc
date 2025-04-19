@@ -68,16 +68,44 @@ namespace vbcc
             return err(_(FunctionId), "unknown function");
           }
 
+          if (*id == MainFuncId)
+          {
+            if (state->functions.at(MainFuncId).params != 0)
+            {
+              state->error = true;
+              return err(
+                _(FunctionId), "main function must take no parameters");
+            }
+          }
+
           return NoChange;
         },
 
-        T(GlobalId)[GlobalId] >> [state](Match& _) -> Node {
-          auto id = state->get_func_id(_(GlobalId));
+        T(GlobalId)[GlobalId] >> [state](Match& /*_*/) -> Node {
+          // auto id = state->get_global_id(_(GlobalId));
 
-          if (!id)
+          // if (!id)
+          // {
+          //   state->error = true;
+          //   return err(_(GlobalId), "unknown global");
+          // }
+
+          return NoChange;
+        },
+
+        T(Method)[Method] >> [state](Match& _) -> Node {
+          auto method = _(Method);
+          auto id = state->get_method_id(method / MethodId);
+
+          if (*id == FinalMethodId)
           {
-            state->error = true;
-            return err(_(GlobalId), "unknown global");
+            auto func_id = state->get_func_id(method / FunctionId);
+            if (state->functions.at(*func_id).params != 1)
+            {
+              state->error = true;
+              return err(
+                method / FunctionId, "finalizer must have one parameter");
+            }
           }
 
           return NoChange;

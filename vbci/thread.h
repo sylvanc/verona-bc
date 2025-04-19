@@ -13,6 +13,7 @@ namespace vbci
     Stack stack;
     std::vector<Frame> frames;
     std::vector<Value> locals;
+    std::vector<std::pair<Object*, Function*>> finalize;
     std::unordered_set<Cown*> read;
     std::unordered_set<Cown*> write;
     Cown* result;
@@ -48,6 +49,7 @@ namespace vbci
     void pushframe(Function* func, Local dst, Condition condition);
     void popframe(Value& result, Condition condition);
     void tailcall(Function* func);
+    void teardown();
     void branch(Local label);
   };
 }

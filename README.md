@@ -30,7 +30,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work?
-* Stack finalization.
 * Object, cown, and region finalization and freeing.
 * Audit all the errors in `ident.h`.
 * Embedded fields.
@@ -42,6 +41,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * Command line arguments.
 * Standard IO? Does this need string support?
+* String constants? `u8[]`?
 * File API? Seems like too much.
 * Some kind of `dlopen` system for adding FFI?
   * Provide the DSO to vbcc as well as vbci.

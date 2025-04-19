@@ -201,9 +201,12 @@ namespace vbcc
   {
     primitives.resize(NumPrimitiveClasses);
 
-    // Reserve func_id 0 for `main`.
+    // Reserve a function ID for `@main`.
     functions.push_back(FuncState(nullptr));
-    func_ids.insert({"@main", 0});
+    func_ids.insert({"@main", MainFuncId});
+
+    // Reserve a method ID for `@final`.
+    method_ids.insert({"@final", FinalMethodId});
   }
 
   std::optional<Id> State::get_class_id(Node id)

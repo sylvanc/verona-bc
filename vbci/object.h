@@ -12,16 +12,17 @@ namespace vbci
     Id class_id;
     Value fields[0];
 
-    Object(Location loc, Class& cls) : Header(loc), class_id(cls.class_id)
+    Object(Frame* frame, Location loc, Class& cls)
+    : Header(loc), class_id(cls.class_id)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        fields[i] = Value();
+        fields[i] = std::move(frame->arg(i));
     }
 
   public:
-    static Object* create(void* mem, Class& cls, Location loc)
+    static Object* create(Frame* frame, void* mem, Class& cls, Location loc)
     {
-      return new (mem) Object(loc, cls);
+      return new (mem) Object(frame, loc, cls);
     }
 
     Id get_class_id()

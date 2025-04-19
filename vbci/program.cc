@@ -68,6 +68,12 @@ namespace vbci
     auto num_functions = load_u32(pc);
     functions.resize(num_functions);
 
+    if (num_functions == 0)
+    {
+      logging::Error() << file << ": has no no functions" << std::endl;
+      return false;
+    }
+
     for (auto& f : functions)
     {
       // 8 bits for labels, 8 bits for parameters, 8 bits for registers.
@@ -90,11 +96,21 @@ namespace vbci
       f.registers = registers;
     }
 
+    if (functions.at(0).params.size() != 0)
+    {
+      logging::Error() << file << ": `main` must take zero parameters"
+                       << std::endl;
+      return false;
+    }
+
     // Primitive classes.
     primitives.resize(NumPrimitiveClasses);
 
     for (auto& cls : primitives)
-      parse_methods(cls, pc);
+    {
+      if (!parse_methods(cls, pc))
+        return false;
+    }
 
     // User-defined classes.
     auto num_classes = load_u32(pc);
@@ -104,18 +120,29 @@ namespace vbci
     for (auto& cls : classes)
     {
       cls.class_id = class_id++;
-      parse_fields(cls, pc);
-      parse_methods(cls, pc);
+
+      if (!parse_fields(cls, pc))
+        return false;
+
+      if (!parse_methods(cls, pc))
+        return false;
+
       cls.calc_size();
     }
 
     return true;
   }
 
-  void Program::parse_fields(Class& cls, PC& pc)
+  bool Program::parse_fields(Class& cls, PC& pc)
   {
     auto num_fields = load_u32(pc);
     cls.fields.reserve(num_fields);
+
+    if (num_fields > MaxRegisters)
+    {
+      logging::Error() << file << ": too many fields in class" << std::endl;
+      return false;
+    }
 
     for (FieldIdx i = 0; i < num_fields; i++)
     {
@@ -123,9 +150,11 @@ namespace vbci
       Id name = load_u32(pc);
       cls.fields.emplace(name, i);
     }
+
+    return true;
   }
 
-  void Program::parse_methods(Class& cls, PC& pc)
+  bool Program::parse_methods(Class& cls, PC& pc)
   {
     auto num_methods = load_u32(pc);
     cls.methods.reserve(num_methods);
@@ -135,8 +164,22 @@ namespace vbci
       // This creates a mapping from a method name to a function pointer.
       Id method_id = load_u32(pc);
       Id func_id = load_u32(pc);
-      cls.methods.emplace(method_id, &functions.at(func_id));
+      auto& func = functions.at(func_id);
+
+      if (method_id == FinalMethodId)
+      {
+        if (func.params.size() != 1)
+        {
+          logging::Error() << file << ": finalizer must have one parameter"
+                           << std::endl;
+          return false;
+        }
+      }
+
+      cls.methods.emplace(method_id, &func);
     }
+
+    return true;
   }
 
   int Program::run()
@@ -147,7 +190,7 @@ namespace vbci
 
     // TODO: this is hacked up single threaded execution
     Thread thread{.program = this};
-    thread.pushframe(&functions.at(0), 0, Condition::Return);
+    thread.pushframe(&functions.at(MainFuncId), 0, Condition::Return);
 
     while (thread.step())
       ;

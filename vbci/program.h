@@ -96,8 +96,8 @@ namespace vbci
 
     bool load(std::filesystem::path& path);
     bool parse();
-    void parse_fields(Class& cls, PC& pc);
-    void parse_methods(Class& cls, PC& pc);
+    bool parse_fields(Class& cls, PC& pc);
+    bool parse_methods(Class& cls, PC& pc);
     int run();
   };
 }

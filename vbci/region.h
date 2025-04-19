@@ -9,12 +9,16 @@ namespace vbci
 {
   struct Region
   {
+    friend struct Header;
+
+  private:
     Region* parent;
     RC stack_rc;
     RegionType r_type;
 
     Region(RegionType type) : parent(nullptr), stack_rc(1), r_type(type) {}
 
+  public:
     static Region* create(RegionType type)
     {
       return new Region(type);
@@ -25,6 +29,7 @@ namespace vbci
       return std::malloc(size);
     }
 
+  private:
     bool is_ancestor(Region* r)
     {
       while (Region* p = r->parent)
@@ -51,9 +56,7 @@ namespace vbci
     void stack_dec()
     {
       if ((--stack_rc == 0) && (parent != nullptr))
-      {
-        // TODO: free the region.
-      }
+        free();
     }
 
     void clear_parent()
@@ -62,17 +65,19 @@ namespace vbci
       parent = nullptr;
 
       if (stack_rc == 0)
-      {
-        // TODO: free the region.
-        logging::Debug() << "Free region " << this << std::endl;
-        // TODO: finalize and free all objects in the region.
-      }
+        free();
     }
 
     void set_parent(Region* p)
     {
       assert(parent == nullptr);
       parent = p;
+    }
+
+    void free()
+    {
+      logging::Debug() << "Free region " << this << std::endl;
+      // TODO: finalize and free all objects in the region.
     }
   };
 }
