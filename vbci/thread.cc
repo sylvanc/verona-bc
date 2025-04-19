@@ -716,13 +716,12 @@ namespace vbci
     for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
     {
       auto [obj, func] = frame->finalize.at(i);
-      frame->arg(0) = obj;
+      frame->arg(0) = Value(obj, true);
       pushframe(func, 0, Condition::Throw);
 
       while (depth != frames.size())
         step();
 
-      logging::Error() << "Finalized!" << std::endl;
       frame->local(0).drop();
     }
 

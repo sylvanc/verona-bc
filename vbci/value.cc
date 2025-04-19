@@ -31,6 +31,10 @@ namespace vbci
 
   Value::Value(Object* obj) : obj(obj), tag(ValueType::Object), readonly(0) {}
 
+  Value::Value(Object* obj, bool ro)
+  : obj(obj), tag(ValueType::Object), readonly(ro)
+  {}
+
   Value::Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
 
   Value::Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}

@@ -55,6 +55,7 @@ namespace vbci
     Value(float f32);
     Value(double f64);
     Value(Object* obj);
+    Value(Object* obj, bool ro);
     Value(Array* arr);
     Value(Cown* cown);
     Value(Object* obj, FieldIdx f, bool ro);
