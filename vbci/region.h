@@ -9,7 +9,6 @@ namespace vbci
 {
   struct Region
   {
-    std::unordered_set<Region*> children;
     Region* parent;
     RC stack_rc;
     RegionType r_type;
@@ -55,7 +54,6 @@ namespace vbci
     void clear_parent()
     {
       assert(parent != nullptr);
-      parent->children.erase(this);
       parent = nullptr;
 
       if (stack_rc == 0)
@@ -70,7 +68,6 @@ namespace vbci
     {
       assert(parent == nullptr);
       parent = p;
-      p->children.insert(this);
     }
   };
 }

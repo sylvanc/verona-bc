@@ -29,6 +29,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * How do subtype checks work?
 * Object, cown, and region finalization and freeing.
 * Stack allocation that's unwound when a frame is popped.
+  * Can finalize immediately on unwind.
 * Initializing globals.
 * Math ops for numerical limits, by type?
 * Type test.
