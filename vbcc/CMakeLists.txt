@@ -1,6 +1,7 @@
 add_executable(vbcc
   passes/assignids.cc
   passes/labels.cc
+  passes/liveness.cc
   passes/parser.cc
   passes/statements.cc
   passes/validids.cc

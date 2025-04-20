@@ -151,6 +151,45 @@ namespace vbcc
       return ArgType::Copy;
   }
 
+  void LabelState::def(uint8_t r)
+  {
+    // We've defined a register, so it's live.
+    out.set(r);
+    dead.reset(r);
+  }
+
+  bool LabelState::use(uint8_t r)
+  {
+    // We've used a register. If it's not live, we require it and set it as
+    // live.
+    if (dead.test(r))
+      return false;
+
+    if (!out.test(r))
+    {
+      out.set(r);
+      in.set(r);
+    }
+
+    return true;
+  }
+
+  bool LabelState::kill(uint8_t r)
+  {
+    // We've killed a register. If it's live, we kill it. If it's not live, we
+    // require it.
+    if (dead.test(r))
+      return false;
+
+    if (out.test(r))
+      out.reset(r);
+    else
+      in.set(r);
+
+    dead.set(r);
+    return true;
+  }
+
   std::optional<uint8_t> FuncState::get_label_id(Node id)
   {
     auto name = std::string(id->location().view());
@@ -162,6 +201,13 @@ namespace vbcc
     return find->second;
   }
 
+  LabelState& FuncState::get_label(Node id)
+  {
+    auto name = std::string(id->location().view());
+    auto find = label_idxs.find(name);
+    return labels.at(find->second);
+  }
+
   bool FuncState::add_label(Node id)
   {
     auto name = std::string(id->location().view());
@@ -171,6 +217,7 @@ namespace vbcc
       return false;
 
     label_idxs.insert({name, label_idxs.size()});
+    labels.emplace_back();
     return true;
   }
 
@@ -320,6 +367,43 @@ namespace vbcc
     auto& func_state = functions.at(func_id);
     func_state.params = (func / Params)->size();
     return func_state;
+  }
+
+  void State::def(Node& id)
+  {
+    auto& func_state = get_func(id->parent(Func) / FunctionId);
+    auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
+    label_state.def(*func_state.get_register_id(id));
+  }
+
+  bool State::use(Node& id)
+  {
+    auto& func_state = get_func(id->parent(Func) / FunctionId);
+    auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
+
+    if (!label_state.use(*func_state.get_register_id(id)))
+    {
+      error = true;
+      id->parent()->replace(id, err(clone(id), "use of dead register"));
+      return false;
+    }
+
+    return true;
+  }
+
+  bool State::kill(Node& id)
+  {
+    auto& func_state = get_func(id->parent(Func) / FunctionId);
+    auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
+
+    if (!label_state.kill(*func_state.get_register_id(id)))
+    {
+      error = true;
+      id->parent()->replace(id, err(clone(id), "use of dead register"));
+      return false;
+    }
+
+    return true;
   }
 
   void State::gen()
@@ -523,7 +607,7 @@ namespace vbcc
           }
           else if (stmt == HeapArrayConst)
           {
-            code << e{Op::HeapArrayConst, dst(stmt), lhs(stmt)}
+            code << e{Op::HeapArrayConst, dst(stmt), src(stmt)}
                  << lit<uint64_t>(stmt / Rhs);
           }
           else if (stmt == RegionArray)
@@ -828,7 +912,7 @@ namespace vbcc
         else if (term == TailcallDyn)
         {
           args(term / MoveArgs);
-          code << e{Op::Tailcall, +CallType::CallDynamic, src(term)};
+          code << e{Op::Tailcall, +CallType::CallDynamic, dst(term)};
         }
         else if (term == Return)
         {

@@ -123,6 +123,15 @@ namespace vbcc
           return NoChange;
         },
 
+        // Define all destination registers.
+        Def[Body] >> [state](Match& _) -> Node {
+          auto stmt = _(Body);
+          auto dst = stmt / LocalId;
+          auto& func_state = state->get_func(dst->parent(Func) / FunctionId);
+          func_state.add_register(dst);
+          return NoChange;
+        },
+
         // Check that all labels in a function are defined.
         T(LabelId)[LabelId] >> [state](Match& _) -> Node {
           auto label = _(LabelId);
@@ -132,28 +141,6 @@ namespace vbcc
           {
             state->error = true;
             return err(label, "undefined label");
-          }
-
-          return NoChange;
-        },
-
-        // Define all destination registers.
-        Def[Body] >> [state](Match& _) -> Node {
-          auto stmt = _(Body);
-          auto dst = stmt / LocalId;
-          auto& func_state = state->get_func(dst->parent(Func) / FunctionId);
-
-          if (func_state.add_register(dst))
-          {
-            // Check that no register used in this statement was just defined.
-            for (auto& child : *stmt)
-            {
-              if ((&*dst != &*child) && dst->equals(child))
-              {
-                state->error = true;
-                return err(child, "register used before defined");
-              }
-            }
           }
 
           return NoChange;

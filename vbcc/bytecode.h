@@ -1,11 +1,23 @@
 #pragma once
 
+#include <bitset>
 #include <vbcc.h>
 #include <vbci.h>
 
 namespace vbcc
 {
   using namespace vbci;
+
+  struct LabelState
+  {
+    std::bitset<MaxRegisters> in;
+    std::bitset<MaxRegisters> dead;
+    std::bitset<MaxRegisters> out;
+
+    void def(uint8_t r);
+    bool use(uint8_t r);
+    bool kill(uint8_t r);
+  };
 
   struct FuncState
   {
@@ -14,10 +26,12 @@ namespace vbcc
     size_t params;
     std::unordered_map<std::string, uint8_t> label_idxs;
     std::unordered_map<std::string, uint8_t> register_idxs;
+    std::vector<LabelState> labels;
 
     FuncState(Node func) : func(func) {}
 
     std::optional<uint8_t> get_label_id(Node id);
+    LabelState& get_label(Node id);
     bool add_label(Node id);
 
     std::optional<uint8_t> get_register_id(Node id);
@@ -52,6 +66,10 @@ namespace vbcc
     std::optional<Id> get_func_id(Node id);
     FuncState& get_func(Node id);
     FuncState& add_func(Node func);
+
+    void def(Node& id);
+    bool use(Node& id);
+    bool kill(Node& id);
 
     void gen();
   };

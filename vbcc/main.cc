@@ -11,8 +11,13 @@ int main(int argc, char** argv)
   auto state = std::make_shared<State>();
   Reader reader{
     "vbcc",
-    {statements(), labels(), assignids(state), validids(state)},
+    {statements(),
+     labels(),
+     assignids(state),
+     validids(state),
+     liveness(state)},
     parser()};
+
   Driver d(reader, &options());
   auto r = d.run(argc, argv);
 
