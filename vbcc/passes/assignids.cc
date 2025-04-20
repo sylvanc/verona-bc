@@ -175,7 +175,7 @@ namespace vbcc
       }};
 
     p.post([state](auto top) {
-      if (!state->functions.at(0).func)
+      if (!state->functions.at(MainFuncId).func)
       {
         state->error = true;
         top << err(Func, "missing main function");

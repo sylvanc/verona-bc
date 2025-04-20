@@ -2,6 +2,24 @@
 
 This is an experimental byte code interpreter for the Verona operational semantics.
 
+## Register Liveness
+
+* A label sets its arguments to live.
+* `$x = ...` sets a register to live.
+* `$x = move $y` kills `$y`.
+* `drop $x` kill `$x`
+* An `Arg` or `MoveArg` with `move $x` kills `$x`.
+
+Define registers on labels instead of on functions. The label with the highest register count is the register count for the function.
+
+Check the control flow graph without arguments.
+* For each label:
+  * Do local liveness.
+  * Figure out what needs to be live on entry.
+  * Figure out what's live on exit.
+* For each cond/jump:
+  * Make sure exit liveness is a superset of target entry liveness.
+
 ## Non-Local Returns
 
 A function call can be made as a `call`, a `subcall`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
@@ -18,14 +36,15 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## To-Do List
 
-* A register in a label may get initialized in a label that comes after it.
-  * Similarly, a register in a label may appear to have been initialized in a preceding label, but that preceding label may not be executed.
-  * Switch to labels having parameters and disallow writing to an active register.
-  * Implicit start label takes the function parameters as arguments.
-  * Start label becomes a tailcall, can it be eliminated?
+* Label parameters.
+  * Call labels with args.
+  * Make sure label arg count is correct.
+  * Do liveness analysis.
   * If no allocations escape a label, the label stack can be reused.
     * Explicit tail cond/jump?
     * Otherwise, no `restore` on label jump.
+* Change to 8-bit field ID in `Ref`?
+  * Or provide "long `arg`" for initializing huge objects?
 * Type checking in the byte code.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?

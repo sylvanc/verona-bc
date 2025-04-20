@@ -4,9 +4,9 @@ namespace vbcc
 {
   const auto Dst = T(LocalId)[LocalId] * T(Equals);
   const auto RegionType = T(RegionRC, RegionGC, RegionArena);
-  const auto CallArgs = T(LParen) * T(Arg)++[Args] * T(RParen);
   const auto ArrayDynArg = T(LBracket) * T(LocalId)[Arg] * T(RBracket);
   const auto ArrayConstArg = T(LBracket) * IntLiteral[Arg] * T(RBracket);
+  const auto CallArgs = T(LParen) * T(Arg)++[Args] * T(RParen);
   const auto LabelArgs =
     T(LParen) * ~(T(LocalId) * (T(Comma) * T(LocalId))++) * T(RParen);
 
@@ -372,7 +372,7 @@ namespace vbcc
             return Tailcall << (FunctionId ^ _(GlobalId)) << labelargs(_[Args]);
           },
 
-        (T(Tailcall) << End) * T(LocalId)[LocalId] * LabelArgs[Args] >>
+        (T(Tailcall) << End) * T(LocalId)[Lhs] * LabelArgs[Args] >>
           [](Match& _) { return TailcallDyn << _(Lhs) << labelargs(_[Args]); },
 
         (T(Return) << End) * T(LocalId)[LocalId] >>

@@ -96,7 +96,7 @@ namespace vbci
       f.registers = registers;
     }
 
-    if (functions.at(0).params.size() != 0)
+    if (functions.at(MainFuncId).params.size() != 0)
     {
       logging::Error() << file << ": `main` must take zero parameters"
                        << std::endl;
