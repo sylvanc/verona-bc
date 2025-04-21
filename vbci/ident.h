@@ -30,6 +30,7 @@ namespace vbci
     MismatchedTypes,
     MethodNotFound,
     BadStackEscape,
+    BadArgs,
   };
 
   using PC = size_t;

@@ -4,6 +4,7 @@
 #include "program.h"
 #include "stack.h"
 
+#include <bitset>
 #include <unordered_set>
 
 namespace vbci
@@ -16,6 +17,7 @@ namespace vbci
     std::vector<std::pair<Object*, Function*>> finalize;
     std::unordered_set<Cown*> read;
     std::unordered_set<Cown*> write;
+    std::bitset<MaxRegisters> args;
     Cown* result;
 
     Program* program;

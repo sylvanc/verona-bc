@@ -24,6 +24,8 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work?
+* Mode to skip checking argument counts?
+  * Separate for static and dynamic calls?
 * Object, cown, and region finalization and freeing.
 * Audit all the errors in `ident.h`.
 * Embedded fields.

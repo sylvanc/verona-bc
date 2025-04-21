@@ -38,5 +38,6 @@ namespace vbci
     Value& arg(Local idx);
     void push_finalizer(Object* obj, Function* finalizer);
     void drop();
+    void drop_args();
   };
 }

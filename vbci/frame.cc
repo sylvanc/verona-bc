@@ -66,4 +66,10 @@ namespace vbci
     for (size_t i = 0; i < func->registers; i++)
       locals[base + i].drop();
   }
+
+  void Frame::drop_args()
+  {
+    for (size_t i = 0; i < MaxRegisters; i++)
+      locals[base + func->registers + i].drop();
+  }
 }
