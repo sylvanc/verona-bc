@@ -77,12 +77,14 @@ namespace vbci
     Location location();
     Region* region();
 
+    Value swap(ArgType arg_type, bool stack, Value& that);
     void drop();
-    Value makeref(Program* program, ArgType arg_type, Id field);
-    Value makearrayref(ArgType arg_type, size_t i);
+    void field_drop();
+    Value ref(ArgType arg_type, Id field);
+    Value arrayref(ArgType arg_type, size_t i);
     Value load();
     Value store(ArgType arg_type, Value& v);
-    Function* method(Program* program, Id w);
+    Function* method(Id w);
     Value convert(ValueType to);
     Function* function();
 
@@ -376,6 +378,10 @@ namespace vbci
       return Value(std::numeric_limits<double>::quiet_NaN());
     }
 
+  private:
+    void inc(bool reg = true);
+    void dec(bool reg = true);
+
     struct nounop
     {
       template<typename T>
@@ -393,10 +399,6 @@ namespace vbci
         throw Value(Error::BadOperand);
       }
     };
-
-  private:
-    void inc();
-    void dec();
 
     template<
       typename OpB,

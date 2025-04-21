@@ -7,15 +7,71 @@
 
 namespace vbci
 {
-  bool Thread::step()
+  inline Op opcode(Code code)
   {
-    if (!frame)
-    {
-      // TODO: end thread
-      // decrement our acquired cowns
-      return false;
-    }
+    // 8 bit opcode.
+    return static_cast<Op>(code & 0xFF);
+  }
 
+  inline Local arg0(Code code)
+  {
+    // 8 bit local index.
+    return (code >> 8) & 0xFF;
+  }
+
+  inline Local arg1(Code code)
+  {
+    // 8 bit local index.
+    return (code >> 16) & 0xFF;
+  }
+
+  inline Local arg2(Code code)
+  {
+    // 8 bit local index.
+    return (code >> 24) & 0xFF;
+  }
+
+  Thread& Thread::get()
+  {
+    thread_local Thread thread;
+    return thread;
+  }
+
+  Value Thread::run(Function* func)
+  {
+    return get().thread_run(func);
+  }
+
+  void Thread::run_finalizer(Object* obj)
+  {
+    get().thread_run_finalizer(obj);
+  }
+
+  Value Thread::thread_run(Function* func)
+  {
+    auto depth = frames.size();
+    pushframe(func, 0, Condition::Throw);
+
+    while (depth != frames.size())
+      step();
+
+    return std::move(locals.at(0));
+  }
+
+  void Thread::thread_run_finalizer(Object* obj)
+  {
+    if (frame)
+      frame->arg(0) = Value(obj, true);
+    else
+      locals.at(0) = Value(obj, true);
+
+    args.set(0);
+    run(obj->finalizer()).drop();
+  }
+
+  void Thread::step()
+  {
+    assert(frame);
     auto code = program->load_code(frame->pc);
     auto op = opcode(code);
 
@@ -103,7 +159,7 @@ namespace vbci
           check_args(cls.fields.size());
           auto mem = stack.alloc(cls.size);
           auto obj = Object::create(frame, mem, cls, frame->frame_id);
-          frame->push_finalizer(obj, cls.finalizer());
+          frame->push_finalizer(obj);
           dst = obj;
           break;
         }
@@ -216,7 +272,7 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto arg_type = static_cast<ArgType>(arg1(code));
           auto& src = frame->local(arg2(code));
-          dst = src.makeref(program, arg_type, program->load_u32(frame->pc));
+          dst = src.ref(arg_type, program->load_u32(frame->pc));
           break;
         }
 
@@ -225,7 +281,7 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto& src = frame->local(arg1(code));
           auto& idx = frame->local(arg2(code));
-          dst = src.makearrayref(ArgType::Move, idx.to_index());
+          dst = src.arrayref(ArgType::Move, idx.to_index());
           break;
         }
 
@@ -234,7 +290,7 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto& src = frame->local(arg1(code));
           auto& idx = frame->local(arg2(code));
-          dst = src.makearrayref(ArgType::Copy, idx.to_index());
+          dst = src.arrayref(ArgType::Copy, idx.to_index());
           break;
         }
 
@@ -244,7 +300,7 @@ namespace vbci
           auto arg_type = static_cast<ArgType>(arg1(code));
           auto& src = frame->local(arg2(code));
           auto idx = program->load_u64(frame->pc);
-          dst = src.makearrayref(arg_type, idx);
+          dst = src.arrayref(arg_type, idx);
           break;
         }
 
@@ -291,7 +347,7 @@ namespace vbci
             case CallType::CallDynamic:
             {
               auto& src = frame->local(arg2(code));
-              dst = src.method(program, func_id);
+              dst = src.method(func_id);
               break;
             }
 
@@ -584,8 +640,6 @@ namespace vbci
     {
       popframe(v, Condition::Throw);
     }
-
-    return true;
   }
 
   void Thread::pushframe(Function* func, Local dst, Condition condition)
@@ -649,9 +703,7 @@ namespace vbci
     if (frames.empty())
     {
       // TODO: store to the result cown?
-      // auto prev = result->store(ret);
-      // prev.drop();
-      locals.at(0) = ret;
+      locals.at(0) = std::move(ret);
       frame = nullptr;
       return;
     }
@@ -698,7 +750,7 @@ namespace vbci
         break;
     }
 
-    frame->local(frame->dst) = ret;
+    frame->local(frame->dst) = std::move(ret);
     frame->condition = Condition::Return;
   }
 
@@ -733,20 +785,10 @@ namespace vbci
 
   void Thread::teardown()
   {
-    auto depth = frames.size();
     frame->drop();
 
     for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
-    {
-      auto [obj, func] = frame->finalize.at(i);
-      frame->arg(0) = Value(obj, true);
-      pushframe(func, 0, Condition::Throw);
-
-      while (depth != frames.size())
-        step();
-
-      frame->local(0).drop();
-    }
+      thread_run_finalizer(finalize.at(i));
 
     stack.restore(frame->save);
   }

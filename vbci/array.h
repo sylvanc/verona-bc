@@ -40,5 +40,16 @@ namespace vbci
 
       return base_store(arg_type, data[idx], v);
     }
+
+    void dec(bool reg)
+    {
+      if (base_dec(reg))
+        return;
+
+      for (size_t i = 0; i < size; i++)
+        data[i].field_drop();
+
+      // TODO: free the memory
+    }
   };
 }

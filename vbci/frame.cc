@@ -1,6 +1,7 @@
 #include "frame.h"
 
 #include "function.h"
+#include "object.h"
 
 namespace vbci
 {
@@ -10,7 +11,7 @@ namespace vbci
     Stack::Idx save,
     std::vector<Value>& locals,
     size_t base,
-    std::vector<std::pair<Object*, Function*>>& finalize,
+    std::vector<Object*>& finalize,
     size_t finalize_base,
     PC pc,
     Local dst,
@@ -48,15 +49,17 @@ namespace vbci
     return locals.at(i);
   }
 
-  void Frame::push_finalizer(Object* obj, Function* finalizer)
+  void Frame::push_finalizer(Object* obj)
   {
+    auto finalizer = obj->finalizer();
+
     if (finalizer == nullptr)
       return;
 
     if (finalize_base == finalize_top)
-      finalize.emplace_back(obj, finalizer);
+      finalize.emplace_back(obj);
     else
-      finalize.at(finalize_top) = {obj, finalizer};
+      finalize.at(finalize_top) = obj;
 
     finalize_top++;
   }

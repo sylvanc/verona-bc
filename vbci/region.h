@@ -61,22 +61,26 @@ namespace vbci
 
     void clear_parent()
     {
+      // The stack RC must be greater than 0, because this only happens when
+      // a region entry point is returned as the previous value during a store,
+      // which means it's stack RC was just incremented.
       assert(parent != nullptr);
+      assert(stack_rc > 0);
       parent = nullptr;
-
-      if (stack_rc == 0)
-        free();
     }
 
     void set_parent(Region* p)
     {
+      // This originate from a region entry point being stored.
       assert(parent == nullptr);
       parent = p;
     }
 
     void free()
     {
-      logging::Debug() << "Free region " << this << std::endl;
+      // This must originate from Header::base_dec(true), which is a drop of a
+      // register from a frame.
+
       // TODO: finalize and free all objects in the region.
     }
   };

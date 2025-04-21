@@ -15,7 +15,7 @@ namespace vbci
     Stack::Idx save;
     std::vector<Value>& locals;
     size_t base;
-    std::vector<std::pair<Object*, Function*>>& finalize;
+    std::vector<Object*>& finalize;
     size_t finalize_base;
     size_t finalize_top;
     PC pc;
@@ -28,7 +28,7 @@ namespace vbci
       Stack::Idx save,
       std::vector<Value>& locals,
       size_t base,
-      std::vector<std::pair<Object*, Function*>>& finalize,
+      std::vector<Object*>& finalize,
       size_t finalize_base,
       PC pc,
       Local dst,
@@ -36,7 +36,7 @@ namespace vbci
 
     Value& local(Local idx);
     Value& arg(Local idx);
-    void push_finalizer(Object* obj, Function* finalizer);
+    void push_finalizer(Object* obj);
     void drop();
     void drop_args();
   };

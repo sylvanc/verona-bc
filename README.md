@@ -6,11 +6,11 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 A function call can be made as a `call`, a `subcall`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
 
-If you make a `call` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `return` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+If you `call` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `return` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
 
-If you make a `subcall` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `raise` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+If you `subcall` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `raise` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
 
-If you make a `try`, your destination register will have the returned value regardless of whether the function does a `return`, a `raise`, or a `throw`.
+If you `try`, your destination register will have the returned value regardless of whether the function does a `return`, a `raise`, or a `throw`.
 
 One way to use this is to implement Smalltalk style non-local returns. To do so, functions `call` blocks and other functions, and `return` results, whereas blocks `subcall` functions and other blocks, and either `raise` to return from the calling function (popping all blocks), or `return` to return to the calling block or function.
 
@@ -18,6 +18,9 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## To-Do List
 
+* Regions.
+  * Alloc/free depends on region type.
+  * Can't free a region until all objects in it have been freed.
 * Type test.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
@@ -25,6 +28,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * Automatic checking on calls and stores?
 * Mode to skip checking argument counts?
   * Separate for static and dynamic calls?
+  * Could do this in vbcc instead of in vbci.
 * Audit all the errors in `ident.h`.
 * Embedded fields.
 * Initializing globals.
@@ -47,6 +51,7 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * The DSO has an entry point that returns a list of function names, with their parameter counts.
   * These functions take vbci::Value arguments and return a vbci::Value.
 * Debug info that maps instructions to file:line:column?
+  * Debug adapter protocol?
 * Build an LSP to allow debugging.
 * Compile to LLVM IR and/or Cranelift.
 * AST to IR output.

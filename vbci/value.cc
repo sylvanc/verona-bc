@@ -135,20 +135,20 @@ namespace vbci
     }
   }
 
-  void Value::inc()
+  void Value::inc(bool reg)
   {
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::Ref:
         if (!readonly)
-          obj->inc();
+          obj->inc(reg);
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->inc();
+          arr->inc(reg);
         break;
 
       case ValueType::Cown:
@@ -161,20 +161,20 @@ namespace vbci
     }
   }
 
-  void Value::dec()
+  void Value::dec(bool reg)
   {
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::Ref:
         if (!readonly)
-          obj->dec();
+          obj->dec(reg);
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->dec();
+          arr->dec(reg);
         break;
 
       case ValueType::Cown:
@@ -225,29 +225,50 @@ namespace vbci
     }
   }
 
+  Value Value::swap(ArgType arg_type, bool stack, Value& that)
+  {
+    // This is called from Cown::store and Header::base_store.
+    // Safety is already checked.
+    assert(this != &that);
+    auto prev = std::move(*this);
+    std::memcpy(this, &that, sizeof(Value));
+
+    // If the store location is a stack alloc, we need to increment the
+    // region stack RC as well as the allocation RC.
+    if (arg_type == ArgType::Copy)
+      inc(stack);
+    else
+      that.tag = ValueType::Invalid;
+
+    return prev;
+  }
+
   void Value::drop()
   {
     dec();
     tag = ValueType::Invalid;
   }
 
-  Value Value::makeref(Program* program, ArgType arg_type, Id field)
+  void Value::field_drop()
+  {
+    dec(false);
+    tag = ValueType::Invalid;
+  }
+
+  Value Value::ref(ArgType arg_type, Id field)
   {
     switch (tag)
     {
       case ValueType::Object:
       {
-        auto& cls = program->classes.at(obj->get_class_id());
-        auto find = cls.fields.find(field);
-        if (find == cls.fields.end())
-          throw Value(Error::BadField);
+        auto f = obj->field(field);
 
         if (arg_type == ArgType::Move)
           tag = ValueType::Invalid;
         else
           inc();
 
-        return Value(obj, find->second, readonly);
+        return Value(obj, f, readonly);
       }
 
       case ValueType::Cown:
@@ -265,7 +286,7 @@ namespace vbci
     }
   }
 
-  Value Value::makearrayref(ArgType arg_type, size_t i)
+  Value Value::arrayref(ArgType arg_type, size_t i)
   {
     if (tag != ValueType::Array)
       throw Value(Error::BadRefTarget);
@@ -329,17 +350,18 @@ namespace vbci
     }
   }
 
-  Function* Value::method(Program* program, Id w)
+  Function* Value::method(Id w)
   {
     if (tag == ValueType::Object)
-      return program->classes.at(obj->get_class_id()).method(w);
+      return obj->method(w);
 
+    auto& program = Program::get();
     auto type_id = static_cast<size_t>(tag);
 
-    if (type_id >= program->primitives.size())
+    if (type_id >= program.primitives.size())
       throw Value(Error::BadMethodTarget);
 
-    return program->primitives.at(type_id).method(w);
+    return program.primitives.at(type_id).method(w);
   }
 
   Value Value::convert(ValueType to)

@@ -188,13 +188,6 @@ namespace vbci
     auto& sched = Scheduler::get();
     (void)sched;
 
-    // TODO: this is hacked up single threaded execution
-    Thread thread{.program = this};
-    thread.pushframe(&functions.at(MainFuncId), 0, Condition::Return);
-
-    while (thread.step())
-      ;
-
-    return thread.locals.at(0).get_i32();
+    return Thread::run(&functions.at(MainFuncId)).get_i32();
   }
 }

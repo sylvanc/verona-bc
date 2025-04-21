@@ -14,13 +14,13 @@ namespace vbci
   struct Header
   {
   private:
+    Location loc;
+
     union
     {
       RC rc;
       ARC arc;
     };
-
-    Location loc;
 
     static Region* region(Location loc)
     {
@@ -87,7 +87,7 @@ namespace vbci
     }
 
   protected:
-    Header(Location loc) : rc(1), loc(loc) {}
+    Header(Location loc) : loc(loc), rc(1) {}
 
     Value base_store(ArgType arg_type, Value& dst, Value& src)
     {
@@ -95,44 +95,68 @@ namespace vbci
         throw Value(Error::BadStore);
 
       auto stack = is_stack(loc);
-      auto prev = std::move(dst);
-      auto ploc = prev.location();
-      auto vloc = src.location();
+      auto dst_loc = dst.location();
+      auto src_loc = src.location();
 
-      if (ploc != vloc)
+      // If this is a stack allocation, we're moving the stack RC from the
+      // store location to the register (for prev), or from the register to
+      // the store location (for src), so no action is needed.
+      // If prev and src are in the same region, we don't need to do anything.
+      if (!stack && (dst_loc != src_loc))
       {
-        if (is_region(ploc))
+        if (is_region(dst_loc))
         {
           // Increment the region stack RC.
-          auto pr = region(ploc);
-          pr->stack_inc();
+          auto dst_r = region(dst_loc);
+          dst_r->stack_inc();
 
           // Clear the parent if it's in a different region.
-          if (!stack && (ploc != loc))
-            pr->clear_parent();
+          if (dst_loc != loc)
+            dst_r->clear_parent();
         }
 
-        if (is_region(vloc))
+        if (is_region(src_loc))
         {
-          // Decrement the region stack RC.
-          auto vr = region(vloc);
-          vr->stack_dec();
+          auto src_r = region(src_loc);
 
           // Set the parent if it's in a different region.
-          if (!stack && (vloc != loc))
-          {
-            auto r = region(loc);
-            vr->set_parent(r);
-          }
+          if (src_loc != loc)
+            src_r->set_parent(region(loc));
+
+          // Decrement the region stack RC.
+          src_r->stack_dec();
         }
       }
 
-      if (arg_type == ArgType::Move)
-        dst = std::move(src);
-      else
-        dst = src;
+      return dst.swap(arg_type, stack, src);
+    }
 
-      return prev;
+    bool base_dec(bool reg)
+    {
+      // Returns false if the allocation should be freed.
+      if (loc == Immutable)
+      {
+        return --arc != 0;
+      }
+      else if (!no_rc(loc))
+      {
+        auto r = region(loc);
+        bool ret = true;
+
+        if (r->enable_rc())
+          ret = --rc != 0;
+
+        // If this dec comes from a register, decrement the region stack RC.
+        if (reg)
+        {
+          // TODO: when can we collect the region?
+          r->stack_dec();
+        }
+
+        return ret;
+      }
+
+      return true;
     }
 
   public:
@@ -149,7 +173,7 @@ namespace vbci
       return region(loc);
     }
 
-    void inc()
+    void inc(bool reg)
     {
       if (loc == Immutable)
       {
@@ -157,40 +181,14 @@ namespace vbci
       }
       else if (!no_rc(loc))
       {
-        // RC inc comes from new values in registers. As such, it's paired with
-        // a stack RC increment for the containing region.
         auto r = region(loc);
-        r->stack_inc();
+
+        // If this RC inc comes from a register, increment the region stack RC.
+        if (reg)
+          r->stack_inc();
 
         if (r->enable_rc())
           rc++;
-      }
-    }
-
-    void dec()
-    {
-      if (loc == Immutable)
-      {
-        // TODO: free at zero
-        arc--;
-      }
-      else if (!no_rc(loc))
-      {
-        // RC dec comes from invalidating values in registers. As such, it's
-        // paired with a stack RC decrement for the containing region.
-        auto r = region(loc);
-
-        if (r->enable_rc())
-        {
-          if (--rc == 0)
-          {
-            logging::Debug() << "Free " << this << std::endl;
-            // TODO: finalize, decrement fields
-            // free(this);
-          };
-        }
-
-        r->stack_dec();
       }
     }
   };
