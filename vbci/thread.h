@@ -53,5 +53,6 @@ namespace vbci
     void tailcall(Function* func);
     void teardown();
     void branch(Local label);
+    void check_args(size_t expect);
   };
 }

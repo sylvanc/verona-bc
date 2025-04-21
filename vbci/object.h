@@ -16,7 +16,7 @@ namespace vbci
     : Header(loc), class_id(cls.class_id)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        fields[i] = std::move(frame->arg(i));
+        store(ArgType::Move, i, frame->arg(i));
     }
 
   public:

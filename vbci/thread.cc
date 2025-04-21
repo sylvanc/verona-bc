@@ -100,6 +100,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->classes.at(program->load_u32(frame->pc));
+          check_args(cls.fields.size());
           auto mem = stack.alloc(cls.size);
           auto obj = Object::create(frame, mem, cls, frame->frame_id);
           frame->push_finalizer(obj, cls.finalizer());
@@ -111,6 +112,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->classes.at(program->load_u32(frame->pc));
+          check_args(cls.fields.size());
           auto region = frame->local(arg1(code)).region();
           auto mem = region->alloc(cls.size);
           dst = Object::create(frame, mem, cls, Location(region));
@@ -121,6 +123,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->classes.at(program->load_u32(frame->pc));
+          check_args(cls.fields.size());
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto mem = region->alloc(cls.size);
           dst = Object::create(frame, mem, cls, Location(region));
@@ -588,28 +591,7 @@ namespace vbci
   void Thread::pushframe(Function* func, Local dst, Condition condition)
   {
     assert(func);
-    bool bad_args = false;
-
-    for (size_t i = 0; i < func->params.size(); i++)
-    {
-      if (!args.test(i))
-      {
-        bad_args = true;
-        continue;
-      }
-
-      args.reset(i);
-    }
-
-    if (args.any())
-    {
-      frame->drop_args();
-      args.reset();
-      bad_args = true;
-    }
-
-    if (bad_args)
-      throw Value(Error::BadArgs);
+    check_args(func->params.size());
 
     // Set how we will handle non-local returns in the current frame.
     Location frame_id = StackAlloc;
@@ -724,20 +706,13 @@ namespace vbci
   {
     assert(func);
     teardown();
+    check_args(func->params.size());
 
     // Move arguments back to the current frame.
     bool stack_escape = false;
-    bool bad_args = false;
 
     for (size_t i = 0; i < func->params.size(); i++)
     {
-      if (!args.test(i))
-      {
-        bad_args = true;
-        continue;
-      }
-
-      args.reset(i);
       auto& arg = frame->arg(i);
 
       if (arg.location() == frame->frame_id)
@@ -746,24 +721,14 @@ namespace vbci
       frame->local(i) = std::move(arg);
     }
 
+    // Can't tailcall with stack allocations.
+    if (stack_escape)
+      throw Value(Error::BadStackEscape);
+
     // Set the new function and program counter.
     frame->func = func;
     frame->pc = func->labels.at(0);
     frame->condition = Condition::Return;
-
-    if (args.any())
-    {
-      frame->drop_args();
-      args.reset();
-      bad_args = true;
-    }
-
-    if (bad_args)
-      throw Value(Error::BadArgs);
-
-    // Can't tailcall with stack allocations.
-    if (stack_escape)
-      throw Value(Error::BadStackEscape);
   }
 
   void Thread::teardown()
@@ -792,5 +757,18 @@ namespace vbci
       throw Value(Error::BadLabel);
 
     frame->pc = frame->func->labels.at(label);
+  }
+
+  void Thread::check_args(size_t expect)
+  {
+    for (size_t i = 0; i < expect; i++)
+      args.flip(i);
+
+    if (args.any())
+    {
+      frame->drop_args();
+      args.reset();
+      throw Value(Error::BadArgs);
+    }
   }
 }
