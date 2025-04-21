@@ -123,7 +123,7 @@ namespace vbci
           if (src_loc != loc)
             src_r->set_parent(region(loc));
 
-          // Decrement the region stack RC.
+          // Decrement the region stack RC. This can't free the region.
           src_r->stack_dec();
         }
       }
@@ -147,11 +147,9 @@ namespace vbci
           ret = --rc != 0;
 
         // If this dec comes from a register, decrement the region stack RC.
-        if (reg)
-        {
-          // TODO: when can we collect the region?
-          r->stack_dec();
-        }
+        // If the region is freed, don't try to free the object.
+        if (reg && !r->stack_dec())
+          ret = true;
 
         return ret;
       }

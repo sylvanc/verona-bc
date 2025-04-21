@@ -14,17 +14,20 @@ namespace vbci
     Id class_id;
     Value fields[0];
 
-    Object(Frame* frame, Location loc, Class& cls)
-    : Header(loc), class_id(cls.class_id)
+    Object(Location loc, Class& cls) : Header(loc), class_id(cls.class_id) {}
+
+  public:
+    static Object* create(void* mem, Class& cls, Location loc)
+    {
+      return new (mem) Object(loc, cls);
+    }
+
+    Object& init(Frame* frame, Class& cls)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
         store(ArgType::Move, i, frame->arg(i));
-    }
 
-  public:
-    static Object* create(Frame* frame, void* mem, Class& cls, Location loc)
-    {
-      return new (mem) Object(frame, loc, cls);
+      return *this;
     }
 
     FieldIdx field(Id field)
@@ -74,7 +77,7 @@ namespace vbci
       for (size_t i = 0; i < cls.fields.size(); i++)
         fields[i].field_drop();
 
-      // TODO: free the memory
+      region()->free(this);
     }
   };
 }

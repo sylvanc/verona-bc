@@ -60,6 +60,8 @@ namespace vbci
 
   void Thread::thread_run_finalizer(Object* obj)
   {
+    LOG(Debug) << "Running finalizer for " << obj;
+
     if (frame)
       frame->arg(0) = Value(obj, true);
     else
@@ -158,7 +160,8 @@ namespace vbci
           auto& cls = program->classes.at(program->load_u32(frame->pc));
           check_args(cls.fields.size());
           auto mem = stack.alloc(cls.size);
-          auto obj = Object::create(frame, mem, cls, frame->frame_id);
+          auto obj =
+            &Object::create(mem, cls, frame->frame_id)->init(frame, cls);
           frame->push_finalizer(obj);
           dst = obj;
           break;
@@ -170,8 +173,7 @@ namespace vbci
           auto& cls = program->classes.at(program->load_u32(frame->pc));
           check_args(cls.fields.size());
           auto region = frame->local(arg1(code)).region();
-          auto mem = region->alloc(cls.size);
-          dst = Object::create(frame, mem, cls, Location(region));
+          dst = &region->object(cls)->init(frame, cls);
           break;
         }
 
@@ -181,8 +183,7 @@ namespace vbci
           auto& cls = program->classes.at(program->load_u32(frame->pc));
           check_args(cls.fields.size());
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
-          auto mem = region->alloc(cls.size);
-          dst = Object::create(frame, mem, cls, Location(region));
+          dst = &region->object(cls)->init(frame, cls);
           break;
         }
 
@@ -209,8 +210,7 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto region = frame->local(arg1(code)).region();
           auto size = frame->local(arg2(code)).to_index();
-          auto mem = region->alloc(Array::size_of(size));
-          dst = Array::create(mem, Location(region), size);
+          dst = region->array(Array::size_of(size));
           break;
         }
 
@@ -219,8 +219,7 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto region = frame->local(arg1(code)).region();
           auto size = program->load_u64(frame->pc);
-          auto mem = region->alloc(Array::size_of(size));
-          dst = Array::create(mem, Location(region), size);
+          dst = region->array(Array::size_of(size));
           break;
         }
 
@@ -229,8 +228,7 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto size = frame->local(arg2(code)).to_index();
-          auto mem = region->alloc(Array::size_of(size));
-          dst = Array::create(mem, Location(region), size);
+          dst = region->array(Array::size_of(size));
           break;
         }
 
@@ -239,8 +237,7 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto size = program->load_u64(frame->pc);
-          auto mem = region->alloc(Array::size_of(size));
-          dst = Array::create(mem, Location(region), size);
+          dst = region->array(Array::size_of(size));
           break;
         }
 

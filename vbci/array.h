@@ -49,7 +49,7 @@ namespace vbci
       for (size_t i = 0; i < size; i++)
         data[i].field_drop();
 
-      // TODO: free the memory
+      region()->free(this);
     }
   };
 }

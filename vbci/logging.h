@@ -156,7 +156,8 @@ namespace vbci::logging
       strstream.destruct();
     }
 
-    SNMALLOC_SLOW_PATH void operation(decltype(std::endl<char, std::char_traits<char>>) f)
+    SNMALLOC_SLOW_PATH void
+    operation(decltype(std::endl<char, std::char_traits<char>>) f)
     {
       auto endl_func = std::endl<char, std::char_traits<char>>;
       // Intercept std::endl and indent the next line.
@@ -412,7 +413,6 @@ namespace vbci::logging
     }
   };
 
-#ifdef TRIESTE_EXPOSE_LOG_MACRO
 // This macro is used to expose the logging to uses in a way that
 // guarantees no evaluation of the pipe sequence:
 //   LOG(Info) << "Hello " << "World" << fib(23);
@@ -420,10 +420,9 @@ namespace vbci::logging
 // Where as the pure C++ version
 //   logging::Info() << "Hello " << "World" << fib(23);
 // would be required to evaluate fib(23) even if Info is not enabled.
-#  define LOG(param) \
-    if (SNMALLOC_UNLIKELY(trieste::logging::param::active())) \
-    trieste::logging::param()
-#endif
+#define LOG(param) \
+  if (SNMALLOC_UNLIKELY(logging::param::active())) \
+  logging::param()
 
   /**
    * @brief Sets the level of logging that should be reported.

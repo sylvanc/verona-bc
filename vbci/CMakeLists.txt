@@ -2,6 +2,7 @@ add_executable(vbci
   frame.cc
   main.cc
   program.cc
+  region.cc
   thread.cc
   types.cc
   value.cc

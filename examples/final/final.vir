@@ -9,6 +9,7 @@ func @Foo_final($self: dyn): i32
 
 func @main(): i32
   $a = const i32 99
-  $foo = stack @Foo(move $a)
+  $foo = stack @Foo(copy $a)
+  $bar = region rc @Foo(copy $a)
   $r = const i32 3
   ret $r

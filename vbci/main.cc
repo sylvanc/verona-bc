@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     return app.exit(e);
   }
 
-  auto program = Program::get();
+  auto& program = Program::get();
 
   if (!program.load(file))
     return -1;

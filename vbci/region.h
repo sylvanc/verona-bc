@@ -1,9 +1,8 @@
 #pragma once
 
 #include "ident.h"
+#include "types.h"
 #include "vbci.h"
-
-#include <unordered_set>
 
 namespace vbci
 {
@@ -14,22 +13,23 @@ namespace vbci
   private:
     Region* parent;
     RC stack_rc;
-    RegionType r_type;
 
-    Region(RegionType type) : parent(nullptr), stack_rc(1), r_type(type) {}
+  protected:
+    Region() : parent(nullptr), stack_rc(1) {}
+    virtual ~Region() = default;
 
   public:
-    static Region* create(RegionType type)
-    {
-      return new Region(type);
-    }
+    static Region* create(RegionType type);
 
-    void* alloc(size_t size)
-    {
-      return std::malloc(size);
-    }
+    virtual Object* object(Class& cls) = 0;
+    virtual Array* array(size_t size) = 0;
+    virtual void free(Object* obj) = 0;
+    virtual void free(Array* arr) = 0;
 
   private:
+    virtual bool enable_rc() = 0;
+    virtual void free_contents() = 0;
+
     bool is_ancestor(Region* r)
     {
       while (Region* p = r->parent)
@@ -43,20 +43,21 @@ namespace vbci
       return false;
     }
 
-    bool enable_rc()
-    {
-      return r_type == RegionType::RegionRC;
-    }
-
     void stack_inc()
     {
       stack_rc++;
     }
 
-    void stack_dec()
+    bool stack_dec()
     {
-      if ((--stack_rc == 0) && (parent != nullptr))
-        free();
+      // Returns false if the region has beeen freed.
+      if ((--stack_rc == 0) && (parent == nullptr))
+      {
+        free_region();
+        return false;
+      }
+
+      return true;
     }
 
     void clear_parent()
@@ -76,12 +77,12 @@ namespace vbci
       parent = p;
     }
 
-    void free()
+    void free_region()
     {
       // This must originate from Header::base_dec(true), which is a drop of a
       // register from a frame.
-
-      // TODO: finalize and free all objects in the region.
+      free_contents();
+      delete this;
     }
   };
 }
