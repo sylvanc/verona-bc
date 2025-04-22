@@ -18,6 +18,7 @@ namespace vbci
   {
     std::filesystem::path file;
     std::vector<Code> code;
+    std::vector<uint8_t> di;
 
     std::vector<Function> functions;
     std::vector<Class> primitives;

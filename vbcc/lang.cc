@@ -49,5 +49,7 @@ namespace vbcc
   {
     cli.add_option(
       "-b,--bytecode", bytecode_file, "Output bytecode to this file.");
+    cli.add_flag(
+      "-s,--strip", strip, "Strip debug information from the bytecode.");
   }
 }

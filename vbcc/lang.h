@@ -106,6 +106,8 @@ namespace vbcc
   struct Options : public trieste::Options
   {
     std::string bytecode_file;
+    bool strip = false;
+
     void configure(CLI::App& cli) override;
   };
 

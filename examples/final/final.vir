@@ -7,6 +7,7 @@ func @Foo_final($self: dyn): i32
   $a = load $ref
   ret $a
 
+#"some other/filename.foo"
 func @main(): i32
   $a = const i32 99
   $foo0 = stack @Foo(copy $a)

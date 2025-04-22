@@ -2,10 +2,10 @@
 
 namespace vbcc
 {
-  const auto wfParserTokens = Primitive | Class | Func | GlobalId | LocalId |
-    LabelId | Equals | LParen | RParen | LBracket | RBracket | Comma | Colon |
-    wfRegionType | wfBaseType | wfStatement | wfTerminator | wfBinop | wfUnop |
-    wfConst | wfLiteral;
+  const auto wfParserTokens = Primitive | Class | Func | Source | GlobalId |
+    LocalId | LabelId | Equals | LParen | RParen | LBracket | RBracket | Comma |
+    Colon | wfRegionType | wfBaseType | wfStatement | wfTerminator | wfBinop |
+    wfUnop | wfConst | wfLiteral | String;
 
   // clang-format off
   const auto wfParser =
@@ -165,24 +165,29 @@ namespace vbcc
           [](auto& m) { m.add(HexFloat); },
 
         // Float.
-        "[-]?[[:digit:]][_[:digit:]]*\\.[_[:digit:]]+(?:e[+-]?[_[:digit:]]+)?"
-        "\\b" >>
+        "[-]?[[:digit:]]+\\.[[:digit:]]+(?:e[+-]?[[:digit:]]+)?\\b" >>
           [](auto& m) { m.add(Float); },
 
         // Bin.
-        "0b[_01]+\\b" >> [](auto& m) { m.add(Bin); },
+        "0b[01]+\\b" >> [](auto& m) { m.add(Bin); },
 
         // Oct.
-        "0o[_01234567]+\\b" >> [](auto& m) { m.add(Oct); },
+        "0o[01234567]+\\b" >> [](auto& m) { m.add(Oct); },
 
         // Hex.
-        "0x[_[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
+        "0x[[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
 
         // Int.
-        "[-]?[[:digit:]][_[:digit:]]*\\b" >> [](auto& m) { m.add(Int); },
+        "[-]?[[:digit:]]+\\b" >> [](auto& m) { m.add(Int); },
+
+        // Escaped string.
+        "\"((?:\\\"|[^\"])*?)\"" >> [](auto& m) { m.add(String, 1); },
 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},
+
+        // Source file.
+        "#" >> [](auto& m) { m.add(Source); },
       });
 
     return p;

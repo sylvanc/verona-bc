@@ -147,8 +147,10 @@ namespace vbcc
   inline const auto Int = TokenDef("int", flag::print);
   inline const auto Float = TokenDef("float", flag::print);
   inline const auto HexFloat = TokenDef("hexfloat", flag::print);
+  inline const auto String = TokenDef("string", flag::print);
 
   // Structure.
+  inline const auto Source = TokenDef("source");
   inline const auto Field = TokenDef("field");
   inline const auto Fields = TokenDef("fields");
   inline const auto Methods = TokenDef("methods");
@@ -217,8 +219,9 @@ namespace vbcc
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Func)++)
+      (Top <<= (Primitive | Class | Func | Source)++)
     | (Type <<= wfBaseType)
+    | (Source <<= String * (Lhs >>= Int) * (Rhs >>= Int))
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)

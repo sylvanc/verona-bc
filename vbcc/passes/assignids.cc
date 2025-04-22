@@ -9,6 +9,12 @@ namespace vbcc
       wfIR,
       dir::topdown | dir::once,
       {
+        // Accumulate source files.
+        T(Source)[Source] >> [](Match& _) -> Node {
+          ST::pub((_(Source) / String)->location().view());
+          return NoChange;
+        },
+
         // Accumulate primitive classes.
         T(Primitive)[Primitive] >> [state](Match& _) -> Node {
           auto primitive = _(Primitive);

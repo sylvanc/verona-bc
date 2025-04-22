@@ -77,6 +77,33 @@ namespace vbcc
     return code;
   }
 
+  template<typename T>
+  struct uleb
+  {
+    T value;
+    uleb(T value) : value(value) {}
+  };
+
+  template<typename T>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, uleb<T>&& u)
+  {
+    auto value = u.value;
+    uint8_t byte;
+
+    do
+    {
+      byte = value & 0x7F;
+      value >>= 7;
+
+      if (value)
+        byte |= 0x80;
+
+      di.push_back(byte);
+    } while (value);
+
+    return di;
+  }
+
   uint8_t rgn(Node node)
   {
     auto region = node / Region;
@@ -192,8 +219,8 @@ namespace vbcc
 
   std::optional<uint8_t> FuncState::get_label_id(Node id)
   {
-    auto name = std::string(id->location().view());
-    auto find = label_idxs.find(name);
+    auto index = ST::priv(id->location().view());
+    auto find = label_idxs.find(index);
 
     if (find == label_idxs.end())
       return {};
@@ -203,28 +230,28 @@ namespace vbcc
 
   LabelState& FuncState::get_label(Node id)
   {
-    auto name = std::string(id->location().view());
-    auto find = label_idxs.find(name);
+    auto index = ST::priv(id->location().view());
+    auto find = label_idxs.find(index);
     return labels.at(find->second);
   }
 
   bool FuncState::add_label(Node id)
   {
-    auto name = std::string(id->location().view());
-    auto find = label_idxs.find(name);
+    auto index = ST::priv(id->location().view());
+    auto find = label_idxs.find(index);
 
     if (find != label_idxs.end())
       return false;
 
-    label_idxs.insert({name, label_idxs.size()});
+    label_idxs.insert({index, label_idxs.size()});
     labels.emplace_back();
     return true;
   }
 
   std::optional<uint8_t> FuncState::get_register_id(Node id)
   {
-    auto name = std::string(id->location().view());
-    auto find = register_idxs.find(name);
+    auto index = ST::pub(id->location().view());
+    auto find = register_idxs.find(index);
 
     if (find == register_idxs.end())
       return {};
@@ -234,13 +261,15 @@ namespace vbcc
 
   bool FuncState::add_register(Node id)
   {
-    auto name = std::string(id->location().view());
-    auto find = register_idxs.find(name);
+    auto index = ST::pub(id->location().view());
+    auto find = register_idxs.find(index);
 
     if (find != register_idxs.end())
       return false;
 
-    register_idxs.insert({name, register_idxs.size()});
+    register_idxs.insert({index, register_idxs.size()});
+    register_names.push_back(index);
+    assert(register_idxs.size() == register_names.size());
     return true;
   }
 
@@ -250,15 +279,15 @@ namespace vbcc
 
     // Reserve a function ID for `@main`.
     functions.push_back(FuncState(nullptr));
-    func_ids.insert({"@main", MainFuncId});
+    func_ids.insert({ST::pub("@main"), MainFuncId});
 
     // Reserve a method ID for `@final`.
-    method_ids.insert({"@final", FinalMethodId});
+    method_ids.insert({ST::pub("@final"), FinalMethodId});
   }
 
   std::optional<Id> State::get_class_id(Node id)
   {
-    auto name = std::string(id->location().view());
+    auto name = ST::pub(id->location().view());
     auto find = class_ids.find(name);
 
     if (find == class_ids.end())
@@ -269,7 +298,7 @@ namespace vbcc
 
   bool State::add_class(Node cls)
   {
-    auto name = std::string((cls / ClassId)->location().view());
+    auto name = ST::pub((cls / ClassId)->location().view());
     auto find = class_ids.find(name);
 
     if (find != class_ids.end())
@@ -282,7 +311,7 @@ namespace vbcc
 
   std::optional<Id> State::get_field_id(Node id)
   {
-    auto name = std::string(id->location().view());
+    auto name = ST::pub(id->location().view());
     auto find = field_ids.find(name);
 
     if (find == field_ids.end())
@@ -293,7 +322,7 @@ namespace vbcc
 
   void State::add_field(Node field)
   {
-    auto name = std::string((field / FieldId)->location().view());
+    auto name = ST::pub((field / FieldId)->location().view());
     auto find = field_ids.find(name);
 
     if (find == field_ids.end())
@@ -302,7 +331,7 @@ namespace vbcc
 
   std::optional<Id> State::get_method_id(Node id)
   {
-    auto name = std::string(id->location().view());
+    auto name = ST::pub(id->location().view());
     auto find = method_ids.find(name);
 
     if (find == method_ids.end())
@@ -313,7 +342,7 @@ namespace vbcc
 
   void State::add_method(Node method)
   {
-    auto name = std::string((method / MethodId)->location().view());
+    auto name = ST::pub((method / MethodId)->location().view());
     auto find = method_ids.find(name);
 
     if (find == method_ids.end())
@@ -322,7 +351,7 @@ namespace vbcc
 
   std::optional<Id> State::get_func_id(Node id)
   {
-    auto name = std::string(id->location().view());
+    auto name = ST::pub(id->location().view());
     auto find = func_ids.find(name);
 
     if (find == func_ids.end())
@@ -339,14 +368,14 @@ namespace vbcc
 
   FuncState& State::get_func(Node id)
   {
-    auto name = std::string(id->location().view());
+    auto name = ST::pub(id->location().view());
     auto find = func_ids.find(name);
     return functions.at(find->second);
   }
 
   FuncState& State::add_func(Node func)
   {
-    auto name = std::string((func / FunctionId)->location().view());
+    auto name = ST::pub((func / FunctionId)->location().view());
     auto find = func_ids.find(name);
     Id func_id;
 
@@ -365,6 +394,7 @@ namespace vbcc
     }
 
     auto& func_state = functions.at(func_id);
+    func_state.name = name;
     func_state.params = (func / Params)->size();
     return func_state;
   }
@@ -408,9 +438,29 @@ namespace vbcc
 
   void State::gen()
   {
+    auto debug = !options().strip;
     std::vector<Code> code;
+    std::vector<uint8_t> di;
+
     code << MagicNumber;
     code << CurrentVersion;
+
+    // Placeholder for the debug offset.
+    auto debug_offset = code.size();
+    code << uint64_t(0);
+
+    // String table.
+    if (debug)
+    {
+      di << uleb(ST::size());
+
+      for (size_t i = 0; i < ST::size(); i++)
+      {
+        auto str = ST::at(i);
+        di << uleb(str.size());
+        di.insert(di.end(), str.begin(), str.end());
+      }
+    }
 
     // Function headers.
     code << uint32_t(functions.size());
@@ -426,6 +476,16 @@ namespace vbcc
       // Reserve space for a 64 bit PC for each label.
       func_state.pcs = code.size();
       code.insert(code.end(), labels * 2, 0);
+
+      if (debug)
+      {
+        // Function name.
+        di << uleb(func_state.name);
+
+        // Register names.
+        for (auto& name : func_state.register_names)
+          di << uleb(name);
+      }
     }
 
     // Primitive classes.
@@ -453,11 +513,19 @@ namespace vbcc
 
     for (auto& c : classes)
     {
+      if (debug)
+        di << uleb(ST::pub((c / ClassId)->location().view()));
+
       auto fields = c / Fields;
       code << uint32_t(fields->size());
 
       for (auto& field : *fields)
+      {
         code << *get_field_id(field / FieldId);
+
+        if (debug)
+          di << uleb(ST::pub((field / FieldId)->location().view()));
+      }
 
       auto methods = c / Methods;
       code << uint32_t(methods->size());
@@ -466,6 +534,9 @@ namespace vbcc
       {
         code << *get_method_id(method / MethodId);
         code << *get_func_id(method / FunctionId);
+
+        if (debug)
+          di << uleb(ST::pub((method / MethodId)->location().view()));
       }
     }
 
@@ -939,6 +1010,13 @@ namespace vbcc
       }
     }
 
+    if (debug)
+    {
+      size_t pc = code.size();
+      code.at(debug_offset) = pc & 0xFFFFFFFF;
+      code.at(debug_offset + 1) = (pc >> 32) & 0xFFFFFFFF;
+    }
+
     if constexpr (std::endian::native == std::endian::big)
     {
       for (size_t i = 0; i < code.size(); i++)
@@ -949,9 +1027,11 @@ namespace vbcc
 
     if (f)
     {
-      auto data = reinterpret_cast<const char*>(code.data());
-      auto size = code.size() * sizeof(Code);
-      f.write(data, size);
+      f.write(
+        reinterpret_cast<const char*>(code.data()), code.size() * sizeof(Code));
+
+      if (debug)
+        f.write(reinterpret_cast<const char*>(di.data()), di.size());
     }
 
     if (!f)

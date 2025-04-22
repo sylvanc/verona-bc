@@ -13,8 +13,10 @@ namespace vbcc
   // clang-format off
   const auto wfPassStatements =
       wfIR
-    | (Top <<=
-        (Primitive | Class | Func | LabelId | wfStatement | wfTerminator)++)
+    | (Top <<= (
+        Primitive | Class | Func | Source | LabelId | wfStatement
+      | wfTerminator)++
+      )
     ;
   // clang-format on
 
@@ -114,8 +116,31 @@ namespace vbcc
       wfPassStatements,
       dir::bottomup,
       {
-        T(Directory, File, Group)[Group] >>
-          [](Match& _) { return Seq << *_[Group]; },
+        T(Directory, Group)[Group] >> [](Match& _) { return Seq << *_[Group]; },
+
+        T(File)[File] >>
+          [](Match& _) {
+            auto node = _(File);
+            std::filesystem::path path = node->location().view();
+
+            while ((node = node->parent()))
+            {
+              if (node == Directory)
+                path = node->location().view() / path;
+            }
+
+            auto name = path.replace_extension(".vir").string();
+            return Seq << (Source << (String ^ name) << (Int ^ "1")
+                                  << (Int ^ "1"))
+                       << *_[File];
+          },
+
+        // Source.
+        (T(Source) << End) * ~T(String)[String] * ~T(Int)[Lhs] * ~T(Int)[Rhs] >>
+          [](Match& _) {
+            return Source << (_(String) || (String ^ ""))
+                          << (_(Lhs) || (Int ^ "1")) << (_(Rhs) || (Int ^ "1"));
+          },
 
         // Primitive class.
         (T(Primitive) << End) * PrimitiveType[Type] >>

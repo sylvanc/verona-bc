@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stringtable.h"
+
 #include <bitset>
 #include <vbcc.h>
 #include <vbci.h>
@@ -21,11 +23,13 @@ namespace vbcc
 
   struct FuncState
   {
+    ST::Index name;
     Node func;
     size_t pcs;
     size_t params;
-    std::unordered_map<std::string, uint8_t> label_idxs;
-    std::unordered_map<std::string, uint8_t> register_idxs;
+    std::unordered_map<ST::Index, uint8_t> label_idxs;
+    std::unordered_map<ST::Index, uint8_t> register_idxs;
+    std::vector<ST::Index> register_names;
     std::vector<LabelState> labels;
 
     FuncState(Node func) : func(func) {}
@@ -43,10 +47,10 @@ namespace vbcc
     bool error = false;
     Node top;
 
-    std::unordered_map<std::string, Id> func_ids;
-    std::unordered_map<std::string, Id> class_ids;
-    std::unordered_map<std::string, Id> field_ids;
-    std::unordered_map<std::string, Id> method_ids;
+    std::unordered_map<ST::Index, Id> func_ids;
+    std::unordered_map<ST::Index, Id> class_ids;
+    std::unordered_map<ST::Index, Id> field_ids;
+    std::unordered_map<ST::Index, Id> method_ids;
 
     std::vector<Node> primitives;
     std::vector<Node> classes;

@@ -17,19 +17,74 @@ namespace vbci
       return {};
     }
 
-    auto size = f.tellg();
+    size_t size = f.tellg();
     f.seekg(0, std::ios::beg);
+
+    // Check the file header.
+    constexpr auto header_size = 4 * sizeof(Code);
+    constexpr auto header_words = header_size / sizeof(Code);
+
+    if (size < header_size)
+    {
+      logging::Error() << file << ": too small" << std::endl;
+      return false;
+    }
+
+    code.resize(header_words);
+    f.read(reinterpret_cast<char*>(&code.at(0)), header_size);
+
+    if constexpr (std::endian::native == std::endian::big)
+    {
+      for (size_t i = 0; i < header_words; i++)
+        code[i] = std::byteswap(code[i]);
+    }
+
+    PC pc = 0;
+
+    if (load_code(pc) != MagicNumber)
+    {
+      logging::Error() << file << ": does not start with the magic number"
+                       << std::endl;
+      return false;
+    }
+
+    if (load_code(pc) != CurrentVersion)
+    {
+      logging::Error() << file << ": has an unknown version number"
+                       << std::endl;
+      return false;
+    }
+
+    // Debug info.
+    auto debug_offset = load_pc(pc);
+
+    if (debug_offset > 0)
+    {
+      auto di_start = debug_offset * sizeof(Code);
+
+      if (di_start > size)
+      {
+        logging::Error() << file << ": invalid debug offset" << std::endl;
+        return false;
+      }
+
+      auto di_size = size - di_start;
+      di.resize(di_size);
+      f.seekg(di_start, std::ios::beg);
+      f.read(reinterpret_cast<char*>(&di.at(0)), di_size);
+      size = debug_offset * sizeof(Code);
+    }
 
     if ((size % sizeof(Code)) != 0)
     {
-      logging::Error() << file << ": not a multiple of " << sizeof(Code)
-                       << " bytes" << std::endl;
+      logging::Error() << file << ": invalid size" << std::endl;
       return false;
     }
 
     auto words = size / sizeof(Code);
     code.resize(words);
-    f.read(reinterpret_cast<char*>(&code[0]), size);
+    f.seekg(0, std::ios::beg);
+    f.read(reinterpret_cast<char*>(&code.at(0)), size);
 
     if (!f)
     {
@@ -48,21 +103,11 @@ namespace vbci
 
   bool Program::parse()
   {
+    // Skip the file header.
     PC pc = 0;
-
-    if (load_code(pc) != MagicNumber)
-    {
-      logging::Error() << file << ": does not start with the magic number"
-                       << std::endl;
-      return false;
-    }
-
-    if (load_code(pc) != CurrentVersion)
-    {
-      logging::Error() << file << ": has an unknown version number"
-                       << std::endl;
-      return false;
-    }
+    load_code(pc);
+    load_code(pc);
+    load_pc(pc);
 
     // Function headers.
     auto num_functions = load_u32(pc);
