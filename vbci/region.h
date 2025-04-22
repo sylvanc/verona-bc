@@ -15,8 +15,13 @@ namespace vbci
     RC stack_rc;
 
   protected:
-    Region() : parent(nullptr), stack_rc(1) {}
+    Region() : parent(nullptr), stack_rc(0) {}
     virtual ~Region() = default;
+
+    void stack_inc()
+    {
+      stack_rc++;
+    }
 
   public:
     static Region* create(RegionType type);
@@ -41,11 +46,6 @@ namespace vbci
       }
 
       return false;
-    }
-
-    void stack_inc()
-    {
-      stack_rc++;
     }
 
     bool stack_dec()

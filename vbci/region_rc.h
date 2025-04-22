@@ -17,6 +17,7 @@ namespace vbci
     std::unordered_set<Object*> finalizer;
     std::unordered_set<void*> no_finalizer;
 
+  protected:
     RegionRC() : Region() {}
 
     Object* object(Class& cls)
@@ -29,6 +30,7 @@ namespace vbci
       else
         no_finalizer.emplace(obj);
 
+      stack_inc();
       return obj;
     }
 
@@ -37,6 +39,7 @@ namespace vbci
       auto mem = std::malloc(Array::size_of(size));
       auto arr = Array::create(mem, Location(this), size);
       no_finalizer.emplace(arr);
+      stack_inc();
       return arr;
     }
 

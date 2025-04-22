@@ -1,5 +1,6 @@
 #include "region.h"
 
+#include "region_arena.h"
 #include "region_rc.h"
 #include "value.h"
 
@@ -9,6 +10,9 @@ namespace vbci
   {
     switch (type)
     {
+      case RegionType::RegionArena:
+        return new RegionArena();
+
       case RegionType::RegionRC:
         return new RegionRC();
 

@@ -64,9 +64,9 @@ namespace vbci
     Value(Error error);
     Value(Function* func);
     Value(const Value& that);
-    Value(Value&& that);
+    Value(Value&& that) noexcept;
     Value& operator=(const Value& that);
-    Value& operator=(Value&& that);
+    Value& operator=(Value&& that) noexcept;
 
     static Value none();
 

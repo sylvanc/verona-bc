@@ -65,7 +65,7 @@ namespace vbci
     inc();
   }
 
-  Value::Value(Value&& that)
+  Value::Value(Value&& that) noexcept
   {
     std::memcpy(this, &that, sizeof(Value));
     that.tag = ValueType::Invalid;
@@ -82,7 +82,7 @@ namespace vbci
     return *this;
   }
 
-  Value& Value::operator=(Value&& that)
+  Value& Value::operator=(Value&& that) noexcept
   {
     if (this == &that)
       return *this;

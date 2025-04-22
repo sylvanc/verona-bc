@@ -9,7 +9,9 @@ func @Foo_final($self: dyn): i32
 
 func @main(): i32
   $a = const i32 99
-  $foo = stack @Foo(copy $a)
-  $bar = region rc @Foo(copy $a)
+  $foo0 = stack @Foo(copy $a)
+  $foo1 = region rc @Foo(copy $a)
+  $foo2 = heap $foo1 @Foo(copy $a)
+  $foo3 = region arena @Foo(copy $a)
   $r = const i32 3
   ret $r
