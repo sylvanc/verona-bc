@@ -18,14 +18,11 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## To-Do List
 
-* Regions.
-  * Alloc/free depends on region type.
-  * Can't free a region until all objects in it have been freed.
 * Type test.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work? Entirely as union types?
-  * Automatic checking on calls and stores?
+  * Automatic checking on calls, returns, and stores?
 * Mode to skip checking argument counts?
   * Separate for static and dynamic calls?
   * Could do this in vbcc instead of in vbci.
@@ -35,12 +32,13 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 * Merge, freeze, extract.
   * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RCs.
-* Object, cown, and region finalization and freeing.
 * When.
 * Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * Command line arguments.
 * Change to 8-bit field ID in `Ref`?
   * Or provide "long `arg`" for initializing huge objects?
+  * General purpose "long register" versions of all instructions?
+  * Would allow functions to have semi-unlimited register counts.
 * Math ops for numerical limits, by type?
 * Standard IO? Does this need string support?
 * String constants? `u8[]`?
@@ -52,6 +50,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * These functions take vbci::Value arguments and return a vbci::Value.
 * Debug info that maps instructions to file:line:column?
   * Debug adapter protocol?
-* Build an LSP to allow debugging.
+* Build an DAP/LSP to allow debugging.
 * Compile to LLVM IR and/or Cranelift.
 * AST to IR output.

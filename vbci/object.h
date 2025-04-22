@@ -68,6 +68,14 @@ namespace vbci
 
       // This object isn't in a cycle. It can be immediately finalized and then
       // freed.
+      finalize();
+
+      // TODO: this will get called for an immutable and will crash.
+      region()->free(this);
+    }
+
+    void finalize()
+    {
       auto& program = Program::get();
       auto& cls = program.classes.at(class_id);
 
@@ -76,8 +84,6 @@ namespace vbci
 
       for (size_t i = 0; i < cls.fields.size(); i++)
         fields[i].field_drop();
-
-      region()->free(this);
     }
   };
 }

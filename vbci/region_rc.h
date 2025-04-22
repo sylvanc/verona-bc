@@ -14,8 +14,8 @@ namespace vbci
     friend struct Region;
 
   private:
-    std::unordered_set<Object*> finalizer;
-    std::unordered_set<void*> no_finalizer;
+    std::unordered_set<Object*> objects;
+    std::unordered_set<Array*> arrays;
 
   protected:
     RegionRC() : Region() {}
@@ -24,12 +24,7 @@ namespace vbci
     {
       auto mem = std::malloc(cls.size);
       auto obj = Object::create(mem, cls, Location(this));
-
-      if (cls.finalizer())
-        finalizer.emplace(obj);
-      else
-        no_finalizer.emplace(obj);
-
+      objects.emplace(obj);
       stack_inc();
       return obj;
     }
@@ -38,24 +33,20 @@ namespace vbci
     {
       auto mem = std::malloc(Array::size_of(size));
       auto arr = Array::create(mem, Location(this), size);
-      no_finalizer.emplace(arr);
+      arrays.emplace(arr);
       stack_inc();
       return arr;
     }
 
     void free(Object* obj)
     {
-      if (obj->finalizer())
-        finalizer.erase(obj);
-      else
-        no_finalizer.erase(obj);
-
+      objects.erase(obj);
       std::free(obj);
     }
 
     void free(Array* arr)
     {
-      no_finalizer.erase(arr);
+      arrays.erase(arr);
       std::free(arr);
     }
 
@@ -66,17 +57,17 @@ namespace vbci
 
     void free_contents()
     {
-      for (auto obj : finalizer)
-      {
-        if (obj->finalizer())
-          Thread::run_finalizer(obj);
-      }
+      for (auto obj : objects)
+        obj->finalize();
 
-      for (auto obj : finalizer)
+      for (auto arr : arrays)
+        arr->finalize();
+
+      for (auto obj : objects)
         std::free(obj);
 
-      for (auto p : no_finalizer)
-        std::free(p);
+      for (auto arr : arrays)
+        std::free(arr);
     }
   };
 }

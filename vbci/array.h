@@ -46,10 +46,16 @@ namespace vbci
       if (base_dec(reg))
         return;
 
+      finalize();
+
+      // TODO: this will get called for an immutable and will crash.
+      region()->free(this);
+    }
+
+    void finalize()
+    {
       for (size_t i = 0; i < size; i++)
         data[i].field_drop();
-
-      region()->free(this);
     }
   };
 }

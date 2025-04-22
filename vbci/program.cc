@@ -76,24 +76,8 @@ namespace vbci
 
     for (auto& f : functions)
     {
-      // 8 bits for labels, 8 bits for parameters, 8 bits for registers.
-      auto word = load_code(pc);
-      auto labels = word & 0xFF;
-      auto params = (word >> 8) & 0xFF;
-      auto registers = (word >> 16) & 0xFF;
-
-      if (labels == 0)
-      {
-        logging::Error() << file << ": function has no labels" << std::endl;
+      if (!parse_function(f, pc))
         return false;
-      }
-
-      f.labels.resize(labels);
-      for (auto& label : f.labels)
-        label = load_pc(pc);
-
-      f.params.resize(params);
-      f.registers = registers;
     }
 
     if (functions.at(MainFuncId).params.size() != 0)
@@ -130,6 +114,29 @@ namespace vbci
       cls.calc_size();
     }
 
+    return true;
+  }
+
+  bool Program::parse_function(Function& f, PC& pc)
+  {
+    // 8 bits for labels, 8 bits for parameters, 8 bits for registers.
+    auto word = load_code(pc);
+    auto labels = word & 0xFF;
+    auto params = (word >> 8) & 0xFF;
+    auto registers = (word >> 16) & 0xFF;
+
+    if (labels == 0)
+    {
+      logging::Error() << file << ": function has no labels" << std::endl;
+      return false;
+    }
+
+    f.labels.resize(labels);
+    for (auto& label : f.labels)
+      label = load_pc(pc);
+
+    f.params.resize(params);
+    f.registers = registers;
     return true;
   }
 
