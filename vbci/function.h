@@ -13,5 +13,6 @@ namespace vbci
     std::vector<Type> params;
     Local registers;
     Type return_type;
+    size_t debug_info;
   };
 }

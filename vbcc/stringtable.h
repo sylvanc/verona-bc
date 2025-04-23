@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vbcc.h>
 
 namespace vbcc
 {
@@ -16,9 +17,19 @@ namespace vbcc
       return pub_instance().intern(str);
     }
 
+    static Index pub(Node node)
+    {
+      return pub_instance().intern(node->location().view());
+    }
+
     static Index priv(std::string_view str)
     {
       return priv_instance().intern(str);
+    }
+
+    static Index priv(Node node)
+    {
+      return priv_instance().intern(node->location().view());
     }
 
     static size_t size()

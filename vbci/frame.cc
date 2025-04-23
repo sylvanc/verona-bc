@@ -70,9 +70,22 @@ namespace vbci
       locals[base + i].drop();
   }
 
-  void Frame::drop_args()
+  void Frame::drop_args(std::bitset<MaxRegisters>& args)
   {
-    for (size_t i = 0; i < MaxRegisters; i++)
-      locals[base + func->registers + i].drop();
+    auto count = args.count();
+    size_t i = 0;
+
+    while (count)
+    {
+      if (args.test(i))
+      {
+        locals[base + func->registers + i].drop();
+        count--;
+      }
+
+      i++;
+    }
+
+    args.reset();
   }
 }

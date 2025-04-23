@@ -151,6 +151,7 @@ namespace vbcc
 
   // Structure.
   inline const auto Source = TokenDef("source");
+  inline const auto Offset = TokenDef("offset");
   inline const auto Field = TokenDef("field");
   inline const auto Fields = TokenDef("fields");
   inline const auto Methods = TokenDef("methods");
@@ -197,11 +198,11 @@ namespace vbcc
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
-  inline const auto wfStatement = Global | Const | Convert | Stack | Heap |
-    Region | StackArray | StackArrayConst | HeapArray | HeapArrayConst |
-    RegionArray | RegionArrayConst | Copy | Move | Drop | Ref | ArrayRef |
-    ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
-    Subcall | SubcallDyn | Try | TryDyn | wfBinop | wfUnop | wfConst;
+  inline const auto wfStatement = Source | Offset | Global | Const | Convert |
+    Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
+    HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop | Ref |
+    ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call |
+    CallDyn | Subcall | SubcallDyn | Try | TryDyn | wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -219,9 +220,8 @@ namespace vbcc
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Func | Source)++)
+      (Top <<= (Primitive | Class | Func)++)
     | (Type <<= wfBaseType)
-    | (Source <<= String * (Lhs >>= Int) * (Rhs >>= Int))
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)
@@ -234,6 +234,8 @@ namespace vbcc
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfStatement++)
+    | (Source <<= String)
+    | (Offset <<= Int)
     | (Global <<= wfDst * GlobalId)
     | (Const <<= wfDst * Type * (Rhs >>= wfLiteral))
     | (Convert <<= wfDst * Type * wfSrc)

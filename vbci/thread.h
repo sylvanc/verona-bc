@@ -4,7 +4,6 @@
 #include "program.h"
 #include "stack.h"
 
-#include <bitset>
 #include <unordered_set>
 
 namespace vbci

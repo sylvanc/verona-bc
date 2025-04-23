@@ -149,6 +149,7 @@ namespace vbci
     for (auto& cls : classes)
     {
       cls.class_id = class_id++;
+      cls.debug_info = load_pc(pc);
 
       if (!parse_fields(cls, pc))
         return false;
@@ -180,6 +181,7 @@ namespace vbci
     for (auto& label : f.labels)
       label = load_pc(pc);
 
+    f.debug_info = load_pc(pc);
     f.params.resize(params);
     f.registers = registers;
     return true;

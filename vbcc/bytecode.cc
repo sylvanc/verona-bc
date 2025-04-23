@@ -85,6 +85,14 @@ namespace vbcc
   };
 
   template<typename T>
+  struct d
+  {
+    DIOp op;
+    T value;
+    d(DIOp op, T value) : op(op), value(value) {}
+  };
+
+  template<typename T>
   std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, uleb<T>&& u)
   {
     auto value = u.value;
@@ -102,6 +110,13 @@ namespace vbcc
     } while (value);
 
     return di;
+  }
+
+  template<typename T>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, d<T>&& d)
+  {
+    auto value = (d.value << 2) | +d.op;
+    return di << uleb(value);
   }
 
   uint8_t rgn(Node node)
@@ -250,7 +265,7 @@ namespace vbcc
 
   std::optional<uint8_t> FuncState::get_register_id(Node id)
   {
-    auto index = ST::pub(id->location().view());
+    auto index = ST::pub(id);
     auto find = register_idxs.find(index);
 
     if (find == register_idxs.end())
@@ -261,7 +276,7 @@ namespace vbcc
 
   bool FuncState::add_register(Node id)
   {
-    auto index = ST::pub(id->location().view());
+    auto index = ST::pub(id);
     auto find = register_idxs.find(index);
 
     if (find != register_idxs.end())
@@ -287,7 +302,7 @@ namespace vbcc
 
   std::optional<Id> State::get_class_id(Node id)
   {
-    auto name = ST::pub(id->location().view());
+    auto name = ST::pub(id);
     auto find = class_ids.find(name);
 
     if (find == class_ids.end())
@@ -298,7 +313,7 @@ namespace vbcc
 
   bool State::add_class(Node cls)
   {
-    auto name = ST::pub((cls / ClassId)->location().view());
+    auto name = ST::pub(cls / ClassId);
     auto find = class_ids.find(name);
 
     if (find != class_ids.end())
@@ -311,7 +326,7 @@ namespace vbcc
 
   std::optional<Id> State::get_field_id(Node id)
   {
-    auto name = ST::pub(id->location().view());
+    auto name = ST::pub(id);
     auto find = field_ids.find(name);
 
     if (find == field_ids.end())
@@ -322,7 +337,7 @@ namespace vbcc
 
   void State::add_field(Node field)
   {
-    auto name = ST::pub((field / FieldId)->location().view());
+    auto name = ST::pub(field / FieldId);
     auto find = field_ids.find(name);
 
     if (find == field_ids.end())
@@ -331,7 +346,7 @@ namespace vbcc
 
   std::optional<Id> State::get_method_id(Node id)
   {
-    auto name = ST::pub(id->location().view());
+    auto name = ST::pub(id);
     auto find = method_ids.find(name);
 
     if (find == method_ids.end())
@@ -342,7 +357,7 @@ namespace vbcc
 
   void State::add_method(Node method)
   {
-    auto name = ST::pub((method / MethodId)->location().view());
+    auto name = ST::pub(method / MethodId);
     auto find = method_ids.find(name);
 
     if (find == method_ids.end())
@@ -351,7 +366,7 @@ namespace vbcc
 
   std::optional<Id> State::get_func_id(Node id)
   {
-    auto name = ST::pub(id->location().view());
+    auto name = ST::pub(id);
     auto find = func_ids.find(name);
 
     if (find == func_ids.end())
@@ -368,14 +383,14 @@ namespace vbcc
 
   FuncState& State::get_func(Node id)
   {
-    auto name = ST::pub(id->location().view());
+    auto name = ST::pub(id);
     auto find = func_ids.find(name);
     return functions.at(find->second);
   }
 
   FuncState& State::add_func(Node func)
   {
-    auto name = ST::pub((func / FunctionId)->location().view());
+    auto name = ST::pub(func / FunctionId);
     auto find = func_ids.find(name);
     Id func_id;
 
@@ -438,28 +453,36 @@ namespace vbcc
 
   void State::gen()
   {
-    auto debug = !options().strip;
     std::vector<Code> code;
     std::vector<uint8_t> di;
+
+    // Use to reserve space for patching a PC.
+    auto reserve = [&](size_t count = 1) {
+      auto offset = code.size();
+      code.insert(code.end(), count * 2, 0);
+      return offset;
+    };
+
+    // Use to patch a PC into the code stream later.
+    auto patch = [&](size_t& offset, uint64_t write) {
+      code.at(offset++) = write & 0xFFFFFFFF;
+      code.at(offset++) = (write >> 32) & 0xFFFFFFFF;
+    };
 
     code << MagicNumber;
     code << CurrentVersion;
 
-    // Placeholder for the debug offset.
-    auto debug_offset = code.size();
-    code << uint64_t(0);
+    // Reserve space for the debug offset.
+    auto debug_offset = reserve();
 
     // String table.
-    if (debug)
-    {
-      di << uleb(ST::size());
+    di << uleb(ST::size());
 
-      for (size_t i = 0; i < ST::size(); i++)
-      {
-        auto str = ST::at(i);
-        di << uleb(str.size());
-        di.insert(di.end(), str.begin(), str.end());
-      }
+    for (size_t i = 0; i < ST::size(); i++)
+    {
+      auto str = ST::at(i);
+      di << uleb(str.size());
+      di.insert(di.end(), str.begin(), str.end());
     }
 
     // Function headers.
@@ -474,18 +497,10 @@ namespace vbcc
         (func_state.register_idxs.size() << 16));
 
       // Reserve space for a 64 bit PC for each label.
-      func_state.pcs = code.size();
-      code.insert(code.end(), labels * 2, 0);
+      func_state.label_pcs = reserve(labels);
 
-      if (debug)
-      {
-        // Function name.
-        di << uleb(func_state.name);
-
-        // Register names.
-        for (auto& name : func_state.register_names)
-          di << uleb(name);
-      }
+      // Reserve space for a 64 bit PC for the debug info.
+      func_state.debug_offset = reserve();
     }
 
     // Primitive classes.
@@ -513,8 +528,8 @@ namespace vbcc
 
     for (auto& c : classes)
     {
-      if (debug)
-        di << uleb(ST::pub((c / ClassId)->location().view()));
+      code << uint64_t(di.size());
+      di << uleb(ST::pub(c / ClassId));
 
       auto fields = c / Fields;
       code << uint32_t(fields->size());
@@ -522,9 +537,7 @@ namespace vbcc
       for (auto& field : *fields)
       {
         code << *get_field_id(field / FieldId);
-
-        if (debug)
-          di << uleb(ST::pub((field / FieldId)->location().view()));
+        di << uleb(ST::pub(field / FieldId));
       }
 
       auto methods = c / Methods;
@@ -534,15 +547,22 @@ namespace vbcc
       {
         code << *get_method_id(method / MethodId);
         code << *get_func_id(method / FunctionId);
-
-        if (debug)
-          di << uleb(ST::pub((method / MethodId)->location().view()));
+        di << uleb(ST::pub(method / MethodId));
       }
     }
 
     // Function bodies.
     for (auto& func_state : functions)
     {
+      patch(func_state.debug_offset, di.size());
+
+      // Function name.
+      di << uleb(func_state.name);
+
+      // Register names.
+      for (auto& name : func_state.register_names)
+        di << uleb(name);
+
       auto dst = [&](Node stmt) {
         return *func_state.get_register_id(stmt / LocalId);
       };
@@ -573,15 +593,67 @@ namespace vbcc
           code << e{Op::Arg, i++, +argtype(arg), src(arg)};
       };
 
+      constexpr size_t no_value = size_t(-1);
+      size_t di_file = no_value;
+      size_t di_offset = 0;
+      size_t di_pc_advance = 0;
+      bool explicit_di = false;
+
+      auto stmt_di = [&](Node stmt) {
+        // Use the source and offset in the AST.
+        auto file = ST::pub(stmt->location().source->origin());
+        auto pos = stmt->location().pos;
+
+        if (file != di_file)
+        {
+          di << d(DIOp::File, file);
+          di_file = file;
+          di_offset = 0;
+        }
+
+        if (pos != di_offset)
+        {
+          di << d(DIOp::Offset, pos - di_offset);
+          di_offset = pos;
+        }
+      };
+
       for (auto label : *(func_state.func / Labels))
       {
         // Save the pc for this label.
-        auto pc = code.size();
-        code.at(func_state.pcs++) = pc & 0xFFFFFFFF;
-        code.at(func_state.pcs++) = (pc >> 32) & 0xFFFFFFFF;
+        patch(func_state.label_pcs, code.size());
 
         for (auto stmt : *(label / Body))
         {
+          if (stmt == Source)
+          {
+            if (di_pc_advance > 0)
+              di << d(DIOp::Skip, di_pc_advance);
+
+            di_file = ST::pub(stmt / String);
+            di_offset = 0;
+            explicit_di = true;
+            di << d(DIOp::File, di_file);
+            continue;
+          }
+          else if (stmt == Offset)
+          {
+            if (di_pc_advance > 0)
+              di << d(DIOp::Skip, di_pc_advance);
+
+            di_offset = lit<size_t>(stmt / Int);
+            explicit_di = true;
+            di << d(DIOp::Offset, di_offset);
+            continue;
+          }
+          else
+          {
+            if (explicit_di)
+              di_pc_advance++;
+            else
+              stmt_di(stmt);
+          }
+
           if (stmt == Const)
           {
             auto t = stmt / Type / Type;
@@ -975,6 +1047,11 @@ namespace vbcc
 
         auto term = label / Return;
 
+        if (explicit_di)
+          di << d(DIOp::Skip, di_pc_advance + 1);
+        else
+          stmt_di(term);
+
         if (term == Tailcall)
         {
           args(term / MoveArgs);
@@ -1010,12 +1087,7 @@ namespace vbcc
       }
     }
 
-    if (debug)
-    {
-      size_t pc = code.size();
-      code.at(debug_offset) = pc & 0xFFFFFFFF;
-      code.at(debug_offset + 1) = (pc >> 32) & 0xFFFFFFFF;
-    }
+    patch(debug_offset, code.size());
 
     if constexpr (std::endian::native == std::endian::big)
     {
@@ -1030,7 +1102,7 @@ namespace vbcc
       f.write(
         reinterpret_cast<const char*>(code.data()), code.size() * sizeof(Code));
 
-      if (debug)
+      if (!options().strip)
         f.write(reinterpret_cast<const char*>(di.data()), di.size());
     }
 

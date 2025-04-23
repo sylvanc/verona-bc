@@ -14,6 +14,7 @@ namespace vbci
   struct Class
   {
     size_t size;
+    size_t debug_info;
     Id class_id;
 
     // Precalculate an offset into the object for each field name.

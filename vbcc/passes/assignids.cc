@@ -11,7 +11,7 @@ namespace vbcc
       {
         // Accumulate source files.
         T(Source)[Source] >> [](Match& _) -> Node {
-          ST::pub((_(Source) / String)->location().view());
+          ST::pub(_(Source) / String);
           return NoChange;
         },
 
@@ -107,12 +107,32 @@ namespace vbcc
           }
 
           // Register label names.
+          bool explicit_di_file = false;
+
           for (auto label : *(func / Labels))
           {
             if (!func_state.add_label(label / LabelId))
             {
               state->error = true;
               return err(label / LabelId, "duplicate label name");
+            }
+
+            // Accumulate source files that aren't overridden.
+            if (!explicit_di_file)
+            {
+              for (auto stmt : *(label / Body))
+              {
+                if (stmt == Source)
+                {
+                  explicit_di_file = true;
+                  break;
+                }
+
+                ST::pub(stmt->location().source->origin());
+              }
+
+              if (!explicit_di_file)
+                ST::pub((label / Return)->location().source->origin());
             }
           }
 

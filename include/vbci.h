@@ -326,6 +326,13 @@ namespace vbci
     Throw,
   };
 
+  enum class DIOp : uint8_t
+  {
+    File,
+    Offset,
+    Skip,
+  };
+
   inline constexpr uint8_t operator+(Op op)
   {
     return static_cast<uint8_t>(op);
@@ -357,6 +364,11 @@ namespace vbci
   }
 
   inline constexpr uint8_t operator+(Condition c)
+  {
+    return static_cast<uint8_t>(c);
+  }
+
+  inline constexpr uint8_t operator+(DIOp c)
   {
     return static_cast<uint8_t>(c);
   }

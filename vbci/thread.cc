@@ -31,6 +31,11 @@ namespace vbci
     return (code >> 24) & 0xFF;
   }
 
+  inline constexpr auto argmask(size_t n)
+  {
+    return ~std::bitset<MaxRegisters>() >> (MaxRegisters - n);
+  }
+
   Thread& Thread::get()
   {
     thread_local Thread thread;
@@ -681,11 +686,7 @@ namespace vbci
   void Thread::popframe(Value& ret, Condition condition)
   {
     // Clear any unused arguments.
-    if (args.any())
-    {
-      frame->drop_args();
-      args.reset();
-    }
+    frame->drop_args(args);
 
     // The return value can't be allocated in this frame.
     if (ret.location() == frame->frame_id)
@@ -800,14 +801,12 @@ namespace vbci
 
   void Thread::check_args(size_t expect)
   {
-    for (size_t i = 0; i < expect; i++)
-      args.flip(i);
-
-    if (args.any())
+    if (args != argmask(expect))
     {
-      frame->drop_args();
-      args.reset();
+      frame->drop_args(args);
       throw Value(Error::BadArgs);
     }
+
+    args.reset();
   }
 }

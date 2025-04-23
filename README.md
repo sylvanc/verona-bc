@@ -16,8 +16,37 @@ One way to use this is to implement Smalltalk style non-local returns. To do so,
 
 Another way to use this is to implement exceptions. To do so, `throw` exception values. Exceptions are caught by a `try`.
 
+## Debug Info
+
+Debug info is appended to the end of the byte code.
+
+The first entry is a string table. This is:
+* A ULEB128 count of the number of strings.
+* Strings, each of which is a ULEB128 length followed by the string.
+
+This is followed by debug info for each user-defined classes. This is:
+* A ULEB128 string table index for the class name.
+* A ULEB128 string table index for each field name.
+* A ULEB128 string table index for each method name.
+
+This is followed by debug info for each function. This is:
+* A ULEB128 string table index for the function name.
+* A ULEB128 string table index for each register name.
+* A debug info program.
+
+A debug info program is a sequence of instructions encoded as ULEB128s. The low 2 bits are the instruction, and the high bits are the argument. The instructions are:
+* `vbci::File` (0): the argument is the source file's name in the string table, reset the offset to 0.
+* `vbci::Offset` (1): advance the offset by the argument.
+* `vbci::Skip` (2): advance the PC by the argument.
+
+*TODO*: describe how to use the debug info.
+
+Open questions:
+* Do we want hashes of files to avoid "wrong version" debugging?
+
 ## To-Do List
 
+* Use the debug info to emit better error messages.
 * Type test.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
@@ -48,8 +77,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
   * VIR specifies the DSOs to load.
   * The DSO has an entry point that returns a list of function names, with their parameter counts.
   * These functions take vbci::Value arguments and return a vbci::Value.
-* Debug info that maps instructions to file:line:column?
-  * Debug adapter protocol?
 * Build an DAP/LSP to allow debugging.
-* Compile to LLVM IR and/or Cranelift.
 * AST to IR output.
+* Compile to LLVM IR and/or Cranelift.

@@ -25,12 +25,14 @@ namespace vbcc
   {
     ST::Index name;
     Node func;
-    size_t pcs;
     size_t params;
     std::unordered_map<ST::Index, uint8_t> label_idxs;
     std::unordered_map<ST::Index, uint8_t> register_idxs;
     std::vector<ST::Index> register_names;
     std::vector<LabelState> labels;
+
+    size_t label_pcs;
+    size_t debug_offset;
 
     FuncState(Node func) : func(func) {}
 
