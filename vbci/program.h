@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dynlib.h"
 #include "frame.h"
 #include "function.h"
 #include "ident.h"
@@ -8,7 +9,6 @@
 #include "value.h"
 
 #include <bit>
-#include <filesystem>
 #include <fstream>
 #include <vector>
 
@@ -34,6 +34,8 @@ namespace vbci
     std::vector<Class> primitives;
     std::vector<Class> classes;
     std::vector<Value> globals;
+
+    Dynlibs dynlibs;
 
     size_t di_compilation_path;
     std::vector<std::string> di_strings;

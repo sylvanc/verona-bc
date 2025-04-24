@@ -592,11 +592,8 @@ namespace vbcc
       auto fn = [&](Node stmt) { return *get_func_id(stmt / FunctionId); };
 
       auto args = [&](Node args) {
-        // Set up the arguments.
-        uint8_t i = 0;
-
         for (auto arg : *args)
-          code << e{Op::Arg, i++, +argtype(arg), src(arg)};
+          code << e{Op::Arg, +argtype(arg), src(arg)};
       };
 
       constexpr size_t no_value = size_t(-1);
@@ -724,11 +721,11 @@ namespace vbcc
             {
               code << e{Op::Const, dst(stmt), *val(t)} << lit<uint32_t>(v);
             }
-            else if (t == I64)
+            else if (t->in({I64, ILong, ISize}))
             {
               code << e{Op::Const, dst(stmt), *val(t)} << lit<int64_t>(v);
             }
-            else if (t == U64)
+            else if (t->in({U64, ULong, USize, Ptr}))
             {
               code << e{Op::Const, dst(stmt), *val(t)} << lit<uint64_t>(v);
             }

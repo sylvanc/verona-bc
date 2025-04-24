@@ -43,14 +43,28 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* FFI with `libffi`.
+  * `none` is `void` return type.
+  * `sym` that isn't after `lib` comes from the executable.
+  * `sym` that is after `lib` comes from that library.
+  * Allow a version string on `sym`, use `dlvsym`.
+  * `struct` types.
 * Type test.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work? Entirely as union types?
   * Automatic checking on calls, returns, and stores?
+* Initializing globals.
+* Command line arguments.
+  * Set these as immortal globals in well known locations?
+* Introspection.
+  * Get the dynamic type of a value.
+  * Functions: get the argument count and types, and the return type.
+  * Classes:
+    * Get the field count, types, and names.
+    * Get the method count and names.
 * Interactive debugger.
 * Embedded fields.
-* Initializing globals.
 * Merge, freeze, extract.
   * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RCs.
@@ -59,15 +73,10 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * General purpose "long register" versions of all instructions?
   * Would allow functions to have semi-unlimited register counts.
 * Math ops for numerical limits, by type?
-* Command line arguments.
 * String constants? `u8[]`?
 * Standard IO? Does this need string support?
 * File API? Seems like too much.
-* Some kind of `dlopen` system for adding FFI?
-  * Provide the DSO to vbcc as well as vbci.
-  * VIR specifies the DSOs to load.
-  * The DSO has an entry point that returns a list of function names, with their parameter counts.
-  * These functions take vbci::Value arguments and return a vbci::Value.
 * Build an DAP/LSP to allow debugging.
 * AST to IR output.
 * Compile to LLVM IR and/or Cranelift.
+* Serialize a behavior to execute on another process or machine.

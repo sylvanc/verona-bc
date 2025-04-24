@@ -48,6 +48,11 @@ namespace vbcc
   inline const auto U64 = TokenDef("u64");
   inline const auto F32 = TokenDef("f32");
   inline const auto F64 = TokenDef("f64");
+  inline const auto ILong = TokenDef("ilong");
+  inline const auto ULong = TokenDef("ulong");
+  inline const auto ISize = TokenDef("isize");
+  inline const auto USize = TokenDef("usize");
+  inline const auto Ptr = TokenDef("ptr");
 
   // Types.
   inline const auto Dyn = TokenDef("dyn");
@@ -182,8 +187,8 @@ namespace vbcc
 
   inline const auto wfRegionType = RegionRC | RegionGC | RegionArena;
 
-  inline const auto wfPrimitiveType =
-    None | Bool | I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | F32 | F64;
+  inline const auto wfPrimitiveType = None | Bool | I8 | I16 | I32 | I64 | U8 |
+    U16 | U32 | U64 | F32 | F64 | ILong | ULong | ISize | USize | Ptr;
 
   inline const auto wfBaseType = wfPrimitiveType | Dyn;
   inline const auto wfIntLiteral = Bin | Oct | Hex | Int;

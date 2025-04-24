@@ -31,9 +31,30 @@ namespace vbci
     return (code >> 24) & 0xFF;
   }
 
-  inline constexpr auto argmask(size_t n)
+  inline ValueType platform(Local v)
   {
-    return ~std::bitset<MaxRegisters>() >> (MaxRegisters - n);
+    auto t = static_cast<ValueType>(v);
+
+    switch (t)
+    {
+      case ValueType::ILong:
+        return sizeof(long) == 4 ? ValueType::I32 : ValueType::I64;
+
+      case ValueType::ULong:
+        return sizeof(unsigned long) == 4 ? ValueType::U32 : ValueType::U64;
+
+      case ValueType::ISize:
+        return sizeof(ssize_t) == 4 ? ValueType::I32 : ValueType::I64;
+
+      case ValueType::USize:
+        return sizeof(size_t) == 4 ? ValueType::U32 : ValueType::U64;
+
+      case ValueType::Ptr:
+        return sizeof(void*) == 4 ? ValueType::U32 : ValueType::U64;
+
+      default:
+        return t;
+    }
   }
 
   Thread& Thread::get()
@@ -68,11 +89,16 @@ namespace vbci
     LOG(Debug) << "Running finalizer for " << obj;
 
     if (frame)
+    {
+      frame->drop_args(args);
       frame->arg(0) = Value(obj, true);
+    }
     else
+    {
       locals.at(0) = Value(obj, true);
+    }
 
-    args.set(0);
+    args = 1;
     run(obj->finalizer()).drop();
   }
 
@@ -97,7 +123,7 @@ namespace vbci
         case Op::Const:
         {
           auto& dst = frame->local(arg0(code));
-          ValueType t = static_cast<ValueType>(arg1(code));
+          ValueType t = platform(arg1(code));
 
           switch (t)
           {
@@ -357,10 +383,9 @@ namespace vbci
 
         case Op::Arg:
         {
-          auto idx = arg0(code);
-          auto& dst = frame->arg(idx);
-          auto arg_type = static_cast<ArgType>(arg1(code));
-          auto& src = frame->local(arg2(code));
+          auto& dst = frame->arg(args++);
+          auto arg_type = static_cast<ArgType>(arg0(code));
+          auto& src = frame->local(arg1(code));
 
           switch (arg_type)
           {
@@ -375,8 +400,6 @@ namespace vbci
             default:
               throw Value(Error::UnknownArgType);
           }
-
-          args.set(idx);
           break;
         }
 
@@ -624,7 +647,7 @@ namespace vbci
         case Op::Convert:
         {
           auto& dst = frame->local(arg0(code));
-          auto type_id = static_cast<ValueType>(arg1(code));
+          auto type_id = platform(arg1(code));
           auto& src = frame->local(arg2(code));
           dst = src.convert(type_id);
           break;
@@ -798,12 +821,12 @@ namespace vbci
 
   void Thread::check_args(size_t expect)
   {
-    if (args != argmask(expect))
+    if (args != expect)
     {
       frame->drop_args(args);
       throw Value(Error::BadArgs);
     }
 
-    args.reset();
+    args = 0;
   }
 }

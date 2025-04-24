@@ -20,7 +20,7 @@ namespace vbcc
           auto primitive = _(Primitive);
           auto vtype = val(primitive / Type);
 
-          if (!vtype)
+          if (!vtype || (*vtype >= NumPrimitiveClasses))
           {
             state->error = true;
             return err(primitive / Type, "unknown primitive type");

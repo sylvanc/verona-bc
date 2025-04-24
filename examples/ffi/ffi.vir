@@ -1,0 +1,8 @@
+sym @"malloc"(usize): ptr
+sym @"free"(ptr): none
+
+func @main(): i32
+  $size = const usize 8
+  $addr = @"malloc"(copy $size)
+  $free = @"free"(copy $addr)
+  ret $size

@@ -25,7 +25,7 @@ FetchContent_Declare(
   verona-rt
   # GIT_REPOSITORY https://github.com/microsoft/verona-rt
   GIT_REPOSITORY https://github.com/mjp41/verona-rt
-  GIT_TAG 8914bf9a6dec841053b82b6afe077fd124f56f0a
+  GIT_TAG c897c6d0435f9fbc93bab372c3e69ab53764feb9
   # GIT_TAG 6549f0f7b7b36e9106a0457f3235f74799d9cce4
 )
 
@@ -38,6 +38,8 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
+
+include(cmake/libffi.cmake)
 
 # Use snmalloc clangformat target
 clangformat_targets()

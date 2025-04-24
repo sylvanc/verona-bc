@@ -162,10 +162,10 @@ namespace vbci
     Lookup,
 
     // Set a value as an argument index in the next frame. Use this to set up
-    // the arguments for an object allocation or a function call.
-    // Arg0 = argument index.
-    // Arg1 = move or copy.
-    // Arg2 = src.
+    // the arguments for an object allocation or a function call. Arguments are
+    // set up in order, and cleared on a call, tailcall, ore return.
+    // Arg0 = move or copy.
+    // Arg1 = src.
     Arg,
 
     // Arg0 = dst.
@@ -282,6 +282,11 @@ namespace vbci
     U64,
     F32,
     F64,
+    ILong,
+    ULong,
+    ISize,
+    USize,
+    Ptr,
     Object,
     Array,
     Cown,

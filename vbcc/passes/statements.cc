@@ -76,7 +76,7 @@ namespace vbcc
       return check_int<int16_t>(value);
     if (ty == I32)
       return check_int<int32_t>(value);
-    if (ty == I64)
+    if (ty->in({I64, ILong, ISize}))
       return check_int<int64_t>(value);
     if (ty == U8)
       return check_int<uint8_t>(value);
@@ -84,7 +84,7 @@ namespace vbcc
       return check_int<uint16_t>(value);
     if (ty == U32)
       return check_int<uint32_t>(value);
-    if (ty == U64)
+    if (ty->in({U64, ULong, USize}))
       return check_int<uint64_t>(value);
     if (ty == F32)
       return check_float<float>(value);

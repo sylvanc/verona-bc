@@ -35,6 +35,16 @@ namespace vbcc
       return +ValueType::F32;
     if (ptype == F64)
       return +ValueType::F64;
+    if (ptype == ILong)
+      return +ValueType::ILong;
+    if (ptype == ULong)
+      return +ValueType::ULong;
+    if (ptype == ISize)
+      return +ValueType::ISize;
+    if (ptype == USize)
+      return +ValueType::USize;
+    if (ptype == Ptr)
+      return +ValueType::Ptr;
 
     return {};
   }

@@ -2,6 +2,7 @@
 
 #include "thread.h"
 
+#include <dlfcn.h>
 #include <format>
 #include <verona.h>
 
@@ -254,6 +255,7 @@ namespace vbci
     primitives.clear();
     classes.clear();
     globals.clear();
+    dynlibs.clear();
     di_compilation_path = 0;
     di_strings.clear();
     source_files.clear();

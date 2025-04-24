@@ -4,7 +4,6 @@
 #include "types.h"
 #include "value.h"
 
-#include <bitset>
 #include <vector>
 
 namespace vbci
@@ -39,6 +38,6 @@ namespace vbci
     Value& arg(Local idx);
     void push_finalizer(Object* obj);
     void drop();
-    void drop_args(std::bitset<MaxRegisters>& args);
+    void drop_args(size_t& args);
   };
 }

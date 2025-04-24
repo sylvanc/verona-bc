@@ -21,8 +21,7 @@ else()
     -flto -ffunction-sections -fdata-sections
     )
   target_link_options(vbci PRIVATE
-    -flto
-    -Wl,--gc-sections
+    -flto -Wl,--gc-sections
     )
 endif()
 
@@ -30,6 +29,7 @@ target_link_libraries(vbci
   Threads::Threads
   snmalloc-new-override
   verona_rt
+  ffi::ffi
   CLI11::CLI11
   verona-bc::include
 )

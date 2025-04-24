@@ -8,10 +8,11 @@ namespace vbcc
 {
   using namespace trieste;
 
-  const auto IntType = T(I8, I16, I32, I64, U8, U16, U32, U64);
+  const auto IntType =
+    T(I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize);
   const auto FloatType = T(F32, F64);
   const auto PrimitiveType = T(None, Bool) / IntType / FloatType;
-  const auto BaseType = PrimitiveType / T(Dyn);
+  const auto BaseType = PrimitiveType / T(Ptr, Dyn);
 
   const auto IntLiteral = T(Bin, Oct, Hex, Int);
   const auto FloatLiteral = T(Float, HexFloat);

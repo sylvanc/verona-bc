@@ -60,6 +60,10 @@ namespace vbcc
         "u16\\b" >> [](auto& m) { m.add(U16); },
         "u32\\b" >> [](auto& m) { m.add(U32); },
         "u64\\b" >> [](auto& m) { m.add(U64); },
+        "ilong\\b" >> [](auto& m) { m.add(ILong); },
+        "ulong\\b" >> [](auto& m) { m.add(ULong); },
+        "isize\\b" >> [](auto& m) { m.add(ISize); },
+        "usize\\b" >> [](auto& m) { m.add(USize); },
         "f32\\b" >> [](auto& m) { m.add(F32); },
         "f64\\b" >> [](auto& m) { m.add(F64); },
 

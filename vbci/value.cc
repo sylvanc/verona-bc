@@ -439,6 +439,13 @@ namespace vbci
       case ValueType::F64:
         return std::to_string(f64);
 
+      case ValueType::ILong:
+      case ValueType::ULong:
+      case ValueType::ISize:
+      case ValueType::USize:
+      case ValueType::Ptr:
+        return "unreachable";
+
       case ValueType::Object:
         return obj->to_string();
 

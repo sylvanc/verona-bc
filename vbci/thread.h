@@ -4,6 +4,7 @@
 #include "program.h"
 #include "stack.h"
 
+#include <ffi.h>
 #include <unordered_set>
 
 namespace vbci
@@ -15,15 +16,15 @@ namespace vbci
     std::vector<Frame> frames;
     std::vector<Value> locals;
     std::vector<Object*> finalize;
-    std::bitset<MaxRegisters> args;
     // std::unordered_set<Cown*> read;
     // std::unordered_set<Cown*> write;
     // Cown* result;
 
     Program* program;
     Frame* frame;
+    size_t args;
 
-    Thread() : program(&Program::get()), frame(nullptr) {}
+    Thread() : program(&Program::get()), frame(nullptr), args(0) {}
     static Thread& get();
 
   public:
