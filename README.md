@@ -24,6 +24,8 @@ The first entry is a string table. This is:
 * A ULEB128 count of the number of strings.
 * Strings, each of which is a ULEB128 length followed by the string.
 
+This is followed by a ULEB128 string table index for the compilation path.
+
 This is followed by debug info for each user-defined classes. This is:
 * A ULEB128 string table index for the class name.
 * A ULEB128 string table index for each field name.
@@ -36,17 +38,11 @@ This is followed by debug info for each function. This is:
 
 A debug info program is a sequence of instructions encoded as ULEB128s. The low 2 bits are the instruction, and the high bits are the argument. The instructions are:
 * `vbci::File` (0): the argument is the source file's name in the string table, reset the offset to 0.
-* `vbci::Offset` (1): advance the offset by the argument.
+* `vbci::Offset` (1): advance the offset by the argument, advance the PC by 1.
 * `vbci::Skip` (2): advance the PC by the argument.
-
-*TODO*: describe how to use the debug info.
-
-Open questions:
-* Do we want hashes of files to avoid "wrong version" debugging?
 
 ## To-Do List
 
-* Use the debug info to emit better error messages.
 * Type test.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?

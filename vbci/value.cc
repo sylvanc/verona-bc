@@ -51,7 +51,10 @@ namespace vbci
   : cown(cown), tag(ValueType::CownRef), readonly(ro)
   {}
 
-  Value::Value(Error error) : error(error), tag(ValueType::Error) {}
+  Value::Value(Error error) : tag(ValueType::Error)
+  {
+    err.error = error;
+  }
 
   Value::Value(Function* func) : func(func), tag(ValueType::Function)
   {
@@ -390,5 +393,91 @@ namespace vbci
       throw Value(Error::UnknownFunction);
 
     return func;
+  }
+
+  void Value::annotate(Function* func, PC pc)
+  {
+    assert(tag == ValueType::Error);
+    err.func = uintptr_t(func);
+    idx = pc;
+  }
+
+  std::string Value::to_string()
+  {
+    switch (tag)
+    {
+      case ValueType::None:
+        return "none";
+
+      case ValueType::Bool:
+        return std::to_string(b);
+
+      case ValueType::I8:
+        return std::to_string(i8);
+
+      case ValueType::I16:
+        return std::to_string(i16);
+
+      case ValueType::I32:
+        return std::to_string(i32);
+
+      case ValueType::I64:
+        return std::to_string(i64);
+
+      case ValueType::U8:
+        return std::to_string(u8);
+
+      case ValueType::U16:
+        return std::to_string(u16);
+
+      case ValueType::U32:
+        return std::to_string(u32);
+
+      case ValueType::U64:
+        return std::to_string(u64);
+
+      case ValueType::F32:
+        return std::to_string(f32);
+
+      case ValueType::F64:
+        return std::to_string(f64);
+
+      case ValueType::Object:
+        return obj->to_string();
+
+      case ValueType::Array:
+        return arr->to_string();
+
+      case ValueType::Cown:
+        return cown->to_string();
+
+      case ValueType::Ref:
+        return std::format(
+          "ref [{}] {}",
+          Program::get().di_field(obj->cls(), idx),
+          obj->to_string());
+
+      case ValueType::ArrayRef:
+      {
+        FieldIdx f = idx;
+        return std::format("ref [{}] {}", f, arr->to_string());
+      }
+
+      case ValueType::CownRef:
+        return std::format("ref {}", cown->to_string());
+
+      case ValueType::Function:
+        return Program::get().di_function(func);
+
+      case ValueType::Error:
+      {
+        auto di =
+          Program::get().debug_info(reinterpret_cast<Function*>(err.func), idx);
+        return std::format("{}\n{}", errormsg(err.error), di);
+      }
+
+      case ValueType::Invalid:
+        return "invalid";
+    }
   }
 }

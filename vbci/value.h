@@ -15,6 +15,12 @@ namespace vbci
   struct Value
   {
   private:
+    struct Err
+    {
+      uintptr_t func : 56;
+      Error error : 8;
+    };
+
     union
     {
       bool b;
@@ -31,7 +37,7 @@ namespace vbci
       Object* obj;
       Array* arr;
       Cown* cown;
-      Error error;
+      Err err;
       Function* func;
     };
 
@@ -87,6 +93,9 @@ namespace vbci
     Function* method(Id w);
     Value convert(ValueType to);
     Function* function();
+
+    void annotate(Function* func, PC pc);
+    std::string to_string();
 
 #define make_unop(name, func) \
   struct name \

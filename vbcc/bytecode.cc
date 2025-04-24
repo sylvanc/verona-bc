@@ -475,6 +475,9 @@ namespace vbcc
     // Reserve space for the debug offset.
     auto debug_offset = reserve();
 
+    // Add the compilation path to the string table.
+    auto comp_path = ST::pub(options().compilation_path.string());
+
     // String table.
     di << uleb(ST::size());
 
@@ -484,6 +487,9 @@ namespace vbcc
       di << uleb(str.size());
       di.insert(di.end(), str.begin(), str.end());
     }
+
+    // The compilation path.
+    di << uleb(comp_path);
 
     // Function headers.
     code << uint32_t(functions.size());
@@ -598,14 +604,24 @@ namespace vbcc
       size_t di_offset = 0;
       size_t di_pc_advance = 0;
       bool explicit_di = false;
+      bool explicit_offset = false;
+
+      auto adv_di = [&]() {
+        if (di_pc_advance > 0)
+        {
+          di << d(DIOp::Skip, di_pc_advance);
+          di_pc_advance = 0;
+        }
+      };
 
       auto stmt_di = [&](Node stmt) {
         // Use the source and offset in the AST.
-        auto file = ST::pub(stmt->location().source->origin());
+        auto file = ST::file(stmt->location().source->origin());
         auto pos = stmt->location().pos;
 
         if (file != di_file)
         {
+          adv_di();
           di << d(DIOp::File, file);
           di_file = file;
           di_offset = 0;
@@ -613,8 +629,13 @@ namespace vbcc
 
         if (pos != di_offset)
         {
+          adv_di();
           di << d(DIOp::Offset, pos - di_offset);
           di_offset = pos;
+        }
+        else
+        {
+          di_pc_advance++;
         }
       };
 
@@ -627,31 +648,36 @@ namespace vbcc
         {
           if (stmt == Source)
           {
-            if (di_pc_advance > 0)
-              di << d(DIOp::Skip, di_pc_advance);
-
-            di_file = ST::pub(stmt / String);
+            adv_di();
+            di_file = ST::file(stmt / String);
             di_offset = 0;
             explicit_di = true;
+            explicit_offset = false;
             di << d(DIOp::File, di_file);
             continue;
           }
           else if (stmt == Offset)
           {
-            if (di_pc_advance > 0)
-              di << d(DIOp::Skip, di_pc_advance);
-
+            adv_di();
             di_offset = lit<size_t>(stmt / Int);
             explicit_di = true;
+            explicit_offset = true;
             di << d(DIOp::Offset, di_offset);
             continue;
           }
           else
           {
             if (explicit_di)
-              di_pc_advance++;
+            {
+              if (explicit_offset)
+                explicit_offset = false;
+              else
+                di_pc_advance++;
+            }
             else
+            {
               stmt_di(stmt);
+            }
           }
 
           if (stmt == Const)

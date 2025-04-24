@@ -23,6 +23,10 @@ namespace vbcc
 
     p.postparse([](auto&, auto& path, auto) {
       auto& opt = options();
+      opt.compilation_path = std::filesystem::canonical(path);
+
+      if (!std::filesystem::is_directory(opt.compilation_path))
+        opt.compilation_path = opt.compilation_path.parent_path();
 
       if (opt.bytecode_file.empty())
         opt.bytecode_file = path.stem().replace_extension(".vbc");

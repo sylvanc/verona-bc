@@ -8,6 +8,7 @@ add_executable(vbcc
   bytecode.cc
   lang.cc
   main.cc
+  stringtable.cc
 )
 
 if(MSVC)

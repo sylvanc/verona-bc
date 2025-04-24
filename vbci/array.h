@@ -2,6 +2,8 @@
 
 #include "header.h"
 
+#include <format>
+
 namespace vbci
 {
   struct Array : public Header
@@ -56,6 +58,11 @@ namespace vbci
     {
       for (size_t i = 0; i < size; i++)
         data[i].field_drop();
+    }
+
+    std::string to_string()
+    {
+      return std::format("array[{}]: {}", size, static_cast<void*>(this));
     }
   };
 }

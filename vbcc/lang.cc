@@ -52,4 +52,9 @@ namespace vbcc
     cli.add_flag(
       "-s,--strip", strip, "Strip debug information from the bytecode.");
   }
+
+  std::filesystem::path Options::relative(const std::filesystem::path& path)
+  {
+    return std::filesystem::relative(path, compilation_path);
+  }
 }

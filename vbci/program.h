@@ -14,6 +14,15 @@
 
 namespace vbci
 {
+  struct SourceFile
+  {
+    std::string contents;
+    std::vector<size_t> lines;
+
+    std::pair<size_t, size_t> linecol(size_t pos);
+    std::string line(size_t line);
+  };
+
   struct Program
   {
     std::filesystem::path file;
@@ -24,6 +33,10 @@ namespace vbci
     std::vector<Class> primitives;
     std::vector<Class> classes;
     std::vector<Value> globals;
+
+    size_t di_compilation_path;
+    std::vector<std::string> di_strings;
+    std::unordered_map<std::string, SourceFile> source_files;
 
     static Program& get()
     {
@@ -101,5 +114,14 @@ namespace vbci
     bool parse_fields(Class& cls, PC& pc);
     bool parse_methods(Class& cls, PC& pc);
     int run();
+
+    std::string debug_info(Function* func, PC pc);
+    std::string di_function(Function* func);
+    std::string di_class(Class* cls);
+    std::string di_field(Class* cls, FieldIdx idx);
+    std::string di_string(size_t idx);
+    size_t uleb(size_t& pc);
+
+    SourceFile* get_source_file(const std::string& path);
   };
 }

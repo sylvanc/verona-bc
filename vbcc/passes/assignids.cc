@@ -11,7 +11,7 @@ namespace vbcc
       {
         // Accumulate source files.
         T(Source)[Source] >> [](Match& _) -> Node {
-          ST::pub(_(Source) / String);
+          ST::file(_(Source) / String);
           return NoChange;
         },
 
@@ -128,11 +128,11 @@ namespace vbcc
                   break;
                 }
 
-                ST::pub(stmt->location().source->origin());
+                ST::file(stmt->location().source->origin());
               }
 
               if (!explicit_di_file)
-                ST::pub((label / Return)->location().source->origin());
+                ST::file((label / Return)->location().source->origin());
             }
           }
 

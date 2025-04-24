@@ -6,6 +6,8 @@
 #include "thread.h"
 #include "types.h"
 
+#include <format>
+
 namespace vbci
 {
   struct Object : public Header
@@ -28,6 +30,11 @@ namespace vbci
         store(ArgType::Move, i, frame->arg(i));
 
       return *this;
+    }
+
+    Class* cls()
+    {
+      return &Program::get().classes.at(class_id);
     }
 
     FieldIdx field(Id field)
@@ -84,6 +91,12 @@ namespace vbci
 
       for (size_t i = 0; i < cls.fields.size(); i++)
         fields[i].field_drop();
+    }
+
+    std::string to_string()
+    {
+      return std::format(
+        "{}: {}", Program::get().di_class(cls()), static_cast<void*>(this));
     }
   };
 }

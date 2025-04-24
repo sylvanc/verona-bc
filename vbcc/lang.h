@@ -1,7 +1,6 @@
 #pragma once
 
 #include "bytecode.h"
-#include "lang.h"
 
 #include <vbcc.h>
 
@@ -105,10 +104,12 @@ namespace vbcc
 
   struct Options : public trieste::Options
   {
-    std::string bytecode_file;
+    std::filesystem::path compilation_path;
+    std::filesystem::path bytecode_file;
     bool strip = false;
 
     void configure(CLI::App& cli) override;
+    std::filesystem::path relative(const std::filesystem::path& path);
   };
 
   Node err(Node node, const std::string& msg);

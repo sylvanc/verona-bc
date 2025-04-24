@@ -79,6 +79,7 @@ namespace vbci
   void Thread::step()
   {
     assert(frame);
+    auto current_pc = frame->pc;
     auto code = program->load_code(frame->pc);
     auto op = opcode(code);
 
@@ -640,6 +641,7 @@ namespace vbci
     }
     catch (Value& v)
     {
+      v.annotate(frame->func, current_pc);
       popframe(v, Condition::Throw);
     }
   }
