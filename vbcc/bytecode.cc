@@ -599,15 +599,16 @@ namespace vbcc
       constexpr size_t no_value = size_t(-1);
       size_t di_file = no_value;
       size_t di_offset = 0;
-      size_t di_pc_advance = 0;
+      size_t di_last_pc = code.size();
       bool explicit_di = false;
-      bool explicit_offset = false;
 
       auto adv_di = [&]() {
-        if (di_pc_advance > 0)
+        auto di_cur_pc = code.size();
+
+        if (di_cur_pc > di_last_pc)
         {
-          di << d(DIOp::Skip, di_pc_advance);
-          di_pc_advance = 0;
+          di << d(DIOp::Skip, di_cur_pc - di_last_pc);
+          di_last_pc = di_cur_pc;
         }
       };
 
@@ -626,13 +627,11 @@ namespace vbcc
 
         if (pos != di_offset)
         {
+          // Offset will also advance the PC by one, so reduce any Skip by one.
+          di_last_pc++;
           adv_di();
           di << d(DIOp::Offset, pos - di_offset);
           di_offset = pos;
-        }
-        else
-        {
-          di_pc_advance++;
         }
       };
 
@@ -649,7 +648,6 @@ namespace vbcc
             di_file = ST::file(stmt / String);
             di_offset = 0;
             explicit_di = true;
-            explicit_offset = false;
             di << d(DIOp::File, di_file);
             continue;
           }
@@ -658,23 +656,12 @@ namespace vbcc
             adv_di();
             di_offset = lit<size_t>(stmt / Int);
             explicit_di = true;
-            explicit_offset = true;
             di << d(DIOp::Offset, di_offset);
             continue;
           }
-          else
+          else if (!explicit_di)
           {
-            if (explicit_di)
-            {
-              if (explicit_offset)
-                explicit_offset = false;
-              else
-                di_pc_advance++;
-            }
-            else
-            {
-              stmt_di(stmt);
-            }
+            stmt_di(stmt);
           }
 
           if (stmt == Const)
@@ -1071,7 +1058,7 @@ namespace vbcc
         auto term = label / Return;
 
         if (explicit_di)
-          di << d(DIOp::Skip, di_pc_advance + 1);
+          adv_di();
         else
           stmt_di(term);
 
