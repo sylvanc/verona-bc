@@ -358,13 +358,10 @@ namespace vbci
     if (tag == ValueType::Object)
       return obj->method(w);
 
-    auto& program = Program::get();
-    auto type_id = static_cast<size_t>(tag);
-
-    if (type_id >= program.primitives.size())
+    if (+tag > +ValueType::F64)
       throw Value(Error::BadMethodTarget);
 
-    return program.primitives.at(type_id).method(w);
+    return Program::get().primitive(+tag).method(w);
   }
 
   Value Value::convert(ValueType to)

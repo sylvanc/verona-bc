@@ -41,9 +41,223 @@ namespace vbci
     return ret;
   }
 
-  bool Program::load(std::filesystem::path& path)
+  Program& Program::get()
+  {
+    static Program program;
+    return program;
+  }
+
+  Function* Program::function(Id id)
+  {
+    if (id >= functions.size())
+      throw Value(Error::UnknownFunction);
+
+    return &functions.at(id);
+  }
+
+  Class& Program::primitive(Id id)
+  {
+    return primitives.at(id);
+  }
+
+  Class& Program::cls(Id id)
+  {
+    return classes.at(id);
+  }
+
+  Value& Program::global(Id id)
+  {
+    if (id >= globals.size())
+      throw Value(Error::UnknownGlobal);
+
+    return globals.at(id);
+  }
+
+  Code Program::load_code(PC& pc)
+  {
+    return code.at(pc++);
+  }
+
+  PC Program::load_pc(PC& pc)
+  {
+    return load_u64(pc);
+  }
+
+  int16_t Program::load_i16(PC& pc)
+  {
+    return code.at(pc++);
+  }
+
+  int32_t Program::load_i32(PC& pc)
+  {
+    return code.at(pc++);
+  }
+
+  int64_t Program::load_i64(PC& pc)
+  {
+    auto lo = code.at(pc++);
+    auto hi = code.at(pc++);
+    return (int64_t(hi) << 32) | int64_t(lo);
+  }
+
+  uint16_t Program::load_u16(PC& pc)
+  {
+    return code.at(pc++);
+  }
+
+  uint32_t Program::load_u32(PC& pc)
+  {
+    return code.at(pc++);
+  }
+
+  uint64_t Program::load_u64(PC& pc)
+  {
+    auto lo = code.at(pc++);
+    auto hi = code.at(pc++);
+    return (uint64_t(hi) << 32) | uint64_t(lo);
+  }
+
+  float Program::load_f32(PC& pc)
+  {
+    return std::bit_cast<float>(code.at(pc++));
+  }
+
+  double Program::load_f64(PC& pc)
+  {
+    auto lo = code.at(pc++);
+    auto hi = code.at(pc++);
+    return std::bit_cast<double>((static_cast<uint64_t>(hi) << 32) | lo);
+  }
+
+  int Program::run(std::filesystem::path& path)
   {
     file = path;
+
+    if (!load())
+      return -1;
+
+    using namespace verona::rt;
+    auto& sched = Scheduler::get();
+    (void)sched;
+
+    auto ret = Thread::run(&functions.at(MainFuncId));
+    std::cout << ret.to_string() << std::endl;
+    return 0;
+  }
+
+  std::string Program::debug_info(Function* func, PC pc)
+  {
+    if (di.size() == 0)
+      return "no debug info";
+
+    constexpr auto no_value = size_t(-1);
+    auto di_file = no_value;
+    auto di_offset = 0;
+    auto cur_pc = func->labels.at(0);
+    auto di_pc = func->debug_info;
+
+    // Read past the function name and the register names.
+    uleb(di_pc);
+
+    for (size_t i = 0; i < func->registers; i++)
+      uleb(di_pc);
+
+    while (cur_pc < pc)
+    {
+      auto u = uleb(di_pc);
+      auto op = u & 0x03;
+      u >>= 2;
+
+      if (op == +DIOp::File)
+      {
+        di_file = u;
+        di_offset = 0;
+      }
+      else if (op == +DIOp::Offset)
+      {
+        di_offset += u;
+        cur_pc++;
+      }
+      else if (op == +DIOp::Skip)
+      {
+        cur_pc += u;
+      }
+      else
+      {
+        logging::Error() << file << ": unknown debug info op" << std::endl;
+        return "<unknown>";
+      }
+    }
+
+    auto filename = di_string(di_file);
+    auto source = get_source_file(filename);
+
+    if (!source)
+      return std::format(" --> {}:{}", filename, std::to_string(di_offset));
+
+    auto [line, col] = source->linecol(di_offset);
+    auto src_line = source->line(line);
+    auto caret = src_line.substr(0, col);
+
+    std::replace_if(
+      caret.begin(),
+      caret.end(),
+      [](unsigned char ch) { return ch != '\t'; },
+      ' ');
+
+    return std::format(
+      " --> {}:{}:{}\n  | {}\n  | {}^",
+      filename,
+      line + 1,
+      col + 1,
+      src_line,
+      caret);
+  }
+
+  std::string Program::di_function(Function* func)
+  {
+    if (di.size() == 0)
+      return "?";
+
+    auto pc = func->debug_info;
+    return di_string(uleb(pc));
+  }
+
+  std::string Program::di_class(Class* cls)
+  {
+    if (di.size() == 0)
+      return std::to_string(cls->class_id);
+
+    auto pc = cls->debug_info;
+    return di_string(uleb(pc));
+  }
+
+  std::string Program::di_field(Class* cls, FieldIdx idx)
+  {
+    if (di.size() == 0)
+      return std::to_string(idx);
+
+    auto pc = cls->debug_info;
+    uleb(pc);
+
+    while (idx > 0)
+      uleb(pc);
+
+    return di_string(uleb(pc));
+  }
+
+  bool Program::load()
+  {
+    code.clear();
+    di.clear();
+    functions.clear();
+    primitives.clear();
+    classes.clear();
+    globals.clear();
+    di_compilation_path = 0;
+    di_strings.clear();
+    source_files.clear();
+
     std::ifstream f(file, std::ios::binary | std::ios::in | std::ios::ate);
 
     if (!f)
@@ -127,17 +341,6 @@ namespace vbci
         code[i] = std::byteswap(code[i]);
     }
 
-    return true;
-  }
-
-  bool Program::parse()
-  {
-    // Skip the file header.
-    PC pc = 0;
-    load_code(pc);
-    load_code(pc);
-    load_pc(pc);
-
     // Function headers.
     auto num_functions = load_u32(pc);
     functions.resize(num_functions);
@@ -148,9 +351,9 @@ namespace vbci
       return false;
     }
 
-    for (auto& f : functions)
+    for (auto& func : functions)
     {
-      if (!parse_function(f, pc))
+      if (!parse_function(func, pc))
         return false;
     }
 
@@ -263,118 +466,6 @@ namespace vbci
     }
 
     return true;
-  }
-
-  int Program::run()
-  {
-    using namespace verona::rt;
-    auto& sched = Scheduler::get();
-    (void)sched;
-
-    auto ret = Thread::run(&functions.at(MainFuncId));
-    std::cout << ret.to_string() << std::endl;
-    return 0;
-  }
-
-  std::string Program::debug_info(Function* func, PC pc)
-  {
-    if (di.size() == 0)
-      return "no debug info";
-
-    constexpr auto no_value = size_t(-1);
-    auto di_file = no_value;
-    auto di_offset = 0;
-    auto cur_pc = func->labels.at(0);
-    auto di_pc = func->debug_info;
-
-    // Read past the function name and the register names.
-    uleb(di_pc);
-
-    for (size_t i = 0; i < func->registers; i++)
-      uleb(di_pc);
-
-    while (cur_pc < pc)
-    {
-      auto u = uleb(di_pc);
-      auto op = u & 0x03;
-      u >>= 2;
-
-      if (op == +DIOp::File)
-      {
-        di_file = u;
-        di_offset = 0;
-      }
-      else if (op == +DIOp::Offset)
-      {
-        di_offset += u;
-        cur_pc++;
-      }
-      else if (op == +DIOp::Skip)
-      {
-        cur_pc += u;
-      }
-      else
-      {
-        logging::Error() << file << ": unknown debug info op" << std::endl;
-        return "<unknown>";
-      }
-    }
-
-    auto filename = di_string(di_file);
-    auto source = get_source_file(filename);
-
-    if (!source)
-      return std::format(" --> {}:{}", filename, std::to_string(di_offset));
-
-    auto [line, col] = source->linecol(di_offset);
-    auto src_line = source->line(line);
-    auto caret = src_line.substr(0, col);
-
-    std::replace_if(
-      caret.begin(),
-      caret.end(),
-      [](unsigned char ch) { return ch != '\t'; },
-      ' ');
-
-    return std::format(
-      " --> {}:{}:{}\n  | {}\n  | {}^",
-      filename,
-      line + 1,
-      col + 1,
-      src_line,
-      caret);
-  }
-
-  std::string Program::di_function(Function* func)
-  {
-    if (di.size() == 0)
-      return "?";
-
-    auto pc = func->debug_info;
-    return di_string(uleb(pc));
-  }
-
-  std::string Program::di_class(Class* cls)
-  {
-    if (di.size() == 0)
-      return std::to_string(cls->class_id);
-
-    auto pc = cls->debug_info;
-    return di_string(uleb(pc));
-  }
-
-  std::string Program::di_field(Class* cls, FieldIdx idx)
-  {
-    if (di.size() == 0)
-      return std::to_string(idx);
-
-    auto pc = cls->debug_info;
-    uleb(pc);
-
-    while (idx > 0)
-      uleb(pc);
-
-    return di_string(uleb(pc));
   }
 
   std::string Program::di_string(size_t idx)

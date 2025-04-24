@@ -90,12 +90,7 @@ namespace vbci
         case Op::Global:
         {
           auto& dst = frame->local(arg0(code));
-          auto global_id = program->load_u32(frame->pc);
-
-          if (global_id >= program->globals.size())
-            throw Value(Error::UnknownGlobal);
-
-          dst = program->globals.at(global_id);
+          dst = program->global(program->load_u32(frame->pc));
           break;
         }
 
@@ -163,7 +158,7 @@ namespace vbci
         case Op::Stack:
         {
           auto& dst = frame->local(arg0(code));
-          auto& cls = program->classes.at(program->load_u32(frame->pc));
+          auto& cls = program->cls(program->load_u32(frame->pc));
           check_args(cls.fields.size());
           auto mem = stack.alloc(cls.size);
           auto obj =
@@ -176,7 +171,7 @@ namespace vbci
         case Op::Heap:
         {
           auto& dst = frame->local(arg0(code));
-          auto& cls = program->classes.at(program->load_u32(frame->pc));
+          auto& cls = program->cls(program->load_u32(frame->pc));
           check_args(cls.fields.size());
           auto region = frame->local(arg1(code)).region();
           dst = &region->object(cls)->init(frame, cls);
@@ -186,7 +181,7 @@ namespace vbci
         case Op::Region:
         {
           auto& dst = frame->local(arg0(code));
-          auto& cls = program->classes.at(program->load_u32(frame->pc));
+          auto& cls = program->cls(program->load_u32(frame->pc));
           check_args(cls.fields.size());
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           dst = &region->object(cls)->init(frame, cls);
@@ -343,7 +338,7 @@ namespace vbci
           {
             case CallType::CallStatic:
             {
-              dst = program->get_function(func_id);
+              dst = program->function(func_id);
               break;
             }
 
@@ -396,21 +391,21 @@ namespace vbci
           {
             case CallType::CallStatic:
             {
-              func = program->get_function(program->load_u32(frame->pc));
+              func = program->function(program->load_u32(frame->pc));
               cond = Condition::Return;
               break;
             }
 
             case CallType::SubcallStatic:
             {
-              func = program->get_function(program->load_u32(frame->pc));
+              func = program->function(program->load_u32(frame->pc));
               cond = Condition::Raise;
               break;
             }
 
             case CallType::TryStatic:
             {
-              func = program->get_function(program->load_u32(frame->pc));
+              func = program->function(program->load_u32(frame->pc));
               cond = Condition::Throw;
               break;
             }
@@ -453,7 +448,7 @@ namespace vbci
           {
             case CallType::CallStatic:
             {
-              func = program->get_function(program->load_u32(frame->pc));
+              func = program->function(program->load_u32(frame->pc));
               break;
             }
 

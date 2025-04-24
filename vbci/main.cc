@@ -4,7 +4,6 @@
 #include "types.h"
 
 #include <CLI/CLI.hpp>
-#include <verona.h>
 
 int main(int argc, char** argv)
 {
@@ -34,13 +33,5 @@ int main(int argc, char** argv)
     return app.exit(e);
   }
 
-  auto& program = Program::get();
-
-  if (!program.load(file))
-    return -1;
-
-  if (!program.parse())
-    return -1;
-
-  return program.run();
+  return Program::get().run(file);
 }

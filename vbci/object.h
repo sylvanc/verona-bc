@@ -34,13 +34,13 @@ namespace vbci
 
     Class* cls()
     {
-      return &Program::get().classes.at(class_id);
+      return &Program::get().cls(class_id);
     }
 
     FieldIdx field(Id field)
     {
       auto& program = Program::get();
-      auto& cls = program.classes.at(class_id);
+      auto& cls = program.cls(class_id);
       auto find = cls.fields.find(field);
       if (find == cls.fields.end())
         throw Value(Error::BadField);
@@ -50,12 +50,12 @@ namespace vbci
 
     Function* method(Id w)
     {
-      return Program::get().classes.at(class_id).method(w);
+      return Program::get().cls(class_id).method(w);
     }
 
     Function* finalizer()
     {
-      return Program::get().classes.at(class_id).finalizer();
+      return Program::get().cls(class_id).finalizer();
     }
 
     Value load(FieldIdx idx)
@@ -84,7 +84,7 @@ namespace vbci
     void finalize()
     {
       auto& program = Program::get();
-      auto& cls = program.classes.at(class_id);
+      auto& cls = program.cls(class_id);
 
       if (cls.finalizer())
         Thread::run_finalizer(this);
