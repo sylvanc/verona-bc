@@ -48,10 +48,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work? Entirely as union types?
   * Automatic checking on calls, returns, and stores?
-* Mode to skip checking argument counts?
-  * Separate for static and dynamic calls?
-  * Could do this in vbcc instead of in vbci.
-* Audit all the errors in `ident.h`.
 * Embedded fields.
 * Initializing globals.
 * Merge, freeze, extract.
@@ -60,9 +56,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * When.
 * Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * Command line arguments.
-* Change to 8-bit field ID in `Ref`?
-  * Or provide "long `arg`" for initializing huge objects?
-  * General purpose "long register" versions of all instructions?
+* General purpose "long register" versions of all instructions?
   * Would allow functions to have semi-unlimited register counts.
 * Math ops for numerical limits, by type?
 * Standard IO? Does this need string support?

@@ -92,23 +92,17 @@ namespace vbci
 
     // Debug info.
     auto debug_offset = load_pc(pc);
+    auto di_start = debug_offset * sizeof(Code);
 
-    if (debug_offset > 0)
+    if (size > di_start)
     {
-      auto di_start = debug_offset * sizeof(Code);
-
-      if (di_start > size)
-      {
-        logging::Error() << file << ": invalid debug offset" << std::endl;
-        return false;
-      }
-
       auto di_size = size - di_start;
       di.resize(di_size);
       f.seekg(di_start, std::ios::beg);
       f.read(reinterpret_cast<char*>(&di.at(0)), di_size);
-      size = debug_offset * sizeof(Code);
     }
+
+    size = di_start;
 
     if ((size % sizeof(Code)) != 0)
     {

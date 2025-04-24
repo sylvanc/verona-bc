@@ -34,7 +34,7 @@ FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 1de098a53e82a79c6b6e7143bb92caa83cc128e2
+  GIT_TAG 30986102c54c356346ab6cb1e2d17f43272e0888
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
