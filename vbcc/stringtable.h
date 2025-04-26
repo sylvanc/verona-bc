@@ -12,22 +12,21 @@ namespace vbcc
   {
     using Index = size_t;
 
-    static Index file(std::string_view str);
-    static Index file(Node node);
-    static Index pub(std::string_view str);
-    static Index pub(Node node);
-    static Index priv(std::string_view str);
-    static Index priv(Node node);
-    static size_t size();
-    static const std::string& at(size_t i);
-
   private:
     std::deque<std::string> store;
     std::unordered_map<std::string_view, Index> lookup;
 
-    static ST& pub_instance();
-    static ST& priv_instance();
+  public:
+    static ST& noemit();
+    static ST& ffi();
+    static ST& di();
 
-    Index intern(std::string_view str);
+    Index string(std::string_view str);
+    Index string(Node node);
+    Index file(std::string_view str);
+    Index file(Node node);
+
+    size_t size();
+    const std::string& at(size_t i);
   };
 }

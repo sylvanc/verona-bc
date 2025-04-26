@@ -44,19 +44,20 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * FFI with `libffi`.
+  * Write the libraries and symbols to the byte code.
+  * Parse the libraries and symbols from the byte code.
+  * Load the libraries and symbols at runtime.
+  * Generate byte code for FFI calls.
+  * Allow a version string on a symbol, use `dlvsym`.
   * `none` is `void` return type.
-  * `sym` that isn't after `lib` comes from the executable.
-  * `sym` that is after `lib` comes from that library.
-  * Allow a version string on `sym`, use `dlvsym`.
   * `struct` types.
 * Type test.
   * Add ClassIds as types.
   * Add union, array, ref, cown, imm, etc. types?
   * How do subtype checks work? Entirely as union types?
   * Automatic checking on calls, returns, and stores?
+* FFI to access command line arguments.
 * Initializing globals.
-* Command line arguments.
-  * Set these as immortal globals in well known locations?
 * Introspection.
   * Get the dynamic type of a value.
   * Functions: get the argument count and types, and the return type.
@@ -74,8 +75,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Would allow functions to have semi-unlimited register counts.
 * Math ops for numerical limits, by type?
 * String constants? `u8[]`?
-* Standard IO? Does this need string support?
-* File API? Seems like too much.
 * Build an DAP/LSP to allow debugging.
 * AST to IR output.
 * Compile to LLVM IR and/or Cranelift.

@@ -1,10 +1,11 @@
-// sym @"malloc"(usize): ptr
-// sym @"free"(ptr): none
+lib
+  @malloc = "malloc"(usize): ptr
+  @free = "free"(ptr): none
 
 func @main(): i32
   $size = const usize 8
-  // $addr = @"malloc"(copy $size)
-  // $free = @"free"(copy $addr)
+  $addr = ffi @malloc(copy $size)
+  $free = ffi @free(copy $addr)
   $x = const u32 12
   $y = add $size $x
   ret $y

@@ -5,11 +5,14 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace vbci
 {
-  struct Type
-  {};
+  struct Typedef
+  {
+    std::vector<Id> type_ids;
+  };
 
   struct Class
   {
@@ -19,6 +22,7 @@ namespace vbci
 
     // Precalculate an offset into the object for each field name.
     std::unordered_map<Id, FieldIdx> fields;
+    std::vector<Id> field_types;
 
     // Precalculate a function pointer for each method name.
     std::unordered_map<Id, Function*> methods;

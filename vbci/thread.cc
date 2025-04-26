@@ -219,16 +219,18 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto size = frame->local(arg1(code)).to_index();
           auto mem = stack.alloc(Array::size_of(size));
-          dst = Array::create(mem, frame->frame_id, size);
+          auto type_id = program->load_u32(frame->pc);
+          dst = Array::create(mem, type_id, frame->frame_id, size);
           break;
         }
 
         case Op::StackArrayConst:
         {
           auto& dst = frame->local(arg0(code));
+          auto type_id = program->load_u32(frame->pc);
           auto size = program->load_u64(frame->pc);
           auto mem = stack.alloc(Array::size_of(size));
-          dst = Array::create(mem, frame->frame_id, size);
+          dst = Array::create(mem, type_id, frame->frame_id, size);
           break;
         }
 
@@ -237,7 +239,8 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto region = frame->local(arg1(code)).region();
           auto size = frame->local(arg2(code)).to_index();
-          dst = region->array(Array::size_of(size));
+          auto type_id = program->load_u32(frame->pc);
+          dst = region->array(type_id, Array::size_of(size));
           break;
         }
 
@@ -245,8 +248,9 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto region = frame->local(arg1(code)).region();
+          auto type_id = program->load_u32(frame->pc);
           auto size = program->load_u64(frame->pc);
-          dst = region->array(Array::size_of(size));
+          dst = region->array(type_id, Array::size_of(size));
           break;
         }
 
@@ -254,8 +258,9 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
+          auto type_id = program->load_u32(frame->pc);
           auto size = frame->local(arg2(code)).to_index();
-          dst = region->array(Array::size_of(size));
+          dst = region->array(type_id, Array::size_of(size));
           break;
         }
 
@@ -263,8 +268,9 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
+          auto type_id = program->load_u32(frame->pc);
           auto size = program->load_u64(frame->pc);
-          dst = region->array(Array::size_of(size));
+          dst = region->array(type_id, Array::size_of(size));
           break;
         }
 
@@ -667,7 +673,7 @@ namespace vbci
   void Thread::pushframe(Function* func, Local dst, Condition condition)
   {
     assert(func);
-    check_args(func->params.size());
+    check_args(func->param_types.size());
 
     // Set how we will handle non-local returns in the current frame.
     Location frame_id = StackAlloc;
@@ -776,12 +782,12 @@ namespace vbci
   {
     assert(func);
     teardown();
-    check_args(func->params.size());
+    check_args(func->param_types.size());
 
     // Move arguments back to the current frame.
     bool stack_escape = false;
 
-    for (size_t i = 0; i < func->params.size(); i++)
+    for (size_t i = 0; i < func->param_types.size(); i++)
     {
       auto& arg = frame->arg(i);
 

@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #ifdef _WIN32
 #  include <windows.h>
@@ -33,9 +34,9 @@ namespace vbci
         handle = LoadLibraryA(path.c_str());
 #else
       if (path.empty())
-        handle = dlopen(nullptr, RTLD_GLOBAL | RTLD_NOW);
+        handle = dlopen(nullptr, RTLD_LOCAL | RTLD_NOW);
       else
-        handle = dlopen(path.c_str(), RTLD_GLOBAL | RTLD_NOW);
+        handle = dlopen(path.c_str(), RTLD_LOCAL | RTLD_NOW);
 #endif
     }
 
@@ -67,7 +68,8 @@ namespace vbci
   struct Dynlibs
   {
   private:
-    std::unordered_map<std::filesystem::path, Dynlib> libs;
+    std::unordered_map<std::filesystem::path, size_t> paths;
+    std::vector<Dynlib> libs;
 
   public:
     Dynlib& get()
@@ -77,16 +79,19 @@ namespace vbci
 
     Dynlib& get(const std::filesystem::path& path)
     {
-      auto find = libs.find(path);
+      auto find = paths.find(path);
 
-      if (find != libs.end())
-        return find->second;
+      if (find != paths.end())
+        return libs.at(find->second);
 
-      return libs.emplace(path, Dynlib(path)).first->second;
+      paths.emplace(path, libs.size());
+      libs.emplace_back(Dynlib(path));
+      return libs.back();
     }
 
     void clear()
     {
+      paths.clear();
       libs.clear();
     }
   };

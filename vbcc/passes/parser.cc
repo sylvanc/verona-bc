@@ -2,10 +2,10 @@
 
 namespace vbcc
 {
-  const auto wfParserTokens = Primitive | Class | Func | Source | GlobalId |
-    LocalId | LabelId | Equals | LParen | RParen | LBracket | RBracket | Comma |
-    Colon | wfRegionType | wfBaseType | wfStatement | wfTerminator | wfBinop |
-    wfUnop | wfConst | wfLiteral | String;
+  const auto wfParserTokens = Lib | Primitive | Class | Func | Type | Source |
+    GlobalId | LocalId | LabelId | Equals | LParen | RParen | LBracket |
+    RBracket | Comma | Colon | Union | wfRegionType | wfBaseType | wfStatement |
+    wfTerminator | wfBinop | wfUnop | wfConst | wfLiteral | String;
 
   // clang-format off
   const auto wfParser =
@@ -40,16 +40,18 @@ namespace vbcc
         "[[:space:]]+" >> [](auto&) {},
 
         // Definition keywords.
+        "lib\\b" >> [](auto& m) { m.add(Lib); },
         "primitive\\b" >> [](auto& m) { m.add(Primitive); },
         "class\\b" >> [](auto& m) { m.add(Class); },
         "func\\b" >> [](auto& m) { m.add(Func); },
+        "type\\b" >> [](auto& m) { m.add(Type); },
 
         // Region types.
         "rc\\b" >> [](auto& m) { m.add(RegionRC); },
         "gc\\b" >> [](auto& m) { m.add(RegionGC); },
         "arena\\b" >> [](auto& m) { m.add(RegionArena); },
 
-        // Primitive types.
+        // Types.
         "none\\b" >> [](auto& m) { m.add(None); },
         "bool\\b" >> [](auto& m) { m.add(Bool); },
         "i8\\b" >> [](auto& m) { m.add(I8); },
@@ -60,14 +62,13 @@ namespace vbcc
         "u16\\b" >> [](auto& m) { m.add(U16); },
         "u32\\b" >> [](auto& m) { m.add(U32); },
         "u64\\b" >> [](auto& m) { m.add(U64); },
+        "f32\\b" >> [](auto& m) { m.add(F32); },
+        "f64\\b" >> [](auto& m) { m.add(F64); },
         "ilong\\b" >> [](auto& m) { m.add(ILong); },
         "ulong\\b" >> [](auto& m) { m.add(ULong); },
         "isize\\b" >> [](auto& m) { m.add(ISize); },
         "usize\\b" >> [](auto& m) { m.add(USize); },
-        "f32\\b" >> [](auto& m) { m.add(F32); },
-        "f64\\b" >> [](auto& m) { m.add(F64); },
-
-        // Types.
+        "ptr\\b" >> [](auto& m) { m.add(Ptr); },
         "dyn\\b" >> [](auto& m) { m.add(Dyn); },
 
         // Op codes.
@@ -87,6 +88,7 @@ namespace vbcc
         "call\\b" >> [](auto& m) { m.add(Call); },
         "subcall\\b" >> [](auto& m) { m.add(Subcall); },
         "try\\b" >> [](auto& m) { m.add(Try); },
+        "ffi\\b" >> [](auto& m) { m.add(FFI); },
 
         // Terminators.
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },
@@ -158,6 +160,7 @@ namespace vbcc
         "\\]" >> [](auto& m) { m.add(RBracket); },
         "," >> [](auto& m) { m.add(Comma); },
         ":" >> [](auto& m) { m.add(Colon); },
+        "\\|" >> [](auto& m) { m.add(Union); },
 
         // // Identifiers.
         "\\@[_[:alnum:]]*" >> [](auto& m) { m.add(GlobalId); },

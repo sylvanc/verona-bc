@@ -29,10 +29,10 @@ namespace vbci
       return obj;
     }
 
-    Array* array(size_t size)
+    Array* array(Id type_id, size_t size)
     {
       auto mem = std::malloc(Array::size_of(size));
-      auto arr = Array::create(mem, Location(this), size);
+      auto arr = Array::create(mem, type_id, Location(this), size);
       arrays.emplace(arr);
       stack_inc();
       return arr;

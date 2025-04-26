@@ -119,6 +119,14 @@ namespace vbcc
     return di << uleb(value);
   }
 
+  std::vector<uint8_t>&
+  operator<<(std::vector<uint8_t>& di, const std::string& str)
+  {
+    di << uleb(str.size());
+    di.insert(di.end(), str.begin(), str.end());
+    return di;
+  }
+
   uint8_t rgn(Node node)
   {
     auto region = node / Region;
@@ -234,7 +242,7 @@ namespace vbcc
 
   std::optional<uint8_t> FuncState::get_label_id(Node id)
   {
-    auto index = ST::priv(id->location().view());
+    auto index = ST::noemit().string(id->location().view());
     auto find = label_idxs.find(index);
 
     if (find == label_idxs.end())
@@ -245,14 +253,14 @@ namespace vbcc
 
   LabelState& FuncState::get_label(Node id)
   {
-    auto index = ST::priv(id->location().view());
+    auto index = ST::noemit().string(id->location().view());
     auto find = label_idxs.find(index);
     return labels.at(find->second);
   }
 
   bool FuncState::add_label(Node id)
   {
-    auto index = ST::priv(id->location().view());
+    auto index = ST::noemit().string(id->location().view());
     auto find = label_idxs.find(index);
 
     if (find != label_idxs.end())
@@ -265,7 +273,7 @@ namespace vbcc
 
   std::optional<uint8_t> FuncState::get_register_id(Node id)
   {
-    auto index = ST::pub(id);
+    auto index = ST::di().string(id);
     auto find = register_idxs.find(index);
 
     if (find == register_idxs.end())
@@ -276,7 +284,7 @@ namespace vbcc
 
   bool FuncState::add_register(Node id)
   {
-    auto index = ST::pub(id);
+    auto index = ST::di().string(id);
     auto find = register_idxs.find(index);
 
     if (find != register_idxs.end())
@@ -294,15 +302,39 @@ namespace vbcc
 
     // Reserve a function ID for `@main`.
     functions.push_back(FuncState(nullptr));
-    func_ids.insert({ST::pub("@main"), MainFuncId});
+    func_ids.insert({ST::di().string("@main"), MainFuncId});
 
     // Reserve a method ID for `@final`.
-    method_ids.insert({ST::pub("@final"), FinalMethodId});
+    method_ids.insert({ST::di().string("@final"), FinalMethodId});
+  }
+
+  std::optional<Id> State::get_type_id(Node id)
+  {
+    auto name = ST::di().string(id);
+    auto find = type_ids.find(name);
+
+    if (find == type_ids.end())
+      return {};
+
+    return find->second;
+  }
+
+  bool State::add_type(Node type)
+  {
+    auto name = ST::di().string(type / TypeId);
+    auto find = type_ids.find(name);
+
+    if (find != type_ids.end())
+      return false;
+
+    type_ids.insert({name, type_ids.size()});
+    typedefs.push_back(type);
+    return true;
   }
 
   std::optional<Id> State::get_class_id(Node id)
   {
-    auto name = ST::pub(id);
+    auto name = ST::di().string(id);
     auto find = class_ids.find(name);
 
     if (find == class_ids.end())
@@ -313,7 +345,7 @@ namespace vbcc
 
   bool State::add_class(Node cls)
   {
-    auto name = ST::pub(cls / ClassId);
+    auto name = ST::di().string(cls / ClassId);
     auto find = class_ids.find(name);
 
     if (find != class_ids.end())
@@ -326,7 +358,7 @@ namespace vbcc
 
   std::optional<Id> State::get_field_id(Node id)
   {
-    auto name = ST::pub(id);
+    auto name = ST::di().string(id);
     auto find = field_ids.find(name);
 
     if (find == field_ids.end())
@@ -337,7 +369,7 @@ namespace vbcc
 
   void State::add_field(Node field)
   {
-    auto name = ST::pub(field / FieldId);
+    auto name = ST::di().string(field / FieldId);
     auto find = field_ids.find(name);
 
     if (find == field_ids.end())
@@ -346,7 +378,7 @@ namespace vbcc
 
   std::optional<Id> State::get_method_id(Node id)
   {
-    auto name = ST::pub(id);
+    auto name = ST::di().string(id);
     auto find = method_ids.find(name);
 
     if (find == method_ids.end())
@@ -357,7 +389,7 @@ namespace vbcc
 
   void State::add_method(Node method)
   {
-    auto name = ST::pub(method / MethodId);
+    auto name = ST::di().string(method / MethodId);
     auto find = method_ids.find(name);
 
     if (find == method_ids.end())
@@ -366,7 +398,7 @@ namespace vbcc
 
   std::optional<Id> State::get_func_id(Node id)
   {
-    auto name = ST::pub(id);
+    auto name = ST::di().string(id);
     auto find = func_ids.find(name);
 
     if (find == func_ids.end())
@@ -383,14 +415,14 @@ namespace vbcc
 
   FuncState& State::get_func(Node id)
   {
-    auto name = ST::pub(id);
+    auto name = ST::di().string(id);
     auto find = func_ids.find(name);
     return functions.at(find->second);
   }
 
   FuncState& State::add_func(Node func)
   {
-    auto name = ST::pub(func / FunctionId);
+    auto name = ST::di().string(func / FunctionId);
     auto find = func_ids.find(name);
     Id func_id;
 
@@ -412,6 +444,53 @@ namespace vbcc
     func_state.name = name;
     func_state.params = (func / Params)->size();
     return func_state;
+  }
+
+  std::optional<Id> State::get_symbol_id(Node id)
+  {
+    auto name = ST::ffi().string(id);
+    auto find = symbol_ids.find(name);
+
+    if (find == symbol_ids.end())
+      return {};
+
+    return find->second;
+  }
+
+  bool State::add_symbol(Node symbol)
+  {
+    auto name = ST::ffi().string(symbol / SymbolId);
+    auto find = symbol_ids.find(name);
+
+    if (find != symbol_ids.end())
+      return false;
+
+    symbol_ids.insert({name, symbol_ids.size()});
+    symbols.push_back(symbol);
+    return true;
+  }
+
+  std::optional<Id> State::get_library_id(Node lib)
+  {
+    auto name = ST::ffi().string(lib / String);
+    auto find = library_ids.find(name);
+
+    if (find == library_ids.end())
+      return {};
+
+    return find->second;
+  }
+
+  void State::add_library(Node lib)
+  {
+    auto name = ST::ffi().string(lib / String);
+    auto find = library_ids.find(name);
+
+    if (find != library_ids.end())
+      return;
+
+    library_ids.insert({name, library_ids.size()});
+    libraries.push_back(lib);
   }
 
   void State::def(Node& id)
@@ -469,6 +548,23 @@ namespace vbcc
       code.at(offset++) = (write >> 32) & 0xFFFFFFFF;
     };
 
+    std::function<uint32_t(Node)> typ = [&](Node type) -> uint32_t {
+      if (type == Dyn)
+        return 0;
+
+      if (type == ClassId)
+        return (+ValueType::Ptr + 1 + *get_class_id(type)) << vbci::TypeShift;
+
+      if (type == TypeId)
+        return (+ValueType::Ptr + 1 + classes.size() + *get_type_id(type))
+          << vbci::TypeShift;
+
+      if (type == Array)
+        return typ(type / Type) | vbci::TypeArray;
+
+      return (*val(type) + 1) << vbci::TypeShift;
+    };
+
     code << MagicNumber;
     code << CurrentVersion;
 
@@ -476,20 +572,44 @@ namespace vbcc
     auto debug_offset = reserve();
 
     // Add the compilation path to the string table.
-    auto comp_path = ST::pub(options().compilation_path.string());
+    auto comp_path = ST::di().string(options().compilation_path.string());
 
-    // String table.
-    di << uleb(ST::size());
+    // Debug info string table.
+    di << uleb(ST::di().size());
 
-    for (size_t i = 0; i < ST::size(); i++)
-    {
-      auto str = ST::at(i);
-      di << uleb(str.size());
-      di.insert(di.end(), str.begin(), str.end());
-    }
+    for (size_t i = 0; i < ST::di().size(); i++)
+      di << ST::di().at(i);
 
     // The compilation path.
     di << uleb(comp_path);
+
+    // FFI string table.
+    std::vector<uint8_t> ffi;
+    ffi << uleb(ST::ffi().size());
+
+    for (size_t i = 0; i < ST::ffi().size(); i++)
+      ffi << ST::ffi().at(i);
+
+    // FFI libraries.
+    ffi << uleb(libraries.size());
+
+    for (auto& lib : libraries)
+      ffi << uleb(ST::ffi().string(lib / String));
+
+    for (auto& symbol : symbols)
+    {
+      ffi << uleb(*get_library_id(symbol->parent(Lib)))
+          << uleb(ST::ffi().string(symbol / SymbolId))
+          << uleb((symbol / FFIParams)->size());
+
+      for (auto& param : *(symbol / FFIParams))
+        ffi << uleb(typ(param));
+
+      ffi << uleb(typ(symbol / Return));
+    }
+
+    // TODO: put the ffi section in the code stream.
+    // could append it, before the debug info.
 
     // Function headers.
     code << uint32_t(functions.size());
@@ -502,11 +622,28 @@ namespace vbcc
         labels | (func_state.params << 8) |
         (func_state.register_idxs.size() << 16));
 
+      // Parameter and return types.
+      for (auto& param : *(func_state.func / Params))
+        code << typ(param / Type);
+
+      code << typ(func_state.func / Type);
+
       // Reserve space for a 64 bit PC for each label.
       func_state.label_pcs = reserve(labels);
 
       // Reserve space for a 64 bit PC for the debug info.
       func_state.debug_offset = reserve();
+    }
+
+    // Typedefs.
+    code << uint32_t(typedefs.size());
+
+    for (auto& type : typedefs)
+    {
+      code << uint32_t((type / Union)->size());
+
+      for (auto& def : *(type / Union))
+        code << typ(def);
     }
 
     // Primitive classes.
@@ -519,8 +656,8 @@ namespace vbcc
 
         for (auto& method : *methods)
         {
-          code << *get_method_id(method / MethodId);
-          code << *get_func_id(method / FunctionId);
+          code << *get_method_id(method / MethodId)
+               << *get_func_id(method / FunctionId);
         }
       }
       else
@@ -535,7 +672,7 @@ namespace vbcc
     for (auto& c : classes)
     {
       code << uint64_t(di.size());
-      di << uleb(ST::pub(c / ClassId));
+      di << uleb(ST::di().string(c / ClassId));
 
       auto fields = c / Fields;
       code << uint32_t(fields->size());
@@ -543,7 +680,8 @@ namespace vbcc
       for (auto& field : *fields)
       {
         code << *get_field_id(field / FieldId);
-        di << uleb(ST::pub(field / FieldId));
+        code << typ(field / Type);
+        di << uleb(ST::di().string(field / FieldId));
       }
 
       auto methods = c / Methods;
@@ -551,9 +689,9 @@ namespace vbcc
 
       for (auto& method : *methods)
       {
-        code << *get_method_id(method / MethodId);
-        code << *get_func_id(method / FunctionId);
-        di << uleb(ST::pub(method / MethodId));
+        code << *get_method_id(method / MethodId)
+             << *get_func_id(method / FunctionId);
+        di << uleb(ST::di().string(method / MethodId));
       }
     }
 
@@ -614,7 +752,7 @@ namespace vbcc
 
       auto stmt_di = [&](Node stmt) {
         // Use the source and offset in the AST.
-        auto file = ST::file(stmt->location().source->origin());
+        auto file = ST::di().file(stmt->location().source->origin());
         auto pos = stmt->location().pos;
 
         if (file != di_file)
@@ -645,7 +783,7 @@ namespace vbcc
           if (stmt == Source)
           {
             adv_di();
-            di_file = ST::file(stmt / String);
+            di_file = ST::di().file(stmt / String);
             di_offset = 0;
             explicit_di = true;
             di << d(DIOp::File, di_file);
@@ -666,7 +804,7 @@ namespace vbcc
 
           if (stmt == Const)
           {
-            auto t = stmt / Type / Type;
+            auto t = stmt / Type;
             auto v = stmt / Rhs;
 
             if (t == None)
@@ -746,31 +884,32 @@ namespace vbcc
           }
           else if (stmt == StackArray)
           {
-            code << e{Op::StackArray, dst(stmt), rhs(stmt)};
+            code << e{Op::StackArray, dst(stmt), rhs(stmt)} << typ(stmt / Type);
           }
           else if (stmt == StackArrayConst)
           {
-            code << e{Op::StackArrayConst, dst(stmt)}
+            code << e{Op::StackArrayConst, dst(stmt)} << typ(stmt / Type)
                  << lit<uint64_t>(stmt / Rhs);
           }
           else if (stmt == HeapArray)
           {
             code << e{Op::HeapArray, dst(stmt), lhs(stmt), rhs(stmt)}
-                 << rhs(stmt);
+                 << typ(stmt / Type);
           }
           else if (stmt == HeapArrayConst)
           {
             code << e{Op::HeapArrayConst, dst(stmt), src(stmt)}
-                 << lit<uint64_t>(stmt / Rhs);
+                 << typ(stmt / Type) << lit<uint64_t>(stmt / Rhs);
           }
           else if (stmt == RegionArray)
           {
-            code << e{Op::RegionArray, dst(stmt), rgn(stmt), rhs(stmt)};
+            code << e{Op::RegionArray, dst(stmt), rgn(stmt), rhs(stmt)}
+                 << typ(stmt / Type);
           }
           else if (stmt == RegionArrayConst)
           {
             code << e{Op::RegionArrayConst, dst(stmt), rgn(stmt)}
-                 << lit<uint64_t>(stmt / Rhs);
+                 << typ(stmt / Type) << lit<uint64_t>(stmt / Rhs);
           }
           else if (stmt == Copy)
           {

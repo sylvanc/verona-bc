@@ -11,8 +11,12 @@ namespace vbcc
   inline const auto Primitive = TokenDef("primitive");
   inline const auto Class = TokenDef("class");
   inline const auto Func = TokenDef("func");
+  inline const auto Lib = TokenDef("lib");
+  inline const auto Type = TokenDef("type");
 
   // Identifiers.
+  inline const auto SymbolId = TokenDef("symbolid", flag::print);
+  inline const auto TypeId = TokenDef("typeid", flag::print);
   inline const auto GlobalId = TokenDef("globalid", flag::print);
   inline const auto ClassId = TokenDef("classid", flag::print);
   inline const auto FieldId = TokenDef("fieldid", flag::print);
@@ -35,7 +39,7 @@ namespace vbcc
   inline const auto RegionGC = TokenDef("gc");
   inline const auto RegionArena = TokenDef("arena");
 
-  // Primitive types.
+  // Types.
   inline const auto None = TokenDef("none");
   inline const auto Bool = TokenDef("bool");
   inline const auto I8 = TokenDef("i8");
@@ -53,9 +57,8 @@ namespace vbcc
   inline const auto ISize = TokenDef("isize");
   inline const auto USize = TokenDef("usize");
   inline const auto Ptr = TokenDef("ptr");
-
-  // Types.
   inline const auto Dyn = TokenDef("dyn");
+  inline const auto Array = TokenDef("array");
 
   // Op codes.
   inline const auto Global = TokenDef("global");
@@ -80,6 +83,7 @@ namespace vbcc
   inline const auto Call = TokenDef("call");
   inline const auto Subcall = TokenDef("subcall");
   inline const auto Try = TokenDef("try");
+  inline const auto FFI = TokenDef("ffi");
 
   // Terminators.
   inline const auto Tailcall = TokenDef("tailcall");
@@ -157,13 +161,16 @@ namespace vbcc
   // Structure.
   inline const auto Source = TokenDef("source");
   inline const auto Offset = TokenDef("offset");
+  inline const auto Symbol = TokenDef("symbol");
+  inline const auto Symbols = TokenDef("symbols");
+  inline const auto Union = TokenDef("union");
   inline const auto Field = TokenDef("field");
   inline const auto Fields = TokenDef("fields");
-  inline const auto Methods = TokenDef("methods");
   inline const auto Method = TokenDef("method");
+  inline const auto Methods = TokenDef("methods");
   inline const auto Param = TokenDef("param");
   inline const auto Params = TokenDef("params");
-  inline const auto Type = TokenDef("type");
+  inline const auto FFIParams = TokenDef("ffiparams");
   inline const auto Label = TokenDef("label");
   inline const auto Labels = TokenDef("labels");
   inline const auto Arg = TokenDef("arg");
@@ -187,10 +194,15 @@ namespace vbcc
 
   inline const auto wfRegionType = RegionRC | RegionGC | RegionArena;
 
-  inline const auto wfPrimitiveType = None | Bool | I8 | I16 | I32 | I64 | U8 |
-    U16 | U32 | U64 | F32 | F64 | ILong | ULong | ISize | USize | Ptr;
+  inline const auto wfIntType =
+    I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
+  inline const auto wfFloatType = F32 | F64;
+  inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
+  inline const auto wfFFIParamType = Bool | wfIntType | wfFloatType | Ptr;
+  inline const auto wfFFIRetType = wfFFIParamType | None;
+  inline const auto wfBaseType = wfPrimitiveType | Ptr | Dyn | ClassId | TypeId;
+  inline const auto wfFullType = wfBaseType | Array;
 
-  inline const auto wfBaseType = wfPrimitiveType | Dyn;
   inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
   inline const auto wfLiteral = None | True | wfIntLiteral | Float | HexFloat;
 
@@ -207,7 +219,8 @@ namespace vbcc
     Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
     HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop | Ref |
     ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call |
-    CallDyn | Subcall | SubcallDyn | Try | TryDyn | wfBinop | wfUnop | wfConst;
+    CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI | wfBinop | wfUnop |
+    wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -225,34 +238,40 @@ namespace vbcc
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Func)++)
-    | (Type <<= wfBaseType)
+      (Top <<= (Primitive | Class | Func | Lib)++)
+    | (Array <<= (Type >>= wfFullType))
+    | (Lib <<= String * Symbols)
+    | (Symbols <<= Symbol++)
+    | (Symbol <<= SymbolId * String * FFIParams * (Return >>= wfFFIRetType))
+    | (FFIParams <<= wfFFIParamType++)
+    | (Type <<= TypeId * Union)
+    | (Union <<= wfFullType++)
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)
-    | (Field <<= FieldId * Type)
+    | (Field <<= FieldId * (Type >>= wfFullType))
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
-    | (Func <<= FunctionId * Params * Type * Labels)
+    | (Func <<= FunctionId * Params * (Type >>= wfFullType) * Labels)
     | (Params <<= Param++)
-    | (Param <<= LocalId * Type)
+    | (Param <<= LocalId * (Type >>= wfFullType))
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfStatement++)
     | (Source <<= String)
     | (Offset <<= Int)
     | (Global <<= wfDst * GlobalId)
-    | (Const <<= wfDst * Type * (Rhs >>= wfLiteral))
-    | (Convert <<= wfDst * Type * wfSrc)
+    | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
+    | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
     | (Stack <<= wfDst * ClassId * Args)
     | (Heap <<= wfDst * wfSrc * ClassId * Args)
     | (Region <<= wfDst * wfRgn * ClassId * Args)
-    | (StackArray <<= wfDst * Type * wfRhs)
-    | (StackArrayConst <<= wfDst * Type * wfLit)
-    | (HeapArray <<= wfDst * wfLhs * Type * wfRhs)
-    | (HeapArrayConst <<= wfDst * wfSrc * Type * wfLit)
-    | (RegionArray <<=  wfDst * wfRgn * Type * wfRhs)
-    | (RegionArrayConst <<= wfDst * wfRgn * Type * wfLit)
+    | (StackArray <<= wfDst * (Type >>= wfBaseType) * wfRhs)
+    | (StackArrayConst <<= wfDst * (Type >>= wfBaseType) * wfLit)
+    | (HeapArray <<= wfDst * wfLhs * (Type >>= wfBaseType) * wfRhs)
+    | (HeapArrayConst <<= wfDst * wfSrc * (Type >>= wfBaseType) * wfLit)
+    | (RegionArray <<=  wfDst * wfRgn * (Type >>= wfBaseType) * wfRhs)
+    | (RegionArrayConst <<= wfDst * wfRgn * (Type >>= wfBaseType) * wfLit)
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
@@ -269,6 +288,7 @@ namespace vbcc
     | (SubcallDyn <<= wfDst * wfSrc * Args)
     | (Try <<= wfDst * FunctionId * Args)
     | (TryDyn <<= wfDst * wfSrc * Args)
+    | (FFI <<= wfDst * SymbolId * Args)
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
     | (Tailcall <<= FunctionId * MoveArgs)

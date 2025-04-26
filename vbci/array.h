@@ -9,25 +9,31 @@ namespace vbci
   struct Array : public Header
   {
   private:
-    // TODO: array content type
+    Id type_id;
     size_t size;
     Value data[0];
 
-    Array(Location loc, size_t size) : Header(loc), size(size)
+    Array(Id type_id, Location loc, size_t size)
+    : Header(loc), type_id(type_id), size(size)
     {
       for (size_t i = 0; i < size; i++)
         data[i] = Value();
     }
 
   public:
-    static Array* create(void* mem, Location loc, size_t size)
+    static Array* create(void* mem, Id type_id, Location loc, size_t size)
     {
-      return new (mem) Array(loc, size);
+      return new (mem) Array(type_id, loc, size);
     }
 
     static size_t size_of(size_t size)
     {
       return sizeof(Array) + (size * sizeof(Value));
+    }
+
+    Id content_type_id()
+    {
+      return type_id;
     }
 
     Value load(size_t idx)

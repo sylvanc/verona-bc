@@ -23,7 +23,24 @@ namespace vbcc
           return NoChange;
         },
 
+        T(TypeId)[TypeId] >> [state](Match& _) -> Node {
+          auto id = state->get_type_id(_(TypeId));
+
+          if (!id)
+          {
+            state->error = true;
+            return err(_(TypeId), "unknown type");
+          }
+
+          return NoChange;
+        },
+
         T(ClassId)[ClassId] >> [state](Match& _) -> Node {
+          auto type_id = state->get_type_id(_(ClassId));
+
+          if (type_id)
+            return TypeId ^ _(ClassId);
+
           auto id = state->get_class_id(_(ClassId));
 
           if (!id)
@@ -68,14 +85,16 @@ namespace vbcc
             return err(_(FunctionId), "unknown function");
           }
 
-          if (*id == MainFuncId)
+          return NoChange;
+        },
+
+        T(SymbolId)[SymbolId] >> [state](Match& _) -> Node {
+          auto id = state->get_symbol_id(_(SymbolId));
+
+          if (!id)
           {
-            if (state->functions.at(MainFuncId).params != 0)
-            {
-              state->error = true;
-              return err(
-                _(FunctionId), "main function must take no parameters");
-            }
+            state->error = true;
+            return err(_(SymbolId), "unknown symbol");
           }
 
           return NoChange;
@@ -106,6 +125,38 @@ namespace vbcc
               return err(
                 method / FunctionId, "finalizer must have one parameter");
             }
+          }
+
+          return NoChange;
+        },
+
+        T(Call, Subcall, Try)[Call] >> [state](Match& _) -> Node {
+          auto call = _(Call);
+          auto& func_state = state->get_func(call / FunctionId);
+
+          if ((call / Args)->size() != func_state.params)
+          {
+            state->error = true;
+            return err(call / Args, "wrong number of arguments");
+          }
+
+          return NoChange;
+        },
+
+        T(FFI)[FFI] >> [state](Match& _) -> Node {
+          auto ffi = _(FFI);
+          auto id = state->get_symbol_id(ffi / SymbolId);
+
+          if (!id)
+            return NoChange;
+
+          auto args = ffi / Args;
+          auto params = state->symbols.at(*id) / FFIParams;
+
+          if (args->size() != params->size())
+          {
+            state->error = true;
+            return err(args, "wrong number of arguments");
           }
 
           return NoChange;

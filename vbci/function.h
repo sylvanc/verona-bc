@@ -10,9 +10,9 @@ namespace vbci
   struct Function
   {
     std::vector<PC> labels;
-    std::vector<Type> params;
+    std::vector<Id> param_types;
     Local registers;
-    Type return_type;
+    Id return_type;
     size_t debug_info;
   };
 }

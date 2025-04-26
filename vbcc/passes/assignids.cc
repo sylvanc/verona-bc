@@ -11,7 +11,43 @@ namespace vbcc
       {
         // Accumulate source files.
         T(Source)[Source] >> [](Match& _) -> Node {
-          ST::file(_(Source) / String);
+          ST::di().file(_(Source) / String);
+          return NoChange;
+        },
+
+        // Accumulate libraries.
+        T(Lib)[Lib] >> [state](Match& _) -> Node {
+          state->add_library(_(Lib));
+          return NoChange;
+        },
+
+        // Accumulate symbols.
+        T(Symbol)[Symbol] >> [state](Match& _) -> Node {
+          if (!state->add_symbol(_(Symbol)))
+          {
+            state->error = true;
+            return err(_(Symbol), "duplicate symbol");
+          }
+
+          return NoChange;
+        },
+
+        // Accumulate type defs.
+        T(Type)[Type] >> [state](Match& _) -> Node {
+          auto class_id = state->get_class_id(_(Type) / TypeId);
+
+          if (class_id)
+          {
+            state->error = true;
+            return err(_(Type) / TypeId, "type shadows class name");
+          }
+
+          if (!state->add_type(_(Type)))
+          {
+            state->error = true;
+            return err(_(Type) / TypeId, "duplicate class name");
+          }
+
           return NoChange;
         },
 
@@ -40,6 +76,14 @@ namespace vbcc
 
         // Accumulate user-defined classes.
         T(Class)[Class] >> [state](Match& _) -> Node {
+          auto type_id = state->get_type_id(_(Class) / ClassId);
+
+          if (type_id)
+          {
+            state->error = true;
+            return err(_(Type) / TypeId, "class shadows type name");
+          }
+
           if (!state->add_class(_(Class)))
           {
             state->error = true;
@@ -106,6 +150,16 @@ namespace vbcc
             return err(func_id, "function has too many params");
           }
 
+          if (*state->get_func_id(func_id) == MainFuncId)
+          {
+            if (func_state.params != 0)
+            {
+              state->error = true;
+              return err(
+                _(FunctionId), "main function must take no parameters");
+            }
+          }
+
           // Register label names.
           bool explicit_di_file = false;
 
@@ -128,11 +182,11 @@ namespace vbcc
                   break;
                 }
 
-                ST::file(stmt->location().source->origin());
+                ST::di().file(stmt->location().source->origin());
               }
 
               if (!explicit_di_file)
-                ST::file((label / Return)->location().source->origin());
+                ST::di().file((label / Return)->location().source->origin());
             }
           }
 

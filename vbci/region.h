@@ -27,7 +27,7 @@ namespace vbci
     static Region* create(RegionType type);
 
     virtual Object* object(Class& cls) = 0;
-    virtual Array* array(size_t size) = 0;
+    virtual Array* array(Id type_id, size_t size) = 0;
     virtual void free(Object* obj) = 0;
     virtual void free(Array* arr) = 0;
 

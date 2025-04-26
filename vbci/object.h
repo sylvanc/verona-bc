@@ -32,6 +32,11 @@ namespace vbci
       return *this;
     }
 
+    Id type_id()
+    {
+      return (+ValueType::Ptr + 1 + class_id) << TypeShift;
+    }
+
     Class* cls()
     {
       return &Program::get().cls(class_id);

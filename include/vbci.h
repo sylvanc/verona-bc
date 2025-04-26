@@ -16,6 +16,9 @@ namespace vbci
   inline const auto MainFuncId = Id(0);
   inline const auto FinalMethodId = Id(0);
 
+  inline const auto TypeShift = size_t(1);
+  inline const auto TypeArray = size_t(0x1);
+
   enum class Op : uint8_t
   {
     // Load a global value.
@@ -59,41 +62,38 @@ namespace vbci
     // Allocates a new array in the current frame. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = size.
-    // TODO: content type.
+    // Stream: 32 bit content type ID.
     StackArray,
 
     // Allocates a new array in the current frame. The array is uninitialized.
     // Arg0 = dst.
-    // Stream: 64 bit static size.
-    // TODO: content type.
+    // Stream: 32 bit content type ID, 64 bit static size.
     StackArrayConst,
 
     // Allocates a new array in the same region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
     // Arg2 = size.
-    // TODO: content type.
+    // Stream: 32 bit content type ID.
     HeapArray,
 
     // Allocates a new array in the same region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
-    // Stream: 64 bit static size.
-    // TODO: content type.
+    // Stream: 32 bit content type ID, 64 bit static size.
     HeapArrayConst,
 
     // Allocates a new array in a new region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = region type.
     // Arg2 = size.
-    // TODO: content type.
+    // Stream: 32 bit content type ID.
     RegionArray,
 
     // Allocates a new array in a new region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = region type.
-    // Stream: 64 bit static size.
-    // TODO: content type.
+    // Stream: 32 bit content type ID, 64 bit static size.
     RegionArrayConst,
 
     // Copies the value.

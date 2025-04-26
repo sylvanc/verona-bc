@@ -30,6 +30,7 @@ namespace vbci
     std::vector<Code> code;
     std::vector<uint8_t> di;
 
+    std::vector<Typedef> typedefs;
     std::vector<Function> functions;
     std::vector<Class> primitives;
     std::vector<Class> classes;

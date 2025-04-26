@@ -149,7 +149,7 @@ namespace vbci
   std::string Program::debug_info(Function* func, PC pc)
   {
     if (di.size() == 0)
-      return "no debug info";
+      return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
 
     constexpr auto no_value = size_t(-1);
     auto di_file = no_value;
@@ -185,8 +185,7 @@ namespace vbci
       }
       else
       {
-        logging::Error() << file << ": unknown debug info op" << std::endl;
-        return "<unknown>";
+        return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
       }
     }
 
@@ -218,7 +217,7 @@ namespace vbci
   std::string Program::di_function(Function* func)
   {
     if (di.size() == 0)
-      return "?";
+      return std::format("function {}", static_cast<void*>(func));
 
     auto pc = func->debug_info;
     return di_string(uleb(pc));
@@ -227,7 +226,7 @@ namespace vbci
   std::string Program::di_class(Class* cls)
   {
     if (di.size() == 0)
-      return std::to_string(cls->class_id);
+      return std::format("class {}", cls->class_id);
 
     auto pc = cls->debug_info;
     return di_string(uleb(pc));
@@ -343,6 +342,8 @@ namespace vbci
         code[i] = std::byteswap(code[i]);
     }
 
+    // TODO: FFI libraries.
+
     // Function headers.
     auto num_functions = load_u32(pc);
     functions.resize(num_functions);
@@ -359,11 +360,25 @@ namespace vbci
         return false;
     }
 
-    if (functions.at(MainFuncId).params.size() != 0)
+    if (functions.at(MainFuncId).param_types.size() != 0)
     {
       logging::Error() << file << ": `main` must take zero parameters"
                        << std::endl;
       return false;
+    }
+
+    // Typedefs.
+    auto num_typedefs = load_u32(pc);
+    typedefs.resize(num_typedefs);
+
+    for (size_t i = 0; i < num_typedefs; i++)
+    {
+      auto& def = typedefs.at(i);
+      auto num_types = load_u32(pc);
+      def.type_ids.resize(num_types);
+
+      for (size_t j = 0; j < num_types; j++)
+        def.type_ids.at(j) = load_u32(pc);
     }
 
     // Primitive classes.
@@ -371,6 +386,9 @@ namespace vbci
 
     for (auto& cls : primitives)
     {
+      cls.class_id = Id(-1);
+      cls.debug_info = size_t(-1);
+
       if (!parse_methods(cls, pc))
         return false;
     }
@@ -411,12 +429,19 @@ namespace vbci
       return false;
     }
 
+    // Function signature.
+    f.param_types.resize(params);
+    for (size_t i = 0; i < params; i++)
+      f.param_types.at(i) = load_u32(pc);
+
+    f.return_type = load_u32(pc);
+
+    // Label PCs.
     f.labels.resize(labels);
     for (auto& label : f.labels)
       label = load_pc(pc);
 
     f.debug_info = load_pc(pc);
-    f.params.resize(params);
     f.registers = registers;
     return true;
   }
@@ -434,9 +459,8 @@ namespace vbci
 
     for (FieldIdx i = 0; i < num_fields; i++)
     {
-      // This creates a mapping from a field name to an index into the object.
-      Id name = load_u32(pc);
-      cls.fields.emplace(name, i);
+      cls.fields.emplace(load_u32(pc), i);
+      cls.field_types.push_back(load_u32(pc));
     }
 
     return true;
@@ -456,7 +480,7 @@ namespace vbci
 
       if (method_id == FinalMethodId)
       {
-        if (func.params.size() != 1)
+        if (func.param_types.size() != 1)
         {
           logging::Error() << file << ": finalizer must have one parameter"
                            << std::endl;

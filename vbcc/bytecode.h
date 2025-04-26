@@ -49,16 +49,25 @@ namespace vbcc
     bool error = false;
     Node top;
 
-    std::unordered_map<ST::Index, Id> func_ids;
+    std::unordered_map<ST::Index, Id> type_ids;
     std::unordered_map<ST::Index, Id> class_ids;
     std::unordered_map<ST::Index, Id> field_ids;
     std::unordered_map<ST::Index, Id> method_ids;
+    std::unordered_map<ST::Index, Id> func_ids;
+    std::unordered_map<ST::Index, Id> symbol_ids;
+    std::unordered_map<ST::Index, Id> library_ids;
 
+    std::vector<Node> typedefs;
     std::vector<Node> primitives;
     std::vector<Node> classes;
     std::vector<FuncState> functions;
+    std::vector<Node> symbols;
+    std::vector<Node> libraries;
 
     State();
+
+    std::optional<Id> get_type_id(Node id);
+    bool add_type(Node type);
 
     std::optional<Id> get_class_id(Node id);
     bool add_class(Node cls);
@@ -72,6 +81,12 @@ namespace vbcc
     std::optional<Id> get_func_id(Node id);
     FuncState& get_func(Node id);
     FuncState& add_func(Node func);
+
+    std::optional<Id> get_symbol_id(Node id);
+    bool add_symbol(Node symbol);
+
+    std::optional<Id> get_library_id(Node id);
+    void add_library(Node lib);
 
     void def(Node& id);
     bool use(Node& id);
