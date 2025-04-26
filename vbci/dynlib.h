@@ -25,7 +25,7 @@ namespace vbci
     LibHandle handle = nullptr;
 
   public:
-    Dynlib(const std::filesystem::path& path)
+    Dynlib(const std::string& path)
     {
 #ifdef _WIN32
       if (path.empty())
@@ -52,47 +52,16 @@ namespace vbci
 #endif
     }
 
-    void* symbol(const char* name) const
+    void* symbol(const std::string& name) const
     {
       if (!handle)
         return nullptr;
 
 #ifdef _WIN32
-      return reinterpret_cast<void*>(GetProcAddress(handle, name));
+      return reinterpret_cast<void*>(GetProcAddress(handle, name.c_str()));
 #else
-      return dlsym(handle, name);
+      return dlsym(handle, name.c_str());
 #endif
-    }
-  };
-
-  struct Dynlibs
-  {
-  private:
-    std::unordered_map<std::filesystem::path, size_t> paths;
-    std::vector<Dynlib> libs;
-
-  public:
-    Dynlib& get()
-    {
-      return get(std::filesystem::path{});
-    }
-
-    Dynlib& get(const std::filesystem::path& path)
-    {
-      auto find = paths.find(path);
-
-      if (find != paths.end())
-        return libs.at(find->second);
-
-      paths.emplace(path, libs.size());
-      libs.emplace_back(Dynlib(path));
-      return libs.back();
-    }
-
-    void clear()
-    {
-      paths.clear();
-      libs.clear();
     }
   };
 }

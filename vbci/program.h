@@ -27,8 +27,8 @@ namespace vbci
   {
   private:
     std::filesystem::path file;
-    std::vector<Code> code;
-    std::vector<uint8_t> di;
+    std::vector<uint8_t> content;
+    Code* code;
 
     std::vector<Typedef> typedefs;
     std::vector<Function> functions;
@@ -36,8 +36,10 @@ namespace vbci
     std::vector<Class> classes;
     std::vector<Value> globals;
 
-    Dynlibs dynlibs;
+    std::vector<std::string> ffi_strings;
+    std::vector<Dynlib> libs;
 
+    PC di;
     size_t di_compilation_path;
     std::vector<std::string> di_strings;
     std::unordered_map<std::string, SourceFile> source_files;
@@ -74,8 +76,9 @@ namespace vbci
     bool parse_fields(Class& cls, PC& pc);
     bool parse_methods(Class& cls, PC& pc);
 
-    std::string di_string(size_t idx);
     size_t uleb(size_t& pc);
+    std::string str(size_t& pc);
+    void string_table(size_t& pc, std::vector<std::string>& table);
 
     SourceFile* get_source_file(const std::string& path);
   };

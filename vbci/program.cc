@@ -76,7 +76,7 @@ namespace vbci
 
   Code Program::load_code(PC& pc)
   {
-    return code.at(pc++);
+    return code[pc++];
   }
 
   PC Program::load_pc(PC& pc)
@@ -86,47 +86,47 @@ namespace vbci
 
   int16_t Program::load_i16(PC& pc)
   {
-    return code.at(pc++);
+    return code[pc++];
   }
 
   int32_t Program::load_i32(PC& pc)
   {
-    return code.at(pc++);
+    return code[pc++];
   }
 
   int64_t Program::load_i64(PC& pc)
   {
-    auto lo = code.at(pc++);
-    auto hi = code.at(pc++);
+    auto lo = code[pc++];
+    auto hi = code[pc++];
     return (int64_t(hi) << 32) | int64_t(lo);
   }
 
   uint16_t Program::load_u16(PC& pc)
   {
-    return code.at(pc++);
+    return code[pc++];
   }
 
   uint32_t Program::load_u32(PC& pc)
   {
-    return code.at(pc++);
+    return code[pc++];
   }
 
   uint64_t Program::load_u64(PC& pc)
   {
-    auto lo = code.at(pc++);
-    auto hi = code.at(pc++);
+    auto lo = code[pc++];
+    auto hi = code[pc++];
     return (uint64_t(hi) << 32) | uint64_t(lo);
   }
 
   float Program::load_f32(PC& pc)
   {
-    return std::bit_cast<float>(code.at(pc++));
+    return std::bit_cast<float>(code[pc++]);
   }
 
   double Program::load_f64(PC& pc)
   {
-    auto lo = code.at(pc++);
-    auto hi = code.at(pc++);
+    auto lo = code[pc++];
+    auto hi = code[pc++];
     return std::bit_cast<double>((static_cast<uint64_t>(hi) << 32) | lo);
   }
 
@@ -148,14 +148,14 @@ namespace vbci
 
   std::string Program::debug_info(Function* func, PC pc)
   {
-    if (di.size() == 0)
+    if (di == PC(-1))
       return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
 
     constexpr auto no_value = size_t(-1);
     auto di_file = no_value;
     auto di_offset = 0;
     auto cur_pc = func->labels.at(0);
-    auto di_pc = func->debug_info;
+    auto di_pc = di + func->debug_info;
 
     // Read past the function name and the register names.
     uleb(di_pc);
@@ -189,7 +189,7 @@ namespace vbci
       }
     }
 
-    auto filename = di_string(di_file);
+    auto filename = di_strings.at(di_file);
     auto source = get_source_file(filename);
 
     if (!source)
@@ -216,136 +216,107 @@ namespace vbci
 
   std::string Program::di_function(Function* func)
   {
-    if (di.size() == 0)
+    if (di == PC(-1))
       return std::format("function {}", static_cast<void*>(func));
 
-    auto pc = func->debug_info;
-    return di_string(uleb(pc));
+    auto pc = di + func->debug_info;
+    return di_strings.at(uleb(pc));
   }
 
   std::string Program::di_class(Class* cls)
   {
-    if (di.size() == 0)
+    if (di == PC(-1))
       return std::format("class {}", cls->class_id);
 
-    auto pc = cls->debug_info;
-    return di_string(uleb(pc));
+    auto pc = di + cls->debug_info;
+    return di_strings.at(uleb(pc));
   }
 
   std::string Program::di_field(Class* cls, FieldIdx idx)
   {
-    if (di.size() == 0)
+    if (di == PC(-1))
       return std::to_string(idx);
 
-    auto pc = cls->debug_info;
+    auto pc = di + cls->debug_info;
     uleb(pc);
 
     while (idx > 0)
       uleb(pc);
 
-    return di_string(uleb(pc));
+    return di_strings.at(uleb(pc));
   }
 
   bool Program::load()
   {
-    code.clear();
-    di.clear();
+    content.clear();
+    code = nullptr;
+    di = PC(-1);
+
     functions.clear();
     primitives.clear();
     classes.clear();
     globals.clear();
-    dynlibs.clear();
+    libs.clear();
     di_compilation_path = 0;
     di_strings.clear();
     source_files.clear();
 
     std::ifstream f(file, std::ios::binary | std::ios::in | std::ios::ate);
+    size_t size = f.tellg();
+    f.seekg(0, std::ios::beg);
+    content.resize(size);
+    f.read(reinterpret_cast<char*>(&content.at(0)), size);
 
     if (!f)
     {
-      logging::Error() << file << ": could not open for reading" << std::endl;
+      logging::Error() << file << ": couldn't load" << std::endl;
       return {};
-    }
-
-    size_t size = f.tellg();
-    f.seekg(0, std::ios::beg);
-
-    // Check the file header.
-    constexpr auto header_size = 4 * sizeof(Code);
-    constexpr auto header_words = header_size / sizeof(Code);
-
-    if (size < header_size)
-    {
-      logging::Error() << file << ": too small" << std::endl;
-      return false;
-    }
-
-    code.resize(header_words);
-    f.read(reinterpret_cast<char*>(&code.at(0)), header_size);
-
-    if constexpr (std::endian::native == std::endian::big)
-    {
-      for (size_t i = 0; i < header_words; i++)
-        code[i] = std::byteswap(code[i]);
     }
 
     PC pc = 0;
 
-    if (load_code(pc) != MagicNumber)
+    if (uleb(pc) != MagicNumber)
     {
       logging::Error() << file << ": does not start with the magic number"
                        << std::endl;
       return false;
     }
 
-    if (load_code(pc) != CurrentVersion)
+    if (uleb(pc) != CurrentVersion)
     {
       logging::Error() << file << ": has an unknown version number"
                        << std::endl;
       return false;
     }
 
-    // Debug info.
-    auto debug_offset = load_pc(pc);
-    auto di_start = debug_offset * sizeof(Code);
+    // FFI information.
+    string_table(pc, ffi_strings);
 
-    if (size > di_start)
+    auto num_libs = uleb(pc);
+    for (size_t i = 0; i < num_libs; i++)
+      libs.push_back(ffi_strings.at(uleb(pc)));
+
+    auto num_symbols = uleb(pc);
+    for (size_t i = 0; i < num_symbols; i++)
     {
-      auto di_size = size - di_start;
-      di.resize(di_size);
-      f.seekg(di_start, std::ios::beg);
-      f.read(reinterpret_cast<char*>(&di.at(0)), di_size);
+      auto& lib = libs.at(uleb(pc));
+      auto& name = ffi_strings.at(uleb(pc));
+      auto symbol = lib.symbol(name);
+
+      // TODO: parameter types.
+      auto num_params = uleb(pc);
+      for (size_t j = 0; j < num_params; j++)
+        uleb(pc);
+
+      // TODO: return type.
+      uleb(pc);
+
+      // TODO: prep the symbol.
+      (void)symbol;
     }
-
-    size = di_start;
-
-    if ((size % sizeof(Code)) != 0)
-    {
-      logging::Error() << file << ": invalid size" << std::endl;
-      return false;
-    }
-
-    auto words = size / sizeof(Code);
-    code.resize(words);
-    f.seekg(0, std::ios::beg);
-    f.read(reinterpret_cast<char*>(&code.at(0)), size);
-
-    if (!f)
-    {
-      logging::Error() << file << ": failed to read " << size << std::endl;
-      return false;
-    }
-
-    if constexpr (std::endian::native == std::endian::big)
-    {
-      for (size_t i = 0; i < words; i++)
-        code[i] = std::byteswap(code[i]);
-    }
-
-    // TODO: FFI libraries.
 
     // Function headers.
-    auto num_functions = load_u32(pc);
+    auto num_functions = uleb(pc);
     functions.resize(num_functions);
 
     if (num_functions == 0)
@@ -368,17 +339,17 @@ namespace vbci
     }
 
     // Typedefs.
-    auto num_typedefs = load_u32(pc);
+    auto num_typedefs = uleb(pc);
     typedefs.resize(num_typedefs);
 
     for (size_t i = 0; i < num_typedefs; i++)
     {
       auto& def = typedefs.at(i);
-      auto num_types = load_u32(pc);
+      auto num_types = uleb(pc);
       def.type_ids.resize(num_types);
 
       for (size_t j = 0; j < num_types; j++)
-        def.type_ids.at(j) = load_u32(pc);
+        def.type_ids.at(j) = uleb(pc);
     }
 
     // Primitive classes.
@@ -394,14 +365,14 @@ namespace vbci
     }
 
     // User-defined classes.
-    auto num_classes = load_u32(pc);
+    auto num_classes = uleb(pc);
     classes.resize(num_classes);
     Id class_id = 0;
 
     for (auto& cls : classes)
     {
       cls.class_id = class_id++;
-      cls.debug_info = load_pc(pc);
+      cls.debug_info = uleb(pc);
 
       if (!parse_fields(cls, pc))
         return false;
@@ -412,16 +383,54 @@ namespace vbci
       cls.calc_size();
     }
 
+    // Debug info.
+    auto debug_info_size = uleb(pc);
+
+    if (debug_info_size > 0)
+    {
+      di = pc;
+      string_table(pc, di_strings);
+      di_compilation_path = uleb(pc);
+      pc = di + debug_info_size;
+    }
+
+    // Skip padding.
+    pc += (sizeof(Code) - (pc % sizeof(Code))) % sizeof(Code);
+
+    if (((size - pc) % sizeof(Code)) != 0)
+    {
+      logging::Error() << file << ": invalid file size" << std::endl;
+      return false;
+    }
+
+    code = reinterpret_cast<Code*>(content.data() + pc);
+    auto words = (size - pc) / sizeof(Code);
+
+    if constexpr (std::endian::native == std::endian::big)
+    {
+      for (size_t i = 0; i < words; i++)
+        code[i] = std::byteswap(code[i]);
+    }
+
+    // Patch the function headers with offsets.
+    pc = 0;
+
+    for (auto& func : functions)
+    {
+      for (auto& label : func.labels)
+        label = load_pc(pc);
+
+      func.debug_info = load_pc(pc);
+    }
+
     return true;
   }
 
   bool Program::parse_function(Function& f, PC& pc)
   {
-    // 8 bits for labels, 8 bits for parameters, 8 bits for registers.
-    auto word = load_code(pc);
-    auto labels = word & 0xFF;
-    auto params = (word >> 8) & 0xFF;
-    auto registers = (word >> 16) & 0xFF;
+    auto params = uleb(pc);
+    auto registers = uleb(pc);
+    auto labels = uleb(pc);
 
     if (labels == 0)
     {
@@ -432,23 +441,17 @@ namespace vbci
     // Function signature.
     f.param_types.resize(params);
     for (size_t i = 0; i < params; i++)
-      f.param_types.at(i) = load_u32(pc);
+      f.param_types.at(i) = uleb(pc);
 
-    f.return_type = load_u32(pc);
-
-    // Label PCs.
-    f.labels.resize(labels);
-    for (auto& label : f.labels)
-      label = load_pc(pc);
-
-    f.debug_info = load_pc(pc);
+    f.return_type = uleb(pc);
     f.registers = registers;
+    f.labels.resize(labels);
     return true;
   }
 
   bool Program::parse_fields(Class& cls, PC& pc)
   {
-    auto num_fields = load_u32(pc);
+    auto num_fields = uleb(pc);
     cls.fields.reserve(num_fields);
 
     if (num_fields > MaxRegisters)
@@ -459,8 +462,8 @@ namespace vbci
 
     for (FieldIdx i = 0; i < num_fields; i++)
     {
-      cls.fields.emplace(load_u32(pc), i);
-      cls.field_types.push_back(load_u32(pc));
+      cls.fields.emplace(uleb(pc), i);
+      cls.field_types.push_back(uleb(pc));
     }
 
     return true;
@@ -468,14 +471,14 @@ namespace vbci
 
   bool Program::parse_methods(Class& cls, PC& pc)
   {
-    auto num_methods = load_u32(pc);
+    auto num_methods = uleb(pc);
     cls.methods.reserve(num_methods);
 
     for (size_t i = 0; i < num_methods; i++)
     {
       // This creates a mapping from a method name to a function pointer.
-      Id method_id = load_u32(pc);
-      Id func_id = load_u32(pc);
+      Id method_id = uleb(pc);
+      Id func_id = uleb(pc);
       auto& func = functions.at(func_id);
 
       if (method_id == FinalMethodId)
@@ -494,31 +497,6 @@ namespace vbci
     return true;
   }
 
-  std::string Program::di_string(size_t idx)
-  {
-    if (di_strings.size() == 0)
-    {
-      size_t di_pc = 0;
-      auto count = uleb(di_pc);
-      di_strings.reserve(count);
-
-      for (size_t i = 0; i < count; i++)
-      {
-        auto size = uleb(di_pc);
-        di_strings.push_back(
-          std::string(di.begin() + di_pc, di.begin() + di_pc + size));
-        di_pc += size;
-      }
-
-      di_compilation_path = uleb(di_pc);
-    }
-
-    if (idx >= di_strings.size())
-      return "<unknown>";
-
-    return di_strings.at(idx);
-  }
-
   size_t Program::uleb(size_t& pc)
   {
     size_t value = 0;
@@ -526,8 +504,8 @@ namespace vbci
 
     while (true)
     {
-      auto byte = di.at(pc++);
-      value |= (byte & 0x7F) << shift;
+      auto byte = content.at(pc++);
+      value |= (size_t(byte) & 0x7F) << shift;
 
       if ((byte & 0x80) == 0)
         break;
@@ -538,6 +516,23 @@ namespace vbci
     return value;
   }
 
+  std::string Program::str(size_t& pc)
+  {
+    auto size = uleb(pc);
+    auto str = std::string(content.begin() + pc, content.begin() + pc + size);
+    pc += size;
+    return str;
+  }
+
+  void Program::string_table(size_t& pc, std::vector<std::string>& table)
+  {
+    auto count = uleb(pc);
+    table.reserve(count);
+
+    for (size_t i = 0; i < count; i++)
+      table.push_back(str(pc));
+  }
+
   SourceFile* Program::get_source_file(const std::string& path)
   {
     auto find = source_files.find(path);
@@ -545,7 +540,7 @@ namespace vbci
       return &find->second;
 
     auto filename =
-      std::filesystem::path(di_string(di_compilation_path)) / path;
+      std::filesystem::path(di_strings.at(di_compilation_path)) / path;
     std::ifstream f(filename, std::ios::binary | std::ios::in | std::ios::ate);
 
     if (!f)

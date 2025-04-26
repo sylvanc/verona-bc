@@ -532,8 +532,9 @@ namespace vbcc
 
   void State::gen()
   {
-    std::vector<Code> code;
+    std::vector<uint8_t> hdr;
     std::vector<uint8_t> di;
+    std::vector<Code> code;
 
     // Use to reserve space for patching a PC.
     auto reserve = [&](size_t count = 1) {
@@ -565,11 +566,8 @@ namespace vbcc
       return (*val(type) + 1) << vbci::TypeShift;
     };
 
-    code << MagicNumber;
-    code << CurrentVersion;
-
-    // Reserve space for the debug offset.
-    auto debug_offset = reserve();
+    hdr << uleb(MagicNumber);
+    hdr << uleb(CurrentVersion);
 
     // Add the compilation path to the string table.
     auto comp_path = ST::di().string(options().compilation_path.string());
@@ -584,66 +582,62 @@ namespace vbcc
     di << uleb(comp_path);
 
     // FFI string table.
-    std::vector<uint8_t> ffi;
-    ffi << uleb(ST::ffi().size());
+    hdr << uleb(ST::ffi().size());
 
     for (size_t i = 0; i < ST::ffi().size(); i++)
-      ffi << ST::ffi().at(i);
+      hdr << ST::ffi().at(i);
 
     // FFI libraries.
-    ffi << uleb(libraries.size());
+    hdr << uleb(libraries.size());
 
     for (auto& lib : libraries)
-      ffi << uleb(ST::ffi().string(lib / String));
+      hdr << uleb(ST::ffi().string(lib / String));
+
+    hdr << uleb(symbols.size());
 
     for (auto& symbol : symbols)
     {
-      ffi << uleb(*get_library_id(symbol->parent(Lib)))
+      hdr << uleb(*get_library_id(symbol->parent(Lib)))
           << uleb(ST::ffi().string(symbol / SymbolId))
           << uleb((symbol / FFIParams)->size());
 
       for (auto& param : *(symbol / FFIParams))
-        ffi << uleb(typ(param));
+        hdr << uleb(typ(param));
 
-      ffi << uleb(typ(symbol / Return));
+      hdr << uleb(typ(symbol / Return));
     }
 
-    // TODO: put the ffi section in the code stream.
-    // could append it, before the debug info.
-
     // Function headers.
-    code << uint32_t(functions.size());
+    hdr << uleb(functions.size());
 
     for (auto& func_state : functions)
     {
-      // 8 bit label count, 8 bit param count, 8 bit register count.
-      auto labels = func_state.label_idxs.size();
-      code << uint32_t(
-        labels | (func_state.params << 8) |
-        (func_state.register_idxs.size() << 16));
+      hdr << uleb(func_state.params);
+      hdr << uleb(func_state.register_idxs.size());
+      hdr << uleb(func_state.label_idxs.size());
 
       // Parameter and return types.
       for (auto& param : *(func_state.func / Params))
-        code << typ(param / Type);
+        hdr << uleb(typ(param / Type));
 
-      code << typ(func_state.func / Type);
+      hdr << uleb(typ(func_state.func / Type));
 
       // Reserve space for a 64 bit PC for each label.
-      func_state.label_pcs = reserve(labels);
+      func_state.label_pcs = reserve(func_state.label_idxs.size());
 
       // Reserve space for a 64 bit PC for the debug info.
       func_state.debug_offset = reserve();
     }
 
     // Typedefs.
-    code << uint32_t(typedefs.size());
+    hdr << uleb(typedefs.size());
 
     for (auto& type : typedefs)
     {
-      code << uint32_t((type / Union)->size());
+      hdr << uleb((type / Union)->size());
 
       for (auto& def : *(type / Union))
-        code << typ(def);
+        hdr << uleb(typ(def));
     }
 
     // Primitive classes.
@@ -652,50 +646,51 @@ namespace vbcc
       if (p)
       {
         auto methods = p / Methods;
-        code << uint32_t(methods->size());
+        hdr << uleb(methods->size());
 
         for (auto& method : *methods)
         {
-          code << *get_method_id(method / MethodId)
-               << *get_func_id(method / FunctionId);
+          hdr << uleb(*get_method_id(method / MethodId))
+              << uleb(*get_func_id(method / FunctionId));
         }
       }
       else
       {
-        code << uint32_t(0);
+        hdr << uleb(0);
       }
     }
 
     // Classes.
-    code << uint32_t(classes.size());
+    hdr << uleb(classes.size());
 
     for (auto& c : classes)
     {
-      code << uint64_t(di.size());
+      hdr << uleb(di.size());
       di << uleb(ST::di().string(c / ClassId));
 
       auto fields = c / Fields;
-      code << uint32_t(fields->size());
+      hdr << uleb(fields->size());
 
       for (auto& field : *fields)
       {
-        code << *get_field_id(field / FieldId);
-        code << typ(field / Type);
+        hdr << uleb(*get_field_id(field / FieldId));
+        hdr << uleb(typ(field / Type));
         di << uleb(ST::di().string(field / FieldId));
       }
 
       auto methods = c / Methods;
-      code << uint32_t(methods->size());
+      hdr << uleb(methods->size());
 
       for (auto& method : *methods)
       {
-        code << *get_method_id(method / MethodId)
-             << *get_func_id(method / FunctionId);
+        hdr << uleb(*get_method_id(method / MethodId))
+            << uleb(*get_func_id(method / FunctionId));
         di << uleb(ST::di().string(method / MethodId));
       }
     }
 
     // Function bodies.
+    // This goes in `code`, not in `hdr`.
     for (auto& func_state : functions)
     {
       patch(func_state.debug_offset, di.size());
@@ -1236,24 +1231,35 @@ namespace vbcc
       }
     }
 
-    patch(debug_offset, code.size());
-
     if constexpr (std::endian::native == std::endian::big)
     {
       for (size_t i = 0; i < code.size(); i++)
         code[i] = std::byteswap(code[i]);
     }
 
+    // Length of the debug info section.
+    if (options().strip)
+      hdr << uleb(0);
+    else
+      hdr << uleb(di.size());
+
     std::ofstream f(options().bytecode_file, std::ios::binary | std::ios::out);
 
-    if (f)
-    {
-      f.write(
-        reinterpret_cast<const char*>(code.data()), code.size() * sizeof(Code));
+    f.write(reinterpret_cast<const char*>(hdr.data()), hdr.size());
+    auto len = hdr.size();
 
-      if (!options().strip)
-        f.write(reinterpret_cast<const char*>(di.data()), di.size());
+    if (!options().strip)
+    {
+      f.write(reinterpret_cast<const char*>(di.data()), di.size());
+      len += di.size();
     }
+
+    // Pad to sizeof(Code) alignment.
+    auto pad = (sizeof(Code) - (len % sizeof(Code))) % sizeof(Code);
+    f.write("\0\0\0\0", pad);
+
+    f.write(
+      reinterpret_cast<const char*>(code.data()), code.size() * sizeof(Code));
 
     if (!f)
     {
