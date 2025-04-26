@@ -48,6 +48,11 @@ namespace vbci
     return program;
   }
 
+  Symbol& Program::symbol(Id id)
+  {
+    return symbols.at(id);
+  }
+
   Function* Program::function(Id id)
   {
     if (id >= functions.size())
@@ -290,6 +295,7 @@ namespace vbci
     }
 
     // FFI information.
+    std::vector<std::string> ffi_strings;
     string_table(pc, ffi_strings);
 
     auto num_libs = uleb(pc);
@@ -301,18 +307,35 @@ namespace vbci
     {
       auto& lib = libs.at(uleb(pc));
       auto& name = ffi_strings.at(uleb(pc));
-      auto symbol = lib.symbol(name);
+      auto func = lib.symbol(name);
 
-      // TODO: parameter types.
+      if (!func)
+      {
+        logging::Error() << file << ": couldn't load symbol " << name
+                         << std::endl;
+        return false;
+      }
+
+      symbols.push_back(Symbol(func));
+      auto& symbol = symbols.back();
+
       auto num_params = uleb(pc);
+      bool ok = true;
       for (size_t j = 0; j < num_params; j++)
-        uleb(pc);
+      {
+        if (!symbol.param(uleb(pc)))
+          ok = false;
+      }
 
-      // TODO: return type.
-      uleb(pc);
+      if (!symbol.ret(uleb(pc)))
+        ok = false;
 
-      // TODO: prep the symbol.
-      (void)symbol;
+      if (!ok || !symbol.prepare())
+      {
+        logging::Error() << file << ": couldn't prepare symbol " << name
+                         << std::endl;
+        return false;
+      }
     }
 
     // Function headers.

@@ -33,6 +33,7 @@ namespace vbci
     MethodNotFound,
     BadStackEscape,
     BadArgs,
+    BadType,
   };
 
   using PC = size_t;
@@ -101,6 +102,8 @@ namespace vbci
         return "bad stack escape";
       case Error::BadArgs:
         return "bad args";
+      case Error::BadType:
+        return "bad type";
 
       default:
         assert(false);

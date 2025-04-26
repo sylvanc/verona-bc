@@ -448,7 +448,7 @@ namespace vbcc
 
   std::optional<Id> State::get_symbol_id(Node id)
   {
-    auto name = ST::ffi().string(id);
+    auto name = ST::noemit().string(id);
     auto find = symbol_ids.find(name);
 
     if (find == symbol_ids.end())
@@ -459,12 +459,13 @@ namespace vbcc
 
   bool State::add_symbol(Node symbol)
   {
-    auto name = ST::ffi().string(symbol / SymbolId);
+    auto name = ST::noemit().string(symbol / SymbolId);
     auto find = symbol_ids.find(name);
 
     if (find != symbol_ids.end())
       return false;
 
+    ST::ffi().string(symbol / String);
     symbol_ids.insert({name, symbol_ids.size()});
     symbols.push_back(symbol);
     return true;
@@ -563,7 +564,7 @@ namespace vbcc
       if (type == Array)
         return typ(type / Type) | vbci::TypeArray;
 
-      return (*val(type) + 1) << vbci::TypeShift;
+      return *val(type) << vbci::TypeShift;
     };
 
     hdr << uleb(MagicNumber);
@@ -598,7 +599,7 @@ namespace vbcc
     for (auto& symbol : symbols)
     {
       hdr << uleb(*get_library_id(symbol->parent(Lib)))
-          << uleb(ST::ffi().string(symbol / SymbolId))
+          << uleb(ST::ffi().string(symbol / String))
           << uleb((symbol / FFIParams)->size());
 
       for (auto& param : *(symbol / FFIParams))
@@ -994,6 +995,12 @@ namespace vbcc
           {
             args(stmt / Args);
             code << e{Op::Call, dst(stmt), +CallType::TryDynamic, src(stmt)};
+          }
+          else if (stmt == FFI)
+          {
+            args(stmt / Args);
+            code << e{Op::Call, dst(stmt), +CallType::FFI}
+                 << *get_symbol_id(stmt / SymbolId);
           }
           else if (stmt == Add)
           {

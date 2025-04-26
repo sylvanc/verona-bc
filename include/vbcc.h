@@ -198,7 +198,7 @@ namespace vbcc
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
-  inline const auto wfFFIParamType = Bool | wfIntType | wfFloatType | Ptr;
+  inline const auto wfFFIParamType = wfIntType | wfFloatType | Ptr;
   inline const auto wfFFIRetType = wfFFIParamType | None;
   inline const auto wfBaseType = wfPrimitiveType | Ptr | Dyn | ClassId | TypeId;
   inline const auto wfFullType = wfBaseType | Array;

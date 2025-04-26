@@ -36,8 +36,8 @@ namespace vbci
     std::vector<Class> classes;
     std::vector<Value> globals;
 
-    std::vector<std::string> ffi_strings;
     std::vector<Dynlib> libs;
+    std::vector<Symbol> symbols;
 
     PC di;
     size_t di_compilation_path;
@@ -47,6 +47,7 @@ namespace vbci
   public:
     static Program& get();
 
+    Symbol& symbol(Id id);
     Function* function(Id id);
     Class& primitive(Id id);
     Class& cls(Id id);

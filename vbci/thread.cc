@@ -31,32 +31,6 @@ namespace vbci
     return (code >> 24) & 0xFF;
   }
 
-  inline ValueType platform(Local v)
-  {
-    auto t = static_cast<ValueType>(v);
-
-    switch (t)
-    {
-      case ValueType::ILong:
-        return sizeof(long) == 4 ? ValueType::I32 : ValueType::I64;
-
-      case ValueType::ULong:
-        return sizeof(unsigned long) == 4 ? ValueType::U32 : ValueType::U64;
-
-      case ValueType::ISize:
-        return sizeof(ssize_t) == 4 ? ValueType::I32 : ValueType::I64;
-
-      case ValueType::USize:
-        return sizeof(size_t) == 4 ? ValueType::U32 : ValueType::U64;
-
-      case ValueType::Ptr:
-        return sizeof(void*) == 4 ? ValueType::U32 : ValueType::U64;
-
-      default:
-        return t;
-    }
-  }
-
   Thread& Thread::get()
   {
     thread_local Thread thread;
@@ -123,7 +97,7 @@ namespace vbci
         case Op::Const:
         {
           auto& dst = frame->local(arg0(code));
-          ValueType t = platform(arg1(code));
+          auto t = platform_type(static_cast<ValueType>(arg1(code)));
 
           switch (t)
           {
@@ -460,6 +434,38 @@ namespace vbci
               break;
             }
 
+            case CallType::FFI:
+            {
+              auto& symbol = program->symbol(program->load_u32(frame->pc));
+              auto& params = symbol.params();
+              auto param_size = params.size();
+              check_args(param_size);
+
+              if (ffi_args.size() < param_size)
+              {
+                ffi_args.resize(param_size);
+                ffi_arg_addrs.resize(param_size);
+
+                for (size_t i = 0; i < param_size; i++)
+                  ffi_arg_addrs.at(i) = &ffi_args.at(i);
+              }
+
+              for (size_t i = 0; i < param_size; i++)
+              {
+                auto& arg = frame->arg(i);
+
+                if (arg.type() != params.at(i))
+                  throw Value(Error::BadType);
+
+                ffi_args.at(i) = arg.to_ffi();
+              }
+
+              frame->local(dst) =
+                Value::from_ffi(symbol.ret(), symbol.call(ffi_arg_addrs));
+              frame->drop_args(args);
+              return;
+            }
+
             default:
               throw Value(Error::UnknownCallType);
           }
@@ -653,9 +659,9 @@ namespace vbci
         case Op::Convert:
         {
           auto& dst = frame->local(arg0(code));
-          auto type_id = platform(arg1(code));
+          auto t = platform_type(static_cast<ValueType>(arg1(code)));
           auto& src = frame->local(arg2(code));
-          dst = src.convert(type_id);
+          dst = src.convert(t);
           break;
         }
 

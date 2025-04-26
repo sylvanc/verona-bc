@@ -1,13 +1,13 @@
 #pragma once
 
 #include "ident.h"
-#include "vbci.h"
 
 #include <cmath>
 #include <cstring>
 #include <functional>
 #include <limits>
 #include <numbers>
+#include <vbci.h>
 
 namespace vbci
 {
@@ -75,10 +75,14 @@ namespace vbci
     Value& operator=(Value&& that) noexcept;
 
     static Value none();
+    static Value from_ffi(ValueType t, uint64_t v);
+
+    ValueType type();
 
     bool get_bool();
     int32_t get_i32();
     size_t to_index();
+    uint64_t to_ffi();
 
     Location location();
     Region* region();

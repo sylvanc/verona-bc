@@ -6,6 +6,6 @@ func @main(): i32
   $size = const usize 8
   $addr = ffi @malloc(copy $size)
   $free = ffi @free(copy $addr)
-  $x = const u32 12
+  $x = const usize 12
   $y = add $size $x
   ret $y

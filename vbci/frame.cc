@@ -49,6 +49,13 @@ namespace vbci
     return locals.at(i);
   }
 
+  std::span<Value> Frame::args(size_t args)
+  {
+    return std::span<Value>{
+      locals.data() + base + func->registers,
+      locals.data() + base + func->registers + args};
+  }
+
   void Frame::push_finalizer(Object* obj)
   {
     auto finalizer = obj->finalizer();

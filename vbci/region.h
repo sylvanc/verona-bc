@@ -2,7 +2,8 @@
 
 #include "ident.h"
 #include "types.h"
-#include "vbci.h"
+
+#include <vbci.h>
 
 namespace vbci
 {

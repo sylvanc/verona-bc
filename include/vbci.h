@@ -170,7 +170,7 @@ namespace vbci
 
     // Arg0 = dst.
     // Arg1 = call type: function static, function dynamic, block static, block
-    // dynamic, try static, try dynamic.
+    // dynamic, try static, try dynamic, FFI.
     // Arg2 = function value, ignored if static.
     // Stream: 32 bit function ID, for static calls.
     Call,
@@ -322,6 +322,7 @@ namespace vbci
     SubcallDynamic,
     TryStatic,
     TryDynamic,
+    FFI,
   };
 
   enum class Condition : uint8_t

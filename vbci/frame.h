@@ -4,6 +4,7 @@
 #include "types.h"
 #include "value.h"
 
+#include <span>
 #include <vector>
 
 namespace vbci
@@ -36,6 +37,7 @@ namespace vbci
 
     Value& local(Local idx);
     Value& arg(Local idx);
+    std::span<Value> args(size_t args);
     void push_finalizer(Object* obj);
     void drop();
     void drop_args(size_t& args);

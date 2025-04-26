@@ -4,7 +4,6 @@
 #include "program.h"
 #include "stack.h"
 
-#include <ffi.h>
 #include <unordered_set>
 
 namespace vbci
@@ -23,6 +22,9 @@ namespace vbci
     Program* program;
     Frame* frame;
     size_t args;
+
+    std::vector<uint64_t> ffi_args;
+    std::vector<void*> ffi_arg_addrs;
 
     Thread() : program(&Program::get()), frame(nullptr), args(0) {}
     static Thread& get();

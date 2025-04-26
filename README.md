@@ -44,18 +44,11 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * FFI with `libffi`.
-  * Write the libraries and symbols to the byte code.
-  * Parse the libraries and symbols from the byte code.
-  * Load the libraries and symbols at runtime.
-  * Generate byte code for FFI calls.
   * Allow a version string on a symbol, use `dlvsym`.
-  * `none` is `void` return type.
   * `struct` types.
 * Type test.
-  * Add ClassIds as types.
-  * Add union, array, ref, cown, imm, etc. types?
-  * How do subtype checks work? Entirely as union types?
-  * Automatic checking on calls, returns, and stores?
+  * Add ref, cown, imm, etc. types?
+  * Automatic checking on calls, returns, and stores.
 * FFI to access command line arguments.
 * Initializing globals.
 * Introspection.

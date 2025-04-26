@@ -101,6 +101,18 @@ namespace vbci
     return Value(ValueType::None);
   }
 
+  Value Value::from_ffi(ValueType t, uint64_t v)
+  {
+    Value value(t);
+    value.u64 = v;
+    return value;
+  }
+
+  ValueType Value::type()
+  {
+    return tag;
+  }
+
   bool Value::get_bool()
   {
     if (tag != ValueType::Bool)
@@ -136,6 +148,11 @@ namespace vbci
       default:
         throw Value(Error::BadRefTarget);
     }
+  }
+
+  uint64_t Value::to_ffi()
+  {
+    return u64;
   }
 
   void Value::inc(bool reg)
