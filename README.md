@@ -49,13 +49,12 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * Type test.
-  * Check that `main` returns `i32`.
+  * Add a type test op code.
   * Raise and throw signatures on functions.
   * Function types? Not strictly needed, as this can be encoded as objects.
   * Add `ref`, `cown` types to `vbcc`.
     * Can't create a `cown` of a `cown T`.
     * Can't create a `ref` of a `ref T`, so no field can have a `ref` type and no array can have a `ref` content type.
-  * `vbcc` check for `types::too_many()`.
   * Cache type check results? Would also prevent circular type checks.
   * `imm` and other memory location types?
 * FFI with `libffi`.
@@ -86,6 +85,9 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
     * Or just extend the size of `locals` when arguments are pushed.
 * Math ops for numerical limits, by type?
 * String constants? `u8[]`?
+* Mark classes to auto-generate a C API.
+  * Output a C header file.
+  * Allow calling back into the interpreter.
 * Build an DAP/LSP to allow debugging.
 * AST to IR output.
 * Compile to LLVM IR and/or Cranelift.

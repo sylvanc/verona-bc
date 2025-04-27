@@ -151,6 +151,12 @@ namespace vbcc
               return err(
                 _(FunctionId), "main function must take no parameters");
             }
+
+            if ((func_state.func / Type) != I32)
+            {
+              state->error = true;
+              return err(_(FunctionId), "main function must return i32");
+            }
           }
 
           // Register label names.
