@@ -18,8 +18,6 @@ Another way to use this is to implement exceptions. To do so, `throw` exception 
 
 ## Debug Info
 
-Debug info is appended to the end of the byte code.
-
 The first entry is a string table. This is:
 * A ULEB128 count of the number of strings.
 * Strings, each of which is a ULEB128 length followed by the string.
@@ -47,8 +45,11 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Allow a version string on a symbol, use `dlvsym`.
   * `struct` types.
 * Type test.
-  * Add ref, cown, imm, etc. types?
-  * Automatic checking on calls, returns, and stores.
+  * Raise and throw signatures on functions.
+  * Add `ref`, `cown` types.
+  * Cache type check results? Would also prevent circular type checks.
+  * `imm` and other memory location types?
+* Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * FFI to access command line arguments.
 * Initializing globals.
 * Introspection.
@@ -63,9 +64,12 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RCs.
 * When.
-* Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * General purpose "long register" versions of all instructions?
   * Would allow functions to have semi-unlimited register counts.
+  * Argument space is highest of:
+    * Parameter count of any function.
+    * Parameter count of any FFI symbol.
+    * Field count of any class.
 * Math ops for numerical limits, by type?
 * String constants? `u8[]`?
 * Build an DAP/LSP to allow debugging.

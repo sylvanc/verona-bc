@@ -101,16 +101,50 @@ namespace vbci
     return Value(ValueType::None);
   }
 
-  Value Value::from_ffi(ValueType t, uint64_t v)
+  Value Value::from_ffi(Id type_id, uint64_t v)
   {
-    Value value(t);
+    if (type_id & TypeArray)
+      throw Value(Error::BadType);
+
+    type_id >>= TypeShift;
+
+    if (type_id > +ValueType::Ptr)
+      throw Value(Error::BadType);
+
+    Value value(static_cast<ValueType>(type_id));
     value.u64 = v;
     return value;
   }
 
-  ValueType Value::type()
+  Id Value::type_id()
   {
-    return tag;
+    switch (tag)
+    {
+      case ValueType::Object:
+        return obj->type_id();
+
+      case ValueType::Array:
+        return arr->array_type_id();
+
+      case ValueType::Cown:
+        // TODO: need a cown type
+        return 0;
+
+      case ValueType::Ref:
+      case ValueType::ArrayRef:
+      case ValueType::CownRef:
+        // TODO: need a ref type
+        return 0;
+
+      case ValueType::Function:
+      case ValueType::Error:
+      case ValueType::Invalid:
+        // TODO: what to do here?
+        return 0;
+
+      default:
+        return (+tag) << TypeShift;
+    }
   }
 
   bool Value::get_bool()

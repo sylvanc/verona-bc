@@ -79,7 +79,7 @@ namespace vbci
   void Thread::step()
   {
     assert(frame);
-    auto current_pc = frame->pc;
+    current_pc = frame->pc;
     auto code = program->load_code(frame->pc);
     auto op = opcode(code);
 
@@ -159,7 +159,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->cls(program->load_u32(frame->pc));
-          check_args(cls.fields.size());
+          check_args(cls.field_types);
           auto mem = stack.alloc(cls.size);
           auto obj =
             &Object::create(mem, cls, frame->frame_id)->init(frame, cls);
@@ -172,7 +172,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->cls(program->load_u32(frame->pc));
-          check_args(cls.fields.size());
+          check_args(cls.field_types);
           auto region = frame->local(arg1(code)).region();
           dst = &region->object(cls)->init(frame, cls);
           break;
@@ -182,7 +182,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->cls(program->load_u32(frame->pc));
-          check_args(cls.fields.size());
+          check_args(cls.field_types);
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           dst = &region->object(cls)->init(frame, cls);
           break;
@@ -439,7 +439,7 @@ namespace vbci
               auto& symbol = program->symbol(program->load_u32(frame->pc));
               auto& params = symbol.params();
               auto param_size = params.size();
-              check_args(param_size);
+              check_args(params);
 
               if (ffi_args.size() < param_size)
               {
@@ -451,18 +451,11 @@ namespace vbci
               }
 
               for (size_t i = 0; i < param_size; i++)
-              {
-                auto& arg = frame->arg(i);
+                ffi_args.at(i) = frame->arg(i).to_ffi();
 
-                if (arg.type() != params.at(i))
-                  throw Value(Error::BadType);
-
-                ffi_args.at(i) = arg.to_ffi();
-              }
-
+              frame->drop_args(args);
               frame->local(dst) =
                 Value::from_ffi(symbol.ret(), symbol.call(ffi_arg_addrs));
-              frame->drop_args(args);
               return;
             }
 
@@ -679,7 +672,7 @@ namespace vbci
   void Thread::pushframe(Function* func, Local dst, Condition condition)
   {
     assert(func);
-    check_args(func->param_types.size());
+    check_args(func->param_types);
 
     // Set how we will handle non-local returns in the current frame.
     Location frame_id = StackAlloc;
@@ -724,7 +717,24 @@ namespace vbci
     if (ret.location() == frame->frame_id)
     {
       ret = Value(Error::BadStackEscape);
+      ret.annotate(frame->func, current_pc);
       condition = Condition::Throw;
+    }
+
+    switch (condition)
+    {
+      case Condition::Return:
+        if (!program->typecheck(ret.type_id(), frame->func->return_type))
+        {
+          ret = Value(Error::BadType);
+          ret.annotate(frame->func, current_pc);
+          condition = Condition::Throw;
+        }
+        break;
+
+      case Condition::Raise:
+      case Condition::Throw:
+        break;
     }
 
     teardown();
@@ -788,7 +798,7 @@ namespace vbci
   {
     assert(func);
     teardown();
-    check_args(func->param_types.size());
+    check_args(func->param_types);
 
     // Move arguments back to the current frame.
     bool stack_escape = false;
@@ -831,12 +841,18 @@ namespace vbci
     frame->pc = frame->func->labels.at(label);
   }
 
-  void Thread::check_args(size_t expect)
+  void Thread::check_args(std::vector<Id>& types)
   {
-    if (args != expect)
+    if (args != types.size())
     {
       frame->drop_args(args);
       throw Value(Error::BadArgs);
+    }
+
+    for (size_t i = 0; i < args; i++)
+    {
+      if (!program->typecheck(frame->arg(i).type_id(), types.at(i)))
+        throw Value(Error::BadType);
     }
 
     args = 0;

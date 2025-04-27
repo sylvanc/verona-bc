@@ -26,79 +26,75 @@ namespace vbci
     }
   }
 
-  std::pair<ValueType, ffi_type*> map(Id type_id)
+  ffi_type* ffi_map(Id type_id)
   {
     if (type_id & TypeArray)
-      return {ValueType::None, nullptr};
+      return nullptr;
 
     auto t = static_cast<ValueType>(type_id >> TypeShift);
 
     switch (t)
     {
       case ValueType::None:
-        return {t, &ffi_type_void};
+        return &ffi_type_void;
       case ValueType::I8:
-        return {t, &ffi_type_sint8};
+        return &ffi_type_sint8;
       case ValueType::I16:
-        return {t, &ffi_type_sint16};
+        return &ffi_type_sint16;
       case ValueType::I32:
-        return {t, &ffi_type_sint32};
+        return &ffi_type_sint32;
       case ValueType::I64:
-        return {t, &ffi_type_sint64};
+        return &ffi_type_sint64;
       case ValueType::U8:
-        return {t, &ffi_type_uint8};
+        return &ffi_type_uint8;
       case ValueType::U16:
-        return {t, &ffi_type_uint16};
+        return &ffi_type_uint16;
       case ValueType::U32:
-        return {t, &ffi_type_uint32};
+        return &ffi_type_uint32;
       case ValueType::U64:
-        return {t, &ffi_type_uint64};
+        return &ffi_type_uint64;
       case ValueType::F32:
-        return {t, &ffi_type_float};
+        return &ffi_type_float;
       case ValueType::F64:
-        return {t, &ffi_type_double};
+        return &ffi_type_double;
       case ValueType::ILong:
-        return {platform_type(t), &ffi_type_slong};
+        return &ffi_type_slong;
       case ValueType::ULong:
-        return {platform_type(t), &ffi_type_ulong};
+        return &ffi_type_ulong;
       case ValueType::ISize:
-        return {
-          platform_type(t),
-          sizeof(ssize_t) == 4 ? &ffi_type_sint32 : &ffi_type_sint64};
+        return sizeof(ssize_t) == 4 ? &ffi_type_sint32 : &ffi_type_sint64;
       case ValueType::USize:
-        return {
-          platform_type(t),
-          sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64};
+        return sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64;
       case ValueType::Ptr:
-        return {t, &ffi_type_pointer};
+        return &ffi_type_pointer;
       default:
-        return {t, nullptr};
+        return nullptr;
     }
   }
 
-  Symbol::Symbol(Func func) : func(func), return_type(nullptr) {}
+  Symbol::Symbol(Func func) : func(func), return_ffi_type(nullptr) {}
 
   bool Symbol::param(Id type_id)
   {
-    auto [vt, ffit] = map(type_id);
+    auto ffit = ffi_map(type_id);
 
     if (!ffit)
       return false;
 
-    param_types.push_back(ffit);
-    param_vtypes.push_back(vt);
+    param_types.push_back(type_id);
+    param_ffi_types.push_back(ffit);
     return true;
   }
 
   bool Symbol::ret(Id type_id)
   {
-    auto [vt, ffit] = map(type_id);
+    auto ffit = ffi_map(type_id);
 
     if (!ffit)
       return false;
 
-    return_type = ffit;
-    return_vtype = vt;
+    return_type = type_id;
+    return_ffi_type = ffit;
     return true;
   }
 
@@ -110,19 +106,19 @@ namespace vbci
     return ffi_prep_cif(
              &cif,
              FFI_DEFAULT_ABI,
-             static_cast<unsigned>(param_types.size()),
-             return_type,
-             param_types.data()) == FFI_OK;
+             static_cast<unsigned>(param_ffi_types.size()),
+             return_ffi_type,
+             param_ffi_types.data()) == FFI_OK;
   }
 
-  const std::vector<ValueType>& Symbol::params()
+  std::vector<Id>& Symbol::params()
   {
-    return param_vtypes;
+    return param_types;
   }
 
-  ValueType Symbol::ret()
+  Id Symbol::ret()
   {
-    return return_vtype;
+    return return_type;
   }
 
   uint64_t Symbol::call(std::vector<void*>& args)

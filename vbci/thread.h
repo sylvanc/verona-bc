@@ -21,6 +21,7 @@ namespace vbci
 
     Program* program;
     Frame* frame;
+    PC current_pc;
     size_t args;
 
     std::vector<uint64_t> ffi_args;
@@ -42,6 +43,6 @@ namespace vbci
     void tailcall(Function* func);
     void teardown();
     void branch(Local label);
-    void check_args(size_t expect);
+    void check_args(std::vector<Id>& types);
   };
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "header.h"
+#include "program.h"
 
 #include <format>
 
@@ -23,12 +24,20 @@ namespace vbci
   public:
     static Array* create(void* mem, Id type_id, Location loc, size_t size)
     {
+      if (type_id & TypeArray)
+        throw Value(Error::BadType);
+
       return new (mem) Array(type_id, loc, size);
     }
 
     static size_t size_of(size_t size)
     {
       return sizeof(Array) + (size * sizeof(Value));
+    }
+
+    Id array_type_id()
+    {
+      return type_id | TypeArray;
     }
 
     Id content_type_id()
@@ -45,6 +54,9 @@ namespace vbci
     {
       if (idx >= size)
         throw Value(Error::BadStore);
+
+      if (!Program::get().typecheck(v.type_id(), type_id))
+        throw Value(Error::BadType);
 
       return base_store(arg_type, data[idx], v);
     }

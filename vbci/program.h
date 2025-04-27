@@ -66,6 +66,8 @@ namespace vbci
 
     int run(std::filesystem::path& path);
 
+    bool typecheck(Id t1, Id t2);
+
     std::string debug_info(Function* func, PC pc);
     std::string di_function(Function* func);
     std::string di_class(Class* cls);

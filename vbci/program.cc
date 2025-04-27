@@ -151,6 +151,37 @@ namespace vbci
     return 0;
   }
 
+  bool Program::typecheck(Id t1, Id t2)
+  {
+    // Checks if t1 <: t2.
+    if (t1 == t2)
+      return true;
+
+    // Array types are invariant.
+    if ((t1 & TypeArray) || (t2 & TypeArray))
+      return false;
+
+    // Primitive types and class types have no subtypes.
+    t2 >>= TypeShift;
+    auto min_tdef = +ValueType::Ptr + classes.size() + 1;
+
+    if (t2 < min_tdef)
+      return false;
+
+    // t1 is a dynamic type, so it can't be a typedef.
+    // Otherwise, all elements of t1 must be a subtype of t2.
+    assert((t1 >> TypeShift) < min_tdef);
+
+    auto tdef = typedefs.at(t2 - min_tdef);
+    for (auto t : tdef.type_ids)
+    {
+      if (typecheck(t1, t))
+        return true;
+    }
+
+    return false;
+  }
+
   std::string Program::debug_info(Function* func, PC pc)
   {
     if (di == PC(-1))

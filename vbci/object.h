@@ -70,6 +70,12 @@ namespace vbci
 
     Value store(ArgType arg_type, FieldIdx idx, Value& v)
     {
+      auto program = Program::get();
+      auto ftype = program.cls(class_id).field_types.at(idx);
+
+      if (!program.typecheck(v.type_id(), ftype))
+        throw Value(Error::BadType);
+
       return base_store(arg_type, fields[idx], v);
     }
 
