@@ -2,6 +2,13 @@
 
 This is an experimental byte code interpreter for the Verona operational semantics.
 
+## Dynamic Types
+
+To allow a fixed size type representation:
+* You can't have an array of `array T`. To do this, create a `typedef` for `array T`, and have an array of that `typedef`.
+* You can't have a ref of `ref T`. That means fields, `cown` contents, and array elements can't be of type `ref T`. To do this, create a `typedef` for `ref T`, and use that.
+* You can't have a `cown` of `cown T`. That means `cown` contents can't be of type `cown T`. To do this, create a `typedef` for `cown T` and use that.
+
 ## Non-Local Returns
 
 A function call can be made as a `call`, a `subcall`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
@@ -41,19 +48,24 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* Type test.
+  * Check that `main` returns `i32`.
+  * Raise and throw signatures on functions.
+  * Function types? Not strictly needed, as this can be encoded as objects.
+  * Add `ref`, `cown` types to `vbcc`.
+    * Can't create a `cown` of a `cown T`.
+    * Can't create a `ref` of a `ref T`, so no field can have a `ref` type and no array can have a `ref` content type.
+  * `vbcc` check for `types::too_many()`.
+  * Cache type check results? Would also prevent circular type checks.
+  * `imm` and other memory location types?
 * FFI with `libffi`.
   * Allow a version string on a symbol, use `dlvsym`.
   * `struct` types.
-* Type test.
-  * Raise and throw signatures on functions.
-  * Add `ref`, `cown` types.
-  * Cache type check results? Would also prevent circular type checks.
-  * `imm` and other memory location types?
 * Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * FFI to access command line arguments.
-* Initializing globals.
+* Initializing global values.
 * Introspection.
-  * Get the dynamic type of a value.
+  * Get a value's dynamic type.
   * Functions: get the argument count and types, and the return type.
   * Classes:
     * Get the field count, types, and names.
@@ -65,11 +77,13 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Modes that allow/disallow parent pointers and stack RCs.
 * When.
 * General purpose "long register" versions of all instructions?
+  * Consider ULEB128 for the code instead of fixed length.
   * Would allow functions to have semi-unlimited register counts.
   * Argument space is highest of:
     * Parameter count of any function.
     * Parameter count of any FFI symbol.
     * Field count of any class.
+    * Or just extend the size of `locals` when arguments are pushed.
 * Math ops for numerical limits, by type?
 * String constants? `u8[]`?
 * Build an DAP/LSP to allow debugging.

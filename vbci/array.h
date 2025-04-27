@@ -24,7 +24,7 @@ namespace vbci
   public:
     static Array* create(void* mem, Id type_id, Location loc, size_t size)
     {
-      if (type_id & TypeArray)
+      if (type::is_array(type_id))
         throw Value(Error::BadType);
 
       return new (mem) Array(type_id, loc, size);
@@ -37,7 +37,7 @@ namespace vbci
 
     Id array_type_id()
     {
-      return type_id | TypeArray;
+      return type::array(type_id);
     }
 
     Id content_type_id()

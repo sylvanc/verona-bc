@@ -153,27 +153,26 @@ namespace vbci
 
   bool Program::typecheck(Id t1, Id t2)
   {
-    // Checks if t1 <: t2.
-    if (t1 == t2)
+    // Checks if t1 <: t2. t1 is a concrete type, so won't be dyn or a typedef.
+    // However, t1 can be an array, ref, or cown of a typedef. Dyn is used for
+    // invalid values and errors.
+    assert(!type::is_def(classes.size(), t1));
+    if (type::is_dyn(t1))
+      return false;
+
+    // If t2 is dynamic, anything is ok.
+    if ((t1 == t2) || type::is_dyn(t2))
       return true;
 
-    // Array types are invariant.
-    if ((t1 & TypeArray) || (t2 & TypeArray))
+    // If t2 is an array, ref, or cown, it doesn't matter what type it's
+    // modifying. If t1 isn't identical, it's not a subtype. Primitive types and
+    // classes have no subtypes. So t2 must be an unmodified typedef.
+    if (!type::is_def(classes.size(), t2))
       return false;
 
-    // Primitive types and class types have no subtypes.
-    t2 >>= TypeShift;
-    auto min_tdef = +ValueType::Ptr + classes.size() + 1;
-
-    if (t2 < min_tdef)
-      return false;
-
-    // t1 is a dynamic type, so it can't be a typedef.
-    // Otherwise, all elements of t1 must be a subtype of t2.
-    assert((t1 >> TypeShift) < min_tdef);
-
-    auto tdef = typedefs.at(t2 - min_tdef);
-    for (auto t : tdef.type_ids)
+    // If t2 is a subtype of any type in the typedef, that's sufficient.
+    auto def = typedefs.at(type::def_idx(classes.size(), t2));
+    for (auto t : def.type_ids)
     {
       if (typecheck(t1, t))
         return true;

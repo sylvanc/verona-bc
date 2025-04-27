@@ -9,44 +9,45 @@ namespace vbcc
     return Error << (ErrorMsg ^ msg) << node;
   }
 
-  std::optional<uint8_t> val(Node ptype)
+  ValueType val(Node ptype)
   {
     if (ptype == None)
-      return +ValueType::None;
+      return ValueType::None;
     if (ptype == Bool)
-      return +ValueType::Bool;
+      return ValueType::Bool;
     if (ptype == I8)
-      return +ValueType::I8;
+      return ValueType::I8;
     if (ptype == I16)
-      return +ValueType::I16;
+      return ValueType::I16;
     if (ptype == I32)
-      return +ValueType::I32;
+      return ValueType::I32;
     if (ptype == I64)
-      return +ValueType::I64;
+      return ValueType::I64;
     if (ptype == U8)
-      return +ValueType::U8;
+      return ValueType::U8;
     if (ptype == U16)
-      return +ValueType::U16;
+      return ValueType::U16;
     if (ptype == U32)
-      return +ValueType::U32;
+      return ValueType::U32;
     if (ptype == U64)
-      return +ValueType::U64;
+      return ValueType::U64;
     if (ptype == F32)
-      return +ValueType::F32;
+      return ValueType::F32;
     if (ptype == F64)
-      return +ValueType::F64;
+      return ValueType::F64;
     if (ptype == ILong)
-      return +ValueType::ILong;
+      return ValueType::ILong;
     if (ptype == ULong)
-      return +ValueType::ULong;
+      return ValueType::ULong;
     if (ptype == ISize)
-      return +ValueType::ISize;
+      return ValueType::ISize;
     if (ptype == USize)
-      return +ValueType::USize;
+      return ValueType::USize;
     if (ptype == Ptr)
-      return +ValueType::Ptr;
+      return ValueType::Ptr;
 
-    return {};
+    assert(false);
+    return ValueType::Invalid;
   }
 
   Options& options()

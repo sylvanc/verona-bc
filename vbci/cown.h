@@ -9,8 +9,8 @@ namespace vbci
 {
   struct Cown
   {
-    // TODO: cown content type
     ARC arc;
+    Id type_id;
     Value content;
 
     void inc()

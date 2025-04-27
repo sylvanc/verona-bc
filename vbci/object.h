@@ -34,7 +34,12 @@ namespace vbci
 
     Id type_id()
     {
-      return (+ValueType::Ptr + 1 + class_id) << TypeShift;
+      return type::cls(class_id);
+    }
+
+    Id field_type_id(FieldIdx idx)
+    {
+      return cls()->field_types.at(idx);
     }
 
     Class* cls()

@@ -28,10 +28,7 @@ namespace vbci
 
   ffi_type* ffi_map(Id type_id)
   {
-    if (type_id & TypeArray)
-      return nullptr;
-
-    auto t = static_cast<ValueType>(type_id >> TypeShift);
+    auto t = type::val(type_id);
 
     switch (t)
     {

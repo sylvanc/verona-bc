@@ -55,14 +55,7 @@ namespace vbcc
         T(Primitive)[Primitive] >> [state](Match& _) -> Node {
           auto primitive = _(Primitive);
           auto vtype = val(primitive / Type);
-
-          if (!vtype || (*vtype >= NumPrimitiveClasses))
-          {
-            state->error = true;
-            return err(primitive / Type, "unknown primitive type");
-          }
-
-          auto& slot = state->primitives.at(*vtype);
+          auto& slot = state->primitives.at(+vtype);
 
           if (slot)
           {

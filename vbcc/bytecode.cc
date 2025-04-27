@@ -552,19 +552,18 @@ namespace vbcc
 
     std::function<uint32_t(Node)> typ = [&](Node type) -> uint32_t {
       if (type == Dyn)
-        return 0;
+        return type::dyn();
 
       if (type == ClassId)
-        return (+ValueType::Ptr + 1 + *get_class_id(type)) << vbci::TypeShift;
+        return type::cls(*get_class_id(type));
 
       if (type == TypeId)
-        return (+ValueType::Ptr + 1 + classes.size() + *get_type_id(type))
-          << vbci::TypeShift;
+        return type::def(classes.size(), *get_type_id(type));
 
       if (type == Array)
-        return typ(type / Type) | vbci::TypeArray;
+        return type::array(typ(type / Type));
 
-      return *val(type) << vbci::TypeShift;
+      return type::val(val(type));
     };
 
     hdr << uleb(MagicNumber);
@@ -805,63 +804,63 @@ namespace vbcc
 
             if (t == None)
             {
-              code << e{Op::Const, dst(stmt), *val(t)};
+              code << e{Op::Const, dst(stmt), +val(t)};
             }
             else if (t == Bool)
             {
               if ((stmt / Rhs) == True)
-                code << e{Op::Const, dst(stmt), *val(t), true};
+                code << e{Op::Const, dst(stmt), +val(t), true};
               else
-                code << e{Op::Const, dst(stmt), *val(t), false};
+                code << e{Op::Const, dst(stmt), +val(t), false};
             }
             else if (t == I8)
             {
               code << e{
                 Op::Const,
                 dst(stmt),
-                *val(t),
+                +val(t),
                 static_cast<uint8_t>(lit<int8_t>(v))};
             }
             else if (t == U8)
             {
-              code << e{Op::Const, dst(stmt), *val(t), lit<uint8_t>(v)};
+              code << e{Op::Const, dst(stmt), +val(t), lit<uint8_t>(v)};
             }
             else if (t == I16)
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<int16_t>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<int16_t>(v);
             }
             else if (t == U16)
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<uint16_t>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<uint16_t>(v);
             }
             else if (t == I32)
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<int32_t>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<int32_t>(v);
             }
             else if (t == U32)
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<uint32_t>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<uint32_t>(v);
             }
             else if (t->in({I64, ILong, ISize}))
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<int64_t>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<int64_t>(v);
             }
             else if (t->in({U64, ULong, USize, Ptr}))
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<uint64_t>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<uint64_t>(v);
             }
             else if (t == F32)
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<float>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<float>(v);
             }
             else if (t == F64)
             {
-              code << e{Op::Const, dst(stmt), *val(t)} << lit<double>(v);
+              code << e{Op::Const, dst(stmt), +val(t)} << lit<double>(v);
             }
           }
           else if (stmt == Convert)
           {
-            code << e{Op::Convert, dst(stmt), *val(stmt / Type), rhs(stmt)};
+            code << e{Op::Convert, dst(stmt), +val(stmt / Type), rhs(stmt)};
           }
           else if (stmt == Stack)
           {

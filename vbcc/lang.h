@@ -106,6 +106,6 @@ namespace vbcc
   };
 
   Node err(Node node, const std::string& msg);
-  std::optional<uint8_t> val(Node ptype);
+  ValueType val(Node ptype);
   Options& options();
 }

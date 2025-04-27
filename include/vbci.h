@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -15,9 +16,6 @@ namespace vbci
   inline const auto MaxRegisters = size_t(256);
   inline const auto MainFuncId = Id(0);
   inline const auto FinalMethodId = Id(0);
-
-  inline const auto TypeShift = size_t(1);
-  inline const auto TypeArray = size_t(0x1);
 
   enum class Op : uint8_t
   {
@@ -377,5 +375,120 @@ namespace vbci
   inline constexpr uint8_t operator+(DIOp c)
   {
     return static_cast<uint8_t>(c);
+  }
+
+  namespace type
+  {
+    inline const auto Shift = size_t(3);
+    inline const auto Mask = (size_t(1) << Shift) - 1;
+    inline const auto Max =
+      (size_t(1) << ((sizeof(Id) * 8) - Shift)) - (+ValueType::Ptr + 1);
+
+    enum class Mod : uint8_t
+    {
+      Array = 1 << 0,
+      Ref = 1 << 1,
+      Cown = 1 << 2,
+    };
+
+    inline constexpr uint8_t operator+(Mod t)
+    {
+      return static_cast<uint8_t>(t);
+    }
+
+    inline constexpr bool is_mod(Id type_id)
+    {
+      return (type_id & Mask);
+    }
+
+    inline constexpr bool is_array(Id type_id)
+    {
+      return (type_id & +Mod::Array);
+    }
+
+    inline constexpr bool is_ref(Id type_id)
+    {
+      return (type_id & +Mod::Ref);
+    }
+
+    inline constexpr bool is_dyn(Id type_id)
+    {
+      return !is_mod(type_id) && (type_id == 0);
+    }
+
+    inline constexpr bool is_cown(Id type_id)
+    {
+      return (type_id & +Mod::Cown);
+    }
+
+    inline constexpr bool is_def(size_t num_classes, Id type_id)
+    {
+      return !is_mod(type_id) &&
+        ((type_id >> Shift) >= (+ValueType::Ptr + 2 + num_classes));
+    }
+
+    inline constexpr size_t def_idx(size_t num_classes, Id type_id)
+    {
+      assert(is_def(num_classes, type_id));
+      return (type_id >> Shift) - (+ValueType::Ptr + 2 + num_classes);
+    }
+
+    inline constexpr Id dyn()
+    {
+      return 0;
+    }
+
+    inline constexpr Id val(ValueType t)
+    {
+      return (+t + 1) << Shift;
+    }
+
+    inline constexpr Id cls(Id class_id)
+    {
+      assert(class_id <= Max);
+      return (+ValueType::Ptr + 2 + class_id) << Shift;
+    }
+
+    inline constexpr Id def(size_t num_classes, Id typedef_id)
+    {
+      assert((num_classes + typedef_id) <= Max);
+      return (+ValueType::Ptr + 2 + num_classes + typedef_id) << Shift;
+    }
+
+    inline constexpr Id array(Id type_id)
+    {
+      assert(!is_array(type_id));
+      return type_id | +Mod::Array;
+    }
+
+    inline constexpr Id ref(Id type_id)
+    {
+      assert(!is_ref(type_id));
+      return type_id | +Mod::Ref;
+    }
+
+    inline constexpr Id cown(Id type_id)
+    {
+      assert(!is_cown(type_id));
+      return type_id | +Mod::Cown;
+    }
+
+    inline constexpr ValueType val(Id type_id)
+    {
+      if (type_id & Mask)
+        return ValueType::Invalid;
+
+      type_id = (type_id >> Shift) - 1;
+
+      if (type_id > +ValueType::Ptr)
+        return ValueType::Invalid;
+
+      return static_cast<ValueType>(type_id);
+    }
+
+    inline constexpr bool too_many(size_t num_classes, size_t num_typedefs)
+    {
+      return (num_classes + num_typedefs) <= Max;
+    }
   }
 }
