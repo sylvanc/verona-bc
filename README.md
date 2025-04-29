@@ -52,14 +52,13 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Add a type test op code.
   * Raise and throw signatures on functions.
   * Function types? Not strictly needed, as this can be encoded as objects.
-  * Add `ref`, `cown` types to `vbcc`.
-    * Can't create a `cown` of a `cown T`.
-    * Can't create a `ref` of a `ref T`, so no field can have a `ref` type and no array can have a `ref` content type.
   * Cache type check results? Would also prevent circular type checks.
   * `imm` and other memory location types?
 * FFI with `libffi`.
   * Allow a version string on a symbol, use `dlvsym`.
   * `struct` types.
+  * Platform-specific FFI. Only load for the runtime platform.
+  * FFI to get the runtime platform.
 * Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * FFI to access command line arguments.
 * Initializing global values.
@@ -78,11 +77,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * General purpose "long register" versions of all instructions?
   * Consider ULEB128 for the code instead of fixed length.
   * Would allow functions to have semi-unlimited register counts.
-  * Argument space is highest of:
-    * Parameter count of any function.
-    * Parameter count of any FFI symbol.
-    * Field count of any class.
-    * Or just extend the size of `locals` when arguments are pushed.
 * Math ops for numerical limits, by type?
 * String constants? `u8[]`?
 * Mark classes to auto-generate a C API.

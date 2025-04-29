@@ -73,7 +73,7 @@ namespace vbcc
       RegionArrayConst,
       Copy,
       Move,
-      Ref,
+      FieldRef,
       ArrayRef,
       ArrayRefConst,
       Load,

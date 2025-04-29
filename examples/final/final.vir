@@ -2,7 +2,7 @@ class @Foo
   @a: i32
   @final @Foo_final
 
-func @Foo_final($self: dyn): i32
+func @Foo_final($self: @Foo): i32
   $ref = ref move $self @a
   $a = load $ref
   ret $a

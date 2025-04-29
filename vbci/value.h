@@ -78,6 +78,7 @@ namespace vbci
     static Value from_ffi(Id type_id, uint64_t v);
 
     Id type_id();
+    bool is_error();
     bool get_bool();
     int32_t get_i32();
     size_t to_index();

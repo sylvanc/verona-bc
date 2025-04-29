@@ -27,7 +27,12 @@ namespace vbci
     std::vector<uint64_t> ffi_args;
     std::vector<void*> ffi_arg_addrs;
 
-    Thread() : program(&Program::get()), frame(nullptr), args(0) {}
+    Thread() : program(&Program::get()), frame(nullptr), args(0)
+    {
+      frames.reserve(16);
+      locals.resize(1024);
+    }
+
     static Thread& get();
 
   public:

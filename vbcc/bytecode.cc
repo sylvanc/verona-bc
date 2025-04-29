@@ -563,6 +563,12 @@ namespace vbcc
       if (type == Array)
         return type::array(typ(type / Type));
 
+      if (type == Ref)
+        return type::ref(typ(type / Type));
+
+      if (type == Cown)
+        return type::cown(typ(type / Type));
+
       return type::val(val(type));
     };
 
@@ -918,7 +924,7 @@ namespace vbcc
           {
             code << e{Op::Drop, dst(stmt)};
           }
-          else if (stmt == Ref)
+          else if (stmt == FieldRef)
           {
             auto arg = stmt / Arg;
             code << e{Op::Ref, dst(stmt), +argtype(arg), src(arg)} << fld(stmt);

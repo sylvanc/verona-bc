@@ -1,0 +1,27 @@
+type @union = i32 | @Foo
+
+class @Foo
+  @a: i32
+
+func @main(): i32
+  $x = const i32 99
+  $foo = stack @Foo(copy $x)
+  $ref = ref copy $foo @a
+  $r0 = call @func1(move $foo)
+  $r1 = call @func1(move $x)
+  $r2 = call @func2(move $ref)
+  $r3 = eq $r1 $r2
+  cond $r3 ^true ^false
+^true
+  ret $r1
+^false
+  ret $r2
+
+func @func1($x: @union): i32
+  $r = const i32 1
+  ret $r
+
+func @func2($x: ref i32): i32
+  $y = load $x
+  $r = const i32 2
+  ret $r

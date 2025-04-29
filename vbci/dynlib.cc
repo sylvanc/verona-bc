@@ -123,7 +123,7 @@ namespace vbci
     if (!func)
       return 0;
 
-    uint64_t ret;
+    uint64_t ret = 0;
     ffi_call(&cif, func, &ret, args.data());
     return ret;
   }

@@ -17,7 +17,6 @@ namespace vbci
     UnknownCallType,
     UnknownOpcode,
     UnknownMathOp,
-    StackOutOfBounds,
     BadAllocTarget,
     BadLabel,
     BadField,
@@ -70,8 +69,6 @@ namespace vbci
         return "unknown opcode";
       case Error::UnknownMathOp:
         return "unknown math op";
-      case Error::StackOutOfBounds:
-        return "stack out of bounds";
       case Error::BadAllocTarget:
         return "bad alloc target";
       case Error::BadLabel:

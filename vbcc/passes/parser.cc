@@ -4,8 +4,9 @@ namespace vbcc
 {
   const auto wfParserTokens = Lib | Primitive | Class | Func | Type | Source |
     GlobalId | LocalId | LabelId | Equals | LParen | RParen | LBracket |
-    RBracket | Comma | Colon | Union | wfRegionType | wfBaseType | wfStatement |
-    wfTerminator | wfBinop | wfUnop | wfConst | wfLiteral | String;
+    RBracket | Comma | Colon | Union | wfRegionType | wfTypeBase | Ref | Cown |
+    wfStatement | wfTerminator | wfBinop | wfUnop | wfConst | wfLiteral |
+    String;
 
   // clang-format off
   const auto wfParser =

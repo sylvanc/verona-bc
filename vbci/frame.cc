@@ -33,8 +33,8 @@ namespace vbci
   {
     auto i = base + idx;
 
-    if ((i < base) || (i >= locals.size()))
-      throw Value(Error::StackOutOfBounds);
+    while (i >= locals.size())
+      locals.resize(locals.size() * 2);
 
     return locals.at(i);
   }
@@ -43,8 +43,8 @@ namespace vbci
   {
     auto i = base + func->registers + idx;
 
-    if ((i < base) || (i >= locals.size()))
-      throw Value(Error::StackOutOfBounds);
+    while (i >= locals.size())
+      locals.resize(locals.size() * 2);
 
     return locals.at(i);
   }

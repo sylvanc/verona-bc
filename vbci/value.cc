@@ -143,6 +143,11 @@ namespace vbci
     }
   }
 
+  bool Value::is_error()
+  {
+    return tag == ValueType::Error;
+  }
+
   bool Value::get_bool()
   {
     if (tag != ValueType::Bool)

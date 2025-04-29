@@ -688,10 +688,10 @@ namespace vbci
     }
 
     // Make sure there's enough register space.
-    auto req_stack_size = base + func->registers + MaxRegisters;
+    auto req_stack_size = base + func->registers;
 
-    if (locals.size() < req_stack_size)
-      locals.resize(req_stack_size);
+    while (locals.size() < req_stack_size)
+      locals.resize(locals.size() * 2);
 
     frames.emplace_back(
       func,
@@ -710,6 +710,9 @@ namespace vbci
 
   void Thread::popframe(Value& ret, Condition condition)
   {
+    // Save the destination register.
+    auto dst = frame->dst;
+
     // Clear any unused arguments.
     frame->drop_args(args);
 
@@ -724,7 +727,9 @@ namespace vbci
     switch (condition)
     {
       case Condition::Return:
-        if (!program->typecheck(ret.type_id(), frame->func->return_type))
+        if (
+          !ret.is_error() &&
+          !program->typecheck(ret.type_id(), frame->func->return_type))
         {
           ret = Value(Error::BadType);
           ret.annotate(frame->func, current_pc);
@@ -734,6 +739,7 @@ namespace vbci
 
       case Condition::Raise:
       case Condition::Throw:
+        // TODO: check against the raise type and throw type.
         break;
     }
 
@@ -790,7 +796,7 @@ namespace vbci
         break;
     }
 
-    frame->local(frame->dst) = std::move(ret);
+    frame->local(dst) = std::move(ret);
     frame->condition = Condition::Return;
   }
 

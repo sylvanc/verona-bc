@@ -44,7 +44,7 @@ namespace vbcc
                     StackArrayConst,
                     RegionArray,
                     RegionArrayConst,
-                    Ref,
+                    FieldRef,
                     ArrayRefConst,
                     FnPointer,
                     Call,

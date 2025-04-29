@@ -59,6 +59,8 @@ namespace vbcc
   inline const auto Ptr = TokenDef("ptr");
   inline const auto Dyn = TokenDef("dyn");
   inline const auto Array = TokenDef("array");
+  inline const auto Ref = TokenDef("ref");
+  inline const auto Cown = TokenDef("cown");
 
   // Op codes.
   inline const auto Global = TokenDef("global");
@@ -76,7 +78,7 @@ namespace vbcc
   inline const auto Copy = TokenDef("copy");
   inline const auto Move = TokenDef("move");
   inline const auto Drop = TokenDef("drop");
-  inline const auto Ref = TokenDef("ref");
+  inline const auto FieldRef = TokenDef("fieldref");
   inline const auto Load = TokenDef("load");
   inline const auto Store = TokenDef("store");
   inline const auto Lookup = TokenDef("lookup");
@@ -200,8 +202,11 @@ namespace vbcc
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
   inline const auto wfFFIParamType = wfIntType | wfFloatType | Ptr;
   inline const auto wfFFIRetType = wfFFIParamType | None;
-  inline const auto wfBaseType = wfPrimitiveType | Ptr | Dyn | ClassId | TypeId;
-  inline const auto wfFullType = wfBaseType | Array;
+  inline const auto wfTypeBase = wfPrimitiveType | Ptr | Dyn | ClassId | TypeId;
+  inline const auto wfTypeArrayElem = wfTypeBase | Cown;
+  inline const auto wfTypeField = wfTypeBase | Array | Cown;
+  inline const auto wfTypeCownValue = wfTypeBase | Array;
+  inline const auto wfType = wfTypeBase | Array | Ref | Cown;
 
   inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
   inline const auto wfLiteral = None | True | wfIntLiteral | Float | HexFloat;
@@ -217,10 +222,10 @@ namespace vbcc
 
   inline const auto wfStatement = Source | Offset | Global | Const | Convert |
     Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
-    HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop | Ref |
-    ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call |
-    CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI | wfBinop | wfUnop |
-    wfConst;
+    HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop |
+    FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer |
+    Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI | wfBinop |
+    wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -238,23 +243,25 @@ namespace vbcc
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Func | Lib)++)
-    | (Array <<= (Type >>= wfFullType))
+      (Top <<= (Primitive | Class | Type | Func | Lib)++)
+    | (Array <<= (Type >>= wfType))
+    | (Ref <<= (Type >>= wfType))
+    | (Cown <<= (Type >>= wfType))
+    | (Union <<= wfType++)
     | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
     | (Symbol <<= SymbolId * String * FFIParams * (Return >>= wfFFIRetType))
     | (FFIParams <<= wfFFIParamType++)
     | (Type <<= TypeId * Union)
-    | (Union <<= wfFullType++)
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)
-    | (Field <<= FieldId * (Type >>= wfFullType))
+    | (Field <<= FieldId * (Type >>= wfTypeField))
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
-    | (Func <<= FunctionId * Params * (Type >>= wfFullType) * Labels)
+    | (Func <<= FunctionId * Params * (Type >>= wfType) * Labels)
     | (Params <<= Param++)
-    | (Param <<= LocalId * (Type >>= wfFullType))
+    | (Param <<= LocalId * (Type >>= wfType))
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfStatement++)
@@ -266,16 +273,16 @@ namespace vbcc
     | (Stack <<= wfDst * ClassId * Args)
     | (Heap <<= wfDst * wfSrc * ClassId * Args)
     | (Region <<= wfDst * wfRgn * ClassId * Args)
-    | (StackArray <<= wfDst * (Type >>= wfBaseType) * wfRhs)
-    | (StackArrayConst <<= wfDst * (Type >>= wfBaseType) * wfLit)
-    | (HeapArray <<= wfDst * wfLhs * (Type >>= wfBaseType) * wfRhs)
-    | (HeapArrayConst <<= wfDst * wfSrc * (Type >>= wfBaseType) * wfLit)
-    | (RegionArray <<=  wfDst * wfRgn * (Type >>= wfBaseType) * wfRhs)
-    | (RegionArrayConst <<= wfDst * wfRgn * (Type >>= wfBaseType) * wfLit)
+    | (StackArray <<= wfDst * (Type >>= wfTypeArrayElem) * wfRhs)
+    | (StackArrayConst <<= wfDst * (Type >>= wfTypeArrayElem) * wfLit)
+    | (HeapArray <<= wfDst * wfLhs * (Type >>= wfTypeArrayElem) * wfRhs)
+    | (HeapArrayConst <<= wfDst * wfSrc * (Type >>= wfTypeArrayElem) * wfLit)
+    | (RegionArray <<=  wfDst * wfRgn * (Type >>= wfTypeArrayElem) * wfRhs)
+    | (RegionArrayConst <<= wfDst * wfRgn * (Type >>= wfTypeArrayElem) * wfLit)
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
-    | (Ref <<= wfDst * Arg * FieldId)
+    | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
     | (Load <<= wfDst * wfSrc)
