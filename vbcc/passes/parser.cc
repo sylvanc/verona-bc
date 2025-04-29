@@ -5,8 +5,7 @@ namespace vbcc
   const auto wfParserTokens = Lib | Primitive | Class | Func | Type | Source |
     GlobalId | LocalId | LabelId | Equals | LParen | RParen | LBracket |
     RBracket | Comma | Colon | Union | wfRegionType | wfTypeBase | Ref | Cown |
-    wfStatement | wfTerminator | wfBinop | wfUnop | wfConst | wfLiteral |
-    String;
+    wfStatement | wfTerminator | wfLiteral | String;
 
   // clang-format off
   const auto wfParser =
@@ -90,6 +89,7 @@ namespace vbcc
         "subcall\\b" >> [](auto& m) { m.add(Subcall); },
         "try\\b" >> [](auto& m) { m.add(Try); },
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
+        "typetest\\b" >> [](auto& m) { m.add(Typetest); },
 
         // Terminators.
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },

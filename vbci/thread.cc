@@ -467,6 +467,15 @@ namespace vbci
           break;
         }
 
+        case Op::Typetest:
+        {
+          auto& dst = frame->local(arg0(code));
+          auto& src = frame->local(arg1(code));
+          Id type_id = program->load_u32(frame->pc);
+          dst = program->typecheck(src.type_id(), type_id);
+          break;
+        }
+
         case Op::Tailcall:
         {
           auto call_type = static_cast<CallType>(arg1(code));

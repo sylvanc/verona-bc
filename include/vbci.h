@@ -173,6 +173,11 @@ namespace vbci
     // Stream: 32 bit function ID, for static calls.
     Call,
 
+    // Arg0 = dst.
+    // Arg1 = src.
+    // Stream: 32 bit type ID.
+    Typetest,
+
     // Replace the current frame with a new one.
     // Arg0 = call type: function static or function dynamic.
     // Arg1 = function value, ignored if static.

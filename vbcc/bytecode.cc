@@ -1007,6 +1007,10 @@ namespace vbcc
             code << e{Op::Call, dst(stmt), +CallType::FFI}
                  << *get_symbol_id(stmt / SymbolId);
           }
+          else if (stmt == Typetest)
+          {
+            code << e{Op::Typetest, dst(stmt), src(stmt)} << typ(stmt / Type);
+          }
           else if (stmt == Add)
           {
             code << e{Op::Add, dst(stmt), lhs(stmt), rhs(stmt)};

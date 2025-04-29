@@ -23,5 +23,11 @@ func @func1($x: @union): i32
 
 func @func2($x: ref i32): i32
   $y = load $x
-  $r = const i32 2
+  $z = typetest $y i32
+  cond $z ^true ^false
+^true
+  $r = const i32 100
+  ret $r
+^false
+  $r = const i32 0
   ret $r

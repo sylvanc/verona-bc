@@ -601,6 +601,12 @@ namespace vbcc
                        << callargs(_[Args]);
           },
 
+        // Type test.
+        Dst * T(Typetest) * T(LocalId)[Rhs] * TypeFull[Type] >>
+          [](Match& _) {
+            return Typetest << _(LocalId) << _(Rhs) << maketype(_[Type]);
+          },
+
         // Terminators.
         (T(Tailcall) << End) * T(GlobalId)[GlobalId] * TailArgs[Args] >>
           [](Match& _) {

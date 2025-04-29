@@ -86,7 +86,8 @@ namespace vbcc
       SubcallDyn,
       Try,
       TryDyn,
-      FFI);
+      FFI,
+      Typetest);
 
   Parse parser();
   PassDef statements();

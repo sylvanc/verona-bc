@@ -86,6 +86,7 @@ namespace vbcc
   inline const auto Subcall = TokenDef("subcall");
   inline const auto Try = TokenDef("try");
   inline const auto FFI = TokenDef("ffi");
+  inline const auto Typetest = TokenDef("typetest");
 
   // Terminators.
   inline const auto Tailcall = TokenDef("tailcall");
@@ -224,8 +225,8 @@ namespace vbcc
     Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
     HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop |
     FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer |
-    Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI | wfBinop |
-    wfUnop | wfConst;
+    Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI |
+    Typetest | wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -296,6 +297,7 @@ namespace vbcc
     | (Try <<= wfDst * FunctionId * Args)
     | (TryDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
+    | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
     | (Tailcall <<= FunctionId * MoveArgs)
