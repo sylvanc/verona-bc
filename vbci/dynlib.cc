@@ -2,30 +2,6 @@
 
 namespace vbci
 {
-  ValueType platform_type(ValueType t)
-  {
-    switch (t)
-    {
-      case ValueType::ILong:
-        return sizeof(long) == 4 ? ValueType::I32 : ValueType::I64;
-
-      case ValueType::ULong:
-        return sizeof(unsigned long) == 4 ? ValueType::U32 : ValueType::U64;
-
-      case ValueType::ISize:
-        return sizeof(ssize_t) == 4 ? ValueType::I32 : ValueType::I64;
-
-      case ValueType::USize:
-        return sizeof(size_t) == 4 ? ValueType::U32 : ValueType::U64;
-
-      case ValueType::Ptr:
-        return sizeof(void*) == 4 ? ValueType::U32 : ValueType::U64;
-
-      default:
-        return t;
-    }
-  }
-
   ffi_type* ffi_map(Id type_id)
   {
     auto t = type::val(type_id);

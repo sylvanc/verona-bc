@@ -97,7 +97,7 @@ namespace vbci
         case Op::Const:
         {
           auto& dst = frame->local(arg0(code));
-          auto t = platform_type(static_cast<ValueType>(arg1(code)));
+          auto t = static_cast<ValueType>(arg1(code));
 
           switch (t)
           {
@@ -139,6 +139,13 @@ namespace vbci
 
             case ValueType::U64:
               dst = Value(program->load_u64(frame->pc));
+              break;
+
+            case ValueType::ILong:
+            case ValueType::ULong:
+            case ValueType::ISize:
+            case ValueType::USize:
+              dst = Value::from_ffi(type::val(t), program->load_i64(frame->pc));
               break;
 
             case ValueType::F32:
@@ -661,7 +668,7 @@ namespace vbci
         case Op::Convert:
         {
           auto& dst = frame->local(arg0(code));
-          auto t = platform_type(static_cast<ValueType>(arg1(code)));
+          auto t = static_cast<ValueType>(arg1(code));
           auto& src = frame->local(arg2(code));
           dst = src.convert(t);
           break;

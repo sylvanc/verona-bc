@@ -283,12 +283,12 @@ namespace vbci
     U16,
     U32,
     U64,
-    F32,
-    F64,
     ILong,
     ULong,
     ISize,
     USize,
+    F32,
+    F64,
     Ptr,
     Object,
     Array,
@@ -302,7 +302,7 @@ namespace vbci
   };
 
   inline const auto NumPrimitiveClasses =
-    static_cast<size_t>(ValueType::F64) + 1;
+    static_cast<size_t>(ValueType::Ptr) + 1;
 
   enum class RegionType : uint8_t
   {
@@ -387,7 +387,7 @@ namespace vbci
     inline const auto Shift = size_t(3);
     inline const auto Mask = (size_t(1) << Shift) - 1;
     inline const auto Max =
-      (size_t(1) << ((sizeof(Id) * 8) - Shift)) - (+ValueType::Ptr + 1);
+      (size_t(1) << ((sizeof(Id) * 8) - Shift)) - NumPrimitiveClasses;
 
     enum class Mod : uint8_t
     {
@@ -429,13 +429,13 @@ namespace vbci
     inline constexpr bool is_def(size_t num_classes, Id type_id)
     {
       return !is_mod(type_id) &&
-        ((type_id >> Shift) >= (+ValueType::Ptr + 2 + num_classes));
+        ((type_id >> Shift) > (NumPrimitiveClasses + num_classes + 1));
     }
 
     inline constexpr size_t def_idx(size_t num_classes, Id type_id)
     {
       assert(is_def(num_classes, type_id));
-      return (type_id >> Shift) - (+ValueType::Ptr + 2 + num_classes);
+      return (type_id >> Shift) - (NumPrimitiveClasses + num_classes + 2);
     }
 
     inline constexpr Id dyn()
@@ -451,13 +451,13 @@ namespace vbci
     inline constexpr Id cls(Id class_id)
     {
       assert(class_id <= Max);
-      return (+ValueType::Ptr + 2 + class_id) << Shift;
+      return (NumPrimitiveClasses + 2 + class_id) << Shift;
     }
 
     inline constexpr Id def(size_t num_classes, Id typedef_id)
     {
       assert((num_classes + typedef_id) <= Max);
-      return (+ValueType::Ptr + 2 + num_classes + typedef_id) << Shift;
+      return (NumPrimitiveClasses + 2 + num_classes + typedef_id) << Shift;
     }
 
     inline constexpr Id array(Id type_id)

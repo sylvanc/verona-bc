@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ident.h"
+#include "value.h"
 
 #include <unordered_map>
 #include <unordered_set>

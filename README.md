@@ -48,7 +48,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
-* Type test.
+* Types.
   * Raise and throw signatures on functions.
   * Function types? Not strictly needed, as this can be encoded as objects.
   * Cache type check results? Would also prevent circular type checks.

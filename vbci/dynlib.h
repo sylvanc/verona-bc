@@ -21,8 +21,6 @@ namespace vbci
   using LibHandle = void*;
 #endif
 
-  ValueType platform_type(ValueType t);
-
   struct Symbol
   {
     using Func = void (*)();

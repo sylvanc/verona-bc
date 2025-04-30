@@ -25,13 +25,15 @@ namespace vbcc
           state->use(node / Rhs);
           state->def(node / LocalId);
         }
-        else if (node->in(
-                   {Copy,   Heap,    HeapArrayConst, ArrayRef, Load,     Store,
-                    Lookup, CallDyn, SubcallDyn,     TryDyn,   Typetest, Neg,
-                    Not,    Abs,     Ceil,           Floor,    Exp,      Log,
-                    Sqrt,   Cbrt,    IsInf,          IsNaN,    Sin,      Cos,
-                    Tan,    Asin,    Acos,           Atan,     Sinh,     Cosh,
-                    Tanh,   Asinh,   Acosh,          Atanh}))
+        else if (node->in({Convert,  Copy,       Heap,   HeapArrayConst,
+                           ArrayRef, Load,       Store,  Lookup,
+                           CallDyn,  SubcallDyn, TryDyn, Typetest,
+                           Neg,      Not,        Abs,    Ceil,
+                           Floor,    Exp,        Log,    Sqrt,
+                           Cbrt,     IsInf,      IsNaN,  Sin,
+                           Cos,      Tan,        Asin,   Acos,
+                           Atan,     Sinh,       Cosh,   Tanh,
+                           Asinh,    Acosh,      Atanh}))
         {
           state->use(node / Rhs);
           state->def(node / LocalId);

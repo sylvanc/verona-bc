@@ -32,8 +32,13 @@ namespace vbci
       uint16_t u16;
       uint32_t u32;
       uint64_t u64;
+      long ilong;
+      unsigned long ulong;
+      ssize_t isize;
+      size_t usize;
       float f32;
       double f64;
+      void* ptr;
       Object* obj;
       Array* arr;
       Cown* cown;
@@ -449,6 +454,18 @@ namespace vbci
         case ValueType::U64:
           return OpU{}(u64);
 
+        case ValueType::ILong:
+          return OpI{}(ilong);
+
+        case ValueType::ULong:
+          return OpU{}(ulong);
+
+        case ValueType::ISize:
+          return OpI{}(isize);
+
+        case ValueType::USize:
+          return OpU{}(usize);
+
         case ValueType::F32:
           return OpF{}(f32);
 
@@ -499,6 +516,18 @@ namespace vbci
         case ValueType::U64:
           return OpU{}(u64, v.u64);
 
+        case ValueType::ILong:
+          return OpI{}(ilong, v.ilong);
+
+        case ValueType::ULong:
+          return OpU{}(ulong, v.ulong);
+
+        case ValueType::ISize:
+          return OpI{}(isize, v.isize);
+
+        case ValueType::USize:
+          return OpU{}(usize, v.usize);
+
         case ValueType::F32:
           return OpF{}(f32, v.f32);
 
@@ -538,6 +567,18 @@ namespace vbci
 
         case ValueType::U64:
           return u64;
+
+        case ValueType::ILong:
+          return ilong;
+
+        case ValueType::ULong:
+          return ulong;
+
+        case ValueType::ISize:
+          return isize;
+
+        case ValueType::USize:
+          return usize;
 
         case ValueType::F32:
           return f32;
@@ -585,6 +626,22 @@ namespace vbci
 
         case ValueType::U64:
           u64 = value;
+          break;
+
+        case ValueType::ILong:
+          ilong = value;
+          break;
+
+        case ValueType::ULong:
+          ulong = value;
+          break;
+
+        case ValueType::ISize:
+          isize = value;
+          break;
+
+        case ValueType::USize:
+          usize = value;
           break;
 
         case ValueType::F32:

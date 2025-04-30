@@ -6,29 +6,17 @@
 namespace vbci
 {
   Value::Value() : tag(ValueType::Invalid) {}
-
   Value::Value(bool b) : b(b), tag(ValueType::Bool) {}
-
   Value::Value(uint8_t u8) : u8(u8), tag(ValueType::U8) {}
-
   Value::Value(uint16_t u16) : u16(u16), tag(ValueType::U16) {}
-
   Value::Value(uint32_t u32) : u32(u32), tag(ValueType::U32) {}
-
   Value::Value(uint64_t u64) : u64(u64), tag(ValueType::U64) {}
-
   Value::Value(int8_t i8) : i8(i8), tag(ValueType::I8) {}
-
   Value::Value(int16_t i16) : i16(i16), tag(ValueType::I16) {}
-
   Value::Value(int32_t i32) : i32(i32), tag(ValueType::I32) {}
-
   Value::Value(int64_t i64) : i64(i64), tag(ValueType::I64) {}
-
   Value::Value(float f32) : f32(f32), tag(ValueType::F32) {}
-
   Value::Value(double f64) : f64(f64), tag(ValueType::F64) {}
-
   Value::Value(Object* obj) : obj(obj), tag(ValueType::Object), readonly(0) {}
 
   Value::Value(Object* obj, bool ro)
@@ -36,7 +24,6 @@ namespace vbci
   {}
 
   Value::Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
-
   Value::Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
 
   Value::Value(Object* obj, FieldIdx f, bool ro)
@@ -492,11 +479,19 @@ namespace vbci
         return std::to_string(f64);
 
       case ValueType::ILong:
+        return std::to_string(ilong);
+
       case ValueType::ULong:
+        return std::to_string(ulong);
+
       case ValueType::ISize:
+        return std::to_string(isize);
+
       case ValueType::USize:
+        return std::to_string(usize);
+
       case ValueType::Ptr:
-        return "unreachable";
+        return std::format("ptr {}", ptr);
 
       case ValueType::Object:
         return obj->to_string();

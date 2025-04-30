@@ -8,4 +8,5 @@ func @main(): i32
   $free = ffi @free(copy $addr)
   $x = const usize 12
   $y = add $size $x
-  ret $y
+  $z = convert i32 $y
+  ret $z
