@@ -4,6 +4,9 @@ namespace vbci
 {
   ffi_type* ffi_map(Id type_id)
   {
+    if (!type::is_val(type_id))
+      return nullptr;
+
     auto t = type::val(type_id);
 
     switch (t)
@@ -47,28 +50,16 @@ namespace vbci
 
   Symbol::Symbol(Func func) : func(func), return_ffi_type(nullptr) {}
 
-  bool Symbol::param(Id type_id)
+  void Symbol::param(Id type_id, ffi_type* ffit)
   {
-    auto ffit = ffi_map(type_id);
-
-    if (!ffit)
-      return false;
-
     param_types.push_back(type_id);
     param_ffi_types.push_back(ffit);
-    return true;
   }
 
-  bool Symbol::ret(Id type_id)
+  void Symbol::ret(ValueType t, ffi_type* ffit)
   {
-    auto ffit = ffi_map(type_id);
-
-    if (!ffit)
-      return false;
-
-    return_type = type_id;
+    return_type = t;
     return_ffi_type = ffit;
-    return true;
   }
 
   bool Symbol::prepare()
@@ -89,7 +80,7 @@ namespace vbci
     return param_types;
   }
 
-  Id Symbol::ret()
+  ValueType Symbol::ret()
   {
     return return_type;
   }
@@ -99,7 +90,7 @@ namespace vbci
     if (!func)
       return 0;
 
-    uint64_t ret = 0;
+    ffi_arg ret = 0;
     ffi_call(&cif, func, &ret, args.data());
     return ret;
   }

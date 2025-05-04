@@ -406,6 +406,30 @@ namespace vbci
       return (type_id & Mask);
     }
 
+    inline constexpr bool is_dyn(Id type_id)
+    {
+      return type_id == 0;
+    }
+
+    inline constexpr bool is_val(Id type_id)
+    {
+      auto t = type_id >> Shift;
+      return !is_mod(type_id) && (t > 0) && (t <= NumPrimitiveClasses);
+    }
+
+    inline constexpr bool is_cls(size_t num_classes, Id type_id)
+    {
+      auto t = type_id >> Shift;
+      return !is_mod(type_id) && (t > NumPrimitiveClasses) &&
+        (t <= (NumPrimitiveClasses + num_classes));
+    }
+
+    inline constexpr bool is_def(size_t num_classes, Id type_id)
+    {
+      return !is_mod(type_id) &&
+        ((type_id >> Shift) > (NumPrimitiveClasses + num_classes));
+    }
+
     inline constexpr bool is_array(Id type_id)
     {
       return (type_id & +Mod::Array);
@@ -416,26 +440,26 @@ namespace vbci
       return (type_id & +Mod::Ref);
     }
 
-    inline constexpr bool is_dyn(Id type_id)
-    {
-      return !is_mod(type_id) && (type_id == 0);
-    }
-
     inline constexpr bool is_cown(Id type_id)
     {
       return (type_id & +Mod::Cown);
     }
 
-    inline constexpr bool is_def(size_t num_classes, Id type_id)
+    inline constexpr ValueType val(Id type_id)
     {
-      return !is_mod(type_id) &&
-        ((type_id >> Shift) > (NumPrimitiveClasses + num_classes + 1));
+      assert(is_val(type_id));
+      return static_cast<ValueType>((type_id >> Shift) - 1);
+    }
+
+    inline constexpr size_t cls_idx(Id type_id)
+    {
+      return (type_id >> Shift) - (NumPrimitiveClasses + 1);
     }
 
     inline constexpr size_t def_idx(size_t num_classes, Id type_id)
     {
       assert(is_def(num_classes, type_id));
-      return (type_id >> Shift) - (NumPrimitiveClasses + num_classes + 2);
+      return (type_id >> Shift) - (NumPrimitiveClasses + num_classes + 1);
     }
 
     inline constexpr Id dyn()
@@ -451,13 +475,13 @@ namespace vbci
     inline constexpr Id cls(Id class_id)
     {
       assert(class_id <= Max);
-      return (NumPrimitiveClasses + 2 + class_id) << Shift;
+      return (NumPrimitiveClasses + class_id + 1) << Shift;
     }
 
     inline constexpr Id def(size_t num_classes, Id typedef_id)
     {
       assert((num_classes + typedef_id) <= Max);
-      return (NumPrimitiveClasses + 2 + num_classes + typedef_id) << Shift;
+      return (NumPrimitiveClasses + num_classes + typedef_id + 1) << Shift;
     }
 
     inline constexpr Id array(Id type_id)
@@ -476,19 +500,6 @@ namespace vbci
     {
       assert(!is_cown(type_id));
       return type_id | +Mod::Cown;
-    }
-
-    inline constexpr ValueType val(Id type_id)
-    {
-      if (type_id & Mask)
-        return ValueType::Invalid;
-
-      type_id = (type_id >> Shift) - 1;
-
-      if (type_id > +ValueType::Ptr)
-        return ValueType::Invalid;
-
-      return static_cast<ValueType>(type_id);
     }
 
     inline constexpr bool too_many(size_t num_classes, size_t num_typedefs)

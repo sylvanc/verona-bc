@@ -24,7 +24,6 @@ namespace vbci
     PC current_pc;
     size_t args;
 
-    std::vector<uint64_t> ffi_args;
     std::vector<void*> ffi_arg_addrs;
 
     Thread() : program(&Program::get()), frame(nullptr), args(0)
@@ -49,5 +48,6 @@ namespace vbci
     void teardown();
     void branch(Local label);
     void check_args(std::vector<Id>& types);
+    void check_args(std::vector<Field>& fields);
   };
 }

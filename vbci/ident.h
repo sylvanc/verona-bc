@@ -20,6 +20,7 @@ namespace vbci
     BadAllocTarget,
     BadLabel,
     BadField,
+    BadArrayIndex,
     BadRefTarget,
     BadLoadTarget,
     BadStoreTarget,
@@ -75,6 +76,8 @@ namespace vbci
         return "bad label";
       case Error::BadField:
         return "bad field";
+      case Error::BadArrayIndex:
+        return "bad array index";
       case Error::BadRefTarget:
         return "bad ref target";
       case Error::BadLoadTarget:

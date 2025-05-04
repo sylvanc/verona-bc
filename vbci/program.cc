@@ -181,6 +181,89 @@ namespace vbci
     return false;
   }
 
+  std::pair<ValueType, ffi_type*> Program::layout_type_id(Id type_id)
+  {
+    if (type::is_val(type_id))
+    {
+      auto t = type::val(type_id);
+
+      switch (t)
+      {
+        case ValueType::None:
+          return {ValueType::None, &ffi_type_void};
+        case ValueType::Bool:
+          return {ValueType::Bool, &ffi_type_uint8};
+        case ValueType::I8:
+          return {ValueType::I8, &ffi_type_sint8};
+        case ValueType::I16:
+          return {ValueType::I16, &ffi_type_sint16};
+        case ValueType::I32:
+          return {ValueType::I32, &ffi_type_sint32};
+        case ValueType::I64:
+          return {ValueType::I64, &ffi_type_sint64};
+        case ValueType::U8:
+          return {ValueType::U8, &ffi_type_uint8};
+        case ValueType::U16:
+          return {ValueType::U16, &ffi_type_uint16};
+        case ValueType::U32:
+          return {ValueType::U32, &ffi_type_uint32};
+        case ValueType::U64:
+          return {ValueType::U64, &ffi_type_uint64};
+        case ValueType::F32:
+          return {ValueType::F32, &ffi_type_float};
+        case ValueType::F64:
+          return {ValueType::F64, &ffi_type_double};
+        case ValueType::ILong:
+          return {ValueType::ILong, &ffi_type_slong};
+        case ValueType::ULong:
+          return {ValueType::ULong, &ffi_type_ulong};
+        case ValueType::ISize:
+          return {
+            ValueType::ISize,
+            sizeof(ssize_t) == 4 ? &ffi_type_sint32 : &ffi_type_sint64};
+        case ValueType::USize:
+          return {
+            ValueType::USize,
+            sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64};
+        case ValueType::Ptr:
+          return {ValueType::Ptr, &ffi_type_pointer};
+        default:
+          assert(false);
+          return {ValueType::Invalid, &ffi_type_void};
+      }
+    }
+    else if (type::is_cls(classes.size(), type_id))
+    {
+      return {ValueType::Object, &ffi_type_pointer};
+    }
+    else if (type::is_def(classes.size(), type_id))
+    {
+      // If all elements of the union have the same representation, use it.
+      auto& def = typedefs.at(type::def_idx(classes.size(), type_id));
+      auto rep = layout_type_id(def.type_ids.at(0));
+      bool ok = true;
+
+      for (size_t i = 0; i < def.type_ids.size(); i++)
+      {
+        if (rep != layout_type_id(def.type_ids.at(i)))
+        {
+          ok = false;
+          break;
+        }
+      }
+
+      if (ok)
+        return rep;
+    }
+    else if (type::is_array(type_id))
+    {
+      return {ValueType::Array, &ffi_type_pointer};
+    }
+
+    // Dyn, cown, ref, array ref, cown ref.
+    return {ValueType::Invalid, &value_type};
+  }
+
   std::string Program::debug_info(Function* func, PC pc)
   {
     if (di == PC(-1))
@@ -281,8 +364,29 @@ namespace vbci
     return di_strings.at(uleb(pc));
   }
 
+  bool Program::setup_value_type()
+  {
+    std::vector<ffi_type*> field_types;
+    field_types.push_back(&ffi_type_uint64);
+    field_types.push_back(&ffi_type_uint64);
+
+    std::vector<size_t> field_offsets;
+    field_offsets.resize(field_types.size());
+
+    value_type.size = 0;
+    value_type.alignment = 0;
+    value_type.type = FFI_TYPE_STRUCT;
+    value_type.elements = field_types.data();
+
+    return ffi_get_struct_offsets(FFI_DEFAULT_ABI, &value_type, nullptr) ==
+      FFI_OK;
+  }
+
   bool Program::load()
   {
+    if (!setup_value_type())
+      return false;
+
     content.clear();
     code = nullptr;
     di = PC(-1);
@@ -350,17 +454,18 @@ namespace vbci
       auto& symbol = symbols.back();
 
       auto num_params = uleb(pc);
-      bool ok = true;
       for (size_t j = 0; j < num_params; j++)
       {
-        if (!symbol.param(uleb(pc)))
-          ok = false;
+        auto type_id = uleb(pc);
+        auto rep = layout_type_id(type_id);
+        symbol.param(type_id, rep.second);
       }
 
-      if (!symbol.ret(uleb(pc)))
-        ok = false;
+      auto type_id = uleb(pc);
+      auto rep = layout_type_id(type_id);
+      symbol.ret(rep.first, rep.second);
 
-      if (!ok || !symbol.prepare())
+      if (!symbol.prepare())
       {
         logging::Error() << file << ": couldn't prepare symbol " << name
                          << std::endl;
@@ -432,8 +537,6 @@ namespace vbci
 
       if (!parse_methods(cls, pc))
         return false;
-
-      cls.calc_size();
     }
 
     // Debug info.
@@ -504,8 +607,11 @@ namespace vbci
 
   bool Program::parse_fields(Class& cls, PC& pc)
   {
+    std::vector<ffi_type*> ffi_types;
     auto num_fields = uleb(pc);
-    cls.fields.reserve(num_fields);
+    cls.field_map.reserve(num_fields);
+    cls.fields.resize(num_fields);
+    ffi_types.resize(num_fields);
 
     if (num_fields > MaxRegisters)
     {
@@ -515,10 +621,16 @@ namespace vbci
 
     for (FieldIdx i = 0; i < num_fields; i++)
     {
-      cls.fields.emplace(uleb(pc), i);
-      cls.field_types.push_back(uleb(pc));
+      auto& f = cls.fields.at(i);
+      cls.field_map.emplace(uleb(pc), i);
+      f.type_id = uleb(pc);
+
+      auto rep = layout_type_id(f.type_id);
+      f.value_type = rep.first;
+      ffi_types.at(i) = rep.second;
     }
 
+    cls.calc_size(ffi_types);
     return true;
   }
 

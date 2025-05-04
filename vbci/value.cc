@@ -88,11 +88,195 @@ namespace vbci
     return Value(ValueType::None);
   }
 
-  Value Value::from_ffi(Id type_id, uint64_t v)
+  ValueType Value::type()
   {
-    Value value(type::val(type_id));
+    return tag;
+  }
+
+  Value Value::from_ffi(ValueType t, uint64_t v)
+  {
+    Value value(t);
     value.u64 = v;
     return value;
+  }
+
+  Value Value::from_addr(ValueType t, void* v)
+  {
+    Value value(t);
+
+    switch (t)
+    {
+      case ValueType::None:
+        break;
+
+      case ValueType::Bool:
+        value.b = *reinterpret_cast<bool*>(v);
+        break;
+
+      case ValueType::I8:
+        value.i8 = *reinterpret_cast<int8_t*>(v);
+        break;
+
+      case ValueType::I16:
+        value.i16 = *reinterpret_cast<int16_t*>(v);
+        break;
+
+      case ValueType::I32:
+        value.i32 = *reinterpret_cast<int32_t*>(v);
+        break;
+
+      case ValueType::I64:
+        value.i64 = *reinterpret_cast<int64_t*>(v);
+        break;
+
+      case ValueType::U8:
+        value.u8 = *reinterpret_cast<uint8_t*>(v);
+        break;
+
+      case ValueType::U16:
+        value.u16 = *reinterpret_cast<uint16_t*>(v);
+        break;
+
+      case ValueType::U32:
+        value.u32 = *reinterpret_cast<uint32_t*>(v);
+        break;
+
+      case ValueType::U64:
+        value.u64 = *reinterpret_cast<uint64_t*>(v);
+        break;
+
+      case ValueType::ILong:
+        value.ilong = *reinterpret_cast<long*>(v);
+        break;
+
+      case ValueType::ULong:
+        value.ulong = *reinterpret_cast<unsigned long*>(v);
+        break;
+
+      case ValueType::ISize:
+        value.isize = *reinterpret_cast<ssize_t*>(v);
+        break;
+
+      case ValueType::USize:
+        value.usize = *reinterpret_cast<size_t*>(v);
+        break;
+
+      case ValueType::F32:
+        value.f32 = *reinterpret_cast<float*>(v);
+        break;
+
+      case ValueType::F64:
+        value.f64 = *reinterpret_cast<double*>(v);
+        break;
+
+      case ValueType::Ptr:
+        value.ptr = *reinterpret_cast<void**>(v);
+        break;
+
+      case ValueType::Object:
+        value.obj = *reinterpret_cast<Object**>(v);
+        break;
+
+      case ValueType::Array:
+        value.arr = *reinterpret_cast<Array**>(v);
+        break;
+
+      default:
+        std::memcpy(&value, v, sizeof(Value));
+        break;
+    }
+
+    return value;
+  }
+
+  void Value::to_addr(ArgType arg_type, void* v)
+  {
+    switch (tag)
+    {
+      case ValueType::None:
+        break;
+
+      case ValueType::Bool:
+        *reinterpret_cast<bool*>(v) = b;
+        break;
+
+      case ValueType::I8:
+        *reinterpret_cast<int8_t*>(v) = i8;
+        break;
+
+      case ValueType::I16:
+        *reinterpret_cast<int16_t*>(v) = i16;
+        break;
+
+      case ValueType::I32:
+        *reinterpret_cast<int32_t*>(v) = i32;
+        break;
+
+      case ValueType::I64:
+        *reinterpret_cast<int64_t*>(v) = i64;
+        break;
+
+      case ValueType::U8:
+        *reinterpret_cast<uint8_t*>(v) = u8;
+        break;
+
+      case ValueType::U16:
+        *reinterpret_cast<uint16_t*>(v) = u16;
+        break;
+
+      case ValueType::U32:
+        *reinterpret_cast<uint32_t*>(v) = u32;
+        break;
+
+      case ValueType::U64:
+        *reinterpret_cast<uint64_t*>(v) = u64;
+        break;
+
+      case ValueType::ILong:
+        *reinterpret_cast<long*>(v) = ilong;
+        break;
+
+      case ValueType::ULong:
+        *reinterpret_cast<unsigned long*>(v) = ulong;
+        break;
+
+      case ValueType::ISize:
+        *reinterpret_cast<ssize_t*>(v) = isize;
+        break;
+
+      case ValueType::USize:
+        *reinterpret_cast<size_t*>(v) = usize;
+        break;
+
+      case ValueType::F32:
+        *reinterpret_cast<float*>(v) = f32;
+        break;
+
+      case ValueType::F64:
+        *reinterpret_cast<double*>(v) = f64;
+        break;
+
+      case ValueType::Ptr:
+        *reinterpret_cast<void**>(v) = ptr;
+        break;
+
+      case ValueType::Object:
+        *reinterpret_cast<Object**>(v) = obj;
+        break;
+
+      case ValueType::Array:
+        *reinterpret_cast<Array**>(v) = arr;
+        break;
+
+      default:
+        std::memcpy(v, this, sizeof(Value));
+        break;
+    }
+
+    if (arg_type == ArgType::Move)
+      tag = ValueType::Invalid;
+    else
+      inc();
   }
 
   Id Value::type_id()
@@ -156,25 +340,85 @@ namespace vbci
     switch (tag)
     {
       case ValueType::U8:
-        return get<uint8_t>();
-
       case ValueType::U16:
-        return get<uint16_t>();
-
       case ValueType::U32:
-        return get<uint32_t>();
-
       case ValueType::U64:
-        return get<uint64_t>();
+      case ValueType::ULong:
+      case ValueType::USize:
+        return get<size_t>();
 
       default:
         throw Value(Error::BadRefTarget);
     }
   }
 
-  uint64_t Value::to_ffi()
+  void* Value::address_of()
   {
-    return u64;
+    switch (tag)
+    {
+      case ValueType::None:
+        return nullptr;
+
+      case ValueType::Bool:
+        return &b;
+
+      case ValueType::I8:
+        return &i8;
+
+      case ValueType::I16:
+        return &i16;
+
+      case ValueType::I32:
+        return &i32;
+
+      case ValueType::I64:
+        return &i64;
+
+      case ValueType::U8:
+        return &u8;
+
+      case ValueType::U16:
+        return &u16;
+
+      case ValueType::U32:
+        return &u32;
+
+      case ValueType::U64:
+        return &u64;
+
+      case ValueType::F32:
+        return &f32;
+
+      case ValueType::F64:
+        return &f64;
+
+      case ValueType::ILong:
+        return &ilong;
+
+      case ValueType::ULong:
+        return &ulong;
+
+      case ValueType::ISize:
+        return &isize;
+
+      case ValueType::USize:
+        return &usize;
+
+      case ValueType::Ptr:
+        return &ptr;
+
+      case ValueType::Object:
+        return &obj;
+
+      case ValueType::Array:
+        return &arr;
+
+      case ValueType::Cown:
+        return &cown;
+
+      default:
+        return this;
+    }
   }
 
   void Value::inc(bool reg)
@@ -267,24 +511,6 @@ namespace vbci
     }
   }
 
-  Value Value::swap(ArgType arg_type, bool stack, Value& that)
-  {
-    // This is called from Cown::store and Header::base_store.
-    // Safety is already checked.
-    assert(this != &that);
-    auto prev = std::move(*this);
-    std::memcpy(this, &that, sizeof(Value));
-
-    // If the store location is a stack alloc, we need to increment the
-    // region stack RC as well as the allocation RC.
-    if (arg_type == ArgType::Copy)
-      inc(stack);
-    else
-      that.tag = ValueType::Invalid;
-
-    return prev;
-  }
-
   void Value::drop()
   {
     dec();
@@ -332,6 +558,9 @@ namespace vbci
   {
     if (tag != ValueType::Array)
       throw Value(Error::BadRefTarget);
+
+    if (i >= arr->get_size())
+      throw Value(Error::BadArrayIndex);
 
     if (arg_type == ArgType::Move)
       tag = ValueType::Invalid;

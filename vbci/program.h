@@ -26,6 +26,8 @@ namespace vbci
   struct Program
   {
   private:
+    ffi_type value_type;
+
     std::filesystem::path file;
     std::vector<uint8_t> content;
     Code* code;
@@ -67,6 +69,7 @@ namespace vbci
     int run(std::filesystem::path& path);
 
     bool typecheck(Id t1, Id t2);
+    std::pair<ValueType, ffi_type*> layout_type_id(Id type_id);
 
     std::string debug_info(Function* func, PC pc);
     std::string di_function(Function* func);
@@ -74,6 +77,7 @@ namespace vbci
     std::string di_field(Class* cls, FieldIdx idx);
 
   private:
+    bool setup_value_type();
     bool load();
     bool parse_function(Function& f, PC& pc);
     bool parse_fields(Class& cls, PC& pc);

@@ -30,7 +30,7 @@ namespace vbci
     Func func;
 
     std::vector<Id> param_types;
-    Id return_type;
+    ValueType return_type;
 
     std::vector<ffi_type*> param_ffi_types;
     ffi_type* return_ffi_type;
@@ -38,12 +38,12 @@ namespace vbci
   public:
     Symbol(Func func);
 
-    bool param(Id type_id);
-    bool ret(Id type_id);
+    void param(Id type_id, ffi_type* t);
+    void ret(ValueType t, ffi_type* ffit);
     bool prepare();
 
     std::vector<Id>& params();
-    Id ret();
+    ValueType ret();
 
     uint64_t call(std::vector<void*>& args);
   };

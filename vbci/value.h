@@ -79,20 +79,29 @@ namespace vbci
     Value& operator=(const Value& that);
     Value& operator=(Value&& that) noexcept;
 
-    static Value none();
-    static Value from_ffi(Id type_id, uint64_t v);
+    template<typename T>
+    Value(ValueType t, T v) : tag(t)
+    {
+      set<T>(v);
+    }
 
+    static Value none();
+    static Value from_ffi(ValueType t, uint64_t v);
+    static Value from_addr(ValueType t, void* v);
+    void to_addr(ArgType arg_type, void* v);
+
+    ValueType type();
     Id type_id();
+
     bool is_error();
     bool get_bool();
     int32_t get_i32();
     size_t to_index();
-    uint64_t to_ffi();
+    void* address_of();
 
     Location location();
     Region* region();
 
-    Value swap(ArgType arg_type, bool stack, Value& that);
     void drop();
     void field_drop();
     Value ref(ArgType arg_type, Id field);

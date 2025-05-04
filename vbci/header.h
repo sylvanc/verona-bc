@@ -49,6 +49,9 @@ namespace vbci
       return (loc != Immutable) && ((loc & StackAlloc) == 0);
     }
 
+  protected:
+    Header(Location loc) : loc(loc), rc(1) {}
+
     bool safe_store(Value& v)
     {
       if (is_immutable(loc))
@@ -86,49 +89,39 @@ namespace vbci
       return true;
     }
 
-  protected:
-    Header(Location loc) : loc(loc), rc(1) {}
-
-    Value base_store(ArgType arg_type, Value& dst, Value& src)
+    void region_store(Value& dst, Value& src)
     {
-      if (!safe_store(src))
-        throw Value(Error::BadStore);
-
-      auto stack = is_stack(loc);
+      // If this is a stack allocation, we're moving the stack RC from the
+      // store location to the register (for prev), or from the register to
+      // the store location (for src).
       auto dst_loc = dst.location();
       auto src_loc = src.location();
 
-      // If this is a stack allocation, we're moving the stack RC from the
-      // store location to the register (for prev), or from the register to
-      // the store location (for src), so no action is needed.
-      // If prev and src are in the same region, we don't need to do anything.
-      if (!stack && (dst_loc != src_loc))
+      if (is_stack(loc) || (dst_loc == src_loc))
+        return;
+
+      if (is_region(dst_loc))
       {
-        if (is_region(dst_loc))
-        {
-          // Increment the region stack RC.
-          auto dst_r = region(dst_loc);
-          dst_r->stack_inc();
+        // Increment the region stack RC.
+        auto dst_r = region(dst_loc);
+        dst_r->stack_inc();
 
-          // Clear the parent if it's in a different region.
-          if (dst_loc != loc)
-            dst_r->clear_parent();
-        }
-
-        if (is_region(src_loc))
-        {
-          auto src_r = region(src_loc);
-
-          // Set the parent if it's in a different region.
-          if (src_loc != loc)
-            src_r->set_parent(region(loc));
-
-          // Decrement the region stack RC. This can't free the region.
-          src_r->stack_dec();
-        }
+        // Clear the parent if it's in a different region.
+        if (dst_loc != loc)
+          dst_r->clear_parent();
       }
 
-      return dst.swap(arg_type, stack, src);
+      if (is_region(src_loc))
+      {
+        auto src_r = region(src_loc);
+
+        // Set the parent if it's in a different region.
+        if (src_loc != loc)
+          src_r->set_parent(region(loc));
+
+        // Decrement the region stack RC. This can't free the region.
+        src_r->stack_dec();
+      }
     }
 
     bool base_dec(bool reg)

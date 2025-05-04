@@ -145,7 +145,7 @@ namespace vbci
             case ValueType::ULong:
             case ValueType::ISize:
             case ValueType::USize:
-              dst = Value::from_ffi(type::val(t), program->load_i64(frame->pc));
+              dst = Value::from_ffi(t, program->load_u64(frame->pc));
               break;
 
             case ValueType::F32:
@@ -166,7 +166,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->cls(program->load_u32(frame->pc));
-          check_args(cls.field_types);
+          check_args(cls.fields);
           auto mem = stack.alloc(cls.size);
           auto obj =
             &Object::create(mem, cls, frame->frame_id)->init(frame, cls);
@@ -179,7 +179,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->cls(program->load_u32(frame->pc));
-          check_args(cls.field_types);
+          check_args(cls.fields);
           auto region = frame->local(arg1(code)).region();
           dst = &region->object(cls)->init(frame, cls);
           break;
@@ -189,7 +189,7 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto& cls = program->cls(program->load_u32(frame->pc));
-          check_args(cls.field_types);
+          check_args(cls.fields);
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           dst = &region->object(cls)->init(frame, cls);
           break;
@@ -199,9 +199,11 @@ namespace vbci
         {
           auto& dst = frame->local(arg0(code));
           auto size = frame->local(arg1(code)).to_index();
-          auto mem = stack.alloc(Array::size_of(size));
           auto type_id = program->load_u32(frame->pc);
-          dst = Array::create(mem, type_id, frame->frame_id, size);
+          auto rep = program->layout_type_id(type_id);
+          auto mem = stack.alloc(Array::size_of(size, rep.second->size));
+          dst = Array::create(
+            mem, frame->frame_id, type_id, rep.first, size, rep.second->size);
           break;
         }
 
@@ -210,8 +212,10 @@ namespace vbci
           auto& dst = frame->local(arg0(code));
           auto type_id = program->load_u32(frame->pc);
           auto size = program->load_u64(frame->pc);
-          auto mem = stack.alloc(Array::size_of(size));
-          dst = Array::create(mem, type_id, frame->frame_id, size);
+          auto rep = program->layout_type_id(type_id);
+          auto mem = stack.alloc(Array::size_of(size, rep.second->size));
+          dst = Array::create(
+            mem, frame->frame_id, type_id, rep.first, size, rep.second->size);
           break;
         }
 
@@ -221,7 +225,7 @@ namespace vbci
           auto region = frame->local(arg1(code)).region();
           auto size = frame->local(arg2(code)).to_index();
           auto type_id = program->load_u32(frame->pc);
-          dst = region->array(type_id, Array::size_of(size));
+          dst = region->array(type_id, size);
           break;
         }
 
@@ -231,7 +235,7 @@ namespace vbci
           auto region = frame->local(arg1(code)).region();
           auto type_id = program->load_u32(frame->pc);
           auto size = program->load_u64(frame->pc);
-          dst = region->array(type_id, Array::size_of(size));
+          dst = region->array(type_id, size);
           break;
         }
 
@@ -241,7 +245,7 @@ namespace vbci
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto type_id = program->load_u32(frame->pc);
           auto size = frame->local(arg2(code)).to_index();
-          dst = region->array(type_id, Array::size_of(size));
+          dst = region->array(type_id, size);
           break;
         }
 
@@ -251,7 +255,7 @@ namespace vbci
           auto region = Region::create(static_cast<RegionType>(arg1(code)));
           auto type_id = program->load_u32(frame->pc);
           auto size = program->load_u64(frame->pc);
-          dst = region->array(type_id, Array::size_of(size));
+          dst = region->array(type_id, size);
           break;
         }
 
@@ -448,17 +452,13 @@ namespace vbci
               auto param_size = params.size();
               check_args(params);
 
-              if (ffi_args.size() < param_size)
+              if (ffi_arg_addrs.size() < param_size)
               {
-                ffi_args.resize(param_size);
                 ffi_arg_addrs.resize(param_size);
 
                 for (size_t i = 0; i < param_size; i++)
-                  ffi_arg_addrs.at(i) = &ffi_args.at(i);
+                  ffi_arg_addrs.at(i) = frame->arg(i).address_of();
               }
-
-              for (size_t i = 0; i < param_size; i++)
-                ffi_args.at(i) = frame->arg(i).to_ffi();
 
               frame->drop_args(args);
               frame->local(dst) =
@@ -874,6 +874,23 @@ namespace vbci
     for (size_t i = 0; i < args; i++)
     {
       if (!program->typecheck(frame->arg(i).type_id(), types.at(i)))
+        throw Value(Error::BadType);
+    }
+
+    args = 0;
+  }
+
+  void Thread::check_args(std::vector<Field>& fields)
+  {
+    if (args != fields.size())
+    {
+      frame->drop_args(args);
+      throw Value(Error::BadArgs);
+    }
+
+    for (size_t i = 0; i < args; i++)
+    {
+      if (!program->typecheck(frame->arg(i).type_id(), fields.at(i).type_id))
         throw Value(Error::BadType);
     }
 

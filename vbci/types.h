@@ -3,6 +3,7 @@
 #include "ident.h"
 #include "value.h"
 
+#include <ffi.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vbci.h>
@@ -15,6 +16,14 @@ namespace vbci
     std::vector<Id> type_ids;
   };
 
+  struct Field
+  {
+    size_t offset;
+    size_t size;
+    Id type_id;
+    ValueType value_type;
+  };
+
   struct Class
   {
     size_t size;
@@ -22,13 +31,13 @@ namespace vbci
     Id class_id;
 
     // Precalculate an offset into the object for each field name.
-    std::unordered_map<Id, FieldIdx> fields;
-    std::vector<Id> field_types;
+    std::unordered_map<Id, FieldIdx> field_map;
+    std::vector<Field> fields;
 
     // Precalculate a function pointer for each method name.
     std::unordered_map<Id, Function*> methods;
 
-    void calc_size();
+    bool calc_size(std::vector<ffi_type*>& ffi_types);
     Function* finalizer();
     Function* method(Id w);
   };

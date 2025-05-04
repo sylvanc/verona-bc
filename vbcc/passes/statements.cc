@@ -202,63 +202,6 @@ namespace vbcc
     return u;
   }
 
-  // Node maketype(NodeRange t)
-  // {
-  //   // initial new implementation
-  //   auto it = t.begin();
-  //   auto end = t.end();
-  //   Node ret;
-  //   Node cur;
-
-  //   while (it != end)
-  //   {
-  //     if ((*it)->in({Ref, Cown})
-  //     {
-  //       cur = *it;
-  //     }
-  //     else if (*it == LBracket)
-  //     {
-  //       cur = Array << cur;
-  //       ++it;
-  //       assert(*it == RBracket);
-  //     }
-  //     else if (*it == GlobalId)
-  //     {
-  //       auto c = ClassId ^ *it;
-
-  //       if (cur)
-  //         cur << c;
-  //       else
-  //         cur = c;
-  //     }
-  //     else if (*it == Union)
-  //     {
-  //       // TODO:
-  //     }
-  //     else
-  //     {
-  //       //
-  //     }
-  //   }
-
-  //   // old implementation, didn't handle union types
-  //   auto b = t[0];
-
-  //   // Check for a `ref` or `cown` prefix.
-  //   if (b->in({Ref, Cown}))
-  //     return b << maketype({t.begin() + 1, t.end()});
-
-  //   // It might be a TypeId, we'll figure that out later.
-  //   if (b == GlobalId)
-  //     b = ClassId ^ b;
-
-  //   // Check for an array type.
-  //   if (t.size() == 1)
-  //     return b;
-
-  //   return Array << b;
-  // }
-
   Node paramdef(NodeRange params)
   {
     Node r = Params;

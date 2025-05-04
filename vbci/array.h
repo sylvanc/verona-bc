@@ -12,27 +12,52 @@ namespace vbci
   private:
     Id type_id;
     size_t size;
-    Value data[0];
+    uint32_t stride;
+    ValueType value_type;
 
-    Array(Id type_id, Location loc, size_t size)
-    : Header(loc), type_id(type_id), size(size)
+    Array(
+      Location loc,
+      Id type_id,
+      ValueType value_type,
+      size_t size,
+      size_t stride)
+    : Header(loc),
+      type_id(type_id),
+      size(size),
+      stride(stride),
+      value_type(value_type)
     {
-      for (size_t i = 0; i < size; i++)
-        data[i] = Value();
+      if (value_type == ValueType::Invalid)
+      {
+        auto data = reinterpret_cast<Value*>(this + 1);
+
+        for (size_t i = 0; i < size; i++)
+          data[i] = Value();
+      }
+      else
+      {
+        std::memset(this + 1, 0, size * stride);
+      }
     }
 
   public:
-    static Array* create(void* mem, Id type_id, Location loc, size_t size)
+    static Array* create(
+      void* mem,
+      Location loc,
+      Id type_id,
+      ValueType value_type,
+      size_t size,
+      size_t stride)
     {
       if (type::is_array(type_id))
         throw Value(Error::BadType);
 
-      return new (mem) Array(type_id, loc, size);
+      return new (mem) Array(loc, type_id, value_type, size, stride);
     }
 
-    static size_t size_of(size_t size)
+    static size_t size_of(size_t size, size_t stride)
     {
-      return sizeof(Array) + (size * sizeof(Value));
+      return sizeof(Array) + (size * stride);
     }
 
     Id array_type_id()
@@ -45,20 +70,30 @@ namespace vbci
       return type_id;
     }
 
+    size_t get_size()
+    {
+      return size;
+    }
+
     Value load(size_t idx)
     {
-      return data[idx];
+      void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
+      return Value::from_addr(value_type, addr);
     }
 
     Value store(ArgType arg_type, size_t idx, Value& v)
     {
-      if (idx >= size)
-        throw Value(Error::BadStore);
-
       if (!Program::get().typecheck(v.type_id(), type_id))
         throw Value(Error::BadType);
 
-      return base_store(arg_type, data[idx], v);
+      if (!safe_store(v))
+        throw Value(Error::BadStore);
+
+      void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
+      auto prev = Value::from_addr(value_type, addr);
+      region_store(prev, v);
+      v.to_addr(arg_type, addr);
+      return prev;
     }
 
     void dec(bool reg)
@@ -75,7 +110,10 @@ namespace vbci
     void finalize()
     {
       for (size_t i = 0; i < size; i++)
-        data[i].field_drop();
+      {
+        // TODO: can we be more efficient?
+        load(i).field_drop();
+      }
     }
 
     std::string to_string()

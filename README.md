@@ -48,17 +48,22 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* FFI with `libffi`.
+  * Mechanism to pass Array underlying data as a pointer to FFI.
+  * `struct` types.
+    * How does a `struct` return work? Can't use `ffi_arg`?
+    * Can we pass objects as `struct` to FFI?
+      * Won't work for embedded `struct`, would have to pack the fields.
+      * Won't work for pointers unless we store pointers offset from the header.
+    * Can we wrap returned `struct` as objects?
+  * Allow a version string on a symbol, use `dlvsym`.
+  * Platform-specific FFI. Only load for the runtime platform.
+  * FFI to get the runtime platform.
 * Types.
   * Raise and throw signatures on functions.
   * Function types? Not strictly needed, as this can be encoded as objects.
   * Cache type check results? Would also prevent circular type checks.
   * `imm` and other memory location types?
-* FFI with `libffi`.
-  * Allow a version string on a symbol, use `dlvsym`.
-  * `struct` types.
-  * Platform-specific FFI. Only load for the runtime platform.
-  * FFI to get the runtime platform.
-* Compact objects and arrays when a field type or content type can be represented as a single value, e.g., an array of `u8`.
 * FFI to access command line arguments.
 * Initializing global values.
 * Introspection.
@@ -69,6 +74,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
     * Get the method count and names.
 * Interactive debugger.
 * Embedded fields.
+  * Embedded arrays with a constant size.
 * Merge, freeze, extract.
   * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RCs.

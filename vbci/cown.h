@@ -26,7 +26,15 @@ namespace vbci
 
     Value store(ArgType arg_type, Value& v)
     {
-      return content.swap(arg_type, false, v);
+      // TODO: safe store?
+      auto prev = std::move(content);
+
+      if (arg_type == ArgType::Move)
+        content = std::move(v);
+      else
+        content = v;
+
+      return prev;
     }
 
     std::string to_string()
