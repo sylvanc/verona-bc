@@ -128,7 +128,8 @@ namespace vbci
 #endif
   }
 
-  Symbol::Func Dynlib::symbol(const std::string& name)
+  Symbol::Func
+  Dynlib::symbol(const std::string& name, const std::string& version)
   {
     if (!handle)
       return nullptr;
@@ -136,7 +137,12 @@ namespace vbci
 #ifdef _WIN32
     auto f = GetProcAddress(handle, name.c_str());
 #else
-    auto f = dlsym(handle, name.c_str());
+    void* f;
+
+    if (version.empty())
+      f = dlsym(handle, name.c_str());
+    else
+      f = dlvsym(handle, name.c_str(), version.c_str());
 #endif
     return reinterpret_cast<Symbol::Func>(f);
   }

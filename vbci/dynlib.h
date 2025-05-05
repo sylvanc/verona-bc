@@ -59,6 +59,6 @@ namespace vbci
     Dynlib(const std::string& path);
     ~Dynlib();
 
-    Symbol::Func symbol(const std::string& name);
+    Symbol::Func symbol(const std::string& name, const std::string& version);
   };
 }

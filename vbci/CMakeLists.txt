@@ -22,7 +22,7 @@ else()
     -flto -ffunction-sections -fdata-sections
     )
   target_link_options(vbci PRIVATE
-    -flto -Wl,--gc-sections
+    -rdynamic -flto -Wl,--gc-sections
     )
 endif()
 

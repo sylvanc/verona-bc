@@ -78,6 +78,13 @@ namespace vbcc
   }
 
   template<typename T>
+  struct sleb
+  {
+    T value;
+    sleb(T value) : value(value) {}
+  };
+
+  template<typename T>
   struct uleb
   {
     T value;
@@ -91,6 +98,14 @@ namespace vbcc
     T value;
     d(DIOp op, T value) : op(op), value(value) {}
   };
+
+  template<typename T>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, sleb<T>&& s)
+  {
+    // This uses zigzag encoding.
+    auto value = (s.value << 1) ^ (s.value >> ((sizeof(T) * 8) - 1));
+    return di << uleb(value);
+  }
 
   template<typename T>
   std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, uleb<T>&& u)
@@ -465,7 +480,8 @@ namespace vbcc
     if (find != symbol_ids.end())
       return false;
 
-    ST::ffi().string(symbol / String);
+    ST::exec().string(symbol / Lhs);
+    ST::exec().string(symbol / Rhs);
     symbol_ids.insert({name, symbol_ids.size()});
     symbols.push_back(symbol);
     return true;
@@ -473,7 +489,7 @@ namespace vbcc
 
   std::optional<Id> State::get_library_id(Node lib)
   {
-    auto name = ST::ffi().string(lib / String);
+    auto name = ST::exec().string(lib / String);
     auto find = library_ids.find(name);
 
     if (find == library_ids.end())
@@ -484,7 +500,7 @@ namespace vbcc
 
   void State::add_library(Node lib)
   {
-    auto name = ST::ffi().string(lib / String);
+    auto name = ST::exec().string(lib / String);
     auto find = library_ids.find(name);
 
     if (find != library_ids.end())
@@ -587,24 +603,25 @@ namespace vbcc
     // The compilation path.
     di << uleb(comp_path);
 
-    // FFI string table.
-    hdr << uleb(ST::ffi().size());
+    // Exec string table.
+    hdr << uleb(ST::exec().size());
 
-    for (size_t i = 0; i < ST::ffi().size(); i++)
-      hdr << ST::ffi().at(i);
+    for (size_t i = 0; i < ST::exec().size(); i++)
+      hdr << ST::exec().at(i);
 
     // FFI libraries.
     hdr << uleb(libraries.size());
 
     for (auto& lib : libraries)
-      hdr << uleb(ST::ffi().string(lib / String));
+      hdr << uleb(ST::exec().string(lib / String));
 
     hdr << uleb(symbols.size());
 
     for (auto& symbol : symbols)
     {
       hdr << uleb(*get_library_id(symbol->parent(Lib)))
-          << uleb(ST::ffi().string(symbol / String))
+          << uleb(ST::exec().string(symbol / Lhs))
+          << uleb(ST::exec().string(symbol / Rhs))
           << uleb((symbol / FFIParams)->size());
 
       for (auto& param : *(symbol / FFIParams))

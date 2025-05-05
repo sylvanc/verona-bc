@@ -251,7 +251,9 @@ namespace vbcc
     | (Union <<= wfType++)
     | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
-    | (Symbol <<= SymbolId * String * FFIParams * (Return >>= wfType))
+    | (Symbol <<=
+        SymbolId * (Lhs >>= String) * (Rhs >>= String) * FFIParams *
+        (Return >>= wfType))
     | (FFIParams <<= wfType++)
     | (Type <<= TypeId * Union)
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)

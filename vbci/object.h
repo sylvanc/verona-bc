@@ -107,24 +107,50 @@ namespace vbci
 
     void immortalize()
     {
-      mark_immortal();
+      if (location() == Immortal)
+        return;
 
-      // TODO: can we be more efficient?
-      for (size_t i = 0; i < cls()->fields.size(); i++)
-        load(i).immortalize();
+      mark_immortal();
+      auto& f = cls()->fields;
+
+      for (size_t i = 0; i < f.size(); i++)
+      {
+        switch (f.at(i).value_type)
+        {
+          case ValueType::Object:
+          case ValueType::Array:
+          case ValueType::Invalid:
+            load(i).immortalize();
+            break;
+
+          default:
+            break;
+        }
+      }
     }
 
     void finalize()
     {
-      auto& program = Program::get();
-      auto& cls = program.cls(class_id);
+      auto c = cls();
+      auto& f = c->fields;
 
-      if (cls.finalizer())
+      if (c->finalizer())
         Thread::run_finalizer(this);
 
-      // TODO: can we be more efficient?
-      for (size_t i = 0; i < cls.fields.size(); i++)
-        load(i).field_drop();
+      for (size_t i = 0; i < f.size(); i++)
+      {
+        switch (f.at(i).value_type)
+        {
+          case ValueType::Object:
+          case ValueType::Array:
+          case ValueType::Invalid:
+            load(i).field_drop();
+            break;
+
+          default:
+            break;
+        }
+      }
     }
 
     std::string to_string()

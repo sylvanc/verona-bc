@@ -88,7 +88,9 @@ namespace vbci
     bool parse_fields(Class& cls, PC& pc);
     bool parse_methods(Class& cls, PC& pc);
 
-    size_t uleb(size_t& pc);
+    int64_t sleb(size_t& pc);
+    uint64_t uleb(size_t& pc);
+
     std::string str(size_t& pc);
     void string_table(size_t& pc, std::vector<std::string>& table);
 

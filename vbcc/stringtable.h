@@ -18,7 +18,7 @@ namespace vbcc
 
   public:
     static ST& noemit();
-    static ST& ffi();
+    static ST& exec();
     static ST& di();
 
     Index string(std::string_view str);

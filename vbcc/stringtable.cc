@@ -10,7 +10,7 @@ namespace vbcc
     return st;
   }
 
-  ST& ST::ffi()
+  ST& ST::exec()
   {
     static ST st;
     return st;

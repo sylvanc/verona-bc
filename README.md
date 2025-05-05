@@ -49,13 +49,13 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * FFI with `libffi`.
+  * Variadic functions.
   * `struct` types.
     * How does a `struct` return work? Can't use `ffi_arg`?
     * Can we pass objects as `struct` to FFI?
       * Won't work for embedded `struct`, would have to pack the fields.
       * Won't work for pointers unless we store pointers offset from the header.
     * Can we wrap returned `struct` as objects?
-  * Allow a version string on a symbol, use `dlvsym`.
   * Platform-specific FFI. Only load for the runtime platform.
   * FFI to get the runtime platform.
 * Types.
@@ -64,27 +64,29 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Cache type check results? Would also prevent circular type checks.
   * `imm` and other memory location types?
 * Initializing global values.
+  * String constants? `u8[]`?
+  * How to clean them up?
+* Embedded fields.
+  * Embedded arrays with a constant size.
+* Concurrency.
+  * When.
+  * Merge, freeze, extract.
+    * Use `location` to store SCC information.
+    * Modes that allow/disallow parent pointers and stack RCs.
+* General purpose "long register" versions of all instructions?
+  * Consider ULEB128 for the code instead of fixed length.
+  * Would allow functions to have semi-unlimited register counts.
+* Math ops for numerical limits, by type?
 * Introspection.
   * Get a value's dynamic type.
   * Functions: get the argument count and types, and the return type.
   * Classes:
     * Get the field count, types, and names.
     * Get the method count and names.
-* Interactive debugger.
-* Embedded fields.
-  * Embedded arrays with a constant size.
-* Merge, freeze, extract.
-  * Use `location` to store SCC information.
-  * Modes that allow/disallow parent pointers and stack RCs.
-* When.
-* General purpose "long register" versions of all instructions?
-  * Consider ULEB128 for the code instead of fixed length.
-  * Would allow functions to have semi-unlimited register counts.
-* Math ops for numerical limits, by type?
-* String constants? `u8[]`?
 * Mark classes to auto-generate a C API.
   * Output a C header file.
   * Allow calling back into the interpreter.
+* Interactive debugger.
 * Build an DAP/LSP to allow debugging.
 * AST to IR output.
 * Compile to LLVM IR and/or Cranelift.

@@ -273,10 +273,11 @@ namespace vbcc
           },
 
         // FFI symbols.
-        T(GlobalId)[GlobalId] * T(Equals) * T(String)[String] * SymbolParams *
-            T(Colon) * TypeFull[Type] >>
+        T(GlobalId)[GlobalId] * T(Equals) * T(String)[Lhs] * ~T(String)[Rhs] *
+            SymbolParams * T(Colon) * TypeFull[Type] >>
           [](Match& _) {
-            return Symbol << (SymbolId ^ _(GlobalId)) << _(String)
+            return Symbol << (SymbolId ^ _(GlobalId)) << _(Lhs)
+                          << (_(Rhs) || (String ^ ""))
                           << symbolparams(_[Params]) << maketype(_[Type]);
           },
 

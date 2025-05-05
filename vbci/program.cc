@@ -478,7 +478,6 @@ namespace vbci
     libs.clear();
     symbols.clear();
 
-    // TODO: free the argv array.
     argv = nullptr;
 
     di = PC(-1);
@@ -534,12 +533,13 @@ namespace vbci
     {
       auto& lib = libs.at(uleb(pc));
       auto& name = ffi_strings.at(uleb(pc));
-      auto func = lib.symbol(name);
+      auto& version = ffi_strings.at(uleb(pc));
+      auto func = lib.symbol(name, version);
 
       if (!func)
       {
-        logging::Error() << file << ": couldn't load symbol " << name
-                         << std::endl;
+        logging::Error() << file << ": couldn't load symbol " << name << "@"
+                         << version << std::endl;
         return false;
       }
 
@@ -755,15 +755,22 @@ namespace vbci
     return true;
   }
 
-  size_t Program::uleb(size_t& pc)
+  int64_t Program::sleb(size_t& pc)
   {
-    size_t value = 0;
-    size_t shift = 0;
+    // This uses zigzag encoding.
+    auto value = uleb(pc);
+    return (value >> 1) ^ -(value & 1);
+  }
+
+  uint64_t Program::uleb(size_t& pc)
+  {
+    uint64_t value = 0;
+    uint64_t shift = 0;
 
     while (true)
     {
       auto byte = content.at(pc++);
-      value |= (size_t(byte) & 0x7F) << shift;
+      value |= (uint64_t(byte) & 0x7F) << shift;
 
       if ((byte & 0x80) == 0)
         break;

@@ -307,7 +307,6 @@ namespace vbci
         return type::ref(cown->type_id);
 
       case ValueType::Function:
-        // TODO: allow function types?
         return type::dyn();
 
       case ValueType::Error:
