@@ -146,6 +146,8 @@ namespace vbcc
         "asinh\\b" >> [](auto& m) { m.add(Asinh); },
         "acosh\\b" >> [](auto& m) { m.add(Acosh); },
         "atanh\\b" >> [](auto& m) { m.add(Atanh); },
+        "len\\b" >> [](auto& m) { m.add(Len); },
+        "arrayptr\\b" >> [](auto& m) { m.add(ArrayPtr); },
 
         // Constants.
         "e\\b" >> [](auto& m) { m.add(Const_E); },

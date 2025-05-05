@@ -56,9 +56,10 @@ namespace vbci
     param_ffi_types.push_back(ffit);
   }
 
-  void Symbol::ret(ValueType t, ffi_type* ffit)
+  void Symbol::ret(Id type_id, ValueType t, ffi_type* ffit)
   {
-    return_type = t;
+    return_type = type_id;
+    return_value_type = t;
     return_ffi_type = ffit;
   }
 
@@ -80,9 +81,14 @@ namespace vbci
     return param_types;
   }
 
-  ValueType Symbol::ret()
+  Id Symbol::ret()
   {
     return return_type;
+  }
+
+  ValueType Symbol::retval()
+  {
+    return return_value_type;
   }
 
   uint64_t Symbol::call(std::vector<void*>& args)

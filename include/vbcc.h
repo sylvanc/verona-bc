@@ -143,6 +143,8 @@ namespace vbcc
   inline const auto Asinh = TokenDef("asinh");
   inline const auto Acosh = TokenDef("acosh");
   inline const auto Atanh = TokenDef("atanh");
+  inline const auto Len = TokenDef("len");
+  inline const auto ArrayPtr = TokenDef("arrayptr");
 
   // Constants.
   inline const auto Const_E = TokenDef("e");
@@ -201,8 +203,6 @@ namespace vbcc
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
-  inline const auto wfFFIParamType = wfIntType | wfFloatType | Ptr;
-  inline const auto wfFFIRetType = wfFFIParamType | None;
   inline const auto wfTypeBase = wfPrimitiveType | Ptr | Dyn | ClassId | TypeId;
   inline const auto wfTypeArrayElem = wfTypeBase | Cown;
   inline const auto wfTypeField = wfTypeBase | Array | Cown;
@@ -217,7 +217,7 @@ namespace vbcc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Atan | Sinh | Cosh | Tanh | Asinh |
-    Acosh | Atanh;
+    Acosh | Atanh | Len | ArrayPtr;
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -251,8 +251,8 @@ namespace vbcc
     | (Union <<= wfType++)
     | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
-    | (Symbol <<= SymbolId * String * FFIParams * (Return >>= wfFFIRetType))
-    | (FFIParams <<= wfFFIParamType++)
+    | (Symbol <<= SymbolId * String * FFIParams * (Return >>= wfType))
+    | (FFIParams <<= wfType++)
     | (Type <<= TypeId * Union)
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
@@ -353,6 +353,8 @@ namespace vbcc
     | (Asinh <<= wfDst * wfSrc)
     | (Acosh <<= wfDst * wfSrc)
     | (Atanh <<= wfDst * wfSrc)
+    | (Len <<= wfDst * wfSrc)
+    | (ArrayPtr <<= wfDst * wfSrc)
     | (Const_E <<= wfDst)
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)

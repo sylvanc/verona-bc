@@ -1,0 +1,25 @@
+type @arg = u8[]
+
+lib
+  @getargv = "getargv"(): @arg[]
+  @puts = "puts"(ptr): i32
+
+func @main(): i32
+  $one = const usize 1
+  $argv = ffi @getargv()
+  $argc = len $argv
+  $argi = const usize 0
+  jump ^cond
+^cond
+  $cont = lt $argi $argc
+  cond $cont ^loop ^done
+^loop
+  $arg = ref copy $argv $argi
+  $arg = load $arg
+  $arg = arrayptr $arg
+  $_ = ffi @puts(move $arg)
+  $argi = add $argi $one
+  jump ^cond
+^done
+  $r = const i32 0
+  ret $r

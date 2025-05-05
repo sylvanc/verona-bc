@@ -65,6 +65,7 @@ namespace vbci
     Value(int64_t i64);
     Value(float f32);
     Value(double f64);
+    Value(void* ptr);
     Value(Object* obj);
     Value(Object* obj, bool ro);
     Value(Array* arr);
@@ -101,6 +102,7 @@ namespace vbci
 
     Location location();
     Region* region();
+    void immortalize();
 
     void drop();
     void field_drop();
@@ -385,6 +387,9 @@ namespace vbci
       return unop<nounop, nounop, nounop, atanh>();
     }
 
+    Value op_len();
+    Value op_arrayptr();
+
     static Value e()
     {
       return Value(std::numbers::e);
@@ -427,6 +432,24 @@ namespace vbci
       }
     };
 
+    static Value platform_tag(ValueType t, Value&& v)
+    {
+      switch (v.tag)
+      {
+        case ValueType::I32:
+        case ValueType::I64:
+        case ValueType::U32:
+        case ValueType::U64:
+          v.tag = t;
+          break;
+
+        default:
+          break;
+      }
+
+      return v;
+    }
+
     template<
       typename OpB,
       typename OpI = OpB,
@@ -464,16 +487,16 @@ namespace vbci
           return OpU{}(u64);
 
         case ValueType::ILong:
-          return OpI{}(ilong);
+          return platform_tag(tag, Value(OpI{}(ilong)));
 
         case ValueType::ULong:
-          return OpU{}(ulong);
+          return platform_tag(tag, Value(OpU{}(ulong)));
 
         case ValueType::ISize:
-          return OpI{}(isize);
+          return platform_tag(tag, Value(OpI{}(isize)));
 
         case ValueType::USize:
-          return OpU{}(usize);
+          return platform_tag(tag, Value(OpU{}(usize)));
 
         case ValueType::F32:
           return OpF{}(f32);
@@ -526,16 +549,16 @@ namespace vbci
           return OpU{}(u64, v.u64);
 
         case ValueType::ILong:
-          return OpI{}(ilong, v.ilong);
+          return platform_tag(tag, Value(OpI{}(ilong, v.ilong)));
 
         case ValueType::ULong:
-          return OpU{}(ulong, v.ulong);
+          return platform_tag(tag, Value(OpU{}(ulong, v.ulong)));
 
         case ValueType::ISize:
-          return OpI{}(isize, v.isize);
+          return platform_tag(tag, Value(OpI{}(isize, v.isize)));
 
         case ValueType::USize:
-          return OpU{}(usize, v.usize);
+          return platform_tag(tag, Value(OpU{}(usize, v.usize)));
 
         case ValueType::F32:
           return OpF{}(f32, v.f32);

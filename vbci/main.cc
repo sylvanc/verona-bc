@@ -10,6 +10,8 @@ int main(int argc, char** argv)
   using namespace vbci;
 
   CLI::App app;
+  app.allow_extras();
+
   std::filesystem::path file;
   app.add_option("path", file, "File to execute.")->required();
 
@@ -33,5 +35,5 @@ int main(int argc, char** argv)
     return app.exit(e);
   }
 
-  return Program::get().run(file);
+  return Program::get().run(file, app.remaining());
 }

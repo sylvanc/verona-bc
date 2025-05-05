@@ -75,6 +75,11 @@ namespace vbci
       return size;
     }
 
+    void* get_pointer()
+    {
+      return reinterpret_cast<void*>(this + 1);
+    }
+
     Value load(size_t idx)
     {
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
@@ -107,13 +112,20 @@ namespace vbci
       region()->free(this);
     }
 
+    void immortalize()
+    {
+      mark_immortal();
+
+      // TODO: can we be more efficient?
+      for (size_t i = 0; i < size; i++)
+        load(i).immortalize();
+    }
+
     void finalize()
     {
+      // TODO: can we be more efficient?
       for (size_t i = 0; i < size; i++)
-      {
-        // TODO: can we be more efficient?
         load(i).field_drop();
-      }
     }
 
     std::string to_string()

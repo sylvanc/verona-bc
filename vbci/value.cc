@@ -17,6 +17,7 @@ namespace vbci
   Value::Value(int64_t i64) : i64(i64), tag(ValueType::I64) {}
   Value::Value(float f32) : f32(f32), tag(ValueType::F32) {}
   Value::Value(double f64) : f64(f64), tag(ValueType::F64) {}
+  Value::Value(void* ptr) : ptr(ptr), tag(ValueType::Ptr) {}
   Value::Value(Object* obj) : obj(obj), tag(ValueType::Object), readonly(0) {}
 
   Value::Value(Object* obj, bool ro)
@@ -175,10 +176,14 @@ namespace vbci
 
       case ValueType::Object:
         value.obj = *reinterpret_cast<Object**>(v);
+        if (value.obj == nullptr)
+          value.tag = ValueType::Invalid;
         break;
 
       case ValueType::Array:
         value.arr = *reinterpret_cast<Array**>(v);
+        if (value.arr == nullptr)
+          value.tag = ValueType::Invalid;
         break;
 
       default:
@@ -421,6 +426,22 @@ namespace vbci
     }
   }
 
+  Value Value::op_len()
+  {
+    if (tag == ValueType::Array)
+      return Value(ValueType::USize, arr->get_size());
+
+    throw Value(Error::BadOperand);
+  }
+
+  Value Value::op_arrayptr()
+  {
+    if (tag == ValueType::Array)
+      return arr->get_pointer();
+
+    throw Value(Error::BadOperand);
+  }
+
   void Value::inc(bool reg)
   {
     switch (tag)
@@ -508,6 +529,25 @@ namespace vbci
 
       default:
         throw Value(Error::BadAllocTarget);
+    }
+  }
+
+  void Value::immortalize()
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::Ref:
+        obj->immortalize();
+        break;
+
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+        arr->immortalize();
+        break;
+
+      default:
+        break;
     }
   }
 

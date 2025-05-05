@@ -1097,95 +1097,103 @@ namespace vbcc
           }
           else if (stmt == Neg)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Neg, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Neg, src(stmt)};
           }
           else if (stmt == Not)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Not, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Not, src(stmt)};
           }
           else if (stmt == Abs)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Abs, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Abs, src(stmt)};
           }
           else if (stmt == Ceil)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Ceil, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Ceil, src(stmt)};
           }
           else if (stmt == Floor)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Floor, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Floor, src(stmt)};
           }
           else if (stmt == Exp)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Exp, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Exp, src(stmt)};
           }
           else if (stmt == Log)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Log, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Log, src(stmt)};
           }
           else if (stmt == Sqrt)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Sqrt, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Sqrt, src(stmt)};
           }
           else if (stmt == Cbrt)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Cbrt, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Cbrt, src(stmt)};
           }
           else if (stmt == IsInf)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::IsInf, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::IsInf, src(stmt)};
           }
           else if (stmt == IsNaN)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::IsNaN, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::IsNaN, src(stmt)};
           }
           else if (stmt == Sin)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Sin, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Sin, src(stmt)};
           }
           else if (stmt == Cos)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Cos, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Cos, src(stmt)};
           }
           else if (stmt == Tan)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Tan, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Tan, src(stmt)};
           }
           else if (stmt == Asin)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Asin, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Asin, src(stmt)};
           }
           else if (stmt == Acos)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Acos, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Acos, src(stmt)};
           }
           else if (stmt == Atan)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Atan, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Atan, src(stmt)};
           }
           else if (stmt == Sinh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Sinh, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Sinh, src(stmt)};
           }
           else if (stmt == Cosh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Cosh, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Cosh, src(stmt)};
           }
           else if (stmt == Tanh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Tanh, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Tanh, src(stmt)};
           }
           else if (stmt == Asinh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Asinh, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Asinh, src(stmt)};
           }
           else if (stmt == Acosh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Acosh, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Acosh, src(stmt)};
           }
           else if (stmt == Atanh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Atanh, lhs(stmt)};
+            code << e{Op::MathOp, dst(stmt), +MathOp::Atanh, src(stmt)};
+          }
+          else if (stmt == Len)
+          {
+            code << e{Op::MathOp, dst(stmt), +MathOp::Len, src(stmt)};
+          }
+          else if (stmt == ArrayPtr)
+          {
+            code << e{Op::MathOp, dst(stmt), +MathOp::ArrayPtr, src(stmt)};
           }
           else if (stmt == Const_E)
           {

@@ -105,6 +105,15 @@ namespace vbci
       region()->free(this);
     }
 
+    void immortalize()
+    {
+      mark_immortal();
+
+      // TODO: can we be more efficient?
+      for (size_t i = 0; i < cls()->fields.size(); i++)
+        load(i).immortalize();
+    }
+
     void finalize()
     {
       auto& program = Program::get();
@@ -113,11 +122,9 @@ namespace vbci
       if (cls.finalizer())
         Thread::run_finalizer(this);
 
+      // TODO: can we be more efficient?
       for (size_t i = 0; i < cls.fields.size(); i++)
-      {
-        // TODO: can we be more efficient?
         load(i).field_drop();
-      }
     }
 
     std::string to_string()

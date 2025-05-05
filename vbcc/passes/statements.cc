@@ -6,8 +6,6 @@ namespace vbcc
     T(I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize);
   const auto FloatType = T(F32, F64);
   const auto PrimitiveType = T(None, Bool) / IntType / FloatType;
-  const auto FFIParamType = T(Bool) / IntType / FloatType / T(Ptr);
-  const auto FFIRetType = T(None) / FFIParamType;
   const auto TypeBase = PrimitiveType / T(Ptr, Dyn, GlobalId);
   const auto TypeArrayElem = ~T(Cown) * TypeBase;
   const auto TypeField = ~T(Cown) * TypeBase * ~(T(LBracket) * T(RBracket));
@@ -22,7 +20,7 @@ namespace vbcc
   const auto ArrayDynArg = T(LBracket) * T(LocalId)[Arg] * T(RBracket);
   const auto ArrayConstArg = T(LBracket) * IntLiteral[Arg] * T(RBracket);
   const auto SymbolParams =
-    T(LParen) * ~(FFIParamType * (T(Comma) * FFIParamType)++) * T(RParen);
+    T(LParen) * (~(TypeFull * (T(Comma) * TypeFull)++))[Params] * T(RParen);
   const auto ParamDef =
     T(LParen) * ~(T(Param) * (T(Comma) * T(Param))++) * T(RParen);
   const auto CallArgs =
@@ -115,91 +113,88 @@ namespace vbcc
     return {};
   }
 
-  Node symbolparams(NodeRange params)
+  Node make_one_type(NodeRange r)
   {
-    Node r = FFIParams;
+    auto it = r.begin();
+    Node prefix;
 
-    for (auto& param : params)
+    // Optional `ref` / `cown`
+    if ((*it)->in({Ref, Cown}))
     {
-      if (!param->in({LParen, Comma, RParen}))
-        r << param;
+      prefix = *it;
+      ++it;
     }
 
-    return r;
+    // Base token
+    Node base = *it;
+    ++it;
+
+    // Treat a bare GlobalId as a class ID here.
+    if (base == GlobalId)
+      base = ClassId ^ base;
+
+    // Optional `[]`
+    bool array = false;
+
+    if ((it != r.end()) && (*it == LBracket))
+    {
+      array = true;
+      it += 2;
+    }
+
+    Node ty = base;
+
+    if (array)
+      ty = Array << ty;
+
+    if (prefix)
+      ty = prefix << ty;
+
+    return ty;
   }
 
-  Node maketype(NodeRange t)
+  Node maketype(NodeRange r)
   {
-    // Build one type from a slice that contains no `|`.
-    auto single = [](NodeRange r) -> Node {
-      if (r.empty())
-        return Error;
-
-      auto it = r.begin();
-      Node prefix;
-
-      // Optional `ref` / `cown`
-      if ((*it)->in({Ref, Cown}))
-      {
-        prefix = *it;
-        ++it;
-      }
-
-      if (it == r.end())
-        return Error;
-
-      // Base token
-      Node base = *it;
-      ++it;
-
-      // Treat a bare GlobalId as a class ID here.
-      if (base == GlobalId)
-        base = ClassId ^ base;
-
-      // Optional `[]`
-      bool array = false;
-      if ((it != r.end()) && (*it == LBracket))
-      {
-        array = true;
-        ++it; // skip '['
-        if ((it == r.end()) || (*it != RBracket))
-          return Error;
-        ++it; // skip ']'
-      }
-
-      // Nothing else should remain.
-      if (it != r.end())
-        return Error;
-
-      Node ty = base;
-      if (array)
-        ty = Array << ty;
-      if (prefix)
-        ty = prefix << ty;
-      return ty;
-    };
-
     // Split on `|` to build unions.
-    std::vector<Node> parts;
-    auto start = t.begin();
+    Node u = Union;
+    auto start = r.begin();
 
-    for (auto it = t.begin(); it != t.end(); ++it)
+    for (auto it = r.begin(); it != r.end(); ++it)
     {
       if (*it == Union)
       {
-        parts.push_back(single({start, it}));
+        u << make_one_type({start, it});
         start = it + 1;
       }
     }
-    parts.push_back(single({start, t.end()}));
 
-    if (parts.size() == 1)
-      return parts.front();
+    u << make_one_type({start, r.end()});
 
-    Node u = Union;
-    for (auto& p : parts)
-      u << p;
+    if (u->size() == 1)
+      return u->front();
+
     return u;
+  }
+
+  Node symbolparams(NodeRange r)
+  {
+    // Split on `,`.
+    Node p = FFIParams;
+    auto start = r.begin();
+
+    for (auto it = r.begin(); it != r.end(); ++it)
+    {
+      if (*it == Comma)
+      {
+        p << make_one_type({start, it});
+        start = it + 1;
+      }
+    }
+
+    if (start != r.end())
+      p << make_one_type({start, r.end()});
+
+    return p;
   }
 
   Node paramdef(NodeRange params)
@@ -278,11 +273,11 @@ namespace vbcc
           },
 
         // FFI symbols.
-        T(GlobalId)[GlobalId] * T(Equals) * T(String)[String] *
-            SymbolParams[Params] * T(Colon) * FFIRetType[Type] >>
+        T(GlobalId)[GlobalId] * T(Equals) * T(String)[String] * SymbolParams *
+            T(Colon) * TypeFull[Type] >>
           [](Match& _) {
             return Symbol << (SymbolId ^ _(GlobalId)) << _(String)
-                          << symbolparams(_[Params]) << _(Type);
+                          << symbolparams(_[Params]) << maketype(_[Type]);
           },
 
         // Type def.

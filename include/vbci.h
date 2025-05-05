@@ -264,6 +264,9 @@ namespace vbci
     Acosh,
     Atanh,
 
+    Len,
+    ArrayPtr,
+
     // Constants don't use the src argument.
     Const_E,
     Const_Pi,
@@ -404,6 +407,16 @@ namespace vbci
     inline constexpr bool is_mod(Id type_id)
     {
       return (type_id & Mask);
+    }
+
+    inline constexpr Id mod(Id type_id)
+    {
+      return type_id & Mask;
+    }
+
+    inline constexpr Id no_mod(Id type_id)
+    {
+      return type_id & ~Mask;
     }
 
     inline constexpr bool is_dyn(Id type_id)

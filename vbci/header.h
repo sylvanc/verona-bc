@@ -150,6 +150,11 @@ namespace vbci
       return true;
     }
 
+    void mark_immortal()
+    {
+      loc = Immortal;
+    }
+
   public:
     Location location()
     {

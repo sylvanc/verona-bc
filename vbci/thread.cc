@@ -461,8 +461,17 @@ namespace vbci
               }
 
               frame->drop_args(args);
-              frame->local(dst) =
-                Value::from_ffi(symbol.ret(), symbol.call(ffi_arg_addrs));
+              auto ret =
+                Value::from_ffi(symbol.retval(), symbol.call(ffi_arg_addrs));
+
+              if (
+                !ret.is_error() &&
+                !program->typecheck(ret.type_id(), symbol.ret()))
+              {
+                throw Value(Error::BadType);
+              }
+
+              frame->local(dst) = ret;
               return;
             }
 
@@ -644,6 +653,10 @@ namespace vbci
               do_unop(acosh);
             case MathOp::Atanh:
               do_unop(atanh);
+            case MathOp::Len:
+              do_unop(len);
+            case MathOp::ArrayPtr:
+              do_unop(arrayptr);
 
 #define do_const(op) \
   { \

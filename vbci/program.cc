@@ -1,10 +1,16 @@
 #include "program.h"
 
+#include "array.h"
 #include "thread.h"
 
 #include <dlfcn.h>
 #include <format>
 #include <verona.h>
+
+extern "C" vbci::Array* getargv()
+{
+  return vbci::Program::get().get_argv();
+}
 
 namespace vbci
 {
@@ -135,12 +141,19 @@ namespace vbci
     return std::bit_cast<double>((static_cast<uint64_t>(hi) << 32) | lo);
   }
 
-  int Program::run(std::filesystem::path& path)
+  Array* Program::get_argv()
+  {
+    return argv;
+  }
+
+  int Program::run(std::filesystem::path& path, std::vector<std::string> args)
   {
     file = path;
 
     if (!load())
       return -1;
+
+    setup_argv(args);
 
     using namespace verona::rt;
     auto& sched = Scheduler::get();
@@ -153,10 +166,8 @@ namespace vbci
 
   bool Program::typecheck(Id t1, Id t2)
   {
-    // Checks if t1 <: t2. t1 is a concrete type, so won't be dyn or a typedef.
-    // However, t1 can be an array, ref, or cown of a typedef. Dyn is used for
-    // invalid values and errors.
-    assert(!type::is_def(classes.size(), t1));
+    // Checks if t1 <: t2.
+    // Dyn is also used for invalid values and errors.
     if (type::is_dyn(t1))
       return false;
 
@@ -164,13 +175,37 @@ namespace vbci
     if ((t1 == t2) || type::is_dyn(t2))
       return true;
 
-    // If t2 is an array, ref, or cown, it doesn't matter what type it's
-    // modifying. If t1 isn't identical, it's not a subtype. Primitive types and
-    // classes have no subtypes. So t2 must be an unmodified typedef.
+    // If t2 is an array, ref, or cown, t1 must be invariant.
+    auto t2_mod = type::mod(t2);
+
+    if (t2_mod)
+    {
+      if (type::mod(t1) != t2_mod)
+        return false;
+
+      t1 = type::no_mod(t1);
+      t2 = type::no_mod(t2);
+      return typecheck(t1, t2) && typecheck(t2, t1);
+    }
+
+    // Primitive types and classes have no subtypes.
     if (!type::is_def(classes.size(), t2))
       return false;
 
-    // If t2 is a subtype of any type in the typedef, that's sufficient.
+    // If t1 is a def, all of its types must be subtypes of t2.
+    if (type::is_def(classes.size(), t1))
+    {
+      auto def = typedefs.at(type::def_idx(classes.size(), t1));
+      for (auto t : def.type_ids)
+      {
+        if (!typecheck(t, t2))
+          return false;
+      }
+
+      return true;
+    }
+
+    // If t1 is a subtype of any type in t2, that's sufficient.
     auto def = typedefs.at(type::def_idx(classes.size(), t2));
     for (auto t : def.type_ids)
     {
@@ -382,6 +417,50 @@ namespace vbci
       FFI_OK;
   }
 
+  void Program::setup_argv(std::vector<std::string>& args)
+  {
+    auto type_u8 = type::val(ValueType::U8);
+    auto arg_rep = layout_type_id(type_u8);
+
+    auto type_arr_u8 = type::array(type_u8);
+    auto argv_rep = layout_type_id(type_arr_u8);
+    auto type_argv = type::def(classes.size(), typedefs.size());
+    typedefs.resize(typedefs.size() + 1);
+    typedefs.back().type_ids.push_back(type_arr_u8);
+
+    argv = Array::create(
+      std::malloc(Array::size_of(args.size(), argv_rep.second->size)),
+      StackAlloc,
+      type_argv,
+      argv_rep.first,
+      args.size(),
+      argv_rep.second->size);
+
+    for (size_t i = 0; i < args.size(); i++)
+    {
+      auto str = args.at(i);
+      auto str_size = str.size();
+      auto arg = Array::create(
+        std::malloc(Array::size_of(str_size, arg_rep.second->size)),
+        StackAlloc,
+        type_u8,
+        arg_rep.first,
+        str_size,
+        arg_rep.second->size);
+
+      for (size_t j = 0; j < str_size; j++)
+      {
+        auto c = Value(static_cast<uint8_t>(str.at(j)));
+        arg->store(ArgType::Move, j, c);
+      }
+
+      auto arg_value = Value(arg);
+      argv->store(ArgType::Move, i, arg_value);
+    }
+
+    argv->immortalize();
+  }
+
   bool Program::load()
   {
     if (!setup_value_type())
@@ -389,18 +468,32 @@ namespace vbci
 
     content.clear();
     code = nullptr;
-    di = PC(-1);
 
+    typedefs.clear();
     functions.clear();
     primitives.clear();
     classes.clear();
     globals.clear();
+
     libs.clear();
+    symbols.clear();
+
+    // TODO: free the argv array.
+    argv = nullptr;
+
+    di = PC(-1);
     di_compilation_path = 0;
     di_strings.clear();
     source_files.clear();
 
     std::ifstream f(file, std::ios::binary | std::ios::in | std::ios::ate);
+
+    if (!f)
+    {
+      logging::Error() << file << ": couldn't load" << std::endl;
+      return {};
+    }
+
     size_t size = f.tellg();
     f.seekg(0, std::ios::beg);
     content.resize(size);
@@ -408,7 +501,7 @@ namespace vbci
 
     if (!f)
     {
-      logging::Error() << file << ": couldn't load" << std::endl;
+      logging::Error() << file << ": couldn't read" << std::endl;
       return {};
     }
 
@@ -463,7 +556,7 @@ namespace vbci
 
       auto type_id = uleb(pc);
       auto rep = layout_type_id(type_id);
-      symbol.ret(rep.first, rep.second);
+      symbol.ret(type_id, rep.first, rep.second);
 
       if (!symbol.prepare())
       {

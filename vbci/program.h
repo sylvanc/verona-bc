@@ -30,7 +30,7 @@ namespace vbci
 
     std::filesystem::path file;
     std::vector<uint8_t> content;
-    Code* code;
+    Code* code = nullptr;
 
     std::vector<Typedef> typedefs;
     std::vector<Function> functions;
@@ -41,8 +41,10 @@ namespace vbci
     std::vector<Dynlib> libs;
     std::vector<Symbol> symbols;
 
-    PC di;
-    size_t di_compilation_path;
+    Array* argv = nullptr;
+
+    PC di = PC(-1);
+    size_t di_compilation_path = 0;
     std::vector<std::string> di_strings;
     std::unordered_map<std::string, SourceFile> source_files;
 
@@ -66,7 +68,9 @@ namespace vbci
     float load_f32(PC& pc);
     double load_f64(PC& pc);
 
-    int run(std::filesystem::path& path);
+    Array* get_argv();
+
+    int run(std::filesystem::path& path, std::vector<std::string> args);
 
     bool typecheck(Id t1, Id t2);
     std::pair<ValueType, ffi_type*> layout_type_id(Id type_id);
@@ -78,6 +82,7 @@ namespace vbci
 
   private:
     bool setup_value_type();
+    void setup_argv(std::vector<std::string>& args);
     bool load();
     bool parse_function(Function& f, PC& pc);
     bool parse_fields(Class& cls, PC& pc);

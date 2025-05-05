@@ -12,6 +12,9 @@ namespace vbcc
 
   struct LabelState
   {
+    std::vector<uint8_t> pred;
+    std::vector<uint8_t> succ;
+
     std::bitset<MaxRegisters> in;
     std::bitset<MaxRegisters> dead;
     std::bitset<MaxRegisters> out;
