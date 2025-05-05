@@ -19,8 +19,9 @@ namespace vbcc
   const auto RegionType = T(RegionRC, RegionGC, RegionArena);
   const auto ArrayDynArg = T(LBracket) * T(LocalId)[Arg] * T(RBracket);
   const auto ArrayConstArg = T(LBracket) * IntLiteral[Arg] * T(RBracket);
-  const auto SymbolParams =
-    T(LParen) * (~(TypeFull * (T(Comma) * TypeFull)++))[Params] * T(RParen);
+  const auto SymbolParams = T(LParen) *
+    (~(TypeFull * (T(Comma) * TypeFull)++))[Params] *
+    ~(T(Comma) * T(Vararg)[Vararg]) * T(RParen);
   const auto ParamDef =
     T(LParen) * ~(T(Param) * (T(Comma) * T(Param))++) * T(RParen);
   const auto CallArgs =
@@ -277,7 +278,7 @@ namespace vbcc
             SymbolParams * T(Colon) * TypeFull[Type] >>
           [](Match& _) {
             return Symbol << (SymbolId ^ _(GlobalId)) << _(Lhs)
-                          << (_(Rhs) || (String ^ ""))
+                          << (_(Rhs) || (String ^ "")) << (_(Vararg) || None)
                           << symbolparams(_[Params]) << maketype(_[Type]);
           },
 

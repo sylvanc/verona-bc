@@ -622,6 +622,7 @@ namespace vbcc
       hdr << uleb(*get_library_id(symbol->parent(Lib)))
           << uleb(ST::exec().string(symbol / Lhs))
           << uleb(ST::exec().string(symbol / Rhs))
+          << uleb((symbol / Vararg) == Vararg)
           << uleb((symbol / FFIParams)->size());
 
       for (auto& param : *(symbol / FFIParams))

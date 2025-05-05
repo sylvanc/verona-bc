@@ -1,5 +1,7 @@
 #include "dynlib.h"
 
+#include "value.h"
+
 namespace vbci
 {
   ffi_type* ffi_map(Id type_id)
@@ -48,7 +50,7 @@ namespace vbci
     }
   }
 
-  Symbol::Symbol(Func func) : func(func), return_ffi_type(nullptr) {}
+  Symbol::Symbol(Func func, bool vararg) : func(func), vararg(vararg) {}
 
   void Symbol::param(Id type_id, ffi_type* ffit)
   {
@@ -68,12 +70,20 @@ namespace vbci
     if (!func)
       return false;
 
+    if (vararg)
+      return true;
+
     return ffi_prep_cif(
              &cif,
              FFI_DEFAULT_ABI,
              static_cast<unsigned>(param_ffi_types.size()),
              return_ffi_type,
              param_ffi_types.data()) == FFI_OK;
+  }
+
+  bool Symbol::varargs()
+  {
+    return vararg;
   }
 
   std::vector<Id>& Symbol::params()
@@ -91,10 +101,38 @@ namespace vbci
     return return_value_type;
   }
 
+  void Symbol::varparam(ffi_type* ffit)
+  {
+    if (!vararg)
+      throw Value(Error::BadArgs);
+
+    param_ffi_types.push_back(ffit);
+  }
+
   uint64_t Symbol::call(std::vector<void*>& args)
   {
     if (!func)
-      return 0;
+      throw Value(Error::UnknownFunction);
+
+    if (vararg)
+    {
+      if (args.size() != param_ffi_types.size())
+        throw Value(Error::BadArgs);
+
+      if (
+        ffi_prep_cif_var(
+          &cif,
+          FFI_DEFAULT_ABI,
+          static_cast<unsigned>(param_ffi_types.size()),
+          static_cast<unsigned>(args.size()),
+          return_ffi_type,
+          param_ffi_types.data()) != FFI_OK)
+      {
+        throw Value(Error::BadArgs);
+      }
+
+      param_ffi_types.resize(param_types.size());
+    }
 
     ffi_arg ret = 0;
     ffi_call(&cif, func, &ret, args.data());

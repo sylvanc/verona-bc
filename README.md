@@ -49,7 +49,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * FFI with `libffi`.
-  * Variadic functions.
   * `struct` types.
     * How does a `struct` return work? Can't use `ffi_arg`?
     * Can we pass objects as `struct` to FFI?

@@ -4,8 +4,8 @@ namespace vbcc
 {
   const auto wfParserTokens = Lib | Primitive | Class | Func | Type | Source |
     GlobalId | LocalId | LabelId | Equals | LParen | RParen | LBracket |
-    RBracket | Comma | Colon | Union | wfRegionType | wfTypeBase | Ref | Cown |
-    wfStatement | wfTerminator | wfLiteral | String;
+    RBracket | Comma | Colon | Union | Vararg | wfRegionType | wfTypeBase |
+    Ref | Cown | wfStatement | wfTerminator | wfLiteral | String;
 
   // clang-format off
   const auto wfParser =
@@ -164,8 +164,10 @@ namespace vbcc
         "," >> [](auto& m) { m.add(Comma); },
         ":" >> [](auto& m) { m.add(Colon); },
         "\\|" >> [](auto& m) { m.add(Union); },
+        "#" >> [](auto& m) { m.add(Source); },
+        "\\.\\.\\." >> [](auto& m) { m.add(Vararg); },
 
-        // // Identifiers.
+        // Identifiers.
         "\\@[_[:alnum:]]*" >> [](auto& m) { m.add(GlobalId); },
         "\\$[_[:alnum:]]*" >> [](auto& m) { m.add(LocalId); },
         "\\^[_[:alnum:]]*" >> [](auto& m) { m.add(LabelId); },
@@ -199,9 +201,6 @@ namespace vbcc
 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},
-
-        // Source file.
-        "#" >> [](auto& m) { m.add(Source); },
       });
 
     return p;

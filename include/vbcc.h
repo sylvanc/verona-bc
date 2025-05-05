@@ -168,6 +168,7 @@ namespace vbcc
   inline const auto Offset = TokenDef("offset");
   inline const auto Symbol = TokenDef("symbol");
   inline const auto Symbols = TokenDef("symbols");
+  inline const auto Vararg = TokenDef("vararg");
   inline const auto Union = TokenDef("union");
   inline const auto Field = TokenDef("field");
   inline const auto Fields = TokenDef("fields");
@@ -252,8 +253,8 @@ namespace vbcc
     | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
     | (Symbol <<=
-        SymbolId * (Lhs >>= String) * (Rhs >>= String) * FFIParams *
-        (Return >>= wfType))
+        SymbolId * (Lhs >>= String) * (Rhs >>= String) *
+        (Vararg >>= Vararg | None) * FFIParams * (Return >>= wfType))
     | (FFIParams <<= wfType++)
     | (Type <<= TypeId * Union)
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)

@@ -447,20 +447,26 @@ namespace vbci
 
             case CallType::FFI:
             {
+              auto num_args = args;
               auto& symbol = program->symbol(program->load_u32(frame->pc));
-              auto& params = symbol.params();
-              auto param_size = params.size();
-              check_args(params);
+              check_args(symbol.params(), symbol.varargs());
 
-              if (ffi_arg_addrs.size() < param_size)
+              if (ffi_arg_addrs.size() < num_args)
+                ffi_arg_addrs.resize(num_args);
+
+              for (size_t i = 0; i < num_args; i++)
               {
-                ffi_arg_addrs.resize(param_size);
+                auto& arg = frame->arg(i);
+                ffi_arg_addrs.at(i) = arg.address_of();
 
-                for (size_t i = 0; i < param_size; i++)
-                  ffi_arg_addrs.at(i) = frame->arg(i).address_of();
+                if (i >= symbol.params().size())
+                {
+                  symbol.varparam(
+                    program->layout_type_id(arg.type_id()).second);
+                }
               }
 
-              frame->drop_args(args);
+              frame->drop_args(num_args);
               auto ret =
                 Value::from_ffi(symbol.retval(), symbol.call(ffi_arg_addrs));
 
@@ -876,18 +882,21 @@ namespace vbci
     frame->pc = frame->func->labels.at(label);
   }
 
-  void Thread::check_args(std::vector<Id>& types)
+  void Thread::check_args(std::vector<Id>& types, bool vararg)
   {
-    if (args != types.size())
+    if ((args < types.size()) || (!vararg && (args > types.size())))
     {
       frame->drop_args(args);
       throw Value(Error::BadArgs);
     }
 
-    for (size_t i = 0; i < args; i++)
+    for (size_t i = 0; i < types.size(); i++)
     {
       if (!program->typecheck(frame->arg(i).type_id(), types.at(i)))
+      {
+        frame->drop_args(args);
         throw Value(Error::BadType);
+      }
     }
 
     args = 0;
@@ -904,7 +913,10 @@ namespace vbci
     for (size_t i = 0; i < args; i++)
     {
       if (!program->typecheck(frame->arg(i).type_id(), fields.at(i).type_id))
+      {
+        frame->drop_args(args);
         throw Value(Error::BadType);
+      }
     }
 
     args = 0;

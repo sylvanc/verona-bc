@@ -47,7 +47,7 @@ namespace vbci
     void tailcall(Function* func);
     void teardown();
     void branch(Local label);
-    void check_args(std::vector<Id>& types);
+    void check_args(std::vector<Id>& types, bool vararg = false);
     void check_args(std::vector<Field>& fields);
   };
 }

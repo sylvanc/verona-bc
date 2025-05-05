@@ -534,6 +534,7 @@ namespace vbci
       auto& lib = libs.at(uleb(pc));
       auto& name = ffi_strings.at(uleb(pc));
       auto& version = ffi_strings.at(uleb(pc));
+      bool vararg = uleb(pc);
       auto func = lib.symbol(name, version);
 
       if (!func)
@@ -543,7 +544,7 @@ namespace vbci
         return false;
       }
 
-      symbols.push_back(Symbol(func));
+      symbols.push_back(Symbol(func, vararg));
       auto& symbol = symbols.back();
 
       auto num_params = uleb(pc);
