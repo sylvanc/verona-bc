@@ -6,92 +6,93 @@
 
 namespace vbci
 {
-  // Each instruction is 32 bits, with the first byte being the opcode, followed
-  // by 3 8-bit register indices.
-  using Code = uint32_t;
   using Id = uint32_t;
 
-  inline const auto MagicNumber = Code(0xDEC0ADDE);
-  inline const auto CurrentVersion = Code(0);
-  inline const auto MaxRegisters = size_t(256);
-  inline const auto MainFuncId = Id(0);
-  inline const auto FinalMethodId = Id(0);
+  inline const auto MagicNumber = size_t(0xDEC0ADDE);
+  inline const auto CurrentVersion = size_t(0);
+  inline const auto MainFuncId = size_t(0);
+  inline const auto FinalMethodId = size_t(0);
 
-  enum class Op : uint8_t
+  // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
+  // known to be signed integers (zigzag SLEB128) or floats (bitcast zigzag
+  // ULEB128).
+  enum class Op
   {
     // Load a global value.
     // Arg0 = dst.
-    // Stream: 32 bit global ID.
+    // Arg1 = global ID.
     Global,
 
     // Load a primitive value.
     // Arg0 = dst.
     // Arg1 = value type.
-    // Arg2 = primitive value if 8 bits or less.
-    // Stream: 16-64 bit primitive value if required.
+    // Arg2 = primitive value.
     Const,
 
     // Converts src to the specified type.
     // Arg0 = dst.
-    // Arg1 = destination ValueType.
+    // Arg1 = target value type.
     // Arg2 = src.
     Convert,
 
     // Allocates a new object in the current frame. Fields are initialized from
     // arguments.
     // Arg0 = dst.
-    // Stream: 32 bit class ID.
+    // Arg1 = class ID.
     Stack,
 
     // Allocates a new object in the same region. Fields are initialized from
     // arguments.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
-    // Stream: 32 bit class ID.
+    // Arg2 = class ID.
     Heap,
 
     // Allocates a new object in a new region. Fields are initialized from
     // arguments.
     // Arg0 = dst.
     // Arg1 = region type.
-    // Stream: 32 bit class ID.
+    // Arg2 = class ID.
     Region,
 
     // Allocates a new array in the current frame. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = size.
-    // Stream: 32 bit content type ID.
+    // Arg2 = content type ID.
     StackArray,
 
     // Allocates a new array in the current frame. The array is uninitialized.
     // Arg0 = dst.
-    // Stream: 32 bit content type ID, 64 bit static size.
+    // Arg1 = content type ID.
+    // Arg2 = constant size.
     StackArrayConst,
 
     // Allocates a new array in the same region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
     // Arg2 = size.
-    // Stream: 32 bit content type ID.
+    // Arg3 = content type ID.
     HeapArray,
 
     // Allocates a new array in the same region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
-    // Stream: 32 bit content type ID, 64 bit static size.
+    // Arg2 = content type ID.
+    // Arg3 = constant size.
     HeapArrayConst,
 
     // Allocates a new array in a new region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = region type.
     // Arg2 = size.
-    // Stream: 32 bit content type ID.
+    // Arg3 = content type ID.
     RegionArray,
 
     // Allocates a new array in a new region. The array is uninitialized.
     // Arg0 = dst.
     // Arg1 = region type.
-    // Stream: 32 bit content type ID, 64 bit static size.
+    // Arg2 = content type ID.
+    // Arg3 = constant size.
     RegionArrayConst,
 
     // Copies the value.
@@ -108,12 +109,17 @@ namespace vbci
     // Arg0 = dst.
     Drop,
 
-    // Creates a reference to a field in a target object.
+    // Creates a reference to a field in a target object, moving the source.
     // Arg0 = dst.
-    // Arg1 = move or copy the source.
-    // Arg2 = src.
-    // Stream: 32 bit field ID.
-    Ref,
+    // Arg1 = src.
+    // Arg2 = field ID.
+    RefMove,
+
+    // Creates a reference to a field in a target object, copying the source.
+    // Arg0 = dst.
+    // Arg1 = src.
+    // Arg2 = field ID.
+    RefCopy,
 
     // Creates a reference to an array slot, moving the source.
     // Arg0 = dst.
@@ -127,12 +133,19 @@ namespace vbci
     // Arg2 = index.
     ArrayRefCopy,
 
-    // Creates a reference to an array slot from a constant index.
+    // Creates a reference to an array slot from a constant index, moving the
+    // source.
     // Arg0 = dst.
-    // Arg1 = move or copy.
-    // Arg2 = src.
-    // Stream: 64 bit index.
-    ArrayRefConst,
+    // Arg1 = src.
+    // Arg2 = constant index.
+    ArrayRefMoveConst,
+
+    // Creates a reference to an array slot from a constant index, copying the
+    // source.
+    // Arg0 = dst.
+    // Arg1 = src.
+    // Arg2 = constant index.
+    ArrayRefCopyConst,
 
     // Loads a value from a reference.
     // Arg0 = dst.
@@ -151,44 +164,69 @@ namespace vbci
     // Arg2 = src.
     StoreCopy,
 
-    // Creates a function pointer. For a static call, src is ignored.
-    // For a dynamic call, the method is looked up in the src object.
+    // Creates a function pointer from a function ID.
     // Arg0 = dst.
-    // Arg1 = call type: function static or function dynamic.
-    // Arg2 = src, ignored if static.
-    // Stream: 32 bit function ID (static) or method ID (dynamic).
-    Lookup,
+    // Arg1 = function ID.
+    LookupStatic,
+
+    // Creates a function pointer from a source and a method.
+    // Arg0 = dst.
+    // Arg1 = src.
+    // Arg2 = method ID.
+    LookupDynamic,
 
     // Set a value as an argument index in the next frame. Use this to set up
     // the arguments for an object allocation or a function call. Arguments are
     // set up in order, and cleared on a call, tailcall, ore return.
-    // Arg0 = move or copy.
-    // Arg1 = src.
-    Arg,
+    // Arg0 = src.
+    ArgMove,
+    ArgCopy,
 
     // Arg0 = dst.
-    // Arg1 = call type: function static, function dynamic, block static, block
-    // dynamic, try static, try dynamic, FFI.
-    // Arg2 = function value, ignored if static.
-    // Stream: 32 bit function ID, for static calls.
-    Call,
+    // Arg1 = function ID.
+    CallStatic,
+
+    // Arg0 = dst.
+    // Arg1 = function pointer.
+    CallDynamic,
+
+    // Arg0 = dst.
+    // Arg1 = function ID.
+    SubcallStatic,
+
+    // Arg0 = dst.
+    // Arg1 = function pointer.
+    SubcallDynamic,
+
+    // Arg0 = dst.
+    // Arg1 = function ID.
+    TryStatic,
+
+    // Arg0 = dst.
+    // Arg1 = function pointer.
+    TryDynamic,
+
+    // Arg0 = dst.
+    // Arg1 = symbol ID.
+    FFI,
 
     // Arg0 = dst.
     // Arg1 = src.
-    // Stream: 32 bit type ID.
+    // Arg2 = type ID.
     Typetest,
 
     // Replace the current frame with a new one.
-    // Arg0 = call type: function static or function dynamic.
-    // Arg1 = function value, ignored if static.
-    // Stream: 32 bit function ID, for static tail calls.
-    Tailcall,
+    // Arg0 = function ID.
+    TailcallStatic,
 
-    // Return from the current function, as a local return (Return), a non-local
-    // return (Raise) or an exception (Throw).
+    // Arg0 = function pointer.
+    TailcallDynamic,
+
+    // Return, raise, or throw from the current function.
     // Arg0 = return value.
-    // Arg1 = non-local status: Return, Raise, or Throw.
     Return,
+    Raise,
+    Throw,
 
     // Jump to a label depending on a boolean condition.
     // Arg0 = condition.
@@ -226,18 +264,9 @@ namespace vbci
     LogBase,
     Atan2,
 
-    // Math operator.
-    // Arg0 = dst.
-    // Arg1 = math operator.
-    // Arg2 = src.
-    MathOp,
-
-    COUNT,
-  };
-
-  enum class MathOp : uint32_t
-  {
     // Unary operators.
+    // Arg0 = dst.
+    // Arg1 = src.
     Neg,
     Not,
 
@@ -267,14 +296,15 @@ namespace vbci
     Len,
     ArrayPtr,
 
-    // Constants don't use the src argument.
+    // Constants.
+    // Arg0 = dst.
     Const_E,
     Const_Pi,
     Const_Inf,
     Const_NaN,
   };
 
-  enum class ValueType : uint8_t
+  enum class ValueType
   {
     None,
     Bool,
@@ -307,101 +337,67 @@ namespace vbci
   inline const auto NumPrimitiveClasses =
     static_cast<size_t>(ValueType::Ptr) + 1;
 
-  enum class RegionType : uint8_t
+  enum class RegionType
   {
     RegionRC,
     RegionGC,
     RegionArena
   };
 
-  enum class ArgType : uint8_t
-  {
-    Move,
-    Copy,
-  };
-
-  enum class CallType : uint8_t
-  {
-    CallStatic,
-    CallDynamic,
-    SubcallStatic,
-    SubcallDynamic,
-    TryStatic,
-    TryDynamic,
-    FFI,
-  };
-
-  enum class Condition : uint8_t
+  enum class Condition
   {
     Return,
     Raise,
     Throw,
   };
 
-  enum class DIOp : uint8_t
+  enum class DIOp
   {
     File,
     Offset,
     Skip,
   };
 
-  inline constexpr uint8_t operator+(Op op)
+  inline constexpr size_t operator+(Op op)
   {
-    return static_cast<uint8_t>(op);
+    return static_cast<size_t>(op);
   }
 
-  inline constexpr uint8_t operator+(MathOp op)
+  inline constexpr size_t operator+(ValueType v)
   {
-    return static_cast<uint8_t>(op);
+    return static_cast<size_t>(v);
   }
 
-  inline constexpr uint8_t operator+(ValueType v)
+  inline constexpr size_t operator+(RegionType r)
   {
-    return static_cast<uint8_t>(v);
+    return static_cast<size_t>(r);
   }
 
-  inline constexpr uint8_t operator+(RegionType r)
+  inline constexpr size_t operator+(Condition c)
   {
-    return static_cast<uint8_t>(r);
+    return static_cast<size_t>(c);
   }
 
-  inline constexpr uint8_t operator+(ArgType a)
+  inline constexpr size_t operator+(DIOp c)
   {
-    return static_cast<uint8_t>(a);
-  }
-
-  inline constexpr uint8_t operator+(CallType c)
-  {
-    return static_cast<uint8_t>(c);
-  }
-
-  inline constexpr uint8_t operator+(Condition c)
-  {
-    return static_cast<uint8_t>(c);
-  }
-
-  inline constexpr uint8_t operator+(DIOp c)
-  {
-    return static_cast<uint8_t>(c);
+    return static_cast<size_t>(c);
   }
 
   namespace type
   {
-    inline const auto Shift = size_t(3);
-    inline const auto Mask = (size_t(1) << Shift) - 1;
-    inline const auto Max =
-      (size_t(1) << ((sizeof(Id) * 8) - Shift)) - NumPrimitiveClasses;
+    inline const auto Shift = Id(3);
+    inline const auto Mask = (Id(1) << Shift) - 1;
 
-    enum class Mod : uint8_t
+    enum class Mod
     {
       Array = 1 << 0,
       Ref = 1 << 1,
       Cown = 1 << 2,
     };
 
-    inline constexpr uint8_t operator+(Mod t)
+    inline constexpr Id operator+(Mod t)
     {
-      return static_cast<uint8_t>(t);
+      return static_cast<Id>(t);
     }
 
     inline constexpr bool is_mod(Id type_id)
@@ -487,13 +483,11 @@ namespace vbci
 
     inline constexpr Id cls(Id class_id)
     {
-      assert(class_id <= Max);
       return (NumPrimitiveClasses + class_id + 1) << Shift;
     }
 
     inline constexpr Id def(size_t num_classes, Id typedef_id)
     {
-      assert((num_classes + typedef_id) <= Max);
       return (NumPrimitiveClasses + num_classes + typedef_id + 1) << Shift;
     }
 
@@ -513,11 +507,6 @@ namespace vbci
     {
       assert(!is_cown(type_id));
       return type_id | +Mod::Cown;
-    }
-
-    inline constexpr bool too_many(size_t num_classes, size_t num_typedefs)
-    {
-      return (num_classes + num_typedefs) <= Max;
     }
   }
 }

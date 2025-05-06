@@ -26,7 +26,7 @@ namespace vbci
     Object& init(Frame* frame, Class& cls)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        store(ArgType::Move, i, frame->arg(i));
+        store(true, i, frame->arg(i));
 
       return *this;
     }
@@ -36,7 +36,7 @@ namespace vbci
       return type::cls(class_id);
     }
 
-    Id field_type_id(FieldIdx idx)
+    Id field_type_id(size_t idx)
     {
       return cls()->fields.at(idx).type_id;
     }
@@ -46,7 +46,7 @@ namespace vbci
       return &Program::get().cls(class_id);
     }
 
-    FieldIdx field(Id field)
+    size_t field(size_t field)
     {
       auto& program = Program::get();
       auto& cls = program.cls(class_id);
@@ -57,7 +57,7 @@ namespace vbci
       return find->second;
     }
 
-    Function* method(Id w)
+    Function* method(size_t w)
     {
       return Program::get().cls(class_id).method(w);
     }
@@ -67,14 +67,14 @@ namespace vbci
       return Program::get().cls(class_id).finalizer();
     }
 
-    Value load(FieldIdx idx)
+    Value load(size_t idx)
     {
       auto& f = Program::get().cls(class_id).fields.at(idx);
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
       return Value::from_addr(f.value_type, addr);
     }
 
-    Value store(ArgType arg_type, FieldIdx idx, Value& v)
+    Value store(bool move, size_t idx, Value& v)
     {
       auto program = Program::get();
       auto& f = program.cls(class_id).fields.at(idx);
@@ -88,7 +88,7 @@ namespace vbci
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
       auto prev = Value::from_addr(f.value_type, addr);
       region_store(prev, v);
-      v.to_addr(arg_type, addr);
+      v.to_addr(move, addr);
       return prev;
     }
 

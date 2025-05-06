@@ -83,12 +83,6 @@ namespace vbcc
             return err(_(Class) / ClassId, "duplicate class name");
           }
 
-          if ((_(Class) / Fields)->size() > MaxRegisters)
-          {
-            state->error = true;
-            return err(_(Class) / ClassId, "class has too many fields");
-          }
-
           return NoChange;
         },
 
@@ -129,18 +123,6 @@ namespace vbcc
           {
             state->error = true;
             return err(func_id, "function has no labels");
-          }
-
-          if ((func / Labels)->size() >= MaxRegisters)
-          {
-            state->error = true;
-            return err(func_id, "function has too many labels");
-          }
-
-          if ((func / Params)->size() >= MaxRegisters)
-          {
-            state->error = true;
-            return err(func_id, "function has too many params");
           }
 
           if (*state->get_func_id(func_id) == MainFuncId)
@@ -245,6 +227,12 @@ namespace vbcc
       {
         state->error = true;
         top << err(Func, "missing main function");
+      }
+
+      for (auto& func_state : state->functions)
+      {
+        for (auto& label : func_state.labels)
+          label.resize(func_state.register_names.size());
       }
 
       return 0;

@@ -71,10 +71,8 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * When.
   * Merge, freeze, extract.
     * Use `location` to store SCC information.
-    * Modes that allow/disallow parent pointers and stack RCs.
-* General purpose "long register" versions of all instructions?
-  * Consider ULEB128 for the code instead of fixed length.
-  * Would allow functions to have semi-unlimited register counts.
+    * Modes that allow/disallow parent pointers and stack RC.
+* Make a `bool[]` have 1-bit instead of 8-bit elements.
 * Math ops for numerical limits, by type?
 * Introspection.
   * Get a value's dynamic type.

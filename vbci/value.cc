@@ -27,7 +27,7 @@ namespace vbci
   Value::Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
   Value::Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
 
-  Value::Value(Object* obj, FieldIdx f, bool ro)
+  Value::Value(Object* obj, size_t f, bool ro)
   : obj(obj), idx(f), tag(ValueType::Ref), readonly(ro)
   {}
 
@@ -194,7 +194,7 @@ namespace vbci
     return value;
   }
 
-  void Value::to_addr(ArgType arg_type, void* v)
+  void Value::to_addr(bool move, void* v)
   {
     switch (tag)
     {
@@ -278,7 +278,7 @@ namespace vbci
         break;
     }
 
-    if (arg_type == ArgType::Move)
+    if (move)
       tag = ValueType::Invalid;
     else
       inc();
@@ -562,7 +562,7 @@ namespace vbci
     tag = ValueType::Invalid;
   }
 
-  Value Value::ref(ArgType arg_type, Id field)
+  Value Value::ref(bool move, size_t field)
   {
     switch (tag)
     {
@@ -570,7 +570,7 @@ namespace vbci
       {
         auto f = obj->field(field);
 
-        if (arg_type == ArgType::Move)
+        if (move)
           tag = ValueType::Invalid;
         else
           inc();
@@ -580,7 +580,7 @@ namespace vbci
 
       case ValueType::Cown:
       {
-        if (arg_type == ArgType::Move)
+        if (move)
           tag = ValueType::Invalid;
         else
           inc();
@@ -593,7 +593,7 @@ namespace vbci
     }
   }
 
-  Value Value::arrayref(ArgType arg_type, size_t i)
+  Value Value::arrayref(bool move, size_t i)
   {
     if (tag != ValueType::Array)
       throw Value(Error::BadRefTarget);
@@ -601,7 +601,7 @@ namespace vbci
     if (i >= arr->get_size())
       throw Value(Error::BadArrayIndex);
 
-    if (arg_type == ArgType::Move)
+    if (move)
       tag = ValueType::Invalid;
     else
       inc();
@@ -636,7 +636,7 @@ namespace vbci
     return v;
   }
 
-  Value Value::store(ArgType arg_type, Value& v)
+  Value Value::store(bool move, Value& v)
   {
     if (readonly)
       throw Value(Error::BadStoreTarget);
@@ -647,20 +647,20 @@ namespace vbci
     switch (tag)
     {
       case ValueType::Ref:
-        return obj->store(arg_type, idx, v);
+        return obj->store(move, idx, v);
 
       case ValueType::ArrayRef:
-        return arr->store(arg_type, idx, v);
+        return arr->store(move, idx, v);
 
       case ValueType::CownRef:
-        return cown->store(arg_type, v);
+        return cown->store(move, v);
 
       default:
         throw Value(Error::BadStoreTarget);
     }
   }
 
-  Function* Value::method(Id w)
+  Function* Value::method(size_t w)
   {
     if (tag == ValueType::Object)
       return obj->method(w);
@@ -778,8 +778,8 @@ namespace vbci
 
       case ValueType::ArrayRef:
       {
-        FieldIdx f = idx;
-        return std::format("ref [{}] {}", f, arr->to_string());
+        size_t i = idx;
+        return std::format("ref [{}] {}", i, arr->to_string());
       }
 
       case ValueType::CownRef:

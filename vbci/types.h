@@ -31,14 +31,14 @@ namespace vbci
     Id class_id;
 
     // Precalculate an offset into the object for each field name.
-    std::unordered_map<Id, FieldIdx> field_map;
+    std::unordered_map<size_t, size_t> field_map;
     std::vector<Field> fields;
 
     // Precalculate a function pointer for each method name.
-    std::unordered_map<Id, Function*> methods;
+    std::unordered_map<size_t, Function*> methods;
 
     bool calc_size(std::vector<ffi_type*>& ffi_types);
     Function* finalizer();
-    Function* method(Id w);
+    Function* method(size_t w);
   };
 }

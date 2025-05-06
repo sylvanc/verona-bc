@@ -9,60 +9,6 @@ namespace vbcc
       wfIR,
       dir::bottomup | dir::once,
       {
-        T(Top)[Top] >> [state](Match& _) -> Node {
-          if (type::too_many(state->class_ids.size(), state->type_ids.size()))
-          {
-            state->error = true;
-            return err(_(Top), "more classes and typedefs than can be encoded");
-          }
-
-          if (state->field_ids.size() > std::numeric_limits<Id>::max())
-          {
-            state->error = true;
-            return err(_(Top), "more fields than can be encoded");
-          }
-
-          if (state->method_ids.size() > std::numeric_limits<Id>::max())
-          {
-            state->error = true;
-            return err(_(Top), "more methods than can be encoded");
-          }
-
-          if (state->func_ids.size() > std::numeric_limits<Id>::max())
-          {
-            state->error = true;
-            return err(_(Top), "more functions than can be encoded");
-          }
-
-          if (state->symbol_ids.size() > std::numeric_limits<Id>::max())
-          {
-            state->error = true;
-            return err(_(Top), "more symbols than can be encoded");
-          }
-
-          if (state->library_ids.size() > std::numeric_limits<Id>::max())
-          {
-            state->error = true;
-            return err(_(Top), "more libraries than can be encoded");
-          }
-
-          return NoChange;
-        },
-
-        T(Func)[Func] >> [state](Match& _) -> Node {
-          auto func = _(Func);
-          auto func_id = func / FunctionId;
-          auto& func_state = state->get_func(func_id);
-
-          if (func_state.register_idxs.size() >= MaxRegisters)
-          {
-            state->error = true;
-            return err(func_id, "function has too many registers");
-          }
-
-          return NoChange;
-        },
-
         T(TypeId)[TypeId] >> [state](Match& _) -> Node {
           auto id = state->get_type_id(_(TypeId));
 

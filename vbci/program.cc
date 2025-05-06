@@ -54,91 +54,51 @@ namespace vbci
     return program;
   }
 
-  Symbol& Program::symbol(Id id)
+  Symbol& Program::symbol(size_t idx)
   {
-    return symbols.at(id);
+    return symbols.at(idx);
   }
 
-  Function* Program::function(Id id)
+  Function* Program::function(size_t idx)
   {
-    if (id >= functions.size())
-      throw Value(Error::UnknownFunction);
-
-    return &functions.at(id);
+    return &functions.at(idx);
   }
 
-  Class& Program::primitive(Id id)
+  Class& Program::primitive(size_t idx)
   {
-    return primitives.at(id);
+    return primitives.at(idx);
   }
 
-  Class& Program::cls(Id id)
+  Class& Program::cls(size_t idx)
   {
-    return classes.at(id);
+    return classes.at(idx);
   }
 
-  Value& Program::global(Id id)
+  Value& Program::global(size_t idx)
   {
-    if (id >= globals.size())
-      throw Value(Error::UnknownGlobal);
-
-    return globals.at(id);
+    return globals.at(idx);
   }
 
-  Code Program::load_code(PC& pc)
+  int64_t Program::sleb(size_t& pc)
   {
-    return code[pc++];
+    // This uses zigzag encoding.
+    auto value = uleb(pc);
+    return (value >> 1) ^ -(value & 1);
   }
 
-  PC Program::load_pc(PC& pc)
+  uint64_t Program::uleb(size_t& pc)
   {
-    return load_u64(pc);
-  }
+    constexpr uint64_t max_shift = (sizeof(uint64_t) * 8) - 1;
+    uint64_t value = 0;
 
-  int16_t Program::load_i16(PC& pc)
-  {
-    return code[pc++];
-  }
+    for (uint64_t shift = 0; shift <= max_shift; shift += 7)
+    {
+      value |= (uint64_t(content.at(pc)) & 0x7F) << shift;
+      if ((content.at(pc++) & 0x80) == 0) [[likely]]
+        break;
+    }
 
-  int32_t Program::load_i32(PC& pc)
-  {
-    return code[pc++];
-  }
-
-  int64_t Program::load_i64(PC& pc)
-  {
-    auto lo = code[pc++];
-    auto hi = code[pc++];
-    return (int64_t(hi) << 32) | int64_t(lo);
-  }
-
-  uint16_t Program::load_u16(PC& pc)
-  {
-    return code[pc++];
-  }
-
-  uint32_t Program::load_u32(PC& pc)
-  {
-    return code[pc++];
-  }
-
-  uint64_t Program::load_u64(PC& pc)
-  {
-    auto lo = code[pc++];
-    auto hi = code[pc++];
-    return (uint64_t(hi) << 32) | uint64_t(lo);
-  }
-
-  float Program::load_f32(PC& pc)
-  {
-    return std::bit_cast<float>(code[pc++]);
-  }
-
-  double Program::load_f64(PC& pc)
-  {
-    auto lo = code[pc++];
-    auto hi = code[pc++];
-    return std::bit_cast<double>((static_cast<uint64_t>(hi) << 32) | lo);
+    return value;
   }
 
   Array* Program::get_argv()
@@ -385,7 +345,7 @@ namespace vbci
     return di_strings.at(uleb(pc));
   }
 
-  std::string Program::di_field(Class* cls, FieldIdx idx)
+  std::string Program::di_field(Class* cls, size_t idx)
   {
     if (di == PC(-1))
       return std::to_string(idx);
@@ -439,7 +399,7 @@ namespace vbci
     for (size_t i = 0; i < args.size(); i++)
     {
       auto str = args.at(i);
-      auto str_size = str.size();
+      auto str_size = str.size() + 1;
       auto arg = Array::create(
         std::malloc(Array::size_of(str_size, arg_rep.second->size)),
         StackAlloc,
@@ -450,12 +410,12 @@ namespace vbci
 
       for (size_t j = 0; j < str_size; j++)
       {
-        auto c = Value(static_cast<uint8_t>(str.at(j)));
-        arg->store(ArgType::Move, j, c);
+        auto p = arg->get_pointer();
+        std::memcpy(p, str.c_str(), str_size);
       }
 
       auto arg_value = Value(arg);
-      argv->store(ArgType::Move, i, arg_value);
+      argv->store(true, i, arg_value);
     }
 
     argv->immortalize();
@@ -467,8 +427,6 @@ namespace vbci
       return false;
 
     content.clear();
-    code = nullptr;
-
     typedefs.clear();
     functions.clear();
     primitives.clear();
@@ -567,29 +525,6 @@ namespace vbci
       }
     }
 
-    // Function headers.
-    auto num_functions = uleb(pc);
-    functions.resize(num_functions);
-
-    if (num_functions == 0)
-    {
-      logging::Error() << file << ": has no no functions" << std::endl;
-      return false;
-    }
-
-    for (auto& func : functions)
-    {
-      if (!parse_function(func, pc))
-        return false;
-    }
-
-    if (functions.at(MainFuncId).param_types.size() != 0)
-    {
-      logging::Error() << file << ": `main` must take zero parameters"
-                       << std::endl;
-      return false;
-    }
-
     // Typedefs.
     auto num_typedefs = uleb(pc);
     typedefs.resize(num_typedefs);
@@ -633,6 +568,41 @@ namespace vbci
         return false;
     }
 
+    // Function headers.
+    auto num_functions = uleb(pc);
+    functions.resize(num_functions);
+
+    if (num_functions == 0)
+    {
+      logging::Error() << file << ": has no no functions" << std::endl;
+      return false;
+    }
+
+    for (auto& func : functions)
+    {
+      if (!parse_function(func, pc))
+        return false;
+    }
+
+    if (functions.at(MainFuncId).param_types.size() != 0)
+    {
+      logging::Error() << file << ": `main` must take zero parameters"
+                       << std::endl;
+      return false;
+    }
+
+    for (auto& cls : primitives)
+    {
+      if (!fixup_methods(cls))
+        return false;
+    }
+
+    for (auto& cls : classes)
+    {
+      if (!fixup_methods(cls))
+        return false;
+    }
+
     // Debug info.
     auto debug_info_size = uleb(pc);
 
@@ -644,33 +614,12 @@ namespace vbci
       pc = di + debug_info_size;
     }
 
-    // Skip padding.
-    pc += (sizeof(Code) - (pc % sizeof(Code))) % sizeof(Code);
-
-    if (((size - pc) % sizeof(Code)) != 0)
-    {
-      logging::Error() << file << ": invalid file size" << std::endl;
-      return false;
-    }
-
-    code = reinterpret_cast<Code*>(content.data() + pc);
-    auto words = (size - pc) / sizeof(Code);
-
-    if constexpr (std::endian::native == std::endian::big)
-    {
-      for (size_t i = 0; i < words; i++)
-        code[i] = std::byteswap(code[i]);
-    }
-
-    // Patch the function headers with offsets.
-    pc = 0;
-
+    // Function label locations are relative to the code section. Make them
+    // absolute.
     for (auto& func : functions)
     {
       for (auto& label : func.labels)
-        label = load_pc(pc);
-
-      func.debug_info = load_pc(pc);
+        label += pc;
     }
 
     return true;
@@ -678,24 +627,30 @@ namespace vbci
 
   bool Program::parse_function(Function& f, PC& pc)
   {
-    auto params = uleb(pc);
-    auto registers = uleb(pc);
-    auto labels = uleb(pc);
+    f.registers = uleb(pc);
+    f.debug_info = uleb(pc);
 
-    if (labels == 0)
+    // Function signature.
+    auto params = uleb(pc);
+    f.param_types.resize(params);
+
+    for (size_t i = 0; i < params; i++)
+      f.param_types.at(i) = uleb(pc);
+
+    f.return_type = uleb(pc);
+
+    // Labels.
+    f.labels.resize(uleb(pc));
+
+    if (f.labels.empty())
     {
       logging::Error() << file << ": function has no labels" << std::endl;
       return false;
     }
 
-    // Function signature.
-    f.param_types.resize(params);
-    for (size_t i = 0; i < params; i++)
-      f.param_types.at(i) = uleb(pc);
+    for (auto& label : f.labels)
+      label = uleb(pc);
 
-    f.return_type = uleb(pc);
-    f.registers = registers;
-    f.labels.resize(labels);
     return true;
   }
 
@@ -707,13 +662,7 @@ namespace vbci
     cls.fields.resize(num_fields);
     ffi_types.resize(num_fields);
 
-    if (num_fields > MaxRegisters)
-    {
-      logging::Error() << file << ": too many fields in class" << std::endl;
-      return false;
-    }
-
-    for (FieldIdx i = 0; i < num_fields; i++)
+    for (size_t i = 0; i < num_fields; i++)
     {
       auto& f = cls.fields.at(i);
       cls.field_map.emplace(uleb(pc), i);
@@ -735,12 +684,23 @@ namespace vbci
 
     for (size_t i = 0; i < num_methods; i++)
     {
-      // This creates a mapping from a method name to a function pointer.
-      Id method_id = uleb(pc);
-      Id func_id = uleb(pc);
-      auto& func = functions.at(func_id);
+      auto method_id = uleb(pc);
+      auto func_id = uleb(pc);
+      cls.methods.emplace(method_id, reinterpret_cast<Function*>(func_id));
+    }
 
-      if (method_id == FinalMethodId)
+    return true;
+  }
+
+  bool Program::fixup_methods(Class& cls)
+  {
+    for (auto& method : cls.methods)
+    {
+      auto idx = reinterpret_cast<size_t>(method.second);
+      auto& func = functions.at(idx);
+      method.second = &func;
+
+      if (method.first == FinalMethodId)
       {
         if (func.param_types.size() != 1)
         {
@@ -749,37 +709,9 @@ namespace vbci
           return false;
         }
       }
-
-      cls.methods.emplace(method_id, &func);
     }
 
     return true;
-  }
-
-  int64_t Program::sleb(size_t& pc)
-  {
-    // This uses zigzag encoding.
-    auto value = uleb(pc);
-    return (value >> 1) ^ -(value & 1);
-  }
-
-  uint64_t Program::uleb(size_t& pc)
-  {
-    uint64_t value = 0;
-    uint64_t shift = 0;
-
-    while (true)
-    {
-      auto byte = content.at(pc++);
-      value |= (uint64_t(byte) & 0x7F) << shift;
-
-      if ((byte & 0x80) == 0)
-        break;
-
-      shift += 7;
-    }
-
-    return value;
   }
 
   std::string Program::str(size_t& pc)

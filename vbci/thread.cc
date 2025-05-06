@@ -7,30 +7,6 @@
 
 namespace vbci
 {
-  inline Op opcode(Code code)
-  {
-    // 8 bit opcode.
-    return static_cast<Op>(code & 0xFF);
-  }
-
-  inline Local arg0(Code code)
-  {
-    // 8 bit local index.
-    return (code >> 8) & 0xFF;
-  }
-
-  inline Local arg1(Code code)
-  {
-    // 8 bit local index.
-    return (code >> 16) & 0xFF;
-  }
-
-  inline Local arg2(Code code)
-  {
-    // 8 bit local index.
-    return (code >> 24) & 0xFF;
-  }
-
   Thread& Thread::get()
   {
     thread_local Thread thread;
@@ -80,8 +56,7 @@ namespace vbci
   {
     assert(frame);
     current_pc = frame->pc;
-    auto code = program->load_code(frame->pc);
-    auto op = opcode(code);
+    auto op = leb<Op>();
 
     try
     {
@@ -89,15 +64,15 @@ namespace vbci
       {
         case Op::Global:
         {
-          auto& dst = frame->local(arg0(code));
-          dst = program->global(program->load_u32(frame->pc));
+          auto& dst = frame->local(leb());
+          dst = program->global(leb());
           break;
         }
 
         case Op::Const:
         {
-          auto& dst = frame->local(arg0(code));
-          auto t = static_cast<ValueType>(arg1(code));
+          auto& dst = frame->local(leb());
+          auto t = leb<ValueType>();
 
           switch (t)
           {
@@ -106,54 +81,57 @@ namespace vbci
               break;
 
             case ValueType::Bool:
-              dst = Value(static_cast<bool>(arg2(code)));
+              dst = Value(leb<bool>());
               break;
 
             case ValueType::I8:
-              dst = Value(static_cast<int8_t>(arg2(code)));
+              dst = Value(leb<int8_t>());
               break;
 
             case ValueType::I16:
-              dst = Value(program->load_i16(frame->pc));
+              dst = Value(leb<int16_t>());
               break;
 
             case ValueType::I32:
-              dst = Value(program->load_i32(frame->pc));
+              dst = Value(leb<int32_t>());
               break;
 
             case ValueType::I64:
-              dst = Value(program->load_i64(frame->pc));
+              dst = Value(leb<int64_t>());
               break;
 
             case ValueType::U8:
-              dst = Value(arg2(code));
+              dst = Value(leb<uint8_t>());
               break;
 
             case ValueType::U16:
-              dst = Value(program->load_u16(frame->pc));
+              dst = Value(leb<uint16_t>());
               break;
 
             case ValueType::U32:
-              dst = Value(program->load_u32(frame->pc));
+              dst = Value(leb<uint32_t>());
               break;
 
             case ValueType::U64:
-              dst = Value(program->load_u64(frame->pc));
+              dst = Value(leb<uint64_t>());
               break;
 
             case ValueType::ILong:
-            case ValueType::ULong:
             case ValueType::ISize:
+              dst = Value::from_ffi(t, leb<int64_t>());
+              break;
+
+            case ValueType::ULong:
             case ValueType::USize:
-              dst = Value::from_ffi(t, program->load_u64(frame->pc));
+              dst = Value::from_ffi(t, leb<uint64_t>());
               break;
 
             case ValueType::F32:
-              dst = Value(program->load_f32(frame->pc));
+              dst = Value(leb<float>());
               break;
 
             case ValueType::F64:
-              dst = Value(program->load_f64(frame->pc));
+              dst = Value(leb<double>());
               break;
 
             default:
@@ -162,10 +140,19 @@ namespace vbci
           break;
         }
 
+        case Op::Convert:
+        {
+          auto& dst = frame->local(leb());
+          auto t = leb<ValueType>();
+          auto& src = frame->local(leb());
+          dst = src.convert(t);
+          break;
+        }
+
         case Op::Stack:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& cls = program->cls(program->load_u32(frame->pc));
+          auto& dst = frame->local(leb());
+          auto& cls = program->cls(leb());
           check_args(cls.fields);
           auto mem = stack.alloc(cls.size);
           auto obj =
@@ -177,29 +164,29 @@ namespace vbci
 
         case Op::Heap:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& cls = program->cls(program->load_u32(frame->pc));
+          auto& dst = frame->local(leb());
+          auto region = frame->local(leb()).region();
+          auto& cls = program->cls(leb());
           check_args(cls.fields);
-          auto region = frame->local(arg1(code)).region();
           dst = &region->object(cls)->init(frame, cls);
           break;
         }
 
         case Op::Region:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& cls = program->cls(program->load_u32(frame->pc));
+          auto& dst = frame->local(leb());
+          auto region = Region::create(leb<RegionType>());
+          auto& cls = program->cls(leb());
           check_args(cls.fields);
-          auto region = Region::create(static_cast<RegionType>(arg1(code)));
           dst = &region->object(cls)->init(frame, cls);
           break;
         }
 
         case Op::StackArray:
         {
-          auto& dst = frame->local(arg0(code));
-          auto size = frame->local(arg1(code)).to_index();
-          auto type_id = program->load_u32(frame->pc);
+          auto& dst = frame->local(leb());
+          auto size = frame->local(leb()).to_index();
+          auto type_id = leb();
           auto rep = program->layout_type_id(type_id);
           auto mem = stack.alloc(Array::size_of(size, rep.second->size));
           dst = Array::create(
@@ -209,9 +196,9 @@ namespace vbci
 
         case Op::StackArrayConst:
         {
-          auto& dst = frame->local(arg0(code));
-          auto type_id = program->load_u32(frame->pc);
-          auto size = program->load_u64(frame->pc);
+          auto& dst = frame->local(leb());
+          auto type_id = leb();
+          auto size = leb();
           auto rep = program->layout_type_id(type_id);
           auto mem = stack.alloc(Array::size_of(size, rep.second->size));
           dst = Array::create(
@@ -221,322 +208,307 @@ namespace vbci
 
         case Op::HeapArray:
         {
-          auto& dst = frame->local(arg0(code));
-          auto region = frame->local(arg1(code)).region();
-          auto size = frame->local(arg2(code)).to_index();
-          auto type_id = program->load_u32(frame->pc);
+          auto& dst = frame->local(leb());
+          auto region = frame->local(leb()).region();
+          auto size = frame->local(leb()).to_index();
+          auto type_id = leb();
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::HeapArrayConst:
         {
-          auto& dst = frame->local(arg0(code));
-          auto region = frame->local(arg1(code)).region();
-          auto type_id = program->load_u32(frame->pc);
-          auto size = program->load_u64(frame->pc);
+          auto& dst = frame->local(leb());
+          auto region = frame->local(leb()).region();
+          auto type_id = leb();
+          auto size = leb();
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::RegionArray:
         {
-          auto& dst = frame->local(arg0(code));
-          auto region = Region::create(static_cast<RegionType>(arg1(code)));
-          auto type_id = program->load_u32(frame->pc);
-          auto size = frame->local(arg2(code)).to_index();
+          auto& dst = frame->local(leb());
+          auto region = Region::create(leb<RegionType>());
+          auto size = frame->local(leb()).to_index();
+          auto type_id = leb();
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::RegionArrayConst:
         {
-          auto& dst = frame->local(arg0(code));
-          auto region = Region::create(static_cast<RegionType>(arg1(code)));
-          auto type_id = program->load_u32(frame->pc);
-          auto size = program->load_u64(frame->pc);
+          auto& dst = frame->local(leb());
+          auto region = Region::create(leb<RegionType>());
+          auto type_id = leb();
+          auto size = leb();
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::Copy:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
           dst = src;
           break;
         }
 
         case Op::Move:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
           dst = std::move(src);
           break;
         }
 
         case Op::Drop:
         {
-          auto& dst = frame->local(arg0(code));
+          auto& dst = frame->local(leb());
           dst.drop();
           break;
         }
 
-        case Op::Ref:
+        case Op::RefMove:
         {
-          auto& dst = frame->local(arg0(code));
-          auto arg_type = static_cast<ArgType>(arg1(code));
-          auto& src = frame->local(arg2(code));
-          dst = src.ref(arg_type, program->load_u32(frame->pc));
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          dst = src.ref(true, leb());
+          break;
+        }
+
+        case Op::RefCopy:
+        {
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          dst = src.ref(false, leb());
           break;
         }
 
         case Op::ArrayRefMove:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          auto& idx = frame->local(arg2(code));
-          dst = src.arrayref(ArgType::Move, idx.to_index());
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          auto& idx = frame->local(leb());
+          dst = src.arrayref(true, idx.to_index());
           break;
         }
 
         case Op::ArrayRefCopy:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          auto& idx = frame->local(arg2(code));
-          dst = src.arrayref(ArgType::Copy, idx.to_index());
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          auto& idx = frame->local(leb());
+          dst = src.arrayref(false, idx.to_index());
           break;
         }
 
-        case Op::ArrayRefConst:
+        case Op::ArrayRefMoveConst:
         {
-          auto& dst = frame->local(arg0(code));
-          auto arg_type = static_cast<ArgType>(arg1(code));
-          auto& src = frame->local(arg2(code));
-          auto idx = program->load_u64(frame->pc);
-          dst = src.arrayref(arg_type, idx);
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          auto idx = leb();
+          dst = src.arrayref(true, idx);
+          break;
+        }
+
+        case Op::ArrayRefCopyConst:
+        {
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          auto idx = leb();
+          dst = src.arrayref(false, idx);
           break;
         }
 
         case Op::Load:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
           dst = src.load();
           break;
         }
 
         case Op::StoreMove:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& ref = frame->local(arg1(code));
-          auto& src = frame->local(arg2(code));
-          dst = ref.store(ArgType::Move, src);
+          auto& dst = frame->local(leb());
+          auto& ref = frame->local(leb());
+          auto& src = frame->local(leb());
+          dst = ref.store(true, src);
           break;
         }
 
         case Op::StoreCopy:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& ref = frame->local(arg1(code));
-          auto& src = frame->local(arg2(code));
-          dst = ref.store(ArgType::Copy, src);
+          auto& dst = frame->local(leb());
+          auto& ref = frame->local(leb());
+          auto& src = frame->local(leb());
+          dst = ref.store(false, src);
           break;
         }
 
-        case Op::Lookup:
+        case Op::LookupStatic:
         {
-          auto& dst = frame->local(arg0(code));
-          auto call_type = static_cast<CallType>(arg1(code));
-          auto func_id = program->load_u32(frame->pc);
-
-          switch (call_type)
-          {
-            case CallType::CallStatic:
-            {
-              dst = program->function(func_id);
-              break;
-            }
-
-            case CallType::CallDynamic:
-            {
-              auto& src = frame->local(arg2(code));
-              dst = src.method(func_id);
-              break;
-            }
-
-            default:
-              throw Value(Error::UnknownCallType);
-          }
+          auto& dst = frame->local(leb());
+          dst = program->function(leb());
           break;
         }
 
-        case Op::Arg:
+        case Op::LookupDynamic:
+        {
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          auto func_id = leb();
+          dst = src.method(func_id);
+          break;
+        }
+
+        case Op::ArgMove:
         {
           auto& dst = frame->arg(args++);
-          auto arg_type = static_cast<ArgType>(arg0(code));
-          auto& src = frame->local(arg1(code));
-
-          switch (arg_type)
-          {
-            case ArgType::Move:
-              dst = std::move(src);
-              break;
-
-            case ArgType::Copy:
-              dst = src;
-              break;
-
-            default:
-              throw Value(Error::UnknownArgType);
-          }
+          auto& src = frame->local(leb());
+          dst = std::move(src);
           break;
         }
 
-        case Op::Call:
+        case Op::ArgCopy:
         {
-          auto dst = arg0(code);
-          auto call_type = static_cast<CallType>(arg1(code));
-          Function* func;
-          Condition cond;
+          auto& dst = frame->arg(args++);
+          auto& src = frame->local(leb());
+          dst = src;
+          break;
+        }
 
-          switch (call_type)
+        case Op::CallStatic:
+        {
+          auto dst = leb();
+          auto func = program->function(leb());
+          pushframe(func, dst, Condition::Return);
+          break;
+        }
+
+        case Op::CallDynamic:
+        {
+          auto dst = leb();
+          auto func = frame->local(leb()).function();
+          pushframe(func, dst, Condition::Return);
+          break;
+        }
+
+        case Op::SubcallStatic:
+        {
+          auto dst = leb();
+          auto func = program->function(leb());
+          pushframe(func, dst, Condition::Raise);
+          break;
+        }
+
+        case Op::SubcallDynamic:
+        {
+          auto dst = leb();
+          auto func = frame->local(leb()).function();
+          pushframe(func, dst, Condition::Raise);
+          break;
+        }
+
+        case Op::TryStatic:
+        {
+          auto dst = leb();
+          auto func = program->function(leb());
+          pushframe(func, dst, Condition::Throw);
+          break;
+        }
+
+        case Op::TryDynamic:
+        {
+          auto dst = leb();
+          auto func = frame->local(leb()).function();
+          pushframe(func, dst, Condition::Throw);
+          break;
+        }
+
+        case Op::FFI:
+        {
+          auto dst = leb();
+          auto num_args = args;
+          auto& symbol = program->symbol(leb());
+          check_args(symbol.params(), symbol.varargs());
+
+          if (ffi_arg_addrs.size() < num_args)
+            ffi_arg_addrs.resize(num_args);
+
+          for (size_t i = 0; i < num_args; i++)
           {
-            case CallType::CallStatic:
+            auto& arg = frame->arg(i);
+            ffi_arg_addrs.at(i) = arg.address_of();
+
+            if (i >= symbol.params().size())
             {
-              func = program->function(program->load_u32(frame->pc));
-              cond = Condition::Return;
-              break;
+              symbol.varparam(program->layout_type_id(arg.type_id()).second);
             }
-
-            case CallType::SubcallStatic:
-            {
-              func = program->function(program->load_u32(frame->pc));
-              cond = Condition::Raise;
-              break;
-            }
-
-            case CallType::TryStatic:
-            {
-              func = program->function(program->load_u32(frame->pc));
-              cond = Condition::Throw;
-              break;
-            }
-
-            case CallType::CallDynamic:
-            {
-              func = frame->local(arg2(code)).function();
-              cond = Condition::Return;
-              break;
-            }
-
-            case CallType::SubcallDynamic:
-            {
-              func = frame->local(arg2(code)).function();
-              cond = Condition::Raise;
-              break;
-            }
-
-            case CallType::TryDynamic:
-            {
-              func = frame->local(arg2(code)).function();
-              cond = Condition::Throw;
-              break;
-            }
-
-            case CallType::FFI:
-            {
-              auto num_args = args;
-              auto& symbol = program->symbol(program->load_u32(frame->pc));
-              check_args(symbol.params(), symbol.varargs());
-
-              if (ffi_arg_addrs.size() < num_args)
-                ffi_arg_addrs.resize(num_args);
-
-              for (size_t i = 0; i < num_args; i++)
-              {
-                auto& arg = frame->arg(i);
-                ffi_arg_addrs.at(i) = arg.address_of();
-
-                if (i >= symbol.params().size())
-                {
-                  symbol.varparam(
-                    program->layout_type_id(arg.type_id()).second);
-                }
-              }
-
-              frame->drop_args(num_args);
-              auto ret =
-                Value::from_ffi(symbol.retval(), symbol.call(ffi_arg_addrs));
-
-              if (
-                !ret.is_error() &&
-                !program->typecheck(ret.type_id(), symbol.ret()))
-              {
-                throw Value(Error::BadType);
-              }
-
-              frame->local(dst) = ret;
-              return;
-            }
-
-            default:
-              throw Value(Error::UnknownCallType);
           }
 
-          pushframe(func, dst, cond);
+          frame->drop_args(num_args);
+          auto ret =
+            Value::from_ffi(symbol.retval(), symbol.call(ffi_arg_addrs));
+
+          if (
+            !ret.is_error() && !program->typecheck(ret.type_id(), symbol.ret()))
+          {
+            throw Value(Error::BadType);
+          }
+
+          frame->local(dst) = ret;
           break;
         }
 
         case Op::Typetest:
         {
-          auto& dst = frame->local(arg0(code));
-          auto& src = frame->local(arg1(code));
-          Id type_id = program->load_u32(frame->pc);
+          auto& dst = frame->local(leb());
+          auto& src = frame->local(leb());
+          auto type_id = leb();
           dst = program->typecheck(src.type_id(), type_id);
           break;
         }
 
-        case Op::Tailcall:
+        case Op::TailcallStatic:
         {
-          auto call_type = static_cast<CallType>(arg1(code));
-          Function* func;
+          tailcall(program->function(leb()));
+          break;
+        }
 
-          switch (call_type)
-          {
-            case CallType::CallStatic:
-            {
-              func = program->function(program->load_u32(frame->pc));
-              break;
-            }
-
-            case CallType::CallDynamic:
-            {
-              func = frame->local(arg2(code)).function();
-              break;
-            }
-
-            default:
-              throw Value(Error::UnknownCallType);
-          }
-
-          tailcall(func);
+        case Op::TailcallDynamic:
+        {
+          tailcall(frame->local(leb()).function());
           break;
         }
 
         case Op::Return:
         {
-          auto ret = std::move(frame->local(arg0(code)));
-          popframe(ret, static_cast<Condition>(arg1(code)));
+          auto ret = std::move(frame->local(leb()));
+          popframe(ret, Condition::Return);
+          break;
+        }
+
+        case Op::Raise:
+        {
+          auto ret = std::move(frame->local(leb()));
+          popframe(ret, Condition::Raise);
+          break;
+        }
+
+        case Op::Throw:
+        {
+          auto ret = std::move(frame->local(leb()));
+          popframe(ret, Condition::Throw);
           break;
         }
 
         case Op::Cond:
         {
-          auto& cond = frame->local(arg0(code));
-          auto on_true = arg1(code);
-          auto on_false = arg2(code);
+          auto& cond = frame->local(leb());
+          auto on_true = leb();
+          auto on_false = leb();
 
           if (cond.get_bool())
             branch(on_true);
@@ -547,15 +519,15 @@ namespace vbci
 
         case Op::Jump:
         {
-          branch(arg0(code));
+          branch(leb());
           break;
         }
 
 #define do_binop(op) \
   { \
-    auto& dst = frame->local(arg0(code)); \
-    auto& lhs = frame->local(arg1(code)); \
-    auto& rhs = frame->local(arg2(code)); \
+    auto& dst = frame->local(leb()); \
+    auto& lhs = frame->local(leb()); \
+    auto& rhs = frame->local(leb()); \
     dst = lhs.op_##op(rhs); \
     break; \
   }
@@ -600,98 +572,78 @@ namespace vbci
         case Op::Atan2:
           do_binop(atan2);
 
-        case Op::MathOp:
-        {
-          auto& dst = frame->local(arg0(code));
-          auto mop = static_cast<MathOp>(arg1(code));
-
-          switch (mop)
-          {
 #define do_unop(op) \
   { \
-    auto& src = frame->local(arg2(code)); \
+    auto& dst = frame->local(leb()); \
+    auto& src = frame->local(leb()); \
     dst = src.op_##op(); \
     break; \
   }
-            case MathOp::Neg:
-              do_unop(neg);
-            case MathOp::Not:
-              do_unop(not);
-            case MathOp::Abs:
-              do_unop(abs);
-            case MathOp::Ceil:
-              do_unop(ceil);
-            case MathOp::Floor:
-              do_unop(floor);
-            case MathOp::Exp:
-              do_unop(exp);
-            case MathOp::Log:
-              do_unop(log);
-            case MathOp::Sqrt:
-              do_unop(sqrt);
-            case MathOp::Cbrt:
-              do_unop(cbrt);
-            case MathOp::IsInf:
-              do_unop(isinf);
-            case MathOp::IsNaN:
-              do_unop(isnan);
-            case MathOp::Sin:
-              do_unop(sin);
-            case MathOp::Cos:
-              do_unop(cos);
-            case MathOp::Tan:
-              do_unop(tan);
-            case MathOp::Asin:
-              do_unop(asin);
-            case MathOp::Acos:
-              do_unop(acos);
-            case MathOp::Atan:
-              do_unop(atan);
-            case MathOp::Sinh:
-              do_unop(sinh);
-            case MathOp::Cosh:
-              do_unop(cosh);
-            case MathOp::Tanh:
-              do_unop(tanh);
-            case MathOp::Asinh:
-              do_unop(asinh);
-            case MathOp::Acosh:
-              do_unop(acosh);
-            case MathOp::Atanh:
-              do_unop(atanh);
-            case MathOp::Len:
-              do_unop(len);
-            case MathOp::ArrayPtr:
-              do_unop(arrayptr);
+        case Op::Neg:
+          do_unop(neg);
+        case Op::Not:
+          do_unop(not);
+        case Op::Abs:
+          do_unop(abs);
+        case Op::Ceil:
+          do_unop(ceil);
+        case Op::Floor:
+          do_unop(floor);
+        case Op::Exp:
+          do_unop(exp);
+        case Op::Log:
+          do_unop(log);
+        case Op::Sqrt:
+          do_unop(sqrt);
+        case Op::Cbrt:
+          do_unop(cbrt);
+        case Op::IsInf:
+          do_unop(isinf);
+        case Op::IsNaN:
+          do_unop(isnan);
+        case Op::Sin:
+          do_unop(sin);
+        case Op::Cos:
+          do_unop(cos);
+        case Op::Tan:
+          do_unop(tan);
+        case Op::Asin:
+          do_unop(asin);
+        case Op::Acos:
+          do_unop(acos);
+        case Op::Atan:
+          do_unop(atan);
+        case Op::Sinh:
+          do_unop(sinh);
+        case Op::Cosh:
+          do_unop(cosh);
+        case Op::Tanh:
+          do_unop(tanh);
+        case Op::Asinh:
+          do_unop(asinh);
+        case Op::Acosh:
+          do_unop(acosh);
+        case Op::Atanh:
+          do_unop(atanh);
+        case Op::Len:
+          do_unop(len);
+        case Op::ArrayPtr:
+          do_unop(arrayptr);
 
 #define do_const(op) \
   { \
+    auto dst = frame->local(leb()); \
     dst = Value::op(); \
     break; \
   }
-            case MathOp::Const_E:
-              do_const(e);
-            case MathOp::Const_Pi:
-              do_const(pi);
-            case MathOp::Const_Inf:
-              do_const(inf);
-            case MathOp::Const_NaN:
-              do_const(nan);
-
-            default:
-              throw Value(Error::UnknownMathOp);
-          }
-          break;
-        }
-
-        case Op::Convert:
-        {
-          auto& dst = frame->local(arg0(code));
-          auto t = static_cast<ValueType>(arg1(code));
-          auto& src = frame->local(arg2(code));
-          dst = src.convert(t);
-          break;
-        }
+        case Op::Const_E:
+          do_const(e);
+        case Op::Const_Pi:
+          do_const(pi);
+        case Op::Const_Inf:
+          do_const(inf);
+        case Op::Const_NaN:
+          do_const(nan);
 
         default:
           throw Value(Error::UnknownOpcode);
@@ -704,7 +656,7 @@ namespace vbci
     }
   }
 
-  void Thread::pushframe(Function* func, Local dst, Condition condition)
+  void Thread::pushframe(Function* func, size_t dst, Condition condition)
   {
     assert(func);
     check_args(func->param_types);
@@ -874,7 +826,7 @@ namespace vbci
     stack.restore(frame->save);
   }
 
-  void Thread::branch(Local label)
+  void Thread::branch(size_t label)
   {
     if (label >= frame->func->labels.size())
       throw Value(Error::BadLabel);

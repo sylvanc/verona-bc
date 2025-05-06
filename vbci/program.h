@@ -30,8 +30,6 @@ namespace vbci
 
     std::filesystem::path file;
     std::vector<uint8_t> content;
-    Code* code = nullptr;
-
     std::vector<Typedef> typedefs;
     std::vector<Function> functions;
     std::vector<Class> primitives;
@@ -51,22 +49,14 @@ namespace vbci
   public:
     static Program& get();
 
-    Symbol& symbol(Id id);
-    Function* function(Id id);
-    Class& primitive(Id id);
-    Class& cls(Id id);
-    Value& global(Id id);
+    Symbol& symbol(size_t idx);
+    Function* function(size_t idx);
+    Class& primitive(size_t idx);
+    Class& cls(size_t idx);
+    Value& global(size_t idx);
 
-    Code load_code(PC& pc);
-    PC load_pc(PC& pc);
-    int16_t load_i16(PC& pc);
-    int32_t load_i32(PC& pc);
-    int64_t load_i64(PC& pc);
-    uint16_t load_u16(PC& pc);
-    uint32_t load_u32(PC& pc);
-    uint64_t load_u64(PC& pc);
-    float load_f32(PC& pc);
-    double load_f64(PC& pc);
+    int64_t sleb(size_t& pc);
+    uint64_t uleb(size_t& pc);
 
     Array* get_argv();
 
@@ -78,7 +68,7 @@ namespace vbci
     std::string debug_info(Function* func, PC pc);
     std::string di_function(Function* func);
     std::string di_class(Class* cls);
-    std::string di_field(Class* cls, FieldIdx idx);
+    std::string di_field(Class* cls, size_t idx);
 
   private:
     bool setup_value_type();
@@ -87,9 +77,7 @@ namespace vbci
     bool parse_function(Function& f, PC& pc);
     bool parse_fields(Class& cls, PC& pc);
     bool parse_methods(Class& cls, PC& pc);
-
-    int64_t sleb(size_t& pc);
-    uint64_t uleb(size_t& pc);
+    bool fixup_methods(Class& cls);
 
     std::string str(size_t& pc);
     void string_table(size_t& pc, std::vector<std::string>& table);

@@ -36,7 +36,7 @@ namespace vbci
     return method(FinalMethodId);
   }
 
-  Function* Class::method(Id w)
+  Function* Class::method(size_t w)
   {
     auto find = methods.find(w);
     if (find == methods.end())

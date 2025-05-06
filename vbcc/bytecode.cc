@@ -6,77 +6,6 @@ namespace vbcc
 {
   using namespace vbci;
 
-  struct e
-  {
-    Op op;
-    uint8_t arg0 = 0;
-    uint8_t arg1 = 0;
-    uint8_t arg2 = 0;
-
-    operator Code() const
-    {
-      return Code(op) | (arg0 << 8) | (arg1 << 16) | (arg2 << 24);
-    }
-  };
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, e&& e)
-  {
-    code.push_back(e);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, int16_t v)
-  {
-    code.push_back(v);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, uint16_t v)
-  {
-    code.push_back(v);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, int32_t v)
-  {
-    code.push_back(v);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, uint32_t v)
-  {
-    code.push_back(v);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, int64_t v)
-  {
-    code.push_back(v & 0xFFFFFFFF);
-    code.push_back((v >> 32) & 0xFFFFFFFF);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, uint64_t v)
-  {
-    code.push_back(v & 0xFFFFFFFF);
-    code.push_back((v >> 32) & 0xFFFFFFFF);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, float v)
-  {
-    auto t = std::bit_cast<uint32_t>(v);
-    code.push_back(t);
-    return code;
-  }
-
-  std::vector<Code>& operator<<(std::vector<Code>& code, double v)
-  {
-    auto t = std::bit_cast<uint64_t>(v);
-    code.push_back(t);
-    return code;
-  }
-
   template<typename T>
   struct sleb
   {
@@ -100,60 +29,70 @@ namespace vbcc
   };
 
   template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, sleb<T>&& s)
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<T>&& s)
   {
     // This uses zigzag encoding.
     auto value = (s.value << 1) ^ (s.value >> ((sizeof(T) * 8) - 1));
-    return di << uleb(value);
+    return b << uleb(value);
+  }
+
+  template<>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<float>&& s)
+  {
+    auto value = std::bit_cast<int32_t>(s.value);
+    return b << sleb(value);
+  }
+
+  template<>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<double>&& s)
+  {
+    auto value = std::bit_cast<int64_t>(s.value);
+    return b << sleb(value);
   }
 
   template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, uleb<T>&& u)
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, uleb<T>&& u)
   {
     auto value = u.value;
-    uint8_t byte;
 
-    do
+    while (value > 0x7F)
     {
-      byte = value & 0x7F;
+      b.push_back((value & 0x7F) | 0x80);
       value >>= 7;
+    }
 
-      if (value)
-        byte |= 0x80;
-
-      di.push_back(byte);
-    } while (value);
-
-    return di;
+    b.push_back(value);
+    return b;
   }
 
   template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& di, d<T>&& d)
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, d<T>&& d)
   {
     auto value = (d.value << 2) | +d.op;
-    return di << uleb(value);
+    return b << uleb(value);
   }
 
   std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& di, const std::string& str)
+  operator<<(std::vector<uint8_t>& b, const std::string& str)
   {
-    di << uleb(str.size());
-    di.insert(di.end(), str.begin(), str.end());
-    return di;
+    b << uleb(str.size());
+    b.insert(b.end(), str.begin(), str.end());
+    return b;
   }
 
-  uint8_t rgn(Node node)
+  uleb<size_t> rgn(Node node)
   {
     auto region = node / Region;
 
     if (region == RegionRC)
       return +RegionType::RegionRC;
-    if (region == RegionGC)
+    else if (region == RegionGC)
       return +RegionType::RegionGC;
-    if (region == RegionArena)
+    else if (region == RegionArena)
       return +RegionType::RegionArena;
 
-    return uint8_t(-1);
+    assert(false);
+    return size_t(-1);
   }
 
   template<typename T>
@@ -208,22 +147,21 @@ namespace vbcc
     return t;
   }
 
-  ArgType argtype(Node arg)
+  void LabelState::resize(size_t size)
   {
-    if ((arg / Type) == ArgMove)
-      return ArgType::Move;
-    else
-      return ArgType::Copy;
+    in.resize(size);
+    out.resize(size);
+    dead.resize(size);
   }
 
-  void LabelState::def(uint8_t r)
+  void LabelState::def(size_t r)
   {
     // We've defined a register, so it's live.
     out.set(r);
     dead.reset(r);
   }
 
-  bool LabelState::use(uint8_t r)
+  bool LabelState::use(size_t r)
   {
     // We've used a register. If it's not live, we require it and set it as
     // live.
@@ -239,7 +177,7 @@ namespace vbcc
     return true;
   }
 
-  bool LabelState::kill(uint8_t r)
+  bool LabelState::kill(size_t r)
   {
     // We've killed a register. If it's live, we kill it. If it's not live, we
     // require it.
@@ -255,7 +193,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<uint8_t> FuncState::get_label_id(Node id)
+  std::optional<size_t> FuncState::get_label_id(Node id)
   {
     auto index = ST::noemit().string(id->location().view());
     auto find = label_idxs.find(index);
@@ -286,7 +224,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<uint8_t> FuncState::get_register_id(Node id)
+  std::optional<size_t> FuncState::get_register_id(Node id)
   {
     auto index = ST::di().string(id);
     auto find = register_idxs.find(index);
@@ -323,7 +261,7 @@ namespace vbcc
     method_ids.insert({ST::di().string("@final"), FinalMethodId});
   }
 
-  std::optional<Id> State::get_type_id(Node id)
+  std::optional<size_t> State::get_type_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = type_ids.find(name);
@@ -347,7 +285,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<Id> State::get_class_id(Node id)
+  std::optional<size_t> State::get_class_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = class_ids.find(name);
@@ -371,7 +309,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<Id> State::get_field_id(Node id)
+  std::optional<size_t> State::get_field_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = field_ids.find(name);
@@ -391,7 +329,7 @@ namespace vbcc
       field_ids.insert({name, field_ids.size()});
   }
 
-  std::optional<Id> State::get_method_id(Node id)
+  std::optional<size_t> State::get_method_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = method_ids.find(name);
@@ -411,7 +349,7 @@ namespace vbcc
       method_ids.insert({name, method_ids.size()});
   }
 
-  std::optional<Id> State::get_func_id(Node id)
+  std::optional<size_t> State::get_func_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = func_ids.find(name);
@@ -439,7 +377,7 @@ namespace vbcc
   {
     auto name = ST::di().string(func / FunctionId);
     auto find = func_ids.find(name);
-    Id func_id;
+    size_t func_id;
 
     if (find == func_ids.end())
     {
@@ -461,7 +399,7 @@ namespace vbcc
     return func_state;
   }
 
-  std::optional<Id> State::get_symbol_id(Node id)
+  std::optional<size_t> State::get_symbol_id(Node id)
   {
     auto name = ST::noemit().string(id);
     auto find = symbol_ids.find(name);
@@ -487,7 +425,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<Id> State::get_library_id(Node lib)
+  std::optional<size_t> State::get_library_id(Node lib)
   {
     auto name = ST::exec().string(lib / String);
     auto find = library_ids.find(name);
@@ -551,22 +489,9 @@ namespace vbcc
   {
     std::vector<uint8_t> hdr;
     std::vector<uint8_t> di;
-    std::vector<Code> code;
+    std::vector<uint8_t> code;
 
-    // Use to reserve space for patching a PC.
-    auto reserve = [&](size_t count = 1) {
-      auto offset = code.size();
-      code.insert(code.end(), count * 2, 0);
-      return offset;
-    };
-
-    // Use to patch a PC into the code stream later.
-    auto patch = [&](size_t& offset, uint64_t write) {
-      code.at(offset++) = write & 0xFFFFFFFF;
-      code.at(offset++) = (write >> 32) & 0xFFFFFFFF;
-    };
-
-    std::function<uint32_t(Node)> typ = [&](Node type) -> uint32_t {
+    std::function<size_t(Node)> typ = [&](Node type) -> size_t {
       if (type == Dyn)
         return type::dyn();
 
@@ -631,28 +556,6 @@ namespace vbcc
       hdr << uleb(typ(symbol / Return));
     }
 
-    // Function headers.
-    hdr << uleb(functions.size());
-
-    for (auto& func_state : functions)
-    {
-      hdr << uleb(func_state.params);
-      hdr << uleb(func_state.register_idxs.size());
-      hdr << uleb(func_state.label_idxs.size());
-
-      // Parameter and return types.
-      for (auto& param : *(func_state.func / Params))
-        hdr << uleb(typ(param / Type));
-
-      hdr << uleb(typ(func_state.func / Type));
-
-      // Reserve space for a 64 bit PC for each label.
-      func_state.label_pcs = reserve(func_state.label_idxs.size());
-
-      // Reserve space for a 64 bit PC for the debug info.
-      func_state.debug_offset = reserve();
-    }
-
     // Typedefs.
     hdr << uleb(typedefs.size());
 
@@ -713,11 +616,24 @@ namespace vbcc
       }
     }
 
-    // Function bodies.
-    // This goes in `code`, not in `hdr`.
+    // Functions.
+    hdr << uleb(functions.size());
+
     for (auto& func_state : functions)
     {
-      patch(func_state.debug_offset, di.size());
+      hdr << uleb(func_state.register_idxs.size());
+      hdr << uleb(di.size());
+
+      // Parameter and return types.
+      hdr << uleb(func_state.params);
+
+      for (auto& param : *(func_state.func / Params))
+        hdr << uleb(typ(param / Type));
+
+      hdr << uleb(typ(func_state.func / Type));
+
+      // Labels.
+      hdr << uleb(func_state.label_idxs.size());
 
       // Function name.
       di << uleb(func_state.name);
@@ -727,30 +643,39 @@ namespace vbcc
         di << uleb(name);
 
       auto dst = [&](Node stmt) {
-        return *func_state.get_register_id(stmt / LocalId);
+        return uleb(*func_state.get_register_id(stmt / LocalId));
       };
 
       auto lhs = [&](Node stmt) {
-        return *func_state.get_register_id(stmt / Lhs);
+        return uleb(*func_state.get_register_id(stmt / Lhs));
       };
 
       auto rhs = [&](Node stmt) {
-        return *func_state.get_register_id(stmt / Rhs);
+        return uleb(*func_state.get_register_id(stmt / Rhs));
       };
 
       auto src = rhs;
 
-      auto cls = [&](Node stmt) { return *get_class_id(stmt / ClassId); };
+      auto cls = [&](Node stmt) { return uleb(*get_class_id(stmt / ClassId)); };
 
-      auto fld = [&](Node stmt) { return *get_field_id(stmt / FieldId); };
+      auto fld = [&](Node stmt) { return uleb(*get_field_id(stmt / FieldId)); };
 
-      auto mth = [&](Node stmt) { return *get_method_id(stmt / MethodId); };
+      auto mth = [&](Node stmt) {
+        return uleb(*get_method_id(stmt / MethodId));
+      };
 
-      auto fn = [&](Node stmt) { return *get_func_id(stmt / FunctionId); };
+      auto fn = [&](Node stmt) {
+        return uleb(*get_func_id(stmt / FunctionId));
+      };
 
       auto args = [&](Node args) {
         for (auto arg : *args)
-          code << e{Op::Arg, +argtype(arg), src(arg)};
+        {
+          if ((arg / Type) == ArgMove)
+            code << uleb(+Op::ArgMove) << uleb(src(arg));
+          else
+            code << uleb(+Op::ArgCopy) << uleb(src(arg));
+        }
       };
 
       constexpr size_t no_value = size_t(-1);
@@ -795,7 +720,7 @@ namespace vbcc
       for (auto label : *(func_state.func / Labels))
       {
         // Save the pc for this label.
-        patch(func_state.label_pcs, code.size());
+        hdr << uleb(code.size());
 
         for (auto stmt : *(label / Body))
         {
@@ -828,406 +753,427 @@ namespace vbcc
 
             if (t == None)
             {
-              code << e{Op::Const, dst(stmt), +val(t)};
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t));
             }
             else if (t == Bool)
             {
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t));
+
               if ((stmt / Rhs) == True)
-                code << e{Op::Const, dst(stmt), +val(t), true};
+                code << uleb(true);
               else
-                code << e{Op::Const, dst(stmt), +val(t), false};
+                code << uleb(false);
             }
             else if (t == I8)
             {
-              code << e{
-                Op::Const,
-                dst(stmt),
-                +val(t),
-                static_cast<uint8_t>(lit<int8_t>(v))};
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << sleb(lit<int8_t>(v));
             }
             else if (t == U8)
             {
-              code << e{Op::Const, dst(stmt), +val(t), lit<uint8_t>(v)};
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << uleb(lit<uint8_t>(v));
             }
             else if (t == I16)
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<int16_t>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << sleb(lit<int16_t>(v));
             }
             else if (t == U16)
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<uint16_t>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << uleb(lit<uint16_t>(v));
             }
             else if (t == I32)
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<int32_t>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << sleb(lit<int32_t>(v));
             }
             else if (t == U32)
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<uint32_t>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << uleb(lit<uint32_t>(v));
             }
             else if (t->in({I64, ILong, ISize}))
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<int64_t>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << sleb(lit<int64_t>(v));
             }
             else if (t->in({U64, ULong, USize, Ptr}))
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<uint64_t>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << uleb(lit<uint64_t>(v));
             }
             else if (t == F32)
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<float>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << sleb(lit<float>(v));
             }
             else if (t == F64)
             {
-              code << e{Op::Const, dst(stmt), +val(t)} << lit<double>(v);
+              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
+                   << sleb(lit<double>(v));
             }
           }
           else if (stmt == Convert)
           {
-            code << e{Op::Convert, dst(stmt), +val(stmt / Type), rhs(stmt)};
+            code << uleb(+Op::Convert) << dst(stmt) << uleb(+val(stmt / Type))
+                 << rhs(stmt);
           }
           else if (stmt == Stack)
           {
             args(stmt / Args);
-            code << e{Op::Stack, dst(stmt)} << cls(stmt);
+            code << uleb(+Op::Stack) << dst(stmt) << cls(stmt);
           }
           else if (stmt == Heap)
           {
             args(stmt / Args);
-            code << e{Op::Heap, dst(stmt), rhs(stmt)} << cls(stmt);
+            code << uleb(+Op::Heap) << dst(stmt) << rhs(stmt) << cls(stmt);
           }
           else if (stmt == Region)
           {
             args(stmt / Args);
-            code << e{Op::Region, dst(stmt), rgn(stmt)} << cls(stmt);
+            code << uleb(+Op::Region) << dst(stmt) << rgn(stmt) << cls(stmt);
           }
           else if (stmt == StackArray)
           {
-            code << e{Op::StackArray, dst(stmt), rhs(stmt)} << typ(stmt / Type);
+            code << uleb(+Op::StackArray) << dst(stmt) << rhs(stmt)
+                 << uleb(typ(stmt / Type));
           }
           else if (stmt == StackArrayConst)
           {
-            code << e{Op::StackArrayConst, dst(stmt)} << typ(stmt / Type)
-                 << lit<uint64_t>(stmt / Rhs);
+            code << uleb(+Op::StackArrayConst) << dst(stmt)
+                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
           }
           else if (stmt == HeapArray)
           {
-            code << e{Op::HeapArray, dst(stmt), lhs(stmt), rhs(stmt)}
-                 << typ(stmt / Type);
+            code << uleb(+Op::HeapArray) << dst(stmt) << lhs(stmt) << rhs(stmt)
+                 << uleb(typ(stmt / Type));
           }
           else if (stmt == HeapArrayConst)
           {
-            code << e{Op::HeapArrayConst, dst(stmt), src(stmt)}
-                 << typ(stmt / Type) << lit<uint64_t>(stmt / Rhs);
+            code << uleb(+Op::HeapArrayConst) << dst(stmt) << src(stmt)
+                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
           }
           else if (stmt == RegionArray)
           {
-            code << e{Op::RegionArray, dst(stmt), rgn(stmt), rhs(stmt)}
-                 << typ(stmt / Type);
+            code << uleb(+Op::RegionArray) << dst(stmt) << rgn(stmt)
+                 << rhs(stmt) << uleb(typ(stmt / Type));
           }
           else if (stmt == RegionArrayConst)
           {
-            code << e{Op::RegionArrayConst, dst(stmt), rgn(stmt)}
-                 << typ(stmt / Type) << lit<uint64_t>(stmt / Rhs);
+            code << uleb(+Op::RegionArrayConst) << dst(stmt) << rgn(stmt)
+                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
           }
           else if (stmt == Copy)
           {
-            code << e{Op::Copy, dst(stmt), src(stmt)};
+            code << uleb(+Op::Copy) << dst(stmt) << src(stmt);
           }
           else if (stmt == Move)
           {
-            code << e{Op::Move, dst(stmt), src(stmt)};
+            code << uleb(+Op::Move) << dst(stmt) << src(stmt);
           }
           else if (stmt == Drop)
           {
-            code << e{Op::Drop, dst(stmt)};
+            code << uleb(+Op::Drop) << dst(stmt);
           }
           else if (stmt == FieldRef)
           {
             auto arg = stmt / Arg;
-            code << e{Op::Ref, dst(stmt), +argtype(arg), src(arg)} << fld(stmt);
+
+            if (arg == ArgMove)
+              code << uleb(+Op::RefMove);
+            else
+              code << uleb(+Op::RefCopy);
+
+            code << dst(stmt) << src(arg) << fld(stmt);
           }
           else if (stmt == ArrayRef)
           {
             auto arg = stmt / Arg;
-            Op op;
 
-            if (argtype(arg) == ArgType::Move)
-              op = Op::ArrayRefMove;
+            if (arg == ArgMove)
+              code << uleb(+Op::ArrayRefMove);
             else
-              op = Op::ArrayRefCopy;
+              code << uleb(+Op::ArrayRefCopy);
 
-            code << e{op, dst(stmt), src(arg), rhs(stmt)};
+            code << dst(stmt) << src(arg) << rhs(stmt);
           }
           else if (stmt == ArrayRefConst)
           {
             auto arg = stmt / Arg;
-            code << e{Op::ArrayRefConst, dst(stmt), +argtype(arg), src(arg)}
-                 << lit<uint64_t>(stmt / Rhs);
+
+            if (arg == ArgMove)
+              code << uleb(+Op::ArrayRefMoveConst);
+            else
+              code << uleb(+Op::ArrayRefCopyConst);
+
+            code << dst(stmt) << src(arg) << uleb(lit<uint64_t>(stmt / Rhs));
           }
           else if (stmt == Load)
           {
-            code << e{Op::Load, dst(stmt), rhs(stmt)};
+            code << uleb(+Op::Load) << dst(stmt) << rhs(stmt);
           }
           else if (stmt == Store)
           {
             auto arg = stmt / Arg;
 
-            if (argtype(arg) == ArgType::Move)
-              code << e{Op::StoreMove, dst(stmt), src(stmt), src(arg)};
+            if (arg == ArgMove)
+              code << uleb(+Op::StoreMove);
             else
-              code << e{Op::StoreCopy, dst(stmt), src(stmt), src(arg)};
+              code << uleb(+Op::StoreCopy);
+
+            code << dst(stmt) << src(stmt) << src(arg);
           }
           else if (stmt == FnPointer)
           {
-            code << e{Op::Lookup, dst(stmt), +CallType::CallStatic} << fn(stmt);
+            code << uleb(+Op::LookupStatic) << dst(stmt) << fn(stmt);
           }
           else if (stmt == Lookup)
           {
-            code << e{Op::Lookup, dst(stmt), +CallType::CallDynamic, src(stmt)}
+            code << uleb(+Op::LookupDynamic) << dst(stmt) << src(stmt)
                  << mth(stmt);
           }
           else if (stmt == Call)
           {
             args(stmt / Args);
-            code << e{Op::Call, dst(stmt), +CallType::CallStatic} << fn(stmt);
+            code << uleb(+Op::CallStatic) << dst(stmt) << fn(stmt);
           }
           else if (stmt == CallDyn)
           {
             args(stmt / Args);
-            code << e{Op::Call, dst(stmt), +CallType::CallDynamic, src(stmt)};
+            code << uleb(+Op::CallDynamic) << dst(stmt) << src(stmt);
           }
           else if (stmt == Subcall)
           {
             args(stmt / Args);
-            code << e{Op::Call, dst(stmt), +CallType::SubcallStatic}
-                 << fn(stmt);
+            code << uleb(+Op::SubcallStatic) << dst(stmt) << fn(stmt);
           }
           else if (stmt == SubcallDyn)
           {
             args(stmt / Args);
-            code << e{
-              Op::Call, dst(stmt), +CallType::SubcallDynamic, src(stmt)};
+            code << uleb(+Op::SubcallDynamic) << dst(stmt) << src(stmt);
           }
           else if (stmt == Try)
           {
             args(stmt / Args);
-            code << e{Op::Call, dst(stmt), +CallType::TryStatic} << fn(stmt);
+            code << uleb(+Op::TryStatic) << dst(stmt) << fn(stmt);
           }
           else if (stmt == TryDyn)
           {
             args(stmt / Args);
-            code << e{Op::Call, dst(stmt), +CallType::TryDynamic, src(stmt)};
+            code << uleb(+Op::TryDynamic) << dst(stmt) << src(stmt);
           }
           else if (stmt == FFI)
           {
             args(stmt / Args);
-            code << e{Op::Call, dst(stmt), +CallType::FFI}
-                 << *get_symbol_id(stmt / SymbolId);
+            code << uleb(+Op::FFI) << dst(stmt)
+                 << uleb(*get_symbol_id(stmt / SymbolId));
           }
           else if (stmt == Typetest)
           {
-            code << e{Op::Typetest, dst(stmt), src(stmt)} << typ(stmt / Type);
+            code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
+                 << uleb(typ(stmt / Type));
           }
           else if (stmt == Add)
           {
-            code << e{Op::Add, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Add) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Sub)
           {
-            code << e{Op::Sub, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Sub) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Mul)
           {
-            code << e{Op::Mul, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Mul) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Div)
           {
-            code << e{Op::Div, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Div) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Mod)
           {
-            code << e{Op::Mod, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Mod) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Pow)
           {
-            code << e{Op::Pow, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Pow) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == And)
           {
-            code << e{Op::And, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::And) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Or)
           {
-            code << e{Op::Or, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Or) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Xor)
           {
-            code << e{Op::Xor, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Xor) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Shl)
           {
-            code << e{Op::Shl, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Shl) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Shr)
           {
-            code << e{Op::Shr, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Shr) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Eq)
           {
-            code << e{Op::Eq, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Eq) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Ne)
           {
-            code << e{Op::Ne, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Ne) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Lt)
           {
-            code << e{Op::Lt, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Lt) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Le)
           {
-            code << e{Op::Le, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Le) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Gt)
           {
-            code << e{Op::Gt, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Gt) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Ge)
           {
-            code << e{Op::Ge, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Ge) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Min)
           {
-            code << e{Op::Min, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Min) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Max)
           {
-            code << e{Op::Max, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Max) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == LogBase)
           {
-            code << e{Op::LogBase, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::LogBase) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Atan2)
           {
-            code << e{Op::Atan2, dst(stmt), lhs(stmt), rhs(stmt)};
+            code << uleb(+Op::Atan2) << dst(stmt) << lhs(stmt) << rhs(stmt);
           }
           else if (stmt == Neg)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Neg, src(stmt)};
+            code << uleb(+Op::Neg) << dst(stmt) << src(stmt);
           }
           else if (stmt == Not)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Not, src(stmt)};
+            code << uleb(+Op::Not) << dst(stmt) << src(stmt);
           }
           else if (stmt == Abs)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Abs, src(stmt)};
+            code << uleb(+Op::Abs) << dst(stmt) << src(stmt);
           }
           else if (stmt == Ceil)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Ceil, src(stmt)};
+            code << uleb(+Op::Ceil) << dst(stmt) << src(stmt);
           }
           else if (stmt == Floor)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Floor, src(stmt)};
+            code << uleb(+Op::Floor) << dst(stmt) << src(stmt);
           }
           else if (stmt == Exp)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Exp, src(stmt)};
+            code << uleb(+Op::Exp) << dst(stmt) << src(stmt);
           }
           else if (stmt == Log)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Log, src(stmt)};
+            code << uleb(+Op::Log) << dst(stmt) << src(stmt);
           }
           else if (stmt == Sqrt)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Sqrt, src(stmt)};
+            code << uleb(+Op::Sqrt) << dst(stmt) << src(stmt);
           }
           else if (stmt == Cbrt)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Cbrt, src(stmt)};
+            code << uleb(+Op::Cbrt) << dst(stmt) << src(stmt);
           }
           else if (stmt == IsInf)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::IsInf, src(stmt)};
+            code << uleb(+Op::IsInf) << dst(stmt) << src(stmt);
           }
           else if (stmt == IsNaN)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::IsNaN, src(stmt)};
+            code << uleb(+Op::IsNaN) << dst(stmt) << src(stmt);
           }
           else if (stmt == Sin)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Sin, src(stmt)};
+            code << uleb(+Op::Sin) << dst(stmt) << src(stmt);
           }
           else if (stmt == Cos)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Cos, src(stmt)};
+            code << uleb(+Op::Cos) << dst(stmt) << src(stmt);
           }
           else if (stmt == Tan)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Tan, src(stmt)};
+            code << uleb(+Op::Tan) << dst(stmt) << src(stmt);
           }
           else if (stmt == Asin)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Asin, src(stmt)};
+            code << uleb(+Op::Asin) << dst(stmt) << src(stmt);
           }
           else if (stmt == Acos)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Acos, src(stmt)};
+            code << uleb(+Op::Acos) << dst(stmt) << src(stmt);
           }
           else if (stmt == Atan)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Atan, src(stmt)};
+            code << uleb(+Op::Atan) << dst(stmt) << src(stmt);
           }
           else if (stmt == Sinh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Sinh, src(stmt)};
+            code << uleb(+Op::Sinh) << dst(stmt) << src(stmt);
           }
           else if (stmt == Cosh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Cosh, src(stmt)};
+            code << uleb(+Op::Cosh) << dst(stmt) << src(stmt);
           }
           else if (stmt == Tanh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Tanh, src(stmt)};
+            code << uleb(+Op::Tanh) << dst(stmt) << src(stmt);
           }
           else if (stmt == Asinh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Asinh, src(stmt)};
+            code << uleb(+Op::Asinh) << dst(stmt) << src(stmt);
           }
           else if (stmt == Acosh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Acosh, src(stmt)};
+            code << uleb(+Op::Acosh) << dst(stmt) << src(stmt);
           }
           else if (stmt == Atanh)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Atanh, src(stmt)};
+            code << uleb(+Op::Atanh) << dst(stmt) << src(stmt);
           }
           else if (stmt == Len)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Len, src(stmt)};
+            code << uleb(+Op::Len) << dst(stmt) << src(stmt);
           }
           else if (stmt == ArrayPtr)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::ArrayPtr, src(stmt)};
+            code << uleb(+Op::ArrayPtr) << dst(stmt) << src(stmt);
           }
           else if (stmt == Const_E)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Const_E};
+            code << uleb(+Op::Const_E) << dst(stmt);
           }
           else if (stmt == Const_Pi)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Const_Pi};
+            code << uleb(+Op::Const_Pi) << dst(stmt);
           }
           else if (stmt == Const_Inf)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Const_Inf};
+            code << uleb(+Op::Const_Inf) << dst(stmt);
           }
           else if (stmt == Const_NaN)
           {
-            code << e{Op::MathOp, dst(stmt), +MathOp::Const_NaN};
+            code << uleb(+Op::Const_NaN) << dst(stmt);
           }
         }
 
@@ -1241,42 +1187,37 @@ namespace vbcc
         if (term == Tailcall)
         {
           args(term / MoveArgs);
-          code << e{Op::Tailcall, +CallType::CallStatic} << fn(term);
+          code << uleb(+Op::TailcallStatic) << fn(term);
         }
         else if (term == TailcallDyn)
         {
           args(term / MoveArgs);
-          code << e{Op::Tailcall, +CallType::CallDynamic, dst(term)};
+          code << uleb(+Op::TailcallDynamic) << dst(term);
         }
         else if (term == Return)
         {
-          code << e{Op::Return, dst(term), +Condition::Return};
+          code << uleb(+Op::Return) << dst(term);
         }
         else if (term == Raise)
         {
-          code << e{Op::Return, dst(term), +Condition::Raise};
+          code << uleb(+Op::Raise) << dst(term);
         }
         else if (term == Throw)
         {
-          code << e{Op::Return, dst(term), +Condition::Throw};
+          code << uleb(+Op::Throw) << dst(term);
         }
         else if (term == Cond)
         {
           auto t = *func_state.get_label_id(term / Lhs);
           auto f = *func_state.get_label_id(term / Rhs);
-          code << e{Op::Cond, dst(term), t, f};
+          code << uleb(+Op::Cond) << dst(term) << uleb(t) << uleb(f);
         }
         else if (term == Jump)
         {
-          code << e{Op::Jump, *func_state.get_label_id(term / LabelId)};
+          code << uleb(+Op::Jump)
+               << uleb(*func_state.get_label_id(term / LabelId));
         }
       }
-    }
-
-    if constexpr (std::endian::native == std::endian::big)
-    {
-      for (size_t i = 0; i < code.size(); i++)
-        code[i] = std::byteswap(code[i]);
     }
 
     // Length of the debug info section.
@@ -1286,22 +1227,12 @@ namespace vbcc
       hdr << uleb(di.size());
 
     std::ofstream f(options().bytecode_file, std::ios::binary | std::ios::out);
-
     f.write(reinterpret_cast<const char*>(hdr.data()), hdr.size());
-    auto len = hdr.size();
 
     if (!options().strip)
-    {
       f.write(reinterpret_cast<const char*>(di.data()), di.size());
-      len += di.size();
-    }
 
-    // Pad to sizeof(Code) alignment.
-    auto pad = (sizeof(Code) - (len % sizeof(Code))) % sizeof(Code);
-    f.write("\0\0\0\0", pad);
-
-    f.write(
-      reinterpret_cast<const char*>(code.data()), code.size() * sizeof(Code));
+    f.write(reinterpret_cast<const char*>(code.data()), code.size());
 
     if (!f)
     {

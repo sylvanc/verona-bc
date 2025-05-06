@@ -86,7 +86,7 @@ namespace vbci
       return Value::from_addr(value_type, addr);
     }
 
-    Value store(ArgType arg_type, size_t idx, Value& v)
+    Value store(bool move, size_t idx, Value& v)
     {
       if (!Program::get().typecheck(v.type_id(), type_id))
         throw Value(Error::BadType);
@@ -97,7 +97,7 @@ namespace vbci
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
       auto prev = Value::from_addr(value_type, addr);
       region_store(prev, v);
-      v.to_addr(arg_type, addr);
+      v.to_addr(move, addr);
       return prev;
     }
 

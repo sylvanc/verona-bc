@@ -1,4 +1,5 @@
 #include "../lang.h"
+#include "../bitset.h"
 
 #include <queue>
 
@@ -114,7 +115,7 @@ namespace vbcc
           auto target = (node / Labels)->front() / LabelId;
           auto& func_state = state->get_func(node / FunctionId);
           auto& label = func_state.get_label(target);
-          std::bitset<MaxRegisters> params;
+          auto params = Bitset(func_state.register_names.size());
 
           for (auto param : *(node / Params))
             params.set(*func_state.get_register_id(param / LocalId));
@@ -127,8 +128,8 @@ namespace vbcc
           }
 
           // Backward data-flow.
-          std::queue<uint8_t> wl;
-          for (uint8_t i = 0; i < func_state.labels.size(); i++)
+          std::queue<size_t> wl;
+          for (size_t i = 0; i < func_state.labels.size(); i++)
             wl.push(i);
 
           while (!wl.empty())
@@ -138,7 +139,7 @@ namespace vbcc
 
             // Calculate a new out-set that is everything our successors need.
             auto& l = func_state.labels.at(id);
-            std::bitset<MaxRegisters> new_out;
+            auto new_out = Bitset(func_state.register_names.size());
 
             for (auto succ_id : l.succ)
             {
@@ -148,7 +149,7 @@ namespace vbcc
 
             // Calculate a new in-set that is our out-set, minus our own
             // out-set, plus our own in-set.
-            std::bitset<MaxRegisters> new_in = new_out;
+            auto new_in = new_out;
             new_in &= ~l.out;
             new_in |= l.in;
 

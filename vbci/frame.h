@@ -20,7 +20,7 @@ namespace vbci
     size_t finalize_base;
     size_t finalize_top;
     PC pc;
-    Local dst;
+    size_t dst;
     Condition condition;
 
     Frame(
@@ -32,11 +32,11 @@ namespace vbci
       std::vector<Object*>& finalize,
       size_t finalize_base,
       PC pc,
-      Local dst,
+      size_t dst,
       Condition condition);
 
-    Value& local(Local idx);
-    Value& arg(Local idx);
+    Value& local(size_t idx);
+    Value& arg(size_t idx);
     std::span<Value> args(size_t args);
     void push_finalizer(Object* obj);
     void drop();

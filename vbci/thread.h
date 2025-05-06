@@ -4,6 +4,7 @@
 #include "program.h"
 #include "stack.h"
 
+#include <type_traits>
 #include <unordered_set>
 
 namespace vbci
@@ -42,12 +43,23 @@ namespace vbci
     Value thread_run(Function* func);
     void thread_run_finalizer(Object* obj);
     void step();
-    void pushframe(Function* func, Local dst, Condition condition);
+    void pushframe(Function* func, size_t dst, Condition condition);
     void popframe(Value& result, Condition condition);
     void tailcall(Function* func);
     void teardown();
-    void branch(Local label);
+    void branch(size_t label);
     void check_args(std::vector<Id>& types, bool vararg = false);
     void check_args(std::vector<Field>& fields);
+
+    template<typename T = size_t>
+    T leb()
+    {
+      if constexpr (
+        (std::is_integral_v<T> && std::is_signed_v<T>) ||
+        std::is_floating_point_v<T>)
+        return static_cast<T>(program->sleb(frame->pc));
+      else
+        return static_cast<T>(program->uleb(frame->pc));
+    }
   };
 }

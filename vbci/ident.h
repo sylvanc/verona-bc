@@ -7,14 +7,12 @@
 
 namespace vbci
 {
-  enum class Error : uint8_t
+  enum class Error
   {
     UnknownGlobal,
     UnknownFunction,
     UnknownPrimitiveType,
     UnknownRegionType,
-    UnknownArgType,
-    UnknownCallType,
     UnknownOpcode,
     UnknownMathOp,
     BadAllocTarget,
@@ -37,8 +35,6 @@ namespace vbci
   };
 
   using PC = size_t;
-  using Local = uint8_t;
-  using FieldIdx = uint32_t;
   using Location = uintptr_t;
   using RC = uint32_t;
   using ARC = std::atomic<RC>;
@@ -62,10 +58,6 @@ namespace vbci
         return "unknown primitive type";
       case Error::UnknownRegionType:
         return "unknown region type";
-      case Error::UnknownArgType:
-        return "unknown arg type";
-      case Error::UnknownCallType:
-        return "unknown call type";
       case Error::UnknownOpcode:
         return "unknown opcode";
       case Error::UnknownMathOp:

@@ -14,7 +14,7 @@ namespace vbci
     std::vector<Object*>& finalize,
     size_t finalize_base,
     PC pc,
-    Local dst,
+    size_t dst,
     Condition condition)
   : func(func),
     frame_id(frame_id),
@@ -29,7 +29,7 @@ namespace vbci
     condition(condition)
   {}
 
-  Value& Frame::local(Local idx)
+  Value& Frame::local(size_t idx)
   {
     auto i = base + idx;
 
@@ -39,7 +39,7 @@ namespace vbci
     return locals.at(i);
   }
 
-  Value& Frame::arg(Local idx)
+  Value& Frame::arg(size_t idx)
   {
     auto i = base + func->registers + idx;
 

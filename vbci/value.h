@@ -70,7 +70,7 @@ namespace vbci
     Value(Object* obj, bool ro);
     Value(Array* arr);
     Value(Cown* cown);
-    Value(Object* obj, FieldIdx f, bool ro);
+    Value(Object* obj, size_t f, bool ro);
     Value(Array* arr, size_t idx, bool ro);
     Value(Cown* cown, bool ro);
     Value(Error error);
@@ -89,7 +89,7 @@ namespace vbci
     static Value none();
     static Value from_ffi(ValueType t, uint64_t v);
     static Value from_addr(ValueType t, void* v);
-    void to_addr(ArgType arg_type, void* v);
+    void to_addr(bool move, void* v);
 
     ValueType type();
     Id type_id();
@@ -106,11 +106,11 @@ namespace vbci
 
     void drop();
     void field_drop();
-    Value ref(ArgType arg_type, Id field);
-    Value arrayref(ArgType arg_type, size_t i);
+    Value ref(bool move, size_t field);
+    Value arrayref(bool move, size_t i);
     Value load();
-    Value store(ArgType arg_type, Value& v);
-    Function* method(Id w);
+    Value store(bool move, Value& v);
+    Function* method(size_t w);
     Value convert(ValueType to);
     Function* function();
 

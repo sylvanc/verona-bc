@@ -1,8 +1,8 @@
 #pragma once
 
+#include "bitset.h"
 #include "stringtable.h"
 
-#include <bitset>
 #include <vbcc.h>
 #include <vbci.h>
 
@@ -12,16 +12,17 @@ namespace vbcc
 
   struct LabelState
   {
-    std::vector<uint8_t> pred;
-    std::vector<uint8_t> succ;
+    std::vector<size_t> pred;
+    std::vector<size_t> succ;
 
-    std::bitset<MaxRegisters> in;
-    std::bitset<MaxRegisters> dead;
-    std::bitset<MaxRegisters> out;
+    Bitset in;
+    Bitset dead;
+    Bitset out;
 
-    void def(uint8_t r);
-    bool use(uint8_t r);
-    bool kill(uint8_t r);
+    void resize(size_t size);
+    void def(size_t r);
+    bool use(size_t r);
+    bool kill(size_t r);
   };
 
   struct FuncState
@@ -29,21 +30,20 @@ namespace vbcc
     ST::Index name;
     Node func;
     size_t params;
-    std::unordered_map<ST::Index, uint8_t> label_idxs;
-    std::unordered_map<ST::Index, uint8_t> register_idxs;
+    std::unordered_map<ST::Index, size_t> label_idxs;
+    std::unordered_map<ST::Index, size_t> register_idxs;
     std::vector<ST::Index> register_names;
     std::vector<LabelState> labels;
 
     size_t label_pcs;
-    size_t debug_offset;
 
     FuncState(Node func) : func(func) {}
 
-    std::optional<uint8_t> get_label_id(Node id);
+    std::optional<size_t> get_label_id(Node id);
     LabelState& get_label(Node id);
     bool add_label(Node id);
 
-    std::optional<uint8_t> get_register_id(Node id);
+    std::optional<size_t> get_register_id(Node id);
     bool add_register(Node id);
   };
 
@@ -52,13 +52,13 @@ namespace vbcc
     bool error = false;
     Node top;
 
-    std::unordered_map<ST::Index, Id> type_ids;
-    std::unordered_map<ST::Index, Id> class_ids;
-    std::unordered_map<ST::Index, Id> field_ids;
-    std::unordered_map<ST::Index, Id> method_ids;
-    std::unordered_map<ST::Index, Id> func_ids;
-    std::unordered_map<ST::Index, Id> symbol_ids;
-    std::unordered_map<ST::Index, Id> library_ids;
+    std::unordered_map<ST::Index, size_t> type_ids;
+    std::unordered_map<ST::Index, size_t> class_ids;
+    std::unordered_map<ST::Index, size_t> field_ids;
+    std::unordered_map<ST::Index, size_t> method_ids;
+    std::unordered_map<ST::Index, size_t> func_ids;
+    std::unordered_map<ST::Index, size_t> symbol_ids;
+    std::unordered_map<ST::Index, size_t> library_ids;
 
     std::vector<Node> typedefs;
     std::vector<Node> primitives;
@@ -69,26 +69,26 @@ namespace vbcc
 
     State();
 
-    std::optional<Id> get_type_id(Node id);
+    std::optional<size_t> get_type_id(Node id);
     bool add_type(Node type);
 
-    std::optional<Id> get_class_id(Node id);
+    std::optional<size_t> get_class_id(Node id);
     bool add_class(Node cls);
 
-    std::optional<Id> get_field_id(Node id);
+    std::optional<size_t> get_field_id(Node id);
     void add_field(Node field);
 
-    std::optional<Id> get_method_id(Node id);
+    std::optional<size_t> get_method_id(Node id);
     void add_method(Node method);
 
-    std::optional<Id> get_func_id(Node id);
+    std::optional<size_t> get_func_id(Node id);
     FuncState& get_func(Node id);
     FuncState& add_func(Node func);
 
-    std::optional<Id> get_symbol_id(Node id);
+    std::optional<size_t> get_symbol_id(Node id);
     bool add_symbol(Node symbol);
 
-    std::optional<Id> get_library_id(Node id);
+    std::optional<size_t> get_library_id(Node id);
     void add_library(Node lib);
 
     void def(Node& id);
