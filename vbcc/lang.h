@@ -56,7 +56,8 @@ namespace vbcc
       Acosh,
       Atanh,
       Len,
-      ArrayPtr);
+      ArrayPtr,
+      StructPtr);
 
   const auto Constant = T(Const_E, Const_Pi, Const_Inf, Const_NaN);
 

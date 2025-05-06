@@ -175,15 +175,23 @@ namespace vbci
         break;
 
       case ValueType::Object:
+        // Object pointers are stored as one past the object, pointing to the
+        // fields, for FFI compatibility.
         value.obj = *reinterpret_cast<Object**>(v);
         if (value.obj == nullptr)
           value.tag = ValueType::Invalid;
+        else
+          value.obj--;
         break;
 
       case ValueType::Array:
+        // Array pointers are stored as one past the array, pointing to the
+        // elements, for FFI compatibility.
         value.arr = *reinterpret_cast<Array**>(v);
         if (value.arr == nullptr)
           value.tag = ValueType::Invalid;
+        else
+          value.arr--;
         break;
 
       default:
@@ -266,11 +274,15 @@ namespace vbci
         break;
 
       case ValueType::Object:
-        *reinterpret_cast<Object**>(v) = obj;
+        // Object pointers are stored as one past the object, pointing to the
+        // fields, for FFI compatibility.
+        *reinterpret_cast<Object**>(v) = (obj + 1);
         break;
 
       case ValueType::Array:
-        *reinterpret_cast<Array**>(v) = arr;
+        // Array pointers are stored as one past the array, pointing to the
+        // elements, for FFI compatibility.
+        *reinterpret_cast<Array**>(v) = (arr + 1);
         break;
 
       default:
@@ -437,6 +449,14 @@ namespace vbci
   {
     if (tag == ValueType::Array)
       return arr->get_pointer();
+
+    throw Value(Error::BadOperand);
+  }
+
+  Value Value::op_structptr()
+  {
+    if (tag == ValueType::Object)
+      return obj->get_pointer();
 
     throw Value(Error::BadOperand);
   }

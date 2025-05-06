@@ -51,9 +51,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * FFI with `libffi`.
   * `struct` types.
     * How does a `struct` return work? Can't use `ffi_arg`?
-    * Can we pass objects as `struct` to FFI?
-      * Won't work for embedded `struct`, would have to pack the fields.
-      * Won't work for pointers unless we store pointers offset from the header.
     * Can we wrap returned `struct` as objects?
   * Platform-specific FFI. Only load for the runtime platform.
   * FFI to get the runtime platform.
@@ -67,6 +64,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * How to clean them up?
 * Embedded fields.
   * Embedded arrays with a constant size.
+  * Embedded objects vs. structs for FFI (FFI expects no object header).
 * Concurrency.
   * When.
   * Merge, freeze, extract.

@@ -629,6 +629,8 @@ namespace vbci
           do_unop(len);
         case Op::ArrayPtr:
           do_unop(arrayptr);
+        case Op::StructPtr:
+          do_unop(structptr);
 
 #define do_const(op) \
   { \

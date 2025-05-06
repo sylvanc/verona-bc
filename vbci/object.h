@@ -67,6 +67,11 @@ namespace vbci
       return Program::get().cls(class_id).finalizer();
     }
 
+    void* get_pointer()
+    {
+      return reinterpret_cast<void*>(this + 1);
+    }
+
     Value load(size_t idx)
     {
       auto& f = Program::get().cls(class_id).fields.at(idx);

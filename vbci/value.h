@@ -389,6 +389,7 @@ namespace vbci
 
     Value op_len();
     Value op_arrayptr();
+    Value op_structptr();
 
     static Value e()
     {

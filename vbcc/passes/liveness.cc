@@ -1,5 +1,5 @@
-#include "../lang.h"
 #include "../bitset.h"
+#include "../lang.h"
 
 #include <queue>
 
@@ -37,7 +37,7 @@ namespace vbcc
                            Cos,      Tan,        Asin,   Acos,
                            Atan,     Sinh,       Cosh,   Tanh,
                            Asinh,    Acosh,      Atanh,  Len,
-                           ArrayPtr}))
+                           ArrayPtr, StructPtr}))
         {
           state->use(node / Rhs);
           state->def(node / LocalId);

@@ -145,6 +145,7 @@ namespace vbcc
   inline const auto Atanh = TokenDef("atanh");
   inline const auto Len = TokenDef("len");
   inline const auto ArrayPtr = TokenDef("arrayptr");
+  inline const auto StructPtr = TokenDef("structptr");
 
   // Constants.
   inline const auto Const_E = TokenDef("e");
@@ -218,7 +219,7 @@ namespace vbcc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Atan | Sinh | Cosh | Tanh | Asinh |
-    Acosh | Atanh | Len | ArrayPtr;
+    Acosh | Atanh | Len | ArrayPtr | StructPtr;
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -358,6 +359,7 @@ namespace vbcc
     | (Atanh <<= wfDst * wfSrc)
     | (Len <<= wfDst * wfSrc)
     | (ArrayPtr <<= wfDst * wfSrc)
+    | (StructPtr <<= wfDst * wfSrc)
     | (Const_E <<= wfDst)
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)

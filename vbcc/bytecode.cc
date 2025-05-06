@@ -1159,6 +1159,10 @@ namespace vbcc
           {
             code << uleb(+Op::ArrayPtr) << dst(stmt) << src(stmt);
           }
+          else if (stmt == StructPtr)
+          {
+            code << uleb(+Op::StructPtr) << dst(stmt) << src(stmt);
+          }
           else if (stmt == Const_E)
           {
             code << uleb(+Op::Const_E) << dst(stmt);

@@ -295,6 +295,7 @@ namespace vbci
 
     Len,
     ArrayPtr,
+    StructPtr,
 
     // Constants.
     // Arg0 = dst.
