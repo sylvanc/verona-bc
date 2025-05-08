@@ -55,10 +55,6 @@ namespace vbci
 
     Value store(bool move, Value& v)
     {
-      // Allow any cown to contain an error.
-      if (!v.is_error() && !Program::get().typecheck(v.type_id(), type_id))
-        throw Value(Error::BadType);
-
       Value next;
 
       if (move)
@@ -66,8 +62,16 @@ namespace vbci
       else
         next = v;
 
+      // Allow any cown to contain an error.
+      if (
+        !next.is_error() && !Program::get().typecheck(next.type_id(), type_id))
+        next = Value(Error::BadType);
+
       if (!next.is_sendable())
-        throw Value(Error::BadStore);
+        next = Value(Error::BadStore);
+
+      if (next.is_error())
+        LOG(Debug) << next.to_string();
 
       auto prev = std::move(content);
       content = std::move(next);

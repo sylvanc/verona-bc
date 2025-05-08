@@ -121,14 +121,9 @@ namespace vbci
     int exit_code;
 
     if (ret_val.is_error())
-    {
-      std::cerr << ret_val.to_string() << std::endl;
       exit_code = -1;
-    }
     else
-    {
       exit_code = ret_val.get_i32();
-    }
 
     ret.drop();
     return exit_code;
