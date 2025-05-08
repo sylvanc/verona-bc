@@ -1,5 +1,6 @@
 add_executable(vbci
   dynlib.cc
+  ffi.cc
   frame.cc
   main.cc
   program.cc

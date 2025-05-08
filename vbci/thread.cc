@@ -15,7 +15,19 @@ namespace vbci
 
   Value Thread::run(Function* func)
   {
-    return get().thread_run(func);
+    auto result = Cown::create(func->return_type);
+    auto b = verona::rt::BehaviourCore::make(1, run_behavior, sizeof(Value));
+    new (&b->get_slots()[0]) verona::rt::Slot(result);
+    new (b->get_body<Value>()) Value(func);
+    verona::rt::BehaviourCore::schedule_many(&b, 1);
+    return Value(result, false);
+  }
+
+  void Thread::run_behavior(verona::rt::Work* work)
+  {
+    auto b = verona::rt::BehaviourCore::from_work(work);
+    get().thread_run_behavior(b);
+    verona::rt::BehaviourCore::finished(work);
   }
 
   void Thread::run_finalizer(Object* obj)
@@ -34,22 +46,49 @@ namespace vbci
     return std::move(locals.at(0));
   }
 
+  void Thread::thread_run_behavior(verona::rt::BehaviourCore* b)
+  {
+    assert(!frame);
+    assert(!args);
+    auto closure = b->get_body<Value>();
+    Function* function;
+
+    if (closure->is_function())
+    {
+      // This is a function pointer.
+      function = closure->function();
+    }
+    else
+    {
+      // This is a closure, populate the self argument.
+      function = closure->method(ApplyMethodId);
+      locals.at(args++) = std::move(*closure);
+    }
+
+    // Populate cown arguments.
+    auto slots = b->get_slots();
+    auto num_cowns = b->get_count();
+    auto result = static_cast<Cown*>(slots[0].cown());
+
+    for (size_t i = 1; i < num_cowns; i++)
+    {
+      auto cown = static_cast<Cown*>(slots[i].cown());
+      locals.at(args++) = Value(cown, slots[i].is_read_only());
+    }
+
+    // Execute the function.
+    auto ret = thread_run(function);
+    result->store(true, ret);
+  }
+
   void Thread::thread_run_finalizer(Object* obj)
   {
     LOG(Debug) << "Running finalizer for " << obj;
 
-    if (frame)
-    {
-      frame->drop_args(args);
-      frame->arg(0) = Value(obj, true);
-    }
-    else
-    {
-      locals.at(0) = Value(obj, true);
-    }
-
+    drop_args();
+    arg(0) = Value(obj, true);
     args = 1;
-    run(obj->finalizer()).drop();
+    thread_run(obj->finalizer()).drop();
   }
 
   void Thread::step()
@@ -432,25 +471,37 @@ namespace vbci
           auto dst = leb();
           auto num_args = args;
           auto& symbol = program->symbol(leb());
-          check_args(symbol.params(), symbol.varargs());
+          auto& params = symbol.params();
+          auto& paramvals = symbol.paramvals();
+          check_args(params, symbol.varargs());
 
           if (ffi_arg_addrs.size() < num_args)
+          {
             ffi_arg_addrs.resize(num_args);
+            ffi_arg_vals.resize(num_args);
+          }
 
           for (size_t i = 0; i < num_args; i++)
           {
             auto& arg = frame->arg(i);
-            ffi_arg_addrs.at(i) = arg.address_of();
+            ffi_arg_vals.at(i) = &arg;
 
-            if (i >= symbol.params().size())
+            if (i < params.size())
             {
-              symbol.varparam(program->layout_type_id(arg.type_id()).second);
+              ffi_arg_addrs.at(i) =
+                arg.to_ffi(paramvals.at(i), &ffi_arg_vals.at(i));
+            }
+            else
+            {
+              auto rep = program->layout_type_id(arg.type_id());
+              ffi_arg_addrs.at(i) = arg.to_ffi(rep.first, &ffi_arg_vals.at(i));
+              symbol.varparam(rep.second);
             }
           }
 
-          frame->drop_args(num_args);
           auto ret =
             Value::from_ffi(symbol.retval(), symbol.call(ffi_arg_addrs));
+          frame->drop_args(num_args);
 
           if (
             !ret.is_error() && !program->typecheck(ret.type_id(), symbol.ret()))
@@ -459,6 +510,100 @@ namespace vbci
           }
 
           frame->local(dst) = ret;
+          break;
+        }
+
+        case Op::When:
+        {
+          if (args < 1)
+            throw Value(Error::BadArgs);
+
+          auto& dst = frame->local(leb());
+          auto& be = frame->arg(0);
+          bool closure;
+          Function* apply;
+
+          if (be.is_function())
+          {
+            apply = be.function();
+            closure = false;
+
+            if (apply->param_types.size() != (args - 1))
+              throw Value(Error::BadArgs);
+          }
+          else
+          {
+            if (!be.is_sendable())
+              throw Value(Error::BadArgs);
+
+            apply = be.method(ApplyMethodId);
+            closure = true;
+
+            if (!apply)
+              throw Value(Error::MethodNotFound);
+
+            if (apply->param_types.size() != args)
+              throw Value(Error::BadArgs);
+          }
+
+          auto& params = apply->param_types;
+          size_t num_cowns = args;
+          size_t first_cown = 0;
+
+          if (closure)
+          {
+            // First argument is the behavior itself.
+            if (!program->typecheck(be.type_id(), params.at(0)))
+              throw Value(Error::BadArgs);
+
+            // First cown is at index 1. Slot 0 is the result cown.
+            first_cown++;
+            num_cowns--;
+          }
+
+          // Check that all other args are cowns of the right type.
+          for (size_t i = first_cown; i < args; i++)
+          {
+            auto type_id = frame->arg(i).type_id();
+
+            if (!type::is_cown(type_id))
+              throw Value(Error::BadArgs);
+
+            type_id = type::ref(type::uncown(type_id));
+
+            if (!program->typecheck(type_id, params.at(i)))
+              throw Value(Error::BadArgs);
+          }
+
+          args = 0;
+
+          // Create the result cown.
+          auto result = Cown::create(apply->return_type);
+          dst = result;
+
+          auto b = verona::rt::BehaviourCore::make(
+            num_cowns + 1, run_behavior, sizeof(Value));
+          auto slots = b->get_slots();
+          new (&slots[0]) verona::rt::Slot(result);
+
+          for (size_t i = 0; i < num_cowns; i++)
+          {
+            // The first cown argument position depends on whether this is a
+            // closure or not.
+            auto arg = std::move(frame->arg(first_cown + i));
+
+            // Offset the slot by 1 to account for the result cown.
+            auto& slot = slots[i + 1];
+            new (&slot) verona::rt::Slot(arg.get_cown());
+            slot.set_move();
+
+            if (arg.is_readonly())
+              slot.set_read_only();
+          }
+
+          auto value = new (b->get_body<Value>()) Value();
+          *value = std::move(be);
+          verona::rt::BehaviourCore::schedule_many(&b, 1);
           break;
         }
 
@@ -631,6 +776,8 @@ namespace vbci
           do_unop(arrayptr);
         case Op::StructPtr:
           do_unop(structptr);
+        case Op::Read:
+          do_unop(read);
 
 #define do_const(op) \
   { \
@@ -737,7 +884,6 @@ namespace vbci
 
     if (frames.empty())
     {
-      // TODO: store to the result cown?
       locals.at(0) = std::move(ret);
       frame = nullptr;
       return;
@@ -840,15 +986,15 @@ namespace vbci
   {
     if ((args < types.size()) || (!vararg && (args > types.size())))
     {
-      frame->drop_args(args);
+      drop_args();
       throw Value(Error::BadArgs);
     }
 
     for (size_t i = 0; i < types.size(); i++)
     {
-      if (!program->typecheck(frame->arg(i).type_id(), types.at(i)))
+      if (!program->typecheck(arg(i).type_id(), types.at(i)))
       {
-        frame->drop_args(args);
+        drop_args();
         throw Value(Error::BadType);
       }
     }
@@ -871,6 +1017,31 @@ namespace vbci
         frame->drop_args(args);
         throw Value(Error::BadType);
       }
+    }
+
+    args = 0;
+  }
+
+  Value& Thread::arg(size_t idx)
+  {
+    // Only use this when we don't know if we have a frame or not.
+    if (frame) [[likely]]
+      return frame->arg(idx);
+
+    return locals.at(idx);
+  }
+
+  void Thread::drop_args()
+  {
+    // Only use this when we don't know if we have a frame or not.
+    if (frame) [[likely]]
+    {
+      frame->drop_args(args);
+    }
+    else
+    {
+      for (size_t i = 0; i < args; i++)
+        locals.at(i).drop();
     }
 
     args = 0;

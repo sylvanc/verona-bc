@@ -12,6 +12,7 @@ namespace vbci
   inline const auto CurrentVersion = size_t(0);
   inline const auto MainFuncId = size_t(0);
   inline const auto FinalMethodId = size_t(0);
+  inline const auto ApplyMethodId = size_t(1);
 
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
   // known to be signed integers (zigzag SLEB128) or floats (bitcast zigzag
@@ -210,6 +211,15 @@ namespace vbci
     // Arg1 = symbol ID.
     FFI,
 
+    // Set up the arguments with the behavior closure or function pointer first,
+    // followed by the cowns to be acquired. The behavior closure must have an
+    // @apply method where the implementation takes the behavior and the
+    // acquired cowns as arguments. With a function pointer, it takes just the
+    // acquired cowns.
+    // Arg0 = dst.
+    When,
+
+    // Returns true if the dynamic type of src is a subtype of the type ID.
     // Arg0 = dst.
     // Arg1 = src.
     // Arg2 = type ID.
@@ -219,6 +229,7 @@ namespace vbci
     // Arg0 = function ID.
     TailcallStatic,
 
+    // Replace the current frame with a new one.
     // Arg0 = function pointer.
     TailcallDynamic,
 
@@ -296,6 +307,10 @@ namespace vbci
     Len,
     ArrayPtr,
     StructPtr,
+
+    // This creates a read-only view of the target. Currently, this can only be
+    // done on cowns.
+    Read,
 
     // Constants.
     // Arg0 = dst.
@@ -442,17 +457,20 @@ namespace vbci
 
     inline constexpr bool is_array(Id type_id)
     {
+      // An array of anything is an array.
       return (type_id & +Mod::Array);
     }
 
     inline constexpr bool is_ref(Id type_id)
     {
-      return (type_id & +Mod::Ref);
+      // A ref can't be an array.
+      return !is_array(type_id) && (type_id & +Mod::Ref);
     }
 
     inline constexpr bool is_cown(Id type_id)
     {
-      return (type_id & +Mod::Cown);
+      // A cown can't be a ref or an array.
+      return (type_id & Mask) == +Mod::Cown;
     }
 
     inline constexpr ValueType val(Id type_id)
@@ -508,6 +526,12 @@ namespace vbci
     {
       assert(!is_cown(type_id));
       return type_id | +Mod::Cown;
+    }
+
+    inline constexpr Id uncown(Id type_id)
+    {
+      assert(is_cown(type_id));
+      return type_id & ~+Mod::Cown;
     }
   }
 }

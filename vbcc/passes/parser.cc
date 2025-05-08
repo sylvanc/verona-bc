@@ -89,6 +89,7 @@ namespace vbcc
         "subcall\\b" >> [](auto& m) { m.add(Subcall); },
         "try\\b" >> [](auto& m) { m.add(Try); },
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
+        "when\\b" >> [](auto& m) { m.add(When); },
         "typetest\\b" >> [](auto& m) { m.add(Typetest); },
 
         // Terminators.
@@ -149,6 +150,7 @@ namespace vbcc
         "len\\b" >> [](auto& m) { m.add(Len); },
         "arrayptr\\b" >> [](auto& m) { m.add(ArrayPtr); },
         "structptr\\b" >> [](auto& m) { m.add(StructPtr); },
+        "read\\b" >> [](auto& m) { m.add(Read); },
 
         // Constants.
         "e\\b" >> [](auto& m) { m.add(Const_E); },

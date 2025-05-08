@@ -86,6 +86,7 @@ namespace vbcc
   inline const auto Subcall = TokenDef("subcall");
   inline const auto Try = TokenDef("try");
   inline const auto FFI = TokenDef("ffi");
+  inline const auto When = TokenDef("when");
   inline const auto Typetest = TokenDef("typetest");
 
   // Terminators.
@@ -146,6 +147,7 @@ namespace vbcc
   inline const auto Len = TokenDef("len");
   inline const auto ArrayPtr = TokenDef("arrayptr");
   inline const auto StructPtr = TokenDef("structptr");
+  inline const auto Read = TokenDef("read");
 
   // Constants.
   inline const auto Const_E = TokenDef("e");
@@ -219,7 +221,7 @@ namespace vbcc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Atan | Sinh | Cosh | Tanh | Asinh |
-    Acosh | Atanh | Len | ArrayPtr | StructPtr;
+    Acosh | Atanh | Len | ArrayPtr | StructPtr | Read;
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -227,7 +229,7 @@ namespace vbcc
     Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
     HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop |
     FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer |
-    Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI |
+    Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI | When |
     Typetest | wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
@@ -301,6 +303,7 @@ namespace vbcc
     | (Try <<= wfDst * FunctionId * Args)
     | (TryDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
+    | (When <<= wfDst * Args * Arg)
     | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
@@ -360,6 +363,7 @@ namespace vbcc
     | (Len <<= wfDst * wfSrc)
     | (ArrayPtr <<= wfDst * wfSrc)
     | (StructPtr <<= wfDst * wfSrc)
+    | (Read <<= wfDst * wfSrc)
     | (Const_E <<= wfDst)
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)

@@ -32,6 +32,11 @@ namespace vbci
     virtual void free(Object* obj) = 0;
     virtual void free(Array* arr) = 0;
 
+    bool sendable()
+    {
+      return !parent && (stack_rc == 1);
+    }
+
   private:
     virtual bool enable_rc() = 0;
     virtual void free_contents() = 0;

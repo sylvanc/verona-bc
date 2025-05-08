@@ -31,6 +31,7 @@ namespace vbci
     bool vararg;
 
     std::vector<Id> param_types;
+    std::vector<ValueType> param_value_types;
     Id return_type;
     ValueType return_value_type;
 
@@ -40,12 +41,13 @@ namespace vbci
   public:
     Symbol(Func func, bool vararg);
 
-    void param(Id type_id, ffi_type* t);
+    void param(Id type_id, ValueType t, ffi_type* ffit);
     void ret(Id type_id, ValueType t, ffi_type* ffit);
     bool prepare();
 
     bool varargs();
     std::vector<Id>& params();
+    std::vector<ValueType>& paramvals();
     Id ret();
     ValueType retval();
 

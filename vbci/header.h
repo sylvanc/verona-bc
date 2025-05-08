@@ -169,6 +169,11 @@ namespace vbci
       return region(loc);
     }
 
+    bool sendable()
+    {
+      return is_immutable(loc) || (is_region(loc) && region()->sendable());
+    }
+
     void inc(bool reg)
     {
       if (loc == Immutable)

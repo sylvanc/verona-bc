@@ -7,11 +7,6 @@
 #include <format>
 #include <verona.h>
 
-extern "C" vbci::Array* getargv()
-{
-  return vbci::Program::get().get_argv();
-}
-
 namespace vbci
 {
   std::pair<size_t, size_t> SourceFile::linecol(size_t pos)
@@ -106,7 +101,10 @@ namespace vbci
     return argv;
   }
 
-  int Program::run(std::filesystem::path& path, std::vector<std::string> args)
+  int Program::run(
+    std::filesystem::path& path,
+    size_t num_threads,
+    std::vector<std::string> args)
   {
     file = path;
 
@@ -114,14 +112,26 @@ namespace vbci
       return -1;
 
     setup_argv(args);
-
-    using namespace verona::rt;
-    auto& sched = Scheduler::get();
-    (void)sched;
-
+    auto& sched = verona::rt::Scheduler::get();
+    sched.init(num_threads);
     auto ret = Thread::run(&functions.at(MainFuncId));
-    std::cout << ret.to_string() << std::endl;
-    return 0;
+    sched.run();
+
+    auto ret_val = ret.load();
+    int exit_code;
+
+    if (ret_val.is_error())
+    {
+      std::cerr << ret_val.to_string() << std::endl;
+      exit_code = -1;
+    }
+    else
+    {
+      exit_code = ret_val.get_i32();
+    }
+
+    ret.drop();
+    return exit_code;
   }
 
   bool Program::typecheck(Id t1, Id t2)
@@ -256,7 +266,7 @@ namespace vbci
     }
 
     // Dyn, cown, ref, array ref, cown ref.
-    return {ValueType::Invalid, &value_type};
+    return {ValueType::Invalid, &ffi_type_pointer};
   }
 
   std::string Program::debug_info(Function* func, PC pc)
@@ -359,24 +369,6 @@ namespace vbci
     return di_strings.at(uleb(pc));
   }
 
-  bool Program::setup_value_type()
-  {
-    std::vector<ffi_type*> field_types;
-    field_types.push_back(&ffi_type_uint64);
-    field_types.push_back(&ffi_type_uint64);
-
-    std::vector<size_t> field_offsets;
-    field_offsets.resize(field_types.size());
-
-    value_type.size = 0;
-    value_type.alignment = 0;
-    value_type.type = FFI_TYPE_STRUCT;
-    value_type.elements = field_types.data();
-
-    return ffi_get_struct_offsets(FFI_DEFAULT_ABI, &value_type, nullptr) ==
-      FFI_OK;
-  }
-
   void Program::setup_argv(std::vector<std::string>& args)
   {
     auto type_u8 = type::val(ValueType::U8);
@@ -423,9 +415,6 @@ namespace vbci
 
   bool Program::load()
   {
-    if (!setup_value_type())
-      return false;
-
     content.clear();
     typedefs.clear();
     functions.clear();
@@ -510,7 +499,7 @@ namespace vbci
       {
         auto type_id = uleb(pc);
         auto rep = layout_type_id(type_id);
-        symbol.param(type_id, rep.second);
+        symbol.param(type_id, rep.first, rep.second);
       }
 
       auto type_id = uleb(pc);

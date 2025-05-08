@@ -257,8 +257,9 @@ namespace vbcc
     functions.push_back(FuncState(nullptr));
     func_ids.insert({ST::di().string("@main"), MainFuncId});
 
-    // Reserve a method ID for `@final`.
+    // Reserve method IDs.
     method_ids.insert({ST::di().string("@final"), FinalMethodId});
+    method_ids.insert({ST::di().string("@apply"), ApplyMethodId});
   }
 
   std::optional<size_t> State::get_type_id(Node id)
@@ -668,14 +669,16 @@ namespace vbcc
         return uleb(*get_func_id(stmt / FunctionId));
       };
 
+      auto onearg = [&](Node arg) {
+        if ((arg / Type) == ArgMove)
+          code << uleb(+Op::ArgMove) << uleb(src(arg));
+        else
+          code << uleb(+Op::ArgCopy) << uleb(src(arg));
+      };
+
       auto args = [&](Node args) {
         for (auto arg : *args)
-        {
-          if ((arg / Type) == ArgMove)
-            code << uleb(+Op::ArgMove) << uleb(src(arg));
-          else
-            code << uleb(+Op::ArgCopy) << uleb(src(arg));
-        }
+          onearg(arg);
       };
 
       constexpr size_t no_value = size_t(-1);
@@ -970,6 +973,12 @@ namespace vbcc
             code << uleb(+Op::FFI) << dst(stmt)
                  << uleb(*get_symbol_id(stmt / SymbolId));
           }
+          else if (stmt == When)
+          {
+            onearg(stmt / Arg);
+            args(stmt / Args);
+            code << uleb(+Op::When) << dst(stmt);
+          }
           else if (stmt == Typetest)
           {
             code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
@@ -1162,6 +1171,10 @@ namespace vbcc
           else if (stmt == StructPtr)
           {
             code << uleb(+Op::StructPtr) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == Read)
+          {
+            code << uleb(+Op::Read) << dst(stmt) << src(stmt);
           }
           else if (stmt == Const_E)
           {

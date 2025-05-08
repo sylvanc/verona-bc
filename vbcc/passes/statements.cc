@@ -541,6 +541,12 @@ namespace vbcc
                        << callargs(_[Args]);
           },
 
+        // When.
+        Dst * T(When) * CallArgs[Args] * T(Arg)[Arg] >>
+          [](Match& _) {
+            return When << _(LocalId) << callargs(_[Args]) << _(Arg);
+          },
+
         // Type test.
         Dst * T(Typetest) * T(LocalId)[Rhs] * TypeFull[Type] >>
           [](Match& _) {

@@ -15,6 +15,9 @@ int main(int argc, char** argv)
   std::filesystem::path file;
   app.add_option("path", file, "File to execute.")->required();
 
+  size_t num_threads = 4;
+  app.add_option("-t,--threads", num_threads, "Scheduler threads.");
+
   std::string log_level;
   app
     .add_option(
@@ -35,5 +38,5 @@ int main(int argc, char** argv)
     return app.exit(e);
   }
 
-  return Program::get().run(file, app.remaining());
+  return Program::get().run(file, num_threads, app.remaining());
 }

@@ -88,17 +88,23 @@ namespace vbci
 
     static Value none();
     static Value from_ffi(ValueType t, uint64_t v);
+    void* to_ffi(ValueType t, Value** def);
     static Value from_addr(ValueType t, void* v);
     void to_addr(bool move, void* v);
 
     ValueType type();
     Id type_id();
 
+    bool is_readonly();
+    bool is_function();
+    bool is_sendable();
     bool is_error();
+
     bool get_bool();
     int32_t get_i32();
+    Cown* get_cown();
+    Function* function();
     size_t to_index();
-    void* address_of();
 
     Location location();
     Region* region();
@@ -112,7 +118,6 @@ namespace vbci
     Value store(bool move, Value& v);
     Function* method(size_t w);
     Value convert(ValueType to);
-    Function* function();
 
     void annotate(Function* func, PC pc);
     std::string to_string();
@@ -390,6 +395,7 @@ namespace vbci
     Value op_len();
     Value op_arrayptr();
     Value op_structptr();
+    Value op_read();
 
     static Value e()
     {

@@ -37,7 +37,7 @@ namespace vbcc
                            Cos,      Tan,        Asin,   Acos,
                            Atan,     Sinh,       Cosh,   Tanh,
                            Asinh,    Acosh,      Atanh,  Len,
-                           ArrayPtr, StructPtr}))
+                           ArrayPtr, StructPtr,  Read}))
         {
           state->use(node / Rhs);
           state->def(node / LocalId);
@@ -60,6 +60,7 @@ namespace vbcc
                     Try,
                     TryDyn,
                     FFI,
+                    When,
                     Const_E,
                     Const_Pi,
                     Const_Inf,

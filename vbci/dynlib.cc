@@ -4,57 +4,12 @@
 
 namespace vbci
 {
-  ffi_type* ffi_map(Id type_id)
-  {
-    if (!type::is_val(type_id))
-      return nullptr;
-
-    auto t = type::val(type_id);
-
-    switch (t)
-    {
-      case ValueType::None:
-        return &ffi_type_void;
-      case ValueType::I8:
-        return &ffi_type_sint8;
-      case ValueType::I16:
-        return &ffi_type_sint16;
-      case ValueType::I32:
-        return &ffi_type_sint32;
-      case ValueType::I64:
-        return &ffi_type_sint64;
-      case ValueType::U8:
-        return &ffi_type_uint8;
-      case ValueType::U16:
-        return &ffi_type_uint16;
-      case ValueType::U32:
-        return &ffi_type_uint32;
-      case ValueType::U64:
-        return &ffi_type_uint64;
-      case ValueType::F32:
-        return &ffi_type_float;
-      case ValueType::F64:
-        return &ffi_type_double;
-      case ValueType::ILong:
-        return &ffi_type_slong;
-      case ValueType::ULong:
-        return &ffi_type_ulong;
-      case ValueType::ISize:
-        return sizeof(ssize_t) == 4 ? &ffi_type_sint32 : &ffi_type_sint64;
-      case ValueType::USize:
-        return sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64;
-      case ValueType::Ptr:
-        return &ffi_type_pointer;
-      default:
-        return nullptr;
-    }
-  }
-
   Symbol::Symbol(Func func, bool vararg) : func(func), vararg(vararg) {}
 
-  void Symbol::param(Id type_id, ffi_type* ffit)
+  void Symbol::param(Id type_id, ValueType t, ffi_type* ffit)
   {
     param_types.push_back(type_id);
+    param_value_types.push_back(t);
     param_ffi_types.push_back(ffit);
   }
 
@@ -89,6 +44,11 @@ namespace vbci
   std::vector<Id>& Symbol::params()
   {
     return param_types;
+  }
+
+  std::vector<ValueType>& Symbol::paramvals()
+  {
+    return param_value_types;
   }
 
   Id Symbol::ret()

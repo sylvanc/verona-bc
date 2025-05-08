@@ -57,7 +57,8 @@ namespace vbcc
       Atanh,
       Len,
       ArrayPtr,
-      StructPtr);
+      StructPtr,
+      Read);
 
   const auto Constant = T(Const_E, Const_Pi, Const_Inf, Const_NaN);
 
@@ -90,6 +91,7 @@ namespace vbcc
       Try,
       TryDyn,
       FFI,
+      When,
       Typetest);
 
   Parse parser();

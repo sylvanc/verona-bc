@@ -307,7 +307,7 @@ namespace vbci
         return arr->array_type_id();
 
       case ValueType::Cown:
-        return type::cown(cown->type_id);
+        return cown->cown_type_id();
 
       case ValueType::Ref:
         return type::ref(obj->field_type_id(idx));
@@ -316,7 +316,7 @@ namespace vbci
         return type::ref(arr->content_type_id());
 
       case ValueType::CownRef:
-        return type::ref(cown->type_id);
+        return type::ref(cown->content_type_id());
 
       case ValueType::Function:
         return type::dyn();
@@ -327,6 +327,40 @@ namespace vbci
 
       default:
         return type::val(tag);
+    }
+  }
+
+  bool Value::is_readonly()
+  {
+    return readonly;
+  }
+
+  bool Value::is_function()
+  {
+    return tag == ValueType::Function;
+  }
+
+  bool Value::is_sendable()
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+        return obj->sendable();
+
+      case ValueType::Array:
+        return arr->sendable();
+
+      case ValueType::Cown:
+        return true;
+
+      case ValueType::Ptr:
+      case ValueType::Ref:
+      case ValueType::ArrayRef:
+      case ValueType::CownRef:
+        return false;
+
+      default:
+        return true;
     }
   }
 
@@ -351,6 +385,22 @@ namespace vbci
     return i32;
   }
 
+  Cown* Value::get_cown()
+  {
+    if (tag != ValueType::Cown)
+      throw Value(Error::BadArgs);
+
+    return cown;
+  }
+
+  Function* Value::function()
+  {
+    if (tag != ValueType::Function)
+      throw Value(Error::UnknownFunction);
+
+    return func;
+  }
+
   size_t Value::to_index()
   {
     switch (tag)
@@ -368,8 +418,11 @@ namespace vbci
     }
   }
 
-  void* Value::address_of()
+  void* Value::to_ffi(ValueType t, Value** def)
   {
+    if (t == ValueType::Invalid)
+      return def;
+
     switch (tag)
     {
       case ValueType::None:
@@ -433,7 +486,7 @@ namespace vbci
         return &cown;
 
       default:
-        return this;
+        return def;
     }
   }
 
@@ -457,6 +510,18 @@ namespace vbci
   {
     if (tag == ValueType::Object)
       return obj->get_pointer();
+
+    throw Value(Error::BadOperand);
+  }
+
+  Value Value::op_read()
+  {
+    if (tag == ValueType::Cown)
+    {
+      Value r = *this;
+      r.readonly = true;
+      return r;
+    }
 
     throw Value(Error::BadOperand);
   }
@@ -644,7 +709,7 @@ namespace vbci
         break;
 
       case ValueType::CownRef:
-        v = cown->content;
+        v = cown->load();
         break;
 
       default:
@@ -711,14 +776,6 @@ namespace vbci
     return v;
   }
 
-  Function* Value::function()
-  {
-    if (tag != ValueType::Function)
-      throw Value(Error::UnknownFunction);
-
-    return func;
-  }
-
   void Value::annotate(Function* func, PC pc)
   {
     assert(tag == ValueType::Error);
@@ -734,7 +791,7 @@ namespace vbci
         return "none";
 
       case ValueType::Bool:
-        return std::to_string(b);
+        return b ? "true" : "false";
 
       case ValueType::I8:
         return std::to_string(i8);
