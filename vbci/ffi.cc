@@ -65,23 +65,22 @@ VBCI_FFI void uv_close_closure(uv_handle_t* handle)
 
 namespace vbci
 {
+  static uv_async_t poke;
   static uv_async_t keepalive;
   static uv_thread_t thread;
 
   void run_loop()
   {
-    uv_async_init(uv_default_loop(), &keepalive, [](uv_async_t* handle) {
-      uv_close(reinterpret_cast<uv_handle_t*>(handle), nullptr);
+    uv_async_init(uv_default_loop(), &keepalive, [](uv_async_t*) {
+      uv_close(reinterpret_cast<uv_handle_t*>(&poke), nullptr);
+      uv_close(reinterpret_cast<uv_handle_t*>(&keepalive), nullptr);
     });
+
+    uv_async_init(uv_default_loop(), &poke, [](uv_async_t*) {});
 
     uv_thread_create(
       &thread,
-      [](void*) {
-        // TODO: default run hangs when setting external event source.
-        // uv_run(uv_default_loop(), UV_RUN_DEFAULT);
-        while (uv_run(uv_default_loop(), UV_RUN_NOWAIT) != 0)
-          ;
-      },
+      [](void*) { uv_run(uv_default_loop(), UV_RUN_DEFAULT); },
       nullptr);
   }
 
@@ -94,6 +93,9 @@ namespace vbci
 
   void add_external(verona::rt::Work* work)
   {
+    // It's not clear why this is needed, but without it, the loop never
+    // handles events.
+    uv_async_send(&poke);
     verona::rt::Scheduler::add_external_event_source();
     delete work;
   }
