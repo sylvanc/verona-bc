@@ -53,6 +53,7 @@ namespace vbci
 
     void varparam(ffi_type* ffit);
     uint64_t call(std::vector<void*>& args);
+    void* raw_pointer();
   };
 
   struct Dynlib

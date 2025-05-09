@@ -930,7 +930,14 @@ namespace vbcc
           }
           else if (stmt == FnPointer)
           {
-            code << uleb(+Op::LookupStatic) << dst(stmt) << fn(stmt);
+            auto f = stmt / Rhs;
+
+            if (f == FunctionId)
+              code << uleb(+Op::LookupStatic) << dst(stmt)
+                   << uleb(*get_func_id(f));
+            else
+              code << uleb(+Op::LookupFFI) << dst(stmt)
+                   << uleb(*get_symbol_id(f));
           }
           else if (stmt == Lookup)
           {
@@ -1164,13 +1171,9 @@ namespace vbcc
           {
             code << uleb(+Op::Len) << dst(stmt) << src(stmt);
           }
-          else if (stmt == ArrayPtr)
+          else if (stmt == MakePtr)
           {
-            code << uleb(+Op::ArrayPtr) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == StructPtr)
-          {
-            code << uleb(+Op::StructPtr) << dst(stmt) << src(stmt);
+            code << uleb(+Op::Ptr) << dst(stmt) << src(stmt);
           }
           else if (stmt == Read)
           {

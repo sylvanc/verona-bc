@@ -7,12 +7,6 @@
 
 namespace vbci
 {
-  Thread& Thread::get()
-  {
-    thread_local Thread thread;
-    return thread;
-  }
-
   Value Thread::run(Function* func)
   {
     auto result = Cown::create(func->return_type);
@@ -23,16 +17,33 @@ namespace vbci
     return Value(result, false);
   }
 
-  void Thread::run_behavior(verona::rt::Work* work)
+  Value Thread::run(Object* obj)
   {
-    auto b = verona::rt::BehaviourCore::from_work(work);
-    get().thread_run_behavior(b);
-    verona::rt::BehaviourCore::finished(work);
+    return get().thread_run(obj);
   }
 
   void Thread::run_finalizer(Object* obj)
   {
     get().thread_run_finalizer(obj);
+  }
+
+  Thread::Thread() : program(&Program::get()), frame(nullptr), args(0)
+  {
+    frames.reserve(16);
+    locals.resize(1024);
+  }
+
+  Thread& Thread::get()
+  {
+    thread_local Thread thread;
+    return thread;
+  }
+
+  void Thread::run_behavior(verona::rt::Work* work)
+  {
+    auto b = verona::rt::BehaviourCore::from_work(work);
+    get().thread_run_behavior(b);
+    verona::rt::BehaviourCore::finished(work);
   }
 
   Value Thread::thread_run(Function* func)
@@ -44,6 +55,15 @@ namespace vbci
       step();
 
     return std::move(locals.at(0));
+  }
+
+  Value Thread::thread_run(Object* obj)
+  {
+    assert(args == 0);
+    auto function = obj->method(ApplyMethodId);
+    Value keep = obj;
+    arg(args++) = keep;
+    return thread_run(function);
   }
 
   void Thread::thread_run_behavior(verona::rt::BehaviourCore* b)
@@ -399,6 +419,13 @@ namespace vbci
           auto& src = frame->local(leb());
           auto func_id = leb();
           dst = src.method(func_id);
+          break;
+        }
+
+        case Op::LookupFFI:
+        {
+          auto& dst = frame->local(leb());
+          dst = program->symbol(leb()).raw_pointer();
           break;
         }
 
@@ -772,10 +799,8 @@ namespace vbci
           do_unop(atanh);
         case Op::Len:
           do_unop(len);
-        case Op::ArrayPtr:
-          do_unop(arrayptr);
-        case Op::StructPtr:
-          do_unop(structptr);
+        case Op::Ptr:
+          do_unop(ptr);
         case Op::Read:
           do_unop(read);
 

@@ -31,6 +31,7 @@ target_link_libraries(vbci
   Threads::Threads
   snmalloc-new-override
   verona_rt
+  uv_a
   ffi::ffi
   CLI11::CLI11
   verona-bc::include

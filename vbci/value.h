@@ -103,6 +103,7 @@ namespace vbci
     bool get_bool();
     int32_t get_i32();
     Cown* get_cown();
+    Object* get_object();
     Function* function();
     size_t to_index();
 
@@ -393,8 +394,7 @@ namespace vbci
     }
 
     Value op_len();
-    Value op_arrayptr();
-    Value op_structptr();
+    Value op_ptr();
     Value op_read();
 
     static Value e()

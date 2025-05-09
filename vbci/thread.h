@@ -26,21 +26,18 @@ namespace vbci
     std::vector<void*> ffi_arg_addrs;
     std::vector<Value*> ffi_arg_vals;
 
-    Thread() : program(&Program::get()), frame(nullptr), args(0)
-    {
-      frames.reserve(16);
-      locals.resize(1024);
-    }
-
-    static Thread& get();
-
   public:
     static Value run(Function* func);
-    static void run_behavior(verona::rt::Work* work);
+    static Value run(Object* obj);
     static void run_finalizer(Object* obj);
 
   private:
+    Thread();
+    static Thread& get();
+    static void run_behavior(verona::rt::Work* work);
+
     Value thread_run(Function* func);
+    Value thread_run(Object* obj);
     void thread_run_behavior(verona::rt::BehaviourCore* b);
     void thread_run_finalizer(Object* obj);
     void step();

@@ -99,6 +99,11 @@ namespace vbci
     return ret;
   }
 
+  void* Symbol::raw_pointer()
+  {
+    return reinterpret_cast<void*>(func);
+  }
+
   Dynlib::Dynlib(const std::string& path)
   {
 #ifdef _WIN32

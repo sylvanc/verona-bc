@@ -37,7 +37,7 @@ namespace vbcc
                            Cos,      Tan,        Asin,   Acos,
                            Atan,     Sinh,       Cosh,   Tanh,
                            Asinh,    Acosh,      Atanh,  Len,
-                           ArrayPtr, StructPtr,  Read}))
+                           MakePtr,  Read}))
         {
           state->use(node / Rhs);
           state->def(node / LocalId);

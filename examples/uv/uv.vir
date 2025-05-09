@@ -1,0 +1,69 @@
+lib
+  @malloc = "malloc"(usize): ptr
+  @printval = "printval"(dyn): none
+  @puts = "puts"(ptr): i32
+  @uv_os_homedir = "uv_os_homedir"(ptr, ptr): i32
+  @uv_default_loop = "uv_default_loop"(): ptr
+  @uv_handle_size = "uv_handle_size"(i32): usize
+  @uv_handle_closure = "uv_handle_closure"(ptr, dyn): none
+  @uv_callback_closure = "uv_callback_closure"(ptr): none
+  @uv_timer_init = "uv_timer_init"(ptr, ptr): i32
+  @uv_timer_start = "uv_timer_start"(ptr, ptr, u64, u64): i32
+  @uv_timer_stop = "uv_timer_stop"(ptr): i32
+
+class @timer
+  @handle: ptr
+  @counter: usize
+  @apply @timer_apply
+
+func @timer_apply($self: @timer): none
+  $one = const usize 1
+  $done = const usize 3
+  $counter_ref = ref copy $self @counter
+  $counter = load $counter_ref
+  $cond = ge $counter $done
+  cond $cond ^done ^not_done
+^done
+  $handle_ref = ref copy $self @handle
+  $handle = load $handle_ref
+  $_ = ffi @uv_timer_stop(copy $handle)
+  jump ^return
+^not_done
+  $counter = add $counter $one
+  $_ = ffi @printval(copy $counter)
+  $_ = store $counter_ref copy $counter
+  jump ^return
+^return
+  $none = const none
+  ret $none
+
+func @timer_create(): ptr
+  $timer_type = const i32 13
+  $timer_size = ffi @uv_handle_size(move $timer_type)
+  $timer_ptr = ffi @malloc(move $timer_size)
+  $loop = ffi @uv_default_loop()
+  $_ = ffi @uv_timer_init(move $loop, copy $timer_ptr)
+  ret $timer_ptr
+
+func @print_home(): none
+  $home = stack u8[256]
+  $home_ptr = makeptr $home
+  $home_len = len $home
+  $home_len = makeptr $home_len
+  $_ = ffi @uv_os_homedir(copy $home_ptr, move $home_len)
+  $_ = ffi @puts(copy $home_ptr)
+  $ret = const none
+  ret $ret
+
+func @main(): i32
+  // $_ = call @print_home()
+  $timer_ptr = call @timer_create()
+  $counter = const usize 0
+  $timer = region rc @timer(copy $timer_ptr, move $counter)
+  $_ = ffi @uv_handle_closure(copy $timer_ptr, move $timer)
+  $timeout = const u64 1000
+  $callback = lookup @uv_callback_closure
+  $_ = ffi @uv_timer_start(
+    copy $timer_ptr, move $callback, copy $timeout, copy $timeout)
+  $ret = const i32 0
+  ret $ret

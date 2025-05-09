@@ -176,6 +176,11 @@ namespace vbci
     // Arg2 = method ID.
     LookupDynamic,
 
+    // Creates a pointer (not a function pointer) from an FFI symbol.
+    // Arg0 = dst.
+    // Arg1 = symbol ID.
+    LookupFFI,
+
     // Set a value as an argument index in the next frame. Use this to set up
     // the arguments for an object allocation or a function call. Arguments are
     // set up in order, and cleared on a call, tailcall, ore return.
@@ -305,8 +310,7 @@ namespace vbci
     Atanh,
 
     Len,
-    ArrayPtr,
-    StructPtr,
+    Ptr,
 
     // This creates a read-only view of the target. Currently, this can only be
     // done on cowns.

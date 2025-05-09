@@ -17,7 +17,7 @@ func @main(): i32
 ^loop
   $arg = ref copy $argv $argi
   $arg = load $arg
-  $arg = arrayptr $arg
+  $arg = makeptr $arg
   $_ = ffi @puts(move $arg)
   $argi = add $argi $one
   jump ^cond

@@ -388,9 +388,17 @@ namespace vbci
   Cown* Value::get_cown()
   {
     if (tag != ValueType::Cown)
-      throw Value(Error::BadArgs);
+      throw Value(Error::BadConversion);
 
     return cown;
+  }
+
+  Object* Value::get_object()
+  {
+    if (tag != ValueType::Object)
+      throw Value(Error::BadConversion);
+
+    return obj;
   }
 
   Function* Value::function()
@@ -498,20 +506,51 @@ namespace vbci
     throw Value(Error::BadOperand);
   }
 
-  Value Value::op_arrayptr()
+  Value Value::op_ptr()
   {
-    if (tag == ValueType::Array)
-      return arr->get_pointer();
-
-    throw Value(Error::BadOperand);
-  }
-
-  Value Value::op_structptr()
-  {
-    if (tag == ValueType::Object)
-      return obj->get_pointer();
-
-    throw Value(Error::BadOperand);
+    switch (tag)
+    {
+      case ValueType::None:
+        return (void*)nullptr;
+      case ValueType::Bool:
+        return &b;
+      case ValueType::I8:
+        return &i8;
+      case ValueType::I16:
+        return &i16;
+      case ValueType::I32:
+        return &i32;
+      case ValueType::I64:
+        return &i64;
+      case ValueType::U8:
+        return &u8;
+      case ValueType::U16:
+        return &u16;
+      case ValueType::U32:
+        return &u32;
+      case ValueType::U64:
+        return &u64;
+      case ValueType::F32:
+        return &f32;
+      case ValueType::F64:
+        return &f64;
+      case ValueType::ILong:
+        return &ilong;
+      case ValueType::ULong:
+        return &ulong;
+      case ValueType::ISize:
+        return &isize;
+      case ValueType::USize:
+        return &usize;
+      case ValueType::Ptr:
+        return &ptr;
+      case ValueType::Object:
+        return obj->get_pointer();
+      case ValueType::Array:
+        return arr->get_pointer();
+      default:
+        throw Value(Error::BadOperand);
+    }
   }
 
   Value Value::op_read()

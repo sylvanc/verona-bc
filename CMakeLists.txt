@@ -37,6 +37,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
 
+FetchContent_Declare(
+  libuv
+  GIT_REPOSITORY https://github.com/libuv/libuv
+  GIT_TAG        v1.51.0
+)
+
+FetchContent_MakeAvailable_ExcludeFromAll(libuv)
+
 include(cmake/libffi.cmake)
 
 # Use snmalloc clangformat target

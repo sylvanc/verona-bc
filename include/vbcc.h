@@ -145,8 +145,7 @@ namespace vbcc
   inline const auto Acosh = TokenDef("acosh");
   inline const auto Atanh = TokenDef("atanh");
   inline const auto Len = TokenDef("len");
-  inline const auto ArrayPtr = TokenDef("arrayptr");
-  inline const auto StructPtr = TokenDef("structptr");
+  inline const auto MakePtr = TokenDef("makeptr");
   inline const auto Read = TokenDef("read");
 
   // Constants.
@@ -221,7 +220,7 @@ namespace vbcc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Atan | Sinh | Cosh | Tanh | Asinh |
-    Acosh | Atanh | Len | ArrayPtr | StructPtr | Read;
+    Acosh | Atanh | Len | MakePtr | Read;
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -295,7 +294,7 @@ namespace vbcc
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
     | (Lookup <<= wfDst * wfSrc * MethodId)
-    | (FnPointer <<= wfDst * FunctionId)
+    | (FnPointer <<= wfDst * (Rhs >>= FunctionId | SymbolId))
     | (Call <<= wfDst * FunctionId * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
     | (Subcall <<= wfDst * FunctionId * Args)
@@ -361,8 +360,7 @@ namespace vbcc
     | (Acosh <<= wfDst * wfSrc)
     | (Atanh <<= wfDst * wfSrc)
     | (Len <<= wfDst * wfSrc)
-    | (ArrayPtr <<= wfDst * wfSrc)
-    | (StructPtr <<= wfDst * wfSrc)
+    | (MakePtr <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)
     | (Const_E <<= wfDst)
     | (Const_Pi <<= wfDst)

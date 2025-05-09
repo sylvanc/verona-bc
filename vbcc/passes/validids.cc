@@ -67,6 +67,13 @@ namespace vbcc
 
           if (!id)
           {
+            if (_(FunctionId)->parent() == FnPointer)
+            {
+              // Can be a SymbolId instead.
+              if (state->get_symbol_id(_(FunctionId)))
+                return SymbolId ^ _(FunctionId);
+            }
+
             state->error = true;
             return err(_(FunctionId), "unknown function");
           }

@@ -48,10 +48,13 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* I/O with `libuv`.
+  * Do everything asynchronously.
+  * Yield the current thread when waiting for I/O.
+  * Need more than one Thread per scheduler thread.
 * Merge, freeze, extract.
   * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RC.
-* I/O with `libuv`.
 * FFI with `libffi`.
   * `struct` types.
     * How does a `struct` return work? Can't use `ffi_arg`?
@@ -66,9 +69,11 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * Initializing global values.
   * String constants? `u8[]`?
   * How to clean them up?
-* Embedded fields.
-  * Embedded arrays with a constant size.
-  * Embedded objects vs. structs for FFI (FFI expects no object header).
+* Embedded fields (objects and arrays).
+  * Embed with no header, use `snmalloc::external_pointer`.
+  * Need a different `ValueType` to avoid doing this for all objects/arrays.
+  * Compatible with FFI.
+  * Can't store? Or is a store a copy? How do we initialize the field?
 * Make a `bool[]` have 1-bit instead of 8-bit elements.
 * Math ops for numerical limits, by type?
 * Introspection.
@@ -80,8 +85,10 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * Mark classes to auto-generate a C API.
   * Output a C header file.
   * Allow calling back into the interpreter.
+* Generate FFI stubs automatically from C/C++ headers.
 * Interactive debugger.
 * Build an DAP/LSP to allow debugging.
 * AST to IR output.
 * Compile to LLVM IR and/or Cranelift.
+* Hot patching running code.
 * Serialize a behavior to execute on another process or machine.
