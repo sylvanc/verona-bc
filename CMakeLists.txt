@@ -46,6 +46,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable_ExcludeFromAll(libuv)
 
 include(cmake/libffi.cmake)
+find_package(OpenSSL REQUIRED)
 
 # Use snmalloc clangformat target
 clangformat_targets()

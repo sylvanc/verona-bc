@@ -106,8 +106,10 @@ namespace vbci
       // freed.
       finalize();
 
-      // TODO: this will get called for an immutable and will crash.
-      region()->free(this);
+      if (is_immutable())
+        delete this;
+      else
+        region()->rfree(this);
     }
 
     void immortalize()
@@ -138,9 +140,10 @@ namespace vbci
     {
       auto c = cls();
       auto& f = c->fields;
+      auto fin = c->finalizer();
 
-      if (c->finalizer())
-        Thread::run_finalizer(this);
+      if (fin)
+        Thread::run_sync(fin, this);
 
       for (size_t i = 0; i < f.size(); i++)
       {

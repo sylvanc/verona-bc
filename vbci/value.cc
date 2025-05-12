@@ -89,6 +89,11 @@ namespace vbci
     return Value(ValueType::None);
   }
 
+  Value Value::null()
+  {
+    return static_cast<void*>(nullptr);
+  }
+
   ValueType Value::type()
   {
     return tag;
@@ -511,7 +516,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::None:
-        return (void*)nullptr;
+        return static_cast<void*>(nullptr);
       case ValueType::Bool:
         return &b;
       case ValueType::I8:
@@ -548,6 +553,8 @@ namespace vbci
         return obj->get_pointer();
       case ValueType::Array:
         return arr->get_pointer();
+      case ValueType::Function:
+        return func;
       default:
         throw Value(Error::BadOperand);
     }

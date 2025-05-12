@@ -29,8 +29,8 @@ namespace vbci
 
     virtual Object* object(Class& cls) = 0;
     virtual Array* array(Id type_id, size_t size) = 0;
-    virtual void free(Object* obj) = 0;
-    virtual void free(Array* arr) = 0;
+    virtual void rfree(Object* obj) = 0;
+    virtual void rfree(Array* arr) = 0;
 
     bool sendable()
     {

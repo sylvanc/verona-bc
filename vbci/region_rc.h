@@ -22,7 +22,7 @@ namespace vbci
 
     Object* object(Class& cls)
     {
-      auto mem = std::malloc(cls.size);
+      auto mem = new uint8_t[cls.size];
       auto obj = Object::create(mem, cls, Location(this));
       objects.emplace(obj);
       stack_inc();
@@ -32,7 +32,7 @@ namespace vbci
     Array* array(Id type_id, size_t size)
     {
       auto rep = Program::get().layout_type_id(type_id);
-      auto mem = std::malloc(Array::size_of(size, rep.second->size));
+      auto mem = new uint8_t[Array::size_of(size, rep.second->size)];
       auto arr = Array::create(
         mem, Location(this), type_id, rep.first, size, rep.second->size);
       arrays.emplace(arr);
@@ -40,16 +40,16 @@ namespace vbci
       return arr;
     }
 
-    void free(Object* obj)
+    void rfree(Object* obj)
     {
       objects.erase(obj);
-      std::free(obj);
+      delete obj;
     }
 
-    void free(Array* arr)
+    void rfree(Array* arr)
     {
       arrays.erase(arr);
-      std::free(arr);
+      delete arr;
     }
 
     bool enable_rc()
@@ -66,10 +66,10 @@ namespace vbci
         arr->finalize();
 
       for (auto obj : objects)
-        std::free(obj);
+        delete obj;
 
       for (auto arr : arrays)
-        std::free(arr);
+        delete arr;
     }
   };
 }

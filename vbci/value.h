@@ -87,6 +87,7 @@ namespace vbci
     }
 
     static Value none();
+    static Value null();
     static Value from_ffi(ValueType t, uint64_t v);
     void* to_ffi(ValueType t, Value** def);
     static Value from_addr(ValueType t, void* v);

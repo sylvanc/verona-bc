@@ -34,11 +34,6 @@ namespace vbci
       return (loc & StackAlloc) != 0;
     }
 
-    static bool is_immutable(Location loc)
-    {
-      return (loc == Immutable) || (loc == Immortal);
-    }
-
     static bool is_stack(Location loc)
     {
       return (loc != Immortal) && ((loc & StackAlloc) != 0);
@@ -54,7 +49,7 @@ namespace vbci
 
     bool safe_store(Value& v)
     {
-      if (is_immutable(loc))
+      if ((loc == Immutable) || (loc == Immortal))
         return false;
 
       bool stack = is_stack(loc);
@@ -155,6 +150,11 @@ namespace vbci
       loc = Immortal;
     }
 
+    bool is_immutable()
+    {
+      return loc == Immutable;
+    }
+
   public:
     Location location()
     {
@@ -171,7 +171,8 @@ namespace vbci
 
     bool sendable()
     {
-      return is_immutable(loc) || (is_region(loc) && region()->sendable());
+      return (loc == Immortal) || (loc == Immutable) ||
+        (is_region(loc) && region()->sendable());
     }
 
     void inc(bool reg)

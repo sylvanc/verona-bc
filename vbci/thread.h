@@ -27,19 +27,29 @@ namespace vbci
     std::vector<Value*> ffi_arg_vals;
 
   public:
-    static Value run(Function* func);
-    static Value run(Object* obj);
-    static void run_finalizer(Object* obj);
+    static Value run_async(Function* func);
+
+    template<typename... Ts>
+    static Value run_sync(Function* func, Ts... argv)
+    {
+      return get().thread_run_sync(func, std::forward<Ts>(argv)...);
+    }
 
   private:
     Thread();
     static Thread& get();
     static void run_behavior(verona::rt::Work* work);
 
+    template <typename... Ts>
+    Value thread_run_sync(Function* func, Ts... argv)
+    {
+      assert(args == 0);
+      ((arg(args++) = argv), ...);
+      return get().thread_run(func);
+    }
+
+    void thread_run_behavior(verona::rt::Work* work);
     Value thread_run(Function* func);
-    Value thread_run(Object* obj);
-    void thread_run_behavior(verona::rt::BehaviourCore* b);
-    void thread_run_finalizer(Object* obj);
     void step();
     void pushframe(Function* func, size_t dst, Condition condition);
     void popframe(Value& result, Condition condition);

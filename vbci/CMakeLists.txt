@@ -29,9 +29,12 @@ endif()
 
 target_link_libraries(vbci
   Threads::Threads
-  snmalloc-new-override
+  snmallocshim-static
+  # snmalloc-new-override
   verona_rt
   uv_a
+  OpenSSL::Crypto
+  OpenSSL::SSL
   ffi::ffi
   CLI11::CLI11
   verona-bc::include

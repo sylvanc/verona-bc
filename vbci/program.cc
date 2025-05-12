@@ -116,7 +116,7 @@ namespace vbci
     run_loop();
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
-    auto ret = Thread::run(&functions.at(MainFuncId));
+    auto ret = Thread::run_async(&functions.at(MainFuncId));
     sched.run();
     stop_loop();
 
@@ -135,13 +135,13 @@ namespace vbci
   bool Program::typecheck(Id t1, Id t2)
   {
     // Checks if t1 <: t2.
-    // Dyn is also used for invalid values and errors.
-    if (type::is_dyn(t1))
-      return false;
-
     // If t2 is dynamic, anything is ok.
     if ((t1 == t2) || type::is_dyn(t2))
       return true;
+
+    // Dyn is also used for invalid values and errors.
+    if (type::is_dyn(t1))
+      return false;
 
     // If t2 is an array, ref, or cown, t1 must be invariant.
     auto t2_mod = type::mod(t2);
@@ -379,7 +379,7 @@ namespace vbci
     typedefs.back().type_ids.push_back(type_arr_u8);
 
     argv = Array::create(
-      std::malloc(Array::size_of(args.size(), argv_rep.second->size)),
+      new uint8_t[Array::size_of(args.size(), argv_rep.second->size)],
       StackAlloc,
       type_argv,
       argv_rep.first,
@@ -391,7 +391,7 @@ namespace vbci
       auto str = args.at(i);
       auto str_size = str.size() + 1;
       auto arg = Array::create(
-        std::malloc(Array::size_of(str_size, arg_rep.second->size)),
+        new uint8_t[Array::size_of(str_size, arg_rep.second->size)],
         StackAlloc,
         type_u8,
         arg_rep.first,

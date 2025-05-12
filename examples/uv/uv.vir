@@ -2,21 +2,20 @@ lib
   @printval = "printval"(dyn): none
   @puts = "puts"(ptr): i32
   @uv_os_homedir = "uv_os_homedir"(ptr, ptr): i32
-  @uv_default_loop = "uv_default_loop"(): ptr
-  @uv_handle_create = "uv_handle_create"(i32): ptr
-  @uv_handle_closure = "uv_handle_closure"(ptr, dyn): none
-  @uv_callback_closure = "uv_callback_closure"(ptr): none
-  @uv_close_closure = "uv_close_closure"(ptr): none
-  @uv_timer_init = "uv_timer_init"(ptr, ptr): i32
+  @async_create = "async_create"(i32): ptr
+  @async_close = "async_close"(ptr): none
+  @async_set_arg = "async_set_arg"(ptr, dyn): bool
+  @async_set_cb0 = "async_set_cb0"(ptr, dyn): bool
+  @async_cb0 = "async_cb0"(ptr): none
   @uv_timer_start = "uv_timer_start"(ptr, ptr, u64, u64): i32
   @uv_timer_stop = "uv_timer_stop"(ptr): i32
 
 class @timer
   @handle: ptr
   @counter: usize
-  @apply @timer_apply
+  @cb0 @timer_cb0
 
-func @timer_apply($self: @timer): none
+func @timer_cb0($self: @timer): none
   $one = const usize 1
   $done = const usize 3
   $counter_ref = ref copy $self @counter
@@ -27,7 +26,7 @@ func @timer_apply($self: @timer): none
   $handle_ref = ref copy $self @handle
   $handle = load $handle_ref
   $_ = ffi @uv_timer_stop(copy $handle)
-  $_ = ffi @uv_close_closure(move $handle)
+  $_ = ffi @async_close(move $handle)
   jump ^return
 ^not_done
   $counter = add $counter $one
@@ -51,15 +50,15 @@ func @print_home(): none
 func @main(): i32
   $_ = call @print_home()
   $timer_type = const i32 13
-  $timer_ptr = ffi @uv_handle_create(move $timer_type)
-  $loop = ffi @uv_default_loop()
-  $_ = ffi @uv_timer_init(copy $loop, copy $timer_ptr)
+  $timer_h = ffi @async_create(move $timer_type)
   $counter = const usize 0
-  $timer = region rc @timer(copy $timer_ptr, move $counter)
-  $_ = ffi @uv_handle_closure(copy $timer_ptr, move $timer)
+  $timer = region rc @timer(copy $timer_h, move $counter)
+  $cb0 = lookup $timer @cb0
+  $_ = ffi @async_set_arg(copy $timer_h, move $timer)
+  $_ = ffi @async_set_cb0(copy $timer_h, move $cb0)
   $timeout = const u64 1000
-  $callback = lookup @uv_callback_closure
+  $cb0 = lookup @async_cb0
   $_ = ffi @uv_timer_start(
-    copy $timer_ptr, move $callback, copy $timeout, copy $timeout)
+    copy $timer_h, move $cb0, copy $timeout, copy $timeout)
   $ret = const i32 0
   ret $ret

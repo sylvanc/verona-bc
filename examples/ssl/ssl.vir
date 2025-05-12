@@ -1,0 +1,84 @@
+type @arg = u8[]
+
+lib
+  @getargv = "getargv"(): @arg[]
+  @puts = "puts"(ptr): i32
+  @write = "write"(i32, ptr, usize): isize
+  @happy_eyeballs = "happy_eyeballs"(dyn, dyn, ptr, ptr, i32): bool
+  @async_close = "async_close"(ptr): none
+  @async_set_arg = "async_set_arg"(ptr, dyn): bool
+  @async_set_cb1 = "async_set_cb1"(ptr, dyn): bool
+  @async_cb1 = "async_cb1"(ptr): none
+  @async_read_start = "async_read_start"(ptr, dyn): bool
+  @async_write = "async_write"(ptr, u8[]): none
+  @uv_strerror = "uv_strerror"(i32): ptr
+
+class @Conn
+  @handle: ptr
+  @cb1 @conn_cb1
+  @cb_read @conn_read
+
+func @conn_cb1($self: @Conn, $status: i32): none
+  $handle_ref = ref copy $self @handle
+  $handle = load $handle_ref
+  $_ = ffi @async_close(move $handle)
+  $status_text = ffi @uv_strerror(move $status)
+  $_ = ffi @puts(move $status_text)
+  $none = const none
+  ret $none
+
+func @conn_read($self: @Conn, $data: u8[]): none
+  $stdout = const i32 1
+  $text = makeptr $data
+  $len = len $data
+  $_ = ffi @write(move $stdout, move $text, move $len)
+  $none = const none
+  ret $none
+
+class @Eyeballs
+  @msg: u8[]
+  @cb @eyeballs_cb
+
+func @eyeballs_cb($self: @Eyeballs, $tcp_h: ptr, $status: i32): none
+  $zero = const i32 0
+  $eq = eq $status $zero
+  cond $eq ^success ^failure
+^success
+  $msg_ref = ref copy $self @msg
+  $msg = load $msg_ref
+  $_ = ffi @async_write(copy $tcp_h, move $msg)
+  $conn = region rc @Conn(copy $tcp_h)
+  $cb1 = lookup $conn @cb1
+  $cb_read = lookup $conn @cb_read
+  $_ = ffi @async_set_arg(copy $tcp_h, move $conn)
+  $_ = ffi @async_set_cb1(copy $tcp_h, move $cb1)
+  $_ = ffi @async_read_start(copy $tcp_h, move $cb_read)
+  jump ^done
+^failure
+  $err = ffi @uv_strerror(move $status)
+  $_ = ffi @puts(move $err)
+  jump ^done
+^done
+  $none = const none
+  ret $none
+
+func @main(): i32
+  $i0 = const usize 0
+  $i1 = const usize 1
+  $i2 = const usize 2
+  $argv = ffi @getargv()
+  $arg0_ref = ref copy $argv $i0
+  $arg1_ref = ref copy $argv $i1
+  $arg2_ref = ref copy $argv $i2
+  $host = load $arg0_ref
+  $port = load $arg1_ref
+  $msg = load $arg2_ref
+  $eyeballs = region rc @Eyeballs(move $msg)
+  $cb = lookup $eyeballs @cb
+  $host_ptr = makeptr $host
+  $port_ptr = makeptr $port
+  $delay = const i32 100
+  $_ = ffi @happy_eyeballs(
+    move $eyeballs, move $cb, move $host_ptr, move $port_ptr, move $delay)
+  $ret = const i32 0
+  ret $ret

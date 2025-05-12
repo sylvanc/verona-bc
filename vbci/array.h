@@ -108,8 +108,10 @@ namespace vbci
 
       finalize();
 
-      // TODO: this will get called for an immutable and will crash.
-      region()->free(this);
+      if (is_immutable())
+        delete this;
+      else
+        region()->rfree(this);
     }
 
     void immortalize()

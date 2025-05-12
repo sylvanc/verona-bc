@@ -7,7 +7,7 @@
 
 namespace vbci
 {
-  Value Thread::run(Function* func)
+  Value Thread::run_async(Function* func)
   {
     auto result = Cown::create(func->return_type);
     auto b = verona::rt::BehaviourCore::make(1, run_behavior, sizeof(Value));
@@ -15,16 +15,6 @@ namespace vbci
     new (b->get_body<Value>()) Value(func);
     verona::rt::BehaviourCore::schedule_many(&b, 1);
     return Value(result, false);
-  }
-
-  Value Thread::run(Object* obj)
-  {
-    return get().thread_run(obj);
-  }
-
-  void Thread::run_finalizer(Object* obj)
-  {
-    get().thread_run_finalizer(obj);
   }
 
   Thread::Thread() : program(&Program::get()), frame(nullptr), args(0)
@@ -41,35 +31,14 @@ namespace vbci
 
   void Thread::run_behavior(verona::rt::Work* work)
   {
-    auto b = verona::rt::BehaviourCore::from_work(work);
-    get().thread_run_behavior(b);
-    verona::rt::BehaviourCore::finished(work);
+    get().thread_run_behavior(work);
   }
 
-  Value Thread::thread_run(Function* func)
-  {
-    auto depth = frames.size();
-    pushframe(func, 0, Condition::Throw);
-
-    while (depth != frames.size())
-      step();
-
-    return std::move(locals.at(0));
-  }
-
-  Value Thread::thread_run(Object* obj)
-  {
-    assert(args == 0);
-    auto function = obj->method(ApplyMethodId);
-    Value keep = obj;
-    arg(args++) = keep;
-    return thread_run(function);
-  }
-
-  void Thread::thread_run_behavior(verona::rt::BehaviourCore* b)
+  void Thread::thread_run_behavior(verona::rt::Work* work)
   {
     assert(!frame);
     assert(!args);
+    auto b = verona::rt::BehaviourCore::from_work(work);
     auto closure = b->get_body<Value>();
     Function* function;
 
@@ -99,16 +68,18 @@ namespace vbci
     // Execute the function.
     auto ret = thread_run(function);
     result->store(true, ret);
+    verona::rt::BehaviourCore::finished(work);
   }
 
-  void Thread::thread_run_finalizer(Object* obj)
+  Value Thread::thread_run(Function* func)
   {
-    LOG(Debug) << "Running finalizer for " << obj;
+    auto depth = frames.size();
+    pushframe(func, 0, Condition::Throw);
 
-    drop_args();
-    arg(0) = Value(obj, true);
-    args = 1;
-    thread_run(obj->finalizer()).drop();
+    while (depth != frames.size())
+      step();
+
+    return std::move(locals.at(0));
   }
 
   void Thread::step()
@@ -994,7 +965,7 @@ namespace vbci
     frame->drop();
 
     for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
-      thread_run_finalizer(finalize.at(i));
+      finalize.at(i)->finalize();
 
     stack.restore(frame->save);
   }
