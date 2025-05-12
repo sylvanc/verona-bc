@@ -46,25 +46,25 @@ static SSL_CTX* ctx = nullptr;
 
 static void do_add_external(verona::rt::Work* work)
 {
+  uv_async_send(&poke);
   verona::rt::Scheduler::add_external_event_source();
   delete work;
 }
 
 static void do_remove_external(verona::rt::Work* work)
 {
+  uv_async_send(&poke);
   verona::rt::Scheduler::remove_external_event_source();
   delete work;
 }
 
 static void add_external()
 {
-  uv_async_send(&poke);
   verona::rt::Scheduler::schedule(new verona::rt::Work(do_add_external));
 }
 
 static void remove_external()
 {
-  uv_async_send(&poke);
   verona::rt::Scheduler::schedule(new verona::rt::Work(do_remove_external));
 }
 
