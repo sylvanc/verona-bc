@@ -69,10 +69,9 @@ func @main(): i32
   $argv = ffi @getargv()
   $arg0_ref = ref copy $argv $i0
   $arg1_ref = ref copy $argv $i1
-  $arg2_ref = ref copy $argv $i2
   $host = load $arg0_ref
   $port = load $arg1_ref
-  $msg = load $arg2_ref
+  $msg = const "GET / HTTP/1.1\n\n"
   $eyeballs = region rc @Eyeballs(move $msg)
   $cb = lookup $eyeballs @cb
   $host_ptr = makeptr $host

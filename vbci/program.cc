@@ -102,6 +102,26 @@ namespace vbci
     return argv;
   }
 
+  Array* Program::get_string(size_t idx)
+  {
+    if (idx >= strings.size())
+      throw Value(Error::UnknownGlobal);
+
+    auto& str = strings.at(idx);
+    auto str_size = str.size() + 1;
+    auto arr = Array::create(
+      new uint8_t[Array::size_of(str_size, ffi_type_uint8.size)],
+      Immutable,
+      type::val(ValueType::U8),
+      ValueType::U8,
+      str_size,
+      ffi_type_uint8.size);
+
+    auto p = arr->get_pointer();
+    std::memcpy(p, str.c_str(), str_size);
+    return arr;
+  }
+
   int Program::run(
     std::filesystem::path& path,
     size_t num_threads,
@@ -398,11 +418,8 @@ namespace vbci
         str_size,
         arg_rep.second->size);
 
-      for (size_t j = 0; j < str_size; j++)
-      {
-        auto p = arg->get_pointer();
-        std::memcpy(p, str.c_str(), str_size);
-      }
+      auto p = arg->get_pointer();
+      std::memcpy(p, str.c_str(), str_size);
 
       auto arg_value = Value(arg);
       argv->store(true, i, arg_value);
@@ -465,20 +482,20 @@ namespace vbci
       return false;
     }
 
-    // FFI information.
-    std::vector<std::string> ffi_strings;
-    string_table(pc, ffi_strings);
+    // String table.
+    string_table(pc, strings);
 
+    // FFI information.
     auto num_libs = uleb(pc);
     for (size_t i = 0; i < num_libs; i++)
-      libs.push_back(ffi_strings.at(uleb(pc)));
+      libs.push_back(strings.at(uleb(pc)));
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)
     {
       auto& lib = libs.at(uleb(pc));
-      auto& name = ffi_strings.at(uleb(pc));
-      auto& version = ffi_strings.at(uleb(pc));
+      auto& name = strings.at(uleb(pc));
+      auto& version = strings.at(uleb(pc));
       bool vararg = uleb(pc);
       auto func = lib.symbol(name, version);
 
@@ -712,6 +729,7 @@ namespace vbci
   void Program::string_table(size_t& pc, std::vector<std::string>& table)
   {
     auto count = uleb(pc);
+    table.clear();
     table.reserve(count);
 
     for (size_t i = 0; i < count; i++)

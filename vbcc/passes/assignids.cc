@@ -220,6 +220,14 @@ namespace vbcc
 
           return NoChange;
         },
+
+        // Internalize unescaped string literals.
+        T(ConstStr)[ConstStr] >> [state](Match& _) -> Node {
+          auto str = unescape((_(ConstStr) / String)->location().view());
+          ST::exec().string(str);
+          _(ConstStr) / String = String ^ str;
+          return NoChange;
+        },
       }};
 
     p.post([state](auto top) {

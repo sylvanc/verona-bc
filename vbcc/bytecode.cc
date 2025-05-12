@@ -818,6 +818,11 @@ namespace vbcc
                    << sleb(lit<double>(v));
             }
           }
+          else if (stmt == ConstStr)
+          {
+            code << uleb(+Op::String) << dst(stmt)
+                 << uleb(ST::exec().string(stmt / String));
+          }
           else if (stmt == Convert)
           {
             code << uleb(+Op::Convert) << dst(stmt) << uleb(+val(stmt / Type))

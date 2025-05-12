@@ -170,6 +170,13 @@ namespace vbci
           break;
         }
 
+        case Op::String:
+        {
+          auto& dst = frame->local(leb());
+          dst = program->get_string(leb());
+          break;
+        }
+
         case Op::Convert:
         {
           auto& dst = frame->local(leb());

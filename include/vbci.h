@@ -30,6 +30,11 @@ namespace vbci
     // Arg2 = primitive value.
     Const,
 
+    // Load a string literal.
+    // Arg0 = dst.
+    // Arg1 = string ID.
+    String,
+
     // Converts src to the specified type.
     // Arg0 = dst.
     // Arg1 = target value type.

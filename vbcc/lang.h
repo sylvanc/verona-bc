@@ -64,6 +64,7 @@ namespace vbcc
   const auto Def = Unop / Binop / Constant /
     T(Global,
       Const,
+      ConstStr,
       Convert,
       Stack,
       Heap,
@@ -113,4 +114,6 @@ namespace vbcc
   Node err(Node node, const std::string& msg);
   ValueType val(Node ptype);
   Options& options();
+
+  std::string unescape(const std::string_view& in);
 }

@@ -379,6 +379,9 @@ namespace vbcc
             return Const << _(LocalId) << _(Type) << _(Rhs);
           },
 
+        Dst * T(Const) * T(String)[Rhs] >>
+          [](Match& _) { return ConstStr << _(LocalId) << _(Rhs); },
+
         // Convert.
         Dst * T(Convert) * PrimitiveType[Type] * T(LocalId)[Rhs] >>
           [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },

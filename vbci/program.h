@@ -28,6 +28,8 @@ namespace vbci
   private:
     std::filesystem::path file;
     std::vector<uint8_t> content;
+    std::vector<std::string> strings;
+
     std::vector<Typedef> typedefs;
     std::vector<Function> functions;
     std::vector<Class> primitives;
@@ -57,6 +59,7 @@ namespace vbci
     uint64_t uleb(size_t& pc);
 
     Array* get_argv();
+    Array* get_string(size_t idx);
 
     int run(
       std::filesystem::path& path,

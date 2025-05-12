@@ -49,6 +49,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * I/O with `libuv`.
+  * Memory intermittently leaked on TCP connection to `example.com`.
   * Do everything asynchronously.
     * Yield the current thread when waiting for I/O.
     * Need more than one Thread per scheduler thread.
@@ -71,7 +72,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Cache type check results? Would also prevent circular type checks.
   * `imm` and other memory location types?
 * Initializing global values.
-  * String constants? `u8[]`?
   * How to clean them up?
 * Embedded fields (objects and arrays).
   * Embed with no header, use `snmalloc::external_pointer`.

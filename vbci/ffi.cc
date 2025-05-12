@@ -71,7 +71,10 @@ static void remove_external()
 static void callback_close(uv_handle_t* handle)
 {
   auto cb = reinterpret_cast<Callback*>(uv_handle_get_data(handle));
-  delete cb;
+
+  if (cb)
+    delete cb;
+
   delete handle;
   remove_external();
 }
@@ -287,7 +290,8 @@ namespace vbci
     uv_timer_t timer;
     std::vector<uv_connect_t> conns;
     std::vector<uv_tcp_t*> socks;
-    struct addrinfo* list;
+    struct addrinfo* addr_head;
+    struct addrinfo* addr_curr;
     size_t next;
     size_t results;
     uv_tcp_t* winner;
@@ -299,7 +303,8 @@ namespace vbci
       host(host),
       port(port),
       delay(delay),
-      list(nullptr),
+      addr_head(nullptr),
+      addr_curr(nullptr),
       next(0),
       results(0),
       winner(nullptr)
@@ -344,8 +349,10 @@ namespace vbci
         return;
       }
 
-      list = res;
+      addr_head = res;
+      addr_curr = res;
       size_t count = 0;
+
       while (res)
       {
         res = res->ai_next;
@@ -369,10 +376,11 @@ namespace vbci
 
       auto tcp = new uv_tcp_t;
       uv_tcp_init(uv_default_loop(), tcp);
-      uv_tcp_connect(&conns.at(next), tcp, list[next].ai_addr, on_connect);
+      uv_tcp_connect(&conns.at(next), tcp, addr_curr->ai_addr, on_connect);
       add_external();
 
       socks.at(next) = tcp;
+      addr_curr = addr_curr->ai_next;
       next++;
     }
 
@@ -412,17 +420,14 @@ namespace vbci
     {
       uv_timer_stop(&timer);
       uv_close(reinterpret_cast<uv_handle_t*>(&timer), nullptr);
-      uv_freeaddrinfo(list);
-      list = nullptr;
+      uv_freeaddrinfo(addr_head);
+      addr_head = nullptr;
+      addr_curr = nullptr;
 
       for (size_t i = 0; i < next; i++)
       {
         if (socks.at(i) != winner)
-        {
-          uv_close(
-            reinterpret_cast<uv_handle_t*>(socks.at(i)),
-            [](uv_handle_t* handle) { delete handle; });
-        }
+          uv_close(reinterpret_cast<uv_handle_t*>(socks.at(i)), callback_close);
 
         socks.at(i) = nullptr;
       }

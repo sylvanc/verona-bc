@@ -195,6 +195,7 @@ namespace vbcc
   inline const auto SubcallDyn = TokenDef("subcalldyn");
   inline const auto TryDyn = TokenDef("trydyn");
   inline const auto TailcallDyn = TokenDef("tailcalldyn");
+  inline const auto ConstStr = TokenDef("conststr");
 
   // Convenient names.
   inline const auto Lhs = TokenDef("lhs");
@@ -224,8 +225,8 @@ namespace vbcc
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
-  inline const auto wfStatement = Source | Offset | Global | Const | Convert |
-    Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
+  inline const auto wfStatement = Source | Offset | Global | Const | ConstStr |
+    Convert | Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
     HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop |
     FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer |
     Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI | When |
@@ -275,6 +276,7 @@ namespace vbcc
     | (Offset <<= Int)
     | (Global <<= wfDst * GlobalId)
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
+    | (ConstStr <<= wfDst * String)
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
     | (Stack <<= wfDst * ClassId * Args)
     | (Heap <<= wfDst * wfSrc * ClassId * Args)
