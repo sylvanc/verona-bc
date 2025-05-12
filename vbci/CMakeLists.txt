@@ -30,7 +30,6 @@ endif()
 target_link_libraries(vbci
   Threads::Threads
   snmallocshim-static
-  # snmalloc-new-override
   verona_rt
   uv_a
   OpenSSL::Crypto
