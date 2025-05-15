@@ -39,6 +39,9 @@ namespace vbci
     std::vector<Dynlib> libs;
     std::vector<Symbol> symbols;
 
+    ffi_type ffi_type_value;
+    std::vector<ffi_type*> ffi_type_value_elements;
+
     Array* argv = nullptr;
 
     PC di = PC(-1);
@@ -75,6 +78,7 @@ namespace vbci
     std::string di_field(Class* cls, size_t idx);
 
   private:
+    void setup_value_type();
     void setup_argv(std::vector<std::string>& args);
     bool load();
     bool parse_function(Function& f, PC& pc);

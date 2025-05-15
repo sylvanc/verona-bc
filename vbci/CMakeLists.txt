@@ -1,6 +1,5 @@
 add_executable(vbci
   dynlib.cc
-  ffi.cc
   frame.cc
   main.cc
   program.cc
@@ -8,6 +7,9 @@ add_executable(vbci
   thread.cc
   types.cc
   value.cc
+  ffi/eyeballs.cc
+  ffi/ffi.cc
+  ffi/ssl.cc
 )
 
 target_include_directories(vbci SYSTEM PRIVATE

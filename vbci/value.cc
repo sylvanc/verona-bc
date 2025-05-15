@@ -431,11 +431,8 @@ namespace vbci
     }
   }
 
-  void* Value::to_ffi(ValueType t, Value** def)
+  void* Value::to_ffi()
   {
-    if (t == ValueType::Invalid)
-      return def;
-
     switch (tag)
     {
       case ValueType::None:
@@ -499,7 +496,7 @@ namespace vbci
         return &cown;
 
       default:
-        return def;
+        return this;
     }
   }
 

@@ -7,9 +7,11 @@ lib
 
 func @main(): i32
   $one = const usize 1
-  $hi = const "Hello, world! \u26C4\n\n"
+  $fmt = const "%s (%d)\n"
+  $fmt_ptr = makeptr $fmt
+  $hi = const "Hello, world! \u26C4"
   $hi_ptr = makeptr $hi
-  $_ = ffi @printf(move $hi_ptr)
+  $_ = ffi @printf(move $fmt_ptr, move $hi_ptr, copy $one)
   $argc = const usize 0
   $argv = ffi @getargv()
   $argc = len $argv

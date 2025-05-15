@@ -69,7 +69,7 @@ namespace vbci
     param_ffi_types.push_back(ffit);
   }
 
-  uint64_t Symbol::call(std::vector<void*>& args)
+  Value Symbol::call(std::vector<void*>& args)
   {
     if (!func)
       throw Value(Error::UnknownFunction);
@@ -90,12 +90,26 @@ namespace vbci
       {
         throw Value(Error::BadArgs);
       }
-
-      param_ffi_types.resize(param_types.size());
     }
 
-    ffi_arg ret = 0;
-    ffi_call(&cif, func, &ret, args.data());
+    // Check if it's ffi_type_value, use a Value. The C++ type is constructed
+    // into this space.
+    Value ret;
+
+    if (return_value_type == ValueType::Invalid)
+    {
+      ffi_call(&cif, func, &ret, args.data());
+    }
+    else
+    {
+      ffi_arg r = 0;
+      ffi_call(&cif, func, &r, args.data());
+      ret = Value::from_ffi(return_value_type, r);
+    }
+
+    if (vararg)
+      param_ffi_types.resize(param_types.size());
+
     return ret;
   }
 

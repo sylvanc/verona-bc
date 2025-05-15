@@ -49,14 +49,9 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * I/O with `libuv`.
-  * Memory intermittently leaked on TCP connection to `example.com`.
   * Do everything asynchronously.
-    * Yield the current thread when waiting for I/O.
-    * Need more than one Thread per scheduler thread.
-  * Sockets.
-    * TLS?
-    * UDP?
-    * Cloudflare `quiche` for `QUIC`?
+  * Yield the current thread when waiting for I/O.
+  * Need more than one Thread per scheduler thread.
 * Merge, freeze, extract.
   * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RC.
@@ -80,6 +75,9 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Can't store? Or is a store a copy? How do we initialize the field?
 * Make a `bool[]` have 1-bit instead of 8-bit elements.
 * Math ops for numerical limits, by type?
+* Sockets.
+  * UDP?
+  * Cloudflare `quiche` for `QUIC`?
 * Introspection.
   * Get a value's dynamic type.
   * Functions: get the argument count and types, and the return type.

@@ -144,9 +144,13 @@ namespace vbcc
             return NoChange;
 
           auto args = ffi / Args;
-          auto params = state->symbols.at(*id) / FFIParams;
+          auto symbol = state->symbols.at(*id);
+          auto params = symbol / FFIParams;
+          auto varargs = (symbol / Vararg) == Vararg;
 
-          if (args->size() != params->size())
+          if (
+            (args->size() < params->size()) ||
+            (!varargs && (args->size() > params->size())))
           {
             state->error = true;
             return err(args, "wrong number of arguments");

@@ -1,7 +1,7 @@
 #include "program.h"
 
 #include "array.h"
-#include "ffi.h"
+#include "ffi/ffi.h"
 #include "thread.h"
 
 #include <dlfcn.h>
@@ -119,6 +119,7 @@ namespace vbci
 
     auto p = arr->get_pointer();
     std::memcpy(p, str.c_str(), str_size);
+    arr->set_size(str_size - 1);
     return arr;
   }
 
@@ -133,7 +134,7 @@ namespace vbci
       return -1;
 
     setup_argv(args);
-    run_loop();
+    start_loop();
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
     auto ret = Thread::run_async(&functions.at(MainFuncId));
@@ -387,6 +388,19 @@ namespace vbci
     return di_strings.at(uleb(pc));
   }
 
+  void Program::setup_value_type()
+  {
+    ffi_type_value_elements.clear();
+    ffi_type_value_elements.push_back(&ffi_type_uint64);
+    ffi_type_value_elements.push_back(&ffi_type_uint64);
+    ffi_type_value_elements.push_back(nullptr);
+
+    ffi_type_value.size = sizeof(Value);
+    ffi_type_value.alignment = alignof(Value);
+    ffi_type_value.type = FFI_TYPE_STRUCT;
+    ffi_type_value.elements = ffi_type_value_elements.data();
+  }
+
   void Program::setup_argv(std::vector<std::string>& args)
   {
     auto type_u8 = type::val(ValueType::U8);
@@ -420,6 +434,7 @@ namespace vbci
 
       auto p = arg->get_pointer();
       std::memcpy(p, str.c_str(), str_size);
+      arg->set_size(str_size - 1);
 
       auto arg_value = Value(arg);
       argv->store(true, i, arg_value);
@@ -439,6 +454,7 @@ namespace vbci
 
     libs.clear();
     symbols.clear();
+    setup_value_type();
 
     argv = nullptr;
 
@@ -452,7 +468,7 @@ namespace vbci
     if (!f)
     {
       logging::Error() << file << ": couldn't load" << std::endl;
-      return {};
+      return false;
     }
 
     size_t size = f.tellg();
@@ -463,7 +479,7 @@ namespace vbci
     if (!f)
     {
       logging::Error() << file << ": couldn't read" << std::endl;
-      return {};
+      return false;
     }
 
     PC pc = 0;
@@ -484,50 +500,6 @@ namespace vbci
 
     // String table.
     string_table(pc, strings);
-
-    // FFI information.
-    auto num_libs = uleb(pc);
-    for (size_t i = 0; i < num_libs; i++)
-      libs.push_back(strings.at(uleb(pc)));
-
-    auto num_symbols = uleb(pc);
-    for (size_t i = 0; i < num_symbols; i++)
-    {
-      auto& lib = libs.at(uleb(pc));
-      auto& name = strings.at(uleb(pc));
-      auto& version = strings.at(uleb(pc));
-      bool vararg = uleb(pc);
-      auto func = lib.symbol(name, version);
-
-      if (!func)
-      {
-        logging::Error() << file << ": couldn't load symbol " << name << "@"
-                         << version << std::endl;
-        return false;
-      }
-
-      symbols.push_back(Symbol(func, vararg));
-      auto& symbol = symbols.back();
-
-      auto num_params = uleb(pc);
-      for (size_t j = 0; j < num_params; j++)
-      {
-        auto type_id = uleb(pc);
-        auto rep = layout_type_id(type_id);
-        symbol.param(type_id, rep.first, rep.second);
-      }
-
-      auto type_id = uleb(pc);
-      auto rep = layout_type_id(type_id);
-      symbol.ret(type_id, rep.first, rep.second);
-
-      if (!symbol.prepare())
-      {
-        logging::Error() << file << ": couldn't prepare symbol " << name
-                         << std::endl;
-        return false;
-      }
-    }
 
     // Typedefs.
     auto num_typedefs = uleb(pc);
@@ -572,13 +544,61 @@ namespace vbci
         return false;
     }
 
-    // Function headers.
+    // FFI information.
+    auto num_libs = uleb(pc);
+    for (size_t i = 0; i < num_libs; i++)
+      libs.push_back(strings.at(uleb(pc)));
+
+    auto num_symbols = uleb(pc);
+    for (size_t i = 0; i < num_symbols; i++)
+    {
+      auto& lib = libs.at(uleb(pc));
+      auto& name = strings.at(uleb(pc));
+      auto& version = strings.at(uleb(pc));
+      bool vararg = uleb(pc);
+      auto func = lib.symbol(name, version);
+
+      if (!func)
+      {
+        logging::Error() << file << ": couldn't load symbol " << name << "@"
+                         << version << std::endl;
+        return false;
+      }
+
+      symbols.push_back(Symbol(func, vararg));
+      auto& symbol = symbols.back();
+
+      auto num_params = uleb(pc);
+      for (size_t j = 0; j < num_params; j++)
+      {
+        auto type_id = uleb(pc);
+        auto rep = layout_type_id(type_id);
+        symbol.param(type_id, rep.first, rep.second);
+      }
+
+      auto type_id = uleb(pc);
+      auto rep = layout_type_id(type_id);
+
+      if (rep.first == ValueType::Invalid)
+        rep.second = &ffi_type_value;
+
+      symbol.ret(type_id, rep.first, rep.second);
+
+      if (!symbol.prepare())
+      {
+        logging::Error() << file << ": couldn't prepare symbol " << name
+                         << std::endl;
+        return false;
+      }
+    }
+
+    // Functions.
     auto num_functions = uleb(pc);
     functions.resize(num_functions);
 
     if (num_functions == 0)
     {
-      logging::Error() << file << ": has no no functions" << std::endl;
+      logging::Error() << file << ": has no functions" << std::endl;
       return false;
     }
 
@@ -677,6 +697,7 @@ namespace vbci
       ffi_types.at(i) = rep.second;
     }
 
+    ffi_types.push_back(nullptr);
     cls.calc_size(ffi_types);
     return true;
   }

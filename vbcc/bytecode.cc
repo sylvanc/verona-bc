@@ -535,28 +535,6 @@ namespace vbcc
     for (size_t i = 0; i < ST::exec().size(); i++)
       hdr << ST::exec().at(i);
 
-    // FFI libraries.
-    hdr << uleb(libraries.size());
-
-    for (auto& lib : libraries)
-      hdr << uleb(ST::exec().string(lib / String));
-
-    hdr << uleb(symbols.size());
-
-    for (auto& symbol : symbols)
-    {
-      hdr << uleb(*get_library_id(symbol->parent(Lib)))
-          << uleb(ST::exec().string(symbol / Lhs))
-          << uleb(ST::exec().string(symbol / Rhs))
-          << uleb((symbol / Vararg) == Vararg)
-          << uleb((symbol / FFIParams)->size());
-
-      for (auto& param : *(symbol / FFIParams))
-        hdr << uleb(typ(param));
-
-      hdr << uleb(typ(symbol / Return));
-    }
-
     // Typedefs.
     hdr << uleb(typedefs.size());
 
@@ -615,6 +593,28 @@ namespace vbcc
             << uleb(*get_func_id(method / FunctionId));
         di << uleb(ST::di().string(method / MethodId));
       }
+    }
+
+    // FFI libraries.
+    hdr << uleb(libraries.size());
+
+    for (auto& lib : libraries)
+      hdr << uleb(ST::exec().string(lib / String));
+
+    hdr << uleb(symbols.size());
+
+    for (auto& symbol : symbols)
+    {
+      hdr << uleb(*get_library_id(symbol->parent(Lib)))
+          << uleb(ST::exec().string(symbol / Lhs))
+          << uleb(ST::exec().string(symbol / Rhs))
+          << uleb((symbol / Vararg) == Vararg)
+          << uleb((symbol / FFIParams)->size());
+
+      for (auto& param : *(symbol / FFIParams))
+        hdr << uleb(typ(param));
+
+      hdr << uleb(typ(symbol / Return));
     }
 
     // Functions.

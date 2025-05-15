@@ -1,5 +1,7 @@
 #pragma once
 
+#include "value.h"
+
 #include <ffi.h>
 #include <filesystem>
 #include <string>
@@ -52,7 +54,7 @@ namespace vbci
     ValueType retval();
 
     void varparam(ffi_type* ffit);
-    uint64_t call(std::vector<void*>& args);
+    Value call(std::vector<void*>& args);
     void* raw_pointer();
   };
 

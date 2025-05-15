@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ffi/ffi.h"
 #include "frame.h"
 #include "program.h"
 #include "stack.h"
@@ -30,9 +31,15 @@ namespace vbci
     static Value run_async(Function* func);
 
     template<typename... Ts>
-    static Value run_sync(Function* func, Ts... argv)
+    static void run_sync(Function* func, Ts... argv)
     {
-      return get().thread_run_sync(func, std::forward<Ts>(argv)...);
+      get().thread_run_sync(func, std::forward<Ts>(argv)...);
+    }
+
+    VBCI_KEEP static std::string debug()
+    {
+      auto& t = get();
+      return t.program->debug_info(t.frame->func, t.current_pc);
     }
 
   private:
@@ -40,12 +47,17 @@ namespace vbci
     static Thread& get();
     static void run_behavior(verona::rt::Work* work);
 
-    template <typename... Ts>
-    Value thread_run_sync(Function* func, Ts... argv)
+    template<typename... Ts>
+    void thread_run_sync(Function* func, Ts... argv)
     {
       assert(args == 0);
       ((arg(args++) = argv), ...);
-      return get().thread_run(func);
+      auto ret = thread_run(func);
+
+      if (ret.is_error())
+        LOG(Debug) << ret.to_string();
+
+      ret.drop();
     }
 
     void thread_run_behavior(verona::rt::Work* work);

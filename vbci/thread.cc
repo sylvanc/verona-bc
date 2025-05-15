@@ -480,6 +480,8 @@ namespace vbci
           auto& paramvals = symbol.paramvals();
           check_args(params, symbol.varargs());
 
+          // A Value must be passed as a pointer, not as a struct, since it is
+          // a C++ non-trivally constructed type.
           if (ffi_arg_addrs.size() < num_args)
           {
             ffi_arg_addrs.resize(num_args);
@@ -493,20 +495,24 @@ namespace vbci
 
             if (i < params.size())
             {
-              ffi_arg_addrs.at(i) =
-                arg.to_ffi(paramvals.at(i), &ffi_arg_vals.at(i));
+              if (paramvals.at(i) == ValueType::Invalid)
+                ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+              else
+                ffi_arg_addrs.at(i) = arg.to_ffi();
             }
             else
             {
               auto rep = program->layout_type_id(arg.type_id());
-              ffi_arg_addrs.at(i) = arg.to_ffi(rep.first, &ffi_arg_vals.at(i));
               symbol.varparam(rep.second);
+
+              if (rep.first == ValueType::Invalid)
+                ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+              else
+                ffi_arg_addrs.at(i) = arg.to_ffi();
             }
           }
 
-          auto ret =
-            Value::from_ffi(symbol.retval(), symbol.call(ffi_arg_addrs));
-          frame->drop_args(num_args);
+          auto ret = symbol.call(ffi_arg_addrs);
 
           if (
             !ret.is_error() && !program->typecheck(ret.type_id(), symbol.ret()))
@@ -515,6 +521,7 @@ namespace vbci
           }
 
           frame->local(dst) = ret;
+          frame->drop_args(num_args);
           break;
         }
 

@@ -75,6 +75,13 @@ namespace vbci
       return size;
     }
 
+    void set_size(size_t new_size)
+    {
+      // This can only be used to shrink the apparent size of the array.
+      if (new_size < size)
+        size = new_size;
+    }
+
     void* get_pointer()
     {
       return reinterpret_cast<void*>(this + 1);

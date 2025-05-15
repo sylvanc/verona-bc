@@ -11,7 +11,12 @@
 
 namespace vbci
 {
-  // A value is 16 bytes.
+  struct ValueBits
+  {
+    uint64_t hi;
+    uint64_t lo;
+  };
+
   struct Value
   {
   private:
@@ -86,10 +91,19 @@ namespace vbci
       set<T>(v);
     }
 
+    operator ValueBits() const noexcept
+    {
+      static_assert(
+        sizeof(Value) == sizeof(ValueBits), "ValueBits must match Value size");
+      ValueBits b;
+      std::memcpy(&b, this, sizeof(ValueBits));
+      return b;
+    }
+
     static Value none();
     static Value null();
     static Value from_ffi(ValueType t, uint64_t v);
-    void* to_ffi(ValueType t, Value** def);
+    void* to_ffi();
     static Value from_addr(ValueType t, void* v);
     void to_addr(bool move, void* v);
 
