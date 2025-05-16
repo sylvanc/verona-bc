@@ -205,7 +205,8 @@ namespace vbci
   {
     start_ssl();
 
-#ifndef _WIN32
+#if !defined(PLATFORM_IS_WINDOWS)
+    // Ignore SIGPIPE.
     uv_signal_init(uv_default_loop(), &sigpipe_h);
     uv_signal_start(&sigpipe_h, [](uv_signal_t*, int) {}, SIGPIPE);
     uv_unref(reinterpret_cast<uv_handle_t*>(&sigpipe_h));

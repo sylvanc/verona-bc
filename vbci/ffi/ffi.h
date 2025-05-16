@@ -1,8 +1,10 @@
 #pragma once
 
+#include "../platform.h"
+
 #include <uv.h>
 
-#ifdef _WIN32
+#if defined(PLATFORM_IS_WINDOWS)
 #  define VBCI_KEEP __declspec(dllexport)
 #else
 #  define VBCI_KEEP [[gnu::used]] [[gnu::retain]]

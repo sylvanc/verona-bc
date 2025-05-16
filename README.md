@@ -48,19 +48,9 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
-* I/O with `libuv`.
-  * Do everything asynchronously.
-  * Yield the current thread when waiting for I/O.
-  * Need more than one Thread per scheduler thread.
 * Merge, freeze, extract.
   * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RC.
-* FFI with `libffi`.
-  * `struct` types.
-    * How does a `struct` return work? Can't use `ffi_arg`?
-    * Can we wrap returned `struct` as objects?
-  * Platform-specific FFI. Only load for the runtime platform.
-  * FFI to get the runtime platform.
 * Types.
   * Raise and throw signatures on functions.
   * Function types? Not strictly needed, as this can be encoded as objects.
@@ -74,8 +64,17 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Compatible with FFI.
   * Can't store? Or is a store a copy? How do we initialize the field?
 * Make a `bool[]` have 1-bit instead of 8-bit elements.
-* Math ops for numerical limits, by type?
+* Math ops for numeric limits, by type?
+* FFI with `libffi`.
+  * Can we wrap returned `struct` as objects?
+  * Platform-specific FFI. Only load for the runtime platform.
+  * FFI to get the runtime platform.
+* I/O with `libuv`.
+  * Do everything asynchronously.
+  * Yield the current thread when waiting for I/O.
+  * Need more than one Thread per scheduler thread.
 * Sockets.
+  * TCP/TLS server?
   * UDP?
   * Cloudflare `quiche` for `QUIC`?
 * Introspection.

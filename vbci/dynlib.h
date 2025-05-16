@@ -1,5 +1,6 @@
 #pragma once
 
+#include "platform.h"
 #include "value.h"
 
 #include <ffi.h>
@@ -9,15 +10,13 @@
 #include <vbci.h>
 #include <vector>
 
-#ifdef _WIN32
-#  include <windows.h>
-#else
+#if !defined(PLATFORM_IS_WINDOWS)
 #  include <dlfcn.h>
 #endif
 
 namespace vbci
 {
-#ifdef _WIN32
+#if defined(PLATFORM_IS_WINDOWS)
   using LibHandle = HMODULE;
 #else
   using LibHandle = void*;

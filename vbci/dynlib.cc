@@ -120,7 +120,7 @@ namespace vbci
 
   Dynlib::Dynlib(const std::string& path)
   {
-#ifdef _WIN32
+#if defined(PLATFORM_IS_WINDOWS)
     if (path.empty())
       handle = GetModuleHandleA(nullptr);
     else
@@ -138,7 +138,7 @@ namespace vbci
     if (!handle)
       return;
 
-#ifdef _WIN32
+#if defined(PLATFORM_IS_WINDOWS)
     FreeLibrary(handle);
 #else
     dlclose(handle);
@@ -151,15 +151,18 @@ namespace vbci
     if (!handle)
       return nullptr;
 
-#ifdef _WIN32
+#if defined(PLATFORM_IS_WINDOWS)
     auto f = GetProcAddress(handle, name.c_str());
-#else
+#elif defined(PLATFORM_IS_LINUX)
     void* f;
 
     if (version.empty())
       f = dlsym(handle, name.c_str());
     else
       f = dlvsym(handle, name.c_str(), version.c_str());
+#else
+    // No symbol versioning.
+    void* f = dlsym(handle, name.c_str());
 #endif
     return reinterpret_cast<Symbol::Func>(f);
   }
