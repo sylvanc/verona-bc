@@ -15,6 +15,10 @@ namespace vbci
   Value::Value(int16_t i16) : i16(i16), tag(ValueType::I16) {}
   Value::Value(int32_t i32) : i32(i32), tag(ValueType::I32) {}
   Value::Value(int64_t i64) : i64(i64), tag(ValueType::I64) {}
+  #if defined(__APPLE__) && defined(__MACH__)
+  Value::Value(long ilong) : ilong(ilong), tag(ValueType::ILong) {}
+  Value::Value(unsigned long ulong) : ulong(ulong), tag(ValueType::ULong) {}
+  #endif
   Value::Value(float f32) : f32(f32), tag(ValueType::F32) {}
   Value::Value(double f64) : f64(f64), tag(ValueType::F64) {}
   Value::Value(void* ptr) : ptr(ptr), tag(ValueType::Ptr) {}

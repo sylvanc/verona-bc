@@ -2,6 +2,10 @@
 
 #include "lang.h"
 
+#ifndef __cpp_lib_from_chars
+#include "from_chars.h"
+#endif
+
 namespace vbcc
 {
   using namespace vbci;
@@ -98,19 +102,22 @@ namespace vbcc
   template<typename T>
   T lit(Node node)
   {
+    #ifdef __cpp_lib_from_chars
+    using namespace std;
+    #endif
     auto view = node->location().view();
     auto first = view.data();
     auto last = first + view.size();
     T t = 0;
 
     if (node == Bin)
-      std::from_chars(first + 2, last, t, 2);
+      from_chars(first + 2, last, t, 2);
     else if (node == Oct)
-      std::from_chars(first + 2, last, t, 8);
+      from_chars(first + 2, last, t, 8);
     else if (node == Hex)
-      std::from_chars(first + 2, last, t, 16);
+      from_chars(first + 2, last, t, 16);
     else if (node == Int)
-      std::from_chars(first, last, t, 10);
+      from_chars(first, last, t, 10);
 
     return t;
   }
@@ -118,15 +125,18 @@ namespace vbcc
   template<>
   float lit<float>(Node node)
   {
+    #ifdef __cpp_lib_from_chars
+    using namespace std;
+    #endif
     auto view = node->location().view();
     auto first = view.data();
     auto last = first + view.size();
     float t = 0;
 
     if (node == Float)
-      std::from_chars(first, last, t);
+      from_chars(first, last, t);
     else if (node == HexFloat)
-      std::from_chars(first + 2, last, t);
+      from_chars(first + 2, last, t);
 
     return t;
   }
@@ -134,15 +144,18 @@ namespace vbcc
   template<>
   double lit<double>(Node node)
   {
+    #ifdef __cpp_lib_from_chars
+    using namespace std;
+    #endif
     auto view = node->location().view();
     auto first = view.data();
     auto last = first + view.size();
     double t = 0;
 
     if (node == Float)
-      std::from_chars(first, last, t);
+      from_chars(first, last, t);
     else if (node == HexFloat)
-      std::from_chars(first + 2, last, t);
+      from_chars(first + 2, last, t);
 
     return t;
   }

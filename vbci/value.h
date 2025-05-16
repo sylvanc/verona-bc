@@ -70,6 +70,10 @@ namespace vbci
     Value(int16_t i16);
     Value(int32_t i32);
     Value(int64_t i64);
+    #if defined(__APPLE__) && defined(__MACH__)
+    Value(long ilong);
+    Value(unsigned long ulong);
+    #endif
     Value(float f32);
     Value(double f64);
     Value(void* ptr);

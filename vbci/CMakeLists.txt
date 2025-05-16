@@ -1,3 +1,5 @@
+include(CheckLinkerFlag)
+
 add_executable(vbci
   classes.cc
   dynlib.cc
@@ -28,9 +30,11 @@ else()
     -Wall -Wextra -Werror -Wshadow
     -flto -ffunction-sections -fdata-sections
     )
-  target_link_options(vbci PRIVATE
-    -rdynamic -flto -Wl,--gc-sections
-    )
+  target_link_options(vbci PRIVATE -rdynamic -flto)
+  check_linker_flag(CXX "-Wl,--gc-sections" LINKER_SUPPORTS_GC_SECTIONS)
+  if(LINKER_SUPPORTS_GC_SECTIONS)
+    target_link_options(vbci PRIVATE -Wl,--gc-sections)
+  endif()
 endif()
 
 target_link_libraries(vbci
