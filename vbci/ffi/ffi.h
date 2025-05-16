@@ -4,14 +4,6 @@
 
 #include <uv.h>
 
-#if defined(PLATFORM_IS_WINDOWS)
-#  define VBCI_KEEP __declspec(dllexport)
-#else
-#  define VBCI_KEEP [[gnu::used]] [[gnu::retain]]
-#endif
-
-#define VBCI_FFI extern "C" VBCI_KEEP
-
 VBCI_FFI void* async_create(uv_handle_type htype);
 VBCI_FFI void async_close(uv_handle_t* handle);
 

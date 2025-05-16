@@ -68,7 +68,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * FFI with `libffi`.
   * Can we wrap returned `struct` as objects?
   * Platform-specific FFI. Only load for the runtime platform.
-  * FFI to get the runtime platform.
 * I/O with `libuv`.
   * Do everything asynchronously.
   * Yield the current thread when waiting for I/O.

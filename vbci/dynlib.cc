@@ -152,6 +152,7 @@ namespace vbci
       return nullptr;
 
 #if defined(PLATFORM_IS_WINDOWS)
+    (void)version;
     auto f = GetProcAddress(handle, name.c_str());
 #elif defined(PLATFORM_IS_LINUX)
     void* f;
@@ -162,6 +163,7 @@ namespace vbci
       f = dlvsym(handle, name.c_str(), version.c_str());
 #else
     // No symbol versioning.
+    (void)version;
     void* f = dlsym(handle, name.c_str());
 #endif
     return reinterpret_cast<Symbol::Func>(f);

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ffi/ffi.h"
 #include "frame.h"
+#include "platform.h"
 #include "program.h"
 #include "stack.h"
 

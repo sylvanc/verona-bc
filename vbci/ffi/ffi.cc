@@ -31,6 +31,21 @@ struct Callback
   }
 };
 
+VBCI_FFI bool platform_is_mac()
+{
+  return platform::is_mac();
+}
+
+VBCI_FFI bool platform_is_linux()
+{
+  return platform::is_linux();
+}
+
+VBCI_FFI bool platform_is_windows()
+{
+  return platform::is_windows();
+}
+
 VBCI_FFI Array* getargv()
 {
   return Program::get().get_argv();
@@ -196,7 +211,10 @@ VBCI_FFI void async_write(uv_stream_t* handle, Array* array_u8)
 
 namespace vbci
 {
+#if !defined(PLATFORM_IS_WINDOWS)
   static uv_signal_t sigpipe_h;
+#endif
+
   static uv_async_t poke;
   static uv_async_t keepalive;
   static uv_thread_t thread;
