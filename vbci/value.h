@@ -469,6 +469,10 @@ namespace vbci
         case ValueType::I64:
         case ValueType::U32:
         case ValueType::U64:
+        #if defined(__APPLE__) && defined(__MACH__)
+        case ValueType::ILong:
+        case ValueType::ULong:
+        #endif
           v.tag = t;
           break;
 
