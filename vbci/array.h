@@ -10,7 +10,6 @@ namespace vbci
   struct Array : public Header
   {
   private:
-    Id type_id;
     size_t size;
     uint32_t stride;
     ValueType value_type;
@@ -21,11 +20,7 @@ namespace vbci
       ValueType value_type,
       size_t size,
       size_t stride)
-    : Header(loc),
-      type_id(type_id),
-      size(size),
-      stride(stride),
-      value_type(value_type)
+    : Header(loc, type_id), size(size), stride(stride), value_type(value_type)
     {
       if (value_type == ValueType::Invalid)
       {
@@ -52,7 +47,8 @@ namespace vbci
       if (type::is_array(type_id))
         throw Value(Error::BadType);
 
-      return new (mem) Array(loc, type_id, value_type, size, stride);
+      return new (mem)
+        Array(loc, type::array(type_id), value_type, size, stride);
     }
 
     static size_t size_of(size_t size, size_t stride)
@@ -60,14 +56,9 @@ namespace vbci
       return sizeof(Array) + (size * stride);
     }
 
-    Id array_type_id()
-    {
-      return type::array(type_id);
-    }
-
     Id content_type_id()
     {
-      return type_id;
+      return type::unarray(get_type_id());
     }
 
     size_t get_size()
@@ -95,7 +86,7 @@ namespace vbci
 
     Value store(bool move, size_t idx, Value& v)
     {
-      if (!Program::get().typecheck(v.type_id(), type_id))
+      if (!Program::get().typecheck(v.type_id(), content_type_id()))
         throw Value(Error::BadType);
 
       if (!safe_store(v))
@@ -115,10 +106,39 @@ namespace vbci
 
       finalize();
 
-      if (is_immutable())
+      if (location() == Immutable)
         delete this;
       else
         region()->rfree(this);
+    }
+
+    void trace(std::vector<Header*>& list)
+    {
+      switch (value_type)
+      {
+        case ValueType::Object:
+        case ValueType::Array:
+        case ValueType::Invalid:
+        {
+          for (size_t i = 0; i < size; i++)
+          {
+            auto v = load(i);
+
+            if (!v.is_header())
+              return;
+
+            auto h = v.get_header();
+
+            // Only add mutable, heap allocated objects and arrays to the list.
+            if (h->region())
+              list.push_back(h);
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
     }
 
     void immortalize()

@@ -111,6 +111,7 @@ namespace vbci
     Id type_id();
 
     bool is_readonly();
+    bool is_header();
     bool is_function();
     bool is_sendable();
     bool is_error();
@@ -118,9 +119,9 @@ namespace vbci
     bool get_bool();
     int32_t get_i32();
     Cown* get_cown();
-    Object* get_object();
+    Header* get_header();
     Function* function();
-    size_t to_index();
+    size_t get_size();
 
     Location location();
     Region* region();

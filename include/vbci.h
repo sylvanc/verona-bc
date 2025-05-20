@@ -525,10 +525,22 @@ namespace vbci
       return type_id | +Mod::Array;
     }
 
+    inline constexpr Id unarray(Id type_id)
+    {
+      assert(is_array(type_id));
+      return type_id & ~+Mod::Array;
+    }
+
     inline constexpr Id ref(Id type_id)
     {
       assert(!is_ref(type_id));
       return type_id | +Mod::Ref;
+    }
+
+    inline constexpr Id unref(Id type_id)
+    {
+      assert(is_ref(type_id));
+      return type_id & ~+Mod::Ref;
     }
 
     inline constexpr Id cown(Id type_id)

@@ -14,17 +14,17 @@ namespace vbci
     friend struct Region;
 
   private:
-    std::unordered_set<Object*> objects;
-    std::unordered_set<Array*> arrays;
+    std::unordered_set<Header*> headers;
+    bool finalizing;
 
   protected:
-    RegionRC() : Region() {}
+    RegionRC() : Region(), finalizing(false) {}
 
     Object* object(Class& cls)
     {
       auto mem = new uint8_t[cls.size];
       auto obj = Object::create(mem, cls, Location(this));
-      objects.emplace(obj);
+      headers.emplace(obj);
       stack_inc();
       return obj;
     }
@@ -35,41 +35,34 @@ namespace vbci
       auto mem = new uint8_t[Array::size_of(size, rep.second->size)];
       auto arr = Array::create(
         mem, Location(this), type_id, rep.first, size, rep.second->size);
-      arrays.emplace(arr);
+      headers.emplace(arr);
       stack_inc();
       return arr;
     }
 
-    void rfree(Object* obj)
+    void rfree(Header* h)
     {
-      objects.erase(obj);
-      delete obj;
-    }
-
-    void rfree(Array* arr)
-    {
-      arrays.erase(arr);
-      delete arr;
+      headers.erase(h);
+      delete h;
     }
 
     bool enable_rc()
     {
-      return true;
+      return !finalizing;
     }
 
     void free_contents()
     {
-      for (auto obj : objects)
-        obj->finalize();
+      for (auto h : headers)
+      {
+        if (h->is_object())
+          static_cast<Object*>(h)->finalize();
+        else
+          static_cast<Array*>(h)->finalize();
+      }
 
-      for (auto arr : arrays)
-        arr->finalize();
-
-      for (auto obj : objects)
-        delete obj;
-
-      for (auto arr : arrays)
-        delete arr;
+      for (auto h : headers)
+        delete h;
     }
   };
 }

@@ -51,6 +51,16 @@ namespace vbci
     {
       // This is a closure, populate the self argument.
       function = closure->method(ApplyMethodId);
+
+      if (closure->is_header())
+      {
+        auto r = closure->get_header()->region();
+
+        // Clear the parent region, as it's no longer acquired by the behaviour.
+        if (r)
+          r->clear_parent();
+      }
+
       locals.at(args++) = std::move(*closure);
     }
 
@@ -165,7 +175,7 @@ namespace vbci
               break;
 
             default:
-              throw Value(Error::UnknownPrimitiveType);
+              throw Value(Error::BadConversion);
           }
           break;
         }
@@ -222,7 +232,7 @@ namespace vbci
         case Op::StackArray:
         {
           auto& dst = frame->local(leb());
-          auto size = frame->local(leb()).to_index();
+          auto size = frame->local(leb()).get_size();
           auto type_id = leb();
           auto rep = program->layout_type_id(type_id);
           auto mem = stack.alloc(Array::size_of(size, rep.second->size));
@@ -247,7 +257,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto region = frame->local(leb()).region();
-          auto size = frame->local(leb()).to_index();
+          auto size = frame->local(leb()).get_size();
           auto type_id = leb();
           dst = region->array(type_id, size);
           break;
@@ -267,7 +277,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto region = Region::create(leb<RegionType>());
-          auto size = frame->local(leb()).to_index();
+          auto size = frame->local(leb()).get_size();
           auto type_id = leb();
           dst = region->array(type_id, size);
           break;
@@ -327,7 +337,7 @@ namespace vbci
           auto& dst = frame->local(leb());
           auto& src = frame->local(leb());
           auto& idx = frame->local(leb());
-          dst = src.arrayref(true, idx.to_index());
+          dst = src.arrayref(true, idx.get_size());
           break;
         }
 
@@ -336,7 +346,7 @@ namespace vbci
           auto& dst = frame->local(leb());
           auto& src = frame->local(leb());
           auto& idx = frame->local(leb());
-          dst = src.arrayref(false, idx.to_index());
+          dst = src.arrayref(false, idx.get_size());
           break;
         }
 
@@ -395,8 +405,12 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto& src = frame->local(leb());
-          auto func_id = leb();
-          dst = src.method(func_id);
+          auto f = src.method(leb());
+
+          if (!f)
+            throw Value(Error::MethodNotFound);
+
+          dst = f;
           break;
         }
 
@@ -613,6 +627,15 @@ namespace vbci
               slot.set_read_only();
           }
 
+          if (be.is_header())
+          {
+            auto r = be.get_header()->region();
+
+            // Set the region parent, as it's captured by the behavior.
+            if (r)
+              r->set_parent();
+          }
+
           auto value = new (b->get_body<Value>()) Value();
           *value = std::move(be);
           verona::rt::BehaviourCore::schedule_many(&b, 1);
@@ -817,7 +840,9 @@ namespace vbci
 
   void Thread::pushframe(Function* func, size_t dst, Condition condition)
   {
-    assert(func);
+    if (!func)
+      throw Value(Error::MethodNotFound);
+
     check_args(func->param_types);
 
     // Set how we will handle non-local returns in the current frame.
@@ -947,7 +972,9 @@ namespace vbci
 
   void Thread::tailcall(Function* func)
   {
-    assert(func);
+    if (!func)
+      throw Value(Error::MethodNotFound);
+
     teardown();
     check_args(func->param_types);
 

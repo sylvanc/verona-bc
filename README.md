@@ -48,9 +48,11 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* Delayed send/freeze?
+  * With delayed send, if send is still pending at behavior termination, we can reset stack RC and send.
 * Merge, freeze, extract.
   * Use `location` to store SCC information.
-  * Modes that allow/disallow parent pointers and stack RC.
+  * Modes that allow/disallow parent pointers and stack RC?
 * Types.
   * Raise and throw signatures on functions.
   * Function types? Not strictly needed, as this can be encoded as objects.

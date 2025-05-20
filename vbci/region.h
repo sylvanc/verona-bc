@@ -9,9 +9,8 @@ namespace vbci
 {
   struct Region
   {
-    friend struct Header;
-
   private:
+    static constexpr auto CownParent = uintptr_t(0x1);
     Region* parent;
     RC stack_rc;
 
@@ -19,32 +18,46 @@ namespace vbci
     Region() : parent(nullptr), stack_rc(0) {}
     virtual ~Region() = default;
 
-    void stack_inc()
-    {
-      stack_rc++;
-    }
-
   public:
     static Region* create(RegionType type);
 
     virtual Object* object(Class& cls) = 0;
     virtual Array* array(Id type_id, size_t size) = 0;
-    virtual void rfree(Object* obj) = 0;
-    virtual void rfree(Array* arr) = 0;
+    virtual void rfree(Header* h) = 0;
+    virtual bool enable_rc() = 0;
 
-    bool sendable()
+    void stack_inc()
     {
-      return !parent && (stack_rc == 1);
+      // If we transition from 0 to 1, we need to increment the parent RC.
+      if ((stack_rc++ == 0) && (parent != nullptr))
+        parent->stack_inc();
     }
 
-  private:
-    virtual bool enable_rc() = 0;
-    virtual void free_contents() = 0;
+    bool stack_dec()
+    {
+      if (--stack_rc == 0)
+      {
+        if (parent == nullptr)
+        {
+          // Returns false if the region has beeen freed.
+          free_region();
+          return false;
+        }
+
+        // If we transition from 1 to 0, we need to decrement the parent RC.
+        parent->stack_dec();
+      }
+
+      return true;
+    }
 
     bool is_ancestor(Region* r)
     {
       while (Region* p = r->parent)
       {
+        if (p == reinterpret_cast<Region*>(CownParent))
+          return false;
+
         if (p == this)
           return true;
 
@@ -54,34 +67,45 @@ namespace vbci
       return false;
     }
 
-    bool stack_dec()
+    bool sendable()
     {
-      // Returns false if the region has beeen freed.
-      if ((--stack_rc == 0) && (parent == nullptr))
-      {
-        free_region();
-        return false;
-      }
+      assert(stack_rc > 0);
+      return (parent == nullptr) && (stack_rc == 1);
+    }
 
-      return true;
+    bool has_parent()
+    {
+      return parent != nullptr;
+    }
+
+    void set_parent(Region* r)
+    {
+      assert(parent == nullptr);
+      assert(stack_rc > 0);
+      parent = r;
+      parent->stack_inc();
+    }
+
+    void set_parent()
+    {
+      assert(parent == nullptr);
+      assert(stack_rc > 0);
+      parent = reinterpret_cast<Region*>(CownParent);
     }
 
     void clear_parent()
     {
-      // The stack RC must be greater than 0, because this only happens when
-      // a region entry point is returned as the previous value during a store,
-      // which means it's stack RC was just incremented.
       assert(parent != nullptr);
       assert(stack_rc > 0);
+
+      if (parent != reinterpret_cast<Region*>(CownParent))
+        parent->stack_dec();
+
       parent = nullptr;
     }
 
-    void set_parent(Region* p)
-    {
-      // This originate from a region entry point being stored.
-      assert(parent == nullptr);
-      parent = p;
-    }
+  private:
+    virtual void free_contents() = 0;
 
     void free_region()
     {

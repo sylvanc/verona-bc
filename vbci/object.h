@@ -13,9 +13,7 @@ namespace vbci
   struct Object : public Header
   {
   private:
-    Id class_id;
-
-    Object(Location loc, Class& cls) : Header(loc), class_id(cls.class_id) {}
+    Object(Location loc, Class& cls) : Header(loc, type::cls(cls.class_id)) {}
 
   public:
     static Object* create(void* mem, Class& cls, Location loc)
@@ -31,27 +29,21 @@ namespace vbci
       return *this;
     }
 
-    Id type_id()
-    {
-      return type::cls(class_id);
-    }
-
     Id field_type_id(size_t idx)
     {
-      return cls()->fields.at(idx).type_id;
+      return cls().fields.at(idx).type_id;
     }
 
-    Class* cls()
+    Class& cls()
     {
-      return &Program::get().cls(class_id);
+      return Program::get().cls(type::cls_idx(get_type_id()));
     }
 
     size_t field(size_t field)
     {
-      auto& program = Program::get();
-      auto& cls = program.cls(class_id);
-      auto find = cls.field_map.find(field);
-      if (find == cls.field_map.end())
+      auto& c = cls();
+      auto find = c.field_map.find(field);
+      if (find == c.field_map.end())
         throw Value(Error::BadField);
 
       return find->second;
@@ -59,12 +51,12 @@ namespace vbci
 
     Function* method(size_t w)
     {
-      return Program::get().cls(class_id).method(w);
+      return cls().method(w);
     }
 
     Function* finalizer()
     {
-      return Program::get().cls(class_id).finalizer();
+      return cls().finalizer();
     }
 
     void* get_pointer()
@@ -74,7 +66,7 @@ namespace vbci
 
     Value load(size_t idx)
     {
-      auto& f = Program::get().cls(class_id).fields.at(idx);
+      auto& f = Program::get().cls(type::cls_idx(get_type_id())).fields.at(idx);
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
       return Value::from_addr(f.value_type, addr);
     }
@@ -82,7 +74,7 @@ namespace vbci
     Value store(bool move, size_t idx, Value& v)
     {
       auto program = Program::get();
-      auto& f = program.cls(class_id).fields.at(idx);
+      auto& f = program.cls(type::cls_idx(get_type_id())).fields.at(idx);
 
       if (!program.typecheck(v.type_id(), f.type_id))
         throw Value(Error::BadType);
@@ -106,10 +98,41 @@ namespace vbci
       // freed.
       finalize();
 
-      if (is_immutable())
+      if (location() == Immutable)
         delete this;
       else
         region()->rfree(this);
+    }
+
+    void trace(std::vector<Header*>& list)
+    {
+      auto& f = cls().fields;
+
+      for (size_t i = 0; i < f.size(); i++)
+      {
+        switch (f.at(i).value_type)
+        {
+          case ValueType::Object:
+          case ValueType::Array:
+          case ValueType::Invalid:
+          {
+            auto v = load(i);
+
+            if (!v.is_header())
+              return;
+
+            auto h = v.get_header();
+
+            // Only add mutable, heap allocated objects and arrays to the list.
+            if (h->region())
+              list.push_back(h);
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
     }
 
     void immortalize()
@@ -118,7 +141,7 @@ namespace vbci
         return;
 
       mark_immortal();
-      auto& f = cls()->fields;
+      auto& f = cls().fields;
 
       for (size_t i = 0; i < f.size(); i++)
       {
@@ -139,11 +162,12 @@ namespace vbci
     void finalize()
     {
       auto c = cls();
-      auto& f = c->fields;
-      auto fin = c->finalizer();
+      auto& f = c.fields;
+      auto fin = c.finalizer();
 
+      // Pass a read-only reference to the object.
       if (fin)
-        Thread::run_sync(fin, this);
+        Thread::run_sync(fin, Value(this, true));
 
       for (size_t i = 0; i < f.size(); i++)
       {

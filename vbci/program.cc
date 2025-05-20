@@ -52,26 +52,39 @@ namespace vbci
 
   Symbol& Program::symbol(size_t idx)
   {
+    if (idx >= symbols.size())
+      throw Value(Error::UnknownFFI);
+
     return symbols.at(idx);
   }
 
   Function* Program::function(size_t idx)
   {
+    if (idx >= functions.size())
+      return nullptr;
+
     return &functions.at(idx);
   }
 
   Class& Program::primitive(size_t idx)
   {
+    // This will never be out of bounds.
     return primitives.at(idx);
   }
 
   Class& Program::cls(size_t idx)
   {
+    if (idx >= classes.size())
+      throw Value(Error::BadType);
+
     return classes.at(idx);
   }
 
   Value& Program::global(size_t idx)
   {
+    if (idx >= globals.size())
+      throw Value(Error::UnknownGlobal);
+
     return globals.at(idx);
   }
 
@@ -365,21 +378,21 @@ namespace vbci
     return di_strings.at(uleb(pc));
   }
 
-  std::string Program::di_class(Class* cls)
+  std::string Program::di_class(Class& cls)
   {
     if (di == PC(-1))
-      return std::format("class {}", cls->class_id);
+      return std::format("class {}", cls.class_id);
 
-    auto pc = di + cls->debug_info;
+    auto pc = di + cls.debug_info;
     return di_strings.at(uleb(pc));
   }
 
-  std::string Program::di_field(Class* cls, size_t idx)
+  std::string Program::di_field(Class& cls, size_t idx)
   {
     if (di == PC(-1))
       return std::to_string(idx);
 
-    auto pc = di + cls->debug_info;
+    auto pc = di + cls.debug_info;
     uleb(pc);
 
     while (idx > 0)

@@ -74,8 +74,8 @@ namespace vbci
 
     std::string debug_info(Function* func, PC pc);
     std::string di_function(Function* func);
-    std::string di_class(Class* cls);
-    std::string di_field(Class* cls, size_t idx);
+    std::string di_class(Class& cls);
+    std::string di_field(Class& cls, size_t idx);
 
   private:
     void setup_value_type();

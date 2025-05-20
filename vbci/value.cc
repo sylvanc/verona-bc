@@ -306,10 +306,10 @@ namespace vbci
     switch (tag)
     {
       case ValueType::Object:
-        return obj->type_id();
+        return obj->get_type_id();
 
       case ValueType::Array:
-        return arr->array_type_id();
+        return arr->get_type_id();
 
       case ValueType::Cown:
         return cown->cown_type_id();
@@ -338,6 +338,19 @@ namespace vbci
   bool Value::is_readonly()
   {
     return readonly;
+  }
+
+  bool Value::is_header()
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::Array:
+        return true;
+
+      default:
+        return false;
+    }
   }
 
   bool Value::is_function()
@@ -398,37 +411,35 @@ namespace vbci
     return cown;
   }
 
-  Object* Value::get_object()
+  Header* Value::get_header()
   {
-    if (tag != ValueType::Object)
-      throw Value(Error::BadConversion);
+    switch (tag)
+    {
+      case ValueType::Object:
+        return obj;
 
-    return obj;
+      case ValueType::Array:
+        return arr;
+
+      default:
+        throw Value(Error::BadConversion);
+    }
   }
 
   Function* Value::function()
   {
     if (tag != ValueType::Function)
-      throw Value(Error::UnknownFunction);
+      return nullptr;
 
     return func;
   }
 
-  size_t Value::to_index()
+  size_t Value::get_size()
   {
-    switch (tag)
-    {
-      case ValueType::U8:
-      case ValueType::U16:
-      case ValueType::U32:
-      case ValueType::U64:
-      case ValueType::ULong:
-      case ValueType::USize:
-        return get<size_t>();
+    if (tag != ValueType::USize)
+      throw Value(Error::BadConversion);
 
-      default:
-        throw Value(Error::BadRefTarget);
-    }
+    return get<size_t>();
   }
 
   void* Value::to_ffi()
@@ -648,15 +659,27 @@ namespace vbci
     {
       case ValueType::Object:
       case ValueType::Ref:
-        return obj->region();
+      {
+        auto r = obj->region();
+        if (r)
+          return r;
+        break;
+      }
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        return arr->region();
+      {
+        auto r = arr->region();
+        if (r)
+          return r;
+        break;
+      }
 
       default:
-        throw Value(Error::BadAllocTarget);
+        break;
     }
+
+    throw Value(Error::BadAllocTarget);
   }
 
   void Value::immortalize()
@@ -794,7 +817,7 @@ namespace vbci
       return obj->method(w);
 
     if (+tag > +ValueType::F64)
-      throw Value(Error::BadMethodTarget);
+      return nullptr;
 
     return Program::get().primitive(+tag).method(w);
   }

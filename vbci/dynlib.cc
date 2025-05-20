@@ -72,7 +72,7 @@ namespace vbci
   Value Symbol::call(std::vector<void*>& args)
   {
     if (!func)
-      throw Value(Error::UnknownFunction);
+      throw Value(Error::UnknownFFI);
 
     if (vararg)
     {

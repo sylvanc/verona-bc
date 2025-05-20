@@ -10,11 +10,9 @@ namespace vbci
   enum class Error
   {
     UnknownGlobal,
-    UnknownFunction,
-    UnknownPrimitiveType,
+    UnknownFFI,
     UnknownRegionType,
     UnknownOpcode,
-    UnknownMathOp,
     BadAllocTarget,
     BadLabel,
     BadField,
@@ -23,8 +21,6 @@ namespace vbci
     BadLoadTarget,
     BadStoreTarget,
     BadStore,
-    BadMethodTarget,
-    BadConditional,
     BadConversion,
     BadOperand,
     MismatchedTypes,
@@ -40,6 +36,7 @@ namespace vbci
   using ARC = std::atomic<RC>;
 
   struct Region;
+  struct Header;
   struct Object;
   struct Array;
   struct Cown;
@@ -52,16 +49,12 @@ namespace vbci
     {
       case Error::UnknownGlobal:
         return "unknown global";
-      case Error::UnknownFunction:
-        return "unknown function";
-      case Error::UnknownPrimitiveType:
-        return "unknown primitive type";
+      case Error::UnknownFFI:
+        return "unknown FFI";
       case Error::UnknownRegionType:
         return "unknown region type";
       case Error::UnknownOpcode:
         return "unknown opcode";
-      case Error::UnknownMathOp:
-        return "unknown math op";
       case Error::BadAllocTarget:
         return "bad alloc target";
       case Error::BadLabel:
@@ -78,10 +71,6 @@ namespace vbci
         return "bad store target";
       case Error::BadStore:
         return "bad store";
-      case Error::BadMethodTarget:
-        return "bad method target";
-      case Error::BadConditional:
-        return "bad conditional";
       case Error::BadConversion:
         return "bad conversion";
       case Error::BadOperand:
