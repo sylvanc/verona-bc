@@ -646,10 +646,10 @@ namespace vbci
 
       case ValueType::Cown:
       case ValueType::CownRef:
-        return Immutable;
+        return loc::Immutable;
 
       default:
-        return Immortal;
+        return loc::Immortal;
     }
   }
 

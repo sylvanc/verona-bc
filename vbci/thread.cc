@@ -846,7 +846,7 @@ namespace vbci
     check_args(func->param_types);
 
     // Set how we will handle non-local returns in the current frame.
-    Location frame_id = StackAlloc;
+    Location frame_id = loc::Stack;
     size_t base = 0;
     size_t finalize_base = 0;
 

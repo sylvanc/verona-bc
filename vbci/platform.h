@@ -21,7 +21,7 @@
 
 namespace vbci::platform
 {
-  constexpr static bool is_mac()
+  constexpr inline bool is_mac()
   {
 #if defined(PLATFORM_IS_MACOSX)
     return true;
@@ -30,7 +30,7 @@ namespace vbci::platform
 #endif
   }
 
-  constexpr static bool is_linux()
+  constexpr inline bool is_linux()
   {
 #if defined(PLATFORM_IS_LINUX)
     return true;
@@ -39,7 +39,7 @@ namespace vbci::platform
 #endif
   }
 
-  constexpr static bool is_windows()
+  constexpr inline bool is_windows()
   {
 #if defined(PLATFORM_IS_WINDOWS)
     return true;

@@ -50,9 +50,14 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 * Delayed send/freeze?
   * With delayed send, if send is still pending at behavior termination, we can reset stack RC and send.
+  * Store delayed send in the region parent?
+    * Can't do the schedule late, as it breaks causality.
+    * Have to either have a fake execution count, or an ephemeral `cown`.
 * Merge, freeze, extract.
-  * Use `location` to store SCC information.
   * Modes that allow/disallow parent pointers and stack RC?
+  * When freezing a region with a stack RC, how do we know which SCC have those additional incoming edges?
+    * In an RC region, can we reuse the existing object RC?
+    * No way to do it in a non-RC region.
 * Types.
   * Raise and throw signatures on functions.
   * Function types? Not strictly needed, as this can be encoded as objects.

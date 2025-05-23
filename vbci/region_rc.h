@@ -46,6 +46,11 @@ namespace vbci
       delete h;
     }
 
+    void remove(Header* h)
+    {
+      headers.erase(h);
+    }
+
     bool enable_rc()
     {
       return !finalizing;

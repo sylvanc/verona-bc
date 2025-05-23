@@ -296,8 +296,7 @@ VBCI_FFI vbci::SSLconn* ssl_client(uv_tcp_t* tcp, const char* hostname)
   auto conn = new vbci::SSLconn(tcp);
   conn->client(hostname);
   conn->drive();
-  // TODO:
-  // SSL_CTX_set1_sigalgs_list
+  // TODO: SSL_CTX_set1_sigalgs_list
   // check additional X.509 properties?
   // server: SNI to present cert?
   return conn;

@@ -72,16 +72,16 @@ namespace vbci
       auto prev_loc = content.location();
       auto next_loc = next.location();
 
-      if (is_stack(next_loc))
+      if (loc::is_stack(next_loc))
       {
         // Can't store a stack value in a cown.
         next = Value(Error::BadStore);
       }
-      else if (is_region(next_loc) && (next_loc != prev_loc))
+      else if (loc::is_region(next_loc) && (next_loc != prev_loc))
       {
         // If the new value is in a different region, we need to check that the
         // region has no parent.
-        auto r = to_region(next_loc);
+        auto r = loc::to_region(next_loc);
 
         // It doesn't matter what the stack RC is, because all stack RC will be
         // gone by the time this cown is available to any other behavior.
@@ -98,8 +98,8 @@ namespace vbci
       content = std::move(next);
 
       // Clear prev region parent if it's different from next.
-      if (is_region(prev_loc) && (prev_loc != next_loc))
-        to_region(prev_loc)->clear_parent();
+      if (loc::is_region(prev_loc) && (prev_loc != next_loc))
+        loc::to_region(prev_loc)->clear_parent();
 
       return prev;
     }

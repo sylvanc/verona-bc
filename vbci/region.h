@@ -24,6 +24,7 @@ namespace vbci
     virtual Object* object(Class& cls) = 0;
     virtual Array* array(Id type_id, size_t size) = 0;
     virtual void rfree(Header* h) = 0;
+    virtual void remove(Header* h) = 0;
     virtual bool enable_rc() = 0;
 
     void stack_inc()

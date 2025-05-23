@@ -1,6 +1,7 @@
 add_executable(vbci
   dynlib.cc
   frame.cc
+  freeze.cc
   main.cc
   program.cc
   region.cc
