@@ -50,25 +50,6 @@ namespace vbcc
     return ValueType::Invalid;
   }
 
-  Options& options()
-  {
-    static Options opts;
-    return opts;
-  }
-
-  void Options::configure(CLI::App& cli)
-  {
-    cli.add_option(
-      "-b,--bytecode", bytecode_file, "Output bytecode to this file.");
-    cli.add_flag(
-      "-s,--strip", strip, "Strip debug information from the bytecode.");
-  }
-
-  std::filesystem::path Options::relative(const std::filesystem::path& path)
-  {
-    return std::filesystem::relative(path, compilation_path);
-  }
-
   static bool append_utf8(uint32_t cp, std::string& out)
   {
     if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))

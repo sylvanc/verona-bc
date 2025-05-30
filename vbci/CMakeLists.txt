@@ -39,7 +39,7 @@ target_link_libraries(vbci
   OpenSSL::SSL
   ffi::ffi
   CLI11::CLI11
-  verona-bc::include
+  vbc::include
 )
 
 install(TARGETS vbci RUNTIME DESTINATION vbci)

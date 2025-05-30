@@ -249,7 +249,7 @@ namespace vbcc
     return true;
   }
 
-  State::State()
+  Bytecode::Bytecode()
   {
     primitives.resize(NumPrimitiveClasses);
 
@@ -262,7 +262,15 @@ namespace vbcc
     method_ids.insert({ST::di().string("@apply"), ApplyMethodId});
   }
 
-  std::optional<size_t> State::get_type_id(Node id)
+  void Bytecode::set_path(const std::filesystem::path& path)
+  {
+    compilation_path = std::filesystem::canonical(path);
+
+    if (!std::filesystem::is_directory(compilation_path))
+      compilation_path = compilation_path.parent_path();
+  }
+
+  std::optional<size_t> Bytecode::get_type_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = type_ids.find(name);
@@ -273,7 +281,7 @@ namespace vbcc
     return find->second;
   }
 
-  bool State::add_type(Node type)
+  bool Bytecode::add_type(Node type)
   {
     auto name = ST::di().string(type / TypeId);
     auto find = type_ids.find(name);
@@ -286,7 +294,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<size_t> State::get_class_id(Node id)
+  std::optional<size_t> Bytecode::get_class_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = class_ids.find(name);
@@ -297,7 +305,7 @@ namespace vbcc
     return find->second;
   }
 
-  bool State::add_class(Node cls)
+  bool Bytecode::add_class(Node cls)
   {
     auto name = ST::di().string(cls / ClassId);
     auto find = class_ids.find(name);
@@ -310,7 +318,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<size_t> State::get_field_id(Node id)
+  std::optional<size_t> Bytecode::get_field_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = field_ids.find(name);
@@ -321,7 +329,7 @@ namespace vbcc
     return find->second;
   }
 
-  void State::add_field(Node field)
+  void Bytecode::add_field(Node field)
   {
     auto name = ST::di().string(field / FieldId);
     auto find = field_ids.find(name);
@@ -330,7 +338,7 @@ namespace vbcc
       field_ids.insert({name, field_ids.size()});
   }
 
-  std::optional<size_t> State::get_method_id(Node id)
+  std::optional<size_t> Bytecode::get_method_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = method_ids.find(name);
@@ -341,7 +349,7 @@ namespace vbcc
     return find->second;
   }
 
-  void State::add_method(Node method)
+  void Bytecode::add_method(Node method)
   {
     auto name = ST::di().string(method / MethodId);
     auto find = method_ids.find(name);
@@ -350,7 +358,7 @@ namespace vbcc
       method_ids.insert({name, method_ids.size()});
   }
 
-  std::optional<size_t> State::get_func_id(Node id)
+  std::optional<size_t> Bytecode::get_func_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = func_ids.find(name);
@@ -367,14 +375,14 @@ namespace vbcc
     return func_id;
   }
 
-  FuncState& State::get_func(Node id)
+  FuncState& Bytecode::get_func(Node id)
   {
     auto name = ST::di().string(id);
     auto find = func_ids.find(name);
     return functions.at(find->second);
   }
 
-  FuncState& State::add_func(Node func)
+  FuncState& Bytecode::add_func(Node func)
   {
     auto name = ST::di().string(func / FunctionId);
     auto find = func_ids.find(name);
@@ -400,7 +408,7 @@ namespace vbcc
     return func_state;
   }
 
-  std::optional<size_t> State::get_symbol_id(Node id)
+  std::optional<size_t> Bytecode::get_symbol_id(Node id)
   {
     auto name = ST::noemit().string(id);
     auto find = symbol_ids.find(name);
@@ -411,7 +419,7 @@ namespace vbcc
     return find->second;
   }
 
-  bool State::add_symbol(Node symbol)
+  bool Bytecode::add_symbol(Node symbol)
   {
     auto name = ST::noemit().string(symbol / SymbolId);
     auto find = symbol_ids.find(name);
@@ -426,7 +434,7 @@ namespace vbcc
     return true;
   }
 
-  std::optional<size_t> State::get_library_id(Node lib)
+  std::optional<size_t> Bytecode::get_library_id(Node lib)
   {
     auto name = ST::exec().string(lib / String);
     auto find = library_ids.find(name);
@@ -437,7 +445,7 @@ namespace vbcc
     return find->second;
   }
 
-  void State::add_library(Node lib)
+  void Bytecode::add_library(Node lib)
   {
     auto name = ST::exec().string(lib / String);
     auto find = library_ids.find(name);
@@ -449,14 +457,14 @@ namespace vbcc
     libraries.push_back(lib);
   }
 
-  void State::def(Node& id)
+  void Bytecode::def(Node& id)
   {
     auto& func_state = get_func(id->parent(Func) / FunctionId);
     auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
     label_state.def(*func_state.get_register_id(id));
   }
 
-  bool State::use(Node& id)
+  bool Bytecode::use(Node& id)
   {
     auto& func_state = get_func(id->parent(Func) / FunctionId);
     auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
@@ -471,7 +479,7 @@ namespace vbcc
     return true;
   }
 
-  bool State::kill(Node& id)
+  bool Bytecode::kill(Node& id)
   {
     auto& func_state = get_func(id->parent(Func) / FunctionId);
     auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
@@ -486,9 +494,13 @@ namespace vbcc
     return true;
   }
 
-  void State::gen()
+  void Bytecode::gen(std::filesystem::path output, bool strip)
   {
+    if (output.empty())
+      output = compilation_path.stem().replace_extension(".vbc");
+
     std::vector<uint8_t> hdr;
+    std::vector<uint8_t> di_strs;
     std::vector<uint8_t> di;
     std::vector<uint8_t> code;
 
@@ -518,13 +530,7 @@ namespace vbcc
     hdr << uleb(CurrentVersion);
 
     // Add the compilation path to the string table.
-    auto comp_path = ST::di().string(options().compilation_path.string());
-
-    // Debug info string table.
-    di << uleb(ST::di().size());
-
-    for (size_t i = 0; i < ST::di().size(); i++)
-      di << ST::di().at(i);
+    auto comp_path = ST::di().string(compilation_path.string());
 
     // The compilation path.
     di << uleb(comp_path);
@@ -699,7 +705,8 @@ namespace vbcc
 
       auto stmt_di = [&](Node stmt) {
         // Use the source and offset in the AST.
-        auto file = ST::di().file(stmt->location().source->origin());
+        auto file =
+          ST::di().file(compilation_path, stmt->location().source->origin());
         auto pos = stmt->location().pos;
 
         if (file != di_file)
@@ -730,7 +737,7 @@ namespace vbcc
           if (stmt == Source)
           {
             adv_di();
-            di_file = ST::di().file(stmt / String);
+            di_file = ST::di().file(compilation_path, stmt / String);
             di_offset = 0;
             explicit_di = true;
             di << d(DIOp::File, di_file);
@@ -1246,23 +1253,36 @@ namespace vbcc
     }
 
     // Length of the debug info section.
-    if (options().strip)
+    if (strip)
+    {
       hdr << uleb(0);
+    }
     else
+    {
+      // Debug info size.
       hdr << uleb(di.size());
 
-    std::ofstream f(options().bytecode_file, std::ios::binary | std::ios::out);
+      // Debug info string table.
+      di_strs << uleb(ST::di().size());
+
+      for (size_t i = 0; i < ST::di().size(); i++)
+        di_strs << ST::di().at(i);
+    }
+
+    std::ofstream f(output, std::ios::binary | std::ios::out);
     f.write(reinterpret_cast<const char*>(hdr.data()), hdr.size());
 
-    if (!options().strip)
+    if (!strip)
+    {
+      f.write(reinterpret_cast<const char*>(di_strs.data()), di_strs.size());
       f.write(reinterpret_cast<const char*>(di.data()), di.size());
+    }
 
     f.write(reinterpret_cast<const char*>(code.data()), code.size());
 
     if (!f)
     {
-      logging::Error() << "Error writing to: " << options().bytecode_file
-                       << std::endl;
+      logging::Error() << "Error writing to: " << output << std::endl;
     }
   }
 }

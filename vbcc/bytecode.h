@@ -47,8 +47,9 @@ namespace vbcc
     bool add_register(Node id);
   };
 
-  struct State
+  struct Bytecode
   {
+    std::filesystem::path compilation_path;
     bool error = false;
     Node top;
 
@@ -67,7 +68,9 @@ namespace vbcc
     std::vector<Node> symbols;
     std::vector<Node> libraries;
 
-    State();
+    Bytecode();
+
+    void set_path(const std::filesystem::path& path);
 
     std::optional<size_t> get_type_id(Node id);
     bool add_type(Node type);
@@ -95,6 +98,6 @@ namespace vbcc
     bool use(Node& id);
     bool kill(Node& id);
 
-    void gen();
+    void gen(std::filesystem::path output, bool strip);
   };
 }

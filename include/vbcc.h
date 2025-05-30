@@ -214,7 +214,8 @@ namespace vbcc
   inline const auto wfType = wfTypeBase | Array | Ref | Cown;
 
   inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
-  inline const auto wfLiteral = None | True | wfIntLiteral | Float | HexFloat;
+  inline const auto wfLiteral =
+    None | True | False | wfIntLiteral | Float | HexFloat;
 
   inline const auto wfBinop = Add | Sub | Mul | Div | Mod | And | Or | Xor |
     Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;

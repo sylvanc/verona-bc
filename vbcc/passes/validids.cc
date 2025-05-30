@@ -2,7 +2,7 @@
 
 namespace vbcc
 {
-  PassDef validids(std::shared_ptr<State> state)
+  PassDef validids(std::shared_ptr<Bytecode> state)
   {
     return {
       "validids",

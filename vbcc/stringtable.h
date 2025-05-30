@@ -23,8 +23,8 @@ namespace vbcc
 
     Index string(std::string_view str);
     Index string(Node node);
-    Index file(std::string_view str);
-    Index file(Node node);
+    Index file(const std::filesystem::path& path, std::string_view str);
+    Index file(const std::filesystem::path& path, Node node);
 
     size_t size();
     const std::string& at(size_t i);

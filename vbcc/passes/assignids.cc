@@ -2,19 +2,13 @@
 
 namespace vbcc
 {
-  PassDef assignids(std::shared_ptr<State> state)
+  PassDef assignids(std::shared_ptr<Bytecode> state)
   {
     PassDef p{
       "assignids",
       wfIR,
       dir::topdown | dir::once,
       {
-        // Accumulate source files.
-        T(Source)[Source] >> [](Match& _) -> Node {
-          ST::di().file(_(Source) / String);
-          return NoChange;
-        },
-
         // Accumulate libraries.
         T(Lib)[Lib] >> [state](Match& _) -> Node {
           state->add_library(_(Lib));
@@ -142,32 +136,12 @@ namespace vbcc
           }
 
           // Register label names.
-          bool explicit_di_file = false;
-
           for (auto label : *(func / Labels))
           {
             if (!func_state.add_label(label / LabelId))
             {
               state->error = true;
               return err(label / LabelId, "duplicate label name");
-            }
-
-            // Accumulate source files that aren't overridden.
-            if (!explicit_di_file)
-            {
-              for (auto stmt : *(label / Body))
-              {
-                if (stmt == Source)
-                {
-                  explicit_di_file = true;
-                  break;
-                }
-
-                ST::di().file(stmt->location().source->origin());
-              }
-
-              if (!explicit_di_file)
-                ST::di().file((label / Return)->location().source->origin());
             }
           }
 

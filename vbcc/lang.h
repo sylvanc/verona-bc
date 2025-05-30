@@ -94,26 +94,14 @@ namespace vbcc
       When,
       Typetest);
 
-  Parse parser();
+  Parse parser(std::shared_ptr<Bytecode> state);
   PassDef statements();
   PassDef labels();
-  PassDef assignids(std::shared_ptr<State> state);
-  PassDef validids(std::shared_ptr<State> state);
-  PassDef liveness(std::shared_ptr<State> state);
-
-  struct Options : public trieste::Options
-  {
-    std::filesystem::path compilation_path;
-    std::filesystem::path bytecode_file;
-    bool strip = false;
-
-    void configure(CLI::App& cli) override;
-    std::filesystem::path relative(const std::filesystem::path& path);
-  };
+  PassDef assignids(std::shared_ptr<Bytecode> state);
+  PassDef validids(std::shared_ptr<Bytecode> state);
+  PassDef liveness(std::shared_ptr<Bytecode> state);
 
   Node err(Node node, const std::string& msg);
   ValueType val(Node ptype);
-  Options& options();
-
   std::string unescape(const std::string_view& in);
 }

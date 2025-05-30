@@ -16,21 +16,13 @@ namespace vbcc
     ;
   // clang-format on
 
-  Parse parser()
+  Parse parser(std::shared_ptr<Bytecode> state)
   {
     Parse p(depth::subdirectories, wfParser);
     p.prefile([](auto&, auto& path) { return path.extension() == ".vir"; });
 
-    p.postparse([](auto&, auto& path, auto) {
-      auto& opt = options();
-      opt.compilation_path = std::filesystem::canonical(path);
-
-      if (!std::filesystem::is_directory(opt.compilation_path))
-        opt.compilation_path = opt.compilation_path.parent_path();
-
-      if (opt.bytecode_file.empty())
-        opt.bytecode_file = path.stem().replace_extension(".vbc");
-
+    p.postparse([state](auto&, auto& path, auto) {
+      state->set_path(path);
       return 0;
     });
 

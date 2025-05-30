@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(verona-bc VERSION 1.0.0 LANGUAGES CXX)
+project(vbc VERSION 1.0.0 LANGUAGES CXX)
 
 include(FetchContent)
 find_package(Threads REQUIRED)
@@ -58,7 +58,7 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/dist)
 
 add_library(CommonIncludes INTERFACE)
-add_library(verona-bc::include ALIAS CommonIncludes)
+add_library(vbc::include ALIAS CommonIncludes)
 target_include_directories(CommonIncludes INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -71,3 +71,4 @@ install(CODE [[
 
 add_subdirectory(vbcc)
 add_subdirectory(vbci)
+add_subdirectory(vc)

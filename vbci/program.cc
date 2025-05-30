@@ -645,8 +645,8 @@ namespace vbci
 
     if (debug_info_size > 0)
     {
-      di = pc;
       string_table(pc, di_strings);
+      di = pc;
       di_compilation_path = uleb(pc);
       pc = di + debug_info_size;
     }

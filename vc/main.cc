@@ -1,23 +1,16 @@
-#include "bytecode.h"
 #include "lang.h"
 
 #include <trieste/driver.h>
+#include <vbcc.h>
+#include <vbcc/bytecode.h>
 
 int main(int argc, char** argv)
 {
-  using namespace trieste;
-  using namespace vbcc;
+  using namespace vc;
 
+  // TODO: assignids, validids, liveness.
   auto state = std::make_shared<Bytecode>();
-  Reader reader{
-    "vbcc",
-    {statements(),
-     labels(),
-     assignids(state),
-     validids(state),
-     liveness(state)},
-    parser(state)};
-
+  Reader reader{"vc", {structure()}, parser()};
 
   struct Options : public trieste::Options
   {
@@ -40,11 +33,11 @@ int main(int argc, char** argv)
   if (r != 0)
     return r;
 
-  if (state->error)
-    return -1;
+  // if (state->error)
+  //   return -1;
 
-  wf::push_back(wfIR);
-  state->gen(opts.bytecode_file, opts.strip);
-  wf::pop_front();
+  // wf::push_back(wfIR);
+  // state->gen(opts.bytecode_file, opts.strip);
+  // wf::pop_front();
   return 0;
 }

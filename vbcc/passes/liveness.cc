@@ -5,7 +5,7 @@
 
 namespace vbcc
 {
-  PassDef liveness(std::shared_ptr<State> state)
+  PassDef liveness(std::shared_ptr<Bytecode> state)
   {
     PassDef p{"liveness", wfIR, dir::topdown | dir::once, {}};
 
