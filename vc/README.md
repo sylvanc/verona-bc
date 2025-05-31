@@ -6,7 +6,11 @@ Infer the location for everything.
 
 ## To Do
 
-- Let, var, assign, else, type assertion, compile time evaluation, tuple flattening, when, ref, try.
+- Strong: `when`.
+- Medium: application.
+- Weak: assign, `else`, `ref`, `try`.
+- Undecided: type assertion, compile time evaluation, tuple flattening.
+- Since loops are expression, should `break` and `continue` have values?
 - Implement primitive types in `std::builtin`.
 - `where` clause instead of `T1: T2 = T3`?
 - Code reuse for classes.
@@ -21,20 +25,14 @@ Infer the location for everything.
 
 ```rs
 
-keywords = 'use' | 'if' | 'else' | 'while' | 'for' | 'break' | 'continue'
-         | 'return' | 'raise' | 'throw'
-non-symbols = '=' | '#' | ':' | ';' | ',' | '.' | '(' | ')' | '[' | ']' | '{'
-            | '}'
+top = class*
 
-ptype = none | bool | i8 | i16 | i32 | i64 | u8 | u16 | u32 | u64 | f32 | f64
-      | ilong | ulong | isize | usize
 typename = ident typeargs? ('::' ident typeargs?)*
 typearg = type | '#' expr
 typeargs = '[' typearg (',' typearg)* ']'
 
 // No precedence, read left to right.
-type = ptype
-     | typename
+type = typename
      | type '|' type // Union.
      | type '&' type // Intersection.
      | type ',' type // Tuple.
@@ -44,41 +42,34 @@ type = ptype
 typeparam = ident (':' type)? ('=' type)?
 typeparams = '[' (typeparam (',' typeparam)*)? ']'
 
-top = class*
-
-// Functions on primitive types.
-primitive = ptype '{' function* '}'
-
 // Classes.
-class = ident typeparams? '{'
-  (primitive | class | import | typealias | field | function)*
-  '}'
-
-// Imports.
+class = ident typeparams? '{' classbody '}'
+classbody = (class | import | typealias | field | function)*
 import = 'use' typename
-
-// Type alias.
 typealias = 'use' ident typeparams? '=' type
+field = ident (':' type)? ('=' expr)?
 
-param = ident (':' type)? ('=' expr)?
-params = '(' param (',' param)* ')'
-field = param
+// Functions.
 function = ident typeparams? params (':' type)? '{' body '}'
-lambda = typeparams? params (':' type)? '->' (expr | '{' body '}')
-       | '{' body '}'
-tuple = expr (',' expr)*
+params = '(' param (',' param)* ')'
+param = ident (':' type)? ('=' expr)?
 body =
      ( import | typealias | 'break' | 'continue' | 'return' expr
      | 'raise' expr | 'throw' expr | expr
      )*
 
+// Expressions.
+lambda = typeparams? params (':' type)? '->' (expr | '{' body '}')
+       | '{' body '}'
 qname = typename '::' (ident | symbol) typeargs?
       | ident typeargs
 
 // Expression binding.
 strong = '(' expr ')' // exprseq
+       | 'let' ident (':' type)?
+       | 'var' ident (':' type)?
        | literal
-       | tuple
+       | expr (',' expr)+
        | lambda
        | qname
        | ident
@@ -91,6 +82,8 @@ strong = '(' expr ')' // exprseq
 medium = apply expr // extend apply
        | expr expr // apply
 weak   = symbol typeargs? expr // dynamic call
+       | 'ref' expr
+       | 'try' expr
        | expr symbol typeargs? expr // dynamic call
        | expr 'else' expr
        | expr '=' expr

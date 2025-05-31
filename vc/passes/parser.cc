@@ -11,7 +11,8 @@ namespace vc
     Ident | SymbolId | DontCare | Equals | Const | DoubleColon | Colon |
     Vararg | Dot |
     // Keywords.
-    Use | If | While | For | Break | Continue | When | Return | Raise | Throw;
+    Use | Let | Var | If | While | For | Break | Continue | When | Return |
+    Raise | Throw;
 
   // clang-format off
   const auto wfParser =
@@ -173,6 +174,8 @@ namespace vc
 
         // Keywords.
         "use\\b" >> [](auto& m) { m.add(Use); },
+        "let\\b" >> [](auto& m) { m.add(Let); },
+        "var\\b" >> [](auto& m) { m.add(Var); },
         "if\\b" >> [](auto& m) { m.add(If); },
         "else\\b" >> [](auto& m) { m.add(Else); },
         "while\\b" >> [](auto& m) { m.add(While); },

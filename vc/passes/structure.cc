@@ -15,11 +15,11 @@ namespace vc
   // TODO: remove as more expressions are handled.
   // everything from Equals on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq,     DontCare, Ident, None,   True,     False,  Bin,
-    Oct,         Int,      Hex,   Float,  HexFloat, String, RawString,
-    DontCare,    Const,    Tuple, Lambda, QName,    Method, StaticCall,
-    DynamicCall, If,       While, For,    Equals,   Else,   SymbolId,
-    Bracket,     Const,    Colon, Vararg, When};
+    ExprSeq,  DontCare,   Ident,       None,  True,     False,  Bin,
+    Oct,      Int,        Hex,         Float, HexFloat, String, RawString,
+    DontCare, Const,      Tuple,       Let,   Var,      Lambda, QName,
+    Method,   StaticCall, DynamicCall, If,    While,    For,    Equals,
+    Else,     SymbolId,   Bracket,     Const, Colon,    Vararg, When};
 
   // TODO: temporary placeholder.
   const auto wfParserTokens = Const | Colon | Vararg | When;
@@ -30,8 +30,8 @@ namespace vc
   const auto wfWeakExpr = Equals | Else | SymbolId | Bracket;
 
   const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
-    RawString | Tuple | Lambda | QName | Method | StaticCall | DynamicCall |
-    If | While | For | wfWeakExpr | wfParserTokens;
+    RawString | Tuple | Let | Var | Lambda | QName | Method | StaticCall |
+    DynamicCall | If | While | For | wfWeakExpr | wfParserTokens;
 
   // clang-format off
   const auto wfPassStructure =
@@ -67,6 +67,8 @@ namespace vc
     | (If <<= Expr * Lambda)
     | (While <<= Expr * Lambda)
     | (For <<= Expr * Lambda)
+    | (Let <<= Ident * Type)
+    | (Var <<= Ident * Type)
     | (Return <<= ~Expr)
     | (Raise <<= ~Expr)
     | (Throw <<= ~Expr)
@@ -316,6 +318,16 @@ namespace vc
         },
 
         // Expressions.
+        // Let.
+        In(Expr) * T(Let) * T(Ident)[Ident] *
+            ~(T(Colon) * (!T(Equals))++[Type]) >>
+          [](Match& _) { return Let << _(Ident) << (Type << _[Type]); },
+
+        // Var.
+        In(Expr) * T(Var) * T(Ident)[Ident] *
+            ~(T(Colon) * (!T(Equals))++[Type]) >>
+          [](Match& _) { return Var << _(Ident) << (Type << _[Type]); },
+
         // Lambda.
         In(Expr) * TypeParamsDef[TypeParams] * ParamsDef[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *

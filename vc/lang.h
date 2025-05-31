@@ -45,6 +45,9 @@ namespace vc
   inline const auto Else = TokenDef("else");
   inline const auto While = TokenDef("while");
   inline const auto For = TokenDef("for");
+
+  inline const auto Let = TokenDef("let");
+  inline const auto Var = TokenDef("var");
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
 
