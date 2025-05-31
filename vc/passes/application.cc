@@ -4,6 +4,26 @@ namespace vc
 {
   Node resolve(Node name);
 
+  Node resolve_typealias(Node find)
+  {
+    while (find == TypeAlias)
+    {
+      find = find / Type;
+
+      if (find->empty())
+        return Error;
+
+      find = find->front();
+
+      if (find == TypeName)
+        find = resolve(find);
+      else
+        find = Error;
+    }
+
+    return find;
+  }
+
   Node lookup(Node ident)
   {
     // Lookup returns a ClassDef, TypeAlias, TypeParam, ParamDef, Let, Var, or
@@ -23,9 +43,7 @@ namespace vc
         // A TypeName resolve returns a ClassDef, TypeAlias, TypeParam, or an
         // Error.
         auto find = resolve(def / TypeName);
-
-        if (find == Error)
-          continue;
+        find = resolve_typealias(find);
 
         // Lookdown returns a ClassDef, TypeAlias, TypeParam, FieldDef, or a
         // list of Functions.
@@ -78,6 +96,11 @@ namespace vc
     {
       if (find == Function)
         return err(ident, "Path is a function");
+
+      find = resolve_typealias(find);
+
+      if (find == Error)
+        return err(ident, "Path is a complex type alias");
 
       // Lookdown returns a ClassDef, TypeAlias, TypeParam, FieldDef, or a list
       // of Functions.

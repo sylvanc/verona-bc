@@ -7,7 +7,7 @@ Infer the location for everything.
 ## To Do
 
 - Name resolution.
-  - Look down through type aliases.
+  - Look down through type aliases via union and intersection types.
   - Look down through type parameters. Need an upper bounds.
 - Assign: LHS expressions.
 - A-normal form.
