@@ -165,13 +165,6 @@ namespace vc
         // Don't care.
         "_\\b" >> [](auto& m) { m.add(DontCare); },
 
-        // Reserve a sequence of underscores.
-        "_(?:_)+\\b" >>
-          [](auto& m) {
-            m.error(
-              "A sequence of two or more underscores is a reserved identifier");
-          },
-
         // Keywords.
         "use\\b" >> [](auto& m) { m.add(Use); },
         "let\\b" >> [](auto& m) { m.add(Let); },

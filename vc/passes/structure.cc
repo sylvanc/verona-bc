@@ -17,13 +17,13 @@ namespace vc
     If,      While,     For,      When,   Equals,     Else,
     Ref,     Try,       Op,       Const,  Colon,      Vararg};
 
-  const auto FieldDef = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
+  const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
-  const auto TypeParamsDef = T(Bracket) << (T(List, Group) * End);
-  const auto ParamsDef = T(Paren) << (~T(List, Group) * End);
+  const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
+  const auto ParamsPat = T(Paren) << (~T(List, Group) * End);
 
   const auto NamedType =
-    T(Ident) * ~TypeArgsDef * (T(DoubleColon) * T(Ident) * ~TypeArgsDef)++;
+    T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
   const auto SomeType =
     T(TypeName, Union, Isect, TupleType, FuncType, NoArgType);
 
@@ -94,7 +94,7 @@ namespace vc
         // Treat a directory as a class.
         T(Directory)[Directory] >>
           [](Match& _) {
-            return (Class ^ _(Directory))
+            return (ClassDef ^ _(Directory))
               << (Ident ^ _(Directory)->location()) << TypeParams
               << (ClassBody << (Group << Use << (Ident ^ "std") << DoubleColon
                                       << (Ident ^ "builtin"))
@@ -106,34 +106,34 @@ namespace vc
 
         // Class.
         In(ClassBody) * T(Group)
-            << (T(Ident)[Ident] * ~TypeParamsDef[TypeParams] *
+            << (T(Ident)[Ident] * ~TypeParamsPat[TypeParams] *
                 T(Brace)[Brace]) >>
           [](Match& _) {
-            return Class << _(Ident) << (TypeParams << *_[TypeParams])
-                         << (ClassBody << *_[Brace]);
+            return ClassDef << _(Ident) << (TypeParams << *_[TypeParams])
+                            << (ClassBody << *_[Brace]);
           },
 
         // Field.
-        In(ClassBody) * T(Group) << (FieldDef * End) >>
+        In(ClassBody) * T(Group) << (FieldPat * End) >>
           [](Match& _) {
-            return Field << _(Ident) << (Type << _[Type])
-                         << (Body << (Group << _[Body]));
+            return FieldDef << _(Ident) << (Type << _[Type])
+                            << (Body << (Group << _[Body]));
           },
 
         // Function.
         In(ClassBody) * T(Group)
-            << (T(Ident)[Ident] * ~TypeParamsDef[TypeParams] *
-                ParamsDef[Params] * ~(T(Colon) * (!T(Brace))++[Type]) *
+            << (T(Ident, SymbolId)[Ident] * ~TypeParamsPat[TypeParams] *
+                ParamsPat[Params] * ~(T(Colon) * (!T(Brace))++[Type]) *
                 T(Brace)[Brace]) >>
           [](Match& _) {
-            return Func << _(Ident) << (TypeParams << *_[TypeParams])
-                        << (Params << *_[Params]) << (Type << _[Type])
-                        << (Body << *_[Brace]);
+            return Function << _(Ident) << (TypeParams << *_[TypeParams])
+                            << (Params << *_[Params]) << (Type << _[Type])
+                            << (Body << *_[Brace]);
           },
 
         // Type alias.
         T(Group)[Group]
-            << (T(Use) * T(Ident)[Ident] * ~TypeParamsDef[TypeParams] *
+            << (T(Use) * T(Ident)[Ident] * ~TypeParamsPat[TypeParams] *
                 T(Equals) * Any++[Type]) >>
           [](Match& _) {
             if (!_(Group)->parent()->in({ClassBody, Body}))
@@ -163,10 +163,10 @@ namespace vc
           [](Match& _) { return Params << *_[List]; },
 
         // Parameter.
-        In(Params) * (T(Group) << (FieldDef * End)) >>
+        In(Params) * (T(Group) << (FieldPat * End)) >>
           [](Match& _) {
-            return Param << _(Ident) << (Type << _[Type])
-                         << (Body << (Group << _[Body]));
+            return ParamDef << _(Ident) << (Type << _[Type])
+                            << (Body << (Group << _[Body]));
           },
 
         In(Params) * T(Group)[Group] >>
@@ -176,7 +176,7 @@ namespace vc
         T(TypeParams) << (T(List)[List] * End) >>
           [](Match& _) { return TypeParams << *_[List]; },
 
-        In(TypeParams) * (T(Group) << (FieldDef * End)) >>
+        In(TypeParams) * (T(Group) << (FieldPat * End)) >>
           [](Match& _) {
             return TypeParam << _(Ident) << (Type << _[Type])
                              << (Type << _[Body]);
@@ -270,7 +270,7 @@ namespace vc
           [](Match& _) { return Var << _(Ident) << (Type << _[Type]); },
 
         // Lambda.
-        In(Expr) * TypeParamsDef[TypeParams] * ParamsDef[Params] *
+        In(Expr) * TypeParamsPat[TypeParams] * ParamsPat[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
@@ -280,7 +280,7 @@ namespace vc
           },
 
         // Lambda without type parameters.
-        In(Expr) * ParamsDef[Params] *
+        In(Expr) * ParamsPat[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
@@ -296,8 +296,8 @@ namespace vc
           [](Match& _) {
             return Lambda << TypeParams
                           << (Params
-                              << (Param << _(Ident) << (Type << _[Type])
-                                        << Body))
+                              << (ParamDef << _(Ident) << (Type << _[Type])
+                                           << Body))
                           << Type << (Body << *_[Brace] << (Expr << _[Rhs]));
           },
 
@@ -310,39 +310,44 @@ namespace vc
 
         // Qualified name.
         In(Expr) *
-            (T(Ident) * ~TypeArgsDef * T(DoubleColon) * T(Ident, SymbolId) *
-             ~TypeArgsDef *
-             (T(DoubleColon) * T(Ident, SymbolId) * ~TypeArgsDef)++)[QName] >>
+            (T(Ident) * ~TypeArgsPat * T(DoubleColon) * T(Ident, SymbolId) *
+             ~TypeArgsPat *
+             (T(DoubleColon) * T(Ident, SymbolId) * ~TypeArgsPat)++)[QName] >>
           [](Match& _) { return make_qname(_[QName]); },
 
         // Unprefixed qualified name.
         // An identifier with type arguments is a qualified name.
-        In(Expr) * T(Ident)[Ident] * TypeArgsDef[TypeArgs] >>
+        In(Expr) * T(Ident)[Ident] * TypeArgsPat[TypeArgs] >>
           [](Match& _) {
             return QName
               << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs]));
           },
 
         // Method.
-        In(Expr) * ApplyDef[Expr] * T(Dot) * T(Ident, SymbolId)[Ident] *
-            ~TypeArgsDef[TypeArgs] >>
+        In(Expr) * (T(Ident) / ApplyPat)[Expr] * T(Dot) *
+            T(Ident, SymbolId)[Ident] * ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
-            return Method << _(Expr) << _(Ident) << (TypeArgs << *_[TypeArgs]);
+            return Method << (Expr << _(Expr)) << _(Ident)
+                          << (TypeArgs << *_[TypeArgs]);
           },
 
         // Operator.
-        In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsDef[TypeArgs] >>
+        In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
             return Op << _(SymbolId) << (TypeArgs << *_[TypeArgs]);
           },
 
         // Static call.
         In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) { return StaticCall << _(QName) << _(ExprSeq); },
+          [](Match& _) {
+            return StaticCall << _(QName) << seq_to_args(_(ExprSeq));
+          },
 
         // Dynamic call.
         In(Expr) * T(Method)[Method] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) { return DynamicCall << _(Method) << _(ExprSeq); },
+          [](Match& _) {
+            return DynamicCall << _(Method) << seq_to_args(_(ExprSeq));
+          },
 
         // If.
         In(Expr) * (T(If) << End) * (!T(Lambda))++[Expr] * T(Lambda)[Lambda] >>
@@ -366,16 +371,16 @@ namespace vc
         In(Expr) * (T(When) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
           [](Match& _) { return When << (Expr << _[For]) << _(Lambda); },
 
-        // Groups in body, expr, exprseq, and tuple are expressions.
-        In(Body, Expr, ExprSeq, Tuple) * T(Group)[Group] >>
+        // Groups are expressions.
+        In(Body, Expr, ExprSeq, Tuple, Args) * T(Group)[Group] >>
           [](Match& _) { return Expr << *_[Group]; },
 
-        // Parens in body, expr, and tuple are expression sequences.
+        // Parens are expression sequences.
         In(Body, Expr, Tuple) * T(Paren)[Paren] >>
           [](Match& _) { return ExprSeq << *_[Paren]; },
 
-        // Lists in body, expr, exprseq, and tuple are tuples.
-        In(Body, ExprSeq, Tuple) * T(List)[List] >>
+        // Lists are tuples.
+        In(Body, ExprSeq, Tuple, Args) * T(List)[List] >>
           [](Match& _) -> Node { return Expr << (Tuple << *_[List]); },
 
         In(Expr) * T(List)[List] >>

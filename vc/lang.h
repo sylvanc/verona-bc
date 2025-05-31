@@ -20,11 +20,23 @@ namespace vc
   inline const auto Ident = TokenDef("ident", flag::print);
   inline const auto Use = TokenDef("use");
 
-  inline const auto TypeAlias = TokenDef("typealias");
+  inline const auto ClassDef = TokenDef(
+    "classdef", flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
+  inline const auto TypeAlias = TokenDef(
+    "typealias",
+    flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
+  inline const auto FieldDef =
+    TokenDef("fielddef", flag::lookdown | flag::shadowing);
+  inline const auto Function =
+    TokenDef("function", flag::symtab | flag::lookdown);
+  inline const auto ParamDef =
+    TokenDef("paramdef", flag::lookup | flag::shadowing);
+
   inline const auto TypeName = TokenDef("typename");
   inline const auto TypeElement = TokenDef("typeelement");
   inline const auto TypeParams = TokenDef("typeparams");
-  inline const auto TypeParam = TokenDef("typeparam");
+  inline const auto TypeParam =
+    TokenDef("typeparam", flag::lookup | flag::shadowing);
   inline const auto TypeArgs = TokenDef("typeargs");
   inline const auto ClassBody = TokenDef("classbody");
   inline const auto RawString = TokenDef("rawstring", flag::print);
@@ -37,16 +49,19 @@ namespace vc
   inline const auto Expr = TokenDef("expr");
   inline const auto ExprSeq = TokenDef("exprseq");
   inline const auto Tuple = TokenDef("tuple");
-  inline const auto Lambda = TokenDef("lambda");
+  inline const auto Lambda =
+    TokenDef("lambda", flag::symtab | flag::defbeforeuse);
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
   inline const auto Op = TokenDef("op");
   inline const auto StaticCall = TokenDef("staticcall");
   inline const auto DynamicCall = TokenDef("dynamiccall");
+  inline const auto RefLet = TokenDef("reflet");
+  inline const auto RefVar = TokenDef("refvar");
   inline const auto Apply = TokenDef("apply");
 
-  inline const auto Let = TokenDef("let");
-  inline const auto Var = TokenDef("var");
+  inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
+  inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
   inline const auto If = TokenDef("if");
   inline const auto Else = TokenDef("else");
   inline const auto While = TokenDef("while");
@@ -54,11 +69,12 @@ namespace vc
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
 
-  inline const auto TypeArgsDef = T(Bracket) << (T(List, Group) * End);
+  inline const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
-  inline const auto ApplyDef =
+  inline const auto ApplyPat =
     T(ExprSeq,
-      Ident,
+      RefLet,
+      RefVar,
       None,
       True,
       False,
@@ -76,10 +92,10 @@ namespace vc
       StaticCall,
       DynamicCall);
 
-  inline const auto ExprDef =
-    ApplyDef / T(DontCare, Lambda, If, While, For, When, Apply);
+  inline const auto ExprPat =
+    ApplyPat / T(DontCare, Lambda, If, While, For, When, Apply);
 
-  inline const auto AssignDef = ExprDef / T(Let, Var);
+  inline const auto AssignPat = ExprPat / T(Let, Var);
 
   inline const auto wfType =
     TypeName | Union | Isect | TupleType | FuncType | NoArgType;
@@ -96,22 +112,24 @@ namespace vc
     RawString | Tuple | Let | Var | Lambda | QName | Op | Method | StaticCall |
     DynamicCall | If | While | For | When | wfWeakExpr | wfTempExpr;
 
+  inline const auto wfFuncId = Ident >>= Ident | SymbolId;
+
   // clang-format off
   inline const auto wfPassStructure =
-      (Top <<= Class++)
-    | (Class <<= Ident * TypeParams * ClassBody)
-    | (ClassBody <<= (Class | Use | TypeAlias | Field | Func)++)
-    | (Use <<= TypeName)
-    | (TypeAlias <<= Ident * TypeParams * Type)
-    | (Field <<= Ident * Type * Body)
-    | (Func <<= Ident * TypeParams * Params * Type * Body)
-    | (TypeName <<= TypeElement++)
+      (Top <<= ClassDef++)
+    | (ClassDef <<= Ident * TypeParams * ClassBody)[Ident]
+    | (ClassBody <<= (ClassDef | Use | TypeAlias | FieldDef | Function)++)
+    | (Use <<= TypeName)[Include]
+    | (TypeAlias <<= Ident * TypeParams * Type)[Ident]
+    | (FieldDef <<= Ident * Type * Body)[Ident]
+    | (Function <<= wfFuncId * TypeParams * Params * Type * Body)[Ident]
+    | (TypeName <<= TypeElement++[1])
     | (TypeElement <<= Ident * TypeArgs)
     | (TypeParams <<= TypeParam++)
-    | (TypeParam <<= Ident * (Lhs >>= Type) * (Rhs >>= Type))
+    | (TypeParam <<= Ident * (Lhs >>= Type) * (Rhs >>= Type))[Ident]
     | (TypeArgs <<= (Type | Expr)++)
-    | (Params <<= Param++)
-    | (Param <<= Ident * Type * Body)
+    | (Params <<= ParamDef++)
+    | (ParamDef <<= Ident * Type * Body)[Ident]
     | (Type <<= ~wfType)
     | (Union <<= wfType++[2])
     | (Isect <<= wfType++[2])
@@ -122,35 +140,38 @@ namespace vc
     | (ExprSeq <<= Expr++)
     | (Tuple <<= Expr++[2])
     | (Lambda <<= TypeParams * Params * Type * Body)
-    | (QName <<= QElement++)
-    | (QElement <<= (Ident >>= Ident | SymbolId) * TypeArgs)
+    | (QName <<= QElement++[1])
+    | (QElement <<= wfFuncId * TypeArgs)
     | (Op <<= SymbolId * TypeArgs)
-    | (Method <<= (Expr >>= wfExpr) * (Ident >>= Ident | SymbolId) * TypeArgs)
-    | (StaticCall <<= QName * ExprSeq)
-    | (DynamicCall <<= Method * ExprSeq)
+    | (Method <<= Expr * wfFuncId * TypeArgs)
+    | (StaticCall <<= QName * Args)
+    | (DynamicCall <<= Method * Args)
+    | (Args <<= Expr++)
     | (If <<= Expr * Lambda)
     | (While <<= Expr * Lambda)
     | (For <<= Expr * Lambda)
     | (When <<= Expr * Lambda)
-    | (Let <<= Ident * Type)
-    | (Var <<= Ident * Type)
+    | (Let <<= Ident * Type)[Ident]
+    | (Var <<= Ident * Type)[Ident]
     | (Return <<= ~Expr)
     | (Raise <<= ~Expr)
     | (Throw <<= ~Expr)
     ;
   // clang-format on
 
-  inline const auto wfExpr2 = wfExpr | Apply;
+  inline const auto wfExpr2 = (wfExpr | RefLet | RefVar | Apply) - Ident;
 
   // clang-format off
   inline const auto wfPassApplication =
       wfPassStructure
     | (Expr <<= wfExpr2++)
-    | (Apply <<= wfExpr++[2])
+    | (RefLet <<= Ident)
+    | (RefVar <<= Ident)
+    | (Apply <<= wfExpr2++[2])
     ;
   // clang-format on
 
-  inline const auto wfExpr3 = wfExpr2 - Op;
+  inline const auto wfExpr3 = wfExpr2 - (Op | Apply);
 
   // clang-format off
   inline const auto wfPassOperators =
@@ -160,12 +181,20 @@ namespace vc
     | (Try <<= wfExpr3)
     | (Else <<= (Lhs >>= wfExpr3) * (Rhs >>= wfExpr3))
     | (Equals <<= (Lhs >>= wfExpr3) * (Rhs >>= wfExpr3))
-    | (Method <<= (Expr >>= wfExpr3) * (Ident >>= Ident | SymbolId) * TypeArgs)
     ;
   // clang-format on
+
+  // clang-format off
+  inline const auto wfPassANF =
+      wfPassOperators
+    ;
+  // clang-format on
+
+  Node seq_to_args(Node seq);
 
   Parse parser();
   PassDef structure();
   PassDef application();
   PassDef operators();
+  PassDef anf();
 }

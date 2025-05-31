@@ -6,6 +6,16 @@ namespace vbcc
 {
   Node err(Node node, const std::string& msg)
   {
+    while (node->location().source->origin().empty())
+    {
+      auto parent = node->parent();
+
+      if (!parent)
+        break;
+
+      node = parent;
+    }
+
     return Error << (ErrorMsg ^ msg) << node;
   }
 

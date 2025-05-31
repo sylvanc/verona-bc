@@ -6,12 +6,22 @@ Infer the location for everything.
 
 ## To Do
 
+- Name resolution.
+  - Look down through type aliases.
+  - Look down through type parameters. Need an upper bounds.
 - Assign: LHS expressions.
+- A-normal form.
+  - Need destructing assignment first.
+- Auto create, default argument sugar, member conflict.
+- Do we need:
+  - Functions for field access?
+  - LHS functions, with auto RHS versions?
 - Undecided: type assertion, compile time evaluation, tuple flattening.
 - Since loops are expression, should `break` and `continue` have values?
 - Implement primitive types in `std::builtin`.
 - `where` clause instead of `T1: T2 = T3`?
-- Code reuse for classes.
+  - Then a value parameter can be `ident: type`.
+- Code reuse.
 - Structural types.
 - FFI.
 - Partial application, `_`.
@@ -69,7 +79,7 @@ strong = '(' expr ')' // exprseq
        | literal
        | expr (',' expr)+
        | lambda
-       | qname
+       | qname // class, alias, or function
        | ident
        | expr '.' (ident | symbol) typeargs? // method
        | qname exprseq // static call
