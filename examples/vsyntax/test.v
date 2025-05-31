@@ -12,7 +12,7 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     use Func1 = (()->i32)->T1;
     use Func2 = i32->i32->bool;
 
-    let x = std::test(a.f);
+    let x = std::test(a.f) b c;
     var y: i32;
 
     if a b: T1 -> (a, b, true, 0b01, let w);

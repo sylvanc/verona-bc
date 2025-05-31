@@ -2,6 +2,7 @@
 
 #include <trieste/trieste.h>
 #include <vbcc.h>
+#include <vbcc/lang.h>
 
 namespace vc
 {
@@ -41,16 +42,104 @@ namespace vc
   inline const auto QElement = TokenDef("qelement");
   inline const auto StaticCall = TokenDef("staticcall");
   inline const auto DynamicCall = TokenDef("dynamiccall");
+  inline const auto Apply = TokenDef("apply");
+
+  inline const auto Let = TokenDef("let");
+  inline const auto Var = TokenDef("var");
   inline const auto If = TokenDef("if");
   inline const auto Else = TokenDef("else");
   inline const auto While = TokenDef("while");
   inline const auto For = TokenDef("for");
-
-  inline const auto Let = TokenDef("let");
-  inline const auto Var = TokenDef("var");
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
 
+  inline const auto ApplyDef =
+    T(ExprSeq,
+      Ident,
+      None,
+      True,
+      False,
+      Bin,
+      Oct,
+      Int,
+      Hex,
+      Float,
+      HexFloat,
+      String,
+      RawString,
+      Tuple,
+      QName,
+      Method,
+      StaticCall,
+      DynamicCall);
+
+  inline const auto wfType =
+    TypeName | Union | Isect | TupleType | FuncType | NoArgType;
+
+  inline const auto wfBody =
+    Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
+
+  inline const auto wfWeakExpr = Equals | Else | Ref | Try | SymbolId | Bracket;
+
+  // TODO: temporary placeholder.
+  inline const auto wfTempExpr = Const | Colon | Vararg;
+
+  inline const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
+    RawString | Tuple | Let | Var | Lambda | QName | Method | StaticCall |
+    DynamicCall | If | While | For | When | wfWeakExpr | wfTempExpr;
+
+  // clang-format off
+  inline const auto wfPassStructure =
+      (Top <<= Class++)
+    | (Class <<= Ident * TypeParams * ClassBody)
+    | (ClassBody <<= (Class | Use | TypeAlias | Field | Func)++)
+    | (Use <<= TypeName)
+    | (TypeAlias <<= Ident * TypeParams * Type)
+    | (Field <<= Ident * Type * Body)
+    | (Func <<= Ident * TypeParams * Params * Type * Body)
+    | (TypeName <<= TypeElement++)
+    | (TypeElement <<= Ident * TypeArgs)
+    | (TypeParams <<= TypeParam++)
+    | (TypeParam <<= Ident * (Lhs >>= Type) * (Rhs >>= Type))
+    | (TypeArgs <<= (Type | Expr)++)
+    | (Params <<= Param++)
+    | (Param <<= Ident * Type * Body)
+    | (Type <<= ~wfType)
+    | (Union <<= wfType++[2])
+    | (Isect <<= wfType++[2])
+    | (TupleType <<= wfType++[2])
+    | (FuncType <<= (Lhs >>= wfType) * (Rhs >>= wfType))
+    | (Body <<= wfBody++)
+    | (Expr <<= wfExpr++)
+    | (ExprSeq <<= Expr++)
+    | (Tuple <<= Expr++[2])
+    | (Lambda <<= TypeParams * Params * Type * Body)
+    | (QName <<= QElement++)
+    | (QElement <<= (Ident >>= Ident | SymbolId) * TypeArgs)
+    | (Method <<= (Expr >>= wfExpr) * (Ident >>= Ident | SymbolId) * TypeArgs)
+    | (StaticCall <<= QName * ExprSeq)
+    | (DynamicCall <<= Method * ExprSeq)
+    | (If <<= Expr * Lambda)
+    | (While <<= Expr * Lambda)
+    | (For <<= Expr * Lambda)
+    | (When <<= Expr * Lambda)
+    | (Let <<= Ident * Type)
+    | (Var <<= Ident * Type)
+    | (Return <<= ~Expr)
+    | (Raise <<= ~Expr)
+    | (Throw <<= ~Expr)
+    ;
+  // clang-format on
+
+  // clang-format off
+  inline const auto wfPassApplication =
+      wfPassStructure
+    | (Expr <<= (Apply | wfExpr)++)
+    | (Apply <<= wfExpr++[2])
+    ;
+  // clang-format on
+
   Parse parser();
   PassDef structure();
+  PassDef application();
 }

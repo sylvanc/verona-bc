@@ -1,12 +1,7 @@
 #include "../lang.h"
 
-#include <vbcc/lang.h>
-
 namespace vc
 {
-  const auto wfType =
-    TypeName | Union | Isect | TupleType | FuncType | NoArgType;
-
   const std::initializer_list<Token> wfTypeElement = {
     None, Bool, I8,       I16,   I32,   I64,      U8,       U16,
     U32,  U64,  ILong,    ULong, ISize, USize,    F32,      F64,
@@ -21,61 +16,6 @@ namespace vc
     Method,   StaticCall, DynamicCall, If,    While,    For,     When,
     Equals,   Else,       Ref,         Try,   SymbolId, Bracket, Const,
     Colon,    Vararg};
-
-  // TODO: temporary placeholder.
-  const auto wfParserTokens = Const | Colon | Vararg;
-
-  const auto wfBody =
-    Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
-
-  const auto wfWeakExpr = Equals | Else | Ref | Try | SymbolId | Bracket;
-
-  const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
-    RawString | Tuple | Let | Var | Lambda | QName | Method | StaticCall |
-    DynamicCall | If | While | For | When | wfWeakExpr | wfParserTokens;
-
-  // clang-format off
-  const auto wfPassStructure =
-      (Top <<= Class++)
-    | (Class <<= Ident * TypeParams * ClassBody)
-    | (ClassBody <<= (Class | Use | TypeAlias | Field | Func)++)
-    | (Use <<= TypeName)
-    | (TypeAlias <<= Ident * TypeParams * Type)
-    | (Field <<= Ident * Type * Body)
-    | (Func <<= Ident * TypeParams * Params * Type * Body)
-    | (TypeName <<= TypeElement++)
-    | (TypeElement <<= Ident * TypeArgs)
-    | (TypeParams <<= TypeParam++)
-    | (TypeParam <<= Ident * (Lhs >>= Type) * (Rhs >>= Type))
-    | (TypeArgs <<= (Type | Expr)++)
-    | (Params <<= Param++)
-    | (Param <<= Ident * Type * Body)
-    | (Type <<= ~wfType)
-    | (Union <<= wfType++[2])
-    | (Isect <<= wfType++[2])
-    | (TupleType <<= wfType++[2])
-    | (FuncType <<= (Lhs >>= wfType) * (Rhs >>= wfType))
-    | (Body <<= wfBody++)
-    | (Expr <<= wfExpr++)
-    | (ExprSeq <<= Expr++)
-    | (Tuple <<= Expr++[2])
-    | (Lambda <<= TypeParams * Params * Type * Body)
-    | (QName <<= QElement++)
-    | (QElement <<= (Ident >>= Ident | SymbolId) * TypeArgs)
-    | (Method <<= (Expr >>= wfExpr) * (Ident >>= Ident | SymbolId) * TypeArgs)
-    | (StaticCall <<= QName * ExprSeq)
-    | (DynamicCall <<= Method * ExprSeq)
-    | (If <<= Expr * Lambda)
-    | (While <<= Expr * Lambda)
-    | (For <<= Expr * Lambda)
-    | (When <<= Expr * Lambda)
-    | (Let <<= Ident * Type)
-    | (Var <<= Ident * Type)
-    | (Return <<= ~Expr)
-    | (Raise <<= ~Expr)
-    | (Throw <<= ~Expr)
-    ;
-  // clang-format on
 
   const auto FieldDef = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -385,26 +325,8 @@ namespace vc
           },
 
         // Method.
-        In(Expr) *
-            T(Expr,
-              Ident,
-              None,
-              True,
-              False,
-              Bin,
-              Oct,
-              Int,
-              Hex,
-              Float,
-              HexFloat,
-              String,
-              RawString,
-              Tuple,
-              QName,
-              Method,
-              StaticCall,
-              DynamicCall)[Expr] *
-            T(Dot) * T(Ident, SymbolId)[Ident] * ~TypeArgsDef[TypeArgs] >>
+        In(Expr) * ApplyDef[Expr] * T(Dot) * T(Ident, SymbolId)[Ident] *
+            ~TypeArgsDef[TypeArgs] >>
           [](Match& _) {
             return Method << _(Expr) << _(Ident) << (TypeArgs << *_[TypeArgs]);
           },

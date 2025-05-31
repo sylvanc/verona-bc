@@ -1,4 +1,5 @@
 add_executable(vc
+  passes/application.cc
   passes/parser.cc
   passes/structure.cc
   lang.cc
