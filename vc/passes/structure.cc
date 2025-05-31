@@ -4,32 +4,46 @@
 
 namespace vc
 {
-  const auto wfType = TypeNames | Union | Isect | FuncType | TupleType;
+  const auto wfType =
+    TypeName | Union | Isect | TupleType | FuncType | NoArgType;
+
+  const std::initializer_list<Token> wfTypeElement = {
+    None, Bool, I8,       I16,   I32,   I64,      U8,       U16,
+    U32,  U64,  ILong,    ULong, ISize, USize,    F32,      F64,
+    Ptr,  Dyn,  TypeName, Union, Isect, FuncType, TupleType};
+
+  // TODO: remove as more expressions are handled.
+  // everything from Equals on isn't handled.
+  const std::initializer_list<Token> wfExprElement = {
+    ExprSeq,     DontCare, Ident, None,   True,     False,  Bin,
+    Oct,         Int,      Hex,   Float,  HexFloat, String, RawString,
+    DontCare,    Const,    Tuple, Lambda, QName,    Method, StaticCall,
+    DynamicCall, If,       While, For,    Equals,   Else,   SymbolId,
+    Bracket,     Const,    Colon, Vararg, When};
 
   // TODO: temporary placeholder.
-  const auto wfParserTokens =
-    // Symbols.
-    Ident | DontCare | Equals | Const | Colon | Vararg | Dot |
-    // Keywords.
-    When;
+  const auto wfParserTokens = Const | Colon | Vararg | When;
 
   const auto wfBody =
     Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
 
-  const auto wfExpr = Expr | Tuple | Lambda | If | While | For | QName |
-    wfLiteral | String | RawString | wfParserTokens;
+  const auto wfWeakExpr = Equals | Else | SymbolId | Bracket;
+
+  const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
+    RawString | Tuple | Lambda | QName | Method | StaticCall | DynamicCall |
+    If | While | For | wfWeakExpr | wfParserTokens;
 
   // clang-format off
   const auto wfPassStructure =
       (Top <<= Class++)
     | (Class <<= Ident * TypeParams * ClassBody)
     | (ClassBody <<= (Class | Use | TypeAlias | Field | Func)++)
-    | (Use <<= TypeNames)
+    | (Use <<= TypeName)
     | (TypeAlias <<= Ident * TypeParams * Type)
     | (Field <<= Ident * Type * Body)
     | (Func <<= Ident * TypeParams * Params * Type * Body)
-    | (TypeNames <<= TypeName++)
-    | (TypeName <<= Ident * TypeArgs)
+    | (TypeName <<= TypeElement++)
+    | (TypeElement <<= Ident * TypeArgs)
     | (TypeParams <<= TypeParam++)
     | (TypeParam <<= Ident * (Lhs >>= Type) * (Rhs >>= Type))
     | (TypeArgs <<= (Type | Expr)++)
@@ -42,9 +56,14 @@ namespace vc
     | (FuncType <<= (Lhs >>= wfType) * (Rhs >>= wfType))
     | (Body <<= wfBody++)
     | (Expr <<= wfExpr++)
+    | (ExprSeq <<= Expr++)
     | (Tuple <<= Expr++[2])
     | (Lambda <<= TypeParams * Params * Type * Body)
-    | (QName <<= TypeNames * (Ident >>= (SymbolId | Ident)) * TypeArgs)
+    | (QName <<= QElement++)
+    | (QElement <<= (Ident >>= Ident | SymbolId) * TypeArgs)
+    | (Method <<= (Expr >>= wfExpr) * (Ident >>= Ident | SymbolId) * TypeArgs)
+    | (StaticCall <<= QName * ExprSeq)
+    | (DynamicCall <<= Method * ExprSeq)
     | (If <<= Expr * Lambda)
     | (While <<= Expr * Lambda)
     | (For <<= Expr * Lambda)
@@ -62,25 +81,26 @@ namespace vc
 
   const auto NamedType =
     T(Ident) * ~TypeArgsDef * (T(DoubleColon) * T(Ident) * ~TypeArgsDef)++;
-  const auto SomeType = T(TypeNames, Union, Isect, FuncType, TupleType);
+  const auto SomeType =
+    T(TypeName, Union, Isect, TupleType, FuncType, NoArgType);
 
   Node make_typename(NodeRange r)
   {
-    Node tns = TypeNames;
-    Node tn;
+    Node tn = TypeName;
+    Node te;
 
     for (auto& n : r)
     {
       if (n == Ident)
-        tn = TypeName << n << TypeArgs;
+        te = TypeElement << n << TypeArgs;
       else if (n == Bracket)
-        (tn / TypeArgs) << *n;
+        (te / TypeArgs) << *n;
       else if (n == DoubleColon)
-        tns << tn;
+        tn << te;
     }
 
-    tns << tn;
-    return tns;
+    tn << te;
+    return tn;
   }
 
   Node merge_type(Token t, Node lhs, Node rhs)
@@ -100,6 +120,25 @@ namespace vc
     {
       return t << lhs << rhs;
     }
+  }
+
+  Node make_qname(NodeRange r)
+  {
+    Node qn = QName;
+    Node qe;
+
+    for (auto& n : r)
+    {
+      if (n->in({Ident, SymbolId}))
+        qe = QElement << n << TypeArgs;
+      else if (n == Bracket)
+        (qe / TypeArgs) << *n;
+      else if (n == DoubleColon)
+        qn << qe;
+    }
+
+    qn << qe;
+    return qn;
   }
 
   PassDef structure()
@@ -215,7 +254,7 @@ namespace vc
 
         // Types.
         // Type name.
-        In(Type)++ * --In(TypeName) * NamedType[Type] >>
+        In(Type)++ * --In(TypeElement) * NamedType[Type] >>
           [](Match& _) { return make_typename(_[Type]); },
 
         // Union type.
@@ -247,8 +286,9 @@ namespace vc
             return FuncType << _(Lhs) << _(Rhs);
           },
 
-        // Empty parentheses is unit, which is `none`.
-        In(Type)++ * T(Paren) << End >> [](Match&) -> Node { return None; },
+        // Empty parentheses is the "no arguments" type.
+        In(Type)++ * T(Paren) << End >>
+          [](Match&) -> Node { return NoArgType; },
 
         // Type grouping.
         In(Type)++* T(Paren) << (SomeType[Type] * End) >>
@@ -278,7 +318,7 @@ namespace vc
         // Expressions.
         // Lambda.
         In(Expr) * TypeParamsDef[TypeParams] * ParamsDef[Params] *
-            ~(T(Colon) * (!T(Brace))++[Type]) * T(SymbolId, "->") *
+            ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
             return Lambda << (TypeParams << *_[TypeParams])
@@ -287,12 +327,25 @@ namespace vc
           },
 
         // Lambda without type parameters.
-        In(Expr) * ParamsDef[Params] * ~(T(Colon) * (!T(Brace))++[Type]) *
-            T(SymbolId, "->") * (T(Brace)[Brace] / Any++[Rhs]) >>
+        In(Expr) * ParamsDef[Params] *
+            ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
+            (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
             return Lambda << TypeParams << (Params << *_[Params])
                           << (Type << _[Type])
                           << (Body << *_[Brace] << (Expr << _[Rhs]));
+          },
+
+        // Lambda with a single parameter.
+        In(Expr) * T(Ident)[Ident] *
+            ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
+            (T(Brace)[Brace] / Any++[Rhs]) >>
+          [](Match& _) {
+            return Lambda << TypeParams
+                          << (Params
+                              << (Param << _(Ident) << (Type << _[Type])
+                                        << Body))
+                          << Type << (Body << *_[Brace] << (Expr << _[Rhs]));
           },
 
         // Lambda without parameters.
@@ -301,6 +354,54 @@ namespace vc
             return Lambda << TypeParams << Params << Type
                           << (Body << *_[Brace]);
           },
+
+        // Qualified name.
+        In(Expr) *
+            (T(Ident) * ~TypeArgsDef * T(DoubleColon) * T(Ident, SymbolId) *
+             ~TypeArgsDef *
+             (T(DoubleColon) * T(Ident, SymbolId) * ~TypeArgsDef)++)[QName] >>
+          [](Match& _) { return make_qname(_[QName]); },
+
+        // Unprefixed qualified name.
+        // An identifier with type arguments is a qualified name.
+        In(Expr) * T(Ident)[Ident] * TypeArgsDef[TypeArgs] >>
+          [](Match& _) {
+            return QName
+              << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs]));
+          },
+
+        // Method.
+        In(Expr) *
+            T(Expr,
+              Ident,
+              None,
+              True,
+              False,
+              Bin,
+              Oct,
+              Int,
+              Hex,
+              Float,
+              HexFloat,
+              String,
+              RawString,
+              Tuple,
+              QName,
+              Method,
+              StaticCall,
+              DynamicCall)[Expr] *
+            T(Dot) * T(Ident, SymbolId)[Ident] * ~TypeArgsDef[TypeArgs] >>
+          [](Match& _) {
+            return Method << _(Expr) << _(Ident) << (TypeArgs << *_[TypeArgs]);
+          },
+
+        // Static call.
+        In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
+          [](Match& _) { return StaticCall << _(QName) << _(ExprSeq); },
+
+        // Dynamic call.
+        In(Expr) * T(Method)[Method] * T(ExprSeq)[ExprSeq] >>
+          [](Match& _) { return DynamicCall << _(Method) << _(ExprSeq); },
 
         // If.
         In(Expr) * (T(If) << End) * (!T(Lambda))++[Expr] * T(Lambda)[Lambda] >>
@@ -320,34 +421,20 @@ namespace vc
         In(Expr) * (T(For) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
           [](Match& _) { return For << (Expr << _[For]) << _(Lambda); },
 
-        // Qualified name.
-        In(Expr) * NamedType[TypeName] * T(DoubleColon) *
-            T(Ident, SymbolId)[Ident] * ~TypeArgsDef[TypeArgs] >>
-          [](Match& _) {
-            return QName << make_typename(_[TypeName]) << _(Ident)
-                         << (TypeArgs << *_[TypeArgs]);
-          },
-
-        // Unprefixed qualified name.
-        // An identifier with type arguments is a qualified name.
-        // A symbol, with or without type arguments, is a qualified name.
-        In(Expr) *
-            ((T(Ident, SymbolId)[Ident] * TypeArgsDef[TypeArgs]) /
-             T(SymbolId)[Ident]) >>
-          [](Match& _) {
-            return QName << TypeNames << _(Ident) << (TypeArgs << *_[TypeArgs]);
-          },
-
-        // Groups and parens in bodies, expressions, and tuples are expressions.
-        In(Body, Expr, Tuple) * T(Group, Paren)[Group] >>
+        // Groups in body, expr, exprseq, and tuple are expressions.
+        In(Body, Expr, ExprSeq, Tuple) * T(Group)[Group] >>
           [](Match& _) { return Expr << *_[Group]; },
 
-        // Lists in bodies, expressions, and tuples are tuples.
-        In(Body, Expr, Tuple) * T(List)[List] >>
+        // Parens in body, expr, and tuple are expression sequences.
+        In(Body, Expr, Tuple) * T(Paren)[Paren] >>
+          [](Match& _) { return ExprSeq << *_[Paren]; },
+
+        // Lists in body, expr, exprseq, and tuple are tuples.
+        In(Body, ExprSeq, Tuple) * T(List)[List] >>
           [](Match& _) -> Node { return Expr << (Tuple << *_[List]); },
 
-        // Compact expressions that contain a single expression.
-        T(Expr) << (T(Expr)[Expr] * End) >> [](Match& _) { return _(Expr); },
+        In(Expr) * T(List)[List] >>
+          [](Match& _) -> Node { return Tuple << *_[List]; },
 
         // Remove empty expressions.
         T(Expr) << End >> [](Match&) -> Node { return {}; },
@@ -365,20 +452,16 @@ namespace vc
         {
           for (auto& child : *node)
           {
-            if (!child->in({Expr,     Tuple,  Lambda,    If,       While,
-                            For,      QName,  Ident,     True,     False,
-                            Bin,      Oct,    Int,       Hex,      Float,
-                            HexFloat, String, RawString, DontCare, Const,
-                            Vararg,   Dot,    Equals,    Colon,    When}))
+            if (!child->in(wfExprElement))
             {
               node->replace(child, err(child, "Expected an expression"));
               ok = false;
             }
           }
         }
-        else if (node->in({Type, Union, Isect, FuncType, TupleType}))
+        else if (node == Type)
         {
-          if ((node == Type) && (node->size() > 1))
+          if (node->size() > 1)
           {
             node->replace(
               node->front(), err(node->front(), "Expected a single type"));
@@ -388,15 +471,36 @@ namespace vc
           {
             for (auto& child : *node)
             {
-              if (!child->in({None,  Bool,     I8,       I16,       I32,
-                              I64,   U8,       U16,      U32,       U64,
-                              ILong, ULong,    ISize,    USize,     F32,
-                              F64,   Ptr,      Dyn,      TypeNames, Union,
-                              Isect, FuncType, TupleType}))
+              if (!child->in(wfTypeElement))
               {
                 node->replace(child, err(child, "Expected a type"));
                 ok = false;
               }
+            }
+          }
+        }
+        else if (node == FuncType)
+        {
+          if (((node / Lhs) != NoArgType) && !(node / Lhs)->in(wfTypeElement))
+          {
+            node->replace(node->front(), err(node->front(), "Expected a type"));
+            ok = false;
+          }
+
+          if (!(node / Rhs)->in(wfTypeElement))
+          {
+            node->replace(node->back(), err(node->back(), "Expected a type"));
+            ok = false;
+          }
+        }
+        else if (node->in({Union, Isect, TupleType}))
+        {
+          for (auto& child : *node)
+          {
+            if (!child->in(wfTypeElement))
+            {
+              node->replace(child, err(child, "Expected a type"));
+              ok = false;
             }
           }
         }

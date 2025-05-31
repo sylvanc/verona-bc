@@ -9,17 +9,18 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
   f[T3: i32 = i32](a: T3 = 1, b: T1): (T3 & (none | i32), bool)
   {
     use std::builtin;
-    use Func1 = (i32->i32)->T1;
+    use Func1 = (()->i32)->T1;
     use Func2 = i32->i32->bool;
 
-    if a (b: T1) -> (a, b, true, 0b01);
+    std::test(a.f);
+
+    if a b: T1 -> (a, b, true, 0b01);
 
     (while true {}; a);
 
     while (a + b)
     {
       a + b;
-      (a + b; break);
       continue;
       return 5;
       raise;
@@ -33,8 +34,8 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 
     match x
     {
-      (z) -> 3;
-      (y: f64) -> { a / b; 4 }
+      z -> 3;
+      y: f64 -> { a / b; 4 }
     }
 
     a

@@ -20,8 +20,8 @@ namespace vc
   inline const auto Use = TokenDef("use");
 
   inline const auto TypeAlias = TokenDef("typealias");
-  inline const auto TypeNames = TokenDef("typenames");
   inline const auto TypeName = TokenDef("typename");
+  inline const auto TypeElement = TokenDef("typeelement");
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam = TokenDef("typeparam");
   inline const auto TypeArgs = TokenDef("typeargs");
@@ -31,11 +31,16 @@ namespace vc
   inline const auto Isect = TokenDef("isect");
   inline const auto TupleType = TokenDef("tupletype");
   inline const auto FuncType = TokenDef("functype");
+  inline const auto NoArgType = TokenDef("noargtype");
 
   inline const auto Expr = TokenDef("expr");
+  inline const auto ExprSeq = TokenDef("exprseq");
   inline const auto Tuple = TokenDef("tuple");
   inline const auto Lambda = TokenDef("lambda");
   inline const auto QName = TokenDef("qname");
+  inline const auto QElement = TokenDef("qelement");
+  inline const auto StaticCall = TokenDef("staticcall");
+  inline const auto DynamicCall = TokenDef("dynamiccall");
   inline const auto If = TokenDef("if");
   inline const auto Else = TokenDef("else");
   inline const auto While = TokenDef("while");

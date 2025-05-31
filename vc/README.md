@@ -6,10 +6,8 @@ Infer the location for everything.
 
 ## To Do
 
-- Expression grouping.
-- Else, var/let, when, ref, try.
-- Assignment, LHS and RHS expressions.
-- How does dot actually work?
+- Let, var, assign, else, type assertion, compile time evaluation, tuple flattening, when, ref, try.
+- Implement primitive types in `std::builtin`.
 - `where` clause instead of `T1: T2 = T3`?
 - Code reuse for classes.
 - Structural types.
@@ -76,29 +74,29 @@ body =
 
 qname = typename '::' (ident | symbol) typeargs?
       | ident typeargs
-      | symbol typeargs?
 
-expr = ident // Local, function pointer, or create-sugar for a class.
-     | qname expr // (apply qname expr)
-       // want to be able to use an ident as well instead of a qname. but if the ident is a local, it should be an application.
-       // have to do expr.ident instead, or use a symbol.
-     | expr1 qname expr2 // (apply (lookup expr1 op) expr1 expr2)
-       // want to be able to use an ident as well instead of a qname. but if the ident is a local, it should be an application.
-       // have to do expr1.ident expr2 instead, or use a symbol.
-       // if this is a class, we get Class::create(expr1, expr2)
-     | expr '.' ident typeargs? // (apply (lookup expr ident typeargs) expr)
-     | expr '.' symbol typeargs? // (apply (lookup expr symbol typeargs) expr)
-     | expr1 expr2 // (apply expr1 expr2), extend if expr1 is `apply`
-     | expr1 '.' expr2 // (apply expr2 expr1), extend if expr2 is `apply`
-     | expr '=' expr // Assignment.
-     // done:
-     | '(' expr ')'
-     | literal
-     | tuple
-     | lambda
-     | qname // Function pointer, or create-sugar for a class.
-     | 'if' expr lambda ('else' 'if' expr lambda)* ('else' lambda)?
-     | 'while' expr lambda
-     | 'for' expr lambda
+// Expression binding.
+strong = '(' expr ')' // exprseq
+       | literal
+       | tuple
+       | lambda
+       | qname
+       | ident
+       | expr '.' (ident | symbol) typeargs? // method
+       | qname exprseq // static call
+       | method exprseq // dynamic call
+       | 'if' expr lambda
+       | 'while' expr lambda
+       | 'for' expr lambda
+medium = apply expr // extend apply
+       | expr expr // apply
+weak   = symbol typeargs? expr // dynamic call
+       | expr symbol typeargs? expr // dynamic call
+       | expr 'else' expr
+       | expr '=' expr
+       | apply
+         // qname: static call
+         // method: dynamic call
+         // other: dynamic call of `apply`
 
 ```
