@@ -6,7 +6,7 @@ Infer the location for everything.
 
 ## To Do
 
-- Weak: assign, `else`, `ref`, `try`, prefix, infix.
+- Assign: LHS expressions.
 - Undecided: type assertion, compile time evaluation, tuple flattening.
 - Since loops are expression, should `break` and `continue` have values?
 - Implement primitive types in `std::builtin`.
@@ -79,9 +79,9 @@ strong = '(' expr ')' // exprseq
        | 'for' expr lambda
 medium = apply expr // extend apply
        | expr expr // apply
-weak   = symbol typeargs? expr // dynamic call
-       | 'ref' expr
+weak   = 'ref' expr
        | 'try' expr
+       | symbol typeargs? expr // dynamic call
        | expr symbol typeargs? expr // dynamic call
        | expr 'else' expr
        | expr '=' expr

@@ -12,8 +12,10 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     use Func1 = (()->i32)->T1;
     use Func2 = i32->i32->bool;
 
-    let x = std::test(a.f) b c;
+    let x = std::test(a.f) b c = 7;
     var y: i32;
+
+    $[hi] 3;
 
     if a b: T1 -> (a, b, true, 0b01, let w);
 
@@ -21,6 +23,7 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 
     while (a + b)
     {
+      -a b + -c d;
       a + b;
       continue;
       return 5;
@@ -32,6 +35,10 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     {
       key == value;
     }
+    else
+    {
+      "hi"
+    }
 
     match x
     {
@@ -42,41 +49,3 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     a
   }
 }
-
-
-// t1: Node = Node(SomeToken);
-// t2 = Node(SomeToken);
-
-// Node
-// {
-//   _type: Token;
-//   _location: Location;
-//   _symtab: SymbolTable;
-//   _parent: OptNode;
-//   _flags: Flags;
-//   _children: Array[Node];
-
-//   create(type: Token): Node
-//   {
-//     new (type, Location, SymbolTable, None, Flags::none(), Array[Node]);
-//   }
-
-//   type(self): Token
-//   {
-//     self._type;
-//   }
-
-//   in(self, types: Array[Token]): Bool
-//   {
-//     for types
-//     {
-//       type =>
-//       if (self._type == type)
-//       {
-//         return true;
-//       }
-//     }
-
-//     false;
-//   }
-// }

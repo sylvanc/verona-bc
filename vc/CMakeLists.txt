@@ -1,5 +1,6 @@
 add_executable(vc
   passes/application.cc
+  passes/operators.cc
   passes/parser.cc
   passes/structure.cc
   lang.cc

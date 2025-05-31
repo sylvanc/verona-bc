@@ -40,6 +40,7 @@ namespace vc
   inline const auto Lambda = TokenDef("lambda");
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
+  inline const auto Op = TokenDef("op");
   inline const auto StaticCall = TokenDef("staticcall");
   inline const auto DynamicCall = TokenDef("dynamiccall");
   inline const auto Apply = TokenDef("apply");
@@ -52,6 +53,8 @@ namespace vc
   inline const auto For = TokenDef("for");
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
+
+  inline const auto TypeArgsDef = T(Bracket) << (T(List, Group) * End);
 
   inline const auto ApplyDef =
     T(ExprSeq,
@@ -73,6 +76,11 @@ namespace vc
       StaticCall,
       DynamicCall);
 
+  inline const auto ExprDef =
+    ApplyDef / T(DontCare, Lambda, If, While, For, When, Apply);
+
+  inline const auto AssignDef = ExprDef / T(Let, Var);
+
   inline const auto wfType =
     TypeName | Union | Isect | TupleType | FuncType | NoArgType;
 
@@ -85,7 +93,7 @@ namespace vc
   inline const auto wfTempExpr = Const | Colon | Vararg;
 
   inline const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
-    RawString | Tuple | Let | Var | Lambda | QName | Method | StaticCall |
+    RawString | Tuple | Let | Var | Lambda | QName | Op | Method | StaticCall |
     DynamicCall | If | While | For | When | wfWeakExpr | wfTempExpr;
 
   // clang-format off
@@ -116,6 +124,7 @@ namespace vc
     | (Lambda <<= TypeParams * Params * Type * Body)
     | (QName <<= QElement++)
     | (QElement <<= (Ident >>= Ident | SymbolId) * TypeArgs)
+    | (Op <<= SymbolId * TypeArgs)
     | (Method <<= (Expr >>= wfExpr) * (Ident >>= Ident | SymbolId) * TypeArgs)
     | (StaticCall <<= QName * ExprSeq)
     | (DynamicCall <<= Method * ExprSeq)
@@ -131,15 +140,32 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto wfExpr2 = wfExpr | Apply;
+
   // clang-format off
   inline const auto wfPassApplication =
       wfPassStructure
-    | (Expr <<= (Apply | wfExpr)++)
+    | (Expr <<= wfExpr2++)
     | (Apply <<= wfExpr++[2])
+    ;
+  // clang-format on
+
+  inline const auto wfExpr3 = wfExpr2 - Op;
+
+  // clang-format off
+  inline const auto wfPassOperators =
+      wfPassApplication
+    | (Expr <<= wfExpr3)
+    | (Ref <<= wfExpr3)
+    | (Try <<= wfExpr3)
+    | (Else <<= (Lhs >>= wfExpr3) * (Rhs >>= wfExpr3))
+    | (Equals <<= (Lhs >>= wfExpr3) * (Rhs >>= wfExpr3))
+    | (Method <<= (Expr >>= wfExpr3) * (Ident >>= Ident | SymbolId) * TypeArgs)
     ;
   // clang-format on
 
   Parse parser();
   PassDef structure();
   PassDef application();
+  PassDef operators();
 }

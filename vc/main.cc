@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 
   // TODO: assignids, validids, liveness.
   auto state = std::make_shared<Bytecode>();
-  Reader reader{"vc", {structure(), application()}, parser()};
+  Reader reader{"vc", {structure(), application(), operators()}, parser()};
 
   struct Options : public trieste::Options
   {

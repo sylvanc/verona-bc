@@ -10,17 +10,16 @@ namespace vc
   // TODO: remove as more expressions are handled.
   // everything from Const on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq,  DontCare,   Ident,       None,  True,     False,   Bin,
-    Oct,      Int,        Hex,         Float, HexFloat, String,  RawString,
-    DontCare, Const,      Tuple,       Let,   Var,      Lambda,  QName,
-    Method,   StaticCall, DynamicCall, If,    While,    For,     When,
-    Equals,   Else,       Ref,         Try,   SymbolId, Bracket, Const,
-    Colon,    Vararg};
+    ExprSeq, DontCare,  Ident,    None,   True,       False,
+    Bin,     Oct,       Int,      Hex,    Float,      HexFloat,
+    String,  RawString, DontCare, Const,  Tuple,      Let,
+    Var,     Lambda,    QName,    Method, StaticCall, DynamicCall,
+    If,      While,     For,      When,   Equals,     Else,
+    Ref,     Try,       Op,       Const,  Colon,      Vararg};
 
   const auto FieldDef = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
   const auto TypeParamsDef = T(Bracket) << (T(List, Group) * End);
-  const auto TypeArgsDef = T(Bracket) << (T(List, Group) * End);
   const auto ParamsDef = T(Paren) << (~T(List, Group) * End);
 
   const auto NamedType =
@@ -329,6 +328,12 @@ namespace vc
             ~TypeArgsDef[TypeArgs] >>
           [](Match& _) {
             return Method << _(Expr) << _(Ident) << (TypeArgs << *_[TypeArgs]);
+          },
+
+        // Operator.
+        In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsDef[TypeArgs] >>
+          [](Match& _) {
+            return Op << _(SymbolId) << (TypeArgs << *_[TypeArgs]);
           },
 
         // Static call.

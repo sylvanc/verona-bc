@@ -11,8 +11,8 @@ namespace vc
     Ident | SymbolId | DontCare | Equals | Const | DoubleColon | Colon |
     Vararg | Dot |
     // Keywords.
-    Use | Let | Var | Ref | Try | If | While | For | Break | Continue | When |
-    Return | Raise | Throw;
+    Use | Let | Var | Ref | Try | If | Else | While | For | Break | Continue |
+    When | Return | Raise | Throw;
 
   // clang-format off
   const auto wfParser =

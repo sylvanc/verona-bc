@@ -10,11 +10,11 @@ namespace vc
       dir::topdown,
       {
         // Application.
-        In(Expr) * ApplyDef[Lhs] * (ApplyDef / T(Apply, If, While, For))[Rhs] >>
+        In(Expr) * ApplyDef[Lhs] * ExprDef[Rhs] >>
           [](Match& _) { return Apply << _(Lhs) << _(Rhs); },
 
         // Extend an existing application.
-        In(Expr) * T(Apply)[Lhs] * (ApplyDef / T(Apply, If, While, For))[Rhs] >>
+        In(Expr) * T(Apply)[Lhs] * ExprDef[Rhs] >>
           [](Match& _) { return _(Lhs) << _(Rhs); },
       }};
 
