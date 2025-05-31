@@ -6,9 +6,8 @@ Infer the location for everything.
 
 ## To Do
 
-- Strong: `when`.
 - Medium: application.
-- Weak: assign, `else`, `ref`, `try`.
+- Weak: assign, `else`, `ref`, `try`, prefix, infix.
 - Undecided: type assertion, compile time evaluation, tuple flattening.
 - Since loops are expression, should `break` and `continue` have values?
 - Implement primitive types in `std::builtin`.

@@ -11,8 +11,8 @@ namespace vc
     Ident | SymbolId | DontCare | Equals | Const | DoubleColon | Colon |
     Vararg | Dot |
     // Keywords.
-    Use | Let | Var | If | While | For | Break | Continue | When | Return |
-    Raise | Throw;
+    Use | Let | Var | Ref | Try | If | While | For | Break | Continue | When |
+    Return | Raise | Throw;
 
   // clang-format off
   const auto wfParser =
@@ -176,13 +176,15 @@ namespace vc
         "use\\b" >> [](auto& m) { m.add(Use); },
         "let\\b" >> [](auto& m) { m.add(Let); },
         "var\\b" >> [](auto& m) { m.add(Var); },
+        "ref\\b" >> [](auto& m) { m.add(Ref); },
+        "try\\b" >> [](auto& m) { m.add(Try); },
         "if\\b" >> [](auto& m) { m.add(If); },
         "else\\b" >> [](auto& m) { m.add(Else); },
         "while\\b" >> [](auto& m) { m.add(While); },
         "for\\b" >> [](auto& m) { m.add(For); },
+        "when\\b" >> [](auto& m) { m.add(When); },
         "break\\b" >> [](auto& m) { m.add(Break); },
         "continue\\b" >> [](auto& m) { m.add(Continue); },
-        "when\\b" >> [](auto& m) { m.add(When); },
         "return\\b" >> [](auto& m) { m.add(Return); },
         "raise\\b" >> [](auto& m) { m.add(Raise); },
         "throw\\b" >> [](auto& m) { m.add(Throw); },

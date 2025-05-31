@@ -13,25 +13,26 @@ namespace vc
     Ptr,  Dyn,  TypeName, Union, Isect, FuncType, TupleType};
 
   // TODO: remove as more expressions are handled.
-  // everything from Equals on isn't handled.
+  // everything from Const on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq,  DontCare,   Ident,       None,  True,     False,  Bin,
-    Oct,      Int,        Hex,         Float, HexFloat, String, RawString,
-    DontCare, Const,      Tuple,       Let,   Var,      Lambda, QName,
-    Method,   StaticCall, DynamicCall, If,    While,    For,    Equals,
-    Else,     SymbolId,   Bracket,     Const, Colon,    Vararg, When};
+    ExprSeq,  DontCare,   Ident,       None,  True,     False,   Bin,
+    Oct,      Int,        Hex,         Float, HexFloat, String,  RawString,
+    DontCare, Const,      Tuple,       Let,   Var,      Lambda,  QName,
+    Method,   StaticCall, DynamicCall, If,    While,    For,     When,
+    Equals,   Else,       Ref,         Try,   SymbolId, Bracket, Const,
+    Colon,    Vararg};
 
   // TODO: temporary placeholder.
-  const auto wfParserTokens = Const | Colon | Vararg | When;
+  const auto wfParserTokens = Const | Colon | Vararg;
 
   const auto wfBody =
     Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
 
-  const auto wfWeakExpr = Equals | Else | SymbolId | Bracket;
+  const auto wfWeakExpr = Equals | Else | Ref | Try | SymbolId | Bracket;
 
   const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
     RawString | Tuple | Let | Var | Lambda | QName | Method | StaticCall |
-    DynamicCall | If | While | For | wfWeakExpr | wfParserTokens;
+    DynamicCall | If | While | For | When | wfWeakExpr | wfParserTokens;
 
   // clang-format off
   const auto wfPassStructure =
@@ -67,6 +68,7 @@ namespace vc
     | (If <<= Expr * Lambda)
     | (While <<= Expr * Lambda)
     | (For <<= Expr * Lambda)
+    | (When <<= Expr * Lambda)
     | (Let <<= Ident * Type)
     | (Var <<= Ident * Type)
     | (Return <<= ~Expr)
@@ -432,6 +434,10 @@ namespace vc
         // For.
         In(Expr) * (T(For) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
           [](Match& _) { return For << (Expr << _[For]) << _(Lambda); },
+
+        // When.
+        In(Expr) * (T(When) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
+          [](Match& _) { return When << (Expr << _[For]) << _(Lambda); },
 
         // Groups in body, expr, exprseq, and tuple are expressions.
         In(Body, Expr, ExprSeq, Tuple) * T(Group)[Group] >>
