@@ -17,16 +17,19 @@ ANF:
 
 ## To Do
 
-- Assign: LHS expressions.
 - A-normal form.
-  - Need destructing assignment first.
-- Mark free variables in lambdas?
+  - Assign: LHS expressions.
+  - Destructing assignment.
+  - Control flow.
+- Classes.
+  - Functions for field access.
+  - LHS functions, with auto RHS versions.
+- Lambdas to classes.
+  - Mark free variables in lambdas.
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
   - A free `var` is captured by reference. The lambda must be `stack` allocated.
 - Auto create, default argument sugar, member conflict.
-- Do we need:
-  - Functions for field access?
-  - LHS functions, with auto RHS versions?
+- Single instance for classes without fields.
 - Type assertions, compile time evaluation, tuple flattening.
 - Since loops are expression, should `break` and `continue` have values?
 - Implement primitive types in `std::builtin`.
@@ -35,6 +38,11 @@ ANF:
 - Name resolution.
   - Look down through type aliases via union and intersection types.
   - Look down through type parameters. Need an upper bounds.
+    - Restrict to type parameters as the first path element?
+    - Still causes a lookup problem:
+      1. Class `C` has type parameter `T`.
+      2. Class has type alias `A = T::U`.
+      3. `C[X]::A` should resolve to `X::U`, which means tracking.
 - Code reuse.
 - Structural types.
 - FFI.

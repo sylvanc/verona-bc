@@ -125,7 +125,7 @@ namespace vc
     | (Lambda <<= TypeParams * Params * Type * Body)
     | (QName <<= QElement++[1])
     | (QElement <<= wfFuncId * TypeArgs)
-    | (Op <<= SymbolId * TypeArgs)
+    | (Op <<= wfFuncId * TypeArgs)
     | (Method <<= Expr * wfFuncId * TypeArgs)
     | (Call <<= QName * Args)
     | (CallDyn <<= Method * Args)

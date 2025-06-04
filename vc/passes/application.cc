@@ -64,7 +64,7 @@ namespace vc
     }
 
     // Not found.
-    return err(ident, "Identifier not found");
+    return {};
   }
 
   Node resolve(Node name)
@@ -80,6 +80,9 @@ namespace vc
     auto it = name->begin();
     auto ident = *it / Ident;
     auto find = lookup(ident);
+
+    if (!find)
+      return err(ident, "Identifier not found");
 
     if (find == Error)
       return find;
@@ -146,7 +149,12 @@ namespace vc
             auto ident = _(Ident);
             auto def = lookup(ident);
 
-            if (def->in({ClassDef, TypeAlias, TypeParam}))
+            if (!def)
+            {
+              // Not found, treat it as an operator.
+              return Op << _(Ident) << TypeArgs;
+            }
+            else if (def->in({ClassDef, TypeAlias, TypeParam}))
             {
               // Create sugar.
               return QName << (QElement << ident << TypeArgs)

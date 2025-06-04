@@ -20,7 +20,7 @@ namespace vc
         // Prefix operator.
         In(Expr) * T(Op)[Op] * ExprPat[Expr] >>
           [](Match& _) {
-            return CallDyn << (Method << (Expr << _(Expr)) << (_(Op) / SymbolId)
+            return CallDyn << (Method << (Expr << _(Expr)) << (_(Op) / Ident)
                                       << (_(Op) / TypeArgs))
                            << Args;
           },
@@ -28,14 +28,14 @@ namespace vc
         // Infix operator.
         In(Expr) * ExprPat[Expr] * T(Op)[Op] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            return CallDyn << (Method << (Expr << _(Expr)) << (_(Op) / SymbolId)
+            return CallDyn << (Method << (Expr << _(Expr)) << (_(Op) / Ident)
                                       << (_(Op) / TypeArgs))
                            << seq_to_args(_(ExprSeq));
           },
 
         In(Expr) * ExprPat[Lhs] * T(Op)[Op] * ExprPat[Rhs] >>
           [](Match& _) {
-            return CallDyn << (Method << (Expr << _(Lhs)) << (_(Op) / SymbolId)
+            return CallDyn << (Method << (Expr << _(Lhs)) << (_(Op) / Ident)
                                       << (_(Op) / TypeArgs))
                            << (Args << (Expr << _(Rhs)));
           },
