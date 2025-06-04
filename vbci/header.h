@@ -64,10 +64,10 @@ namespace vbci
       ARC arc;
     };
 
-    Id type_id;
+    TypeId type_id;
 
   protected:
-    Header(Location loc, Id type_id) : loc(loc), rc(1), type_id(type_id) {}
+    Header(Location loc, TypeId type_id) : loc(loc), rc(1), type_id(type_id) {}
 
     bool safe_store(Value& v)
     {
@@ -196,19 +196,14 @@ namespace vbci
     }
 
   public:
-    Id get_type_id()
+    TypeId get_type_id()
     {
       return type_id;
     }
 
-    bool is_object()
-    {
-      return !type::is_array(type_id);
-    }
-
     bool is_array()
     {
-      return type::is_array(type_id);
+      return type_id.is_array();
     }
 
     Location location()

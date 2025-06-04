@@ -10,12 +10,11 @@ namespace vc
   // TODO: remove as more expressions are handled.
   // everything from Const on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare,  Ident,    None,   True,       False,
-    Bin,     Oct,       Int,      Hex,    Float,      HexFloat,
-    String,  RawString, DontCare, Const,  Tuple,      Let,
-    Var,     Lambda,    QName,    Method, StaticCall, DynamicCall,
-    If,      While,     For,      When,   Equals,     Else,
-    Ref,     Try,       Op,       Const,  Colon,      Vararg};
+    ExprSeq, DontCare, Ident, None,     True,   False,     Bin,      Oct,
+    Int,     Hex,      Float, HexFloat, String, RawString, DontCare, Const,
+    Tuple,   Let,      Var,   Lambda,   QName,  Method,    Call,     CallDyn,
+    If,      While,    For,   When,     Equals, Else,      Ref,      Try,
+    Op,      Const,    Colon, Vararg};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -189,7 +188,7 @@ namespace vc
         T(TypeArgs) << (T(List)[List] * End) >>
           [](Match& _) { return TypeArgs << *_[List]; },
 
-        In(TypeArgs) * (T(Group) << (--T(Const) * Any++)[Type]) >>
+        In(TypeArgs) * (T(Group) << (!T(Const) * Any++)[Type]) >>
           [](Match& _) { return Type << _[Type]; },
 
         In(TypeArgs) * (T(Group) << (T(Const) * Any++[Expr])) >>
@@ -339,14 +338,12 @@ namespace vc
 
         // Static call.
         In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) {
-            return StaticCall << _(QName) << seq_to_args(_(ExprSeq));
-          },
+          [](Match& _) { return Call << _(QName) << seq_to_args(_(ExprSeq)); },
 
         // Dynamic call.
         In(Expr) * T(Method)[Method] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            return DynamicCall << _(Method) << seq_to_args(_(ExprSeq));
+            return CallDyn << _(Method) << seq_to_args(_(ExprSeq));
           },
 
         // If.

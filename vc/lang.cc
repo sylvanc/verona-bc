@@ -6,6 +6,9 @@ namespace vc
   {
     assert(seq == ExprSeq);
 
+    if (seq->empty())
+      return Args;
+
     if (seq->size() == 1)
     {
       auto expr = seq->front();

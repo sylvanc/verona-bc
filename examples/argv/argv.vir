@@ -1,7 +1,5 @@
-type @arg = u8[]
-
 lib
-  @getargv = "getargv"(): @arg[]
+  @getargv = "getargv"(): [[u8]]
   @puts = "puts"(ptr): i32
   @printf = "printf"(ptr, ...): i32
 

@@ -1,29 +1,42 @@
 #include "dynlib.h"
 
+#include "program.h"
 #include "value.h"
 
 namespace vbci
 {
   Symbol::Symbol(Func func, bool vararg) : func(func), vararg(vararg) {}
 
-  void Symbol::param(Id type_id, ValueType t, ffi_type* ffit)
+  void Symbol::param(TypeId type_id)
   {
     param_types.push_back(type_id);
-    param_value_types.push_back(t);
-    param_ffi_types.push_back(ffit);
   }
 
-  void Symbol::ret(Id type_id, ValueType t, ffi_type* ffit)
+  void Symbol::ret(TypeId type_id)
   {
     return_type = type_id;
-    return_value_type = t;
-    return_ffi_type = ffit;
   }
 
   bool Symbol::prepare()
   {
     if (!func)
       return false;
+
+    auto& program = Program::get();
+
+    for (auto& param : param_types)
+    {
+      auto rep = program.layout_type_id(param);
+      param_value_types.push_back(rep.first);
+      param_ffi_types.push_back(rep.second);
+    }
+
+    auto rep = program.layout_type_id(return_type);
+    return_value_type = rep.first;
+    return_ffi_type = rep.second;
+
+    if (return_value_type == ValueType::Invalid)
+      return_ffi_type = program.value_type();
 
     if (vararg)
       return true;
@@ -41,7 +54,7 @@ namespace vbci
     return vararg;
   }
 
-  std::vector<Id>& Symbol::params()
+  std::vector<TypeId>& Symbol::params()
   {
     return param_types;
   }
@@ -51,7 +64,7 @@ namespace vbci
     return param_value_types;
   }
 
-  Id Symbol::ret()
+  TypeId Symbol::ret()
   {
     return return_type;
   }

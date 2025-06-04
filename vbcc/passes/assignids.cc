@@ -108,7 +108,7 @@ namespace vbcc
           if (state->get_func_id(func_id))
           {
             state->error = true;
-            return err(func / FunctionId, "duplicate function name");
+            return err(func_id, "duplicate function name");
           }
 
           auto& func_state = state->add_func(func);
@@ -124,14 +124,13 @@ namespace vbcc
             if (func_state.params != 0)
             {
               state->error = true;
-              return err(
-                _(FunctionId), "main function must take no parameters");
+              return err(func_id, "main function must take no parameters");
             }
 
             if ((func_state.func / Type) != I32)
             {
               state->error = true;
-              return err(_(FunctionId), "main function must return i32");
+              return err(func_id, "main function must return i32");
             }
           }
 

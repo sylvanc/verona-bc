@@ -29,7 +29,7 @@ namespace vbci
       return obj;
     }
 
-    Array* array(Id type_id, size_t size)
+    Array* array(TypeId type_id, size_t size)
     {
       auto rep = Program::get().layout_type_id(type_id);
       auto mem = new uint8_t[Array::size_of(size, rep.second->size)];
@@ -60,10 +60,10 @@ namespace vbci
     {
       for (auto h : headers)
       {
-        if (h->is_object())
-          static_cast<Object*>(h)->finalize();
-        else
+        if (h->is_array())
           static_cast<Array*>(h)->finalize();
+        else
+          static_cast<Object*>(h)->finalize();
       }
 
       for (auto h : headers)

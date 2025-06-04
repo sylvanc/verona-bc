@@ -42,13 +42,17 @@ namespace vbcc
           state->use(node / Rhs);
           state->def(node / LocalId);
         }
-        else if (node->in({Const,         ConstStr,         Stack,
-                           Region,        StackArray,       StackArrayConst,
-                           RegionArray,   RegionArrayConst, FieldRef,
-                           ArrayRefConst, FnPointer,        Call,
-                           CallDyn,       Subcall,          SubcallDyn,
-                           Try,           TryDyn,           FFI,
-                           When,          Const_E,          Const_Pi,
+        else if (node->in({Const,         ConstStr,
+                           Stack,         Region,
+                           StackArray,    StackArrayConst,
+                           RegionArray,   RegionArrayConst,
+                           RegisterRef,   FieldRef,
+                           ArrayRefConst, FnPointer,
+                           Call,          CallDyn,
+                           Subcall,       SubcallDyn,
+                           Try,           TryDyn,
+                           FFI,           When,
+                           Const_E,       Const_Pi,
                            Const_Inf,     Const_NaN}))
         {
           state->def(node / LocalId);

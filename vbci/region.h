@@ -1,5 +1,6 @@
 #pragma once
 
+#include "classes.h"
 #include "ident.h"
 #include "types.h"
 
@@ -22,7 +23,7 @@ namespace vbci
     static Region* create(RegionType type);
 
     virtual Object* object(Class& cls) = 0;
-    virtual Array* array(Id type_id, size_t size) = 0;
+    virtual Array* array(TypeId type_id, size_t size) = 0;
     virtual void rfree(Header* h) = 0;
     virtual void remove(Header* h) = 0;
     virtual bool enable_rc() = 0;

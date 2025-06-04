@@ -21,6 +21,7 @@ namespace vbci
 
     Program* program;
     Frame* frame;
+    Function* behavior;
     PC current_pc;
     size_t args;
 
@@ -41,6 +42,8 @@ namespace vbci
       auto& t = get();
       return t.program->debug_info(t.frame->func, t.current_pc);
     }
+
+    static void annotate(Value& v);
 
   private:
     Thread();
@@ -68,7 +71,7 @@ namespace vbci
     void tailcall(Function* func);
     void teardown();
     void branch(size_t label);
-    void check_args(std::vector<Id>& types, bool vararg = false);
+    void check_args(std::vector<TypeId>& types, bool vararg = false);
     void check_args(std::vector<Field>& fields);
     Value& arg(size_t idx);
     void drop_args();

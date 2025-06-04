@@ -154,10 +154,16 @@ namespace vc
             }
             else if (def->in({ParamDef, Let}))
             {
+              if (!def->precedes(ident))
+                return err(ident, "Identifier used before definition");
+
               return RefLet << ident;
             }
             else if (def == Var)
             {
+              if (!def->precedes(ident))
+                return err(ident, "Identifier used before definition");
+
               return RefVar << ident;
             }
 
@@ -167,11 +173,13 @@ namespace vc
 
         // Application.
         In(Expr) * ApplyPat[Lhs] * ExprPat[Rhs] >>
-          [](Match& _) { return Apply << _(Lhs) << _(Rhs); },
+          [](Match& _) {
+            return Apply << (Expr << _(Lhs)) << (Expr << _(Rhs));
+          },
 
         // Extend an existing application.
         In(Expr) * T(Apply)[Lhs] * ExprPat[Rhs] >>
-          [](Match& _) { return _(Lhs) << _(Rhs); },
+          [](Match& _) { return _(Lhs) << (Expr << _(Rhs)); },
       }};
 
     return p;

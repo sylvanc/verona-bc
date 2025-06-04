@@ -1,5 +1,6 @@
 #pragma once
 
+#include "classes.h"
 #include "dynlib.h"
 #include "frame.h"
 #include "function.h"
@@ -30,10 +31,10 @@ namespace vbci
     std::vector<uint8_t> content;
     std::vector<std::string> strings;
 
-    std::vector<Typedef> typedefs;
     std::vector<Function> functions;
     std::vector<Class> primitives;
     std::vector<Class> classes;
+    std::vector<ComplexType> complex_types;
     std::vector<Value> globals;
 
     std::vector<Dynlib> libs;
@@ -55,8 +56,10 @@ namespace vbci
     Symbol& symbol(size_t idx);
     Function* function(size_t idx);
     Class& primitive(size_t idx);
-    Class& cls(size_t idx);
+    Class& cls(TypeId type_id);
     Value& global(size_t idx);
+    ComplexType& complex_type(size_t idx);
+    ffi_type* value_type();
 
     int64_t sleb(size_t& pc);
     uint64_t uleb(size_t& pc);
@@ -69,8 +72,8 @@ namespace vbci
       size_t num_threads,
       std::vector<std::string> args);
 
-    bool typecheck(Id t1, Id t2);
-    std::pair<ValueType, ffi_type*> layout_type_id(Id type_id);
+    std::pair<ValueType, ffi_type*> layout_type_id(TypeId type_id);
+    std::pair<ValueType, ffi_type*> layout_complex_type(ComplexType& t);
 
     std::string debug_info(Function* func, PC pc);
     std::string di_function(Function* func);
@@ -85,6 +88,7 @@ namespace vbci
     bool parse_fields(Class& cls, PC& pc);
     bool parse_methods(Class& cls, PC& pc);
     bool fixup_methods(Class& cls);
+    bool parse_complex_type(ComplexType*& t, PC& pc);
 
     std::string str(size_t& pc);
     void string_table(size_t& pc, std::vector<std::string>& table);

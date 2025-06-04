@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ident.h"
+#include "types.h"
 
 #include <cmath>
 #include <cstring>
@@ -44,6 +45,7 @@ namespace vbci
       float f32;
       double f64;
       void* ptr;
+      Value* val;
       Object* obj;
       Array* arr;
       Cown* cown;
@@ -75,6 +77,7 @@ namespace vbci
     Value(Object* obj, bool ro);
     Value(Array* arr);
     Value(Cown* cown);
+    Value(Value& val, size_t frame);
     Value(Object* obj, size_t f, bool ro);
     Value(Array* arr, size_t idx, bool ro);
     Value(Cown* cown, bool ro);
@@ -108,7 +111,7 @@ namespace vbci
     void to_addr(bool move, void* v);
 
     ValueType type();
-    Id type_id();
+    TypeId type_id();
 
     bool is_readonly();
     bool is_header();

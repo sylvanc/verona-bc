@@ -1,5 +1,6 @@
 #pragma once
 
+#include "classes.h"
 #include "frame.h"
 #include "header.h"
 #include "program.h"
@@ -13,7 +14,7 @@ namespace vbci
   struct Object : public Header
   {
   private:
-    Object(Location loc, Class& cls) : Header(loc, type::cls(cls.class_id)) {}
+    Object(Location loc, Class& cls) : Header(loc, cls.type_id) {}
 
   public:
     static Object* create(void* mem, Class& cls, Location loc)
@@ -29,14 +30,14 @@ namespace vbci
       return *this;
     }
 
-    Id field_type_id(size_t idx)
+    TypeId field_type_id(size_t idx)
     {
       return cls().fields.at(idx).type_id;
     }
 
     Class& cls()
     {
-      return Program::get().cls(type::cls_idx(get_type_id()));
+      return Program::get().cls(get_type_id());
     }
 
     size_t field(size_t field)
@@ -66,17 +67,16 @@ namespace vbci
 
     Value load(size_t idx)
     {
-      auto& f = Program::get().cls(type::cls_idx(get_type_id())).fields.at(idx);
+      auto& f = cls().fields.at(idx);
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
       return Value::from_addr(f.value_type, addr);
     }
 
     Value store(bool move, size_t idx, Value& v)
     {
-      auto program = Program::get();
-      auto& f = program.cls(type::cls_idx(get_type_id())).fields.at(idx);
+      auto& f = cls().fields.at(idx);
 
-      if (!program.typecheck(v.type_id(), f.type_id))
+      if (!(v.type_id() < f.type_id))
         throw Value(Error::BadType);
 
       if (!safe_store(v))

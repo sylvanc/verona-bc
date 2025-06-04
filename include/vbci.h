@@ -6,8 +6,6 @@
 
 namespace vbci
 {
-  using Id = uint32_t;
-
   inline const auto MagicNumber = size_t(0xDEC0ADDE);
   inline const auto CurrentVersion = size_t(0);
   inline const auto MainFuncId = size_t(0);
@@ -115,17 +113,22 @@ namespace vbci
     // Arg0 = dst.
     Drop,
 
+    // Create a reference to a register.
+    // Arg0 = dst.
+    // Arg1 = src.
+    RegisterRef,
+
     // Creates a reference to a field in a target object, moving the source.
     // Arg0 = dst.
     // Arg1 = src.
     // Arg2 = field ID.
-    RefMove,
+    FieldRefMove,
 
     // Creates a reference to a field in a target object, copying the source.
     // Arg0 = dst.
     // Arg1 = src.
     // Arg2 = field ID.
-    RefCopy,
+    FieldRefCopy,
 
     // Creates a reference to an array slot, moving the source.
     // Arg0 = dst.
@@ -329,7 +332,7 @@ namespace vbci
     Const_NaN,
   };
 
-  enum class ValueType
+  enum class ValueType : uint8_t
   {
     None,
     Bool,
@@ -351,16 +354,14 @@ namespace vbci
     Object,
     Array,
     Cown,
-    Ref,
+    RegisterRef,
+    FieldRef,
     ArrayRef,
     CownRef,
     Function,
     Error,
     Invalid,
   };
-
-  inline const auto NumPrimitiveClasses =
-    static_cast<size_t>(ValueType::Ptr) + 1;
 
   enum class RegionType
   {
@@ -408,151 +409,48 @@ namespace vbci
     return static_cast<size_t>(c);
   }
 
+  inline const auto NumPrimitiveClasses = +ValueType::Ptr + 1;
+
   namespace type
   {
-    inline const auto Shift = Id(3);
-    inline const auto Mask = (Id(1) << Shift) - 1;
+    inline const auto Shift = 1u;
+    inline const auto Mask = (1 << Shift) - 1;
+    inline const auto Simple = 0;
+    inline const auto Complex = 1;
+    inline const auto Dyn = (NumPrimitiveClasses + 0) << Shift;
+    inline const auto Ref = (NumPrimitiveClasses + 1) << Shift;
+    inline const auto Cown = (NumPrimitiveClasses + 2) << Shift;
+    inline const auto Array = (NumPrimitiveClasses + 3) << Shift;
+    inline const auto Union = (NumPrimitiveClasses + 4) << Shift;
 
-    enum class Mod
+    inline bool is_val(uint32_t t)
     {
-      Array = 1 << 0,
-      Ref = 1 << 1,
-      Cown = 1 << 2,
-    };
-
-    inline constexpr Id operator+(Mod t)
-    {
-      return static_cast<Id>(t);
+      return ((t & Mask) == Simple) && (t < Dyn);
     }
 
-    inline constexpr bool is_mod(Id type_id)
+    inline bool is_class(uint32_t t)
     {
-      return (type_id & Mask);
+      return ((t & Mask) == Simple) && (t > Union);
     }
 
-    inline constexpr Id mod(Id type_id)
+    inline bool is_complex(uint32_t t)
     {
-      return type_id & Mask;
+      return (t & Mask) == Complex;
     }
 
-    inline constexpr Id no_mod(Id type_id)
+    inline uint32_t val(ValueType t)
     {
-      return type_id & ~Mask;
+      return +t << Shift;
     }
 
-    inline constexpr bool is_dyn(Id type_id)
+    inline uint32_t cls(size_t idx)
     {
-      return type_id == 0;
+      return (idx + NumPrimitiveClasses + 5) << Shift;
     }
 
-    inline constexpr bool is_val(Id type_id)
+    inline uint32_t complex(size_t idx)
     {
-      auto t = type_id >> Shift;
-      return !is_mod(type_id) && (t > 0) && (t <= NumPrimitiveClasses);
+      return (idx << Shift) | Complex;
     }
-
-    inline constexpr bool is_cls(size_t num_classes, Id type_id)
-    {
-      auto t = type_id >> Shift;
-      return !is_mod(type_id) && (t > NumPrimitiveClasses) &&
-        (t <= (NumPrimitiveClasses + num_classes));
-    }
-
-    inline constexpr bool is_def(size_t num_classes, Id type_id)
-    {
-      return !is_mod(type_id) &&
-        ((type_id >> Shift) > (NumPrimitiveClasses + num_classes));
-    }
-
-    inline constexpr bool is_array(Id type_id)
-    {
-      // An array of anything is an array.
-      return (type_id & +Mod::Array);
-    }
-
-    inline constexpr bool is_ref(Id type_id)
-    {
-      // A ref can't be an array.
-      return !is_array(type_id) && (type_id & +Mod::Ref);
-    }
-
-    inline constexpr bool is_cown(Id type_id)
-    {
-      // A cown can't be a ref or an array.
-      return (type_id & Mask) == +Mod::Cown;
-    }
-
-    inline constexpr ValueType val(Id type_id)
-    {
-      assert(is_val(type_id));
-      return static_cast<ValueType>((type_id >> Shift) - 1);
-    }
-
-    inline constexpr size_t cls_idx(Id type_id)
-    {
-      return (type_id >> Shift) - (NumPrimitiveClasses + 1);
-    }
-
-    inline constexpr size_t def_idx(size_t num_classes, Id type_id)
-    {
-      assert(is_def(num_classes, type_id));
-      return (type_id >> Shift) - (NumPrimitiveClasses + num_classes + 1);
-    }
-
-    inline constexpr Id dyn()
-    {
-      return 0;
-    }
-
-    inline constexpr Id val(ValueType t)
-    {
-      return (+t + 1) << Shift;
-    }
-
-    inline constexpr Id cls(Id class_id)
-    {
-      return (NumPrimitiveClasses + class_id + 1) << Shift;
-    }
-
-    inline constexpr Id def(size_t num_classes, Id typedef_id)
-    {
-      return (NumPrimitiveClasses + num_classes + typedef_id + 1) << Shift;
-    }
-
-    inline constexpr Id array(Id type_id)
-    {
-      assert(!is_array(type_id));
-      return type_id | +Mod::Array;
-    }
-
-    inline constexpr Id unarray(Id type_id)
-    {
-      assert(is_array(type_id));
-      return type_id & ~+Mod::Array;
-    }
-
-    inline constexpr Id ref(Id type_id)
-    {
-      assert(!is_ref(type_id));
-      return type_id | +Mod::Ref;
-    }
-
-    inline constexpr Id unref(Id type_id)
-    {
-      assert(is_ref(type_id));
-      return type_id & ~+Mod::Ref;
-    }
-
-    inline constexpr Id cown(Id type_id)
-    {
-      assert(!is_cown(type_id));
-      return type_id | +Mod::Cown;
-    }
-
-    inline constexpr Id uncown(Id type_id)
-    {
-      assert(is_cown(type_id));
-      return type_id & ~+Mod::Cown;
-    }
-  }
+  };
 }

@@ -1,44 +1,91 @@
 #pragma once
 
 #include "ident.h"
-#include "value.h"
 
-#include <ffi.h>
-#include <unordered_map>
-#include <unordered_set>
 #include <vbci.h>
 #include <vector>
 
 namespace vbci
 {
-  struct Typedef
+  enum class TypeTag
   {
-    std::vector<Id> type_ids;
+    Base,
+    Array,
+    Cown,
+    Union,
   };
 
-  struct Field
+  inline constexpr uint32_t operator+(TypeTag tag)
   {
-    size_t offset;
-    size_t size;
-    Id type_id;
-    ValueType value_type;
+    return static_cast<uint32_t>(tag);
+  }
+
+  // Space for 15 levels of ref on 33 million classes and 33 million complex
+  // types.
+  struct TypeId
+  {
+    static constexpr auto MaxRef = (1 << 4) - 1;
+    static constexpr auto Argv = 0;
+
+    uint32_t tag : 2;
+    uint32_t ref : 4;
+    uint32_t idx : 26;
+
+    TypeId();
+
+    static TypeId val(ValueType type);
+    static TypeId dyn();
+    static TypeId cls(size_t idx);
+    static TypeId leb(size_t leb);
+    static TypeId argv();
+
+    bool is_dyn() const;
+    bool is_val() const;
+    bool is_class() const;
+    bool is_complex() const;
+    bool is_base() const;
+    bool is_ref() const;
+    bool is_array() const;
+    bool is_cown() const;
+    bool is_union() const;
+
+    ValueType val() const;
+    size_t cls() const;
+    size_t complex() const;
+
+    TypeId array() const;
+    TypeId unarray() const;
+    TypeId cown() const;
+    TypeId uncown() const;
+    TypeId make_ref() const;
+
+    bool operator==(const TypeId& that) const;
+    bool operator<(const TypeId& that) const;
   };
 
-  struct Class
+  struct ComplexType
   {
-    size_t size;
-    size_t debug_info;
-    Id class_id;
+    // In complex types, to make subtype checking easier, we don't mix ref,
+    // array, or cown with the underlying type.
+    enum Tag
+    {
+      Base,
+      Ref,
+      Array,
+      Cown,
+      Union,
+    };
 
-    // Precalculate an offset into the object for each field name.
-    std::unordered_map<size_t, size_t> field_map;
-    std::vector<Field> fields;
+    Tag tag;
 
-    // Precalculate a function pointer for each method name.
-    std::unordered_map<size_t, Function*> methods;
+    union
+    {
+      uint32_t depth;
+      uint32_t type_id;
+    };
 
-    bool calc_size(std::vector<ffi_type*>& ffi_types);
-    Function* finalizer();
-    Function* method(size_t w);
+    std::vector<ComplexType> children;
+
+    ComplexType() : tag(Base), depth(0) {}
   };
 }

@@ -1,4 +1,5 @@
 add_executable(vbci
+  classes.cc
   dynlib.cc
   frame.cc
   freeze.cc

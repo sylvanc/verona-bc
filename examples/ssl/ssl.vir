@@ -1,8 +1,5 @@
-type @arg = u8[]
-type @plaintext = u8[] | none
-
 lib
-  @getargv = "getargv"(): @arg[]
+  @getargv = "getargv"(): [[u8]]
   @puts = "puts"(ptr): i32
   @write = "write"(i32, ptr, usize): isize
   @happy_eyeballs = "happy_eyeballs"(dyn, dyn, ptr, ptr, i32): bool
@@ -11,13 +8,13 @@ lib
   @async_set_cb1 = "async_set_cb1"(ptr, dyn): bool
   @async_cb1 = "async_cb1"(ptr): none
   @async_read_start = "async_read_start"(ptr, dyn): bool
-  @async_write = "async_write"(ptr, u8[]): none
+  @async_write = "async_write"(ptr, [u8]): none
   @uv_strerror = "uv_strerror"(i32): ptr
   @ssl_client = "ssl_client"(ptr, ptr): ptr
   @ssl_close = "ssl_close"(ptr): none
-  @ssl_read = "ssl_read"(ptr, u8[]): i32
-  @ssl_write = "ssl_write"(ptr, u8[]): none
-  @ssl_plaintext = "ssl_plaintext"(ptr): @plaintext
+  @ssl_read = "ssl_read"(ptr, [u8]): i32
+  @ssl_write = "ssl_write"(ptr, [u8]): none
+  @ssl_plaintext = "ssl_plaintext"(ptr): [u8] | none
 
 class @Conn
   @ssl: ptr
@@ -33,7 +30,7 @@ func @conn_cb1($self: @Conn, $status: i32): none
   $none = const none
   ret $none
 
-func @conn_read($self: @Conn, $data: u8[]): none
+func @conn_read($self: @Conn, $data: [u8]): none
   $stdout = const i32 1
   $ssl_ref = ref copy $self @ssl
   $ssl = load $ssl_ref
@@ -53,7 +50,7 @@ func @conn_read($self: @Conn, $data: u8[]): none
   ret $none
 
 class @Eyeballs
-  @host: u8[]
+  @host: [u8]
   @cb @eyeballs_cb
 
 func @eyeballs_cb($self: @Eyeballs, $tcp_h: ptr, $status: i32): none

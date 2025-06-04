@@ -6,11 +6,9 @@ namespace vbcc
     T(I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize);
   const auto FloatType = T(F32, F64);
   const auto PrimitiveType = T(None, Bool) / IntType / FloatType;
-  const auto TypeBase = PrimitiveType / T(Ptr, Dyn, GlobalId);
-  const auto TypeArrayElem = ~T(Cown) * TypeBase;
-  const auto TypeField = ~T(Cown) * TypeBase * ~(T(LBracket) * T(RBracket));
-  const auto TypeCownValue = TypeBase * ~(T(LBracket) * T(RBracket));
-  const auto TypeFull = ~T(Ref, Cown) * TypeBase * ~(T(LBracket) * T(RBracket));
+  const auto TypeNoUnion =
+    PrimitiveType / T(Ptr, Dyn, GlobalId) / (T(Array, Ref, Cown) << Any);
+  const auto TypePat = (TypeNoUnion / (T(Union) << Any)) * --(T(Union) << End);
 
   const auto IntLiteral = T(Bin, Oct, Hex, Int);
   const auto FloatLiteral = T(Float, HexFloat);
@@ -20,7 +18,7 @@ namespace vbcc
   const auto ArrayDynArg = T(LBracket) * T(LocalId)[Arg] * T(RBracket);
   const auto ArrayConstArg = T(LBracket) * IntLiteral[Arg] * T(RBracket);
   const auto SymbolParams = T(LParen) *
-    (~(TypeFull * (T(Comma) * TypeFull)++))[Params] *
+    (~(TypePat * (T(Comma) * TypePat)++))[Params] *
     ~(T(Comma) * T(Vararg)[Vararg]) * T(RParen);
   const auto ParamDef =
     T(LParen) * ~(T(Param) * (T(Comma) * T(Param))++) * T(RParen);
@@ -114,88 +112,17 @@ namespace vbcc
     return {};
   }
 
-  Node make_one_type(NodeRange r)
+  Node symbolparams(NodeRange params)
   {
-    auto it = r.begin();
-    Node prefix;
+    Node r = FFIParams;
 
-    // Optional `ref` / `cown`
-    if ((*it)->in({Ref, Cown}))
+    for (auto& param : params)
     {
-      prefix = *it;
-      ++it;
+      if (param != Comma)
+        r << param;
     }
 
-    // Base token
-    Node base = *it;
-    ++it;
-
-    // Treat a bare GlobalId as a class ID here.
-    if (base == GlobalId)
-      base = ClassId ^ base;
-
-    // Optional `[]`
-    bool array = false;
-
-    if ((it != r.end()) && (*it == LBracket))
-    {
-      array = true;
-      it += 2;
-    }
-
-    Node ty = base;
-
-    if (array)
-      ty = Array << ty;
-
-    if (prefix)
-      ty = prefix << ty;
-
-    return ty;
-  }
-
-  Node maketype(NodeRange r)
-  {
-    // Split on `|` to build unions.
-    Node u = Union;
-    auto start = r.begin();
-
-    for (auto it = r.begin(); it != r.end(); ++it)
-    {
-      if (*it == Union)
-      {
-        u << make_one_type({start, it});
-        start = it + 1;
-      }
-    }
-
-    u << make_one_type({start, r.end()});
-
-    if (u->size() == 1)
-      return u->front();
-
-    return u;
-  }
-
-  Node symbolparams(NodeRange r)
-  {
-    // Split on `,`.
-    Node p = FFIParams;
-    auto start = r.begin();
-
-    for (auto it = r.begin(); it != r.end(); ++it)
-    {
-      if (*it == Comma)
-      {
-        p << make_one_type({start, it});
-        start = it + 1;
-      }
-    }
-
-    if (start != r.end())
-      p << make_one_type({start, r.end()});
-
-    return p;
+    return r;
   }
 
   Node paramdef(NodeRange params)
@@ -247,6 +174,59 @@ namespace vbcc
         T(Directory, File, Group)[Group] >>
           [](Match& _) { return Seq << *_[Group]; },
 
+        // Array type.
+        T(LBracket) * TypePat[Type] * T(RBracket) >>
+          [](Match& _) { return Array << _(Type); },
+
+        // Ref type.
+        T(Ref) * TypePat[Type] >> [](Match& _) { return Ref << _(Type); },
+
+        // Cown type.
+        T(Cown) * TypePat[Type] >> [](Match& _) { return Cown << _(Type); },
+
+        // Merge union types.
+        (T(Union) << Any)[Lhs] * (T(Union) << End) * (T(Union) << Any)[Rhs] >>
+          [](Match& _) { return _(Lhs) << *_[Rhs]; },
+
+        // Extend a left-side union type.
+        (T(Union) << Any)[Lhs] * (T(Union) << End) * TypeNoUnion[Rhs] >>
+          [](Match& _) { return _(Lhs) << _(Rhs); },
+
+        // Extend a right-side union type.
+        TypeNoUnion[Lhs] * (T(Union) << End) * (T(Union) << Any)[Rhs] >>
+          [](Match& _) { return Union << _(Lhs) << *_[Rhs]; },
+
+        // Union type.
+        TypeNoUnion[Lhs] * (T(Union) << End) * TypeNoUnion[Rhs] >>
+          [](Match& _) { return Union << _(Lhs) << _(Rhs); },
+
+        // A GlobalId in a wfType is a ClassId.
+        In(
+          Array,
+          Ref,
+          Cown,
+          Union,
+          FFIParams,
+          Type,
+          Field,
+          Symbol,
+          Func,
+          Param,
+          StackArray,
+          StackArrayConst,
+          HeapArray,
+          HeapArrayConst,
+          RegionArray,
+          RegionArrayConst,
+          Typetest) *
+            T(GlobalId)[GlobalId] >>
+          [](Match& _) { return ClassId ^ _(GlobalId); },
+
+        // Type grouping.
+        // If it's prefixed with a string, it's an FFI parameter list.
+        (!T(String))[Lhs] * T(LParen) * TypePat[Type] * T(RParen) >>
+          [](Match& _) { return Seq << _(Lhs) << _(Type); },
+
         // Source file and offset.
         (T(Source) << End) * ~T(String)[String] * ~T(Int)[Int] >>
           [](Match& _) {
@@ -275,24 +255,16 @@ namespace vbcc
 
         // FFI symbols.
         T(GlobalId)[GlobalId] * T(Equals) * T(String)[Lhs] * ~T(String)[Rhs] *
-            SymbolParams * T(Colon) * TypeFull[Type] >>
+            SymbolParams * T(Colon) * TypePat[Type] >>
           [](Match& _) {
             return Symbol << (SymbolId ^ _(GlobalId)) << _(Lhs)
                           << (_(Rhs) || (String ^ "")) << (_(Vararg) || None)
-                          << symbolparams(_[Params]) << maketype(_[Type]);
+                          << symbolparams(_[Params]) << _(Type);
           },
 
-        // Type def.
-        (T(Type) << End) * T(GlobalId)[GlobalId] * T(Equals) *
-            (TypeFull * (T(Union) * TypeFull)++)[Type] >>
-          [](Match& _) {
-            auto type = maketype(_[Type]);
-
-            if (type != Union)
-              type = Union << type;
-
-            return Type << (TypeId ^ _(GlobalId)) << type;
-          },
+        // Type alias.
+        (T(Type) << End) * T(GlobalId)[GlobalId] * T(Equals) * TypePat[Type] >>
+          [](Match& _) { return Type << (TypeId ^ _(GlobalId)) << _(Type); },
 
         // Primitive class.
         (T(Primitive) << End) * PrimitiveType[Type] >>
@@ -313,10 +285,10 @@ namespace vbcc
           },
 
         (T(Class) << T(ClassId))[Class] * T(GlobalId)[GlobalId] * T(Colon) *
-            TypeField[Type] >>
+            TypePat[Type] >>
           [](Match& _) {
             (_(Class) / Fields)
-              << (Field << (FieldId ^ _(GlobalId)) << maketype(_[Type]));
+              << (Field << (FieldId ^ _(GlobalId)) << _(Type));
             return _(Class);
           },
 
@@ -329,25 +301,24 @@ namespace vbcc
 
         // Function.
         (T(Func) << End) * T(GlobalId)[GlobalId] * ParamDef[Params] * T(Colon) *
-            TypeFull[Type] >>
+            TypePat[Type] >>
           [](Match& _) {
             auto start = std::string(_(GlobalId)->location().view());
             start.at(0) = '^';
             return Seq << (Func << (FunctionId ^ _(GlobalId))
-                                << paramdef(_[Params]) << maketype(_[Type])
-                                << Labels)
+                                << paramdef(_[Params]) << _(Type) << Labels)
                        << (LabelId ^ start);
           },
 
         // Parameter.
-        In(Group) * T(LocalId)[LocalId] * T(Colon) * TypeFull[Type] >>
-          [](Match& _) { return Param << _(LocalId) << maketype(_[Type]); },
+        In(Group) * T(LocalId)[LocalId] * T(Colon) * TypePat[Type] >>
+          [](Match& _) { return Param << _(LocalId) << _(Type); },
 
         // Argument.
-        --T(Equals) * (T(Move) * T(LocalId)[LocalId]) >>
+        (T(Move) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Arg << ArgMove << _(LocalId); },
 
-        --T(Equals) * (T(Copy) * T(LocalId)[LocalId]) >>
+        (T(Copy) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Arg << ArgCopy << _(LocalId); },
 
         // Globals.
@@ -407,62 +378,62 @@ namespace vbcc
                           << callargs(_[Args]);
           },
 
-        Dst * T(Stack) * TypeArrayElem[Type] * ArrayDynArg >>
+        Dst * T(Stack) * TypePat[Type] * ArrayDynArg >>
           [](Match& _) {
-            return StackArray << _(LocalId) << maketype(_[Type]) << _(Arg);
+            return StackArray << _(LocalId) << _(Type) << _(Arg);
           },
 
-        Dst * T(Stack) * TypeArrayElem[Type] * ArrayConstArg >>
+        Dst * T(Stack) * TypePat[Type] * ArrayConstArg >>
           [](Match& _) {
             auto r = check_literal(U64, _(Arg));
             if (r)
               return r;
 
-            return StackArrayConst << _(LocalId) << maketype(_[Type]) << _(Arg);
+            return StackArrayConst << _(LocalId) << _(Type) << _(Arg);
           },
 
-        Dst * T(Heap) * T(LocalId)[Rhs] * TypeArrayElem[Type] * ArrayDynArg >>
+        Dst * T(Heap) * T(LocalId)[Rhs] * TypePat[Type] * ArrayDynArg >>
           [](Match& _) {
-            return HeapArray << _(LocalId) << _(Rhs) << maketype(_[Type])
-                             << _(Arg);
+            return HeapArray << _(LocalId) << _(Rhs) << _(Type) << _(Arg);
           },
 
-        Dst * T(Heap) * T(LocalId)[Rhs] * TypeArrayElem[Type] * ArrayConstArg >>
-          [](Match& _) {
-            auto r = check_literal(U64, _(Arg));
-            if (r)
-              return r;
-
-            return HeapArrayConst << _(LocalId) << _(Rhs) << maketype(_[Type])
-                                  << _(Arg);
-          },
-
-        Dst * T(Region) * RegionType[Rhs] * TypeArrayElem[Type] * ArrayDynArg >>
-          [](Match& _) {
-            return RegionArray << _(LocalId) << maketype(_[Type]) << _(Arg);
-          },
-
-        Dst * T(Region) * RegionType[Rhs] * TypeArrayElem[Type] *
-            ArrayConstArg >>
+        Dst * T(Heap) * T(LocalId)[Rhs] * TypePat[Type] * ArrayConstArg >>
           [](Match& _) {
             auto r = check_literal(U64, _(Arg));
             if (r)
               return r;
 
-            return RegionArray << _(LocalId) << maketype(_[Type]) << _(Arg);
+            return HeapArrayConst << _(LocalId) << _(Rhs) << _(Type) << _(Arg);
+          },
+
+        Dst * T(Region) * RegionType[Rhs] * TypePat[Type] * ArrayDynArg >>
+          [](Match& _) {
+            return RegionArray << _(LocalId) << _(Type) << _(Arg);
+          },
+
+        Dst * T(Region) * RegionType[Rhs] * TypePat[Type] * ArrayConstArg >>
+          [](Match& _) {
+            auto r = check_literal(U64, _(Arg));
+            if (r)
+              return r;
+
+            return RegionArray << _(LocalId) << _(Type) << _(Arg);
           },
 
         // Register operations.
-        Dst * T(Copy) * T(LocalId)[Rhs] >>
+        Dst * (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs])) >>
           [](Match& _) { return Copy << _(LocalId) << _(Rhs); },
 
-        Dst * T(Move) * T(LocalId)[Rhs] >>
+        Dst * (T(Arg) << (T(ArgMove) * T(LocalId)[Rhs])) >>
           [](Match& _) { return Move << _(LocalId) << _(Rhs); },
 
         (T(Drop) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Drop << _(LocalId); },
 
         // Reference operations.
+        Dst * T(Ref) * T(LocalId)[LocalId] >>
+          [](Match& _) { return RegisterRef << _(LocalId); },
+
         Dst * T(Ref) * T(Arg)[Arg] * T(GlobalId)[GlobalId] >>
           [](Match& _) {
             return FieldRef << _(LocalId) << _(Arg) << (FieldId ^ _(GlobalId));
@@ -551,10 +522,8 @@ namespace vbcc
           },
 
         // Type test.
-        Dst * T(Typetest) * T(LocalId)[Rhs] * TypeFull[Type] >>
-          [](Match& _) {
-            return Typetest << _(LocalId) << _(Rhs) << maketype(_[Type]);
-          },
+        Dst * T(Typetest) * T(LocalId)[Rhs] * TypePat[Type] >>
+          [](Match& _) { return Typetest << _(LocalId) << _(Rhs) << _(Type); },
 
         // Terminators.
         (T(Tailcall) << End) * T(GlobalId)[GlobalId] * TailArgs[Args] >>

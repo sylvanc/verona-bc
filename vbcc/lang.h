@@ -8,6 +8,15 @@ namespace vbcc
 {
   using namespace trieste;
 
+  // Symbols.
+  inline const auto Equals = TokenDef("=");
+  inline const auto LParen = TokenDef("lparen");
+  inline const auto RParen = TokenDef("rparen");
+  inline const auto LBracket = TokenDef("lbracket");
+  inline const auto RBracket = TokenDef("rbracket");
+  inline const auto Comma = TokenDef(",");
+  inline const auto Colon = TokenDef(":");
+
   const auto Binop =
     T(Add,
       Sub,
@@ -77,6 +86,7 @@ namespace vbcc
       RegionArrayConst,
       Copy,
       Move,
+      RegisterRef,
       FieldRef,
       ArrayRef,
       ArrayRefConst,

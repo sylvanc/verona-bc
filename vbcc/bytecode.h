@@ -10,6 +10,11 @@ namespace vbcc
 {
   using namespace vbci;
 
+  struct VecHash
+  {
+    size_t operator()(const std::vector<uint8_t>& v) const noexcept;
+  };
+
   struct LabelState
   {
     std::vector<size_t> pred;
@@ -61,18 +66,22 @@ namespace vbcc
     std::unordered_map<ST::Index, size_t> symbol_ids;
     std::unordered_map<ST::Index, size_t> library_ids;
 
-    std::vector<Node> typedefs;
+    std::vector<Node> typealiases;
     std::vector<Node> primitives;
     std::vector<Node> classes;
     std::vector<FuncState> functions;
     std::vector<Node> symbols;
     std::vector<Node> libraries;
 
+    std::unordered_map<std::vector<uint8_t>, size_t, VecHash> type_map;
+    std::vector<std::vector<uint8_t>> types;
+
     Bytecode();
 
     void set_path(const std::filesystem::path& path);
 
     std::optional<size_t> get_type_id(Node id);
+    Node get_type(Node id);
     bool add_type(Node type);
 
     std::optional<size_t> get_class_id(Node id);
@@ -99,5 +108,9 @@ namespace vbcc
     bool kill(Node& id);
 
     void gen(std::filesystem::path output, bool strip);
+
+    size_t typ(Node type);
+    bool encode_simple_type(Node type, size_t& id);
+    void encode_type(std::vector<uint8_t>& b, Node type);
   };
 }

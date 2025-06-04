@@ -25,15 +25,6 @@ namespace vbcc
   inline const auto LocalId = TokenDef("localid", flag::print);
   inline const auto LabelId = TokenDef("labelid", flag::print);
 
-  // Symbols.
-  inline const auto Equals = TokenDef("=");
-  inline const auto LParen = TokenDef("lparen");
-  inline const auto RParen = TokenDef("rparen");
-  inline const auto LBracket = TokenDef("lbracket");
-  inline const auto RBracket = TokenDef("rbracket");
-  inline const auto Comma = TokenDef(",");
-  inline const auto Colon = TokenDef(":");
-
   // Region types.
   inline const auto RegionRC = TokenDef("rc");
   inline const auto RegionGC = TokenDef("gc");
@@ -78,7 +69,10 @@ namespace vbcc
   inline const auto Copy = TokenDef("copy");
   inline const auto Move = TokenDef("move");
   inline const auto Drop = TokenDef("drop");
+  inline const auto RegisterRef = TokenDef("registerref");
   inline const auto FieldRef = TokenDef("fieldref");
+  inline const auto ArrayRef = TokenDef("arrayref");
+  inline const auto ArrayRefConst = TokenDef("arrayrefconst");
   inline const auto Load = TokenDef("load");
   inline const auto Store = TokenDef("store");
   inline const auto Lookup = TokenDef("lookup");
@@ -187,8 +181,6 @@ namespace vbcc
   inline const auto MoveArgs = TokenDef("moveargs");
   inline const auto ArgMove = TokenDef("argmove");
   inline const auto ArgCopy = TokenDef("argcopy");
-  inline const auto ArrayRef = TokenDef("arrayref");
-  inline const auto ArrayRefConst = TokenDef("arrayrefconst");
   inline const auto Body = TokenDef("body");
   inline const auto FnPointer = TokenDef("fnpointer");
   inline const auto CallDyn = TokenDef("calldyn");
@@ -207,11 +199,8 @@ namespace vbcc
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
-  inline const auto wfTypeBase = wfPrimitiveType | Ptr | Dyn | ClassId | TypeId;
-  inline const auto wfTypeArrayElem = wfTypeBase | Cown;
-  inline const auto wfTypeField = wfTypeBase | Array | Cown;
-  inline const auto wfTypeCownValue = wfTypeBase | Array;
-  inline const auto wfType = wfTypeBase | Array | Ref | Cown;
+  inline const auto wfType =
+    wfPrimitiveType | Ptr | Dyn | ClassId | TypeId | Array | Ref | Cown | Union;
 
   inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
   inline const auto wfLiteral =
@@ -229,9 +218,9 @@ namespace vbcc
   inline const auto wfStatement = Source | Offset | Global | Const | ConstStr |
     Convert | Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
     HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop |
-    FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup | FnPointer |
-    Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn | FFI | When |
-    Typetest | wfBinop | wfUnop | wfConst;
+    RegisterRef | FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup |
+    FnPointer | Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn |
+    FFI | When | Typetest | wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -260,11 +249,11 @@ namespace vbcc
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *
         (Vararg >>= Vararg | None) * FFIParams * (Return >>= wfType))
     | (FFIParams <<= wfType++)
-    | (Type <<= TypeId * Union)
+    | (Type <<= TypeId * (Type >>= wfType))
     | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)
-    | (Field <<= FieldId * (Type >>= wfTypeField))
+    | (Field <<= FieldId * (Type >>= wfType))
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
     | (Func <<= FunctionId * Params * (Type >>= wfType) * Labels)
@@ -282,15 +271,16 @@ namespace vbcc
     | (Stack <<= wfDst * ClassId * Args)
     | (Heap <<= wfDst * wfSrc * ClassId * Args)
     | (Region <<= wfDst * wfRgn * ClassId * Args)
-    | (StackArray <<= wfDst * (Type >>= wfTypeArrayElem) * wfRhs)
-    | (StackArrayConst <<= wfDst * (Type >>= wfTypeArrayElem) * wfLit)
-    | (HeapArray <<= wfDst * wfLhs * (Type >>= wfTypeArrayElem) * wfRhs)
-    | (HeapArrayConst <<= wfDst * wfSrc * (Type >>= wfTypeArrayElem) * wfLit)
-    | (RegionArray <<=  wfDst * wfRgn * (Type >>= wfTypeArrayElem) * wfRhs)
-    | (RegionArrayConst <<= wfDst * wfRgn * (Type >>= wfTypeArrayElem) * wfLit)
+    | (StackArray <<= wfDst * (Type >>= wfType) * wfRhs)
+    | (StackArrayConst <<= wfDst * (Type >>= wfType) * wfLit)
+    | (HeapArray <<= wfDst * wfLhs * (Type >>= wfType) * wfRhs)
+    | (HeapArrayConst <<= wfDst * wfSrc * (Type >>= wfType) * wfLit)
+    | (RegionArray <<=  wfDst * wfRgn * (Type >>= wfType) * wfRhs)
+    | (RegionArrayConst <<= wfDst * wfRgn * (Type >>= wfType) * wfLit)
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
+    | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)

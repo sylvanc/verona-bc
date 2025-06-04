@@ -18,7 +18,7 @@ std
   test() {}
 }
 
-Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
+foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 {
   _f: i32 = 8;
 
@@ -30,7 +30,10 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     use Func2 = i32->i32->bool;
     use alias = std;
 
+    (a, (b, let aa)) = 1;
+
     alias::test(a; b);
+    foo::f1();
 
     let c = i32(1);
     let d = 0.3e6;
@@ -46,12 +49,15 @@ Class0[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     while (a + (b, c))
     {
       -a b + -c d;
+      let e = 5;
       a + b;
       continue;
       return 5;
       raise;
       throw "Error";
     }
+
+    let e = 7;
 
     for d (key, value) ->
     {

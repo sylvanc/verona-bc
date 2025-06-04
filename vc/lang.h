@@ -49,16 +49,14 @@ namespace vc
   inline const auto Expr = TokenDef("expr");
   inline const auto ExprSeq = TokenDef("exprseq");
   inline const auto Tuple = TokenDef("tuple");
-  inline const auto Lambda =
-    TokenDef("lambda", flag::symtab | flag::defbeforeuse);
+  inline const auto Lambda = TokenDef("lambda", flag::symtab);
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
   inline const auto Op = TokenDef("op");
-  inline const auto StaticCall = TokenDef("staticcall");
-  inline const auto DynamicCall = TokenDef("dynamiccall");
   inline const auto RefLet = TokenDef("reflet");
   inline const auto RefVar = TokenDef("refvar");
   inline const auto Apply = TokenDef("apply");
+  inline const auto Bind = TokenDef("bind");
 
   inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
   inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
@@ -71,26 +69,11 @@ namespace vc
 
   inline const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
-  inline const auto ApplyPat =
-    T(ExprSeq,
-      RefLet,
-      RefVar,
-      None,
-      True,
-      False,
-      Bin,
-      Oct,
-      Int,
-      Hex,
-      Float,
-      HexFloat,
-      String,
-      RawString,
-      Tuple,
-      QName,
-      Method,
-      StaticCall,
-      DynamicCall);
+  inline const auto LiteralPat = T(
+    None, True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
+
+  inline const auto ApplyPat = LiteralPat /
+    T(ExprSeq, RefLet, RefVar, Tuple, QName, Method, Call, CallDyn);
 
   inline const auto ExprPat =
     ApplyPat / T(DontCare, Lambda, If, While, For, When, Apply);
@@ -103,14 +86,14 @@ namespace vc
   inline const auto wfBody =
     Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
 
-  inline const auto wfWeakExpr = Equals | Else | Ref | Try | SymbolId | Bracket;
+  inline const auto wfWeakExpr = Equals | Else | Ref | Try;
 
   // TODO: temporary placeholder.
   inline const auto wfTempExpr = Const | Colon | Vararg;
 
   inline const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
-    RawString | Tuple | Let | Var | Lambda | QName | Op | Method | StaticCall |
-    DynamicCall | If | While | For | When | wfWeakExpr | wfTempExpr;
+    RawString | Tuple | Let | Var | Lambda | QName | Op | Method | Call |
+    CallDyn | If | While | For | When | wfWeakExpr | wfTempExpr;
 
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
 
@@ -144,8 +127,8 @@ namespace vc
     | (QElement <<= wfFuncId * TypeArgs)
     | (Op <<= SymbolId * TypeArgs)
     | (Method <<= Expr * wfFuncId * TypeArgs)
-    | (StaticCall <<= QName * Args)
-    | (DynamicCall <<= Method * Args)
+    | (Call <<= QName * Args)
+    | (CallDyn <<= Method * Args)
     | (Args <<= Expr++)
     | (If <<= Expr * Lambda)
     | (While <<= Expr * Lambda)
@@ -167,7 +150,7 @@ namespace vc
     | (Expr <<= wfExpr2++)
     | (RefLet <<= Ident)
     | (RefVar <<= Ident)
-    | (Apply <<= wfExpr2++[2])
+    | (Apply <<= Expr++[2])
     ;
   // clang-format on
 
@@ -177,10 +160,10 @@ namespace vc
   inline const auto wfPassOperators =
       wfPassApplication
     | (Expr <<= wfExpr3)
-    | (Ref <<= wfExpr3)
-    | (Try <<= wfExpr3)
-    | (Else <<= (Lhs >>= wfExpr3) * (Rhs >>= wfExpr3))
-    | (Equals <<= (Lhs >>= wfExpr3) * (Rhs >>= wfExpr3))
+    | (Ref <<= Expr)
+    | (Try <<= Expr)
+    | (Else <<= (Lhs >>= Expr) * (Rhs >>= Expr))
+    | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     ;
   // clang-format on
 

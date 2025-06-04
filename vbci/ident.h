@@ -13,6 +13,7 @@ namespace vbci
     UnknownFFI,
     UnknownRegionType,
     UnknownOpcode,
+    TooManyRefs,
     BadAllocTarget,
     BadLabel,
     BadField,

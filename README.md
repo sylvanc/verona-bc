@@ -2,12 +2,9 @@
 
 This is an experimental byte code interpreter for the Verona operational semantics.
 
-## Dynamic Types
+## Types
 
-To allow a fixed size type representation:
-* You can't have an array of `array T`. To do this, create a `typedef` for `array T`, and have an array of that `typedef`.
-* You can't have a ref of `ref T`. That means fields, `cown` contents, and array elements can't be of type `ref T`. To do this, create a `typedef` for `ref T`, and use that.
-* You can't have a `cown` of `cown T`. That means `cown` contents can't be of type `cown T`. To do this, create a `typedef` for `cown T` and use that.
+Union types can only be on the right-hand side of a `type` definition. If you need a union type somewhere else, create a `type` for it.
 
 ## Non-Local Returns
 
@@ -48,6 +45,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* Is it ok to immortalize a stack allocated object? Seems like no?
 * Delayed send/freeze?
   * With delayed send, if send is still pending at behavior termination, we can reset stack RC and send.
   * Store delayed send in the region parent?

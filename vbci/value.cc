@@ -27,8 +27,12 @@ namespace vbci
   Value::Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
   Value::Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
 
+  Value::Value(Value& val, size_t frame)
+  : val(&val), idx(frame), tag(ValueType::RegisterRef), readonly(0)
+  {}
+
   Value::Value(Object* obj, size_t f, bool ro)
-  : obj(obj), idx(f), tag(ValueType::Ref), readonly(ro)
+  : obj(obj), idx(f), tag(ValueType::FieldRef), readonly(ro)
   {}
 
   Value::Value(Array* arr, size_t idx, bool ro)
@@ -301,7 +305,7 @@ namespace vbci
       inc();
   }
 
-  Id Value::type_id()
+  TypeId Value::type_id()
   {
     switch (tag)
     {
@@ -314,24 +318,27 @@ namespace vbci
       case ValueType::Cown:
         return cown->cown_type_id();
 
-      case ValueType::Ref:
-        return type::ref(obj->field_type_id(idx));
+      case ValueType::RegisterRef:
+        return val->type_id().make_ref();
+
+      case ValueType::FieldRef:
+        return obj->field_type_id(idx).make_ref();
 
       case ValueType::ArrayRef:
-        return type::ref(arr->content_type_id());
+        return arr->content_type_id().make_ref();
 
       case ValueType::CownRef:
-        return type::ref(cown->content_type_id());
+        return cown->content_type_id().make_ref();
 
       case ValueType::Function:
-        return type::dyn();
+        return TypeId::dyn();
 
       case ValueType::Error:
       case ValueType::Invalid:
-        return type::dyn();
+        return TypeId::dyn();
 
       default:
-        return type::val(tag);
+        return TypeId::val(tag);
     }
   }
 
@@ -372,7 +379,8 @@ namespace vbci
         return true;
 
       case ValueType::Ptr:
-      case ValueType::Ref:
+      case ValueType::RegisterRef:
+      case ValueType::FieldRef:
       case ValueType::ArrayRef:
       case ValueType::CownRef:
         return false;
@@ -585,7 +593,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::Object:
-      case ValueType::Ref:
+      case ValueType::FieldRef:
         if (!readonly)
           obj->inc(reg);
         break;
@@ -611,7 +619,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::Object:
-      case ValueType::Ref:
+      case ValueType::FieldRef:
         if (!readonly)
           obj->dec(reg);
         break;
@@ -636,8 +644,11 @@ namespace vbci
   {
     switch (tag)
     {
+      case ValueType::RegisterRef:
+        return idx;
+
       case ValueType::Object:
-      case ValueType::Ref:
+      case ValueType::FieldRef:
         return obj->location();
 
       case ValueType::Array:
@@ -658,7 +669,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::Object:
-      case ValueType::Ref:
+      case ValueType::FieldRef:
       {
         auto r = obj->region();
         if (r)
@@ -687,7 +698,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::Object:
-      case ValueType::Ref:
+      case ValueType::FieldRef:
         obj->immortalize();
         break;
 
@@ -766,7 +777,11 @@ namespace vbci
 
     switch (tag)
     {
-      case ValueType::Ref:
+      case ValueType::RegisterRef:
+        v = *val;
+        break;
+
+      case ValueType::FieldRef:
         v = obj->load(idx);
         break;
 
@@ -797,7 +812,24 @@ namespace vbci
 
     switch (tag)
     {
-      case ValueType::Ref:
+      case ValueType::RegisterRef:
+      {
+        auto vloc = v.location();
+
+        if (loc::is_stack(vloc) && (vloc > idx))
+          throw Value(Error::BadStoreTarget);
+
+        Value prev = std::move(*val);
+
+        if (move)
+          *val = std::move(v);
+        else
+          *val = v;
+
+        return prev;
+      }
+
+      case ValueType::FieldRef:
         return obj->store(move, idx, v);
 
       case ValueType::ArrayRef:
@@ -913,7 +945,10 @@ namespace vbci
       case ValueType::Cown:
         return cown->to_string();
 
-      case ValueType::Ref:
+      case ValueType::RegisterRef:
+        return std::format("ref {}", val->to_string());
+
+      case ValueType::FieldRef:
         return std::format(
           "ref [{}] {}",
           Program::get().di_field(obj->cls(), idx),

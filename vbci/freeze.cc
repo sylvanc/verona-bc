@@ -93,10 +93,10 @@ namespace vbci
         pending.push_back(h);
         dfs.push_back(post_order(h));
 
-        if (h->is_object())
-          static_cast<Object*>(h)->trace(dfs);
-        else
+        if (h->is_array())
           static_cast<Array*>(h)->trace(dfs);
+        else
+          static_cast<Object*>(h)->trace(dfs);
       }
     }
 

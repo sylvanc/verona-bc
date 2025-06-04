@@ -3,6 +3,7 @@
 #include "header.h"
 #include "program.h"
 #include "region.h"
+#include "thread.h"
 #include "value.h"
 
 #include <format>
@@ -13,31 +14,28 @@ namespace vbci
   struct Cown : public verona::rt::VCown<Cown>
   {
   private:
-    Id type_id;
+    TypeId type_id;
     Value content;
 
-    Cown(Id type_id) : type_id(type_id)
+    Cown(TypeId type_id) : type_id(type_id.cown())
     {
       inc();
     }
 
   public:
-    static Cown* create(Id type_id)
+    static Cown* create(TypeId type_id)
     {
-      if (type::is_cown(type_id))
-        throw Value(Error::BadType);
-
       return new Cown(type_id);
     }
 
-    Id cown_type_id()
-    {
-      return type::cown(type_id);
-    }
-
-    Id content_type_id()
+    TypeId cown_type_id()
     {
       return type_id;
+    }
+
+    TypeId content_type_id()
+    {
+      return type_id.uncown();
     }
 
     void inc()
@@ -65,9 +63,11 @@ namespace vbci
         next = v;
 
       // Allow any cown to contain an error.
-      if (
-        !next.is_error() && !Program::get().typecheck(next.type_id(), type_id))
+      if (!next.is_error() && !(next.type_id() < content_type_id()))
+      {
         next = Value(Error::BadType);
+        Thread::annotate(next);
+      }
 
       auto prev_loc = content.location();
       auto next_loc = next.location();
@@ -76,6 +76,7 @@ namespace vbci
       {
         // Can't store a stack value in a cown.
         next = Value(Error::BadStore);
+        Thread::annotate(next);
       }
       else if (loc::is_region(next_loc) && (next_loc != prev_loc))
       {
