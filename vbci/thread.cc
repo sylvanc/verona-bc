@@ -209,12 +209,21 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto& cls = program->cls(TypeId::leb(leb()));
-          check_args(cls.fields);
-          auto mem = stack.alloc(cls.size);
-          auto obj =
-            &Object::create(mem, cls, frame->frame_id)->init(frame, cls);
-          frame->push_finalizer(obj);
-          dst = obj;
+
+          if (cls.singleton)
+          {
+            // Return the singleton instance if there is one.
+            dst = cls.singleton;
+          }
+          else
+          {
+            check_args(cls.fields);
+            auto mem = stack.alloc(cls.size);
+            auto obj =
+              &Object::create(mem, cls, frame->frame_id)->init(frame, cls);
+            frame->push_finalizer(obj);
+            dst = obj;
+          }
           break;
         }
 

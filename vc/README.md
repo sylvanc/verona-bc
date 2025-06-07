@@ -5,10 +5,14 @@ Infer the location for everything.
 - `a in b`, `a @ b`, or some such.
 
 ANF:
-- Let, Var, Equals.
 - While, For, When.
   - Don't compact while or for conditions.
-- An if with a lambda that takes arguments is a type test.
+- Assign: LHS expressions.
+  - Yes: tuple, method, call, `calldyn`.
+  - `LocalId`: if it's a `var`, it's fine, if it's a `let`, there can be only one.
+  - No: lambda, `qname`, equals.
+  - Destructing assignment.
+- `if` with a lambda that takes arguments is a type test.
 - A `QName` is a function pointer.
   - If it's not in a call, which `arity`? Partial application of shortest?
   - Type arguments?
@@ -17,13 +21,9 @@ ANF:
 - A `Method` is either a field or a zero argument method call.
   - Could make it always a field.
   - If we have functions for field access, then it's always a zero argument method call.
-- Assign: LHS expressions.
-  - Yes: tuple, method, call, `calldyn`.
-  - Trivial: `reflet`, `refvar`.
-  - No: lambda, `qname`, equals.
-  - Destructing assignment.
 - Figure out copy and move.
   - Just do copy for now, figure out move later.
+  - Could `vbcc` figure out move for us?
 - Handle terminators for labels.
 
 ## To Do
@@ -37,7 +37,6 @@ ANF:
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
   - A free `var` is captured by reference. The lambda must be `stack` allocated.
 - Auto create, default argument sugar, member conflict.
-- Single instance for classes without fields.
 - Type assertions, compile time evaluation, tuple flattening.
 - Since loops are expression, should `break` and `continue` have values?
 - `where` clause instead of `T1: T2 = T3`?

@@ -23,6 +23,7 @@ namespace vbci
     size_t size;
     size_t debug_info;
     TypeId type_id;
+    Object* singleton;
 
     // Precalculate an offset into the object for each field name.
     std::unordered_map<size_t, size_t> field_map;

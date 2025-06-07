@@ -8,10 +8,14 @@ namespace vbci
   {
     if (fields.empty())
     {
+      // Create an immortal singleton object for empty classes.
       size = sizeof(Object);
+      auto mem = new uint8_t[size];
+      singleton = Object::create(mem, *this, loc::Immortal);
       return true;
     }
 
+    singleton = nullptr;
     auto program = Program::get();
     std::vector<ffi_type*> ffi_types;
 
@@ -38,7 +42,7 @@ namespace vbci
         FFI_DEFAULT_ABI, &struct_type, field_offsets.data()) != FFI_OK)
       return false;
 
-  size = sizeof(Object) + struct_type.size;
+    size = sizeof(Object) + struct_type.size;
 
     for (size_t i = 0; i < fields.size(); i++)
     {
