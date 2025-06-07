@@ -278,6 +278,9 @@ namespace vbci
 
   bool TypeId::operator<(const TypeId& that) const
   {
+    if ((this == &that) || (*this == that))
+      return true;
+
     ComplexType tmp_this;
     ComplexType tmp_that;
     ComplexType* t1;

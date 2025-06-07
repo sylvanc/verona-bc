@@ -26,6 +26,8 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 
   f[T3: i32 = i32](a: T3 = 1, b: T1): (T3 & (none | i32), bool)
   {
+    if a { 0 } else if b { 1 } else { 2 }
+
     a and b;
 
     use Func1 = (()->i32)->T1;
@@ -53,9 +55,9 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
       -a b + -c d;
       let e = 5;
       a + b;
-      continue;
-      return 5;
-      raise;
+      continue; // TODO: treat as a terminator
+      // return 5;
+      // raise;
       throw "Error";
     }
 

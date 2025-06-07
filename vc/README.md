@@ -1,29 +1,37 @@
-# Syntax Experiment
+# High-Level Language Experiment
 
 Infer the location for everything.
 - Separate expressions to add region constraints.
 - `a in b`, `a @ b`, or some such.
 
 ANF:
-- Let, Var, Equals, Else.
-- A `while` condition needs to be in its own block.
-- Labels.
-  - Lambda in if/while/for/when are really bodies.
-  - An if with a lambda that takes arguments is a type test.
+- Let, Var, Equals.
+- While, For, When.
+  - Don't compact while or for conditions.
+- An if with a lambda that takes arguments is a type test.
 - A `QName` is a function pointer.
+  - If it's not in a call, which `arity`? Partial application of shortest?
+  - Type arguments?
 - A `Method` in a dynamic call is a function lookup.
+  - Type arguments?
 - A `Method` is either a field or a zero argument method call.
   - Could make it always a field.
+  - If we have functions for field access, then it's always a zero argument method call.
+- Assign: LHS expressions.
+  - Yes: tuple, method, call, `calldyn`.
+  - Trivial: `reflet`, `refvar`.
+  - No: lambda, `qname`, equals.
+  - Destructing assignment.
+- Figure out copy and move.
+  - Just do copy for now, figure out move later.
+- Handle terminators for labels.
 
 ## To Do
 
-- A-normal form.
-  - Assign: LHS expressions.
-  - Destructing assignment.
-  - Control flow.
+- Braces and else: it doesn't work if there's a comment in between.
 - Classes.
   - Functions for field access.
-  - LHS functions, with auto RHS versions.
+  - LHS functions (`ref` before function name), with auto RHS versions.
 - Lambdas to classes.
   - Mark free variables in lambdas.
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
@@ -32,7 +40,6 @@ ANF:
 - Single instance for classes without fields.
 - Type assertions, compile time evaluation, tuple flattening.
 - Since loops are expression, should `break` and `continue` have values?
-- Implement primitive types in `std::builtin`.
 - `where` clause instead of `T1: T2 = T3`?
   - Then a value parameter can be `ident: type`.
 - Name resolution.

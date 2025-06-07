@@ -133,14 +133,27 @@ namespace vc
       wfPassApplication,
       dir::topdown,
       {
-        // TypeName and QName resolition.
-        T(TypeName, QName)[TypeName] >> [](Match& _) -> Node {
-          auto find = resolve(_(TypeName));
+        // TypeName resolution.
+        T(TypeName)[TypeName] >> [](Match& _) -> Node {
+          auto def = resolve(_(TypeName));
 
-          if (find == Error)
-            return find;
+          if (def == Error)
+            return def;
 
           return NoChange;
+        },
+
+        // QName resolution.
+        T(QName)[QName] >> [](Match& _) -> Node {
+          auto def = resolve(_(QName));
+
+          // Error, create sugar, or function pointer.
+          if (def == Error)
+            return def;
+          else if (def->in({ClassDef, TypeAlias, TypeParam}))
+            return _(QName) << (QElement << (Ident ^ "create") << TypeArgs);
+          else
+            return NoChange;
         },
 
         // Ident resolution.
@@ -160,19 +173,12 @@ namespace vc
               return QName << (QElement << ident << TypeArgs)
                            << (QElement << (Ident ^ "create") << TypeArgs);
             }
-            else if (def->in({ParamDef, Let}))
+            else if (def->in({ParamDef, Let, Var}))
             {
               if (!def->precedes(ident))
                 return err(ident, "Identifier used before definition");
 
-              return RefLet << ident;
-            }
-            else if (def == Var)
-            {
-              if (!def->precedes(ident))
-                return err(ident, "Identifier used before definition");
-
-              return RefVar << ident;
+              return LocalId ^ ident;
             }
 
             assert(def == Error);
@@ -180,13 +186,13 @@ namespace vc
           },
 
         // Application.
-        In(Expr) * ApplyPat[Lhs] * ExprPat[Rhs] >>
+        In(Expr) * ApplyLhsPat[Lhs] * ApplyRhsPat[Rhs] >>
           [](Match& _) {
             return Apply << (Expr << _(Lhs)) << (Expr << _(Rhs));
           },
 
         // Extend an existing application.
-        In(Expr) * T(Apply)[Lhs] * ExprPat[Rhs] >>
+        In(Expr) * T(Apply)[Lhs] * ApplyRhsPat[Rhs] >>
           [](Match& _) { return _(Lhs) << (Expr << _(Rhs)); },
       }};
 

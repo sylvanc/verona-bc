@@ -53,8 +53,6 @@ namespace vc
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
   inline const auto Op = TokenDef("op");
-  inline const auto RefLet = TokenDef("reflet");
-  inline const auto RefVar = TokenDef("refvar");
   inline const auto Apply = TokenDef("apply");
   inline const auto Bind = TokenDef("bind");
 
@@ -72,11 +70,13 @@ namespace vc
   inline const auto LiteralPat = T(
     None, True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
 
-  inline const auto ApplyPat = LiteralPat /
-    T(ExprSeq, RefLet, RefVar, Tuple, QName, Method, Call, CallDyn);
+  inline const auto ApplyLhsPat =
+    LiteralPat / T(ExprSeq, LocalId, Tuple, QName, Method, Call, CallDyn);
 
-  inline const auto ExprPat =
-    ApplyPat / T(DontCare, Lambda, If, While, For, When, Apply);
+  inline const auto ApplyRhsPat =
+    ApplyLhsPat / T(DontCare, Lambda, If, While, For, When, Apply);
+
+  inline const auto ExprPat = ApplyRhsPat / T(Else);
 
   inline const auto AssignPat = ExprPat / T(Let, Var);
 
@@ -142,14 +142,12 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExpr2 = (wfExpr | RefLet | RefVar | Apply) - Ident;
+  inline const auto wfExpr2 = (wfExpr | LocalId | Apply) - Ident;
 
   // clang-format off
   inline const auto wfPassApplication =
       wfPassStructure
     | (Expr <<= wfExpr2++)
-    | (RefLet <<= Ident)
-    | (RefVar <<= Ident)
     | (Apply <<= Expr++[2])
     ;
   // clang-format on
@@ -170,6 +168,7 @@ namespace vc
   // clang-format off
   inline const auto wfPassANF =
       wfPassOperators
+    | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     ;
   // clang-format on
 

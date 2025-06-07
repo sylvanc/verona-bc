@@ -323,7 +323,7 @@ namespace vc
           },
 
         // Method.
-        In(Expr) * (T(Ident) / ApplyPat)[Expr] * T(Dot) *
+        In(Expr) * (T(Ident) / ApplyLhsPat)[Expr] * T(Dot) *
             T(Ident, SymbolId)[Ident] * ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
             return Method << (Expr << _(Expr)) << _(Ident)

@@ -82,6 +82,7 @@ namespace vc
         "\\{" >> [](auto& m) { m.push(Brace); },
         "\\}[[:space:]]*else\\b" >>
           [](auto& m) {
+            // TODO: what if there's a comment in between } and `else`?
             // Braces don't terminate a group if followed by `else`.
             m.term(terminators);
             m.pop(Brace);
