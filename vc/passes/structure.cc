@@ -3,18 +3,15 @@
 namespace vc
 {
   const std::initializer_list<Token> wfTypeElement = {
-    None, Bool, I8,       I16,   I32,   I64,      U8,       U16,
-    U32,  U64,  ILong,    ULong, ISize, USize,    F32,      F64,
-    Ptr,  Dyn,  TypeName, Union, Isect, FuncType, TupleType};
+    TypeName, Union, Isect, FuncType, TupleType};
 
   // TODO: remove as more expressions are handled.
   // everything from Const on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident, None,     True,   False,     Bin,      Oct,
-    Int,     Hex,      Float, HexFloat, String, RawString, DontCare, Const,
-    Tuple,   Let,      Var,   Lambda,   QName,  Method,    Call,     CallDyn,
-    If,      While,    For,   When,     Equals, Else,      Ref,      Try,
-    Op,      Const,    Colon, Vararg};
+    ExprSeq, DontCare, Ident,  True,      False,    Bin,   Oct,   Int,   Hex,
+    Float,   HexFloat, String, RawString, DontCare, Const, Tuple, Let,   Var,
+    Lambda,  QName,    Method, Call,      CallDyn,  If,    While, For,   When,
+    Equals,  Else,     Ref,    Try,       Op,       Const, Colon, Vararg};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);

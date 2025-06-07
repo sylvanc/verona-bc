@@ -21,6 +21,26 @@ namespace vc
   inline const auto l_local = Location("local");
   inline const auto l_label = Location("label");
 
+  Node type_nomatch()
+  {
+    return TypeName << (TypeElement << (Ident ^ "std") << TypeArgs)
+                    << (TypeElement << (Ident ^ "builtin") << TypeArgs)
+                    << (TypeElement << (Ident ^ "nomatch") << TypeArgs);
+  }
+
+  Node make_nomatch(Node localid)
+  {
+    assert(localid == LocalId);
+    return Stack << (LocalId ^ localid) << type_nomatch() << Args;
+  }
+
+  Node test_nomatch(Node dst, Node src)
+  {
+    assert(dst == LocalId);
+    assert(src == LocalId);
+    return Typetest << (LocalId ^ dst) << (LocalId ^ src) << type_nomatch();
+  }
+
   PassDef anf()
   {
     PassDef p{
@@ -53,10 +73,9 @@ namespace vc
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
             // TODO: what do we do with the Type?
-            // TODO: use a zero-alloc type instead of None?
             auto on_true = _.fresh(l_label);
             auto join = _.fresh(l_label);
-            return Seq << (Const << _(LocalId) << None << None)
+            return Seq << make_nomatch(_(LocalId))
                        << (Cond << _(Cond) << (LabelId ^ on_true)
                                 << (LabelId ^ join))
                        << (Label << (LabelId ^ on_true)
@@ -91,11 +110,10 @@ namespace vc
                      T(Type)[Type] * T(Body)[Body]))) >>
           [](Match& _) {
             // TODO: what do we do with the Type?
-            // TODO: use a zero-alloc type instead of None?
             auto id = _.fresh(l_local);
             auto on_true = _.fresh(l_label);
             auto join = _.fresh(l_label);
-            return Seq << (Typetest << (LocalId ^ id) << _(LocalId) << None)
+            return Seq << test_nomatch((LocalId ^ id), _(LocalId))
                        << (Cond << (LocalId ^ id) << (LabelId ^ on_true)
                                 << (LabelId ^ join))
                        << (Label << (LabelId ^ on_true)
@@ -165,14 +183,6 @@ namespace vc
           },
 
         // Lift literals.
-        In(Expr) * T(None) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << None << None))
-                       << (LocalId ^ id);
-          },
-
         In(Expr) * T(True, False)[Bool] >>
           [](Match& _) {
             auto id = _.fresh(l_local);

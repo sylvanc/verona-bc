@@ -67,8 +67,8 @@ namespace vc
 
   inline const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
-  inline const auto LiteralPat = T(
-    None, True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
+  inline const auto LiteralPat =
+    T(True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
 
   inline const auto ApplyLhsPat =
     LiteralPat / T(ExprSeq, LocalId, Tuple, QName, Method, Call, CallDyn);
