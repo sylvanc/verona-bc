@@ -2,20 +2,20 @@
 
 namespace vc
 {
+  // Equals
   // Tuple,
   // Ref,
   // Try,
   // Lambda,
   // QName,
-  // Method, done
-  // Call,
+  // Method, done - change to 0-arg call?
+  // Call, done
   // CallDyn, done
   // If, done
-  // While,
+  // While, done
   // For,
   // When,
   // Else, done
-  // Equals
 
   // Sythetic locations.
   inline const auto l_local = Location("local");
@@ -284,6 +284,16 @@ namespace vc
             return Seq << (Lift << Body
                                 << (CallDyn << (LocalId ^ id) << _(LocalId)
                                             << (Args << _(Arg) << *_[Args])))
+                       << (LocalId ^ id);
+          },
+
+        // Call.
+        In(Expr) * (T(Call) << (T(QName)[QName] * T(Args)[Args])) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (Call << (LocalId ^ id) << _(QName) << _(Args)))
                        << (LocalId ^ id);
           },
 

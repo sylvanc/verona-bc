@@ -5,8 +5,6 @@ Infer the location for everything.
 - `a in b`, `a @ b`, or some such.
 
 ANF:
-- For, When.
-  - Don't compact for condition.
 - Assign: LHS expressions.
   - Yes: tuple, method, call, `calldyn`.
   - `LocalId`: if it's a `var`, it's fine, if it's a `let`, there can be only one.
@@ -14,13 +12,15 @@ ANF:
   - Destructing assignment.
 - `if` with a lambda that takes arguments is a type test.
 - A `QName` is a function pointer.
-  - If it's not in a call, which `arity`? Partial application of shortest?
+  - If it's not in a call, which `arity`?
   - Type arguments?
 - A `Method` in a dynamic call is a function lookup.
   - Type arguments?
 - A `Method` is either a field or a zero argument method call.
   - Could make it always a field.
   - If we have functions for field access, then it's always a zero argument method call.
+- For, When.
+  - Don't compact for condition.
 - Figure out copy and move.
   - Just do copy for now, figure out move later.
   - Could `vbcc` figure out move for us?
@@ -28,6 +28,10 @@ ANF:
 
 ## To Do
 
+- Reachability and flattening.
+  - Find all reachable classes and functions with their type arguments.
+  - Flatten the classes and functions.
+  - Expand `QName` and `TypeName` to the flattened names.
 - Braces and else: it doesn't work if there's a comment in between.
 - Classes.
   - Functions for field access.
