@@ -6,19 +6,13 @@ Infer the location for everything.
 
 ANF:
 - Assign: LHS expressions.
-  - Yes: tuple, method, call, `calldyn`.
+  - Yes: tuple (destructing), `call`, `calldyn`.
   - `LocalId`: if it's a `var`, it's fine, if it's a `let`, there can be only one.
   - No: lambda, `qname`, equals.
-  - Destructing assignment.
 - `if` with a lambda that takes arguments is a type test.
 - A `QName` is a function pointer.
   - If it's not in a call, which `arity`?
   - Type arguments?
-- A `Method` in a dynamic call is a function lookup.
-  - Type arguments?
-- A `Method` is either a field or a zero argument method call.
-  - Could make it always a field.
-  - If we have functions for field access, then it's always a zero argument method call.
 - For, When.
   - Don't compact for condition.
 - Figure out copy and move.

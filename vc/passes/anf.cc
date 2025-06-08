@@ -8,7 +8,7 @@ namespace vc
   // Try,
   // Lambda,
   // QName,
-  // Method, done - change to 0-arg call?
+  // Method, done
   // Call, done
   // CallDyn, done
   // If, done
@@ -246,21 +246,6 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        // A Method in an Expr is a FieldRef.
-        In(Expr) *
-            (T(Method)
-             << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
-                 T(TypeArgs)[TypeArgs])) >>
-          [](Match& _) {
-            // TODO: what to do with the TypeArgs?
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (FieldRef << (LocalId ^ id)
-                                             << (Arg << ArgCopy << _(LocalId))
-                                             << _(Ident)))
-                       << (LocalId ^ id);
-          },
-
         // A Method in a CallDyn is a Lookup.
         In(CallDyn) *
             (T(Method)
@@ -273,6 +258,25 @@ namespace vc
                                 << (Lookup << (LocalId ^ id) << _(LocalId)
                                            << (MethodId ^ _(Ident))))
                        << (LocalId ^ id) << (LocalId ^ _(LocalId));
+          },
+
+        // Any other Method is a CallDyn.
+        --In(CallDyn) *
+            (T(Method)
+             << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
+                 T(TypeArgs)[TypeArgs])) >>
+          [](Match& _) {
+            // TODO: what to do with the TypeArgs?
+            auto lookup = _.fresh(l_local);
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (Lookup << (LocalId ^ lookup) << _(LocalId)
+                                           << (MethodId ^ _(Ident))))
+                       << (Lift
+                           << Body
+                           << (CallDyn << (LocalId ^ id) << (LocalId ^ lookup)
+                                       << (Args << (LocalId ^ _(LocalId)))))
+                       << (LocalId ^ id);
           },
 
         // CallDyn.

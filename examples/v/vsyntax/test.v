@@ -39,6 +39,8 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     alias::test(a; b);
     foo::f1();
 
+    a.f;
+
     let c = i32(1);
     let d = 0.3e6;
     let x = std::test(a.f, 3) b c = 7;
