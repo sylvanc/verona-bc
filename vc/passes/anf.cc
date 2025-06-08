@@ -55,6 +55,19 @@ namespace vc
             return Labels << (Label << (LabelId ^ id) << _(Body));
           },
 
+        // L-values.
+        In(Expr) * T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs]) >>
+          [](Match& _) {
+            // TODO: experimenting
+            return Equals << (Lhs << *_[Lhs]) << _(Rhs);
+          },
+
+        In(Lhs)++ * T(Expr)[Expr] >>
+          [](Match& _) {
+            // TODO: experimenting
+            return Lhs << *_[Expr];
+          },
+
         // If expression.
         In(Expr) * T(If)[If] >>
           [](Match& _) {
@@ -81,6 +94,37 @@ namespace vc
                        << (Label << (LabelId ^ on_true)
                                  << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
                                              << (Jump << (LabelId ^ join))))
+                       << (Label << (LabelId ^ join) << Body);
+          },
+
+        // While expression.
+        In(Expr) * T(While)[While] >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body << (_(While) << (LocalId ^ id)))
+                       << (LocalId ^ id);
+          },
+
+        // While body.
+        In(Body) * T(While)
+            << (T(Expr)[Cond] *
+                (T(Lambda)
+                 << ((T(TypeParams) << End) * (T(Params) << End) *
+                     T(Type)[Type] * T(Body)[Body])) *
+                T(LocalId)[LocalId]) >>
+          [](Match& _) {
+            // TODO: what do we do with the Type?
+            auto cond = _.fresh(l_label);
+            auto body = _.fresh(l_label);
+            auto join = _.fresh(l_label);
+            return Seq << make_nomatch(_(LocalId)) << (Jump << (LabelId ^ cond))
+                       << (Label << (LabelId ^ cond)
+                                 << (Body
+                                     << (Cond << _(Cond) << (LabelId ^ body)
+                                              << (LabelId ^ join))))
+                       << (Label << (LabelId ^ body)
+                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                             << (Jump << (LabelId ^ cond))))
                        << (Label << (LabelId ^ join) << Body);
           },
 
@@ -155,19 +199,6 @@ namespace vc
 
           return seq;
         },
-
-        // L-values.
-        In(Expr) * T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs]) >>
-          [](Match& _) {
-            // TODO: experimenting
-            return Equals << (Lhs << *_[Lhs]) << _(Rhs);
-          },
-
-        In(Lhs)++ * T(Expr)[Expr] >>
-          [](Match& _) {
-            // TODO: experimenting
-            return Lhs << *_[Expr];
-          },
 
         // Lift variable declarations.
         In(Expr, Lhs) * T(Let)[Let] >>

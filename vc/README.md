@@ -5,8 +5,8 @@ Infer the location for everything.
 - `a in b`, `a @ b`, or some such.
 
 ANF:
-- While, For, When.
-  - Don't compact while or for conditions.
+- For, When.
+  - Don't compact for condition.
 - Assign: LHS expressions.
   - Yes: tuple, method, call, `calldyn`.
   - `LocalId`: if it's a `var`, it's fine, if it's a `let`, there can be only one.
