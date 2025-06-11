@@ -41,7 +41,7 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     zz = ref 7;
     let zzz = *zz;
 
-    (a, (b, let aa)) = 1;
+    let yy = (a, (b, let aa)) = 1;
 
     alias::test(a; b);
     foo::f1();

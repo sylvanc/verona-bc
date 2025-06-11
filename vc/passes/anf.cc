@@ -171,6 +171,33 @@ namespace vc
                        << (LocalId ^ id);
           },
 
+        // Destructuring assignment.
+        T(Equals)
+            << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId)++)) *
+                T(LocalId)[Rhs]) >>
+          [](Match& _) {
+            // If the RHS is too short, this will throw an error.
+            // If the RHS is too long, the extra values will be discarded.
+            Node seq = Seq;
+            Node tuple = Tuple;
+            size_t idx = 0;
+
+            for (auto& l : *_(Lhs))
+            {
+              auto ref = _.fresh(l_local);
+              auto val = _.fresh(l_local);
+              seq << (Lift << Body
+                           << (ArrayRefConst << (LocalId ^ ref)
+                                             << (LocalId ^ _(Rhs))
+                                             << (Int ^ std::to_string(idx++))))
+                  << (Lift << Body
+                           << (Load << (LocalId ^ val) << (LocalId ^ ref)));
+              tuple << (Equals << l << (LocalId ^ val));
+            }
+
+            return seq << tuple;
+          },
+
         // Invalid l-values.
         In(Lhs) * T(Lambda, QName, If, Else, While, For, When)[Lhs] >>
           [](Match& _) { return err(_(Lhs), "can't assign to this"); },
@@ -413,6 +440,10 @@ namespace vc
         // Compact LHS Ref LocalId.
         T(Lhs) << (T(Ref) << T(LocalId)[LocalId] * End) >>
           [](Match& _) { return Ref << _(LocalId); },
+
+        // Compact TupleLHS.
+        T(Lhs) << (T(TupleLHS)[TupleLHS] * End) >>
+          [](Match& _) { return _(TupleLHS); },
 
         // Combine non-terminal LocalId with an incomplete copy.
         // This is for `if` and `else`.
