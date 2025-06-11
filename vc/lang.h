@@ -49,12 +49,12 @@ namespace vc
   inline const auto Expr = TokenDef("expr");
   inline const auto ExprSeq = TokenDef("exprseq");
   inline const auto Tuple = TokenDef("tuple");
+  inline const auto TupleLHS = TokenDef("tuplelhs");
   inline const auto Lambda = TokenDef("lambda", flag::symtab);
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
   inline const auto Op = TokenDef("op");
   inline const auto Apply = TokenDef("apply");
-  inline const auto Bind = TokenDef("bind");
 
   inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
   inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
@@ -76,7 +76,7 @@ namespace vc
   inline const auto ApplyRhsPat =
     ApplyLhsPat / T(DontCare, Lambda, If, While, For, When, Apply);
 
-  inline const auto ExprPat = ApplyRhsPat / T(Else);
+  inline const auto ExprPat = ApplyRhsPat / (T(Else, Ref) << Any);
 
   inline const auto AssignPat = ExprPat / T(Let, Var);
 
@@ -86,14 +86,12 @@ namespace vc
   inline const auto wfBody =
     Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
 
-  inline const auto wfWeakExpr = Equals | Else | Ref | Try;
-
   // TODO: temporary placeholder.
   inline const auto wfTempExpr = Const | Colon | Vararg;
 
   inline const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
     RawString | Tuple | Let | Var | Lambda | QName | Op | Method | Call |
-    CallDyn | If | While | For | When | wfWeakExpr | wfTempExpr;
+    CallDyn | If | Else | While | For | When | Equals | Ref | Try | wfTempExpr;
 
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
 

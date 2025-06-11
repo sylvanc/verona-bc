@@ -41,6 +41,84 @@ namespace vc
     return Typetest << (LocalId ^ dst) << (LocalId ^ src) << type_nomatch();
   }
 
+  std::string flat_name(Node ident, Node typeargs, size_t argc, bool ref)
+  {
+    // TODO: typeargs?
+    (void)typeargs;
+    return std::format(
+      "{}.{}{}", ident->location().view(), argc, ref ? ".ref" : "");
+  }
+
+  std::string flat_qname(Node qname, size_t argc, bool ref)
+  {
+    std::stringstream ss;
+    bool first = true;
+
+    for (auto& child : *qname)
+    {
+      if (first)
+        first = false;
+      else
+        ss << ".";
+
+      // TODO: typeargs?
+      ss << (child / Ident)->location().view();
+    }
+
+    ss << "." << argc;
+
+    if (ref)
+      ss << ".ref";
+
+    return ss.str();
+  }
+
+  const auto CallPat = T(Call)[Call] << (T(QName)[QName] * T(Args)[Args]);
+
+  const auto CallDynPat = T(CallDyn)[CallDyn]
+    << ((T(Method)
+         << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
+             T(TypeArgs)[TypeArgs])) *
+        T(Args)[Args]);
+
+  const auto MethodPat = T(Method)[Method]
+    << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
+        T(TypeArgs)[TypeArgs]);
+
+  Node make_call(Match& _, bool lvalue, bool ref)
+  {
+    // lvalue is true if the call appears on the LHS of an assignment.
+    // ref is true if lvalue is true, or if the call is in a Ref node.
+
+    // TODO: check that a version with this arity exists.
+    auto name = flat_qname(_(QName), _(Args)->size(), ref);
+    auto id = _.fresh(l_local);
+    auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
+    return Seq << (Lift << Body
+                        << (Call << (LocalId ^ id) << (FunctionId ^ name)
+                                 << _(Args)))
+               << res;
+  }
+
+  Node make_calldyn(Match& _, bool lvalue, bool ref)
+  {
+    // lvalue is true if the call appears on the LHS of an assignment.
+    // ref is true if lvalue is true, or if the call is in a Ref node.
+    auto argc = _(Args) ? _(Args)->size() : 0;
+    auto name = flat_name(_(Ident), _(TypeArgs), argc + 1, ref);
+    auto fn = _.fresh(l_local);
+    auto id = _.fresh(l_local);
+    auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
+    return Seq << (Lift << Body
+                        << (Lookup << (LocalId ^ fn) << (LocalId ^ _(LocalId))
+                                   << (MethodId ^ name)))
+               << (Lift << Body
+                        << (CallDyn
+                            << (LocalId ^ id) << (LocalId ^ fn)
+                            << (Args << (LocalId ^ _(LocalId)) << *_[Args])))
+               << res;
+  }
+
   PassDef anf()
   {
     PassDef p{
@@ -62,11 +140,40 @@ namespace vc
             return Equals << (Lhs << *_[Lhs]) << _(Rhs);
           },
 
-        In(Lhs)++ * T(Expr)[Expr] >>
+        In(Lhs, TupleLHS) * T(Expr)[Expr] >>
           [](Match& _) {
             // TODO: experimenting
             return Lhs << *_[Expr];
           },
+
+        In(Lhs) * T(Tuple)[Tuple] >>
+          [](Match& _) {
+            // TODO: experimenting
+            return TupleLHS << *_[Tuple];
+          },
+
+        // Assignment.
+        T(Equals) << (T(LocalId)[Lhs] * T(LocalId)[Rhs]) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body << (Move << (LocalId ^ id) << _(Lhs)))
+                       << (Lift << Body << (Copy << _(Lhs) << _(Rhs)))
+                       << (LocalId ^ id);
+          },
+
+        // Store.
+        T(Equals) << ((T(Ref) << T(LocalId)[Lhs]) * T(LocalId)[Rhs]) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (Store << (LocalId ^ id) << _(Lhs) << _(Rhs)))
+                       << (LocalId ^ id);
+          },
+
+        // Invalid l-values.
+        In(Lhs) * T(Lambda, QName, If, Else, While, For, When)[Lhs] >>
+          [](Match& _) { return err(_(Lhs), "can't assign to this"); },
 
         // If expression.
         In(Expr) * T(If)[If] >>
@@ -246,68 +353,66 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        // A Method in a CallDyn is a Lookup.
-        In(CallDyn) *
-            (T(Method)
-             << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
-                 T(TypeArgs)[TypeArgs])) >>
-          [](Match& _) {
-            // TODO: what to do with the TypeArgs?
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Lookup << (LocalId ^ id) << _(LocalId)
-                                           << (MethodId ^ _(Ident))))
-                       << (LocalId ^ id) << (LocalId ^ _(LocalId));
-          },
+        // Dynamic call.
+        In(Expr) * T(Ref) << (T(Expr) << CallDynPat) >>
+          [](Match& _) { return make_calldyn(_, false, true); },
 
-        // Any other Method is a CallDyn.
-        --In(CallDyn) *
-            (T(Method)
-             << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
-                 T(TypeArgs)[TypeArgs])) >>
-          [](Match& _) {
-            // TODO: what to do with the TypeArgs?
-            auto lookup = _.fresh(l_local);
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Lookup << (LocalId ^ lookup) << _(LocalId)
-                                           << (MethodId ^ _(Ident))))
-                       << (Lift
-                           << Body
-                           << (CallDyn << (LocalId ^ id) << (LocalId ^ lookup)
-                                       << (Args << (LocalId ^ _(LocalId)))))
-                       << (LocalId ^ id);
-          },
+        In(Expr) * CallDynPat >>
+          [](Match& _) { return make_calldyn(_, false, false); },
 
-        // CallDyn.
-        In(Expr) *
-            (T(CallDyn)
-             << (T(LocalId)[LocalId] * T(LocalId)[Arg] * T(Args)[Args])) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (CallDyn << (LocalId ^ id) << _(LocalId)
-                                            << (Args << _(Arg) << *_[Args])))
-                       << (LocalId ^ id);
-          },
+        In(Lhs) * CallDynPat >>
+          [](Match& _) { return make_calldyn(_, true, true); },
 
-        // Call.
-        In(Expr) * (T(Call) << (T(QName)[QName] * T(Args)[Args])) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift
-                           << Body
-                           << (Call << (LocalId ^ id) << _(QName) << _(Args)))
-                       << (LocalId ^ id);
-          },
+        // 0-argument dynamic call.
+        In(Expr) * T(Ref) << (T(Expr) << MethodPat) >>
+          [](Match& _) { return make_calldyn(_, false, true); },
+
+        In(Expr) * MethodPat >>
+          [](Match& _) { return make_calldyn(_, false, false); },
+
+        In(Lhs) * MethodPat >>
+          [](Match& _) { return make_calldyn(_, true, true); },
+
+        // Static call.
+        In(Expr) * (T(Ref) << (T(Expr) << CallPat)) >>
+          [](Match& _) { return make_call(_, false, true); },
+
+        In(Expr) * CallPat >>
+          [](Match& _) { return make_call(_, false, false); },
+
+        In(Lhs) * CallPat >>
+          [](Match& _) { return make_call(_, false, false); },
 
         // Treat all Args as ArgCopy at this stage.
         In(Args) * T(LocalId)[LocalId] >>
           [](Match& _) { return Arg << ArgCopy << _(LocalId); },
 
-        // Compact RHS LocalId.
-        T(Expr) << (T(LocalId)[LocalId] * End) >>
+        // RHS reference creation.
+        In(Expr) * T(Ref) << T(LocalId)[LocalId] >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (RegisterRef << (LocalId ^ id) << _(LocalId)))
+                       << (LocalId ^ id);
+          },
+
+        // LHS dereference.
+        In(Lhs) * T(Ref) << (T(Ref) << T(LocalId)[LocalId]) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (Load << (LocalId ^ id) << _(LocalId)))
+                       << (Ref << (LocalId ^ id));
+          },
+
+        // Compact LocalId.
+        T(Expr, Lhs) << (T(LocalId)[LocalId] * End) >>
           [](Match& _) { return _(LocalId); },
+
+        // Compact LHS Ref LocalId.
+        T(Lhs) << (T(Ref) << T(LocalId)[LocalId] * End) >>
+          [](Match& _) { return Ref << _(LocalId); },
 
         // Combine non-terminal LocalId with an incomplete copy.
         // This is for `if` and `else`.
@@ -316,6 +421,10 @@ namespace vc
 
         // Discard non-terminal LocalId.
         In(Body) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
+
+        // Discard non-terminal Ref LocalId.
+        In(Body) * (T(Ref) << T(LocalId)) * ++Any >>
+          [](Match&) -> Node { return {}; },
 
         // A terminator followed by a Jump is an unnecessary Jump.
         In(Body) *

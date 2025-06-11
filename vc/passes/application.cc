@@ -147,13 +147,14 @@ namespace vc
         T(QName)[QName] >> [](Match& _) -> Node {
           auto def = resolve(_(QName));
 
-          // Error, create sugar, or function pointer.
           if (def == Error)
             return def;
-          else if (def->in({ClassDef, TypeAlias, TypeParam}))
+
+          if (def->in({ClassDef, TypeAlias, TypeParam}))
             return _(QName) << (QElement << (Ident ^ "create") << TypeArgs);
-          else
-            return NoChange;
+
+          assert(def == Function);
+          return NoChange;
         },
 
         // Ident resolution.
@@ -169,9 +170,8 @@ namespace vc
             }
             else if (def->in({ClassDef, TypeAlias, TypeParam}))
             {
-              // Create sugar.
-              return QName << (QElement << ident << TypeArgs)
-                           << (QElement << (Ident ^ "create") << TypeArgs);
+              // This will later be turned into create-sugar.
+              return QName << (QElement << ident << TypeArgs);
             }
             else if (def->in({ParamDef, Let, Var}))
             {

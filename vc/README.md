@@ -4,17 +4,17 @@ Infer the location for everything.
 - Separate expressions to add region constraints.
 - `a in b`, `a @ b`, or some such.
 
+Assign:
+  - *TO DO* need to be able to load a `localid`.
+  - Destructing assignment.
+  - Unknown: `=` on LHS of `=`?
+
 ANF:
-- Assign: LHS expressions.
-  - Yes: tuple (destructing), `call`, `calldyn`.
-  - `LocalId`: if it's a `var`, it's fine, if it's a `let`, there can be only one.
-  - No: lambda, `qname`, equals.
 - `if` with a lambda that takes arguments is a type test.
 - A `QName` is a function pointer.
   - If it's not in a call, which `arity`?
   - Type arguments?
 - For, When.
-  - Don't compact for condition.
 - Figure out copy and move.
   - Just do copy for now, figure out move later.
   - Could `vbcc` figure out move for us?
@@ -22,6 +22,8 @@ ANF:
 
 ## To Do
 
+- Try, sub-call, tail-call.
+- Set-once for `let`. Set-before-use for `let` and `var`.
 - Reachability and flattening.
   - Find all reachable classes and functions with their type arguments.
   - Flatten the classes and functions.
@@ -49,6 +51,7 @@ ANF:
       3. `C[X]::A` should resolve to `X::U`, which means tracking.
 - Code reuse.
 - Structural types.
+- Use libgit2 for fetching dependencies.
 - FFI.
 - Partial application, `_`.
 - Pattern matching.

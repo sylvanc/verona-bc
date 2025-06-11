@@ -34,12 +34,19 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     use Func2 = i32->i32->bool;
     use alias = std;
 
+    var zz = ref a.f;
+    zz = ref a.g; // zz is a new ref
+    ref zz = 7; // a.g = 7
+    zz = 7; // zz is no longer a ref, it's an int
+    zz = ref 7;
+    let zzz = *zz;
+
     (a, (b, let aa)) = 1;
 
     alias::test(a; b);
     foo::f1();
 
-    a.f;
+    a.f = 99;
 
     let c = i32(1);
     let d = 0.3e6;
