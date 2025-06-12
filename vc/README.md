@@ -20,6 +20,8 @@ ANF:
 - Handle terminators for labels.
 
 Tuples:
+- Destructing when the tuple is too short throws an error. Should it?
+- Destructing when the tuple is too long ignores the extra elements. Should it?
 - A `tuple` is a `[dyn]`?
   - What's the allocation location?
   - What's the syntax for tuple element reference?
@@ -44,8 +46,6 @@ Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
 
 Structure:
-- Could allow `ident::name` (lookup, no call).
-  - Like `ident.name`, but no first argument binding.
 - Reachability and flattening.
   - Find all reachable classes and functions with their type arguments.
   - Flatten the classes and functions.
@@ -58,8 +58,10 @@ Structure:
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
   - A free `var` is captured by reference. The lambda must be `stack` allocated.
 - Auto create, default argument sugar, member conflict.
-- Compile time evaluation.
 - Code reuse.
+- Could allow `ident::name` (lookup, no call).
+  - Like `ident.name`, but no first argument binding.
+- Compile time evaluation.
 - Structural types.
 
 Packages:

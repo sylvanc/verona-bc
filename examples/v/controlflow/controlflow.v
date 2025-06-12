@@ -1,11 +1,3 @@
-std
-{
-  builtin
-  {
-    i32 {}
-  }
-}
-
 // f0(): i32
 // {
 //   1 else 2 else 3

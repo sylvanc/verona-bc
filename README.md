@@ -45,6 +45,9 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* Local region.
+  * Per-frame.
+  * Automatically moved.
 * Is it ok to immortalize a stack allocated object? Seems like no?
 * Delayed send/freeze?
   * With delayed send, if send is still pending at behavior termination, we can reset stack RC and send.

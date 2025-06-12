@@ -53,8 +53,11 @@ namespace vc
 
     p.postfile([state](auto&, auto&, auto) { state->depth = 0; });
 
-    p.postparse([](auto&, auto& /*path*/, auto) {
-      // TODO: std?
+    p.postparse([](auto& pp, auto& path, auto ast) {
+      auto stdlib = pp.executable().parent_path() / "std";
+      if (path != stdlib)
+        ast << pp.sub_parse(stdlib);
+
       return 0;
     });
 

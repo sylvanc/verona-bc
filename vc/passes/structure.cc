@@ -12,7 +12,7 @@ namespace vc
     Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple, Let,
     Var,     Lambda,   QName,    Method, Call,      CallDyn,  If,    While,
     For,     When,     Equals,   Else,   Ref,       Try,      Op,    Convert,
-    Binop,   Unop,     Const,    Colon,  Vararg};
+    Binop,   Unop,     Nulop,    Const,  Colon,     Vararg};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -377,14 +377,16 @@ namespace vc
             return Unop << Acosh << seq_to_args(_(ExprSeq));
           else if (id == "atanh")
             return Unop << Atanh << seq_to_args(_(ExprSeq));
+          else if (id == "none")
+            return Nulop << None << seq_to_args(_(ExprSeq));
           else if (id == "e")
-            return Nulop << Const_E;
+            return Nulop << Const_E << seq_to_args(_(ExprSeq));
           else if (id == "pi")
-            return Nulop << Const_Pi;
+            return Nulop << Const_Pi << seq_to_args(_(ExprSeq));
           else if (id == "inf")
-            return Nulop << Const_Inf;
+            return Nulop << Const_Inf << seq_to_args(_(ExprSeq));
           else if (id == "nan")
-            return Nulop << Const_NaN;
+            return Nulop << Const_NaN << seq_to_args(_(ExprSeq));
 
           return NoChange;
         },

@@ -425,8 +425,9 @@ namespace vc
         // Binop.
         In(Expr, Lhs) * T(Binop)
             << (Any[Op] *
-                (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs]))
-                         << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs])))) >>
+                (T(Args)
+                 << ((T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])) *
+                     (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift
@@ -446,7 +447,14 @@ namespace vc
           },
 
         // Nulop.
-        In(Expr, Lhs) * T(Nulop) << (Any[Op] * T(Args)) >>
+        In(Expr, Lhs) * T(Nulop) << (T(None) * T(Args)) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body << (Const << (LocalId ^ id) << None))
+                       << (LocalId ^ id);
+          },
+
+        In(Expr, Lhs) * T(Nulop) << ((!T(None))[Op] * T(Args)) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body << (_(Op) << (LocalId ^ id)))

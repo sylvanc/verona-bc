@@ -110,7 +110,7 @@ namespace vc
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
     Tanh | Asinh | Acosh | Atanh;
 
-  inline const auto wfNulop = Const_E | Const_Pi | Const_Inf | Const_NaN;
+  inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
     RawString | Tuple | Let | Var | Lambda | QName | Op | Method | Call |

@@ -1,49 +1,5 @@
-std
+some
 {
-  builtin
-  {
-    none {}
-    bool {}
-
-    i32
-    {
-      create(x: u64)
-      {
-        :::convi32(x)
-      }
-
-      +(self: i32, other: i32): i32
-      {
-        :::add(self, other)
-      }
-
-      -(self: i32, other: i32): i32
-      {
-        :::sub(self, other)
-      }
-
-      -(self: i32): i32
-      {
-        :::neg(self)
-      }
-    }
-
-    i64 {}
-
-    u64
-    {
-      create(x: u64) { x }
-
-      -(self: u64): u64
-      {
-        :::neg(self)
-      }
-    }
-
-    f32 {}
-    f64 {}
-  }
-
   test() {}
 }
 
@@ -61,7 +17,7 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 
     use Func1 = (()->i32)->T1;
     use Func2 = i32->i32->bool;
-    use alias = std;
+    use alias = some;
 
     var zz = ref a.f;
     zz = ref a.g; // zz is a new ref
@@ -79,7 +35,7 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 
     let c = i32(1);
     let d = 0.3e6;
-    let x = std::test(a.f, 3) b c = 7;
+    let x = some::test(a.f, 3) b c = 7;
     var y: i32;
 
     $[none] 3;

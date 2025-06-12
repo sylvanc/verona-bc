@@ -1,0 +1,7 @@
+none
+{
+  create(): none
+  {
+    :::none()
+  }
+}

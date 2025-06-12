@@ -212,7 +212,6 @@ namespace vbci
 
           if (cls.singleton)
           {
-            // Return the singleton instance if there is one.
             dst = cls.singleton;
           }
           else
@@ -232,8 +231,16 @@ namespace vbci
           auto& dst = frame->local(leb());
           auto region = frame->local(leb()).region();
           auto& cls = program->cls(TypeId::leb(leb()));
-          check_args(cls.fields);
-          dst = &region->object(cls)->init(frame, cls);
+
+          if (cls.singleton)
+          {
+            dst = cls.singleton;
+          }
+          else
+          {
+            check_args(cls.fields);
+            dst = &region->object(cls)->init(frame, cls);
+          }
           break;
         }
 
@@ -242,8 +249,16 @@ namespace vbci
           auto& dst = frame->local(leb());
           auto region = Region::create(leb<RegionType>());
           auto& cls = program->cls(TypeId::leb(leb()));
-          check_args(cls.fields);
-          dst = &region->object(cls)->init(frame, cls);
+
+          if (cls.singleton)
+          {
+            dst = cls.singleton;
+          }
+          else
+          {
+            check_args(cls.fields);
+            dst = &region->object(cls)->init(frame, cls);
+          }
           break;
         }
 
