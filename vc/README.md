@@ -8,18 +8,18 @@ Assign:
 
 ANF:
 - A `tuple` is a `[dyn]`?
+  - What's the allocation location?
   - What's the syntax for tuple element reference?
     - `apply` method on `array`?
   - Can we do IR-level type checking?
     - IR tuple type demands `[dyn]` of correct size with elements that type check.
 - Break, continue need to deal with loop labels.
-- Since loops are expression, should `break` and `continue` have values?
+  - Since loops are expression, should `break` and `continue` have values?
 - `if` with a lambda that takes arguments is a type test.
   - Allow type test version of `for`?
   - Allow a pattern, not just a type test?
 - A `QName` is a function pointer.
   - If it's not in a call, which `arity`?
-  - Could allow `ident::name` (lookup, no call) to be a function pointer as well.
 - For, When.
 - Type arguments on calls?
 - Figure out copy and move.
@@ -44,6 +44,8 @@ Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
 
 Structure:
+- Could allow `ident::name` (lookup, no call).
+  - Like `ident.name`, but no first argument binding.
 - Reachability and flattening.
   - Find all reachable classes and functions with their type arguments.
   - Flatten the classes and functions.

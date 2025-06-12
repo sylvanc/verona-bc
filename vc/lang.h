@@ -163,10 +163,39 @@ namespace vc
     ;
   // clang-format on
 
+  // TODO: remove LocalId, Let, Var
+  inline const auto wfBody2 = Use | TypeAlias | Const | ConstStr | Convert |
+    Copy | Move | RegisterRef | FieldRef | ArrayRefConst | Load | Store |
+    Lookup | Call | CallDyn | Return | Raise | Throw | Cond | Jump | LocalId |
+    Let | Var;
+
   // clang-format off
   inline const auto wfPassANF =
       wfPassOperators
-    | (Label <<= LabelId * Body * (Return >>= wfTerminator))
+    | (Function <<= wfFuncId * TypeParams * Params * Type * Labels)[Ident]
+    | (Labels <<= Label++)
+    | (Label <<= LabelId * Body)
+    | (Body <<= wfBody2++)
+    | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
+    | (ConstStr <<= wfDst * String)
+    | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
+    | (Copy <<= wfDst * wfSrc)
+    | (Move <<= wfDst * wfSrc)
+    | (RegisterRef <<= wfDst * wfSrc)
+    | (FieldRef <<= wfDst * Arg * FieldId)
+    | (ArrayRefConst <<= wfDst * Arg * wfLit)
+    | (Load <<= wfDst * wfSrc)
+    | (Store <<= wfDst * wfSrc * Arg)
+    | (Lookup <<= wfDst * wfSrc * MethodId)
+    | (Call <<= wfDst * FunctionId * Args)
+    | (CallDyn <<= wfDst * wfSrc * Args)
+    | (Args <<= Arg++)
+    | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
+    | (Return <<= LocalId)
+    | (Raise <<= LocalId)
+    | (Throw <<= LocalId)
+    | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
+    | (Jump <<= LabelId)
     ;
   // clang-format on
 

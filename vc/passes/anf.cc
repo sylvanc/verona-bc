@@ -2,21 +2,6 @@
 
 namespace vc
 {
-  // Equals
-  // Tuple,
-  // Ref,
-  // Try,
-  // Lambda,
-  // QName,
-  // Method, done
-  // Call, done
-  // CallDyn, done
-  // If, done
-  // While, done
-  // For,
-  // When,
-  // Else, done
-
   // Sythetic locations.
   inline const auto l_local = Location("local");
   inline const auto l_label = Location("label");
@@ -91,12 +76,13 @@ namespace vc
     // ref is true if lvalue is true, or if the call is in a Ref node.
 
     // TODO: check that a version with this arity exists.
-    auto name = flat_qname(_(QName), _(Args)->size(), ref);
+    auto argc = _(Args) ? _(Args)->size() : 0;
+    auto name = flat_qname(_(QName), argc, ref);
     auto id = _.fresh(l_local);
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
     return Seq << (Lift << Body
                         << (Call << (LocalId ^ id) << (FunctionId ^ name)
-                                 << _(Args)))
+                                 << (Args << *_[Args])))
                << res;
   }
 
@@ -135,28 +121,21 @@ namespace vc
 
         // L-values.
         In(Expr) * T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs]) >>
-          [](Match& _) {
-            // TODO: experimenting
-            return Equals << (Lhs << *_[Lhs]) << _(Rhs);
-          },
+          [](Match& _) { return Equals << (Lhs << *_[Lhs]) << _(Rhs); },
 
         In(Lhs, TupleLHS) * T(Expr)[Expr] >>
-          [](Match& _) {
-            // TODO: experimenting
-            return Lhs << *_[Expr];
-          },
+          [](Match& _) { return Lhs << *_[Expr]; },
 
         In(Lhs) * T(Tuple)[Tuple] >>
-          [](Match& _) {
-            // TODO: experimenting
-            return TupleLHS << *_[Tuple];
-          },
+          [](Match& _) { return TupleLHS << *_[Tuple]; },
 
         // Assignment.
         T(Equals) << (T(LocalId)[Lhs] * T(LocalId)[Rhs]) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (Move << (LocalId ^ id) << _(Lhs)))
+            return Seq << (Lift
+                           << Body
+                           << (Move << (LocalId ^ id) << (LocalId ^ _(Lhs))))
                        << (Lift << Body << (Copy << _(Lhs) << _(Rhs)))
                        << (LocalId ^ id);
           },
@@ -408,6 +387,16 @@ namespace vc
           [](Match& _) { return make_call(_, false, false); },
 
         In(Lhs) * CallPat >>
+          [](Match& _) { return make_call(_, false, false); },
+
+        // 0-argument static call.
+        In(Expr) * (T(Ref) << (T(Expr) << T(QName)[QName])) >>
+          [](Match& _) { return make_call(_, false, true); },
+
+        In(Expr) * T(QName)[QName] >>
+          [](Match& _) { return make_call(_, false, false); },
+
+        In(Lhs) * T(QName)[QName] >>
           [](Match& _) { return make_call(_, false, false); },
 
         // Treat all Args as ArgCopy at this stage.
