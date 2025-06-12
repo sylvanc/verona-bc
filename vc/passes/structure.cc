@@ -6,12 +6,13 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType};
 
   // TODO: remove as more expressions are handled.
-  // everything from Const on isn't handled.
+  // everything from Colon on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,  True,      False,    Bin,   Oct,   Int,   Hex,
-    Float,   HexFloat, String, RawString, DontCare, Const, Tuple, Let,   Var,
-    Lambda,  QName,    Method, Call,      CallDyn,  If,    While, For,   When,
-    Equals,  Else,     Ref,    Try,       Op,       Const, Colon, Vararg};
+    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,   Int,
+    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple, Let,
+    Var,     Lambda,   QName,    Method, Call,      CallDyn,  If,    While,
+    For,     When,     Equals,   Else,   Ref,       Try,      Op,    Convert,
+    Binop,   Unop,     Const,    Colon,  Vararg};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -237,7 +238,7 @@ namespace vc
         In(Type)++ * In(Paren) * T(Group) << (SomeType[Type] * End) >>
           [](Match& _) { return _(Type); },
 
-        // Statements.
+        // Terminators.
         // Break, continue, return, raise, throw.
         T(Expr)[Expr]
             << (T(Break, Continue, Return, Raise, Throw)[Break] * Any++[Rhs]) >>
@@ -252,6 +253,140 @@ namespace vc
             return err(_(Expr), "Can't be used as an expression");
 
           return b << e;
+        },
+
+        // Builtins.
+        In(Expr) * T(TripleColon) * T(Ident)[Ident] * T(ExprSeq)[ExprSeq] >>
+          [](Match& _) -> Node {
+          auto id = _(Ident)->location().view();
+
+          // TODO: constants
+          if (id == "convi8")
+            return Convert << I8 << seq_to_args(_(ExprSeq));
+          else if (id == "convi16")
+            return Convert << I16 << seq_to_args(_(ExprSeq));
+          else if (id == "convi32")
+            return Convert << I32 << seq_to_args(_(ExprSeq));
+          else if (id == "convi64")
+            return Convert << I64 << seq_to_args(_(ExprSeq));
+          else if (id == "convu8")
+            return Convert << U8 << seq_to_args(_(ExprSeq));
+          else if (id == "convu16")
+            return Convert << U16 << seq_to_args(_(ExprSeq));
+          else if (id == "convu32")
+            return Convert << U32 << seq_to_args(_(ExprSeq));
+          else if (id == "convu64")
+            return Convert << U64 << seq_to_args(_(ExprSeq));
+          else if (id == "convilong")
+            return Convert << ILong << seq_to_args(_(ExprSeq));
+          else if (id == "convulong")
+            return Convert << ULong << seq_to_args(_(ExprSeq));
+          else if (id == "convisize")
+            return Convert << ISize << seq_to_args(_(ExprSeq));
+          else if (id == "convusize")
+            return Convert << USize << seq_to_args(_(ExprSeq));
+          else if (id == "convf32")
+            return Convert << F32 << seq_to_args(_(ExprSeq));
+          else if (id == "convf64")
+            return Convert << F64 << seq_to_args(_(ExprSeq));
+          else if (id == "add")
+            return Binop << Add << seq_to_args(_(ExprSeq));
+          else if (id == "sub")
+            return Binop << Sub << seq_to_args(_(ExprSeq));
+          else if (id == "mul")
+            return Binop << Mul << seq_to_args(_(ExprSeq));
+          else if (id == "div")
+            return Binop << Div << seq_to_args(_(ExprSeq));
+          else if (id == "mod")
+            return Binop << Mod << seq_to_args(_(ExprSeq));
+          else if (id == "pow")
+            return Binop << Pow << seq_to_args(_(ExprSeq));
+          else if (id == "and")
+            return Binop << And << seq_to_args(_(ExprSeq));
+          else if (id == "or")
+            return Binop << Or << seq_to_args(_(ExprSeq));
+          else if (id == "xor")
+            return Binop << Xor << seq_to_args(_(ExprSeq));
+          else if (id == "shl")
+            return Binop << Shl << seq_to_args(_(ExprSeq));
+          else if (id == "shr")
+            return Binop << Shr << seq_to_args(_(ExprSeq));
+          else if (id == "eq")
+            return Binop << Eq << seq_to_args(_(ExprSeq));
+          else if (id == "ne")
+            return Binop << Ne << seq_to_args(_(ExprSeq));
+          else if (id == "lt")
+            return Binop << Lt << seq_to_args(_(ExprSeq));
+          else if (id == "le")
+            return Binop << Le << seq_to_args(_(ExprSeq));
+          else if (id == "gt")
+            return Binop << Gt << seq_to_args(_(ExprSeq));
+          else if (id == "ge")
+            return Binop << Ge << seq_to_args(_(ExprSeq));
+          else if (id == "min")
+            return Binop << Min << seq_to_args(_(ExprSeq));
+          else if (id == "max")
+            return Binop << Max << seq_to_args(_(ExprSeq));
+          else if (id == "logbase")
+            return Binop << LogBase << seq_to_args(_(ExprSeq));
+          else if (id == "atan2")
+            return Binop << Atan2 << seq_to_args(_(ExprSeq));
+          else if (id == "neg")
+            return Unop << Neg << seq_to_args(_(ExprSeq));
+          else if (id == "not")
+            return Unop << Not << seq_to_args(_(ExprSeq));
+          else if (id == "abs")
+            return Unop << Abs << seq_to_args(_(ExprSeq));
+          else if (id == "ceil")
+            return Unop << Ceil << seq_to_args(_(ExprSeq));
+          else if (id == "floor")
+            return Unop << Floor << seq_to_args(_(ExprSeq));
+          else if (id == "exp")
+            return Unop << Exp << seq_to_args(_(ExprSeq));
+          else if (id == "log")
+            return Unop << Log << seq_to_args(_(ExprSeq));
+          else if (id == "sqrt")
+            return Unop << Sqrt << seq_to_args(_(ExprSeq));
+          else if (id == "cbrt")
+            return Unop << Cbrt << seq_to_args(_(ExprSeq));
+          else if (id == "isinf")
+            return Unop << IsInf << seq_to_args(_(ExprSeq));
+          else if (id == "isnan")
+            return Unop << IsNaN << seq_to_args(_(ExprSeq));
+          else if (id == "sin")
+            return Unop << Sin << seq_to_args(_(ExprSeq));
+          else if (id == "cos")
+            return Unop << Cos << seq_to_args(_(ExprSeq));
+          else if (id == "tan")
+            return Unop << Tan << seq_to_args(_(ExprSeq));
+          else if (id == "asin")
+            return Unop << Asin << seq_to_args(_(ExprSeq));
+          else if (id == "acos")
+            return Unop << Acos << seq_to_args(_(ExprSeq));
+          else if (id == "atan")
+            return Unop << Atan << seq_to_args(_(ExprSeq));
+          else if (id == "sinh")
+            return Unop << Sinh << seq_to_args(_(ExprSeq));
+          else if (id == "cosh")
+            return Unop << Cosh << seq_to_args(_(ExprSeq));
+          else if (id == "tanh")
+            return Unop << Tanh << seq_to_args(_(ExprSeq));
+          else if (id == "asinh")
+            return Unop << Asinh << seq_to_args(_(ExprSeq));
+          else if (id == "acosh")
+            return Unop << Acosh << seq_to_args(_(ExprSeq));
+          else if (id == "atanh")
+            return Unop << Atanh << seq_to_args(_(ExprSeq));
+          else if (id == "e")
+            return Nulop << Const_E;
+          else if (id == "pi")
+            return Nulop << Const_Pi;
+          else if (id == "inf")
+            return Nulop << Const_Inf;
+          else if (id == "nan")
+            return Nulop << Const_NaN;
+
+          return NoChange;
         },
 
         // Expressions.
@@ -457,6 +592,33 @@ namespace vc
             p = node->parent();
             p->replace(
               node, err(node, "Break or continue must be in a loop body"));
+            ok = false;
+          }
+        }
+        else if (node == Binop)
+        {
+          if ((node / Args)->size() != 2)
+          {
+            node->replace(
+              node->front(), err(node->front(), "Expected two arguments"));
+            ok = false;
+          }
+        }
+        else if (node == Unop)
+        {
+          if ((node / Args)->size() != 1)
+          {
+            node->replace(
+              node->front(), err(node->front(), "Expected one argument"));
+            ok = false;
+          }
+        }
+        else if (node == Nulop)
+        {
+          if ((node / Args)->size() != 0)
+          {
+            node->replace(
+              node->front(), err(node->front(), "Expected no arguments"));
             ok = false;
           }
         }

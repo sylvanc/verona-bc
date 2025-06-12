@@ -8,8 +8,8 @@ namespace vc
     // Literals.
     wfLiteral | String | RawString |
     // Symbols.
-    Ident | SymbolId | DontCare | Equals | Const | DoubleColon | Colon |
-    Vararg | Dot |
+    Ident | SymbolId | DontCare | Equals | Const | TripleColon | DoubleColon |
+    Colon | Vararg | Dot |
     // Keywords.
     Use | Let | Var | Ref | Try | If | Else | While | For | Break | Continue |
     When | Return | Raise | Throw;
@@ -155,6 +155,7 @@ namespace vc
         "=" >> [](auto& m) { m.add(Equals); },
         "#" >> [](auto& m) { m.add(Const); },
         "," >> [](auto& m) { m.seq(List); },
+        ":::" >> [](auto& m) { m.add(TripleColon); },
         "::" >> [](auto& m) { m.add(DoubleColon); },
         ":" >> [](auto& m) { m.add(Colon); },
         "\\.\\.\\." >> [](auto& m) { m.add(Vararg); },

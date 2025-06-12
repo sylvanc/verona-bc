@@ -7,19 +7,11 @@ Assign:
   - Keyword? Or a method on `ref`?
 
 ANF:
-- A `tuple` is a `[dyn]`?
-  - What's the allocation location?
-  - What's the syntax for tuple element reference?
-    - `apply` method on `array`?
-  - Can we do IR-level type checking?
-    - IR tuple type demands `[dyn]` of correct size with elements that type check.
 - Break, continue need to deal with loop labels.
   - Since loops are expression, should `break` and `continue` have values?
 - `if` with a lambda that takes arguments is a type test.
   - Allow type test version of `for`?
   - Allow a pattern, not just a type test?
-- A `QName` is a function pointer.
-  - If it's not in a call, which `arity`?
 - For, When.
 - Type arguments on calls?
 - Figure out copy and move.
@@ -28,6 +20,13 @@ ANF:
 - Handle terminators for labels.
 
 Tuples:
+- A `tuple` is a `[dyn]`?
+  - What's the allocation location?
+  - What's the syntax for tuple element reference?
+    - `apply` method on `array`?
+  - Can we do IR-level type checking?
+    - IR tuple type demands `[dyn]` of correct size with elements that type check.
+- Want to be able to return `(a, b)`, where the tuple is on the stack.
 - Flatten a tuple into another tuple.
 
 Calls:
@@ -35,6 +34,7 @@ Calls:
 - Set-once for `let`. Set-before-use for `let` and `var`.
 
 Expressions:
+- Only allow `:::` in `std::builtin`.
 - Partial application, `_`.
 - Pattern matching.
   - If a lambda can be a pattern, this becomes a series of `else`.

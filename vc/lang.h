@@ -15,6 +15,7 @@ namespace vc
   inline const auto Brace = TokenDef("brace");
   inline const auto List = TokenDef("list");
   inline const auto DoubleColon = TokenDef("doublecolon");
+  inline const auto TripleColon = TokenDef("triplecolon");
   inline const auto Dot = TokenDef("dot");
   inline const auto DontCare = TokenDef("dontcare");
   inline const auto Ident = TokenDef("ident", flag::print);
@@ -55,6 +56,9 @@ namespace vc
   inline const auto QElement = TokenDef("qelement");
   inline const auto Op = TokenDef("op");
   inline const auto Apply = TokenDef("apply");
+  inline const auto Binop = TokenDef("binop");
+  inline const auto Unop = TokenDef("unop");
+  inline const auto Nulop = TokenDef("nulop");
 
   inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
   inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
@@ -70,8 +74,18 @@ namespace vc
   inline const auto LiteralPat =
     T(True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
 
-  inline const auto ApplyLhsPat =
-    LiteralPat / T(ExprSeq, LocalId, Tuple, QName, Method, Call, CallDyn);
+  inline const auto ApplyLhsPat = LiteralPat /
+    T(ExprSeq,
+      LocalId,
+      Tuple,
+      QName,
+      Method,
+      Call,
+      CallDyn,
+      Convert,
+      Binop,
+      Unop,
+      Nulop);
 
   inline const auto ApplyRhsPat =
     ApplyLhsPat / T(DontCare, Lambda, If, While, For, When, Apply);
@@ -89,9 +103,19 @@ namespace vc
   // TODO: temporary placeholder.
   inline const auto wfTempExpr = Const | Colon | Vararg;
 
+  inline const auto wfBinop = Add | Sub | Mul | Div | Mod | Pow | And | Or |
+    Xor | Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
+
+  inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
+    Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
+    Tanh | Asinh | Acosh | Atanh;
+
+  inline const auto wfNulop = Const_E | Const_Pi | Const_Inf | Const_NaN;
+
   inline const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
     RawString | Tuple | Let | Var | Lambda | QName | Op | Method | Call |
-    CallDyn | If | Else | While | For | When | Equals | Ref | Try | wfTempExpr;
+    CallDyn | If | Else | While | For | When | Equals | Ref | Try | Convert |
+    Binop | Unop | Nulop | wfTempExpr;
 
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
 
@@ -137,6 +161,10 @@ namespace vc
     | (Return <<= ~Expr)
     | (Raise <<= ~Expr)
     | (Throw <<= ~Expr)
+    | (Convert <<= (Type >>= wfPrimitiveType) * Args)
+    | (Binop <<= (Op >>= wfBinop) * Args)
+    | (Unop <<= (Op >>= wfUnop) * Args)
+    | (Nulop <<= (Op >>= wfNulop) * Args)
     ;
   // clang-format on
 
@@ -167,7 +195,7 @@ namespace vc
   inline const auto wfBody2 = Use | TypeAlias | Const | ConstStr | Convert |
     Copy | Move | RegisterRef | FieldRef | ArrayRefConst | Load | Store |
     Lookup | Call | CallDyn | Return | Raise | Throw | Cond | Jump | LocalId |
-    Let | Var;
+    Let | Var | wfBinop | wfUnop | wfNulop;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -196,6 +224,54 @@ namespace vc
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
     | (Jump <<= LabelId)
+    | (Add <<= wfDst * wfLhs * wfRhs)
+    | (Sub <<= wfDst * wfLhs * wfRhs)
+    | (Mul <<= wfDst * wfLhs * wfRhs)
+    | (Div <<= wfDst * wfLhs * wfRhs)
+    | (Mod <<= wfDst * wfLhs * wfRhs)
+    | (Pow <<= wfDst * wfLhs * wfRhs)
+    | (And <<= wfDst * wfLhs * wfRhs)
+    | (Or <<= wfDst * wfLhs * wfRhs)
+    | (Xor <<= wfDst * wfLhs * wfRhs)
+    | (Shl <<= wfDst * wfLhs * wfRhs)
+    | (Shr <<= wfDst * wfLhs * wfRhs)
+    | (Eq <<= wfDst * wfLhs * wfRhs)
+    | (Ne <<= wfDst * wfLhs * wfRhs)
+    | (Lt <<= wfDst * wfLhs * wfRhs)
+    | (Le <<= wfDst * wfLhs * wfRhs)
+    | (Gt <<= wfDst * wfLhs * wfRhs)
+    | (Ge <<= wfDst * wfLhs * wfRhs)
+    | (Min <<= wfDst * wfLhs * wfRhs)
+    | (Max <<= wfDst * wfLhs * wfRhs)
+    | (LogBase <<= wfDst * wfLhs * wfRhs)
+    | (Atan2 <<= wfDst * wfLhs * wfRhs)
+    | (Neg <<= wfDst * wfSrc)
+    | (Not <<= wfDst * wfSrc)
+    | (Abs <<= wfDst * wfSrc)
+    | (Ceil <<= wfDst * wfSrc)
+    | (Floor <<= wfDst * wfSrc)
+    | (Exp <<= wfDst * wfSrc)
+    | (Log <<= wfDst * wfSrc)
+    | (Sqrt <<= wfDst * wfSrc)
+    | (Cbrt <<= wfDst * wfSrc)
+    | (IsInf <<= wfDst * wfSrc)
+    | (IsNaN <<= wfDst * wfSrc)
+    | (Sin <<= wfDst * wfSrc)
+    | (Cos <<= wfDst * wfSrc)
+    | (Tan <<= wfDst * wfSrc)
+    | (Asin <<= wfDst * wfSrc)
+    | (Acos <<= wfDst * wfSrc)
+    | (Atan <<= wfDst * wfSrc)
+    | (Sinh <<= wfDst * wfSrc)
+    | (Cosh <<= wfDst * wfSrc)
+    | (Tanh <<= wfDst * wfSrc)
+    | (Asinh <<= wfDst * wfSrc)
+    | (Acosh <<= wfDst * wfSrc)
+    | (Atanh <<= wfDst * wfSrc)
+    | (Const_E <<= wfDst)
+    | (Const_Pi <<= wfDst)
+    | (Const_Inf <<= wfDst)
+    | (Const_NaN <<= wfDst)
     ;
   // clang-format on
 

@@ -422,6 +422,37 @@ namespace vc
                        << (Ref << (LocalId ^ id));
           },
 
+        // Binop.
+        In(Expr, Lhs) * T(Binop)
+            << (Any[Op] *
+                (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs]))
+                         << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs])))) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (_(Op) << (LocalId ^ id) << _(Lhs) << _(Rhs)))
+                       << (LocalId ^ id);
+          },
+
+        // Unop.
+        In(Expr, Lhs) * T(Unop)
+            << (Any[Op] *
+                (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])))) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body << (_(Op) << (LocalId ^ id) << _(Lhs)))
+                       << (LocalId ^ id);
+          },
+
+        // Nulop.
+        In(Expr, Lhs) * T(Nulop) << (Any[Op] * T(Args)) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body << (_(Op) << (LocalId ^ id)))
+                       << (LocalId ^ id);
+          },
+
         // Compact LocalId.
         T(Expr, Lhs) << (T(LocalId)[LocalId] * End) >>
           [](Match& _) { return _(LocalId); },

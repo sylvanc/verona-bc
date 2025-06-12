@@ -7,10 +7,39 @@ std
 
     i32
     {
-      create(x: i32) { x }
+      create(x: u64)
+      {
+        :::convi32(x)
+      }
+
+      +(self: i32, other: i32): i32
+      {
+        :::add(self, other)
+      }
+
+      -(self: i32, other: i32): i32
+      {
+        :::sub(self, other)
+      }
+
+      -(self: i32): i32
+      {
+        :::neg(self)
+      }
     }
 
     i64 {}
+
+    u64
+    {
+      create(x: u64) { x }
+
+      -(self: u64): u64
+      {
+        :::neg(self)
+      }
+    }
+
     f32 {}
     f64 {}
   }
