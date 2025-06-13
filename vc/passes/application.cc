@@ -45,8 +45,8 @@ namespace vc
         auto find = resolve(def / TypeName);
         find = resolve_typealias(find);
 
-        // Lookdown returns a ClassDef, TypeAlias, TypeParam, FieldDef, or a
-        // list of Functions.
+        // Lookdown returns a ClassDef, TypeAlias, TypeParam, or a list of
+        // Functions.
         auto import_defs = find->lookdown(ident->location());
 
         if (import_defs.empty())
@@ -54,7 +54,7 @@ namespace vc
 
         find = import_defs.front();
 
-        if (find->in({FieldDef, Function}))
+        if (find == Function)
           continue;
 
         return find;
@@ -105,8 +105,8 @@ namespace vc
       if (find == Error)
         return err(ident, "Path is a complex type alias");
 
-      // Lookdown returns a ClassDef, TypeAlias, TypeParam, FieldDef, or a list
-      // of Functions.
+      // Lookdown returns a ClassDef, TypeAlias, TypeParam, or a list of
+      // Functions.
       ident = *it / Ident;
       auto defs = find->lookdown(ident->location());
 
@@ -114,9 +114,6 @@ namespace vc
         return err(ident, "Path not found");
 
       find = defs.front();
-
-      if (find == FieldDef)
-        return err(ident, "Path is a field");
     }
 
     // If a TypeName is a function, we return an error.

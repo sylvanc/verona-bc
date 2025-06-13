@@ -6,6 +6,7 @@ some
 foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 {
   _f: i32 = 8;
+  _g;
 
   f1() {}
 

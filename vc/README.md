@@ -37,6 +37,7 @@ Calls:
 
 Expressions:
 - Only allow `:::` in `std::builtin`.
+- Array operations for `std::builtin`.
 - Partial application, `_`.
 - Pattern matching.
   - If a lambda can be a pattern, this becomes a series of `else`.
@@ -50,14 +51,11 @@ Structure:
   - Find all reachable classes and functions with their type arguments.
   - Flatten the classes and functions.
   - Expand `QName` and `TypeName` to the flattened names.
-- Classes.
-  - Functions for field access.
-  - LHS functions (`ref` before function name), with auto RHS versions.
+- Auto create, default argument sugar, member conflict.
 - Lambdas to classes.
   - Mark free variables in lambdas.
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
   - A free `var` is captured by reference. The lambda must be `stack` allocated.
-- Auto create, default argument sugar, member conflict.
 - Code reuse.
 - Could allow `ident::name` (lookup, no call).
   - Like `ident.name`, but no first argument binding.

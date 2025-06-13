@@ -76,6 +76,8 @@ namespace vc
     // ref is true if lvalue is true, or if the call is in a Ref node.
 
     // TODO: check that a version with this arity exists.
+    // if it's a ref call, an Lhs function must exist.
+    // otherwise, either an Lhs or Rhs is sufficient.
     auto argc = _(Args) ? _(Args)->size() : 0;
     auto name = flat_qname(_(QName), argc, ref);
     auto id = _.fresh(l_local);
@@ -117,6 +119,17 @@ namespace vc
           [](Match& _) {
             auto id = _(Body)->parent(Function) / Ident;
             return Labels << (Label << (LabelId ^ id) << _(Body));
+          },
+
+        // Field reference.
+        In(Expr) * T(FieldRef) << (T(LocalId)[LocalId] * T(FieldId)[FieldId]) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (FieldRef << (LocalId ^ id)
+                                             << (Arg << ArgCopy << _(LocalId))
+                                             << _(FieldId)))
+                       << (LocalId ^ id);
           },
 
         // L-values.
@@ -504,6 +517,21 @@ namespace vc
         // Discard leading LocalId in ExprSeq.
         In(ExprSeq) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
       }};
+
+    // TODO: is this needed?
+    p.post([](auto top) {
+      top->traverse([&](auto node) {
+        bool ok = true;
+
+        if (node == Error)
+        {
+          ok = false;
+        }
+
+        return ok;
+      });
+      return 0;
+    });
 
     return p;
   }

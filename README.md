@@ -48,6 +48,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * Local region.
   * Per-frame.
   * Automatically moved.
+* Do programs ever need to create null pointers?
 * Is it ok to immortalize a stack allocated object? Seems like no?
 * Delayed send/freeze?
   * With delayed send, if send is still pending at behavior termination, we can reset stack RC and send.
@@ -72,7 +73,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Need a different `ValueType` to avoid doing this for all objects/arrays.
   * Compatible with FFI.
   * Can't store? Or is a store a copy? How do we initialize the field?
-* Make a `bool[]` have 1-bit instead of 8-bit elements.
+* Make a `[bool]` have 1-bit instead of 8-bit elements.
 * Math ops for numeric limits, by type?
 * FFI with `libffi`.
   * Can we wrap returned `struct` as objects?

@@ -3,16 +3,16 @@
 namespace vc
 {
   const std::initializer_list<Token> wfTypeElement = {
-    TypeName, Union, Isect, FuncType, TupleType};
+    TypeName, Union, Isect, FuncType, TupleType, RefType};
 
   // TODO: remove as more expressions are handled.
-  // everything from Colon on isn't handled.
+  // everything from Const on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,   Int,
-    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple, Let,
-    Var,     Lambda,   QName,    Method, Call,      CallDyn,  If,    While,
-    For,     When,     Equals,   Else,   Ref,       Try,      Op,    Convert,
-    Binop,   Unop,     Nulop,    Const,  Colon,     Vararg};
+    ExprSeq, DontCare, Ident,    True,     False,     Bin,      Oct,   Int,
+    Hex,     Float,    HexFloat, String,   RawString, DontCare, Tuple, Let,
+    Var,     Lambda,   QName,    Method,   Call,      CallDyn,  If,    While,
+    For,     When,     Equals,   Else,     Ref,       Try,      Op,    Convert,
+    Binop,   Unop,     Nulop,    FieldRef, Load,      Const,    Colon, Vararg};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -22,7 +22,7 @@ namespace vc
   const auto NamedType =
     T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
   const auto SomeType =
-    T(TypeName, Union, Isect, TupleType, FuncType, NoArgType);
+    T(TypeName, Union, Isect, RefType, TupleType, FuncType, NoArgType);
 
   Node make_typename(NodeRange r)
   {
@@ -60,6 +60,37 @@ namespace vc
     {
       return t << lhs << rhs;
     }
+  }
+
+  Node make_typeargs(Node typeparams)
+  {
+    Node ta = TypeArgs;
+
+    for (auto& tp : *typeparams)
+    {
+      ta
+        << (Type
+            << (TypeName << (TypeElement << clone(tp / Ident) << TypeArgs)));
+    }
+
+    return ta;
+  }
+
+  Node make_selftype(Node node)
+  {
+    auto cls = node->parent(ClassDef);
+    auto tps = cls / TypeParams;
+    return Type
+      << (TypeName
+          << (TypeElement << clone(cls / Ident) << make_typeargs(tps)));
+  }
+
+  Node make_qname(Node ident, Node tps)
+  {
+    auto cls = ident->parent(ClassDef);
+    auto cls_tps = cls / TypeParams;
+    return QName << (QElement << clone(cls / Ident) << make_typeargs(cls_tps))
+                 << (QElement << clone(ident) << make_typeargs(tps));
   }
 
   Node make_qname(NodeRange r)
@@ -113,20 +144,82 @@ namespace vc
         // Field.
         In(ClassBody) * T(Group) << (FieldPat * End) >>
           [](Match& _) {
-            return FieldDef << _(Ident) << (Type << _[Type])
-                            << (Body << (Group << _[Body]));
+            auto type = clone(Type << _[Type]);
+            Node reftype =
+              _[Type].empty() ? Type : Type << (RefType << _[Type]);
+            return Seq << (FieldDef << clone(_(Ident)) << type
+                                    << (Body << (Group << _[Body])))
+                       << (Function
+                           << Lhs << clone(_(Ident)) << (TypeParams)
+                           << (Params
+                               << (ParamDef << (Ident ^ "self")
+                                            << make_selftype(_(Ident)) << Body))
+                           << reftype
+                           << (Body
+                               << (Expr
+                                   << (FieldRef << (Expr << (Ident ^ "self"))
+                                                << (FieldId ^ _(Ident))))));
           },
 
         // Function.
         In(ClassBody) * T(Group)
-            << (T(Ident, SymbolId)[Ident] * ~TypeParamsPat[TypeParams] *
-                ParamsPat[Params] * ~(T(Colon) * (!T(Brace))++[Type]) *
-                T(Brace)[Brace]) >>
+            << (~T(Ref)[Ref] * T(Ident, SymbolId)[Ident] *
+                ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
+                ~(T(Colon) * (!T(Brace))++[Type]) * T(Brace)[Brace]) >>
           [](Match& _) {
-            return Function << _(Ident) << (TypeParams << *_[TypeParams])
+            Node side = _(Ref) ? Lhs : Rhs;
+            return Function << side << _(Ident)
+                            << (TypeParams << *_[TypeParams])
                             << (Params << *_[Params]) << (Type << _[Type])
                             << (Body << *_[Brace]);
           },
+
+        // Auto-RHS.
+        In(ClassBody) * T(Function)[Function]
+            << (T(Lhs) * T(Ident, SymbolId)[Ident] * T(TypeParams)[TypeParams] *
+                T(Params)[Params] * T(Type)[Type]) >>
+          [](Match& _) -> Node {
+          // Check if an RHS function with the same name and arity exists.
+          auto ident = _(Ident);
+          auto arity = _(Params)->size();
+          auto cls = _(Function)->parent(ClassBody);
+
+          for (auto& def : *cls)
+          {
+            if (
+              (def == Function) && ((def / Lhs) == Rhs) &&
+              (def / Ident)->equals(ident) && ((def / Params)->size() == arity))
+              return NoChange;
+          }
+
+          // If Type is a RefType, unwrap it, otherwise empty.
+          auto type = _(Type);
+
+          if (!type->empty() && (type->front() == RefType))
+            type = Type << clone(type->front()->front());
+          else
+            type = Type;
+
+          // Forward the arguments.
+          Node args = Args;
+
+          for (auto& param : *_(Params))
+            args << (Expr << clone(param / Ident));
+
+          // Create the RHS function.
+          auto rhs =
+            Function << Rhs << clone(ident) << clone(_(TypeParams))
+                     << clone(_(Params)) << type
+                     << (Body
+                         << (Expr
+                             << (Load
+                                 << (Expr << Ref
+                                          << (Call << make_qname(
+                                                        ident, _(TypeParams))
+                                                   << args)))));
+
+          return Seq << _(Function) << rhs;
+        },
 
         // Type alias.
         T(Group)[Group]
@@ -205,9 +298,13 @@ namespace vc
         In(Type)++ * SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
           [](Match& _) { return merge_type(Isect, _(Lhs), _(Rhs)); },
 
+        // Reference type.
+        In(Type)++ * T(Ref) * SomeType[Type] >>
+          [](Match& _) { return RefType << _(Type); },
+
         // Tuple type.
         In(Type)++ * T(List)[List] >>
-          [](Match& _) -> Node { return TupleType << *_[List]; },
+          [](Match& _) { return TupleType << *_[List]; },
 
         // Tuple type element.
         In(TupleType) * T(Group) << (SomeType[Type] * End) >>
@@ -260,7 +357,6 @@ namespace vc
           [](Match& _) -> Node {
           auto id = _(Ident)->location().view();
 
-          // TODO: constants
           if (id == "convi8")
             return Convert << I8 << seq_to_args(_(ExprSeq));
           else if (id == "convi16")
@@ -574,7 +670,7 @@ namespace vc
             ok = false;
           }
         }
-        else if (node->in({Union, Isect, TupleType}))
+        else if (node->in({Union, Isect, RefType, TupleType}))
         {
           for (auto& child : *node)
           {
