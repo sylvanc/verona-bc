@@ -1,58 +1,13 @@
 #pragma once
 
 #include "ident.h"
+#include "location.h"
 #include "logging.h"
 #include "region.h"
 #include "value.h"
 
 namespace vbci
 {
-  namespace loc
-  {
-    static constexpr auto Stack = uintptr_t(0x1);
-    static constexpr auto Immutable = uintptr_t(0x2);
-    static constexpr auto Pending = uintptr_t(0x3);
-    static constexpr auto Mask = uintptr_t(0x3);
-    static constexpr auto Immortal = uintptr_t(-1) & ~Stack;
-
-    inline bool no_rc(Location loc)
-    {
-      return ((loc & Stack) != 0) || (loc == Immortal);
-    }
-
-    inline bool is_region(Location loc)
-    {
-      return (loc & Mask) == 0;
-    }
-
-    inline bool is_stack(Location loc)
-    {
-      return (loc & Mask) == Stack;
-    }
-
-    inline bool is_immutable(Location loc)
-    {
-      return (loc & Mask) == Immutable;
-    }
-
-    inline bool is_pending(Location loc)
-    {
-      return (loc & Mask) == Pending;
-    }
-
-    inline Region* to_region(Location loc)
-    {
-      assert(is_region(loc));
-      return reinterpret_cast<Region*>(loc);
-    }
-
-    inline Header* to_scc(Location loc)
-    {
-      assert(is_immutable(loc));
-      return reinterpret_cast<Header*>(loc & ~Immutable);
-    }
-  }
-
   struct Header
   {
   private:
@@ -69,76 +24,120 @@ namespace vbci
   protected:
     Header(Location loc, TypeId type_id) : loc(loc), rc(1), type_id(type_id) {}
 
-    bool safe_store(Value& v)
+    bool write_barrier(Value& prev, Value& next)
     {
+      auto ploc = prev.location();
+      auto nloc = next.location();
+      Location frame;
+      Location nframe;
+
       if (loc::is_immutable(loc))
+      {
+        // Nothing can be stored to an immutable location.
         return false;
-
-      bool stack = loc::is_stack(loc);
-      auto vloc = v.location();
-      bool vstack = loc::is_stack(vloc);
-
-      if (stack)
-      {
-        // If v is in a younger frame, fail.
-        if (vstack && (vloc > loc))
-          return false;
       }
-      else
+      else if (loc::is_stack(loc))
       {
-        auto r = loc::to_region(loc);
-
-        // Can't store if v is on the stack.
-        if (vstack)
-          return false;
-
-        if (loc::is_region(vloc))
+        if (loc::is_immutable(nloc))
         {
-          auto vr = loc::to_region(vloc);
+          // Ok.
+        }
+        else if (loc::is_stack(nloc))
+        {
+          // Older frames can't point to newer frames.
+          if (loc < nloc)
+            return false;
+        }
+        else
+        {
+          assert(loc::is_region(nloc));
+          auto nr = loc::to_region(nloc);
 
-          // Can't store if they're in a different region that has a parent, or
-          // if they're an ancestor of this region.
-          if ((r != vr) && (vr->has_parent() || vr->is_ancestor(r)))
+          // Older frames can't point to newer frames.
+          if (nr->get_frame_id(nframe) && (loc < nframe))
             return false;
         }
       }
+      else
+      {
+        assert(loc::is_region(loc));
+        auto r = loc::to_region(loc);
 
-      return true;
-    }
+        if (loc::is_immutable(nloc))
+        {
+          // Ok.
+        }
+        else if (loc::is_stack(nloc))
+        {
+          // Drag a stack allocation to a region. This will fail unless the
+          // region is frame-local and no older than the stack allocation.
+          if (!drag_allocation(r, next.get_header()))
+            return false;
+        }
+        else
+        {
+          assert(loc::is_region(nloc));
+          auto nr = loc::to_region(nloc);
 
-    void region_store(Value& dst, Value& src)
-    {
-      // If this is a stack allocation, we're moving the stack RC from the
-      // store location to the register (for prev), or from the register to
-      // the store location (for src).
-      auto dst_loc = dst.location();
-      auto src_loc = src.location();
+          if (r == nr)
+          {
+            // Ok.
+          }
+          else if (nr->get_frame_id(nframe))
+          {
+            // Drag a frame-local allocation to a region.
+            if (!drag_allocation(r, next.get_header()))
+              return false;
+          }
+          else if (nr->has_parent())
+          {
+            // Regions can only have a single entry point.
+            if (!loc::is_region(ploc) || (loc::to_region(ploc) != nr))
+              return false;
+          }
+          else if (nr->is_ancestor_of(r))
+          {
+            // Regions can't form cycles.
+            return false;
+          }
+        }
+      }
 
-      if (loc::is_stack(loc) || (dst_loc == src_loc))
-        return;
+      // At this point, the write barrier is satisfied.
+      if (
+        (ploc == nloc) || loc::is_stack(loc) ||
+        loc::to_region(loc)->get_frame_id(frame))
+      {
+        // If the previous and next locations are the same, or if the location
+        // is a stack allocation, or if the location is a frame-local region, no
+        // action is needed.
+        return true;
+      }
 
-      if (loc::is_region(dst_loc))
+      if (loc::is_region(ploc))
       {
         // Increment the region stack RC.
-        auto dst_r = loc::to_region(dst_loc);
-        dst_r->stack_inc();
+        auto pr = loc::to_region(ploc);
+        pr->stack_inc();
 
         // Clear the parent if it's in a different region.
-        if (dst_loc != loc)
-          dst_r->clear_parent();
+        if (ploc != loc)
+          pr->clear_parent();
       }
 
-      if (loc::is_region(src_loc))
+      if (loc::is_region(nloc))
       {
-        auto src_r = loc::to_region(src_loc);
+        auto nr = loc::to_region(nloc);
 
         // Set the parent if it's in a different region.
-        if (src_loc != loc)
-          src_r->set_parent(loc::to_region(loc));
+        if (nloc != loc)
+          nr->set_parent(loc::to_region(loc));
 
         // Decrement the region stack RC. This can't free the region.
-        src_r->stack_dec();
+        nr->stack_dec();
       }
+
+      return true;
     }
 
     Header* get_scc()
@@ -201,6 +200,11 @@ namespace vbci
       return type_id;
     }
 
+    RC get_rc()
+    {
+      return rc;
+    }
+
     bool is_array()
     {
       return type_id.is_array();
@@ -217,6 +221,15 @@ namespace vbci
         return nullptr;
 
       return loc::to_region(loc);
+    }
+
+    void move_region(Region* to)
+    {
+      if (loc::is_region(loc))
+        loc::to_region(loc)->remove(this);
+
+      loc = Location(to);
+      to->insert(this);
     }
 
     bool sendable()

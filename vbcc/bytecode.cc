@@ -822,6 +822,11 @@ namespace vbcc
             code << uleb(+Op::Convert) << dst(stmt) << uleb(+val(stmt / Type))
                  << rhs(stmt);
           }
+          else if (stmt == New)
+          {
+            args(stmt / Args);
+            code << uleb(+Op::New) << dst(stmt) << cls(stmt);
+          }
           else if (stmt == Stack)
           {
             args(stmt / Args);
@@ -836,6 +841,16 @@ namespace vbcc
           {
             args(stmt / Args);
             code << uleb(+Op::Region) << dst(stmt) << rgn(stmt) << cls(stmt);
+          }
+          else if (stmt == NewArray)
+          {
+            code << uleb(+Op::NewArray) << dst(stmt) << rhs(stmt)
+                 << uleb(typ(stmt / Type));
+          }
+          else if (stmt == NewArrayConst)
+          {
+            code << uleb(+Op::NewArrayConst) << dst(stmt)
+                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
           }
           else if (stmt == StackArray)
           {

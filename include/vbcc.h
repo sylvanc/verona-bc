@@ -57,9 +57,12 @@ namespace vbcc
   inline const auto Global = TokenDef("global");
   inline const auto Const = TokenDef("const");
   inline const auto Convert = TokenDef("convert");
+  inline const auto New = TokenDef("new");
   inline const auto Stack = TokenDef("stack");
   inline const auto Heap = TokenDef("heap");
   inline const auto Region = TokenDef("region");
+  inline const auto NewArray = TokenDef("newarray");
+  inline const auto NewArrayConst = TokenDef("newarrayconst");
   inline const auto StackArray = TokenDef("stackarray");
   inline const auto StackArrayConst = TokenDef("stackarrayconst");
   inline const auto HeapArray = TokenDef("heaparray");
@@ -216,11 +219,12 @@ namespace vbcc
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfStatement = Source | Offset | Global | Const | ConstStr |
-    Convert | Stack | Heap | Region | StackArray | StackArrayConst | HeapArray |
-    HeapArrayConst | RegionArray | RegionArrayConst | Copy | Move | Drop |
-    RegisterRef | FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup |
-    FnPointer | Arg | Call | CallDyn | Subcall | SubcallDyn | Try | TryDyn |
-    FFI | When | Typetest | wfBinop | wfUnop | wfConst;
+    Convert | New | Stack | Heap | Region | NewArray | NewArrayConst |
+    StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
+    RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
+    ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
+    Subcall | SubcallDyn | Try | TryDyn | FFI | When | Typetest | wfBinop |
+    wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -268,9 +272,12 @@ namespace vbcc
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     | (ConstStr <<= wfDst * String)
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
+    | (New <<= wfDst * ClassId * Args)
     | (Stack <<= wfDst * ClassId * Args)
     | (Heap <<= wfDst * wfSrc * ClassId * Args)
     | (Region <<= wfDst * wfRgn * ClassId * Args)
+    | (NewArray <<= wfDst * (Type >>= wfType) * wfRhs)
+    | (NewArrayConst <<= wfDst * (Type >>= wfType) * wfLit)
     | (StackArray <<= wfDst * (Type >>= wfType) * wfRhs)
     | (StackArrayConst <<= wfDst * (Type >>= wfType) * wfLit)
     | (HeapArray <<= wfDst * wfLhs * (Type >>= wfType) * wfRhs)

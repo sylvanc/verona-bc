@@ -3,9 +3,11 @@ add_executable(vbci
   dynlib.cc
   frame.cc
   freeze.cc
+  location.cc
   main.cc
   program.cc
   region.cc
+  region_rc.cc
   thread.cc
   types.cc
   value.cc

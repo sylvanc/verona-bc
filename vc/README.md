@@ -12,6 +12,7 @@ ANF:
 - `if` with a lambda that takes arguments is a type test.
   - Allow type test version of `for`?
   - Allow a pattern, not just a type test?
+  - If all lambdas are patterns that return `nomatch`, then `if` with a lambda is the same as invoking the lambda with the value.
 - For, When.
 - Type arguments on calls?
 - Figure out copy and move.

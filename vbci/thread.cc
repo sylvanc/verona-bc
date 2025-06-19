@@ -205,6 +205,23 @@ namespace vbci
           break;
         }
 
+        case Op::New:
+        {
+          auto& dst = frame->local(leb());
+          auto& cls = program->cls(TypeId::leb(leb()));
+
+          if (cls.singleton)
+          {
+            dst = cls.singleton;
+          }
+          else
+          {
+            check_args(cls.fields);
+            dst = &frame->region.object(cls)->init(frame, cls);
+          }
+          break;
+        }
+
         case Op::Stack:
         {
           auto& dst = frame->local(leb());
@@ -259,6 +276,24 @@ namespace vbci
             check_args(cls.fields);
             dst = &region->object(cls)->init(frame, cls);
           }
+          break;
+        }
+
+        case Op::NewArray:
+        {
+          auto& dst = frame->local(leb());
+          auto size = frame->local(leb()).get_size();
+          auto type_id = TypeId::leb(leb());
+          dst = frame->region.array(type_id, size);
+          break;
+        }
+
+        case Op::NewArrayConst:
+        {
+          auto& dst = frame->local(leb());
+          auto type_id = TypeId::leb(leb());
+          auto size = leb();
+          dst = frame->region.array(type_id, size);
           break;
         }
 
@@ -1035,11 +1070,17 @@ namespace vbci
 
   void Thread::teardown()
   {
+    // Drop all frame registers.
     frame->drop();
 
+    // Finalize the stack.
     for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
       finalize.at(i)->finalize();
 
+    // Finalize the frame-local region.
+    frame->region.free_contents();
+
+    // Pop the stack.
     stack.restore(frame->save);
   }
 

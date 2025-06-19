@@ -2,6 +2,7 @@
 
 #include "classes.h"
 #include "ident.h"
+#include "location.h"
 #include "types.h"
 
 #include <vbci.h>
@@ -11,12 +12,11 @@ namespace vbci
   struct Region
   {
   private:
-    static constexpr auto CownParent = uintptr_t(0x1);
-    Region* parent;
+    Location parent;
     RC stack_rc;
 
   protected:
-    Region() : parent(nullptr), stack_rc(0) {}
+    Region() : parent(0), stack_rc(0) {}
     virtual ~Region() = default;
 
   public:
@@ -25,45 +25,46 @@ namespace vbci
     virtual Object* object(Class& cls) = 0;
     virtual Array* array(TypeId type_id, size_t size) = 0;
     virtual void rfree(Header* h) = 0;
+    virtual void insert(Header* h) = 0;
     virtual void remove(Header* h) = 0;
     virtual bool enable_rc() = 0;
 
-    void stack_inc()
+    void stack_inc(RC inc = 1)
     {
       // If we transition from 0 to 1, we need to increment the parent RC.
-      if ((stack_rc++ == 0) && (parent != nullptr))
-        parent->stack_inc();
+      if ((stack_rc == 0) && loc::is_region(parent))
+        loc::to_region(parent)->stack_inc();
+
+      stack_rc += inc;
     }
 
     bool stack_dec()
     {
       if (--stack_rc == 0)
       {
-        if (parent == nullptr)
+        if (parent == loc::None)
         {
-          // Returns false if the region has beeen freed.
+          // Returns false if the region has been freed.
           free_region();
           return false;
         }
 
         // If we transition from 1 to 0, we need to decrement the parent RC.
-        parent->stack_dec();
+        if (loc::is_region(parent))
+          loc::to_region(parent)->stack_dec();
       }
 
       return true;
     }
 
-    bool is_ancestor(Region* r)
+    bool is_ancestor_of(Region* r)
     {
-      while (Region* p = r->parent)
+      while (loc::is_region(r->parent))
       {
-        if (p == reinterpret_cast<Region*>(CownParent))
-          return false;
+        r = loc::to_region(r->parent);
 
-        if (p == this)
+        if (r == this)
           return true;
-
-        r = p;
       }
 
       return false;
@@ -72,38 +73,62 @@ namespace vbci
     bool sendable()
     {
       assert(stack_rc > 0);
-      return (parent == nullptr) && (stack_rc == 1);
+      return (parent == loc::None) && (stack_rc == 1);
     }
 
     bool has_parent()
     {
-      return parent != nullptr;
+      return parent != loc::None;
+    }
+
+    Location get_parent()
+    {
+      return parent;
+    }
+
+    bool get_frame_id(Location& frame_id)
+    {
+      if (loc::is_stack(parent))
+      {
+        frame_id = parent;
+        return true;
+      }
+
+      return false;
+    }
+
+    void set_frame_id(Location frame_id)
+    {
+      assert(!has_parent());
+      assert(stack_rc > 0);
+      parent = frame_id;
     }
 
     void set_parent(Region* r)
     {
-      assert(parent == nullptr);
-      assert(stack_rc > 0);
-      parent = r;
-      parent->stack_inc();
+      assert(!has_parent());
+      parent = Location(r);
+
+      if (stack_rc > 0)
+        r->stack_inc();
     }
 
     void set_parent()
     {
-      assert(parent == nullptr);
+      assert(!has_parent());
       assert(stack_rc > 0);
-      parent = reinterpret_cast<Region*>(CownParent);
+      parent = loc::Immutable;
     }
 
     void clear_parent()
     {
-      assert(parent != nullptr);
+      assert(has_parent());
       assert(stack_rc > 0);
 
-      if (parent != reinterpret_cast<Region*>(CownParent))
-        parent->stack_dec();
+      if (loc::is_region(parent))
+        loc::to_region(parent)->stack_dec();
 
-      parent = nullptr;
+      parent = loc::None;
     }
 
   private:

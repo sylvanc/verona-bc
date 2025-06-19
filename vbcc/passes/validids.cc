@@ -159,8 +159,8 @@ namespace vbcc
           return NoChange;
         },
 
-        T(Stack, Heap, Region)[Stack] >> [state](Match& _) -> Node {
-          auto alloc = _(Stack);
+        T(New, Stack, Heap, Region)[New] >> [state](Match& _) -> Node {
+          auto alloc = _(New);
           auto id = state->get_class_id(alloc / ClassId);
 
           if (!id)

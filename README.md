@@ -46,8 +46,9 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * Local region.
-  * Per-frame.
-  * Automatically moved.
+  * `cown` store?
+  * Can't send a local region object.
+  * Returning a frame-local object.
 * Do programs ever need to create null pointers?
 * Is it ok to immortalize a stack allocated object? Seems like no?
 * Delayed send/freeze?

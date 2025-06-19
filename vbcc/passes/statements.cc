@@ -212,6 +212,8 @@ namespace vbcc
           Symbol,
           Func,
           Param,
+          NewArray,
+          NewArrayConst,
           StackArray,
           StackArrayConst,
           HeapArray,
@@ -358,6 +360,12 @@ namespace vbcc
           [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },
 
         // Allocation.
+        Dst * T(New) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
+          [](Match& _) {
+            return New << _(LocalId) << (ClassId ^ _(GlobalId))
+                       << callargs(_[Args]);
+          },
+
         Dst * T(Stack) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
             return Stack << _(LocalId) << (ClassId ^ _(GlobalId))
@@ -376,6 +384,18 @@ namespace vbcc
           [](Match& _) {
             return Region << _(LocalId) << _(Rhs) << (ClassId ^ _(GlobalId))
                           << callargs(_[Args]);
+          },
+
+        Dst * T(New) * TypePat[Type] * ArrayDynArg >>
+          [](Match& _) { return NewArray << _(LocalId) << _(Type) << _(Arg); },
+
+        Dst * T(New) * TypePat[Type] * ArrayConstArg >>
+          [](Match& _) {
+            auto r = check_literal(U64, _(Arg));
+            if (r)
+              return r;
+
+            return NewArrayConst << _(LocalId) << _(Type) << _(Arg);
           },
 
         Dst * T(Stack) * TypePat[Type] * ArrayDynArg >>

@@ -3,6 +3,7 @@
 #include "stack.h"
 #include "types.h"
 #include "value.h"
+#include "region_rc.h"
 
 #include <span>
 #include <vector>
@@ -11,6 +12,7 @@ namespace vbci
 {
   struct Frame
   {
+    RegionRC region;
     Function* func;
     Location frame_id;
     Stack::Idx save;

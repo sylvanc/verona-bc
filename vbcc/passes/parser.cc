@@ -67,6 +67,7 @@ namespace vbcc
         "global\\b" >> [](auto& m) { m.add(Global); },
         "const\\b" >> [](auto& m) { m.add(Const); },
         "convert\\b" >> [](auto& m) { m.add(Convert); },
+        "new\\b" >> [](auto& m) { m.add(New); },
         "stack\\b" >> [](auto& m) { m.add(Stack); },
         "heap\\b" >> [](auto& m) { m.add(Heap); },
         "region\\b" >> [](auto& m) { m.add(Region); },

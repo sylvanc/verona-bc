@@ -39,6 +39,12 @@ namespace vbci
     // Arg2 = src.
     Convert,
 
+    // Allocates a new object in the frame-local region. Fields are initialized
+    // from arguments.
+    // Arg0 = dst.
+    // Arg1 = class ID.
+    New,
+
     // Allocates a new object in the current frame. Fields are initialized from
     // arguments.
     // Arg0 = dst.
@@ -58,6 +64,20 @@ namespace vbci
     // Arg1 = region type.
     // Arg2 = class ID.
     Region,
+
+    // Allocates a new array in the frame-local region. The array is
+    // uninitialized.
+    // Arg0 = dst.
+    // Arg1 = size.
+    // Arg2 = content type ID.
+    NewArray,
+
+    // Allocates a new array in the frame-local region. The array is
+    // uninitialized.
+    // Arg0 = dst.
+    // Arg1 = content type ID.
+    // Arg2 = constant size.
+    NewArrayConst,
 
     // Allocates a new array in the current frame. The array is uninitialized.
     // Arg0 = dst.

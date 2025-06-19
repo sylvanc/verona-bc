@@ -88,12 +88,12 @@ namespace vbci
       if (!(v.type_id() < content_type_id()))
         throw Value(Error::BadType);
 
-      if (!safe_store(v))
-        throw Value(Error::BadStore);
-
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
       auto prev = Value::from_addr(value_type, addr);
-      region_store(prev, v);
+
+      if (!write_barrier(prev, v))
+        throw Value(Error::BadStore);
+
       v.to_addr(move, addr);
       return prev;
     }
