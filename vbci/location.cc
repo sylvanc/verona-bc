@@ -67,15 +67,19 @@ namespace vbci
         if ((hr == r) || (hr->get_parent() == Location(r)))
           continue;
 
-        // If hr has some other parent or hr is an ancestor of r,
-        // we can't drag the allocation.
-        if (hr->has_parent() || hr->is_ancestor_of(r))
+        // If r is not frame-local, it can't point to a region that already has
+        // a parent.
+        if ((frame == loc::None) && hr->has_parent())
           return false;
 
-        // If we would have multiple entry points to this region, we can't
-        // drag the allocation.
+        // If hr is already an ancestor of r, we can't drag the allocation.
+        if (hr->is_ancestor_of(r))
+          return false;
+
+        // If r is not frame-local, it can't have multiple entry points to this
+        // region.
         auto [it, ok] = regions.insert(hr);
-        if (!ok)
+        if ((frame == loc::None) && !ok)
           return false;
       }
     }

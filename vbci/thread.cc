@@ -956,12 +956,45 @@ namespace vbci
     // Clear any unused arguments.
     frame->drop_args(args);
 
-    // The return value can't be allocated in this frame.
-    if (ret.location() == frame->frame_id)
+    // Check for stack escapes.
+    auto retloc = ret.location();
+
+    if (retloc == frame->frame_id)
     {
+      // The return value can't be stack allocated in this frame.
       ret = Value(Error::BadStackEscape);
       ret.annotate(frame->func, current_pc);
       condition = Condition::Throw;
+    }
+    else if (
+      loc::is_region(retloc) && loc::to_region(retloc)->get_frame_id(retloc) &&
+      (retloc == frame->frame_id))
+    {
+      if (frames.size() > 1)
+      {
+        // Drag the frame-local allocation to the previous frame.
+        auto& prev_frame = frames.at(frames.size() - 2);
+
+        if (!drag_allocation(&prev_frame.region, ret.get_header()))
+        {
+          ret = Value(Error::BadStackEscape);
+          ret.annotate(frame->func, current_pc);
+          condition = Condition::Throw;
+        }
+      }
+      else
+      {
+        // Drag the frame-local allocation to a fresh region.
+        auto r = Region::create(RegionType::RegionRC);
+
+        if (!drag_allocation(r, ret.get_header()))
+        {
+          ret = Value(Error::BadStackEscape);
+          ret.annotate(frame->func, current_pc);
+          condition = Condition::Throw;
+          r->free_region();
+        }
+      }
     }
 
     switch (condition)
@@ -1042,6 +1075,7 @@ namespace vbci
     if (!func)
       throw Value(Error::MethodNotFound);
 
+    // TODO: check for arguments that are stack or frame-local allocated.
     teardown();
     check_args(func->param_types);
 

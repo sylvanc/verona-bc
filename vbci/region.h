@@ -42,7 +42,7 @@ namespace vbci
     {
       if (--stack_rc == 0)
       {
-        if (parent == loc::None)
+        if (!has_parent())
         {
           // Returns false if the region has been freed.
           free_region();
@@ -73,7 +73,7 @@ namespace vbci
     bool sendable()
     {
       assert(stack_rc > 0);
-      return (parent == loc::None) && (stack_rc == 1);
+      return !has_parent() && (stack_rc == 1);
     }
 
     bool has_parent()
@@ -131,15 +131,15 @@ namespace vbci
       parent = loc::None;
     }
 
-  private:
-    virtual void free_contents() = 0;
-
     void free_region()
     {
-      // This must originate from Header::base_dec(true), which is a drop of a
-      // register from a frame.
+      assert(!has_parent());
+      assert(stack_rc == 0);
       free_contents();
       delete this;
     }
+
+  private:
+    virtual void free_contents() = 0;
   };
 }
