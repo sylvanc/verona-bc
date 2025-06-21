@@ -46,6 +46,9 @@ namespace vbci
   Value::Value(Error error) : tag(ValueType::Error)
   {
     err.error = error;
+    auto [func, pc] = Thread::debug_info();
+    err.func = uintptr_t(func);
+    idx = pc;
   }
 
   Value::Value(Function* func) : func(func), tag(ValueType::Function)
@@ -872,13 +875,6 @@ namespace vbci
       v.set(get<double>());
 
     return v;
-  }
-
-  void Value::annotate(Function* func, PC pc)
-  {
-    assert(tag == ValueType::Error);
-    err.func = uintptr_t(func);
-    idx = pc;
   }
 
   std::string Value::to_string()

@@ -139,7 +139,6 @@ namespace vbci
     Function* method(size_t w);
     Value convert(ValueType to);
 
-    void annotate(Function* func, PC pc);
     std::string to_string();
 
 #define make_unop(name, func) \

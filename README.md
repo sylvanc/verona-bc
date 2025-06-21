@@ -46,9 +46,8 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * Local region.
-  * `cown` store? Auto-move to a fresh region?
   * Can't send a local region object - auto-move to a fresh region?
-  * Tail call with a frame-local object.
+    * Don't just call `is_sendable` in thread `when` handler.
 * Do programs ever need to create null pointers?
 * Is it ok to immortalize a stack allocated object? Seems like no?
 * Delayed send/freeze?

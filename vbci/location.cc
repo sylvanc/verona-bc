@@ -9,7 +9,9 @@ namespace vbci
   bool drag_allocation(Region* r, Header* h)
   {
     Location frame = loc::None;
-    r->get_frame_id(frame);
+
+    if (r->is_frame_local())
+      frame = r->get_parent();
 
     std::vector<Header*> wl;
     std::unordered_map<Header*, RC> rc_map;
@@ -34,23 +36,17 @@ namespace vbci
       if (loc::is_immutable(loc))
         continue;
 
+      // No region, even a frame-local one, can point to the stack.
       if (loc::is_stack(loc))
-      {
-        // A frame-local region can't point to a younger frame, and a heap
-        // region can't point to a stack allocation.
-        if (frame < loc)
-          return false;
-
-        continue;
-      }
+        return false;
 
       auto hr = loc::to_region(loc);
 
-      if (hr->get_frame_id(loc))
+      if (hr->is_frame_local())
       {
         // Younger frames can point to older frames.
         // Older frames and non-frame-local regions drag the object.
-        if (frame >= loc)
+        if (frame >= hr->get_parent())
           continue;
 
         // Initial internal RC count is 1.

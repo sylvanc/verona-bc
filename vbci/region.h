@@ -86,15 +86,9 @@ namespace vbci
       return parent;
     }
 
-    bool get_frame_id(Location& frame_id)
+    bool is_frame_local()
     {
-      if (loc::is_stack(parent))
-      {
-        frame_id = parent;
-        return true;
-      }
-
-      return false;
+      return loc::is_stack(parent);
     }
 
     void set_frame_id(Location frame_id)

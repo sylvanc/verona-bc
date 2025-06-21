@@ -43,7 +43,7 @@ namespace vbci
       return t.program->debug_info(t.frame->func, t.current_pc);
     }
 
-    static void annotate(Value& v);
+    static std::pair<Function*, PC> debug_info();
 
   private:
     Thread();
@@ -69,7 +69,7 @@ namespace vbci
     void pushframe(Function* func, size_t dst, Condition condition);
     void popframe(Value& result, Condition condition);
     void tailcall(Function* func);
-    void teardown();
+    void teardown(bool tailcall = false);
     void branch(size_t label);
     void check_args(std::vector<TypeId>& types, bool vararg = false);
     void check_args(std::vector<Field>& fields);

@@ -28,8 +28,6 @@ namespace vbci
     {
       auto ploc = prev.location();
       auto nloc = next.location();
-      Location frame;
-      Location nframe;
 
       if (loc::is_immutable(loc))
       {
@@ -54,14 +52,13 @@ namespace vbci
           auto nr = loc::to_region(nloc);
 
           // Older frames can't point to newer frames.
-          if (nr->get_frame_id(nframe) && (loc < nframe))
+          if (nr->is_frame_local() && (loc < nr->get_parent()))
             return false;
         }
       }
       else
       {
         assert(loc::is_region(loc));
-        auto r = loc::to_region(loc);
 
         if (loc::is_immutable(nloc))
         {
@@ -69,21 +66,20 @@ namespace vbci
         }
         else if (loc::is_stack(nloc))
         {
-          // Drag a stack allocation to a region. This will fail unless the
-          // region is frame-local and no older than the stack allocation.
-          if (!drag_allocation(r, next.get_header()))
-            return false;
+          // No region, even a frame-local one, can point to the stack.
+          return false;
         }
         else
         {
           assert(loc::is_region(nloc));
+          auto r = loc::to_region(loc);
           auto nr = loc::to_region(nloc);
 
           if (r == nr)
           {
             // Ok.
           }
-          else if (nr->get_frame_id(nframe))
+          else if (nr->is_frame_local())
           {
             // Drag a frame-local allocation to a region.
             if (!drag_allocation(r, next.get_header()))
@@ -106,7 +102,7 @@ namespace vbci
       // At this point, the write barrier is satisfied.
       if (
         (ploc == nloc) || loc::is_stack(loc) ||
-        loc::to_region(loc)->get_frame_id(frame))
+        loc::to_region(loc)->is_frame_local())
       {
         // If the previous and next locations are the same, or if the location
         // is a stack allocation, or if the location is a frame-local region, no

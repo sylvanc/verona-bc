@@ -17,14 +17,14 @@ namespace vbci
     return Value(result, false);
   }
 
-  void Thread::annotate(Value& v)
+  std::pair<Function*, PC> Thread::debug_info()
   {
     auto t = get();
 
     if (t.frame)
-      v.annotate(t.frame->func, t.current_pc);
+      return {t.frame->func, t.current_pc};
     else
-      v.annotate(t.behavior, t.current_pc);
+      return {t.behavior, t.current_pc};
   }
 
   Thread::Thread() : program(&Program::get()), frame(nullptr), args(0)
@@ -902,7 +902,6 @@ namespace vbci
     }
     catch (Value& v)
     {
-      v.annotate(frame->func, current_pc);
       popframe(v, Condition::Throw);
     }
   }
@@ -963,12 +962,11 @@ namespace vbci
     {
       // The return value can't be stack allocated in this frame.
       ret = Value(Error::BadStackEscape);
-      ret.annotate(frame->func, current_pc);
       condition = Condition::Throw;
     }
     else if (
-      loc::is_region(retloc) && loc::to_region(retloc)->get_frame_id(retloc) &&
-      (retloc == frame->frame_id))
+      loc::is_region(retloc) && loc::to_region(retloc)->is_frame_local() &&
+      (loc::to_region(retloc)->get_parent() == frame->frame_id))
     {
       if (frames.size() > 1)
       {
@@ -978,7 +976,6 @@ namespace vbci
         if (!drag_allocation(&prev_frame.region, ret.get_header()))
         {
           ret = Value(Error::BadStackEscape);
-          ret.annotate(frame->func, current_pc);
           condition = Condition::Throw;
         }
       }
@@ -990,7 +987,6 @@ namespace vbci
         if (!drag_allocation(r, ret.get_header()))
         {
           ret = Value(Error::BadStackEscape);
-          ret.annotate(frame->func, current_pc);
           condition = Condition::Throw;
           r->free_region();
         }
@@ -1003,7 +999,6 @@ namespace vbci
         if (!ret.is_error() && !(ret.type_id() < frame->func->return_type))
         {
           ret = Value(Error::BadType);
-          ret.annotate(frame->func, current_pc);
           condition = Condition::Throw;
         }
         break;
@@ -1075,8 +1070,8 @@ namespace vbci
     if (!func)
       throw Value(Error::MethodNotFound);
 
-    // TODO: check for arguments that are stack or frame-local allocated.
-    teardown();
+    // Preserve the frame-local region.
+    teardown(true);
     check_args(func->param_types);
 
     // Move arguments back to the current frame.
@@ -1102,7 +1097,7 @@ namespace vbci
     frame->condition = Condition::Return;
   }
 
-  void Thread::teardown()
+  void Thread::teardown(bool tailcall)
   {
     // Drop all frame registers.
     frame->drop();
@@ -1111,8 +1106,9 @@ namespace vbci
     for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
       finalize.at(i)->finalize();
 
-    // Finalize the frame-local region.
-    frame->region.free_contents();
+    // Finalize the frame-local region. A tailcall preserves the region.
+    if (!tailcall)
+      frame->region.free_contents();
 
     // Pop the stack.
     stack.restore(frame->save);

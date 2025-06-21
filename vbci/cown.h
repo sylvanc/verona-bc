@@ -64,32 +64,44 @@ namespace vbci
 
       // Allow any cown to contain an error.
       if (!next.is_error() && !(next.type_id() < content_type_id()))
-      {
         next = Value(Error::BadType);
-        Thread::annotate(next);
-      }
 
       auto prev_loc = content.location();
       auto next_loc = next.location();
 
+      // Can't store a stack value in a cown.
       if (loc::is_stack(next_loc))
       {
-        // Can't store a stack value in a cown.
         next = Value(Error::BadStore);
-        Thread::annotate(next);
       }
       else if (loc::is_region(next_loc) && (next_loc != prev_loc))
       {
-        // If the new value is in a different region, we need to check that the
-        // region has no parent.
-        auto r = loc::to_region(next_loc);
-
         // It doesn't matter what the stack RC is, because all stack RC will be
         // gone by the time this cown is available to any other behavior.
-        if (r->has_parent())
+        auto r = loc::to_region(next_loc);
+
+        if (r->is_frame_local())
+        {
+          // Drag a frame-local allocation to a fresh region.
+          auto nr = Region::create(RegionType::RegionRC);
+          nr->set_parent();
+
+          if (!drag_allocation(nr, next.get_header()))
+          {
+            next = Value(Error::BadStore);
+            nr->free_region();
+          }
+        }
+        else if (r->has_parent())
+        {
+          // If the region has a parent, it can't be stored.
           next = Value(Error::BadStore);
+        }
         else
+        {
+          // Set the region parent to this cown.
           r->set_parent();
+        }
       }
 
       if (next.is_error())
