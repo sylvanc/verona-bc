@@ -6,6 +6,7 @@ namespace vc
   {
     assert(seq == ExprSeq);
 
+    // Empty parentheses.
     if (seq->empty())
       return Args;
 
@@ -13,6 +14,7 @@ namespace vc
     {
       auto expr = seq->front();
 
+      // Turn a comma-delimited list into separate Args.
       if (expr == List)
         return Args << *expr;
 
@@ -20,11 +22,36 @@ namespace vc
       {
         auto e = expr->front();
 
+        // Turn a tuple into separate Args.
         if (e == Tuple)
           return Args << *e;
       }
     }
 
+    // Treat this as a single argument.
     return Args << (Expr << seq);
+  }
+
+  Node make_typeargs(Node typeparams)
+  {
+    Node ta = TypeArgs;
+
+    for (auto& tp : *typeparams)
+    {
+      ta
+        << (Type
+            << (TypeName << (TypeElement << clone(tp / Ident) << TypeArgs)));
+    }
+
+    return ta;
+  }
+
+  Node make_selftype(Node node)
+  {
+    auto cls = node->parent(ClassDef);
+    auto tps = cls / TypeParams;
+    return Type
+      << (TypeName
+          << (TypeElement << clone(cls / Ident) << make_typeargs(tps)));
   }
 }

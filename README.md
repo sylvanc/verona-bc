@@ -48,14 +48,15 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * Local region.
   * Can't send a local region object - auto-move to a fresh region?
     * Don't just call `is_sendable` in thread `when` handler.
+    * Do delayed-send?
+      * Allow creating a behavior with `exec_count_down` 1 higher.
+      * Expose a decrement function for that.
+      * Set the region parent to be the behavior.
+      * When stack RC goes to 0, decrement the behavior's `exec_count_down`.
 * Do programs ever need to create null pointers?
 * Is it ok to immortalize a stack allocated object? Seems like no?
-* Delayed send/freeze?
-  * With delayed send, if send is still pending at behavior termination, we can reset stack RC and send.
-  * Store delayed send in the region parent?
-    * Can't do the schedule late, as it breaks causality.
-    * Have to either have a fake execution count, or an ephemeral `cown`.
 * Merge, freeze, extract.
+  * Delayed freeze?
   * Modes that allow/disallow parent pointers and stack RC?
   * When freezing a region with a stack RC, how do we know which SCC have those additional incoming edges?
     * In an RC region, can we reuse the existing object RC?

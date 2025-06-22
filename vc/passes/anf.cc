@@ -6,6 +6,20 @@ namespace vc
   inline const auto l_local = Location("local");
   inline const auto l_label = Location("label");
 
+  size_t field_count(Node classbody)
+  {
+    assert(classbody == ClassBody);
+    size_t count = 0;
+
+    for (auto& child : *classbody)
+    {
+      if (child == FieldDef)
+        ++count;
+    }
+
+    return count;
+  }
+
   Node type_nomatch()
   {
     return TypeName << (TypeElement << (Ident ^ "std") << TypeArgs)
@@ -121,6 +135,38 @@ namespace vc
             return Labels << (Label << (LabelId ^ id) << _(Body));
           },
 
+        // New
+        In(Expr) * T(New) << T(LocalId)[LocalId] >>
+          [](Match& _) {
+            auto arg = _(LocalId);
+            auto fields = field_count(arg->parent(ClassBody));
+
+            if (fields != 1)
+              return err(arg, "New requires an argument for each field");
+
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (New << (LocalId ^ id) << *make_selftype(arg)
+                                        << (Args << arg)))
+                       << (LocalId ^ id);
+          },
+
+        In(Expr) * T(New) << T(Tuple)[Tuple] >>
+          [](Match& _) {
+            auto args = _(Tuple);
+            auto fields = field_count(args->parent(ClassBody));
+
+            if (fields != args->size())
+              return err(args, "New requires an argument for each field");
+
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (New << (LocalId ^ id)
+                                        << *make_selftype(_(LocalId))
+                                        << (Args << *args)))
+                       << (LocalId ^ id);
+          },
+
         // Field reference.
         In(Expr) * T(FieldRef) << (T(LocalId)[LocalId] * T(FieldId)[FieldId]) >>
           [](Match& _) {
@@ -192,7 +238,7 @@ namespace vc
 
         // Invalid l-values.
         In(Lhs) * T(Lambda, QName, If, Else, While, For, When)[Lhs] >>
-          [](Match& _) { return err(_(Lhs), "can't assign to this"); },
+          [](Match& _) { return err(_(Lhs), "Can't assign to this"); },
 
         // If expression.
         In(Expr) * T(If)[If] >>
@@ -435,6 +481,28 @@ namespace vc
                        << (Ref << (LocalId ^ id));
           },
 
+        // Load, from auto-RHS fields.
+        In(Expr) * T(Load) << T(LocalId)[LocalId] >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (Load << (LocalId ^ id) << _(LocalId)))
+                       << (LocalId ^ id);
+          },
+
+        // Convert.
+        In(Expr, Lhs) * T(Convert)
+            << (Any[Type] *
+                (T(Args) << ((
+                   T(Arg) << (T(ArgCopy) * T(LocalId)[LocalId]))))) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (Convert << (LocalId ^ id) << _(Type)
+                                            << _(LocalId)))
+                       << (LocalId ^ id);
+          },
+
         // Binop.
         In(Expr, Lhs) * T(Binop)
             << (Any[Op] *
@@ -463,7 +531,8 @@ namespace vc
         In(Expr, Lhs) * T(Nulop) << (T(None) * T(Args)) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (Const << (LocalId ^ id) << None))
+            return Seq << (Lift << Body
+                                << (Const << (LocalId ^ id) << None << None))
                        << (LocalId ^ id);
           },
 
@@ -481,6 +550,9 @@ namespace vc
         // Compact LHS Ref LocalId.
         T(Lhs) << (T(Ref) << T(LocalId)[LocalId] * End) >>
           [](Match& _) { return Ref << _(LocalId); },
+
+        // Compact Tuple.
+        In(Expr) * T(Tuple)[Tuple] >> [](Match& _) { return _(Tuple); },
 
         // Compact TupleLHS.
         T(Lhs) << (T(TupleLHS)[TupleLHS] * End) >>

@@ -230,8 +230,22 @@ namespace vbci
 
     bool sendable()
     {
-      return loc::is_immutable(loc) ||
-        (loc::is_region(loc) && loc::to_region(loc)->sendable());
+      if (loc::is_immutable(loc))
+      {
+        return true;
+      }
+      else if (loc::is_stack(loc))
+      {
+        return false;
+      }
+      else
+      {
+        assert(loc::is_region(loc));
+        auto r = loc::to_region(loc);
+
+        // TODO: drag frame-local? delay when stack RC > 1 ?
+        return r->sendable();
+      }
     }
 
     void inc(bool reg)

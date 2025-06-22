@@ -24,12 +24,10 @@ Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
 - Destructing when the tuple is too long ignores the extra elements. Should it?
 - A `tuple` is a `[dyn]`?
-  - What's the allocation location?
   - What's the syntax for tuple element reference?
     - `apply` method on `array`?
   - Can we do IR-level type checking?
     - IR tuple type demands `[dyn]` of correct size with elements that type check.
-- Want to be able to return `(a, b)`, where the tuple is on the stack.
 - Flatten a tuple into another tuple.
 
 Calls:
@@ -57,13 +55,18 @@ Structure:
   - Mark free variables in lambdas.
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
   - A free `var` is captured by reference. The lambda must be `stack` allocated.
-- Code reuse.
 - Could allow `ident::name` (lookup, no call).
   - Like `ident.name`, but no first argument binding.
 - Compile time evaluation.
 - Structural types.
 
+Standard library:
+- Array.
+- String.
+
 Packages:
+- Code reuse.
+- Public, private.
 - Use libgit2 for fetching dependencies.
 - FFI.
 

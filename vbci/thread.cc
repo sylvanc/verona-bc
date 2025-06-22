@@ -632,9 +632,6 @@ namespace vbci
           }
           else
           {
-            if (!be.is_sendable())
-              throw Value(Error::BadArgs);
-
             apply = be.method(ApplyMethodId);
             closure = true;
 
@@ -642,6 +639,9 @@ namespace vbci
               throw Value(Error::MethodNotFound);
 
             if (apply->param_types.size() != args)
+              throw Value(Error::BadArgs);
+
+            if (!be.is_sendable())
               throw Value(Error::BadArgs);
           }
 
@@ -655,7 +655,7 @@ namespace vbci
             if (!(be.type_id() < params.at(0)))
               throw Value(Error::BadArgs);
 
-            // First cown is at index 1. Slot 0 is the result cown.
+            // First cown argument is at index 1.
             first_cown++;
             num_cowns--;
           }
@@ -676,6 +676,7 @@ namespace vbci
           auto result = Cown::create(apply->return_type);
           dst = result;
 
+          // Slot 0 is the result cown.
           auto b = verona::rt::BehaviourCore::make(
             num_cowns + 1, run_behavior, sizeof(Value));
           auto slots = b->get_slots();

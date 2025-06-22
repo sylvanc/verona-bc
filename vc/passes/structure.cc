@@ -8,11 +8,12 @@ namespace vc
   // TODO: remove as more expressions are handled.
   // everything from Const on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,    True,     False,     Bin,      Oct,   Int,
-    Hex,     Float,    HexFloat, String,   RawString, DontCare, Tuple, Let,
-    Var,     Lambda,   QName,    Method,   Call,      CallDyn,  If,    While,
-    For,     When,     Equals,   Else,     Ref,       Try,      Op,    Convert,
-    Binop,   Unop,     Nulop,    FieldRef, Load,      Const,    Colon, Vararg};
+    ExprSeq, DontCare, Ident, True,     False,   Bin,       Oct,
+    Int,     Hex,      Float, HexFloat, String,  RawString, DontCare,
+    Tuple,   Let,      Var,   New,      Lambda,  QName,     Method,
+    Call,    CallDyn,  If,    While,    For,     When,      Equals,
+    Else,    Ref,      Try,   Op,       Convert, Binop,     Unop,
+    Nulop,   FieldRef, Load,  Const,    Colon,   Vararg};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -60,29 +61,6 @@ namespace vc
     {
       return t << lhs << rhs;
     }
-  }
-
-  Node make_typeargs(Node typeparams)
-  {
-    Node ta = TypeArgs;
-
-    for (auto& tp : *typeparams)
-    {
-      ta
-        << (Type
-            << (TypeName << (TypeElement << clone(tp / Ident) << TypeArgs)));
-    }
-
-    return ta;
-  }
-
-  Node make_selftype(Node node)
-  {
-    auto cls = node->parent(ClassDef);
-    auto tps = cls / TypeParams;
-    return Type
-      << (TypeName
-          << (TypeElement << clone(cls / Ident) << make_typeargs(tps)));
   }
 
   Node make_qname(Node ident, Node tps)
@@ -489,12 +467,12 @@ namespace vc
 
         // Expressions.
         // Let.
-        In(Expr) * T(Let) * T(Ident)[Ident] *
+        In(Expr) * (T(Let) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
           [](Match& _) { return Let << _(Ident) << (Type << _[Type]); },
 
         // Var.
-        In(Expr) * T(Var) * T(Ident)[Ident] *
+        In(Expr) * (T(Var) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
           [](Match& _) { return Var << _(Ident) << (Type << _[Type]); },
 

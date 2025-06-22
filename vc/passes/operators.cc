@@ -9,6 +9,10 @@ namespace vc
       wfPassOperators,
       dir::topdown,
       {
+        // New.
+        In(Expr) * (T(New) << End) * ExprPat[Expr] >>
+          [](Match& _) { return New << (Expr << _(Expr)); },
+
         // Ref.
         In(Expr) * (T(Ref) << End) * ExprPat[Expr] >>
           [](Match& _) { return Ref << (Expr << _(Expr)); },

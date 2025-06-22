@@ -113,7 +113,7 @@ namespace vc
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfExpr = ExprSeq | DontCare | Ident | wfLiteral | String |
-    RawString | Tuple | Let | Var | Lambda | QName | Op | Method | Call |
+    RawString | Tuple | Let | Var | New | Lambda | QName | Op | Method | Call |
     CallDyn | If | Else | While | For | When | Equals | Ref | Try | Convert |
     Binop | Unop | Nulop | FieldRef | Load | wfTempExpr;
 
@@ -189,6 +189,7 @@ namespace vc
   inline const auto wfPassOperators =
       wfPassApplication
     | (Expr <<= wfExpr3)
+    | (New <<= ~Expr)
     | (Ref <<= Expr)
     | (Try <<= Expr)
     | (Else <<= (Lhs >>= Expr) * (Rhs >>= Expr))
@@ -198,7 +199,7 @@ namespace vc
 
   // TODO: remove LocalId, Let, Var
   inline const auto wfBody2 = Use | TypeAlias | Const | ConstStr | Convert |
-    Copy | Move | RegisterRef | FieldRef | ArrayRefConst | Load | Store |
+    Copy | Move | RegisterRef | FieldRef | ArrayRefConst | New | Load | Store |
     Lookup | Call | CallDyn | Return | Raise | Throw | Cond | Jump | LocalId |
     Let | Var | wfBinop | wfUnop | wfNulop;
 
@@ -218,6 +219,7 @@ namespace vc
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
+    | (New <<= wfDst * TypeName * Args)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
     | (Lookup <<= wfDst * wfSrc * MethodId)
@@ -282,6 +284,8 @@ namespace vc
   // clang-format on
 
   Node seq_to_args(Node seq);
+  Node make_typeargs(Node typeparams);
+  Node make_selftype(Node node);
 
   Parse parser();
   PassDef structure();
