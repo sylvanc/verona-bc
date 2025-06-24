@@ -136,7 +136,7 @@ namespace vc
     | (TypeParam <<= Ident * (Lhs >>= Type) * (Rhs >>= Type))[Ident]
     | (TypeArgs <<= (Type | Expr)++)
     | (Params <<= ParamDef++)
-    | (ParamDef <<= Ident * Type * Body)[Ident]
+    | (ParamDef <<= Ident * Type)[Ident]
     | (Type <<= ~wfType)
     | (Union <<= wfType++[2])
     | (Isect <<= wfType++[2])

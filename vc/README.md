@@ -7,7 +7,6 @@ Assign:
   - Keyword? Or a method on `ref`?
 
 ANF:
-- Empty body returns None? Need to deal with default values.
 - Break, continue need to deal with loop labels.
   - Since loops are expression, should `break` and `continue` have values?
 - `if` with a lambda that takes arguments is a type test.

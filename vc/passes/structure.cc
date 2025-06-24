@@ -131,7 +131,7 @@ namespace vc
                            << Lhs << clone(_(Ident)) << (TypeParams)
                            << (Params
                                << (ParamDef << (Ident ^ "self")
-                                            << make_selftype(_(Ident)) << Body))
+                                            << make_selftype(_(Ident))))
                            << reftype
                            << (Body
                                << (Expr
@@ -146,10 +146,16 @@ namespace vc
                 ~(T(Colon) * (!T(Brace))++[Type]) * T(Brace)[Brace]) >>
           [](Match& _) {
             Node side = _(Ref) ? Lhs : Rhs;
-            return Function << side << _(Ident)
-                            << (TypeParams << *_[TypeParams])
-                            << (Params << *_[Params]) << (Type << _[Type])
-                            << (Body << *_[Brace]);
+            Node body = Body;
+
+            if (_(Brace)->empty())
+              body << (Expr << (Ident ^ "none"));
+            else
+              body << *_[Brace];
+
+            return Function
+              << side << _(Ident) << (TypeParams << *_[TypeParams])
+              << (Params << *_[Params]) << (Type << _[Type]) << body;
           },
 
         // Default arguments.
@@ -163,13 +169,13 @@ namespace vc
           if (params->empty())
             return NoChange;
 
-          auto last = params->back();
-          auto body = last / Body;
-          if (body->empty())
+          auto last_param = params->back();
+          auto last = last_param->back();
+          if (last != Body)
             return NoChange;
 
           auto ident = _(Ident);
-          last / Body = Body;
+          last_param->pop_back();
           auto params_0 = clone(params);
           params_0->pop_back();
           Node args = Args;
@@ -177,7 +183,7 @@ namespace vc
           for (auto& param : *params_0)
             args << (Expr << clone(param / Ident));
 
-          args << (Expr << (ExprSeq << *body));
+          args << (Expr << (ExprSeq << *last));
 
           return Seq << (Function
                          << clone(_(Lhs)) << clone(ident)
@@ -270,6 +276,9 @@ namespace vc
         // Parameter.
         In(Params) * (T(Group) << (FieldPat * End)) >>
           [](Match& _) {
+            if (_[Body].empty())
+              return ParamDef << _(Ident) << (Type << _[Type]);
+
             return ParamDef << _(Ident) << (Type << _[Type])
                             << (Body << (Group << _[Body]));
           },
@@ -540,8 +549,7 @@ namespace vc
           [](Match& _) {
             return Lambda << TypeParams
                           << (Params
-                              << (ParamDef << _(Ident) << (Type << _[Type])
-                                           << Body))
+                              << (ParamDef << _(Ident) << (Type << _[Type])))
                           << Type << (Body << *_[Brace] << (Expr << _[Rhs]));
           },
 
@@ -698,12 +706,12 @@ namespace vc
         }
         else if (node == ParamDef)
         {
-          auto body = node / Body;
+          auto last = node->back();
 
-          if (!body->empty())
+          if (last == Body)
           {
             node->replace(
-              body, err(body, "Default arguments must be at the end"));
+              last, err(last, "Default arguments must be at the end"));
             ok = false;
           }
         }
