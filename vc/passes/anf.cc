@@ -40,38 +40,6 @@ namespace vc
     return Typetest << (LocalId ^ dst) << (LocalId ^ src) << type_nomatch();
   }
 
-  std::string flat_name(Node ident, Node typeargs, size_t argc, bool ref)
-  {
-    // TODO: typeargs?
-    (void)typeargs;
-    return std::format(
-      "{}.{}{}", ident->location().view(), argc, ref ? ".ref" : "");
-  }
-
-  std::string flat_qname(Node qname, size_t argc, bool ref)
-  {
-    std::stringstream ss;
-    bool first = true;
-
-    for (auto& child : *qname)
-    {
-      if (first)
-        first = false;
-      else
-        ss << ".";
-
-      // TODO: typeargs?
-      ss << (child / Ident)->location().view();
-    }
-
-    ss << "." << argc;
-
-    if (ref)
-      ss << ".ref";
-
-    return ss.str();
-  }
-
   const auto CallPat = T(Call)[Call] << (T(QName)[QName] * T(Args)[Args]);
 
   const auto CallDynPat = T(CallDyn)[CallDyn]
@@ -93,7 +61,7 @@ namespace vc
     return Seq << (Lift << Body
                         << (Call
                             << (LocalId ^ id)
-                            << (FunctionId << (ref ? Lhs : Rhs) << _(QName))
+                            << (FnPointer << (ref ? Lhs : Rhs) << _(QName))
                             << (Args << *_[Args])))
                << res;
   }
@@ -107,8 +75,8 @@ namespace vc
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
     return Seq << (Lift << Body
                         << (Lookup << (LocalId ^ fn) << (LocalId ^ _(LocalId))
-                                   << (MethodId << (ref ? Lhs : Rhs) << _(Ident)
-                                                << _(TypeArgs))))
+                                   << (Method << (ref ? Lhs : Rhs) << _(Ident)
+                                              << _(TypeArgs))))
                << (Lift << Body
                         << (CallDyn
                             << (LocalId ^ id) << (LocalId ^ fn)

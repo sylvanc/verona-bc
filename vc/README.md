@@ -46,7 +46,7 @@ Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
 
 Structure:
-- Auto create, default argument sugar, member conflict.
+- Auto create, member conflict.
 - Lambdas to classes.
   - Mark free variables in lambdas.
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.

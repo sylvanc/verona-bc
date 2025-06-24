@@ -1,6 +1,6 @@
 bool
 {
-  create(some: bool = false): bool
+  create(some: bool): bool
   {
     some
   }

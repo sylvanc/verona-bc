@@ -152,6 +152,43 @@ namespace vc
                             << (Body << *_[Brace]);
           },
 
+        // Default arguments.
+        In(ClassBody) * T(Function)[Function]
+            << (T(Lhs, Rhs)[Lhs] * T(Ident, SymbolId)[Ident] *
+                T(TypeParams)[TypeParams] *
+                (T(Params)[Params] << (T(ParamDef)++) * End) * T(Type)[Type] *
+                T(Body)[Body]) >>
+          [](Match& _) -> Node {
+          auto params = _(Params);
+          if (params->empty())
+            return NoChange;
+
+          auto last = params->back();
+          auto body = last / Body;
+          if (body->empty())
+            return NoChange;
+
+          auto ident = _(Ident);
+          last / Body = Body;
+          auto params_0 = clone(params);
+          params_0->pop_back();
+          Node args = Args;
+
+          for (auto& param : *params_0)
+            args << (Expr << clone(param / Ident));
+
+          args << (Expr << (ExprSeq << *body));
+
+          return Seq << (Function
+                         << clone(_(Lhs)) << clone(ident)
+                         << clone(_(TypeParams)) << params_0 << clone(_(Type))
+                         << (Body
+                             << (Expr
+                                 << (Call << make_qname(ident, _(TypeParams))
+                                          << args))))
+                     << _(Function);
+        },
+
         // Auto-RHS.
         In(ClassBody) * T(Function)[Function]
             << (T(Lhs) * T(Ident, SymbolId)[Ident] * T(TypeParams)[TypeParams] *
@@ -657,6 +694,17 @@ namespace vc
               node->replace(child, err(child, "Expected a type"));
               ok = false;
             }
+          }
+        }
+        else if (node == ParamDef)
+        {
+          auto body = node / Body;
+
+          if (!body->empty())
+          {
+            node->replace(
+              body, err(body, "Default arguments must be at the end"));
+            ok = false;
           }
         }
         else if (node->in({Break, Continue}))
