@@ -59,10 +59,9 @@ namespace vc
     auto id = _.fresh(l_local);
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
     return Seq << (Lift << Body
-                        << (Call
-                            << (LocalId ^ id)
-                            << (FnPointer << (ref ? Lhs : Rhs) << _(QName))
-                            << (Args << *_[Args])))
+                        << (Call << (LocalId ^ id)
+                                 << (FnPointer << (ref ? Lhs : Rhs) << _(QName))
+                                 << (Args << *_[Args])))
                << res;
   }
 
@@ -99,20 +98,10 @@ namespace vc
           },
 
         // New
+        In(Expr) * T(New) << End >> [](Match&) { return New << Tuple; },
+
         In(Expr) * T(New) << T(LocalId)[LocalId] >>
-          [](Match& _) {
-            auto arg = _(LocalId);
-            auto fields = field_count(arg->parent(ClassBody));
-
-            if (fields != 1)
-              return err(arg, "New requires an argument for each field");
-
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (New << (LocalId ^ id) << *make_selftype(arg)
-                                        << (Args << arg)))
-                       << (LocalId ^ id);
-          },
+          [](Match& _) { return New << (Tuple << _(LocalId)); },
 
         In(Expr) * T(New) << T(Tuple)[Tuple] >>
           [](Match& _) {
@@ -123,10 +112,10 @@ namespace vc
               return err(args, "New requires an argument for each field");
 
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (New << (LocalId ^ id)
-                                        << *make_selftype(_(LocalId))
-                                        << (Args << *args)))
+            return Seq << (Lift
+                           << Body
+                           << (New << (LocalId ^ id) << *make_selftype(args)
+                                   << (Args << *args)))
                        << (LocalId ^ id);
           },
 
@@ -542,6 +531,12 @@ namespace vc
 
         // Discard leading LocalId in ExprSeq.
         In(ExprSeq) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
+
+        // An empty ExprSeq is not an expression.
+        T(ExprSeq)[ExprSeq] << End >>
+          [](Match& _) {
+            return err(_(ExprSeq), "Unexpected empty parentheses");
+          },
       }};
 
     p.post([](auto top) {
