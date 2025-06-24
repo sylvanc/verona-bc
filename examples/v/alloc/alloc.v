@@ -11,6 +11,6 @@ cell
 f1(): cell
 {
   let a = cell;
-  let b = cell 1;
+  let b = cell (1 + 2);
   b
 }

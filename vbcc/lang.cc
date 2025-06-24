@@ -6,12 +6,17 @@ namespace vbcc
 {
   Node err(Node node, const std::string& msg)
   {
+    auto loc = node;
+
     while (
-      node &&
-      (!node->location().source || node->location().source->origin().empty()))
+      loc &&
+      (!loc->location().source || loc->location().source->origin().empty()))
     {
-      node = node->parent();
+      loc = loc->parent();
     }
+
+    if (loc != node)
+      node = loc->type() ^ loc;
 
     return Error << (ErrorMsg ^ msg) << node;
   }

@@ -88,17 +88,13 @@ namespace vc
   {
     // lvalue is true if the call appears on the LHS of an assignment.
     // ref is true if lvalue is true, or if the call is in a Ref node.
-
-    // TODO: check that a version with this arity exists.
-    // if it's a ref call, an Lhs function must exist.
-    // otherwise, either an Lhs or Rhs is sufficient.
-    auto argc = _(Args) ? _(Args)->size() : 0;
-    auto name = flat_qname(_(QName), argc, ref);
     auto id = _.fresh(l_local);
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
     return Seq << (Lift << Body
-                        << (Call << (LocalId ^ id) << (FunctionId ^ name)
-                                 << (Args << *_[Args])))
+                        << (Call
+                            << (LocalId ^ id)
+                            << (FunctionId << (ref ? Lhs : Rhs) << _(QName))
+                            << (Args << *_[Args])))
                << res;
   }
 
@@ -106,14 +102,13 @@ namespace vc
   {
     // lvalue is true if the call appears on the LHS of an assignment.
     // ref is true if lvalue is true, or if the call is in a Ref node.
-    auto argc = _(Args) ? _(Args)->size() : 0;
-    auto name = flat_name(_(Ident), _(TypeArgs), argc + 1, ref);
     auto fn = _.fresh(l_local);
     auto id = _.fresh(l_local);
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
     return Seq << (Lift << Body
                         << (Lookup << (LocalId ^ fn) << (LocalId ^ _(LocalId))
-                                   << (MethodId ^ name)))
+                                   << (MethodId << (ref ? Lhs : Rhs) << _(Ident)
+                                                << _(TypeArgs))))
                << (Lift << Body
                         << (CallDyn
                             << (LocalId ^ id) << (LocalId ^ fn)
@@ -445,8 +440,7 @@ namespace vc
         In(Expr) * CallPat >>
           [](Match& _) { return make_call(_, false, false); },
 
-        In(Lhs) * CallPat >>
-          [](Match& _) { return make_call(_, false, false); },
+        In(Lhs) * CallPat >> [](Match& _) { return make_call(_, true, true); },
 
         // 0-argument static call.
         In(Expr) * (T(Ref) << (T(Expr) << T(QName)[QName])) >>
@@ -456,7 +450,7 @@ namespace vc
           [](Match& _) { return make_call(_, false, false); },
 
         In(Lhs) * T(QName)[QName] >>
-          [](Match& _) { return make_call(_, false, false); },
+          [](Match& _) { return make_call(_, true, true); },
 
         // Treat all Args as ArgCopy at this stage.
         In(Args) * T(LocalId)[LocalId] >>
@@ -552,7 +546,7 @@ namespace vc
           [](Match& _) { return Ref << _(LocalId); },
 
         // Compact Tuple.
-        In(Expr) * T(Tuple)[Tuple] >> [](Match& _) { return _(Tuple); },
+        T(Expr) * (T(Tuple)[Tuple] * End) >> [](Match& _) { return _(Tuple); },
 
         // Compact TupleLHS.
         T(Lhs) << (T(TupleLHS)[TupleLHS] * End) >>
@@ -563,25 +557,17 @@ namespace vc
         In(Body) * T(LocalId)[Rhs] * (T(Copy) << (T(LocalId)[Lhs] * End)) >>
           [](Match& _) { return Copy << _(Lhs) << _(Rhs); },
 
+        // If there was no non-terminal LocalId, elide the incomplete Copy and
+        // the Jump.
+        In(Body) * (T(Copy) << (T(LocalId) * End)) * T(Jump) * End >>
+          [](Match&) -> Node { return {}; },
+
         // Discard non-terminal LocalId.
         In(Body) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
 
-        // Discard non-terminal Ref LocalId.
-        In(Body) * (T(Ref) << T(LocalId)) * ++Any >>
-          [](Match&) -> Node { return {}; },
-
-        // A terminator followed by a Jump is an unnecessary Jump.
-        In(Body) *
-            T(Tailcall, TailcallDyn, Return, Raise, Throw, Cond, Jump)[Return] *
-            T(Jump) * End >>
-          [](Match& _) { return _(Return); },
-
-        // A terminator that isn't at the end is an error.
-        // TODO: this is matching a Lift after the terminator.
-        // In(Body) *
-        //     T(Tailcall, TailcallDyn, Return, Raise, Throw, Cond,
-        //     Jump)[Return] * Any >>
-        //   [](Match& _) { return err(_(Return), "must be a terminator"); },
+        // A terminal LocalId is a Return.
+        In(Body) * T(LocalId)[LocalId] * End >>
+          [](Match& _) { return Return << (LocalId ^ _(LocalId)); },
 
         // Compact an ExprSeq with only one element.
         T(ExprSeq) << (Any[Expr] * End) >> [](Match& _) { return _(Expr); },
@@ -590,12 +576,37 @@ namespace vc
         In(ExprSeq) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
       }};
 
-    // TODO: is this needed?
     p.post([](auto top) {
       top->traverse([&](auto node) {
         bool ok = true;
 
-        if (node == Error)
+        if (node == Label)
+        {
+          // Move the terminator.
+          auto body = node / Body;
+          auto term = body->pop_back();
+
+          if (term && !term->in({Return, Raise, Throw, Jump, Cond}))
+          {
+            // If the terminator is not a control flow node, it is an error.
+            term = err(term, "Invalid terminator");
+            ok = false;
+          }
+
+          node << term;
+        }
+        else if (node == Body)
+        {
+          for (auto& child : *node)
+          {
+            if (child->in({Return, Raise, Throw, Jump, Cond}))
+            {
+              node->replace(child, err(child, "Terminators must come last"));
+              ok = false;
+            }
+          }
+        }
+        else if (node == Error)
         {
           ok = false;
         }

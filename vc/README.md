@@ -7,6 +7,7 @@ Assign:
   - Keyword? Or a method on `ref`?
 
 ANF:
+- Empty body returns None? Need to deal with default values.
 - Break, continue need to deal with loop labels.
   - Since loops are expression, should `break` and `continue` have values?
 - `if` with a lambda that takes arguments is a type test.
@@ -18,7 +19,6 @@ ANF:
 - Figure out copy and move.
   - Just do copy for now, figure out move later.
   - Could `vbcc` figure out move for us?
-- Handle terminators for labels.
 
 Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
@@ -46,10 +46,6 @@ Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
 
 Structure:
-- Reachability and flattening.
-  - Find all reachable classes and functions with their type arguments.
-  - Flatten the classes and functions.
-  - Expand `QName` and `TypeName` to the flattened names.
 - Auto create, default argument sugar, member conflict.
 - Lambdas to classes.
   - Mark free variables in lambdas.
@@ -58,9 +54,14 @@ Structure:
 - Could allow `ident::name` (lookup, no call).
   - Like `ident.name`, but no first argument binding.
 - Compile time evaluation.
-- Structural types.
+
+Reachability and flattening.
+- Find all reachable classes and functions with their type arguments.
+- Flatten the classes and functions.
+- Expand `QName` and `TypeName` to the flattened names.
 
 Standard library:
+- Primitive type conversions.
 - Array.
 - String.
 
@@ -71,6 +72,7 @@ Packages:
 - FFI.
 
 Types:
+- Structural types.
 - Type assertions.
 - `where` clause instead of `T1: T2 = T3`?
   - Then a value parameter can be `ident: type`.
@@ -136,9 +138,9 @@ strong = '(' expr ')' // exprseq
        | literal
        | expr (',' expr)+
        | lambda
-       | qname // class, alias, or function
        | ident
        | expr '.' (ident | symbol) typeargs? // method
+       | qname // function
        | qname exprseq // static call
        | method exprseq // dynamic call
        | 'if' expr lambda
