@@ -1,5 +1,9 @@
 # High-Level Language Experiment
 
+## Priorities
+
+- Allocate tuples.
+
 ## To Do
 
 Assign:
@@ -7,8 +11,6 @@ Assign:
   - Keyword? Or a method on `ref`?
 
 ANF:
-- Break, continue need to deal with loop labels.
-  - Since loops are expression, should `break` and `continue` have values?
 - `if` with a lambda that takes arguments is a type test.
   - Allow type test version of `for`?
   - Allow a pattern, not just a type test?
@@ -45,7 +47,9 @@ Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
 
 Structure:
+- Default field values.
 - Auto create, member conflict.
+- Can auto-RHS conflict with default arguments? Seems yes.
 - Lambdas to classes.
   - Mark free variables in lambdas.
   - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
@@ -83,9 +87,6 @@ Types:
       1. Class `C` has type parameter `T`.
       2. Class has type alias `A = T::U`.
       3. `C[X]::A` should resolve to `X::U`, which means tracking.
-- Infer the location for everything.
-  - Separate expressions to add region constraints.
-  - `a in b`, `a @ b`, or some such.
 
 ## Syntax
 

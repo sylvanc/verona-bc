@@ -90,6 +90,19 @@ namespace vc
     return qn;
   }
 
+  Node lambda_body(Node brace, NodeRange rhs)
+  {
+    if (brace)
+    {
+      if (brace->empty())
+        return Body << (Expr << (Ident ^ "none"));
+      else
+        return Body << *brace;
+    }
+
+    return Body << (Expr << *rhs);
+  }
+
   PassDef structure()
   {
     PassDef p{
@@ -365,10 +378,7 @@ namespace vc
             << (T(Break, Continue, Return, Raise, Throw)[Break] * Any++[Rhs]) >>
           [](Match& _) -> Node {
           auto b = _(Break);
-          auto e = Expr << _[Rhs];
-
-          if (b->in({Break, Continue}) && !e->empty())
-            return err(b, "Break or continue can't have a value");
+          auto e = Expr << (_[Rhs] || Ident ^ "none");
 
           if (_(Expr)->parent() != Body)
             return err(_(Expr), "Can't be used as an expression");
@@ -529,7 +539,7 @@ namespace vc
           [](Match& _) {
             return Lambda << (TypeParams << *_[TypeParams])
                           << (Params << *_[Params]) << (Type << _[Type])
-                          << (Body << *_[Brace] << (Expr << _[Rhs]));
+                          << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without type parameters.
@@ -538,8 +548,7 @@ namespace vc
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
             return Lambda << TypeParams << (Params << *_[Params])
-                          << (Type << _[Type])
-                          << (Body << *_[Brace] << (Expr << _[Rhs]));
+                          << (Type << _[Type]) << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda with a single parameter.
@@ -550,14 +559,14 @@ namespace vc
             return Lambda << TypeParams
                           << (Params
                               << (ParamDef << _(Ident) << (Type << _[Type])))
-                          << Type << (Body << *_[Brace] << (Expr << _[Rhs]));
+                          << Type << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
             return Lambda << TypeParams << Params << Type
-                          << (Body << *_[Brace]);
+                          << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Qualified name.
@@ -712,18 +721,6 @@ namespace vc
           {
             node->replace(
               last, err(last, "Default arguments must be at the end"));
-            ok = false;
-          }
-        }
-        else if (node->in({Break, Continue}))
-        {
-          auto p = node->parent(Lambda);
-
-          if (!p || !p->parent()->in({While, For}))
-          {
-            p = node->parent();
-            p->replace(
-              node, err(node, "Break or continue must be in a loop body"));
             ok = false;
           }
         }

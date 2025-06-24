@@ -4,7 +4,9 @@ namespace vc
 {
   // Sythetic locations.
   inline const auto l_local = Location("local");
-  inline const auto l_label = Location("label");
+  inline const auto l_cond = Location("cond");
+  inline const auto l_body = Location("body");
+  inline const auto l_join = Location("join");
 
   size_t field_count(Node classbody)
   {
@@ -22,15 +24,16 @@ namespace vc
 
   Node type_nomatch()
   {
-    return TypeName << (TypeElement << (Ident ^ "std") << TypeArgs)
-                    << (TypeElement << (Ident ^ "builtin") << TypeArgs)
-                    << (TypeElement << (Ident ^ "nomatch") << TypeArgs);
+    return Type
+      << (TypeName << (TypeElement << (Ident ^ "std") << TypeArgs)
+                   << (TypeElement << (Ident ^ "builtin") << TypeArgs)
+                   << (TypeElement << (Ident ^ "nomatch") << TypeArgs));
   }
 
   Node make_nomatch(Node localid)
   {
     assert(localid == LocalId);
-    return Stack << (LocalId ^ localid) << type_nomatch() << Args;
+    return New << (LocalId ^ localid) << type_nomatch() << Args;
   }
 
   Node test_nomatch(Node dst, Node src)
@@ -93,8 +96,7 @@ namespace vc
         // Turn an initial function body into a label.
         In(Function) * T(Body)[Body] >>
           [](Match& _) {
-            auto id = _(Body)->parent(Function) / Ident;
-            return Labels << (Label << (LabelId ^ id) << _(Body));
+            return Labels << (Label << (LabelId ^ "start") << _(Body));
           },
 
         // New
@@ -112,10 +114,9 @@ namespace vc
               return err(args, "New requires an argument for each field");
 
             auto id = _.fresh(l_local);
-            return Seq << (Lift
-                           << Body
-                           << (New << (LocalId ^ id) << *make_selftype(args)
-                                   << (Args << *args)))
+            return Seq << (Lift << Body
+                                << (New << (LocalId ^ id) << make_selftype(args)
+                                        << (Args << *args)))
                        << (LocalId ^ id);
           },
 
@@ -155,9 +156,9 @@ namespace vc
         T(Equals) << ((T(Ref) << T(LocalId)[Lhs]) * T(LocalId)[Rhs]) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift
-                           << Body
-                           << (Store << (LocalId ^ id) << _(Lhs) << _(Rhs)))
+            return Seq << (Lift << Body
+                                << (Store << (LocalId ^ id) << _(Lhs)
+                                          << (Arg << ArgCopy << _(Rhs))))
                        << (LocalId ^ id);
           },
 
@@ -177,9 +178,10 @@ namespace vc
               auto ref = _.fresh(l_local);
               auto val = _.fresh(l_local);
               seq << (Lift << Body
-                           << (ArrayRefConst << (LocalId ^ ref)
-                                             << (LocalId ^ _(Rhs))
-                                             << (Int ^ std::to_string(idx++))))
+                           << (ArrayRefConst
+                               << (LocalId ^ ref)
+                               << (Arg << ArgCopy << (LocalId ^ _(Rhs)))
+                               << (Int ^ std::to_string(idx++))))
                   << (Lift << Body
                            << (Load << (LocalId ^ val) << (LocalId ^ ref)));
               tuple << (Equals << l << (LocalId ^ val));
@@ -210,12 +212,12 @@ namespace vc
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
             // TODO: what do we do with the Type?
-            auto on_true = _.fresh(l_label);
-            auto join = _.fresh(l_label);
+            auto body = _.fresh(l_body);
+            auto join = _.fresh(l_join);
             return Seq << make_nomatch(_(LocalId))
-                       << (Cond << _(Cond) << (LabelId ^ on_true)
+                       << (Cond << _(Cond) << (LabelId ^ body)
                                 << (LabelId ^ join))
-                       << (Label << (LabelId ^ on_true)
+                       << (Label << (LabelId ^ body)
                                  << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
                                              << (Jump << (LabelId ^ join))))
                        << (Label << (LabelId ^ join) << Body);
@@ -238,9 +240,20 @@ namespace vc
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
             // TODO: what do we do with the Type?
-            auto cond = _.fresh(l_label);
-            auto body = _.fresh(l_label);
-            auto join = _.fresh(l_label);
+            auto cond = _.fresh(l_cond);
+            auto body = _.fresh(l_body);
+            auto join = _.fresh(l_join);
+
+            _(Body)->traverse([&](Node& node) {
+              if (node->in({While, For, Error}))
+                return false;
+              else if (node == Break)
+                node << (LocalId ^ _(LocalId)) << (LabelId ^ join);
+              else if (node == Continue)
+                node << (LocalId ^ _(LocalId)) << (LabelId ^ cond);
+              return true;
+            });
+
             return Seq << make_nomatch(_(LocalId)) << (Jump << (LabelId ^ cond))
                        << (Label << (LabelId ^ cond)
                                  << (Body
@@ -279,15 +292,27 @@ namespace vc
           [](Match& _) {
             // TODO: what do we do with the Type?
             auto id = _.fresh(l_local);
-            auto on_true = _.fresh(l_label);
-            auto join = _.fresh(l_label);
+            auto body = _.fresh(l_body);
+            auto join = _.fresh(l_join);
             return Seq << test_nomatch((LocalId ^ id), _(LocalId))
-                       << (Cond << (LocalId ^ id) << (LabelId ^ on_true)
+                       << (Cond << (LocalId ^ id) << (LabelId ^ body)
                                 << (LabelId ^ join))
-                       << (Label << (LabelId ^ on_true)
+                       << (Label << (LabelId ^ body)
                                  << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
                                              << (Jump << (LabelId ^ join))))
                        << (Label << (LabelId ^ join) << Body);
+          },
+
+        // Break, continue.
+        In(Body) * T(Break, Continue)[Break]
+            << (T(LocalId)[Rhs] * T(LocalId)[Lhs] * T(LabelId)[LabelId]) >>
+          [](Match& _) {
+            return Seq << (Copy << _(Lhs) << _(Rhs)) << (Jump << _(LabelId));
+          },
+
+        In(Body) * T(Break, Continue)[Break] << (T(Expr) * End) >>
+          [](Match& _) {
+            return err(_(Break), "Break and continue must be inside a loop");
           },
 
         // Continuation label.
@@ -514,17 +539,13 @@ namespace vc
         In(Body) * T(LocalId)[Rhs] * (T(Copy) << (T(LocalId)[Lhs] * End)) >>
           [](Match& _) { return Copy << _(Lhs) << _(Rhs); },
 
-        // If there was no non-terminal LocalId, elide the incomplete Copy and
-        // the Jump.
-        In(Body) * (T(Copy) << (T(LocalId) * End)) * T(Jump) * End >>
-          [](Match&) -> Node { return {}; },
+        // If there's a terminator, elide the incomplete Copy and the Jump.
+        In(Body) * (T(Jump, Return, Raise, Throw))[Return] *
+            (T(Copy) << (T(LocalId) * End)) * T(Jump) * End >>
+          [](Match& _) -> Node { return _(Return); },
 
         // Discard non-terminal LocalId.
         In(Body) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
-
-        // A terminal LocalId is a Return.
-        In(Body) * T(LocalId)[LocalId] * End >>
-          [](Match& _) { return Return << (LocalId ^ _(LocalId)); },
 
         // Compact an ExprSeq with only one element.
         T(ExprSeq) << (Any[Expr] * End) >> [](Match& _) { return _(Expr); },
@@ -543,20 +564,27 @@ namespace vc
       top->traverse([&](auto node) {
         bool ok = true;
 
-        if (node == Label)
+        if (node == Error)
+        {
+          ok = false;
+        }
+        else if (node == Label)
         {
           // Move the terminator.
           auto body = node / Body;
           auto term = body->pop_back();
 
-          if (term && !term->in({Return, Raise, Throw, Jump, Cond}))
+          if (!term->in({LocalId, Return, Raise, Throw, Jump, Cond}))
           {
             // If the terminator is not a control flow node, it is an error.
-            term = err(term, "Invalid terminator");
+            node->replace(term, err(term, "Invalid terminator"));
             ok = false;
           }
 
-          node << term;
+          if (term == LocalId)
+            node << (Return << term);
+          else
+            node << term;
         }
         else if (node == Body)
         {
@@ -568,10 +596,6 @@ namespace vc
               ok = false;
             }
           }
-        }
-        else if (node == Error)
-        {
-          ok = false;
         }
 
         return ok;

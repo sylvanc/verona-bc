@@ -5,12 +5,12 @@ some
 
 foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 {
-  _f: i32 = 8;
+  _f: i32; // = 8;
   _g;
 
   f1() {}
 
-  f[T3: i32 = i32](a: T3 = 1, b: T1): (T3 & (none | i32), bool)
+  f[T3: i32 = i32](a: T3, b: T1 = 1): (T3 & (none | i32), bool)
   {
     if a { 0 } else if b { 1 } else { 2 }
 
@@ -41,31 +41,35 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 
     $[none] 3;
 
-    if a b: T1 -> (a, b, true, 0b01, let w);
+    // if a b: T1 -> (a, b, true, 0b01, let w);
 
     (while true {}; a);
 
     while (a + (b, c))
     {
-      -a b + -c d;
-      let e = 5;
-      a + b;
-      continue; // TODO: treat as a terminator
+      if a
+      {
+        continue
+      }
+      else
+      {
+        break
+      }
       // return 5;
       // raise;
-      throw "Error";
+      // throw "Error";
     }
 
     let e = 7;
 
-    for d (key, value) ->
-    {
-      key == value;
-    }
-    else
-    {
-      "hi"
-    }
+    // for d (key, value) ->
+    // {
+    //   key == value;
+    // }
+    // else
+    // {
+    //   "hi"
+    // }
 
     // match x
     // {

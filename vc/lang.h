@@ -163,9 +163,11 @@ namespace vc
     | (When <<= Expr * Lambda)
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
-    | (Return <<= ~Expr)
-    | (Raise <<= ~Expr)
-    | (Throw <<= ~Expr)
+    | (Break <<= Expr)
+    | (Continue <<= Expr)
+    | (Return <<= Expr)
+    | (Raise <<= Expr)
+    | (Throw <<= Expr)
     | (Convert <<= (Type >>= wfPrimitiveType) * Args)
     | (Binop <<= (Op >>= wfBinop) * Args)
     | (Unop <<= (Op >>= wfUnop) * Args)
@@ -200,7 +202,7 @@ namespace vc
   // TODO: remove LocalId, Let, Var
   inline const auto wfBody2 = Use | TypeAlias | Const | ConstStr | Convert |
     Copy | Move | RegisterRef | FieldRef | ArrayRefConst | New | Load | Store |
-    Lookup | Call | CallDyn | Let | Var | wfBinop | wfUnop | wfNulop;
+    Lookup | Call | CallDyn | Typetest | Let | Var | wfBinop | wfUnop | wfNulop;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -218,7 +220,7 @@ namespace vc
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
-    | (New <<= wfDst * TypeName * Args)
+    | (New <<= wfDst * Type * Args)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
     | (Method <<= wfFuncLhs * wfFuncId * TypeArgs)
@@ -228,6 +230,7 @@ namespace vc
     | (CallDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
+    | (Typetest <<= wfDst * wfSrc * Type)
     | (Return <<= LocalId)
     | (Raise <<= LocalId)
     | (Throw <<= LocalId)
