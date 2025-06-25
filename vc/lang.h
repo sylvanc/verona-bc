@@ -225,9 +225,8 @@ namespace vc
     | (NewArrayConst <<= wfDst * Type * wfLit)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
-    | (Method <<= wfFuncLhs * wfFuncId * TypeArgs)
     | (FnPointer <<= wfFuncLhs * QName)
-    | (Lookup <<= wfDst * wfSrc * Method)
+    | (Lookup <<= wfDst * wfSrc * wfFuncLhs * wfFuncId * TypeArgs * Int)
     | (Call <<= wfDst * FnPointer * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
@@ -292,10 +291,14 @@ namespace vc
   Node seq_to_args(Node seq);
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
+  Node lookup(Node ident);
+  Node resolve(Node name);
+  Node resolve_qname(Node qname, Node side, size_t arity);
 
   Parse parser();
   PassDef structure();
   PassDef application();
   PassDef operators();
   PassDef anf();
+  PassDef flatten();
 }

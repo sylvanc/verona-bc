@@ -1,6 +1,6 @@
 some
 {
-  test() {}
+  test(a, b) {}
 }
 
 foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
@@ -19,6 +19,7 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
     use Func1 = (()->i32)->T1;
     use Func2 = i32->i32->bool;
     use alias = some;
+    use some;
 
     var zz = ref a.f;
     zz = ref a.g; // zz is a new ref
@@ -29,7 +30,8 @@ foo[T1: none = i32, T2: bool = (f32 | f64) | (i32 | i64)]
 
     let yy = (a, (b, let aa)) = 1;
 
-    alias::test(a; b);
+    alias::test((a; b), zz);
+    test((a; b), zz);
     foo::f1();
 
     a.f = 99;

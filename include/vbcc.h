@@ -209,12 +209,12 @@ namespace vbcc
   inline const auto wfLiteral =
     None | True | False | wfIntLiteral | Float | HexFloat;
 
-  inline const auto wfBinop = Add | Sub | Mul | Div | Mod | And | Or | Xor |
-    Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
+  inline const auto wfBinop = Add | Sub | Mul | Div | Mod | Pow | And | Or |
+    Xor | Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
-    Cbrt | IsInf | IsNaN | Sin | Cos | Atan | Sinh | Cosh | Tanh | Asinh |
-    Acosh | Atanh | Len | MakePtr | Read;
+    Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
+    Tanh | Asinh | Acosh | Atanh | Len | MakePtr | Read;
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 

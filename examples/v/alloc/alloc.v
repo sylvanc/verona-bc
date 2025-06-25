@@ -1,16 +1,16 @@
 cell
 {
-  f;
+  f: i32;
 
-  create(f = 0): cell
+  create(f: i32 = 0): cell
   {
     new f
   }
 }
 
-f1(): cell
+main(): i32
 {
   let a = cell;
   let b = cell (1 + 2);
-  b
+  a.f + b.f
 }

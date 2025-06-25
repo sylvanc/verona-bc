@@ -14,7 +14,6 @@ ANF:
   - Allow a pattern, not just a type test?
   - If all lambdas are patterns that return `nomatch`, then `if` with a lambda is the same as invoking the lambda with the value.
 - For, When.
-- Type arguments on calls?
 - Figure out copy and move.
   - Just do copy for now, figure out move later.
   - Could `vbcc` figure out move for us?
@@ -56,9 +55,9 @@ Structure:
 - Compile time evaluation.
 
 Reachability and flattening.
-- Find all reachable classes and functions with their type arguments.
-- Flatten the classes and functions.
-- Expand `QName` and `TypeName` to the flattened names.
+- IR types: fields, function signatures, let/var, `Typetest`.
+- Reachability for mono-morphism.
+  - Find all reachable classes and functions with their type arguments.
 
 Standard library:
 - Primitive type conversions.
@@ -82,7 +81,7 @@ Types:
     - Restrict to type parameters as the first path element?
     - Still causes a lookup problem:
       1. Class `C` has type parameter `T`.
-      2. Class has type alias `A = T::U`.
+      2. Class `C` has type alias `A = T::U`.
       3. `C[X]::A` should resolve to `X::U`, which means tracking.
 
 ## Syntax

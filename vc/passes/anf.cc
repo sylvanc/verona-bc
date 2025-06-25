@@ -75,10 +75,12 @@ namespace vc
     auto fn = _.fresh(l_local);
     auto id = _.fresh(l_local);
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
+    auto arity = _[Args].size() + 1;
     return Seq << (Lift << Body
                         << (Lookup << (LocalId ^ fn) << (LocalId ^ _(LocalId))
-                                   << (Method << (ref ? Lhs : Rhs) << _(Ident)
-                                              << _(TypeArgs))))
+                                   << (ref ? Lhs : Rhs) << _(Ident)
+                                   << _(TypeArgs)
+                                   << (Int ^ std::to_string(arity))))
                << (Lift << Body
                         << (CallDyn
                             << (LocalId ^ id) << (LocalId ^ fn)
