@@ -88,477 +88,517 @@ namespace vc
 
   PassDef anf()
   {
-    PassDef p{
-      "anf",
-      wfPassANF,
-      dir::topdown,
-      {
-        // Turn an initial function body into a label.
-        In(Function) * T(Body)[Body] >>
-          [](Match& _) {
-            return Labels << (Label << (LabelId ^ "start") << _(Body));
-          },
+    PassDef
+      p{"anf",
+        wfPassANF,
+        dir::topdown,
+        {
+          // Turn an initial function body into a label.
+          In(Function) * T(Body)[Body] >>
+            [](Match& _) {
+              return Labels << (Label << (LabelId ^ "start") << _(Body));
+            },
 
-        // New
-        In(Expr) * T(New) << End >> [](Match&) { return New << Tuple; },
+          // New
+          In(Expr) * T(New) << End >>
+            [](Match&) { return New << (Expr << Tuple); },
 
-        In(Expr) * T(New) << T(LocalId)[LocalId] >>
-          [](Match& _) { return New << (Tuple << _(LocalId)); },
+          In(Expr) * T(New) << T(LocalId)[LocalId] >>
+            [](Match& _) { return New << (Expr << (Tuple << _(LocalId))); },
 
-        In(Expr) * T(New) << T(Tuple)[Tuple] >>
-          [](Match& _) {
-            auto args = _(Tuple);
-            auto fields = field_count(args->parent(ClassBody));
+          In(Expr) * T(New) << (T(Expr) << T(Tuple)[Tuple]) >>
+            [](Match& _) {
+              auto args = _(Tuple);
+              auto fields = field_count(args->parent(ClassBody));
 
-            if (fields != args->size())
-              return err(args, "New requires an argument for each field");
+              if (fields != args->size())
+                return err(args, "New requires an argument for each field");
 
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (New << (LocalId ^ id) << make_selftype(args)
-                                        << (Args << *args)))
-                       << (LocalId ^ id);
-          },
+              auto id = _.fresh(l_local);
+              return Seq << (Lift
+                             << Body
+                             << (New << (LocalId ^ id) << make_selftype(args)
+                                     << (Args << *args)))
+                         << (LocalId ^ id);
+            },
 
-        // Field reference.
-        In(Expr) * T(FieldRef) << (T(LocalId)[LocalId] * T(FieldId)[FieldId]) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (FieldRef << (LocalId ^ id)
-                                             << (Arg << ArgCopy << _(LocalId))
-                                             << _(FieldId)))
-                       << (LocalId ^ id);
-          },
+          // Tuple creation.
+          In(Expr) * T(Tuple)[Tuple] << (T(LocalId)++ * End) >>
+            [](Match& _) {
+              // Allocate a [dyn] of the right size.
+              auto tuple = _(Tuple);
+              auto id = _.fresh(l_local);
+              auto seq = Seq
+                << (Lift << Body
+                         << (NewArrayConst
+                             << (LocalId ^ id) << Type
+                             << (Int ^ std::to_string(tuple->size()))));
 
-        // L-values.
-        In(Expr) * T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs]) >>
-          [](Match& _) { return Equals << (Lhs << *_[Lhs]) << _(Rhs); },
+              // Copy the elements into the array.
+              size_t idx = 0;
+              for (auto& elem : *tuple)
+              {
+                auto ref = _.fresh(l_local);
+                auto prev = _.fresh(l_local);
+                seq << (Lift
+                        << Body
+                        << (ArrayRefConst << (LocalId ^ ref)
+                                          << (Arg << ArgCopy << (LocalId ^ id))
+                                          << (Int ^ std::to_string(idx++))))
+                    << (Lift << Body
+                             << (Store << (LocalId ^ prev) << (LocalId ^ ref)
+                                       << (Arg << ArgCopy << elem)));
+              }
 
-        In(Lhs, TupleLHS) * T(Expr)[Expr] >>
-          [](Match& _) { return Lhs << *_[Expr]; },
+              return seq << (LocalId ^ id);
+            },
 
-        In(Lhs) * T(Tuple)[Tuple] >>
-          [](Match& _) { return TupleLHS << *_[Tuple]; },
+          // Field reference.
+          In(Expr) * T(FieldRef)
+              << (T(LocalId)[LocalId] * T(FieldId)[FieldId]) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (FieldRef << (LocalId ^ id)
+                                               << (Arg << ArgCopy << _(LocalId))
+                                               << _(FieldId)))
+                         << (LocalId ^ id);
+            },
 
-        // Assignment.
-        T(Equals) << (T(LocalId)[Lhs] * T(LocalId)[Rhs]) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift
-                           << Body
-                           << (Move << (LocalId ^ id) << (LocalId ^ _(Lhs))))
-                       << (Lift << Body << (Copy << _(Lhs) << _(Rhs)))
-                       << (LocalId ^ id);
-          },
+          // L-values.
+          In(Expr) * T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs]) >>
+            [](Match& _) { return Equals << (Lhs << *_[Lhs]) << _(Rhs); },
 
-        // Store.
-        T(Equals) << ((T(Ref) << T(LocalId)[Lhs]) * T(LocalId)[Rhs]) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Store << (LocalId ^ id) << _(Lhs)
-                                          << (Arg << ArgCopy << _(Rhs))))
-                       << (LocalId ^ id);
-          },
+          In(Lhs, TupleLHS) * T(Expr)[Expr] >>
+            [](Match& _) { return Lhs << *_[Expr]; },
 
-        // Destructuring assignment.
-        T(Equals)
-            << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId)++)) *
-                T(LocalId)[Rhs]) >>
-          [](Match& _) {
-            // If the RHS is too short, this will throw an error.
-            // If the RHS is too long, the extra values will be discarded.
-            Node seq = Seq;
-            Node tuple = Tuple;
-            size_t idx = 0;
+          In(Lhs) * T(Tuple)[Tuple] >>
+            [](Match& _) { return TupleLHS << *_[Tuple]; },
 
-            for (auto& l : *_(Lhs))
-            {
-              auto ref = _.fresh(l_local);
-              auto val = _.fresh(l_local);
-              seq << (Lift << Body
-                           << (ArrayRefConst
-                               << (LocalId ^ ref)
-                               << (Arg << ArgCopy << (LocalId ^ _(Rhs)))
-                               << (Int ^ std::to_string(idx++))))
-                  << (Lift << Body
-                           << (Load << (LocalId ^ val) << (LocalId ^ ref)));
-              tuple << (Equals << l << (LocalId ^ val));
-            }
+          // Assignment.
+          T(Equals) << (T(LocalId)[Lhs] * T(LocalId)[Rhs]) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift
+                             << Body
+                             << (Move << (LocalId ^ id) << (LocalId ^ _(Lhs))))
+                         << (Lift << Body << (Copy << _(Lhs) << _(Rhs)))
+                         << (LocalId ^ id);
+            },
 
-            return seq << tuple;
-          },
+          // Store.
+          T(Equals) << ((T(Ref) << T(LocalId)[Lhs]) * T(LocalId)[Rhs]) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (Store << (LocalId ^ id) << _(Lhs)
+                                            << (Arg << ArgCopy << _(Rhs))))
+                         << (LocalId ^ id);
+            },
 
-        // Invalid l-values.
-        In(Lhs) * T(Lambda, QName, If, Else, While, For, When)[Lhs] >>
-          [](Match& _) { return err(_(Lhs), "Can't assign to this"); },
+          // Destructuring assignment.
+          T(Equals)
+              << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId)++)) *
+                  T(LocalId)[Rhs]) >>
+            [](Match& _) {
+              // If the RHS is too short, this will throw an error.
+              // If the RHS is too long, the extra values will be discarded.
+              Node seq = Seq;
+              Node tuple = Tuple;
+              size_t idx = 0;
 
-        // If expression.
-        In(Expr) * T(If)[If] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (_(If) << (LocalId ^ id)))
-                       << (LocalId ^ id);
-          },
+              for (auto& l : *_(Lhs))
+              {
+                auto ref = _.fresh(l_local);
+                auto val = _.fresh(l_local);
+                seq << (Lift << Body
+                             << (ArrayRefConst
+                                 << (LocalId ^ ref)
+                                 << (Arg << ArgCopy << (LocalId ^ _(Rhs)))
+                                 << (Int ^ std::to_string(idx++))))
+                    << (Lift << Body
+                             << (Load << (LocalId ^ val) << (LocalId ^ ref)));
+                tuple << (Equals << l << (LocalId ^ val));
+              }
 
-        // If body.
-        // TODO: distinguish typetest by param count
-        In(Body) * T(If)
-            << (T(Expr)[Cond] *
-                (T(Lambda)
-                 << ((T(TypeParams) << End) * (T(Params) << End) *
-                     T(Type)[Type] * T(Body)[Body])) *
-                T(LocalId)[LocalId]) >>
-          [](Match& _) {
-            // TODO: what do we do with the Type?
-            auto body = _.fresh(l_body);
-            auto join = _.fresh(l_join);
-            return Seq << make_nomatch(_(LocalId))
-                       << (Cond << _(Cond) << (LabelId ^ body)
-                                << (LabelId ^ join))
-                       << (Label << (LabelId ^ body)
-                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
-                                             << (Jump << (LabelId ^ join))))
-                       << (Label << (LabelId ^ join) << Body);
-          },
+              return seq << (Expr << tuple);
+            },
 
-        // While expression.
-        In(Expr) * T(While)[While] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (_(While) << (LocalId ^ id)))
-                       << (LocalId ^ id);
-          },
+          // Invalid l-values.
+          In(Lhs) * T(Lambda, QName, If, Else, While, For, When)[Lhs] >>
+            [](Match& _) { return err(_(Lhs), "Can't assign to this"); },
 
-        // While body.
-        In(Body) * T(While)
-            << (T(Expr)[Cond] *
-                (T(Lambda)
-                 << ((T(TypeParams) << End) * (T(Params) << End) *
-                     T(Type)[Type] * T(Body)[Body])) *
-                T(LocalId)[LocalId]) >>
-          [](Match& _) {
-            // TODO: what do we do with the Type?
-            auto cond = _.fresh(l_cond);
-            auto body = _.fresh(l_body);
-            auto join = _.fresh(l_join);
+          // If expression.
+          In(Expr) * T(If)[If] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body << (_(If) << (LocalId ^ id)))
+                         << (LocalId ^ id);
+            },
 
-            _(Body)->traverse([&](Node& node) {
-              if (node->in({While, For, Error}))
-                return false;
-              else if (node == Break)
-                node << (LocalId ^ _(LocalId)) << (LabelId ^ join);
-              else if (node == Continue)
-                node << (LocalId ^ _(LocalId)) << (LabelId ^ cond);
-              return true;
+          // If body.
+          // TODO: distinguish typetest by param count
+          In(Body) * T(If)
+              << (T(Expr)[Cond] *
+                  (T(Lambda)
+                   << ((T(TypeParams) << End) * (T(Params) << End) *
+                       T(Type)[Type] * T(Body)[Body])) *
+                  T(LocalId)[LocalId]) >>
+            [](Match& _) {
+              // TODO: what do we do with the Type?
+              auto body = _.fresh(l_body);
+              auto join = _.fresh(l_join);
+              return Seq << make_nomatch(_(LocalId))
+                         << (Cond << _(Cond) << (LabelId ^ body)
+                                  << (LabelId ^ join))
+                         << (Label
+                             << (LabelId ^ body)
+                             << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                         << (Jump << (LabelId ^ join))))
+                         << (Label << (LabelId ^ join) << Body);
+            },
+
+          // While expression.
+          In(Expr) * T(While)[While] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body << (_(While) << (LocalId ^ id)))
+                         << (LocalId ^ id);
+            },
+
+          // While body.
+          In(Body) * T(While)
+              << (T(Expr)[Cond] *
+                  (T(Lambda)
+                   << ((T(TypeParams) << End) * (T(Params) << End) *
+                       T(Type)[Type] * T(Body)[Body])) *
+                  T(LocalId)[LocalId]) >>
+            [](Match& _) {
+              // TODO: what do we do with the Type?
+              auto cond = _.fresh(l_cond);
+              auto body = _.fresh(l_body);
+              auto join = _.fresh(l_join);
+
+              _(Body)->traverse([&](Node& node) {
+                if (node->in({While, For, Error}))
+                  return false;
+                else if (node == Break)
+                  node << (LocalId ^ _(LocalId)) << (LabelId ^ join);
+                else if (node == Continue)
+                  node << (LocalId ^ _(LocalId)) << (LabelId ^ cond);
+                return true;
+              });
+
+              return Seq << make_nomatch(_(LocalId))
+                         << (Jump << (LabelId ^ cond))
+                         << (Label << (LabelId ^ cond)
+                                   << (Body
+                                       << (Cond << _(Cond) << (LabelId ^ body)
+                                                << (LabelId ^ join))))
+                         << (Label
+                             << (LabelId ^ body)
+                             << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                         << (Jump << (LabelId ^ cond))))
+                         << (Label << (LabelId ^ join) << Body);
+            },
+
+          // Else expression.
+          In(Expr) * T(Else) << (T(Expr)[Lhs] * (T(Expr)[Rhs] << !T(Lambda))) >>
+            [](Match& _) {
+              return Else << _(Lhs)
+                          << (Expr
+                              << (Lambda << TypeParams << Params << Type
+                                         << (Body << _(Rhs))));
+            },
+
+          // Else lambda.
+          In(Expr) * T(Else)
+              << (T(LocalId)[Lhs] * (T(Expr) << T(Lambda)[Lambda])) >>
+            [](Match& _) {
+              return Seq << (Lift << Body << (Else << _(Lhs) << _(Lambda)))
+                         << (LocalId ^ _(Lhs));
+            },
+
+          // Else body.
+          // TODO: distinguish typetest by param count
+          In(Body) * T(Else)
+              << (T(LocalId)[LocalId] *
+                  (T(Lambda)
+                   << ((T(TypeParams) << End) * (T(Params) << End) *
+                       T(Type)[Type] * T(Body)[Body]))) >>
+            [](Match& _) {
+              // TODO: what do we do with the Type?
+              auto id = _.fresh(l_local);
+              auto body = _.fresh(l_body);
+              auto join = _.fresh(l_join);
+              return Seq << test_nomatch((LocalId ^ id), _(LocalId))
+                         << (Cond << (LocalId ^ id) << (LabelId ^ body)
+                                  << (LabelId ^ join))
+                         << (Label
+                             << (LabelId ^ body)
+                             << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                         << (Jump << (LabelId ^ join))))
+                         << (Label << (LabelId ^ join) << Body);
+            },
+
+          // Break, continue.
+          In(Body) * T(Break, Continue)[Break]
+              << (T(LocalId)[Rhs] * T(LocalId)[Lhs] * T(LabelId)[LabelId]) >>
+            [](Match& _) {
+              return Seq << (Copy << _(Lhs) << _(Rhs)) << (Jump << _(LabelId));
+            },
+
+          In(Body) * T(Break, Continue)[Break] << (T(Expr) * End) >>
+            [](Match& _) {
+              return err(_(Break), "Break and continue must be inside a loop");
+            },
+
+          // Continuation label.
+          In(Body) * (T(Label) << (T(LabelId)[LabelId] * T(Body)[Body])) *
+              (!T(Label) * (!T(Label))++)[Continue] * End >>
+            [](Match& _) {
+              return Label << (LabelId ^ _(LabelId))
+                           << (_(Body) << _[Continue]);
+            },
+
+          // Lift labels without reversing ordering.
+          In(Labels) * T(Label)[Label] >> [](Match& _) -> Node {
+            auto body = _(Label) / Body;
+            Nodes labels;
+
+            auto it = std::remove_if(body->begin(), body->end(), [&](Node& n) {
+              if (n == Label)
+              {
+                labels.push_back(n);
+                return true;
+              }
+
+              return false;
             });
 
-            return Seq << make_nomatch(_(LocalId)) << (Jump << (LabelId ^ cond))
-                       << (Label << (LabelId ^ cond)
-                                 << (Body
-                                     << (Cond << _(Cond) << (LabelId ^ body)
-                                              << (LabelId ^ join))))
-                       << (Label << (LabelId ^ body)
-                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
-                                             << (Jump << (LabelId ^ cond))))
-                       << (Label << (LabelId ^ join) << Body);
+            if (labels.empty())
+              return NoChange;
+
+            body->erase(it, body->end());
+            auto seq = Seq << _(Label);
+
+            for (auto& l : labels)
+              seq << l;
+
+            return seq;
           },
 
-        // Else expression.
-        In(Expr) * T(Else) << (T(Expr)[Lhs] * (T(Expr)[Rhs] << !T(Lambda))) >>
-          [](Match& _) {
-            return Else << _(Lhs)
-                        << (Expr
-                            << (Lambda << TypeParams << Params << Type
-                                       << (Body << _(Rhs))));
-          },
+          // Lift variable declarations.
+          In(Expr, Lhs) * T(Let)[Let] >>
+            [](Match& _) {
+              return Seq << (Lift << Body << _(Let))
+                         << (LocalId ^ (_(Let) / Ident));
+            },
 
-        // Else lambda.
-        In(Expr) * T(Else)
-            << (T(LocalId)[Lhs] * (T(Expr) << T(Lambda)[Lambda])) >>
-          [](Match& _) {
-            return Seq << (Lift << Body << (Else << _(Lhs) << _(Lambda)))
-                       << (LocalId ^ _(Lhs));
-          },
+          In(Expr, Lhs) * T(Var)[Var] >>
+            [](Match& _) {
+              return Seq << (Lift << Body << _(Var))
+                         << (LocalId ^ (_(Var) / Ident));
+            },
 
-        // Else body.
-        // TODO: distinguish typetest by param count
-        In(Body) * T(Else)
-            << (T(LocalId)[LocalId] *
-                (T(Lambda)
-                 << ((T(TypeParams) << End) * (T(Params) << End) *
-                     T(Type)[Type] * T(Body)[Body]))) >>
-          [](Match& _) {
-            // TODO: what do we do with the Type?
-            auto id = _.fresh(l_local);
-            auto body = _.fresh(l_body);
-            auto join = _.fresh(l_join);
-            return Seq << test_nomatch((LocalId ^ id), _(LocalId))
-                       << (Cond << (LocalId ^ id) << (LabelId ^ body)
-                                << (LabelId ^ join))
-                       << (Label << (LabelId ^ body)
-                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
-                                             << (Jump << (LabelId ^ join))))
-                       << (Label << (LabelId ^ join) << Body);
-          },
+          // Lift literals.
+          In(Expr) * T(True, False)[Bool] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift
+                             << Body
+                             << (Const << (LocalId ^ id) << Bool << _(Bool)))
+                         << (LocalId ^ id);
+            },
 
-        // Break, continue.
-        In(Body) * T(Break, Continue)[Break]
-            << (T(LocalId)[Rhs] * T(LocalId)[Lhs] * T(LabelId)[LabelId]) >>
-          [](Match& _) {
-            return Seq << (Copy << _(Lhs) << _(Rhs)) << (Jump << _(LabelId));
-          },
+          In(Expr) * T(Bin, Oct, Int, Hex)[Int] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (Const << (LocalId ^ id) << U64 << _(Int)))
+                         << (LocalId ^ id);
+            },
 
-        In(Body) * T(Break, Continue)[Break] << (T(Expr) * End) >>
-          [](Match& _) {
-            return err(_(Break), "Break and continue must be inside a loop");
-          },
+          In(Expr) * T(Float, HexFloat)[Float] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift
+                             << Body
+                             << (Const << (LocalId ^ id) << F64 << _(Float)))
+                         << (LocalId ^ id);
+            },
 
-        // Continuation label.
-        In(Body) * (T(Label) << (T(LabelId)[LabelId] * T(Body)[Body])) *
-            (!T(Label) * (!T(Label))++)[Continue] * End >>
-          [](Match& _) {
-            return Label << (LabelId ^ _(LabelId)) << (_(Body) << _[Continue]);
-          },
+          In(Expr) * T(String, RawString)[String] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (ConstStr << (LocalId ^ id) << _(String)))
+                         << (LocalId ^ id);
+            },
 
-        // Lift labels without reversing ordering.
-        In(Labels) * T(Label)[Label] >> [](Match& _) -> Node {
-          auto body = _(Label) / Body;
-          Nodes labels;
+          // Dynamic call.
+          In(Expr) * T(Ref) << (T(Expr) << CallDynPat) >>
+            [](Match& _) { return make_calldyn(_, false, true); },
 
-          auto it = std::remove_if(body->begin(), body->end(), [&](Node& n) {
-            if (n == Label)
-            {
-              labels.push_back(n);
-              return true;
-            }
+          In(Expr) * CallDynPat >>
+            [](Match& _) { return make_calldyn(_, false, false); },
 
-            return false;
-          });
+          In(Lhs) * CallDynPat >>
+            [](Match& _) { return make_calldyn(_, true, true); },
 
-          if (labels.empty())
-            return NoChange;
+          // 0-argument dynamic call.
+          In(Expr) * T(Ref) << (T(Expr) << MethodPat) >>
+            [](Match& _) { return make_calldyn(_, false, true); },
 
-          body->erase(it, body->end());
-          auto seq = Seq << _(Label);
+          In(Expr) * MethodPat >>
+            [](Match& _) { return make_calldyn(_, false, false); },
 
-          for (auto& l : labels)
-            seq << l;
+          In(Lhs) * MethodPat >>
+            [](Match& _) { return make_calldyn(_, true, true); },
 
-          return seq;
-        },
+          // Static call.
+          In(Expr) * (T(Ref) << (T(Expr) << CallPat)) >>
+            [](Match& _) { return make_call(_, false, true); },
 
-        // Lift variable declarations.
-        In(Expr, Lhs) * T(Let)[Let] >>
-          [](Match& _) {
-            return Seq << (Lift << Body << _(Let))
-                       << (LocalId ^ (_(Let) / Ident));
-          },
+          In(Expr) * CallPat >>
+            [](Match& _) { return make_call(_, false, false); },
 
-        In(Expr, Lhs) * T(Var)[Var] >>
-          [](Match& _) {
-            return Seq << (Lift << Body << _(Var))
-                       << (LocalId ^ (_(Var) / Ident));
-          },
+          In(Lhs) * CallPat >>
+            [](Match& _) { return make_call(_, true, true); },
 
-        // Lift literals.
-        In(Expr) * T(True, False)[Bool] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << Bool << _(Bool)))
-                       << (LocalId ^ id);
-          },
+          // 0-argument static call.
+          In(Expr) * (T(Ref) << (T(Expr) << T(QName)[QName])) >>
+            [](Match& _) { return make_call(_, false, true); },
 
-        In(Expr) * T(Bin, Oct, Int, Hex)[Int] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << U64 << _(Int)))
-                       << (LocalId ^ id);
-          },
+          In(Expr) * T(QName)[QName] >>
+            [](Match& _) { return make_call(_, false, false); },
 
-        In(Expr) * T(Float, HexFloat)[Float] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << F64 << _(Float)))
-                       << (LocalId ^ id);
-          },
+          In(Lhs) * T(QName)[QName] >>
+            [](Match& _) { return make_call(_, true, true); },
 
-        In(Expr) * T(String, RawString)[String] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (ConstStr << (LocalId ^ id) << _(String)))
-                       << (LocalId ^ id);
-          },
+          // Treat all Args as ArgCopy at this stage.
+          In(Args) * T(LocalId)[LocalId] >>
+            [](Match& _) { return Arg << ArgCopy << _(LocalId); },
 
-        // Dynamic call.
-        In(Expr) * T(Ref) << (T(Expr) << CallDynPat) >>
-          [](Match& _) { return make_calldyn(_, false, true); },
+          // RHS reference creation.
+          In(Expr) * T(Ref) << T(LocalId)[LocalId] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift
+                             << Body
+                             << (RegisterRef << (LocalId ^ id) << _(LocalId)))
+                         << (LocalId ^ id);
+            },
 
-        In(Expr) * CallDynPat >>
-          [](Match& _) { return make_calldyn(_, false, false); },
+          // LHS dereference.
+          In(Lhs) * T(Ref) << (T(Ref) << T(LocalId)[LocalId]) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (Load << (LocalId ^ id) << _(LocalId)))
+                         << (Ref << (LocalId ^ id));
+            },
 
-        In(Lhs) * CallDynPat >>
-          [](Match& _) { return make_calldyn(_, true, true); },
+          // Load, from auto-RHS fields.
+          In(Expr) * T(Load) << T(LocalId)[LocalId] >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (Load << (LocalId ^ id) << _(LocalId)))
+                         << (LocalId ^ id);
+            },
 
-        // 0-argument dynamic call.
-        In(Expr) * T(Ref) << (T(Expr) << MethodPat) >>
-          [](Match& _) { return make_calldyn(_, false, true); },
+          // Convert.
+          In(Expr, Lhs) * T(Convert)
+              << (Any[Type] *
+                  (T(Args) << ((
+                     T(Arg) << (T(ArgCopy) * T(LocalId)[LocalId]))))) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (Convert << (LocalId ^ id) << _(Type)
+                                              << _(LocalId)))
+                         << (LocalId ^ id);
+            },
 
-        In(Expr) * MethodPat >>
-          [](Match& _) { return make_calldyn(_, false, false); },
+          // Binop.
+          In(Expr, Lhs) * T(Binop)
+              << (Any[Op] *
+                  (T(Args)
+                   << ((T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])) *
+                       (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))))) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift
+                             << Body
+                             << (_(Op) << (LocalId ^ id) << _(Lhs) << _(Rhs)))
+                         << (LocalId ^ id);
+            },
 
-        In(Lhs) * MethodPat >>
-          [](Match& _) { return make_calldyn(_, true, true); },
+          // Unop.
+          In(Expr, Lhs) * T(Unop)
+              << (Any[Op] *
+                  (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])))) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (_(Op) << (LocalId ^ id) << _(Lhs)))
+                         << (LocalId ^ id);
+            },
 
-        // Static call.
-        In(Expr) * (T(Ref) << (T(Expr) << CallPat)) >>
-          [](Match& _) { return make_call(_, false, true); },
+          // Nulop.
+          In(Expr, Lhs) * T(Nulop) << (T(None) * T(Args)) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body
+                                  << (Const << (LocalId ^ id) << None << None))
+                         << (LocalId ^ id);
+            },
 
-        In(Expr) * CallPat >>
-          [](Match& _) { return make_call(_, false, false); },
+          In(Expr, Lhs) * T(Nulop) << ((!T(None))[Op] * T(Args)) >>
+            [](Match& _) {
+              auto id = _.fresh(l_local);
+              return Seq << (Lift << Body << (_(Op) << (LocalId ^ id)))
+                         << (LocalId ^ id);
+            },
 
-        In(Lhs) * CallPat >> [](Match& _) { return make_call(_, true, true); },
+          // Compact LocalId.
+          T(Expr, Lhs) << (T(LocalId)[LocalId] * End) >>
+            [](Match& _) { return _(LocalId); },
 
-        // 0-argument static call.
-        In(Expr) * (T(Ref) << (T(Expr) << T(QName)[QName])) >>
-          [](Match& _) { return make_call(_, false, true); },
+          // Compact LHS Ref LocalId.
+          T(Lhs) << (T(Ref) << T(LocalId)[LocalId] * End) >>
+            [](Match& _) { return Ref << _(LocalId); },
 
-        In(Expr) * T(QName)[QName] >>
-          [](Match& _) { return make_call(_, false, false); },
+          // Compact TupleLHS.
+          T(Lhs) << (T(TupleLHS)[TupleLHS] * End) >>
+            [](Match& _) { return _(TupleLHS); },
 
-        In(Lhs) * T(QName)[QName] >>
-          [](Match& _) { return make_call(_, true, true); },
+          // Combine non-terminal LocalId with an incomplete copy.
+          // This is for `if` and `else`.
+          In(Body) * T(LocalId)[Rhs] * (T(Copy) << (T(LocalId)[Lhs] * End)) >>
+            [](Match& _) { return Copy << _(Lhs) << _(Rhs); },
 
-        // Treat all Args as ArgCopy at this stage.
-        In(Args) * T(LocalId)[LocalId] >>
-          [](Match& _) { return Arg << ArgCopy << _(LocalId); },
+          // If there's a terminator, elide the incomplete Copy and the Jump.
+          In(Body) * (T(Jump, Return, Raise, Throw))[Return] *
+              (T(Copy) << (T(LocalId) * End)) * T(Jump) * End >>
+            [](Match& _) -> Node { return _(Return); },
 
-        // RHS reference creation.
-        In(Expr) * T(Ref) << T(LocalId)[LocalId] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift
-                           << Body
-                           << (RegisterRef << (LocalId ^ id) << _(LocalId)))
-                       << (LocalId ^ id);
-          },
+          // Discard non-terminal LocalId.
+          In(Body) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
 
-        // LHS dereference.
-        In(Lhs) * T(Ref) << (T(Ref) << T(LocalId)[LocalId]) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Load << (LocalId ^ id) << _(LocalId)))
-                       << (Ref << (LocalId ^ id));
-          },
+          // Compact an ExprSeq with only one element.
+          T(ExprSeq) << (Any[Expr] * End) >> [](Match& _) { return _(Expr); },
 
-        // Load, from auto-RHS fields.
-        In(Expr) * T(Load) << T(LocalId)[LocalId] >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Load << (LocalId ^ id) << _(LocalId)))
-                       << (LocalId ^ id);
-          },
+          // Discard leading LocalId in ExprSeq.
+          In(ExprSeq) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
 
-        // Convert.
-        In(Expr, Lhs) * T(Convert)
-            << (Any[Type] *
-                (T(Args) << ((
-                   T(Arg) << (T(ArgCopy) * T(LocalId)[LocalId]))))) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Convert << (LocalId ^ id) << _(Type)
-                                            << _(LocalId)))
-                       << (LocalId ^ id);
-          },
-
-        // Binop.
-        In(Expr, Lhs) * T(Binop)
-            << (Any[Op] *
-                (T(Args)
-                 << ((T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])) *
-                     (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))))) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift
-                           << Body
-                           << (_(Op) << (LocalId ^ id) << _(Lhs) << _(Rhs)))
-                       << (LocalId ^ id);
-          },
-
-        // Unop.
-        In(Expr, Lhs) * T(Unop)
-            << (Any[Op] *
-                (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])))) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (_(Op) << (LocalId ^ id) << _(Lhs)))
-                       << (LocalId ^ id);
-          },
-
-        // Nulop.
-        In(Expr, Lhs) * T(Nulop) << (T(None) * T(Args)) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << None << None))
-                       << (LocalId ^ id);
-          },
-
-        In(Expr, Lhs) * T(Nulop) << ((!T(None))[Op] * T(Args)) >>
-          [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (_(Op) << (LocalId ^ id)))
-                       << (LocalId ^ id);
-          },
-
-        // Compact LocalId.
-        T(Expr, Lhs) << (T(LocalId)[LocalId] * End) >>
-          [](Match& _) { return _(LocalId); },
-
-        // Compact LHS Ref LocalId.
-        T(Lhs) << (T(Ref) << T(LocalId)[LocalId] * End) >>
-          [](Match& _) { return Ref << _(LocalId); },
-
-        // Compact Tuple.
-        T(Expr) * (T(Tuple)[Tuple] * End) >> [](Match& _) { return _(Tuple); },
-
-        // Compact TupleLHS.
-        T(Lhs) << (T(TupleLHS)[TupleLHS] * End) >>
-          [](Match& _) { return _(TupleLHS); },
-
-        // Combine non-terminal LocalId with an incomplete copy.
-        // This is for `if` and `else`.
-        In(Body) * T(LocalId)[Rhs] * (T(Copy) << (T(LocalId)[Lhs] * End)) >>
-          [](Match& _) { return Copy << _(Lhs) << _(Rhs); },
-
-        // If there's a terminator, elide the incomplete Copy and the Jump.
-        In(Body) * (T(Jump, Return, Raise, Throw))[Return] *
-            (T(Copy) << (T(LocalId) * End)) * T(Jump) * End >>
-          [](Match& _) -> Node { return _(Return); },
-
-        // Discard non-terminal LocalId.
-        In(Body) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
-
-        // Compact an ExprSeq with only one element.
-        T(ExprSeq) << (Any[Expr] * End) >> [](Match& _) { return _(Expr); },
-
-        // Discard leading LocalId in ExprSeq.
-        In(ExprSeq) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
-
-        // An empty ExprSeq is not an expression.
-        T(ExprSeq)[ExprSeq] << End >>
-          [](Match& _) {
-            return err(_(ExprSeq), "Unexpected empty parentheses");
-          },
-      }};
+          // An empty ExprSeq is not an expression.
+          T(ExprSeq)[ExprSeq] << End >>
+            [](Match& _) {
+              return err(_(ExprSeq), "Unexpected empty parentheses");
+            },
+        }};
 
     p.post([](auto top) {
       top->traverse([&](auto node) {

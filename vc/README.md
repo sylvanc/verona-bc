@@ -2,8 +2,6 @@
 
 ## Priorities
 
-- Allocate tuples.
-
 ## To Do
 
 Assign:
@@ -24,11 +22,10 @@ ANF:
 Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
 - Destructing when the tuple is too long ignores the extra elements. Should it?
-- A `tuple` is a `[dyn]`?
-  - What's the syntax for tuple element reference?
-    - `apply` method on `array`?
-  - Can we do IR-level type checking?
-    - IR tuple type demands `[dyn]` of correct size with elements that type check.
+- What's the syntax for tuple element reference?
+  - `apply` method on `array`?
+- Can we do IR-level type checking?
+  - IR tuple type demands `[dyn]` of correct size with elements that type check.
 - Flatten a tuple into another tuple.
 
 Calls:

@@ -201,8 +201,9 @@ namespace vc
 
   // TODO: remove LocalId, Let, Var
   inline const auto wfBody2 = Use | TypeAlias | Const | ConstStr | Convert |
-    Copy | Move | RegisterRef | FieldRef | ArrayRefConst | New | Load | Store |
-    Lookup | Call | CallDyn | Typetest | Let | Var | wfBinop | wfUnop | wfNulop;
+    Copy | Move | RegisterRef | FieldRef | ArrayRefConst | New | NewArrayConst |
+    Load | Store | Lookup | Call | CallDyn | Typetest | Let | Var | wfBinop |
+    wfUnop | wfNulop;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -221,6 +222,7 @@ namespace vc
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
     | (New <<= wfDst * Type * Args)
+    | (NewArrayConst <<= wfDst * Type * wfLit)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
     | (Method <<= wfFuncLhs * wfFuncId * TypeArgs)
