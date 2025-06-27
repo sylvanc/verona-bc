@@ -159,6 +159,7 @@ namespace vbcc
 
   void LabelState::resize(size_t size)
   {
+    last_use.resize(size);
     in.resize(size);
     out.resize(size);
     dead.resize(size);
@@ -166,12 +167,21 @@ namespace vbcc
 
   void LabelState::def(size_t r)
   {
+    if (auto n = last_use.at(r))
+    {
+      // If the last use was an ArgCopy, turn it into an ArgMove.
+      if (n->parent() == ArgCopy)
+        n->parent()->replace(n, ArgMove << n);
+
+      last_use[r] = {};
+    }
+
     // We've defined a register, so it's live.
     out.set(r);
     dead.reset(r);
   }
 
-  bool LabelState::use(size_t r)
+  bool LabelState::use(size_t r, Node& node)
   {
     // We've used a register. If it's not live, we require it and set it as
     // live.
@@ -184,6 +194,7 @@ namespace vbcc
       in.set(r);
     }
 
+    last_use[r] = node;
     return true;
   }
 
@@ -486,7 +497,7 @@ namespace vbcc
     auto& func_state = get_func(id->parent(Func) / FunctionId);
     auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
 
-    if (!label_state.use(*func_state.get_register_id(id)))
+    if (!label_state.use(*func_state.get_register_id(id), id))
     {
       error = true;
       id->parent()->replace(id, err(clone(id), "use of dead register"));

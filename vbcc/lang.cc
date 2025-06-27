@@ -15,7 +15,7 @@ namespace vbcc
       loc = loc->parent();
     }
 
-    if (loc != node)
+    if (loc && (loc != node))
       node = loc->type() ^ loc;
 
     return Error << (ErrorMsg ^ msg) << node;

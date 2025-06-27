@@ -19,6 +19,7 @@ namespace vbcc
   {
     std::vector<size_t> pred;
     std::vector<size_t> succ;
+    std::vector<Node> last_use;
 
     Bitset in;
     Bitset dead;
@@ -26,7 +27,7 @@ namespace vbcc
 
     void resize(size_t size);
     void def(size_t r);
-    bool use(size_t r);
+    bool use(size_t r, Node& node);
     bool kill(size_t r);
   };
 

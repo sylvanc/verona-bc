@@ -21,11 +21,6 @@ target_link_libraries(vc
   CLI11::CLI11
 )
 
-# Clear all existing files and folders from the install directory
-install(CODE [[
-  file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
-  ]])
-
 # Copy the stdlib to the install directory
 install(DIRECTORY std DESTINATION vc)
 

@@ -18,8 +18,12 @@ namespace vbcc
 
   public:
     Bitset(size_t size = 0);
+
+    operator bool() const;
+    bool empty() const;
+
     void resize(size_t size);
-    bool test(size_t i);
+    bool test(size_t i) const;
     void set(size_t i);
     void reset(size_t i);
 

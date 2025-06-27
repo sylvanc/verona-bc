@@ -73,9 +73,9 @@ namespace vbcc
         {
           state->def(node / LocalId);
         }
-        else if (node->in({Return, Raise, Throw, Cond, TailcallDyn}))
+        else if (node->in({Return, Raise, Throw, TailcallDyn}))
         {
-          state->use(node / LocalId);
+          state->kill(node / LocalId);
         }
         else if (node == Arg)
         {
@@ -98,6 +98,7 @@ namespace vbcc
         }
         else if (node == Cond)
         {
+          state->use(node / LocalId);
           auto& func_state = state->get_func(node->parent(Func) / FunctionId);
           auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
           auto lhs = *func_state.get_label_id(node / Lhs);
@@ -120,18 +121,6 @@ namespace vbcc
         {
           auto target = (node / Labels)->front() / LabelId;
           auto& func_state = state->get_func(node / FunctionId);
-          auto& label = func_state.get_label(target);
-          auto params = Bitset(func_state.register_names.size());
-
-          for (auto param : *(node / Params))
-            params.set(*func_state.get_register_id(param / LocalId));
-
-          if ((params & label.in) != label.in)
-          {
-            state->error = true;
-            node << err(
-              clone(target), "branch doesn't define needed registers");
-          }
 
           // Backward data-flow.
           std::queue<size_t> wl;
@@ -145,12 +134,21 @@ namespace vbcc
 
             // Calculate a new out-set that is everything our successors need.
             auto& l = func_state.labels.at(id);
-            auto new_out = Bitset(func_state.register_names.size());
+            auto new_out = l.out;
 
             for (auto succ_id : l.succ)
             {
               auto& succ = func_state.labels.at(succ_id);
               new_out |= succ.in;
+            }
+
+            if (new_out & l.dead)
+            {
+              state->error = true;
+              node << err(
+                clone(node / FunctionId),
+                "successor label requires dead register");
+              return true;
             }
 
             // Calculate a new in-set that is our out-set, minus our own
@@ -169,6 +167,51 @@ namespace vbcc
 
               for (auto pred_id : l.pred)
                 wl.push(pred_id);
+            }
+          }
+
+          // Check that everything is defined.
+          auto& label = func_state.get_label(target);
+          auto params = Bitset(func_state.register_names.size());
+
+          for (auto param : *(node / Params))
+            params.set(*func_state.get_register_id(param / LocalId));
+
+          if ((params & label.in) != label.in)
+          {
+            state->error = true;
+            node << err(
+              clone(node / FunctionId),
+              "function doesn't define needed registers");
+            return true;
+          }
+
+          // Turn last ArgCopy into an ArgMove.
+          for (auto& l : func_state.labels)
+          {
+            auto unneeded = Bitset(func_state.register_names.size());
+
+            for (auto succ_idx : l.succ)
+              unneeded |= func_state.labels.at(succ_idx).in;
+
+            unneeded = l.out & ~unneeded;
+
+            for (size_t r = 0; r < func_state.register_names.size(); r++)
+            {
+              if (!unneeded.test(r))
+                continue;
+
+              auto last = l.last_use.at(r);
+
+              if (!last)
+                continue;
+
+              auto parent = last->parent();
+
+              if ((parent != Arg) || (parent->front() != ArgCopy))
+                continue;
+
+              parent / Type = ArgMove;
             }
           }
         }

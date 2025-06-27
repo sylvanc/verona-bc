@@ -3,6 +3,5 @@ lib
 
 func @main(): i32
   $r = const i32 4
-  $q = copy $r
   $_ = ffi @printval(copy $r)
   ret $r

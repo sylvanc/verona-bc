@@ -18,12 +18,28 @@ namespace vbcc
       resize(size);
   }
 
+  Bitset::operator bool() const
+  {
+    return !empty();
+  }
+
+  bool Bitset::empty() const
+  {
+    for (const auto& bit : bits)
+    {
+      if (bit != 0)
+        return false;
+    }
+
+    return true;
+  }
+
   void Bitset::resize(size_t size)
   {
     bits.resize(idx(size - 1) + 1);
   }
 
-  bool Bitset::test(size_t i)
+  bool Bitset::test(size_t i) const
   {
     return (bits.at(idx(i)) >> off(i)) & 1;
   }

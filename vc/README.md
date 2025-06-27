@@ -2,6 +2,10 @@
 
 ## Priorities
 
+Let and var.
+- Currently orphaned from flattening.
+- Set-once for `let`. Set-before-use for `let` and `var`.
+
 ## To Do
 
 Assign:
@@ -9,14 +13,11 @@ Assign:
   - Keyword? Or a method on `ref`?
 
 ANF:
+- For, When.
 - `if` with a lambda that takes arguments is a type test.
   - Allow type test version of `for`?
   - Allow a pattern, not just a type test?
   - If all lambdas are patterns that return `nomatch`, then `if` with a lambda is the same as invoking the lambda with the value.
-- For, When.
-- Figure out copy and move.
-  - Just do copy for now, figure out move later.
-  - Could `vbcc` figure out move for us?
 
 Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
@@ -29,7 +30,6 @@ Tuples:
 
 Calls:
 - Try, sub-call, tail-call.
-- Set-once for `let`. Set-before-use for `let` and `var`.
 
 Expressions:
 - Only allow `:::` in `std::builtin`.
@@ -55,7 +55,7 @@ Structure:
 - Compile time evaluation.
 
 Reachability and flattening.
-- IR types: fields, function signatures, let/var, `Typetest`.
+- IR types for: union, intersection, tuple, function.
 - Reachability for mono-morphism.
   - Find all reachable classes and functions with their type arguments.
 
