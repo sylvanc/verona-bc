@@ -186,7 +186,6 @@ namespace vbcc
             return true;
           }
 
-          // Turn last ArgCopy into an ArgMove.
           for (auto& l : func_state.labels)
           {
             auto unneeded = Bitset(func_state.register_names.size());
@@ -198,20 +197,8 @@ namespace vbcc
 
             for (size_t r = 0; r < func_state.register_names.size(); r++)
             {
-              if (!unneeded.test(r))
-                continue;
-
-              auto last = l.last_use.at(r);
-
-              if (!last)
-                continue;
-
-              auto parent = last->parent();
-
-              if ((parent != Arg) || (parent->front() != ArgCopy))
-                continue;
-
-              parent / Type = ArgMove;
+              if (unneeded.test(r))
+                l.automove(r);
             }
           }
         }

@@ -18,20 +18,20 @@ class @timer
 func @timer_cb0($self: @timer): none
   $one = const usize 1
   $done = const usize 3
-  $counter_ref = ref copy $self @counter
+  $counter_ref = ref $self @counter
   $counter = load $counter_ref
   $cond = ge $counter $done
   cond $cond ^done ^not_done
 ^done
-  $handle_ref = ref copy $self @handle
+  $handle_ref = ref $self @handle
   $handle = load $handle_ref
-  $_ = ffi @uv_timer_stop(copy $handle)
-  $_ = ffi @async_close(move $handle)
+  $_ = ffi @uv_timer_stop($handle)
+  $_ = ffi @async_close($handle)
   jump ^return
 ^not_done
   $counter = add $counter $one
-  $_ = ffi @printval(copy $counter)
-  $_ = store $counter_ref copy $counter
+  $_ = ffi @printval($counter)
+  $_ = store $counter_ref $counter
   jump ^return
 ^return
   $none = const none
@@ -42,23 +42,22 @@ func @print_home(): none
   $home_ptr = makeptr $home
   $home_len = len $home
   $home_len_ptr = makeptr $home_len
-  $_ = ffi @uv_os_homedir(copy $home_ptr, move $home_len_ptr)
-  $_ = ffi @puts(copy $home_ptr)
+  $_ = ffi @uv_os_homedir($home_ptr, $home_len_ptr)
+  $_ = ffi @puts($home_ptr)
   $ret = const none
   ret $ret
 
 func @main(): i32
   $_ = call @print_home()
   $timer_type = const i32 13
-  $timer_h = ffi @async_create(move $timer_type)
+  $timer_h = ffi @async_create($timer_type)
   $counter = const usize 0
-  $timer = region rc @timer(copy $timer_h, move $counter)
+  $timer = region rc @timer($timer_h, $counter)
   $cb0 = lookup $timer @cb0
-  $_ = ffi @async_set_arg(copy $timer_h, move $timer)
-  $_ = ffi @async_set_cb0(copy $timer_h, move $cb0)
+  $_ = ffi @async_set_arg($timer_h, $timer)
+  $_ = ffi @async_set_cb0($timer_h, $cb0)
   $timeout = const u64 1000
   $cb0 = lookup @async_cb0
-  $_ = ffi @uv_timer_start(
-    copy $timer_h, move $cb0, copy $timeout, copy $timeout)
+  $_ = ffi @uv_timer_start($timer_h, $cb0, $timeout, $timeout)
   $ret = const i32 0
   ret $ret

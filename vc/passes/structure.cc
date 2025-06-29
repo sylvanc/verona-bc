@@ -657,6 +657,11 @@ namespace vc
         {
           ok = false;
         }
+        else if (node == Group)
+        {
+          node->parent()->replace(node, err(node, "Syntax error"));
+          ok = false;
+        }
         else if (node == Expr)
         {
           for (auto& child : *node)

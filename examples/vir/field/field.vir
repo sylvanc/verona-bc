@@ -3,7 +3,7 @@ class @A
 
 func @main(): i32
   $i = const i32 99
-  $a = stack @A(move $i)
-  $ref = ref move $a @f
+  $a = stack @A($i)
+  $ref = ref $a @f
   $j = load $ref
   ret $j

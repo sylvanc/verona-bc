@@ -3,16 +3,23 @@
 #include <trieste/driver.h>
 #include <vbcc.h>
 #include <vbcc/bytecode.h>
+#include <vbcc/lang.h>
 
 int main(int argc, char** argv)
 {
   using namespace vc;
 
-  // TODO: assignids, validids, liveness.
   auto state = std::make_shared<Bytecode>();
   Reader reader{
     "vc",
-    {structure(), application(), operators(), anf(), flatten()},
+    {structure(),
+     application(),
+     operators(),
+     anf(),
+     flatten(),
+     assignids(state),
+     validids(state),
+     liveness(state)},
     parser()};
 
   struct Options : public trieste::Options

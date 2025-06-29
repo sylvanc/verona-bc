@@ -82,11 +82,32 @@ namespace vc
       top->traverse([&](auto node) {
         bool ok = true;
 
-        if (node == Expr)
+        if (node == Error)
+        {
+          ok = false;
+        }
+        else if (node == Expr)
         {
           if (node->size() != 1)
           {
             node->parent()->replace(node, err(node, "Expected an expression"));
+            ok = false;
+          }
+        }
+        else if (node->in({Ref, Try}))
+        {
+          if (node->empty())
+          {
+            node->parent()->replace(node, err(node, "Expected an expression"));
+            ok = false;
+          }
+        }
+        else if (node->in({Else, Equals}))
+        {
+          if (node->empty())
+          {
+            node->parent()->replace(
+              node, err(node, "Expected a left and right side"));
             ok = false;
           }
         }

@@ -5,6 +5,9 @@
 Let and var.
 - Currently orphaned from flattening.
 - Set-once for `let`. Set-before-use for `let` and `var`.
+- Do this in `liveness`?
+  - Too late for variables with the same name.
+  - Rename shadowed variables?
 
 ## To Do
 
@@ -24,8 +27,6 @@ Tuples:
 - Destructing when the tuple is too long ignores the extra elements. Should it?
 - What's the syntax for tuple element reference?
   - `apply` method on `array`?
-- Can we do IR-level type checking?
-  - IR tuple type demands `[dyn]` of correct size with elements that type check.
 - Flatten a tuple into another tuple.
 
 Calls:
@@ -54,10 +55,9 @@ Structure:
   - Like `ident.name`, but no first argument binding.
 - Compile time evaluation.
 
-Reachability and flattening.
-- IR types for: union, intersection, tuple, function.
+Reachability.
 - Reachability for mono-morphism.
-  - Find all reachable classes and functions with their type arguments.
+- Find all reachable classes and functions with their type arguments.
 
 Standard library:
 - Primitive type conversions.
@@ -71,6 +71,8 @@ Packages:
 - FFI.
 
 Types:
+- IR types for: union, intersection, tuple, function.
+  - IR tuple type could be `[dyn]` of correct size with elements that type check.
 - Structural types.
 - Type assertions.
 - `where` clause instead of `T1: T2 = T3`?

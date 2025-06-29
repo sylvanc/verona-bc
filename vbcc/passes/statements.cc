@@ -15,16 +15,14 @@ namespace vbcc
 
   const auto Dst = T(LocalId)[LocalId] * T(Equals);
   const auto RegionType = T(RegionRC, RegionGC, RegionArena);
-  const auto ArrayDynArg = T(LBracket) * T(LocalId)[Arg] * T(RBracket);
-  const auto ArrayConstArg = T(LBracket) * IntLiteral[Arg] * T(RBracket);
+  const auto ArrayDynArg = T(LBracket) * T(LocalId)[Rhs] * T(RBracket);
+  const auto ArrayConstArg = T(LBracket) * IntLiteral[Rhs] * T(RBracket);
   const auto SymbolParams = T(LParen) *
     (~(TypePat * (T(Comma) * TypePat)++))[Params] *
     ~(T(Comma) * T(Vararg)[Vararg]) * T(RParen);
   const auto ParamDef =
     T(LParen) * ~(T(Param) * (T(Comma) * T(Param))++) * T(RParen);
   const auto CallArgs =
-    T(LParen) * ~(T(Arg) * (T(Comma) * T(Arg))++) * T(RParen);
-  const auto TailArgs =
     T(LParen) * ~(T(LocalId) * (T(Comma) * T(LocalId))++) * T(RParen);
 
   // clang-format off
@@ -144,8 +142,8 @@ namespace vbcc
 
     for (auto& arg : args)
     {
-      if (arg == Arg)
-        r << arg;
+      if (arg == LocalId)
+        r << (Arg << ArgCopy << arg);
     }
 
     return r;
@@ -316,13 +314,6 @@ namespace vbcc
         In(Group) * T(LocalId)[LocalId] * T(Colon) * TypePat[Type] >>
           [](Match& _) { return Param << _(LocalId) << _(Type); },
 
-        // Argument.
-        (T(Move) << End) * T(LocalId)[LocalId] >>
-          [](Match& _) { return Arg << ArgMove << _(LocalId); },
-
-        (T(Copy) << End) * T(LocalId)[LocalId] >>
-          [](Match& _) { return Arg << ArgCopy << _(LocalId); },
-
         // Globals.
         Dst * T(Global) * T(GlobalId)[GlobalId] >>
           [](Match& _) { return Global << _(LocalId) << _(GlobalId); },
@@ -387,64 +378,64 @@ namespace vbcc
           },
 
         Dst * T(New) * TypePat[Type] * ArrayDynArg >>
-          [](Match& _) { return NewArray << _(LocalId) << _(Type) << _(Arg); },
+          [](Match& _) { return NewArray << _(LocalId) << _(Type) << _(Rhs); },
 
         Dst * T(New) * TypePat[Type] * ArrayConstArg >>
           [](Match& _) {
-            auto r = check_literal(U64, _(Arg));
+            auto r = check_literal(U64, _(Rhs));
             if (r)
               return r;
 
-            return NewArrayConst << _(LocalId) << _(Type) << _(Arg);
+            return NewArrayConst << _(LocalId) << _(Type) << _(Rhs);
           },
 
         Dst * T(Stack) * TypePat[Type] * ArrayDynArg >>
           [](Match& _) {
-            return StackArray << _(LocalId) << _(Type) << _(Arg);
+            return StackArray << _(LocalId) << _(Type) << _(Rhs);
           },
 
         Dst * T(Stack) * TypePat[Type] * ArrayConstArg >>
           [](Match& _) {
-            auto r = check_literal(U64, _(Arg));
+            auto r = check_literal(U64, _(Rhs));
             if (r)
               return r;
 
-            return StackArrayConst << _(LocalId) << _(Type) << _(Arg);
+            return StackArrayConst << _(LocalId) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Heap) * T(LocalId)[Rhs] * TypePat[Type] * ArrayDynArg >>
+        Dst * T(Heap) * T(LocalId)[Lhs] * TypePat[Type] * ArrayDynArg >>
           [](Match& _) {
-            return HeapArray << _(LocalId) << _(Rhs) << _(Type) << _(Arg);
+            return HeapArray << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Heap) * T(LocalId)[Rhs] * TypePat[Type] * ArrayConstArg >>
+        Dst * T(Heap) * T(LocalId)[Lhs] * TypePat[Type] * ArrayConstArg >>
           [](Match& _) {
-            auto r = check_literal(U64, _(Arg));
+            auto r = check_literal(U64, _(Rhs));
             if (r)
               return r;
 
-            return HeapArrayConst << _(LocalId) << _(Rhs) << _(Type) << _(Arg);
+            return HeapArrayConst << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Region) * RegionType[Rhs] * TypePat[Type] * ArrayDynArg >>
+        Dst * T(Region) * RegionType[Lhs] * TypePat[Type] * ArrayDynArg >>
           [](Match& _) {
-            return RegionArray << _(LocalId) << _(Type) << _(Arg);
+            return RegionArray << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Region) * RegionType[Rhs] * TypePat[Type] * ArrayConstArg >>
+        Dst * T(Region) * RegionType[Lhs] * TypePat[Type] * ArrayConstArg >>
           [](Match& _) {
-            auto r = check_literal(U64, _(Arg));
+            auto r = check_literal(U64, _(Rhs));
             if (r)
               return r;
 
-            return RegionArray << _(LocalId) << _(Type) << _(Arg);
+            return RegionArray << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
           },
 
         // Register operations.
-        Dst * (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs])) >>
+        Dst * T(Copy) * T(LocalId)[Rhs] >>
           [](Match& _) { return Copy << _(LocalId) << _(Rhs); },
 
-        Dst * (T(Arg) << (T(ArgMove) * T(LocalId)[Rhs])) >>
+        Dst * T(Move) * T(LocalId)[Rhs] >>
           [](Match& _) { return Move << _(LocalId) << _(Rhs); },
 
         (T(Drop) << End) * T(LocalId)[LocalId] >>
@@ -454,28 +445,35 @@ namespace vbcc
         Dst * T(Ref) * T(LocalId)[LocalId] >>
           [](Match& _) { return RegisterRef << _(LocalId); },
 
-        Dst * T(Ref) * T(Arg)[Arg] * T(GlobalId)[GlobalId] >>
+        Dst * T(Ref) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
           [](Match& _) {
-            return FieldRef << _(LocalId) << _(Arg) << (FieldId ^ _(GlobalId));
+            return FieldRef << _(LocalId) << (Arg << ArgCopy << _(Rhs))
+                            << (FieldId ^ _(GlobalId));
           },
 
-        Dst * T(Ref) * T(Arg)[Arg] * T(LocalId)[Rhs] >>
-          [](Match& _) { return ArrayRef << _(LocalId) << _(Arg) << _(Rhs); },
+        Dst * T(Ref) * T(LocalId)[Lhs] * T(LocalId)[Rhs] >>
+          [](Match& _) {
+            return ArrayRef << _(LocalId) << (Arg << ArgCopy << _(Lhs))
+                            << _(Rhs);
+          },
 
-        Dst * T(Ref) * T(Arg)[Arg] * IntLiteral[Rhs] >>
+        Dst * T(Ref) * T(LocalId)[Lhs] * IntLiteral[Rhs] >>
           [](Match& _) {
             auto r = check_literal(U64, _(Rhs));
             if (r)
               return r;
 
-            return ArrayRefConst << _(LocalId) << _(Arg) << _(Rhs);
+            return ArrayRefConst << _(LocalId) << (Arg << ArgCopy << _(Lhs))
+                                 << _(Rhs);
           },
 
         Dst * T(Load) * T(LocalId)[Rhs] >>
           [](Match& _) { return Load << _(LocalId) << _(Rhs); },
 
-        Dst * T(Store) * T(LocalId)[Lhs] * T(Arg)[Rhs] >>
-          [](Match& _) { return Store << _(LocalId) << _(Lhs) << _(Rhs); },
+        Dst * T(Store) * T(LocalId)[Lhs] * T(LocalId)[Rhs] >>
+          [](Match& _) {
+            return Store << _(LocalId) << _(Lhs) << (Arg << ArgCopy << _(Rhs));
+          },
 
         // Static lookup.
         Dst * T(Lookup) * T(GlobalId)[GlobalId] >>
@@ -536,9 +534,10 @@ namespace vbcc
           },
 
         // When.
-        Dst * T(When) * CallArgs[Args] * T(Arg)[Arg] >>
+        Dst * T(When) * CallArgs[Args] * T(LocalId)[Rhs] >>
           [](Match& _) {
-            return When << _(LocalId) << callargs(_[Args]) << _(Arg);
+            return When << _(LocalId) << callargs(_[Args])
+                        << (Arg << ArgCopy << _(Rhs));
           },
 
         // Type test.
@@ -546,12 +545,12 @@ namespace vbcc
           [](Match& _) { return Typetest << _(LocalId) << _(Rhs) << _(Type); },
 
         // Terminators.
-        (T(Tailcall) << End) * T(GlobalId)[GlobalId] * TailArgs[Args] >>
+        (T(Tailcall) << End) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
             return Tailcall << (FunctionId ^ _(GlobalId)) << tailargs(_[Args]);
           },
 
-        (T(Tailcall) << End) * T(LocalId)[Lhs] * TailArgs[Args] >>
+        (T(Tailcall) << End) * T(LocalId)[Lhs] * CallArgs[Args] >>
           [](Match& _) { return TailcallDyn << _(Lhs) << tailargs(_[Args]); },
 
         (T(Return) << End) * T(LocalId)[LocalId] >>

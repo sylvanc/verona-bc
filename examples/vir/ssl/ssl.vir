@@ -22,28 +22,28 @@ class @Conn
   @cb_read @conn_read
 
 func @conn_cb1($self: @Conn, $status: i32): none
-  $ssl_ref = ref copy $self @ssl
+  $ssl_ref = ref $self @ssl
   $ssl = load $ssl_ref
-  $_ = ffi @ssl_close(move $ssl)
-  $status_text = ffi @uv_strerror(move $status)
-  $_ = ffi @puts(move $status_text)
+  $_ = ffi @ssl_close($ssl)
+  $status_text = ffi @uv_strerror($status)
+  $_ = ffi @puts($status_text)
   $none = const none
   ret $none
 
 func @conn_read($self: @Conn, $data: [u8]): none
   $stdout = const i32 1
-  $ssl_ref = ref copy $self @ssl
+  $ssl_ref = ref $self @ssl
   $ssl = load $ssl_ref
-  $_ = ffi @ssl_read(copy $ssl, move $data)
+  $_ = ffi @ssl_read($ssl, $data)
   jump ^while
 ^while
-  $plaintext = ffi @ssl_plaintext(copy $ssl)
+  $plaintext = ffi @ssl_plaintext($ssl)
   $done = typetest $plaintext none
   cond $done ^done ^body
 ^body
   $text = makeptr $plaintext
   $len = len $plaintext
-  $_ = ffi @write(copy $stdout, move $text, move $len)
+  $_ = ffi @write($stdout, $text, $len)
   jump ^while
 ^done
   $none = const none
@@ -58,25 +58,25 @@ func @eyeballs_cb($self: @Eyeballs, $tcp_h: ptr, $status: i32): none
   $eq = eq $status $zero
   cond $eq ^success ^failure
 ^success
-  $host_ref = ref copy $self @host
+  $host_ref = ref $self @host
   $host = load $host_ref
   $host_ptr = makeptr $host
-  $ssl = ffi @ssl_client(copy $tcp_h, move $host_ptr)
-  $conn = region rc @Conn(copy $ssl)
+  $ssl = ffi @ssl_client($tcp_h, $host_ptr)
+  $conn = region rc @Conn($ssl)
   $msg0 = const "GET / HTTP/1.1\r\nHost: "
   $msg1 = const "\r\nConnection: close\r\n\r\n"
-  $_ = ffi @ssl_write(copy $ssl, move $msg0)
-  $_ = ffi @ssl_write(copy $ssl, move $host)
-  $_ = ffi @ssl_write(copy $ssl, move $msg1)
+  $_ = ffi @ssl_write($ssl, $msg0)
+  $_ = ffi @ssl_write($ssl, $host)
+  $_ = ffi @ssl_write($ssl, $msg1)
   $cb1 = lookup $conn @cb1
   $cb_read = lookup $conn @cb_read
-  $_ = ffi @async_set_arg(copy $tcp_h, move $conn)
-  $_ = ffi @async_set_cb1(copy $tcp_h, move $cb1)
-  $_ = ffi @async_read_start(copy $tcp_h, move $cb_read)
+  $_ = ffi @async_set_arg($tcp_h, $conn)
+  $_ = ffi @async_set_cb1($tcp_h, $cb1)
+  $_ = ffi @async_read_start($tcp_h, $cb_read)
   jump ^done
 ^failure
-  $err = ffi @uv_strerror(move $status)
-  $_ = ffi @puts(move $err)
+  $err = ffi @uv_strerror($status)
+  $_ = ffi @puts($err)
   jump ^done
 ^done
   $none = const none
@@ -87,16 +87,15 @@ func @main(): i32
   $i1 = const usize 1
   $i2 = const usize 2
   $argv = ffi @getargv()
-  $arg0_ref = ref copy $argv $i0
-  $arg1_ref = ref copy $argv $i1
+  $arg0_ref = ref $argv $i0
+  $arg1_ref = ref $argv $i1
   $host = load $arg0_ref
   $port = load $arg1_ref
-  $eyeballs = region rc @Eyeballs(copy $host)
+  $eyeballs = region rc @Eyeballs($host)
   $cb = lookup $eyeballs @cb
   $host_ptr = makeptr $host
   $port_ptr = makeptr $port
   $delay = const i32 100
-  $_ = ffi @happy_eyeballs(
-    move $eyeballs, move $cb, move $host_ptr, move $port_ptr, move $delay)
+  $_ = ffi @happy_eyeballs($eyeballs, $cb, $host_ptr, $port_ptr, $delay)
   $ret = const i32 0
   ret $ret

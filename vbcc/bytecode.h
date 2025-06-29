@@ -29,6 +29,7 @@ namespace vbcc
     void def(size_t r);
     bool use(size_t r, Node& node);
     bool kill(size_t r);
+    void automove(size_t r);
   };
 
   struct FuncState

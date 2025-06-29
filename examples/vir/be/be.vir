@@ -6,7 +6,7 @@ class @make_cown_bool
   @apply @make_cown_bool_apply
 
 func @make_cown_bool_apply($self: @make_cown_bool): bool
-  $val_ref = ref move $self @val
+  $val_ref = ref $self @val
   $r = load $val_ref
   ret $r
 
@@ -15,7 +15,7 @@ class @make_cown_i32
   @apply @make_cown_i32_apply
 
 func @make_cown_i32_apply($self: @make_cown_i32): i32
-  $val_ref = ref move $self @val
+  $val_ref = ref $self @val
   $r = load $val_ref
   ret $r
 
@@ -25,13 +25,13 @@ class @behavior1
 
 func @behavior1_apply(
   $self: @behavior1, $cown1_v: ref bool, $cown2_v: ref i32): i32
-  $a_ref = ref move $self @a
+  $a_ref = ref $self @a
   $a = load $a_ref
   $prev = load $cown1_v
   $next = not $prev
-  $prev = store $cown1_v copy $next
-  $_ = ffi @printval(move $prev)
-  $_ = ffi @printval(move $next)
+  $prev = store $cown1_v $next
+  $_ = ffi @printval($prev)
+  $_ = ffi @printval($next)
   $b = load $cown2_v
   $a = add $a $b
   ret $a
@@ -41,21 +41,21 @@ class @behavior2
 
 func @behavior2_apply($self: @behavior2, $promise_v: ref i32): none
   $a = load $promise_v
-  $_ = ffi @printval(move $a)
+  $_ = ffi @printval($a)
   ret $_
 
 func @main(): i32
   $bool = const bool true
-  $make_cown_bool = region arena @make_cown_bool(move $bool)
-  $cown1 = when() move $make_cown_bool
+  $make_cown_bool = region arena @make_cown_bool($bool)
+  $cown1 = when() $make_cown_bool
   $i32 = const i32 42
-  $make_cown_i32 = region arena @make_cown_i32(copy $i32)
-  $cown2 = when() move $make_cown_i32
+  $make_cown_i32 = region arena @make_cown_i32($i32)
+  $cown2 = when() $make_cown_i32
   $cown2 = read $cown2
-  $b1 = region arena @behavior1(copy $i32)
-  $promise = when(move $cown1, copy $cown2) move $b1
+  $b1 = region arena @behavior1($i32)
+  $promise = when($cown1, $cown2) $b1
   $promise = read $promise
   $b2 = region arena @behavior2()
-  $_ = when (move $promise) move $b2
+  $_ = when ($promise) $b2
   $zero = const i32 0
   ret $zero

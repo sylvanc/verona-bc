@@ -167,16 +167,8 @@ namespace vbcc
 
   void LabelState::def(size_t r)
   {
-    if (auto n = last_use.at(r))
-    {
-      // If the last use was an ArgCopy, turn it into an ArgMove.
-      if (n->parent() == ArgCopy)
-        n->parent()->replace(n, ArgMove << n);
-
-      last_use[r] = {};
-    }
-
     // We've defined a register, so it's live.
+    automove(r);
     out.set(r);
     dead.reset(r);
   }
@@ -212,6 +204,23 @@ namespace vbcc
 
     dead.set(r);
     return true;
+  }
+
+  void LabelState::automove(size_t r)
+  {
+    auto n = last_use.at(r);
+
+    if (!n)
+      return;
+
+    auto parent = n->parent();
+
+    if ((parent == Arg) && (parent->front() == ArgCopy))
+      parent / Type = ArgMove;
+    else if (parent == Copy)
+      parent->parent()->replace(parent, Move << *parent);
+
+    last_use[r] = {};
   }
 
   std::optional<size_t> FuncState::get_label_id(Node id)

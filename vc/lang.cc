@@ -79,7 +79,7 @@ namespace vc
   {
     // Lookup returns a ClassDef, TypeAlias, TypeParam, ParamDef, Let, Var, or
     // an Error.
-    assert(ident == Ident);
+    assert(ident->in({Ident, SymbolId}));
     auto defs = ident->lookup();
 
     // The initial lookup is list of Use, ClassDef, TypeAlias, TypeParam,

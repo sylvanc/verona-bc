@@ -3,15 +3,15 @@ class @Foo
   @final @Foo_final
 
 func @Foo_final($self: @Foo): i32
-  $ref = ref move $self @a
+  $ref = ref $self @a
   $a = load $ref
   ret $a
 
 func @main(): i32
   $a = const i32 99
-  $foo0 = stack @Foo(copy $a)
-  $foo1 = region rc @Foo(copy $a)
-  $foo2 = heap $foo1 @Foo(copy $a)
-  $foo3 = region arena @Foo(copy $a)
+  $foo0 = stack @Foo($a)
+  $foo1 = region rc @Foo($a)
+  $foo2 = heap $foo1 @Foo($a)
+  $foo3 = region arena @Foo($a)
   $r = const i32 3
   ret $r
