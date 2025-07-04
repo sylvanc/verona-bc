@@ -37,7 +37,7 @@ namespace vbci
     std::vector<ComplexType> complex_types;
     std::vector<Value> globals;
 
-    std::vector<Dynlib> libs;
+    std::vector<std::shared_ptr<Dynlib>> libs;
     std::vector<Symbol> symbols;
 
     ffi_type ffi_type_value;
