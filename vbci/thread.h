@@ -66,7 +66,7 @@ namespace vbci
     void thread_run_behavior(verona::rt::Work* work);
     Value thread_run(Function* func);
     void step();
-    void pushframe(Function* func, size_t dst, Condition condition);
+    void pushframe(Function* func, size_t dst, CallType calltype);
     void popframe(Value& result, Condition condition);
     void tailcall(Function* func);
     void teardown(bool tailcall = false);

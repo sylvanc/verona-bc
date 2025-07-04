@@ -93,7 +93,7 @@ namespace vbci
   Value Thread::thread_run(Function* func)
   {
     auto depth = frames.size();
-    pushframe(func, 0, Condition::Throw);
+    pushframe(func, 0, CallType::Catch);
 
     while (depth != frames.size())
       step();
@@ -517,7 +517,7 @@ namespace vbci
         {
           auto dst = leb();
           auto func = program->function(leb());
-          pushframe(func, dst, Condition::Return);
+          pushframe(func, dst, CallType::Call);
           break;
         }
 
@@ -525,7 +525,7 @@ namespace vbci
         {
           auto dst = leb();
           auto func = frame->local(leb()).function();
-          pushframe(func, dst, Condition::Return);
+          pushframe(func, dst, CallType::Call);
           break;
         }
 
@@ -533,7 +533,7 @@ namespace vbci
         {
           auto dst = leb();
           auto func = program->function(leb());
-          pushframe(func, dst, Condition::Raise);
+          pushframe(func, dst, CallType::Subcall);
           break;
         }
 
@@ -541,7 +541,7 @@ namespace vbci
         {
           auto dst = leb();
           auto func = frame->local(leb()).function();
-          pushframe(func, dst, Condition::Raise);
+          pushframe(func, dst, CallType::Subcall);
           break;
         }
 
@@ -549,7 +549,7 @@ namespace vbci
         {
           auto dst = leb();
           auto func = program->function(leb());
-          pushframe(func, dst, Condition::Throw);
+          pushframe(func, dst, CallType::Catch);
           break;
         }
 
@@ -557,7 +557,7 @@ namespace vbci
         {
           auto dst = leb();
           auto func = frame->local(leb()).function();
-          pushframe(func, dst, Condition::Throw);
+          pushframe(func, dst, CallType::Catch);
           break;
         }
 
@@ -907,7 +907,7 @@ namespace vbci
     }
   }
 
-  void Thread::pushframe(Function* func, size_t dst, Condition condition)
+  void Thread::pushframe(Function* func, size_t dst, CallType calltype)
   {
     if (!func)
       throw Value(Error::MethodNotFound);
@@ -921,7 +921,7 @@ namespace vbci
 
     if (frame)
     {
-      frame->condition = condition;
+      frame->calltype = calltype;
       frame_id = frame->frame_id + 2;
       base = frame->base + frame->func->registers;
       finalize_base = frame->finalize_top;
@@ -1022,9 +1022,9 @@ namespace vbci
 
     frame = &frames.back();
 
-    switch (frame->condition)
+    switch (frame->calltype)
     {
-      case Condition::Return:
+      case CallType::Call:
       {
         // This unwraps a Raise.
         // Return (nothing), raise (pop as return), throw (pop)
@@ -1044,7 +1044,7 @@ namespace vbci
         break;
       }
 
-      case Condition::Raise:
+      case CallType::Subcall:
       {
         // This does not unwrap a Raise.
         // Return (nothing), raise (pop), throw (pop)
@@ -1063,7 +1063,7 @@ namespace vbci
     }
 
     frame->local(dst) = std::move(ret);
-    frame->condition = Condition::Return;
+    frame->calltype = CallType::Call;
   }
 
   void Thread::tailcall(Function* func)
@@ -1095,7 +1095,7 @@ namespace vbci
     // Set the new function and program counter.
     frame->func = func;
     frame->pc = func->labels.at(0);
-    frame->condition = Condition::Return;
+    frame->calltype = CallType::Call;
   }
 
   void Thread::teardown(bool tailcall)
