@@ -540,12 +540,12 @@ namespace vbci
     // FFI information.
     auto num_libs = uleb(pc);
     for (size_t i = 0; i < num_libs; i++)
-      libs.push_back(strings.at(uleb(pc)));
+      libs.push_back(std::make_shared<Dynlib>(strings.at(uleb(pc))));
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)
     {
-      auto& lib = libs.at(uleb(pc));
+      auto& lib = *libs.at(uleb(pc));
       auto& name = strings.at(uleb(pc));
       auto& version = strings.at(uleb(pc));
       bool vararg = uleb(pc);
