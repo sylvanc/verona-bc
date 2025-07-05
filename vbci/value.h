@@ -2,6 +2,7 @@
 
 #include "ident.h"
 #include "types.h"
+#include "platform.h"
 
 #include <cmath>
 #include <cstring>
@@ -58,6 +59,10 @@ namespace vbci
     uint8_t readonly : 1;
 
     Value(ValueType t) : tag(t) {}
+#ifdef PLATFORM_IS_MACOSX
+    Value(long ilong);
+    Value(unsigned long ulong);
+#endif
 
   public:
     Value();
@@ -465,6 +470,10 @@ namespace vbci
         case ValueType::I64:
         case ValueType::U32:
         case ValueType::U64:
+#ifdef PLATFORM_IS_MACOSX
+        case ValueType::ILong:
+        case ValueType::ULong:
+#endif
           v.tag = t;
           break;
 

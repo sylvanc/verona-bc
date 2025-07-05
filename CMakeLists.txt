@@ -25,7 +25,7 @@ FetchContent_MakeAvailable(cmake_utils)
 FetchContent_Declare(
   verona-rt
   GIT_REPOSITORY https://github.com/microsoft/verona-rt
-  GIT_TAG f328732e0f45418433aa7055e2a2f5cb88395e09
+  GIT_TAG a4b5a71826b5e3f4e7c1a3be9e26e7219678097d
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
@@ -33,7 +33,7 @@ FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 30986102c54c356346ab6cb1e2d17f43272e0888
+  GIT_TAG 44e71e994b03ef766357167df32f148b03a97aa4
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
