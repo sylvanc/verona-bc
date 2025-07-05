@@ -23,7 +23,7 @@ namespace vbci
     size_t finalize_top;
     PC pc;
     size_t dst;
-    Condition condition;
+    CallType calltype;
 
     Frame(
       Function* func,

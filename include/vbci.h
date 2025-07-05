@@ -397,6 +397,13 @@ namespace vbci
     Throw,
   };
 
+  enum class CallType
+  {
+    Call,
+    Subcall,
+    Catch
+  };
+
   enum class DIOp
   {
     File,
