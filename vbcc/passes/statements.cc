@@ -1,9 +1,5 @@
 #include "../lang.h"
 
-#ifndef __cpp_lib_from_chars
-#include "../from_chars.h"
-#endif
-
 namespace vbcc
 {
   const auto IntType =
@@ -41,23 +37,20 @@ namespace vbcc
   template<typename T>
   Node check_int(Node value)
   {
-    #ifdef __cpp_lib_from_chars
-    using namespace std;
-    #endif
     auto view = value->location().view();
     auto first = view.data();
     auto last = first + view.size();
-    from_chars_result r;
+    std::from_chars_result r;
     T t;
 
     if (value == Bin)
-      r = from_chars(first + 2, last, t, 2);
+      r = std::from_chars(first + 2, last, t, 2);
     else if (value == Oct)
-      r = from_chars(first + 2, last, t, 8);
+      r = std::from_chars(first + 2, last, t, 8);
     else if (value == Hex)
-      r = from_chars(first + 2, last, t, 16);
+      r = std::from_chars(first + 2, last, t, 16);
     else if (value == Int)
-      r = from_chars(first, last, t, 10);
+      r = std::from_chars(first, last, t, 10);
 
     if (r.ec == std::errc())
       return {};
@@ -71,19 +64,16 @@ namespace vbcc
   template<typename T>
   Node check_float(Node value)
   {
-    #ifdef __cpp_lib_from_chars
-    using namespace std;
-    #endif
     auto view = value->location().view();
     auto first = view.data();
     auto last = first + view.size();
-    from_chars_result r;
+    std::from_chars_result r;
     T t;
 
     if (value == Float)
-      r = from_chars(first, last, t);
+      r = std::from_chars(first, last, t);
     else if (value == HexFloat)
-      r = from_chars(first + 2, last, t);
+      r = std::from_chars(first + 2, last, t);
 
     if (r.ec == std::errc())
       return {};

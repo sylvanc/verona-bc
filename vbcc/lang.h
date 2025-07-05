@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bytecode.h"
+#include "from_chars.h"
 
 #include <vbcc.h>
 

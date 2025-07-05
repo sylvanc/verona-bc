@@ -173,6 +173,7 @@ namespace vbci
     if (version.empty())
       f = dlsym(handle, name.c_str());
     else
+      f = dlvsym(handle, name.c_str(), version.c_str());
 #else
     // No symbol versioning.
     (void)version;
