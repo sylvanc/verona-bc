@@ -1,13 +1,13 @@
 func @main(): i32
-  $i = const u64 10
+  $i = const usize 10
   $a = stack i32[$i]
   $b = stack i32[10]
   $a0 = ref $a 0
-  $idx = const u64 0
+  $idx = const usize 0
   $b0 = ref $b $idx
   $j = const i32 66
-  $ignore0 = store $a0 $j
-  $ignore1 = store $b0 $j
+  $0 = store $a0 $j
+  $1 = store $b0 $j
   $k0 = load $a0
   $k1 = load $b0
   $eq = eq $k0 $k1

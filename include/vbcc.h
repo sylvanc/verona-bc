@@ -13,6 +13,7 @@ namespace vbcc
   inline const auto Func = TokenDef("func");
   inline const auto Lib = TokenDef("lib");
   inline const auto Type = TokenDef("type");
+  inline const auto Var = TokenDef("var");
 
   // Identifiers.
   inline const auto SymbolId = TokenDef("symbolid", flag::print);
@@ -260,9 +261,10 @@ namespace vbcc
     | (Field <<= FieldId * (Type >>= wfType))
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
-    | (Func <<= FunctionId * Params * (Type >>= wfType) * Labels)
+    | (Func <<= FunctionId * Params * (Type >>= wfType) * Var * Labels)
     | (Params <<= Param++)
     | (Param <<= LocalId * (Type >>= wfType))
+    | (Var <<= LocalId++)
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfStatement++)

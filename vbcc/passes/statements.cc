@@ -136,6 +136,19 @@ namespace vbcc
     return r;
   }
 
+  Node vardef(NodeRange vars)
+  {
+    Node r = Var;
+
+    for (auto& var : vars)
+    {
+      if (var == LocalId)
+        r << var;
+    }
+
+    return r;
+  }
+
   Node callargs(NodeRange args)
   {
     Node r = Args;
@@ -301,12 +314,14 @@ namespace vbcc
 
         // Function.
         (T(Func) << End) * T(GlobalId)[GlobalId] * ParamDef[Params] * T(Colon) *
-            TypePat[Type] >>
+            TypePat[Type] *
+            ~(T(Var) * (T(LocalId) * (T(Comma) * T(LocalId))++)[Var]) >>
           [](Match& _) {
             auto start = std::string(_(GlobalId)->location().view());
             start.at(0) = '^';
             return Seq << (Func << (FunctionId ^ _(GlobalId))
-                                << paramdef(_[Params]) << _(Type) << Labels)
+                                << paramdef(_[Params]) << _(Type)
+                                << vardef(_[Var]) << Labels)
                        << (LabelId ^ start);
           },
 
@@ -442,9 +457,6 @@ namespace vbcc
           [](Match& _) { return Drop << _(LocalId); },
 
         // Reference operations.
-        Dst * T(Ref) * T(LocalId)[LocalId] >>
-          [](Match& _) { return RegisterRef << _(LocalId); },
-
         Dst * T(Ref) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
           [](Match& _) {
             return FieldRef << _(LocalId) << (Arg << ArgCopy << _(Rhs))
@@ -466,6 +478,9 @@ namespace vbcc
             return ArrayRefConst << _(LocalId) << (Arg << ArgCopy << _(Lhs))
                                  << _(Rhs);
           },
+
+        Dst * T(Ref) * T(LocalId)[LocalId] >>
+          [](Match& _) { return RegisterRef << _(LocalId); },
 
         Dst * T(Load) * T(LocalId)[Rhs] >>
           [](Match& _) { return Load << _(LocalId) << _(Rhs); },

@@ -2,10 +2,11 @@
 
 namespace vbcc
 {
-  const auto wfParserTokens = Lib | Primitive | Class | Func | Type | Source |
-    GlobalId | LocalId | LabelId | Equals | LParen | RParen | LBracket |
-    RBracket | Comma | Colon | Union | Vararg | wfRegionType | wfPrimitiveType |
-    Ptr | Dyn | Ref | Cown | wfStatement | wfTerminator | wfLiteral | String;
+  const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Var |
+    Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |
+    LBracket | RBracket | Comma | Colon | Union | Vararg | wfRegionType |
+    wfPrimitiveType | Ptr | Dyn | Ref | Cown | wfStatement | wfTerminator |
+    wfLiteral | String;
 
   // clang-format off
   const auto wfParser =
@@ -33,10 +34,11 @@ namespace vbcc
 
         // Definition keywords.
         "lib\\b" >> [](auto& m) { m.add(Lib); },
+        "type\\b" >> [](auto& m) { m.add(Type); },
         "primitive\\b" >> [](auto& m) { m.add(Primitive); },
         "class\\b" >> [](auto& m) { m.add(Class); },
         "func\\b" >> [](auto& m) { m.add(Func); },
-        "type\\b" >> [](auto& m) { m.add(Type); },
+        "var\\b" >> [](auto& m) { m.add(Var); },
 
         // Region types.
         "rc\\b" >> [](auto& m) { m.add(RegionRC); },

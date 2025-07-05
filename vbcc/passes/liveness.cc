@@ -10,23 +10,66 @@ namespace vbcc
     PassDef p{"liveness", wfIR, dir::topdown | dir::once, {}};
 
     p.post([state](auto top) {
-      top->traverse([&](auto node) {
-        if (node == Move)
+      FuncState* func = nullptr;
+      LabelState* label = nullptr;
+      Bitset vars;
+
+      auto def = [&](Node& id) {
+        auto r = *func->get_register_id(id);
+
+        if (!label->def(r, id, vars.test(r)))
         {
-          state->kill(node / Rhs);
-          state->def(node / LocalId);
+          state->error = true;
+          id->parent()->replace(id, err(clone(id), "redefinition of register"));
+        }
+      };
+
+      auto use = [&](Node& id) {
+        if (!label->use(*func->get_register_id(id), id))
+        {
+          state->error = true;
+          id->parent()->replace(id, err(clone(id), "use of dead register"));
+        }
+      };
+
+      auto kill = [&](Node& id) {
+        if (!label->kill(*func->get_register_id(id)))
+        {
+          state->error = true;
+          id->parent()->replace(id, err(clone(id), "use of dead register"));
+        }
+      };
+
+      top->traverse([&](auto node) {
+        if (node == Func)
+        {
+          func = &state->get_func(node / FunctionId);
+          label = nullptr;
+          vars.resize(func->register_names.size());
+
+          for (auto var : *(node / Var))
+            vars.set(*func->get_register_id(var));
+        }
+        else if (node == Label)
+        {
+          label = &func->get_label(node / LabelId);
+        }
+        else if (node == Move)
+        {
+          def(node / LocalId);
+          kill(node / Rhs);
         }
         else if (node == Drop)
         {
-          state->kill(node / LocalId);
+          kill(node / LocalId);
         }
         else if (node->in({HeapArray, Add, Sub, Mul, Div,     Mod,  Pow, And,
                            Or,        Xor, Shl, Shr, Eq,      Ne,   Lt,  Le,
                            Gt,        Ge,  Min, Max, LogBase, Atan2}))
         {
-          state->use(node / Lhs);
-          state->use(node / Rhs);
-          state->def(node / LocalId);
+          def(node / LocalId);
+          use(node / Lhs);
+          use(node / Rhs);
         }
         else if (node->in({Convert,  Copy,       Heap,   HeapArrayConst,
                            ArrayRef, Load,       Store,  Lookup,
@@ -39,8 +82,8 @@ namespace vbcc
                            Asinh,    Acosh,      Atanh,  Len,
                            MakePtr,  Read}))
         {
-          state->use(node / Rhs);
-          state->def(node / LocalId);
+          def(node / LocalId);
+          use(node / Rhs);
         }
         else if (node->in(
                    {Const,
@@ -71,22 +114,22 @@ namespace vbcc
                     Const_Inf,
                     Const_NaN}))
         {
-          state->def(node / LocalId);
+          def(node / LocalId);
         }
         else if (node->in({Return, Raise, Throw, TailcallDyn}))
         {
-          state->kill(node / LocalId);
+          kill(node / LocalId);
         }
         else if (node == Arg)
         {
           if (node / Type == ArgCopy)
-            state->use(node / Rhs);
+            use(node / Rhs);
           else
-            state->kill(node / Rhs);
+            kill(node / Rhs);
         }
         else if (node == MoveArg)
         {
-          state->kill(node / Rhs);
+          kill(node / Rhs);
         }
         else if (node == Jump)
         {
@@ -98,7 +141,7 @@ namespace vbcc
         }
         else if (node == Cond)
         {
-          state->use(node / LocalId);
+          use(node / LocalId);
           auto& func_state = state->get_func(node->parent(Func) / FunctionId);
           auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
           auto lhs = *func_state.get_label_id(node / Lhs);
@@ -121,6 +164,10 @@ namespace vbcc
         {
           auto target = (node / Labels)->front() / LabelId;
           auto& func_state = state->get_func(node / FunctionId);
+          auto vars = Bitset(func_state.register_names.size());
+
+          for (auto var : *(node / Var))
+            vars.set(*func_state.get_register_id(var));
 
           // Backward data-flow.
           std::queue<size_t> wl;
@@ -133,23 +180,66 @@ namespace vbcc
             wl.pop();
 
             // Calculate a new out-set that is everything our successors need.
+            // Calculate a new defd set that is everything our successors
+            // define.
             auto& l = func_state.labels.at(id);
             auto new_out = l.out;
+            auto new_defd = Bitset(func_state.register_names.size());
 
             for (auto succ_id : l.succ)
             {
               auto& succ = func_state.labels.at(succ_id);
               new_out |= succ.in;
+              new_defd |= succ.defd;
+
+              auto redef = l.defd & succ.defd & ~vars;
+
+              for (size_t r = 0; r < func_state.register_names.size(); r++)
+              {
+                if (succ.defd.test(r) && !l.first_def.at(r))
+                  l.first_def[r] = succ.first_def.at(r);
+              }
+
+              if (redef)
+              {
+                for (size_t r = 0; r < func_state.register_names.size(); r++)
+                {
+                  if (
+                    redef.test(r) &&
+                    (l.first_def.at(r) != succ.first_def.at(r)))
+                  {
+                    state->error = true;
+                    node << err(
+                      clone(succ.first_def.at(r)),
+                      "label redefines non-variable register");
+                    return true;
+                  }
+                }
+              }
             }
 
             if (new_out & l.dead)
             {
-              state->error = true;
-              node << err(
-                clone(node / FunctionId),
-                "successor label requires dead register");
-              return true;
+              for (auto succ_id : l.succ)
+              {
+                auto& succ = func_state.labels.at(succ_id);
+
+                for (size_t r = 0; r < func_state.register_names.size(); r++)
+                {
+                  if (succ.in.test(r) && l.dead.test(r))
+                  {
+                    state->error = true;
+                    node << err(
+                      clone(succ.first_use.at(r)),
+                      "label requires dead register");
+                    return true;
+                  }
+                }
+              }
             }
+
+            // Keep new_defd.
+            l.defd |= new_defd;
 
             // Calculate a new in-set that is our out-set, minus our own
             // out-set, plus our own in-set.
@@ -184,6 +274,24 @@ namespace vbcc
               clone(node / FunctionId),
               "function doesn't define needed registers");
             return true;
+          }
+
+          // Check for multiple assignment to non-variable params.
+          auto bad_assign = params & label.defd & ~vars;
+
+          if (bad_assign)
+          {
+            for (size_t r = 0; r < func_state.register_names.size(); r++)
+            {
+              if (bad_assign.test(r))
+              {
+                state->error = true;
+                node << err(
+                  clone(label.first_use.at(r)),
+                  "label writes to non-variable parameter");
+                return true;
+              }
+            }
           }
 
           for (auto& l : func_state.labels)

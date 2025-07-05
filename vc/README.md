@@ -3,11 +3,7 @@
 ## Priorities
 
 Let and var.
-- Currently orphaned from flattening.
-- Set-once for `let`. Set-before-use for `let` and `var`.
-- Do this in `liveness`?
-  - Too late for variables with the same name.
-  - Rename shadowed variables?
+- Rename shadowed variables.
 
 ## To Do
 

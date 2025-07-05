@@ -159,18 +159,45 @@ namespace vbcc
 
   void LabelState::resize(size_t size)
   {
+    first_def.resize(size);
+    first_use.resize(size);
     last_use.resize(size);
     in.resize(size);
-    out.resize(size);
+    defd.resize(size);
     dead.resize(size);
+    out.resize(size);
   }
 
-  void LabelState::def(size_t r)
+  bool LabelState::def(size_t r, Node& node, bool var)
   {
     // We've defined a register, so it's live.
-    automove(r);
-    out.set(r);
-    dead.reset(r);
+    if (!var && defd.test(r))
+      return false;
+
+    defd.set(r);
+
+    if (out.test(r))
+    {
+      // Assigning to a non-variable used register is an error.
+      if (!var)
+        return false;
+
+      automove(r);
+    }
+    else
+    {
+      out.set(r);
+      dead.reset(r);
+    }
+
+    if (!first_def.at(r))
+      first_def[r] = node;
+
+    if (!first_use.at(r))
+      first_use[r] = node;
+
+    last_use[r] = {};
+    return true;
   }
 
   bool LabelState::use(size_t r, Node& node)
@@ -185,6 +212,9 @@ namespace vbcc
       out.set(r);
       in.set(r);
     }
+
+    if (!first_use.at(r))
+      first_use[r] = node;
 
     last_use[r] = node;
     return true;
@@ -203,24 +233,34 @@ namespace vbcc
       in.set(r);
 
     dead.set(r);
+    last_use[r] = {};
     return true;
   }
 
   void LabelState::automove(size_t r)
   {
     auto n = last_use.at(r);
-
-    if (!n)
-      return;
-
-    auto parent = n->parent();
-
-    if ((parent == Arg) && (parent->front() == ArgCopy))
-      parent / Type = ArgMove;
-    else if (parent == Copy)
-      parent->parent()->replace(parent, Move << *parent);
-
     last_use[r] = {};
+
+    if (n)
+    {
+      auto parent = n->parent();
+
+      if ((parent == Arg) && (parent->front() == ArgCopy))
+      {
+        parent / Type = ArgMove;
+        return;
+      }
+      else if (parent == Copy)
+      {
+        parent->parent()->replace(parent, Move << *parent);
+        return;
+      }
+    }
+
+    // No last use, or last use wasn't a copy.
+    // TODO: insert a drop before a def? pointless for vbci, win for AOT?
+    // TODO: insert a drop at the end of the label?
   }
 
   std::optional<size_t> FuncState::get_label_id(Node id)
@@ -492,43 +532,6 @@ namespace vbcc
 
     library_ids.insert({name, library_ids.size()});
     libraries.push_back(lib);
-  }
-
-  void Bytecode::def(Node& id)
-  {
-    auto& func_state = get_func(id->parent(Func) / FunctionId);
-    auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
-    label_state.def(*func_state.get_register_id(id));
-  }
-
-  bool Bytecode::use(Node& id)
-  {
-    auto& func_state = get_func(id->parent(Func) / FunctionId);
-    auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
-
-    if (!label_state.use(*func_state.get_register_id(id), id))
-    {
-      error = true;
-      id->parent()->replace(id, err(clone(id), "use of dead register"));
-      return false;
-    }
-
-    return true;
-  }
-
-  bool Bytecode::kill(Node& id)
-  {
-    auto& func_state = get_func(id->parent(Func) / FunctionId);
-    auto& label_state = func_state.get_label(id->parent(Label) / LabelId);
-
-    if (!label_state.kill(*func_state.get_register_id(id)))
-    {
-      error = true;
-      id->parent()->replace(id, err(clone(id), "use of dead register"));
-      return false;
-    }
-
-    return true;
   }
 
   void Bytecode::gen(std::filesystem::path output, bool strip)

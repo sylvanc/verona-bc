@@ -4,13 +4,13 @@ lib
   @printf = "printf"(ptr, ...): i32
 
 func @main(): i32
+  var $argi
   $one = const usize 1
   $fmt = const "%s (%d)\n"
   $fmt_ptr = makeptr $fmt
   $hi = const "Hello, world! \u26C4"
   $hi_ptr = makeptr $hi
-  $_ = ffi @printf($fmt_ptr, $hi_ptr, $one)
-  $argc = const usize 0
+  $0 = ffi @printf($fmt_ptr, $hi_ptr, $one)
   $argv = ffi @getargv()
   $argc = len $argv
   $argi = const usize 0
@@ -19,10 +19,10 @@ func @main(): i32
   $cont = lt $argi $argc
   cond $cont ^loop ^done
 ^loop
-  $arg = ref $argv $argi
-  $arg = load $arg
-  $arg = makeptr $arg
-  $_ = ffi @puts($arg)
+  $arg_ref = ref $argv $argi
+  $arg = load $arg_ref
+  $arg_ptr = makeptr $arg
+  $1 = ffi @puts($arg_ptr) // TODO: don't need makeptr here?
   $argi = add $argi $one
   jump ^cond
 ^done

@@ -25,13 +25,13 @@ func @timer_cb0($self: @timer): none
 ^done
   $handle_ref = ref $self @handle
   $handle = load $handle_ref
-  $_ = ffi @uv_timer_stop($handle)
-  $_ = ffi @async_close($handle)
+  $0 = ffi @uv_timer_stop($handle)
+  $1 = ffi @async_close($handle)
   jump ^return
 ^not_done
-  $counter = add $counter $one
-  $_ = ffi @printval($counter)
-  $_ = store $counter_ref $counter
+  $counter2 = add $counter $one
+  $2 = ffi @printval($counter2)
+  $3 = store $counter_ref $counter2
   jump ^return
 ^return
   $none = const none
@@ -42,22 +42,22 @@ func @print_home(): none
   $home_ptr = makeptr $home
   $home_len = len $home
   $home_len_ptr = makeptr $home_len
-  $_ = ffi @uv_os_homedir($home_ptr, $home_len_ptr)
-  $_ = ffi @puts($home_ptr)
+  $0 = ffi @uv_os_homedir($home_ptr, $home_len_ptr)
+  $1 = ffi @puts($home_ptr)
   $ret = const none
   ret $ret
 
 func @main(): i32
-  $_ = call @print_home()
+  $0 = call @print_home()
   $timer_type = const i32 13
   $timer_h = ffi @async_create($timer_type)
   $counter = const usize 0
   $timer = region rc @timer($timer_h, $counter)
   $cb0 = lookup $timer @cb0
-  $_ = ffi @async_set_arg($timer_h, $timer)
-  $_ = ffi @async_set_cb0($timer_h, $cb0)
+  $1 = ffi @async_set_arg($timer_h, $timer)
+  $2 = ffi @async_set_cb0($timer_h, $cb0)
   $timeout = const u64 1000
-  $cb0 = lookup @async_cb0
-  $_ = ffi @uv_timer_start($timer_h, $cb0, $timeout, $timeout)
+  $async_cb0 = lookup @async_cb0
+  $3 = ffi @uv_timer_start($timer_h, $async_cb0, $timeout, $timeout)
   $ret = const i32 0
   ret $ret

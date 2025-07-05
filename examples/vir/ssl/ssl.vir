@@ -24,9 +24,9 @@ class @Conn
 func @conn_cb1($self: @Conn, $status: i32): none
   $ssl_ref = ref $self @ssl
   $ssl = load $ssl_ref
-  $_ = ffi @ssl_close($ssl)
+  $0 = ffi @ssl_close($ssl)
   $status_text = ffi @uv_strerror($status)
-  $_ = ffi @puts($status_text)
+  $1 = ffi @puts($status_text)
   $none = const none
   ret $none
 
@@ -34,7 +34,7 @@ func @conn_read($self: @Conn, $data: [u8]): none
   $stdout = const i32 1
   $ssl_ref = ref $self @ssl
   $ssl = load $ssl_ref
-  $_ = ffi @ssl_read($ssl, $data)
+  $0 = ffi @ssl_read($ssl, $data)
   jump ^while
 ^while
   $plaintext = ffi @ssl_plaintext($ssl)
@@ -43,7 +43,7 @@ func @conn_read($self: @Conn, $data: [u8]): none
 ^body
   $text = makeptr $plaintext
   $len = len $plaintext
-  $_ = ffi @write($stdout, $text, $len)
+  $1 = ffi @write($stdout, $text, $len)
   jump ^while
 ^done
   $none = const none
@@ -65,18 +65,18 @@ func @eyeballs_cb($self: @Eyeballs, $tcp_h: ptr, $status: i32): none
   $conn = region rc @Conn($ssl)
   $msg0 = const "GET / HTTP/1.1\r\nHost: "
   $msg1 = const "\r\nConnection: close\r\n\r\n"
-  $_ = ffi @ssl_write($ssl, $msg0)
-  $_ = ffi @ssl_write($ssl, $host)
-  $_ = ffi @ssl_write($ssl, $msg1)
+  $0 = ffi @ssl_write($ssl, $msg0)
+  $1 = ffi @ssl_write($ssl, $host)
+  $2 = ffi @ssl_write($ssl, $msg1)
   $cb1 = lookup $conn @cb1
   $cb_read = lookup $conn @cb_read
-  $_ = ffi @async_set_arg($tcp_h, $conn)
-  $_ = ffi @async_set_cb1($tcp_h, $cb1)
-  $_ = ffi @async_read_start($tcp_h, $cb_read)
+  $3 = ffi @async_set_arg($tcp_h, $conn)
+  $4 = ffi @async_set_cb1($tcp_h, $cb1)
+  $5 = ffi @async_read_start($tcp_h, $cb_read)
   jump ^done
 ^failure
   $err = ffi @uv_strerror($status)
-  $_ = ffi @puts($err)
+  $6 = ffi @puts($err)
   jump ^done
 ^done
   $none = const none
@@ -96,6 +96,6 @@ func @main(): i32
   $host_ptr = makeptr $host
   $port_ptr = makeptr $port
   $delay = const i32 100
-  $_ = ffi @happy_eyeballs($eyeballs, $cb, $host_ptr, $port_ptr, $delay)
+  $0 = ffi @happy_eyeballs($eyeballs, $cb, $host_ptr, $port_ptr, $delay)
   $ret = const i32 0
   ret $ret

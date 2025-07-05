@@ -134,16 +134,6 @@ namespace vbcc
             }
           }
 
-          // Register label names.
-          for (auto label : *(func / Labels))
-          {
-            if (!func_state.add_label(label / LabelId))
-            {
-              state->error = true;
-              return err(label / LabelId, "duplicate label name");
-            }
-          }
-
           // Register parameter names.
           for (auto param : *(func / Params))
           {
@@ -154,15 +144,27 @@ namespace vbcc
             }
           }
 
+          // Register variable names.
+          for (auto var : *(func / Var))
+            func_state.add_register(var);
+
+          // Register label names.
+          for (auto label : *(func / Labels))
+          {
+            if (!func_state.add_label(label / LabelId))
+            {
+              state->error = true;
+              return err(label / LabelId, "duplicate label name");
+            }
+          }
+
           return NoChange;
         },
 
         // Define all destination registers.
         Def[Body] >> [state](Match& _) -> Node {
-          auto stmt = _(Body);
-          auto dst = stmt / LocalId;
-          auto& func_state = state->get_func(dst->parent(Func) / FunctionId);
-          func_state.add_register(dst);
+          auto dst = _(Body) / LocalId;
+          state->get_func(dst->parent(Func) / FunctionId).add_register(dst);
           return NoChange;
         },
 

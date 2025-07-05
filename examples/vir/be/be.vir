@@ -29,12 +29,12 @@ func @behavior1_apply(
   $a = load $a_ref
   $prev = load $cown1_v
   $next = not $prev
-  $prev = store $cown1_v $next
-  $_ = ffi @printval($prev)
-  $_ = ffi @printval($next)
+  $0 = store $cown1_v $next
+  $1 = ffi @printval($prev)
+  $2 = ffi @printval($next)
   $b = load $cown2_v
-  $a = add $a $b
-  ret $a
+  $c = add $a $b
+  ret $c
 
 class @behavior2
   @apply @behavior2_apply
@@ -51,11 +51,11 @@ func @main(): i32
   $i32 = const i32 42
   $make_cown_i32 = region arena @make_cown_i32($i32)
   $cown2 = when() $make_cown_i32
-  $cown2 = read $cown2
+  $ro_cown2 = read $cown2
   $b1 = region arena @behavior1($i32)
-  $promise = when($cown1, $cown2) $b1
-  $promise = read $promise
+  $promise = when($cown1, $ro_cown2) $b1
+  $ro_promise = read $promise
   $b2 = region arena @behavior2()
-  $_ = when ($promise) $b2
+  $_ = when ($ro_promise) $b2
   $zero = const i32 0
   ret $zero

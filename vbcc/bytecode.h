@@ -19,14 +19,17 @@ namespace vbcc
   {
     std::vector<size_t> pred;
     std::vector<size_t> succ;
+    std::vector<Node> first_def;
+    std::vector<Node> first_use;
     std::vector<Node> last_use;
 
     Bitset in;
+    Bitset defd;
     Bitset dead;
     Bitset out;
 
     void resize(size_t size);
-    void def(size_t r);
+    bool def(size_t r, Node& node, bool var);
     bool use(size_t r, Node& node);
     bool kill(size_t r);
     void automove(size_t r);
@@ -37,12 +40,12 @@ namespace vbcc
     ST::Index name;
     Node func;
     size_t params;
+    size_t label_pcs;
+
     std::unordered_map<ST::Index, size_t> label_idxs;
     std::unordered_map<ST::Index, size_t> register_idxs;
     std::vector<ST::Index> register_names;
     std::vector<LabelState> labels;
-
-    size_t label_pcs;
 
     FuncState(Node func) : func(func) {}
 
@@ -104,10 +107,6 @@ namespace vbcc
 
     std::optional<size_t> get_library_id(Node id);
     void add_library(Node lib);
-
-    void def(Node& id);
-    bool use(Node& id);
-    bool kill(Node& id);
 
     void gen(std::filesystem::path output, bool strip);
 
