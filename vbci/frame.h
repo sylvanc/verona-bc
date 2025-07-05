@@ -35,7 +35,7 @@ namespace vbci
       size_t finalize_base,
       PC pc,
       size_t dst,
-      Condition condition);
+      CallType calltype);
 
     Value& local(size_t idx);
     Value& arg(size_t idx);

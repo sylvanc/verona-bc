@@ -943,7 +943,7 @@ namespace vbci
       finalize_base,
       func->labels.at(0),
       dst,
-      Condition::Return);
+      CallType::Call);
 
     frame = &frames.back();
   }

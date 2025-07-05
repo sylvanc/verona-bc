@@ -15,7 +15,7 @@ namespace vbci
     size_t finalize_base,
     PC pc,
     size_t dst,
-    Condition condition)
+    CallType calltype)
   : func(func),
     frame_id(frame_id),
     save(save),
@@ -26,7 +26,7 @@ namespace vbci
     finalize_top(finalize_base),
     pc(pc),
     dst(dst),
-    condition(condition)
+    calltype(calltype)
   {
     // The frame-local region always carries a stack RC.
     region.stack_inc();
