@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../vbci/platform.h"
+
 // Apple Clang does not include from_chars, so we provide our own
 #if defined(PLATFORM_IS_MACOSX)
 
