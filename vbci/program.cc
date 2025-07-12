@@ -539,8 +539,9 @@ namespace vbci
 
     // FFI information.
     auto num_libs = uleb(pc);
+    libs.reserve(num_libs);
     for (size_t i = 0; i < num_libs; i++)
-      libs.push_back(strings.at(uleb(pc)));
+      libs.emplace_back(strings.at(uleb(pc)));
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)
