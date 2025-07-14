@@ -1,0 +1,12 @@
+class @A 
+    @f : @B 
+
+class @B
+    @f : bool 
+
+func @main():i32 
+    $true = const bool true
+    $b1 = region rc @B($true)
+    $a1 = heap $b1 @A($b1) 
+    $ret_val = const i32 42 
+    ret $ret_val

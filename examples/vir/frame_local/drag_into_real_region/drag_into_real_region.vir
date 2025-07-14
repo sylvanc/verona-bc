@@ -1,0 +1,13 @@
+class @A
+    @f1 : i32 
+
+class @B 
+    @f1 : @A
+
+func @main(): i32
+    $i = const i32 42
+    $a =  new @A($i)
+    $b = region rc @B($a)
+    ret $i
+
+    

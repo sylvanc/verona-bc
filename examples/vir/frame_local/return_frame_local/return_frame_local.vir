@@ -1,0 +1,40 @@
+lib
+  @printf = "printf"(ptr, ...): i32
+
+class @B
+    @f : bool 
+
+class @A 
+    @f : @B 
+
+func @main () : i32 
+    $true = const bool true 
+    $b = new @B($true)
+    $a = call @make_a($b)
+
+    $a_field_ref = ref $a @f 
+    $a_field = load $a_field_ref
+    $b_field_ref = ref $a_field @f 
+    $b_field = load $b_field_ref
+
+    $ret_val = const i32 42 
+    $fmt = const "%s\n"
+    $fmt_ptr = makeptr $fmt
+    
+    cond $b_field ^true ^false 
+    ^true
+        $string_true = const "true" 
+        $ptr_true = makeptr $string_true
+        $out = ffi @printf($fmt_ptr,$ptr_true)
+        ret $ret_val
+    ^false 
+        $string_false = const "false" 
+        $ptr_false = makeptr $string_false
+        $out = ffi @printf($fmt_ptr,$ptr_false)
+        ret $ret_val 
+
+
+func @make_a ($b : @B) : @A 
+    $ret_a = new @A($b)
+    ret $ret_a
+
