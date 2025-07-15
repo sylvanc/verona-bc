@@ -715,6 +715,9 @@ namespace vbcc
 
       auto stmt_di = [&](Node stmt) {
         // Use the source and offset in the AST.
+        if (!stmt->location().source)
+          return;
+
         auto file =
           ST::di().file(compilation_path, stmt->location().source->origin());
         auto pos = stmt->location().pos;

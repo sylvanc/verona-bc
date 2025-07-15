@@ -2,24 +2,8 @@
 
 namespace vc
 {
-  bool is_std_builtin(Node classdef)
-  {
-    assert(classdef == ClassDef);
-    auto p = classdef->parent(ClassDef);
-
-    if (!p || ((p / Ident)->location().view() != "builtin"))
-      return false;
-
-    p = p->parent(ClassDef);
-    return (p && (p / Ident)->location().view() == "std") &&
-      (p->parent() == Top);
-  }
-
   Node primitive_type(Node classdef)
   {
-    if (!is_std_builtin(classdef))
-      return {};
-
     auto name = (classdef / Ident)->location().view();
 
     if (name == "none")
@@ -115,6 +99,9 @@ namespace vc
 
   Node make_irtype(Node type)
   {
+    if (!type)
+      return Dyn;
+
     if (type == Type)
     {
       if (type->empty())
@@ -157,13 +144,17 @@ namespace vc
 
   PassDef flatten()
   {
+    auto has_main = std::make_shared<bool>(false);
+
     PassDef p{
       "flatten",
       wfIR,
-      dir::bottomup,
+      dir::bottomup | dir::once,
       {
         T(ClassDef)[ClassDef] >>
-          [](Match& _) {
+          [=](Match& _) {
+            // TODO: this isn't preserving enough structure to do `resolve`
+
             auto def = _(ClassDef);
             auto prim = primitive_type(def);
             Node fields = Fields;
@@ -171,9 +162,11 @@ namespace vc
             Node seq = Seq;
 
             if (prim)
-              seq << (Primitive << prim << methods);
+              seq << (Lift << Top << (Primitive << prim << methods));
             else
-              seq << (Class << make_classid(def) << fields << methods);
+              seq
+                << (Lift << Top
+                         << (Class << make_classid(def) << fields << methods));
 
             for (auto& child : *(def / ClassBody))
             {
@@ -201,17 +194,58 @@ namespace vc
                 }
 
                 seq
-                  << (Func << clone(functionid) << params
-                           << make_irtype(child / Type) << (child / Labels));
-              }
-              else if (child->in({Primitive, Class, Func}))
-              {
-                seq << child;
+                  << (Lift << Top
+                           << (Func << clone(functionid) << params
+                                    << make_irtype(child / Type) << Vars
+                                    << clone(child / Labels)));
+
+                if (
+                  !*has_main && ((child / Ident)->location().view() == "main"))
+                {
+                  *has_main = true;
+                  auto id = _.fresh();
+                  seq
+                    << (Lift
+                        << Top
+                        << (Func
+                            << (FunctionId ^ "@main") << Params << I32 << Vars
+                            << (Labels
+                                << (Label
+                                    << (LabelId ^ "start")
+                                    << (Body
+                                        << (Call << (LocalId ^ id)
+                                                 << clone(functionid) << Args))
+                                    << (Return << (LocalId ^ id))))));
+                }
               }
             }
 
-            return seq;
+            return seq << def;
           },
+
+        // Elide unused copies.
+        T(Copy) << (T(LocalId)[Lhs] * T(LocalId)) >> [](Match& _) -> Node {
+          auto lhs = _(Lhs);
+          auto f = lhs->parent(Labels);
+          auto found = false;
+
+          f->traverse([&](Node& node) {
+            if (
+              (node == LocalId) && (node != lhs) &&
+              (node->location() == lhs->location()))
+            {
+              found = true;
+              return false;
+            }
+
+            return true;
+          });
+
+          if (!found)
+            return {};
+
+          return NoChange;
+        },
 
         T(New) << (T(LocalId)[LocalId] * T(Type)[Type] * T(Args)[Args]) >>
           [](Match& _) {
@@ -252,16 +286,28 @@ namespace vc
 
     p.post([](auto top) {
       Nodes to_remove;
+
       top->traverse([&](auto node) {
         bool ok = true;
 
-        if (node == Error)
+        if (node->get_contains_error())
         {
           ok = false;
         }
-        else if (node->in({Use, TypeAlias}))
+        else if (node == Var)
+        {
+          // TODO: is this needed?
+          if (!node->parent(Func))
+            return ok;
+
+          (node->parent(Func) / Vars) << (LocalId ^ (node / Ident));
+          to_remove.push_back(node);
+          ok = false;
+        }
+        else if (node->in({Use, TypeAlias, ClassDef}))
         {
           to_remove.push_back(node);
+          ok = false;
         }
 
         return ok;

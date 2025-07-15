@@ -29,9 +29,9 @@ namespace vc
 
   const std::initializer_list<Token> terminators = {List};
 
-  Parse parser()
+  Parse parser(std::shared_ptr<Bytecode> state)
   {
-    struct State
+    struct ParseState
     {
       RE2 re_dir;
       size_t depth;
@@ -39,22 +39,24 @@ namespace vc
       size_t str_end;
       Location loc;
 
-      State() : re_dir("[_[:alpha:]][_[:alnum:]]*?") {}
+      ParseState() : re_dir("[_[:alpha:]][_[:alnum:]]*?") {}
     };
 
     Parse p(depth::subdirectories, wfParser);
-    auto state = std::make_shared<State>();
+    auto ps = std::make_shared<ParseState>();
 
     p.prefile([](auto&, auto& path) { return path.extension() == ".v"; });
 
-    p.predir([state](auto&, auto& path) {
-      return RE2::FullMatch(path.filename().string(), state->re_dir);
+    p.predir([=](auto&, auto& path) {
+      return RE2::FullMatch(path.filename().string(), ps->re_dir);
     });
 
-    p.postfile([state](auto&, auto&, auto) { state->depth = 0; });
+    p.postfile([=](auto&, auto&, auto) { ps->depth = 0; });
 
-    p.postparse([](auto& pp, auto& path, auto ast) {
+    p.postparse([=](auto& pp, auto& path, auto ast) {
+      state->set_path(path);
       auto stdlib = pp.executable().parent_path() / "std";
+
       if (path != stdlib)
         ast << pp.sub_parse(stdlib);
 
@@ -128,10 +130,10 @@ namespace vc
 
         // Raw string.
         "([']+)\"([^\"]*)" >>
-          [state](auto& m) {
-            state->str_start = m.match(1).len;
-            state->str_end = 0;
-            state->loc = m.match(1);
+          [=](auto& m) {
+            ps->str_start = m.match(1).len;
+            ps->str_end = 0;
+            ps->loc = m.match(1);
             m.add(RawString, 2);
             m.mode("string");
           },
@@ -144,10 +146,10 @@ namespace vc
 
         // Nested comment.
         "/\\*" >>
-          [state](auto& m) {
-            assert(state->depth == 0);
-            ++state->depth;
-            state->loc = m.match();
+          [=](auto& m) {
+            assert(ps->depth == 0);
+            ++ps->depth;
+            ps->loc = m.match();
             m.mode("comment");
           },
 
@@ -195,46 +197,46 @@ namespace vc
     p("string",
       {
         "\"'" >>
-          [state](auto& m) {
+          [=](auto& m) {
             m.extend_before(RawString);
-            state->str_end = 1;
-            if (state->str_start == state->str_end)
+            ps->str_end = 1;
+            if (ps->str_start == ps->str_end)
               m.mode("start");
           },
 
         "'" >>
-          [state](auto& m) {
-            if (state->str_end > 0)
+          [=](auto& m) {
+            if (ps->str_end > 0)
             {
-              ++state->str_end;
-              if (state->str_start == state->str_end)
+              ++ps->str_end;
+              if (ps->str_start == ps->str_end)
                 m.mode("start");
             }
           },
 
-        "." >> [state](auto&) { state->str_end = 0; },
+        "." >> [=](auto&) { ps->str_end = 0; },
       });
 
     p("comment",
       {
         "[^/\\*]+" >> [](auto&) {},
-        "/\\*" >> [state](auto&) { ++state->depth; },
+        "/\\*" >> [=](auto&) { ++ps->depth; },
 
         "\\*/" >>
-          [state](auto& m) {
-            if (--state->depth == 0)
+          [=](auto& m) {
+            if (--ps->depth == 0)
               m.mode("start");
           },
 
         "[/\\*]" >> [](auto&) {},
       });
 
-    p.done([state](auto& m) {
+    p.done([=](auto& m) {
       if (m.mode() == "comment")
-        m.error("Unterminated comment starting at ", state->loc);
+        m.error("Unterminated comment starting at ", ps->loc);
 
       if (m.mode() == "string")
-        m.error("Unterminated string starting at ", state->loc);
+        m.error("Unterminated string starting at ", ps->loc);
     });
 
     return p;

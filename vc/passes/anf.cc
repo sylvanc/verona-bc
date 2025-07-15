@@ -183,7 +183,7 @@ namespace vc
               auto id = _.fresh(l_local);
               return Seq << (Lift
                              << Body
-                             << (Move << (LocalId ^ id) << (LocalId ^ _(Lhs))))
+                             << (Copy << (LocalId ^ id) << (LocalId ^ _(Lhs))))
                          << (Lift << Body << (Copy << _(Lhs) << _(Rhs)))
                          << (LocalId ^ id);
             },
@@ -390,13 +390,11 @@ namespace vc
             return seq;
           },
 
-          // Lift variable declarations.
+          // Replace Let with LocalId.
           In(Expr, Lhs) * T(Let)[Let] >>
-            [](Match& _) {
-              return Seq << (Lift << Body << _(Let))
-                         << (LocalId ^ (_(Let) / Ident));
-            },
+            [](Match& _) { return LocalId ^ (_(Let) / Ident); },
 
+          // Lift variable declarations.
           In(Expr, Lhs) * T(Var)[Var] >>
             [](Match& _) {
               return Seq << (Lift << Body << _(Var))

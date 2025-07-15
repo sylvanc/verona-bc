@@ -8,12 +8,12 @@ namespace vbcc
   using namespace trieste::wf::ops;
 
   // Definition keywords.
+  inline const auto Lib = TokenDef("lib");
+  inline const auto Type = TokenDef("type");
   inline const auto Primitive = TokenDef("primitive");
   inline const auto Class = TokenDef("class");
   inline const auto Func = TokenDef("func");
-  inline const auto Lib = TokenDef("lib");
-  inline const auto Type = TokenDef("type");
-  inline const auto Var = TokenDef("var");
+  inline const auto Vars = TokenDef("vars");
 
   // Identifiers.
   inline const auto SymbolId = TokenDef("symbolid", flag::print);
@@ -261,10 +261,10 @@ namespace vbcc
     | (Field <<= FieldId * (Type >>= wfType))
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
-    | (Func <<= FunctionId * Params * (Type >>= wfType) * Var * Labels)
+    | (Func <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)
     | (Params <<= Param++)
     | (Param <<= LocalId * (Type >>= wfType))
-    | (Var <<= LocalId++)
+    | (Vars <<= LocalId++)
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfStatement++)

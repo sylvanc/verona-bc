@@ -47,7 +47,7 @@ namespace vbcc
           label = nullptr;
           vars.resize(func->register_names.size());
 
-          for (auto var : *(node / Var))
+          for (auto var : *(node / Vars))
             vars.set(*func->get_register_id(var));
         }
         else if (node == Label)
@@ -166,7 +166,7 @@ namespace vbcc
           auto& func_state = state->get_func(node / FunctionId);
           auto vars = Bitset(func_state.register_names.size());
 
-          for (auto var : *(node / Var))
+          for (auto var : *(node / Vars))
             vars.set(*func_state.get_register_id(var));
 
           // Backward data-flow.

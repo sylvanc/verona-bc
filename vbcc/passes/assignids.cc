@@ -145,7 +145,7 @@ namespace vbcc
           }
 
           // Register variable names.
-          for (auto var : *(func / Var))
+          for (auto var : *(func / Vars))
             func_state.add_register(var);
 
           // Register label names.

@@ -138,7 +138,7 @@ namespace vbcc
 
   Node vardef(NodeRange vars)
   {
-    Node r = Var;
+    Node r = Vars;
 
     for (auto& var : vars)
     {
@@ -315,13 +315,13 @@ namespace vbcc
         // Function.
         (T(Func) << End) * T(GlobalId)[GlobalId] * ParamDef[Params] * T(Colon) *
             TypePat[Type] *
-            ~(T(Var) * (T(LocalId) * (T(Comma) * T(LocalId))++)[Var]) >>
+            ~(T(Vars) * (T(LocalId) * (T(Comma) * T(LocalId))++)[Vars]) >>
           [](Match& _) {
             auto start = std::string(_(GlobalId)->location().view());
             start.at(0) = '^';
             return Seq << (Func << (FunctionId ^ _(GlobalId))
                                 << paramdef(_[Params]) << _(Type)
-                                << vardef(_[Var]) << Labels)
+                                << vardef(_[Vars]) << Labels)
                        << (LabelId ^ start);
           },
 

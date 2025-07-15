@@ -201,6 +201,11 @@ namespace vc
         return def;
     }
 
-    return err(qname, "Function not found");
+    return err(
+      qname,
+      std::format(
+        "No {}function that takes {} arguments found.",
+        side == Lhs ? "left-hand " : "",
+        arity));
   }
 }

@@ -84,6 +84,9 @@ namespace vbci
             // Drag a frame-local allocation to a region.
             if (!drag_allocation(r, next.get_header()))
               return false;
+
+            // If this has succeeded, next has a new location.
+            nloc = next.location();
           }
           else if (nr->has_parent())
           {

@@ -295,7 +295,7 @@ namespace vc
   Node resolve(Node name);
   Node resolve_qname(Node qname, Node side, size_t arity);
 
-  Parse parser();
+  Parse parser(std::shared_ptr<Bytecode> state);
   PassDef structure();
   PassDef application();
   PassDef operators();

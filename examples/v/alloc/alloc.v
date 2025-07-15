@@ -2,7 +2,7 @@ cell
 {
   f: i32;
 
-  create(f: i32 = 0): cell
+  create(f: i32 = i32 0): cell
   {
     new f
   }
@@ -11,6 +11,8 @@ cell
 main(): i32
 {
   let a = cell;
-  let b = cell (1 + 2);
+  var b = cell (i32(1 + 2));
+  b = cell (i32(3 + 4));
+  a.f = i32 3;
   a.f + b.f
 }

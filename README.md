@@ -45,6 +45,10 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* Fix liveness:
+  * `Heap`, `HeapArray`, `HeapArrayConst`.
+  * These are catching `Arg` liveness after the use of the register to specify a region.
+
 * Local region.
   * Can't send a local region object - auto-move to a fresh region?
     * Don't just call `is_sendable` in thread `when` handler.

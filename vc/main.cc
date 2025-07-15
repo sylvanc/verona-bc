@@ -20,7 +20,7 @@ int main(int argc, char** argv)
      assignids(state),
      validids(state),
      liveness(state)},
-    parser()};
+    vc::parser(state)};
 
   struct Options : public trieste::Options
   {
@@ -43,11 +43,11 @@ int main(int argc, char** argv)
   if (r != 0)
     return r;
 
-  // if (state->error)
-  //   return -1;
+  if (state->error)
+    return -1;
 
-  // wf::push_back(wfIR);
-  // state->gen(opts.bytecode_file, opts.strip);
-  // wf::pop_front();
+  wf::push_back(wfIR);
+  state->gen(opts.bytecode_file, opts.strip);
+  wf::pop_front();
   return 0;
 }

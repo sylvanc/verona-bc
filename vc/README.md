@@ -2,7 +2,6 @@
 
 ## Priorities
 
-Let and var.
 - Rename shadowed variables.
 
 ## To Do

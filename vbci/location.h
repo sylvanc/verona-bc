@@ -12,6 +12,7 @@ namespace vbci
     static constexpr auto Pending = uintptr_t(0x3);
     static constexpr auto Mask = uintptr_t(0x3);
     static constexpr auto Immortal = uintptr_t(-1) & ~Stack;
+    static constexpr auto FrameInc = uintptr_t(0x4);
 
     inline bool no_rc(Location loc)
     {

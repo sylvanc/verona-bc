@@ -922,7 +922,7 @@ namespace vbci
     if (frame)
     {
       frame->calltype = calltype;
-      frame_id = frame->frame_id + 2;
+      frame_id = frame->frame_id + loc::FrameInc;
       base = frame->base + frame->func->registers;
       finalize_base = frame->finalize_top;
     }
