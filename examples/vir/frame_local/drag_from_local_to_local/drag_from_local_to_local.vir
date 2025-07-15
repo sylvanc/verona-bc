@@ -1,0 +1,51 @@
+lib
+  @printf = "printf"(ptr, ...): i32
+
+class @A 
+    @f1 : bool 
+
+class @B 
+    @f1 : @A
+
+func @main():i32 
+    $true = const bool true 
+
+    $a_true = new @A($true) //Initialize an A with field $true 
+
+    $b = new @B($a_true) //Initialize a B with field $a_true 
+
+    $res = call @update_b($b) //update b's field to be an $A which stores false
+
+    // Get the field value
+    $b_field_ref = ref $b @f1 
+    $b_field = load $b_field_ref 
+
+    $a_field_ref = ref $b_field @f1 
+    $a_field = load $a_field_ref
+
+    //printing to ensure the value is correct
+    $ret_val = const i32 42 
+    $fmt = const "%s\n"
+    $fmt_ptr = makeptr $fmt
+
+    cond $a_field ^true ^false 
+    ^true
+        $string_true = const "true" 
+        $ptr_true = makeptr $string_true
+        $out = ffi @printf($fmt_ptr,$ptr_true)
+        ret $ret_val
+    ^false 
+        $string_false = const "false" 
+        $ptr_false = makeptr $string_false
+        $out = ffi @printf($fmt_ptr,$ptr_false)
+        ret $ret_val        
+
+func @update_b($b : @B) : bool
+    $false = const bool false
+    $a_false = new @A($false)
+
+    $ref = ref $b @f1 
+    $old_val = store $ref $a_false //this drags $b into this frame, since older frames should not point to newer ones 
+      
+    $ret_val = const bool true 
+    ret $ret_val
