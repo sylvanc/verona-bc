@@ -7,7 +7,6 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
-#include <vbci.h>
 #include <vector>
 
 #if !defined(PLATFORM_IS_WINDOWS)

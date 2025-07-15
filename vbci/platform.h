@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vbci.h>
+
 #if defined(PLATFORM_IS_WINDOWS)
 #  define VBCI_KEEP __declspec(dllexport)
 #else

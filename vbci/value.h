@@ -9,7 +9,6 @@
 #include <functional>
 #include <limits>
 #include <numbers>
-#include <vbci.h>
 
 namespace vbci
 {
