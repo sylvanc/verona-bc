@@ -1,8 +1,10 @@
 #pragma once
 
-// Apple Clang does not include from_chars, so we provide our own
+#include <vbci.h>
+
 #if defined(PLATFORM_IS_MACOSX)
 
+// Apple Clang does not include from_chars, so we provide our own
 #  include <system_error>
 
 namespace std
