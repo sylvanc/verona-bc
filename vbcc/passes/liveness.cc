@@ -40,124 +40,137 @@ namespace vbcc
         }
       };
 
-      top->traverse([&](auto node) {
-        if (node == Func)
-        {
-          func = &state->get_func(node / FunctionId);
-          label = nullptr;
-          vars.resize(func->register_names.size());
+      top->traverse(
+        [&](auto node) {
+          if (node == Func)
+          {
+            func = &state->get_func(node / FunctionId);
+            label = nullptr;
+            vars.resize(func->register_names.size());
 
-          for (auto var : *(node / Vars))
-            vars.set(*func->get_register_id(var));
-        }
-        else if (node == Label)
-        {
-          label = &func->get_label(node / LabelId);
-        }
-        else if (node == Move)
-        {
-          def(node / LocalId);
-          kill(node / Rhs);
-        }
-        else if (node == Drop)
-        {
-          kill(node / LocalId);
-        }
-        else if (node->in({HeapArray, Add, Sub, Mul, Div,     Mod,  Pow, And,
-                           Or,        Xor, Shl, Shr, Eq,      Ne,   Lt,  Le,
-                           Gt,        Ge,  Min, Max, LogBase, Atan2}))
-        {
-          def(node / LocalId);
-          use(node / Lhs);
-          use(node / Rhs);
-        }
-        else if (node->in({Convert,  Copy,       Heap,   HeapArrayConst,
-                           ArrayRef, Load,       Store,  Lookup,
-                           CallDyn,  SubcallDyn, TryDyn, Typetest,
-                           Neg,      Not,        Abs,    Ceil,
-                           Floor,    Exp,        Log,    Sqrt,
-                           Cbrt,     IsInf,      IsNaN,  Sin,
-                           Cos,      Tan,        Asin,   Acos,
-                           Atan,     Sinh,       Cosh,   Tanh,
-                           Asinh,    Acosh,      Atanh,  Len,
-                           MakePtr,  Read}))
-        {
-          def(node / LocalId);
-          use(node / Rhs);
-        }
-        else if (node->in(
-                   {Const,
-                    ConstStr,
-                    New,
-                    Stack,
-                    Region,
-                    NewArray,
-                    NewArrayConst,
-                    StackArray,
-                    StackArrayConst,
-                    RegionArray,
-                    RegionArrayConst,
-                    RegisterRef,
-                    FieldRef,
-                    ArrayRefConst,
-                    FnPointer,
-                    Call,
-                    CallDyn,
-                    Subcall,
-                    SubcallDyn,
-                    Try,
-                    TryDyn,
-                    FFI,
-                    When,
-                    Const_E,
-                    Const_Pi,
-                    Const_Inf,
-                    Const_NaN}))
-        {
-          def(node / LocalId);
-        }
-        else if (node->in({Return, Raise, Throw, TailcallDyn}))
-        {
-          kill(node / LocalId);
-        }
-        else if (node == Arg)
-        {
-          if (node / Type == ArgCopy)
-            use(node / Rhs);
-          else
+            for (auto var : *(node / Vars))
+              vars.set(*func->get_register_id(var));
+          }
+          else if (node == Label)
+          {
+            label = &func->get_label(node / LabelId);
+          }
+          else if (node == Move)
+          {
             kill(node / Rhs);
-        }
-        else if (node == MoveArg)
-        {
-          kill(node / Rhs);
-        }
-        else if (node == Jump)
-        {
-          auto& func_state = state->get_func(node->parent(Func) / FunctionId);
-          auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
-          auto succ = *func_state.get_label_id(node / LabelId);
-          func_state.labels.at(pred).succ.push_back(succ);
-          func_state.labels.at(succ).pred.push_back(pred);
-        }
-        else if (node == Cond)
-        {
-          use(node / LocalId);
-          auto& func_state = state->get_func(node->parent(Func) / FunctionId);
-          auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
-          auto lhs = *func_state.get_label_id(node / Lhs);
-          auto rhs = *func_state.get_label_id(node / Rhs);
-          func_state.labels.at(pred).succ.push_back(lhs);
-          func_state.labels.at(pred).succ.push_back(rhs);
-          func_state.labels.at(lhs).pred.push_back(pred);
-          func_state.labels.at(rhs).pred.push_back(pred);
-        }
-        else if (node == Error)
-        {
-          return false;
-        }
+            def(node / LocalId);
+          }
+          else if (node == Drop)
+          {
+            kill(node / LocalId);
+          }
+          else if (node->in({HeapArray, Add, Sub, Mul, Div,     Mod,  Pow, And,
+                             Or,        Xor, Shl, Shr, Eq,      Ne,   Lt,  Le,
+                             Gt,        Ge,  Min, Max, LogBase, Atan2}))
+          {
+            use(node / Lhs);
+            use(node / Rhs);
+            def(node / LocalId);
+          }
+          else if (node->in({Convert,  Copy,     HeapArrayConst,
+                             ArrayRef, Load,     Store,
+                             Lookup,   CallDyn,  SubcallDyn,
+                             TryDyn,   Typetest, Neg,
+                             Not,      Abs,      Ceil,
+                             Floor,    Exp,      Log,
+                             Sqrt,     Cbrt,     IsInf,
+                             IsNaN,    Sin,      Cos,
+                             Tan,      Asin,     Acos,
+                             Atan,     Sinh,     Cosh,
+                             Tanh,     Asinh,    Acosh,
+                             Atanh,    Len,      MakePtr,
+                             Read}))
+          {
+            use(node / Rhs);
+            def(node / LocalId);
+          }
+          else if (node->in(
+                     {Const,
+                      ConstStr,
+                      New,
+                      Stack,
+                      Region,
+                      NewArray,
+                      NewArrayConst,
+                      StackArray,
+                      StackArrayConst,
+                      RegionArray,
+                      RegionArrayConst,
+                      RegisterRef,
+                      FieldRef,
+                      ArrayRefConst,
+                      FnPointer,
+                      Call,
+                      CallDyn,
+                      Subcall,
+                      SubcallDyn,
+                      Try,
+                      TryDyn,
+                      FFI,
+                      When,
+                      Const_E,
+                      Const_Pi,
+                      Const_Inf,
+                      Const_NaN}))
+          {
+            def(node / LocalId);
+          }
+          else if (node->in({Return, Raise, Throw, TailcallDyn}))
+          {
+            kill(node / LocalId);
+          }
+          else if (node == Arg)
+          {
+            if (node / Type == ArgCopy)
+              use(node / Rhs);
+            else
+              kill(node / Rhs);
+          }
+          else if (node == MoveArg)
+          {
+            kill(node / Rhs);
+          }
+          else if (node == Jump)
+          {
+            auto& func_state = state->get_func(node->parent(Func) / FunctionId);
+            auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
+            auto succ = *func_state.get_label_id(node / LabelId);
+            func_state.labels.at(pred).succ.push_back(succ);
+            func_state.labels.at(succ).pred.push_back(pred);
+          }
+          else if (node == Cond)
+          {
+            use(node / LocalId);
+            auto& func_state = state->get_func(node->parent(Func) / FunctionId);
+            auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
+            auto lhs = *func_state.get_label_id(node / Lhs);
+            auto rhs = *func_state.get_label_id(node / Rhs);
+            func_state.labels.at(pred).succ.push_back(lhs);
+            func_state.labels.at(pred).succ.push_back(rhs);
+            func_state.labels.at(lhs).pred.push_back(pred);
+            func_state.labels.at(rhs).pred.push_back(pred);
+          }
+          else if (node == Error)
+          {
+            return false;
+          }
 
-        return true;
-      });
+          return true;
+        },
+        [&](auto node) {
+          if (node == Heap)
+          {
+            // Handle this in post, because the arguments will be pushed before
+            // the region is used.
+            use(node / Rhs);
+            def(node / LocalId);
+          }
+        });
 
       top->traverse([&](auto node) {
         if (node == Func)

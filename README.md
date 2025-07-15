@@ -2,10 +2,6 @@
 
 This is an experimental byte code interpreter for the Verona operational semantics.
 
-## Types
-
-Union types can only be on the right-hand side of a `type` definition. If you need a union type somewhere else, create a `type` for it.
-
 ## Non-Local Returns
 
 A function call can be made as a `call`, a `subcall`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
@@ -44,10 +40,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * `vbci::Skip` (2): advance the PC by the argument.
 
 ## To-Do List
-
-* Fix liveness:
-  * `Heap`, `HeapArray`, `HeapArrayConst`.
-  * These are catching `Arg` liveness after the use of the register to specify a region.
 
 * Local region.
   * Can't send a local region object - auto-move to a fresh region?
