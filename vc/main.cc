@@ -13,6 +13,7 @@ int main(int argc, char** argv)
   Reader reader{
     "vc",
     {structure(),
+     sugar(),
      application(),
      operators(),
      anf(),

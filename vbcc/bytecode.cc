@@ -240,27 +240,17 @@ namespace vbcc
   void LabelState::automove(size_t r)
   {
     auto n = last_use.at(r);
+
+    if (!n)
+      return;
+
     last_use[r] = {};
+    auto parent = n->parent();
 
-    if (n)
-    {
-      auto parent = n->parent();
-
-      if ((parent == Arg) && (parent->front() == ArgCopy))
-      {
-        parent / Type = ArgMove;
-        return;
-      }
-      else if (parent == Copy)
-      {
-        parent->parent()->replace(parent, Move << *parent);
-        return;
-      }
-    }
-
-    // No last use, or last use wasn't a copy.
-    // TODO: insert a drop before a def? pointless for vbci, win for AOT?
-    // TODO: insert a drop at the end of the label?
+    if ((parent == Arg) && (parent->front() == ArgCopy))
+      parent / Type = ArgMove;
+    else if (parent == Copy)
+      parent->parent()->replace(parent, Move << *parent);
   }
 
   std::optional<size_t> FuncState::get_label_id(Node id)

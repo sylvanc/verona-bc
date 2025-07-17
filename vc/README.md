@@ -1,21 +1,24 @@
 # High-Level Language Experiment
 
-## Priorities
+## Current Work
 
-- Rename shadowed variables.
+Lambdas to classes.
+- Mark free variables in lambdas.
+  - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
+  - A free `var` is captured by reference. The lambda must be `stack` allocated.
+- Patterns for lambdas.
+  - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
+  - If a lambda can be a pattern, pattern matching becomes a series of `else`.
 
 ## To Do
 
 Assign:
+- Rename shadowed variables.
 - Need to be able to load a `localid`.
   - Keyword? Or a method on `ref`?
 
-ANF:
+Control flow:
 - For, When.
-- `if` with a lambda that takes arguments is a type test.
-  - Allow type test version of `for`?
-  - Allow a pattern, not just a type test?
-  - If all lambdas are patterns that return `nomatch`, then `if` with a lambda is the same as invoking the lambda with the value.
 
 Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
@@ -31,21 +34,17 @@ Expressions:
 - Only allow `:::` in `std::builtin`.
 - Array operations for `std::builtin`.
 - Partial application, `_`.
-- Pattern matching.
-  - If a lambda can be a pattern, this becomes a series of `else`.
-- Generators with `yield`.
 
 Syntax:
+- Zero-argument function calls.
+  - How do we call a zero-argument lambda?
+  - How do we refer to a zero-argument function without calling it?
 - Braces and else: it doesn't work if there's a comment in between.
 
 Structure:
 - Default field values.
 - Auto create, member conflict.
 - Can auto-RHS conflict with default arguments? Seems yes.
-- Lambdas to classes.
-  - Mark free variables in lambdas.
-  - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
-  - A free `var` is captured by reference. The lambda must be `stack` allocated.
 - Could allow `ident::name` (lookup, no call).
   - Like `ident.name`, but no first argument binding.
 - Compile time evaluation.

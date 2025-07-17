@@ -5,15 +5,12 @@ namespace vc
   const std::initializer_list<Token> wfTypeElement = {
     TypeName, Union, Isect, FuncType, TupleType, RefType};
 
-  // TODO: remove as more expressions are handled.
-  // everything from Const on isn't handled.
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident, True,     False,   Bin,       Oct,
-    Int,     Hex,      Float, HexFloat, String,  RawString, DontCare,
-    Tuple,   Let,      Var,   New,      Lambda,  QName,     Method,
-    Call,    CallDyn,  If,    While,    For,     When,      Equals,
-    Else,    Ref,      Try,   Op,       Convert, Binop,     Unop,
-    Nulop,   FieldRef, Load,  Const,    Colon,   Vararg};
+    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,     Int,
+    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple,   Let,
+    Var,     New,      Lambda,   QName,  Method,    Call,     CallDyn, If,
+    While,   For,      When,     Equals, Else,      Ref,      Try,     Op,
+    Convert, Binop,    Unop,     Nulop,  FieldRef,  Load};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -63,33 +60,6 @@ namespace vc
     }
   }
 
-  Node make_qname(Node ident, Node tps)
-  {
-    auto cls = ident->parent(ClassDef);
-    auto cls_tps = cls / TypeParams;
-    return QName << (QElement << clone(cls / Ident) << make_typeargs(cls_tps))
-                 << (QElement << clone(ident) << make_typeargs(tps));
-  }
-
-  Node make_qname(NodeRange r)
-  {
-    Node qn = QName;
-    Node qe;
-
-    for (auto& n : r)
-    {
-      if (n->in({Ident, SymbolId}))
-        qe = QElement << n << TypeArgs;
-      else if (n == Bracket)
-        (qe / TypeArgs) << *n;
-      else if (n == DoubleColon)
-        qn << qe;
-    }
-
-    qn << qe;
-    return qn;
-  }
-
   Node lambda_body(Node brace, NodeRange rhs)
   {
     if (brace)
@@ -100,7 +70,7 @@ namespace vc
         return Body << *brace;
     }
 
-    return Body << (Expr << *rhs);
+    return Body << (Expr << rhs);
   }
 
   PassDef structure()
@@ -141,10 +111,10 @@ namespace vc
             return Seq << (FieldDef << clone(_(Ident)) << type
                                     << (Body << (Group << _[Body])))
                        << (Function
-                           << Lhs << clone(_(Ident)) << (TypeParams)
+                           << Lhs << clone(_(Ident)) << TypeParams
                            << (Params
                                << (ParamDef << (Ident ^ "self")
-                                            << make_selftype(_(Ident))))
+                                            << make_selftype(_(Ident)) << Body))
                            << reftype
                            << (Body
                                << (Expr
@@ -170,90 +140,6 @@ namespace vc
               << side << _(Ident) << (TypeParams << *_[TypeParams])
               << (Params << *_[Params]) << (Type << _[Type]) << body;
           },
-
-        // Default arguments.
-        In(ClassBody) * T(Function)[Function]
-            << (T(Lhs, Rhs)[Lhs] * T(Ident, SymbolId)[Ident] *
-                T(TypeParams)[TypeParams] *
-                (T(Params)[Params] << (T(ParamDef)++) * End) * T(Type)[Type] *
-                T(Body)[Body]) >>
-          [](Match& _) -> Node {
-          auto params = _(Params);
-          if (params->empty())
-            return NoChange;
-
-          auto last_param = params->back();
-          auto last = last_param->back();
-          if (last != Body)
-            return NoChange;
-
-          auto ident = _(Ident);
-          last_param->pop_back();
-          auto params_0 = clone(params);
-          params_0->pop_back();
-          Node args = Args;
-
-          for (auto& param : *params_0)
-            args << (Expr << clone(param / Ident));
-
-          args << (Expr << (ExprSeq << *last));
-
-          return Seq << (Function
-                         << clone(_(Lhs)) << clone(ident)
-                         << clone(_(TypeParams)) << params_0 << clone(_(Type))
-                         << (Body
-                             << (Expr
-                                 << (Call << make_qname(ident, _(TypeParams))
-                                          << args))))
-                     << _(Function);
-        },
-
-        // Auto-RHS.
-        In(ClassBody) * T(Function)[Function]
-            << (T(Lhs) * T(Ident, SymbolId)[Ident] * T(TypeParams)[TypeParams] *
-                T(Params)[Params] * T(Type)[Type]) >>
-          [](Match& _) -> Node {
-          // Check if an RHS function with the same name and arity exists.
-          auto ident = _(Ident);
-          auto arity = _(Params)->size();
-          auto cls = _(Function)->parent(ClassBody);
-
-          for (auto& def : *cls)
-          {
-            if (
-              (def == Function) && ((def / Lhs) == Rhs) &&
-              (def / Ident)->equals(ident) && ((def / Params)->size() == arity))
-              return NoChange;
-          }
-
-          // If Type is a RefType, unwrap it, otherwise empty.
-          auto type = _(Type);
-
-          if (!type->empty() && (type->front() == RefType))
-            type = Type << clone(type->front()->front());
-          else
-            type = Type;
-
-          // Forward the arguments.
-          Node args = Args;
-
-          for (auto& param : *_(Params))
-            args << (Expr << clone(param / Ident));
-
-          // Create the RHS function.
-          auto rhs =
-            Function << Rhs << clone(ident) << clone(_(TypeParams))
-                     << clone(_(Params)) << type
-                     << (Body
-                         << (Expr
-                             << (Load
-                                 << (Expr << Ref
-                                          << (Call << make_qname(
-                                                        ident, _(TypeParams))
-                                                   << args)))));
-
-          return Seq << _(Function) << rhs;
-        },
 
         // Type alias.
         T(Group)[Group]
@@ -289,11 +175,12 @@ namespace vc
         // Parameter.
         In(Params) * (T(Group) << (FieldPat * End)) >>
           [](Match& _) {
-            if (_[Body].empty())
-              return ParamDef << _(Ident) << (Type << _[Type]);
+            Node body = Body;
 
-            return ParamDef << _(Ident) << (Type << _[Type])
-                            << (Body << (Group << _[Body]));
+            if (!_[Body].empty())
+              body << (Group << _[Body]);
+
+            return ParamDef << _(Ident) << (Type << _[Type]) << body;
           },
 
         In(Params) * T(Group)[Group] >>
@@ -558,7 +445,8 @@ namespace vc
           [](Match& _) {
             return Lambda << TypeParams
                           << (Params
-                              << (ParamDef << _(Ident) << (Type << _[Type])))
+                              << (ParamDef << _(Ident) << (Type << _[Type])
+                                           << Body))
                           << Type << lambda_body(_(Brace), _[Rhs]);
           },
 
@@ -574,7 +462,23 @@ namespace vc
             (T(Ident) * ~TypeArgsPat * T(DoubleColon) * T(Ident, SymbolId) *
              ~TypeArgsPat *
              (T(DoubleColon) * T(Ident, SymbolId) * ~TypeArgsPat)++)[QName] >>
-          [](Match& _) { return make_qname(_[QName]); },
+          [](Match& _) {
+            Node qn = QName;
+            Node qe;
+
+            for (auto& n : _[QName])
+            {
+              if (n->in({Ident, SymbolId}))
+                qe = QElement << n << TypeArgs;
+              else if (n == Bracket)
+                (qe / TypeArgs) << *n;
+              else if (n == DoubleColon)
+                qn << qe;
+            }
+
+            qn << qe;
+            return qn;
+          },
 
         // Unprefixed qualified name.
         // An identifier with type arguments is a qualified name.
@@ -610,7 +514,18 @@ namespace vc
 
         // If.
         In(Expr) * (T(If) << End) * (!T(Lambda))++[Expr] * T(Lambda)[Lambda] >>
-          [](Match& _) { return If << (Expr << _[Expr]) << _(Lambda); },
+          [](Match& _) {
+            return If << (Expr << _[Expr]) << (Block << *_(Lambda));
+          },
+
+        // Else.
+        In(Expr) * (T(Else) << End) * T(Lambda)[Lambda] >>
+          [](Match& _) {
+            if (!(_(Lambda) / Params)->empty())
+              return err(_(Lambda), "Else block can't have parameters");
+
+            return Else << (Block << *_(Lambda));
+          },
 
         // While.
         In(Expr) * (T(While) << End) * (!T(Lambda))++[While] *
@@ -619,16 +534,20 @@ namespace vc
             if (!(_(Lambda) / Params)->empty())
               return err(_(Lambda), "While loop can't have parameters");
 
-            return While << (Expr << _[While]) << _(Lambda);
+            return While << (Expr << _[While]) << (Block << *_(Lambda));
           },
 
         // For.
         In(Expr) * (T(For) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
-          [](Match& _) { return For << (Expr << _[For]) << _(Lambda); },
+          [](Match& _) {
+            return For << (Expr << _[For]) << (Block << *_(Lambda));
+          },
 
         // When.
         In(Expr) * (T(When) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
-          [](Match& _) { return When << (Expr << _[For]) << _(Lambda); },
+          [](Match& _) {
+            return When << (Expr << _[For]) << (Block << *_(Lambda));
+          },
 
         // Groups are expressions.
         In(Body, Expr, ExprSeq, Tuple, Args) * T(Group)[Group] >>
@@ -716,17 +635,6 @@ namespace vc
               node->replace(child, err(child, "Expected a type"));
               ok = false;
             }
-          }
-        }
-        else if (node == ParamDef)
-        {
-          auto last = node->back();
-
-          if (last == Body)
-          {
-            node->replace(
-              last, err(last, "Default arguments must be at the end"));
-            ok = false;
           }
         }
         else if (node == Binop)

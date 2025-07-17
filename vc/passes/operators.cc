@@ -45,8 +45,15 @@ namespace vc
           },
 
         // Else.
+        In(Expr) * AssignPat[Lhs] * (T(Else) << T(Block)[Block]) >>
+          [](Match& _) { return Else << (Expr << _(Lhs)) << _(Block); },
+
         In(Expr) * AssignPat[Lhs] * (T(Else) << End) * AssignPat[Rhs] >>
-          [](Match& _) { return Else << (Expr << _(Lhs)) << (Expr << _(Rhs)); },
+          [](Match& _) {
+            return Else << (Expr << _(Lhs))
+                        << (Block << TypeParams << Params << Type
+                                  << (Body << (Expr << _(Rhs))));
+          },
 
         // Assignment is right-associative.
         In(Expr) * (T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs])) *
@@ -104,7 +111,7 @@ namespace vc
         }
         else if (node->in({Else, Equals}))
         {
-          if (node->empty())
+          if (node->size() != 2)
           {
             node->parent()->replace(
               node, err(node, "Expected a left and right side"));

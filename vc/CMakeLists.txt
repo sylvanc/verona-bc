@@ -4,6 +4,7 @@ add_executable(vc
   passes/flatten.cc
   passes/operators.cc
   passes/parser.cc
+  passes/sugar.cc
   passes/structure.cc
   lang.cc
   main.cc
