@@ -72,19 +72,13 @@ namespace vbcc
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({Convert,  Copy,     HeapArrayConst,
-                             ArrayRef, Load,     Store,
-                             Lookup,   CallDyn,  SubcallDyn,
-                             TryDyn,   Typetest, Neg,
-                             Not,      Abs,      Ceil,
-                             Floor,    Exp,      Log,
-                             Sqrt,     Cbrt,     IsInf,
-                             IsNaN,    Sin,      Cos,
-                             Tan,      Asin,     Acos,
-                             Atan,     Sinh,     Cosh,
-                             Tanh,     Asinh,    Acosh,
-                             Atanh,    Len,      MakePtr,
-                             Read}))
+          else if (node->in({Convert, Copy,   HeapArrayConst, ArrayRef, Load,
+                             Store,   Lookup, Typetest,       Neg,      Not,
+                             Abs,     Ceil,   Floor,          Exp,      Log,
+                             Sqrt,    Cbrt,   IsInf,          IsNaN,    Sin,
+                             Cos,     Tan,    Asin,           Acos,     Atan,
+                             Sinh,    Cosh,   Tanh,           Asinh,    Acosh,
+                             Atanh,   Len,    MakePtr,        Read}))
           {
             use(node / Rhs);
             def(node / LocalId);
@@ -92,9 +86,6 @@ namespace vbcc
           else if (node->in(
                      {Const,
                       ConstStr,
-                      New,
-                      Stack,
-                      Region,
                       NewArray,
                       NewArrayConst,
                       StackArray,
@@ -105,12 +96,6 @@ namespace vbcc
                       FieldRef,
                       ArrayRefConst,
                       FnPointer,
-                      Call,
-                      CallDyn,
-                      Subcall,
-                      SubcallDyn,
-                      Try,
-                      TryDyn,
                       FFI,
                       When,
                       Const_E,
@@ -163,11 +148,14 @@ namespace vbcc
           return true;
         },
         [&](auto node) {
-          if (node == Heap)
+          // Handle these in post, because the arguments will be pushed first.
+          if (node->in({Heap, CallDyn, SubcallDyn, TryDyn}))
           {
-            // Handle this in post, because the arguments will be pushed before
-            // the region is used.
             use(node / Rhs);
+            def(node / LocalId);
+          }
+          else if (node->in({New, Stack, Region, Call, Subcall, Try}))
+          {
             def(node / LocalId);
           }
         });

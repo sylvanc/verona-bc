@@ -27,16 +27,16 @@ namespace vc
             << (T(TypeParams)[TypeParams] * T(Params)[Params] * T(Type)[Type] *
                 T(Body)[Body]) >>
           [](Match& _) {
-            auto id = _.fresh(l_lambda);
-            auto type = Type
-              << (TypeName << (TypeElement << (Ident ^ id) << TypeArgs));
-
             // TODO: free variables
             // - field for each one
             // - create arg for each one
             // - new arg for each one
             // - unpack each one in apply
             // - create call arg for each one
+
+            auto id = _.fresh(l_lambda);
+            auto type = Type
+              << (TypeName << (TypeElement << (Ident ^ id) << TypeArgs));
             auto params = _(Params);
             params->push_front(
               ParamDef << (Ident ^ "self") << clone(type) << Body);
