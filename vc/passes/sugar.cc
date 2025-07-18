@@ -23,40 +23,92 @@ namespace vc
       dir::topdown,
       {
         // Turn lambdas into anonymous classes.
-        In(Expr) * T(Lambda)
+        In(Expr) * T(Lambda)[Lambda]
             << (T(TypeParams)[TypeParams] * T(Params)[Params] * T(Type)[Type] *
                 T(Body)[Body]) >>
           [](Match& _) {
+            auto lambda = _(Lambda);
+            std::set<Location> freevars;
+
+            lambda->traverse([&](auto node) {
+              bool ok = true;
+
+              if (node == Error)
+              {
+                ok = false;
+              }
+              else if (node == Ident)
+              {
+                if (node->lookup(lambda).empty())
+                  freevars.emplace(node->location());
+              }
+
+              return ok;
+            });
+
+            auto id = _.fresh(l_lambda);
+            Node classbody = ClassBody;
+            auto type = Type
+              << (TypeName << (TypeElement << (Ident ^ id) << TypeArgs));
+
+            Node create_params = Params;
+            Node create_args = Args;
+            Node apply_params = Params
+              << (ParamDef << (Ident ^ "self") << clone(type) << Body)
+              << *_(Params);
+            Node apply_body = Body;
+            Node new_args;
+
             // TODO: free variables
             // - field for each one
+            // - create param for each one
             // - create arg for each one
             // - new arg for each one
             // - unpack each one in apply
-            // - create call arg for each one
+            for (auto& freevar : freevars)
+            {
+              classbody << (FieldDef << (Ident ^ freevar) << Type << Body);
+              create_params << (ParamDef << (Ident ^ freevar) << Type << Body);
+              create_args << (Expr << (Ident ^ freevar));
 
-            auto id = _.fresh(l_lambda);
-            auto type = Type
-              << (TypeName << (TypeElement << (Ident ^ id) << TypeArgs));
-            auto params = _(Params);
-            params->push_front(
-              ParamDef << (Ident ^ "self") << clone(type) << Body);
+              apply_body
+                << (Expr
+                    << (Equals
+                        << (Expr << (Let << (Ident ^ freevar) << Type))
+                        << (Expr
+                            << (Load
+                                << (Expr
+                                    << (FieldRef << (Expr << (Ident ^ "self"))
+                                                 << (FieldId ^ freevar)))))));
+
+              if (!new_args)
+                new_args = Ident ^ freevar;
+              else if (new_args == Ident)
+                new_args = Tuple << (Expr << new_args)
+                                 << (Expr << (Ident ^ freevar));
+              else
+                new_args << (Expr << (Ident ^ freevar));
+            }
+
+            apply_body << *_(Body);
 
             return Seq << (Lift
                            << ClassBody
                            << (ClassDef
                                << (Ident ^ id) << TypeParams
-                               << (ClassBody
-                                   << (Function << Rhs << (Ident ^ "create")
-                                                << TypeParams << Params << type
-                                                << (Body << (Expr << New)))
+                               << (classbody
+                                   << (Function
+                                       << Rhs << (Ident ^ "create")
+                                       << TypeParams << create_params << type
+                                       << (Body << (Expr << New << new_args)))
                                    << (Function << Rhs << (Ident ^ "apply")
-                                                << _(TypeParams) << params
-                                                << _(Type) << _(Body)))))
+                                                << _(TypeParams) << apply_params
+                                                << _(Type) << apply_body))))
                        << (Call
                            << (QName
                                << (QElement << (Ident ^ id) << TypeArgs)
                                << (QElement << (Ident ^ "create") << TypeArgs))
-                           << Args);
+                           << create_args);
           },
 
         // Default arguments.

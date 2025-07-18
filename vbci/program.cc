@@ -255,7 +255,7 @@ namespace vbci
     }
 
     // Dyn, ref.
-    return {ValueType::Invalid, &ffi_type_pointer};
+    return {ValueType::Invalid, &ffi_type_value};
   }
 
   std::pair<ValueType, ffi_type*> Program::layout_complex_type(ComplexType& t)
@@ -294,7 +294,7 @@ namespace vbci
         if (ok)
           return rep;
 
-        return {ValueType::Invalid, &ffi_type_pointer};
+        return {ValueType::Invalid, &ffi_type_value};
       }
     }
   }

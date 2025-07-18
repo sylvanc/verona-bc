@@ -918,7 +918,7 @@ namespace vbcc
           {
             auto arg = stmt / Arg;
 
-            if (arg == ArgMove)
+            if ((arg / Type) == ArgMove)
               code << uleb(+Op::FieldRefMove);
             else
               code << uleb(+Op::FieldRefCopy);
@@ -929,7 +929,7 @@ namespace vbcc
           {
             auto arg = stmt / Arg;
 
-            if (arg == ArgMove)
+            if ((arg / Type) == ArgMove)
               code << uleb(+Op::ArrayRefMove);
             else
               code << uleb(+Op::ArrayRefCopy);
@@ -940,7 +940,7 @@ namespace vbcc
           {
             auto arg = stmt / Arg;
 
-            if (arg == ArgMove)
+            if ((arg / Type) == ArgMove)
               code << uleb(+Op::ArrayRefMoveConst);
             else
               code << uleb(+Op::ArrayRefCopyConst);
@@ -955,7 +955,7 @@ namespace vbcc
           {
             auto arg = stmt / Arg;
 
-            if (arg == ArgMove)
+            if ((arg / Type) == ArgMove)
               code << uleb(+Op::StoreMove);
             else
               code << uleb(+Op::StoreCopy);

@@ -16,6 +16,8 @@ namespace vc
     ~(T(Equals) * Any++[Body]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
   const auto ParamsPat = T(Paren) << (~T(List, Group) * End);
+  const auto ElseLhsPat = (T(Else) << (T(Expr) * T(Block))) /
+    (!T(Equals, Else) * (!T(Equals, Else))++);
 
   const auto NamedType =
     T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
@@ -519,12 +521,20 @@ namespace vc
           },
 
         // Else.
-        In(Expr) * (T(Else) << End) * T(Lambda)[Lambda] >>
+        In(Expr) * ElseLhsPat[Lhs] * (T(Else) << End) * T(Lambda)[Lambda] >>
           [](Match& _) {
             if (!(_(Lambda) / Params)->empty())
               return err(_(Lambda), "Else block can't have parameters");
 
-            return Else << (Block << *_(Lambda));
+            return Else << (Expr << _[Lhs]) << (Block << *_(Lambda));
+          },
+
+        In(Expr) * ElseLhsPat[Lhs] * (T(Else) << End) *
+            (!T(Equals, Else) * (!T(Equals, Else))++)[Rhs] >>
+          [](Match& _) {
+            return Else << (Expr << _[Lhs])
+                        << (Block << TypeParams << Params << Type
+                                  << (Body << (Expr << _[Rhs])));
           },
 
         // While.
@@ -547,6 +557,20 @@ namespace vc
         In(Expr) * (T(When) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
           [](Match& _) {
             return When << (Expr << _[For]) << (Block << *_(Lambda));
+          },
+
+        // Assignment is right-associative.
+        In(Expr) * (T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs])) *
+            (T(Equals) << End) * (!T(Equals) * (!T(Equals))++)[Expr] >>
+          [](Match& _) {
+            return Equals << _(Lhs)
+                          << (Expr << (Equals << _(Rhs) << (Expr << _[Expr])));
+          },
+
+        In(Expr) * (!T(Equals) * (!T(Equals))++)[Lhs] * (T(Equals) << End) *
+            (!T(Equals) * (!T(Equals))++)[Rhs] >>
+          [](Match& _) {
+            return Equals << (Expr << _[Lhs]) << (Expr << _[Rhs]);
           },
 
         // Groups are expressions.
@@ -635,6 +659,15 @@ namespace vc
               node->replace(child, err(child, "Expected a type"));
               ok = false;
             }
+          }
+        }
+        else if (node->in({Else, Equals}))
+        {
+          if (node->size() != 2)
+          {
+            node->parent()->replace(
+              node, err(node, "Expected a left and right side"));
+            ok = false;
           }
         }
         else if (node == Binop)

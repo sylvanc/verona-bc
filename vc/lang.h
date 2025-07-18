@@ -93,8 +93,6 @@ namespace vc
 
   inline const auto ExprPat = ApplyRhsPat / (T(Else, Ref) << Any);
 
-  inline const auto AssignPat = ExprPat / T(Let, Var);
-
   inline const auto wfType =
     TypeName | Union | Isect | RefType | TupleType | FuncType | NoArgType;
 
@@ -157,10 +155,11 @@ namespace vc
     | (CallDyn <<= Method * Args)
     | (Args <<= Expr++)
     | (If <<= Expr * Block)
-    | (Else <<= ~Block)
+    | (Else <<= Expr * Block)
     | (While <<= Expr * Block)
     | (For <<= Expr * Block)
     | (When <<= Expr * Block)
+    | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
     | (Break <<= Expr)
@@ -204,8 +203,6 @@ namespace vc
     | (New <<= ~Expr)
     | (Ref <<= Expr)
     | (Try <<= Expr)
-    | (Else <<= Expr * Block)
-    | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     ;
   // clang-format on
 

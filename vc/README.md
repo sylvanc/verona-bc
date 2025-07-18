@@ -2,10 +2,10 @@
 
 ## Current Work
 
+Move `new`, `ref`, `try` to structure?
+
 Lambdas to classes.
-- Mark free variables in lambdas.
-  - A free `let` is captured by value. All the free `let` variables are used to determine where the lambda is allocated.
-  - A free `var` is captured by reference. The lambda must be `stack` allocated.
+- A free `var` is captured by reference. The lambda must be `stack` allocated.
 - Patterns for lambdas.
   - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
   - If a lambda can be a pattern, pattern matching becomes a series of `else`.

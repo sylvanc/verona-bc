@@ -219,9 +219,9 @@ namespace vbci
     return value;
   }
 
-  void Value::to_addr(bool move, void* v)
+  void Value::to_addr(ValueType t, void* v, bool move)
   {
-    switch (tag)
+    switch (t)
     {
       case ValueType::None:
         break;

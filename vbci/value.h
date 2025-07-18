@@ -112,7 +112,7 @@ namespace vbci
     static Value from_ffi(ValueType t, uint64_t v);
     void* to_ffi();
     static Value from_addr(ValueType t, void* v);
-    void to_addr(bool move, void* v);
+    void to_addr(ValueType t, void* v, bool move);
 
     ValueType type();
     TypeId type_id();

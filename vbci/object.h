@@ -85,7 +85,7 @@ namespace vbci
       if (!write_barrier(prev, v))
         throw Value(Error::BadStore);
 
-      v.to_addr(move, addr);
+      v.to_addr(f.value_type, addr, move);
       return prev;
     }
 

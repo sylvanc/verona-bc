@@ -44,30 +44,6 @@ namespace vc
                            << (Args << (Expr << _(Rhs)));
           },
 
-        // Else.
-        In(Expr) * AssignPat[Lhs] * (T(Else) << T(Block)[Block]) >>
-          [](Match& _) { return Else << (Expr << _(Lhs)) << _(Block); },
-
-        In(Expr) * AssignPat[Lhs] * (T(Else) << End) * AssignPat[Rhs] >>
-          [](Match& _) {
-            return Else << (Expr << _(Lhs))
-                        << (Block << TypeParams << Params << Type
-                                  << (Body << (Expr << _(Rhs))));
-          },
-
-        // Assignment is right-associative.
-        In(Expr) * (T(Equals) << (T(Expr)[Lhs] * T(Expr)[Rhs])) *
-            (T(Equals) << End) * AssignPat[Expr] >>
-          [](Match& _) {
-            return Equals << _(Lhs)
-                          << (Expr << (Equals << _(Rhs) << (Expr << _(Expr))));
-          },
-
-        In(Expr) * AssignPat[Lhs] * (T(Equals) << End) * AssignPat[Rhs] >>
-          [](Match& _) {
-            return Equals << (Expr << _(Lhs)) << (Expr << _(Rhs));
-          },
-
         // Unpack apply: static call.
         T(Apply) << ((T(Expr) << T(QName)[QName]) * T(Expr)++[Expr]) >>
           [](Match& _) { return Call << _(QName) << (Args << _[Expr]); },
@@ -106,15 +82,6 @@ namespace vc
           if (node->empty())
           {
             node->parent()->replace(node, err(node, "Expected an expression"));
-            ok = false;
-          }
-        }
-        else if (node->in({Else, Equals}))
-        {
-          if (node->size() != 2)
-          {
-            node->parent()->replace(
-              node, err(node, "Expected a left and right side"));
             ok = false;
           }
         }
