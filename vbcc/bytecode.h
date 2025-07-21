@@ -29,7 +29,7 @@ namespace vbcc
     Bitset out;
 
     void resize(size_t size);
-    bool def(size_t r, Node& node, bool var);
+    std::pair<bool,std::string> def(size_t r, Node& node, bool var);
     bool use(size_t r, Node& node);
     bool kill(size_t r);
     void automove(size_t r);
