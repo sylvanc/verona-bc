@@ -168,19 +168,24 @@ namespace vbcc
     out.resize(size);
   }
 
-  bool LabelState::def(size_t r, Node& node, bool var)
+  std::pair<bool, std::string> LabelState::def(size_t r, Node& node, bool var)
   {
-    // We've defined a register, so it's live.
+    // Not a var, and has alrady been defined, should not be able to re-define
     if (!var && defd.test(r))
-      return false;
+      return {false, "redefinition of register"};
 
     defd.set(r);
+
+    // Not a var, has not yet been defined, but has been used, then this is a
+    // use before def error
+    if (!var && in.test(r))
+      return {false, "def after use"};
 
     if (out.test(r))
     {
       // Assigning to a non-variable used register is an error.
       if (!var)
-        return false;
+        return {false, "redefinition of register"};
 
       automove(r);
     }
@@ -197,7 +202,7 @@ namespace vbcc
       first_use[r] = node;
 
     last_use[r] = {};
-    return true;
+    return {true, ""};
   }
 
   bool LabelState::use(size_t r, Node& node)

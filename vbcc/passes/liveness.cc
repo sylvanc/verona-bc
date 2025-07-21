@@ -16,11 +16,12 @@ namespace vbcc
 
       auto def = [&](Node& id) {
         auto r = *func->get_register_id(id);
+        std::tuple<bool, std::string> def_ret = label->def(r, id, vars.test(r));
 
-        if (!label->def(r, id, vars.test(r)))
+        if (!std::get<0>(def_ret))
         {
           state->error = true;
-          id->parent()->replace(id, err(clone(id), "redefinition of register"));
+          id->parent()->replace(id, err(clone(id), std::get<1>(def_ret)));
         }
       };
 
@@ -199,6 +200,9 @@ namespace vbcc
               {
                 if (succ.defd.test(r) && !l.first_def.at(r))
                   l.first_def[r] = succ.first_def.at(r);
+
+                if (succ.first_use[r])
+                  l.first_use[r] = succ.first_use.at(r);
               }
 
               if (redef)
@@ -268,13 +272,21 @@ namespace vbcc
           for (auto param : *(node / Params))
             params.set(*func_state.get_register_id(param / LocalId));
 
-          if ((params & label.in) != label.in)
+          // undef_registers is the set of registers that are still required
+          // that are not paramters
+          auto undef_registers = label.in & ~params;
+          if (undef_registers)
           {
-            state->error = true;
-            node << err(
-              clone(node / FunctionId),
-              "function doesn't define needed registers");
-            return true;
+            for (size_t r = 0; r < func_state.register_names.size(); r++)
+            {
+              if (undef_registers.test(r))
+              {
+                state->error = true;
+                node << err(
+                  clone(label.first_use.at(r)), "use of undefined register");
+                return true;
+              }
+            }
           }
 
           // Check for multiple assignment to non-variable params.
