@@ -176,10 +176,10 @@ namespace vbcc
 
     defd.set(r);
 
-    // Not a var, has not yet been defined, but has been used, then this is a
-    // use before def error
+    // Not a var, is in the in set (which means it has been used but not
+    // defined) then this is a use before def error
     if (!var && in.test(r))
-      return {false, "def after use"};
+      return {false, "use before def"};
 
     if (out.test(r))
     {
