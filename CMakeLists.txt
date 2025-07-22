@@ -30,10 +30,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
 
+set(TRIESTE_BUILD_SAMPLES Off)
+set(TRIESTE_BUILD_PARSERS Off)
+
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 44e71e994b03ef766357167df32f148b03a97aa4
+  GIT_TAG 9bc9c7b1c8cd01b118bfe23b604d56adde2c4863
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
@@ -72,3 +75,5 @@ install(CODE [[
 add_subdirectory(vbcc)
 add_subdirectory(vbci)
 add_subdirectory(vc)
+enable_testing()
+add_subdirectory(testsuite)
