@@ -37,7 +37,9 @@ namespace vc
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam =
     TokenDef("typeparam", flag::lookup | flag::shadowing);
+  inline const auto ValueParam = TokenDef("valueparam");
   inline const auto TypeArgs = TokenDef("typeargs");
+  inline const auto Where = TokenDef("where");
   inline const auto ClassBody = TokenDef("classbody");
   inline const auto RawString = TokenDef("rawstring", flag::print);
 
@@ -46,6 +48,11 @@ namespace vc
   inline const auto TupleType = TokenDef("tupletype");
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
+
+  inline const auto WhereAnd = TokenDef("whereand");
+  inline const auto WhereOr = TokenDef("whereor");
+  inline const auto WhereNot = TokenDef("wherenot");
+  inline const auto SubType = TokenDef("subtype");
 
   inline const auto Expr = TokenDef("expr");
   inline const auto ExprSeq = TokenDef("exprseq");
@@ -96,6 +103,8 @@ namespace vc
   inline const auto wfType =
     TypeName | Union | Isect | RefType | TupleType | FuncType | NoArgType;
 
+  inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
+
   inline const auto wfBody =
     Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
 
@@ -119,17 +128,19 @@ namespace vc
   // clang-format off
   inline const auto wfPassStructure =
       (Top <<= ClassDef++)
-    | (ClassDef <<= Ident * TypeParams * ClassBody)[Ident]
+    | (ClassDef <<= Ident * TypeParams * Where * ClassBody)[Ident]
     | (ClassBody <<= (ClassDef | Use | TypeAlias | FieldDef | Function)++)
     | (Use <<= TypeName)[Include]
     | (TypeAlias <<= Ident * TypeParams * Type)[Ident]
+    | (Where <<= ~wfWhere)
     | (FieldDef <<= Ident * Type * Body)
     | (Function <<=
-        wfFuncLhs * wfFuncId * TypeParams * Params * Type * Body)[Ident]
+        wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Body)[Ident]
     | (TypeName <<= TypeElement++[1])
     | (TypeElement <<= Ident * TypeArgs)
-    | (TypeParams <<= TypeParam++)
-    | (TypeParam <<= Ident * (Lhs >>= Type) * (Rhs >>= Type))[Ident]
+    | (TypeParams <<= (TypeParam | ValueParam)++)
+    | (TypeParam <<= Ident * Type)[Ident]
+    | (ValueParam <<= Ident * Type * Body)[Ident]
     | (TypeArgs <<= (Type | Expr)++)
     | (Params <<= ParamDef++)
     | (ParamDef <<= Ident * Type * Body)[Ident]
@@ -139,14 +150,18 @@ namespace vc
     | (RefType <<= wfType)
     | (TupleType <<= wfType++[2])
     | (FuncType <<= (Lhs >>= wfType) * (Rhs >>= wfType))
+    | (WhereAnd <<= wfWhere++[2])
+    | (WhereOr <<= wfWhere++[2])
+    | (WhereNot <<= wfWhere)
+    | (SubType <<= (Lhs >>= Type) * (Rhs >>= Type))
     | (Body <<= wfBody++)
     | (Expr <<= wfExprStructure++)
     | (ExprSeq <<= Expr++)
     | (FieldRef <<= Expr * FieldId)
     | (Load <<= Expr)
     | (Tuple <<= Expr++[2])
-    | (Lambda <<= TypeParams * Params * Type * Body)
-    | (Block <<= TypeParams * Params * Type * Body)
+    | (Lambda <<= TypeParams * Params * Type * Where * Body)
+    | (Block <<= TypeParams * Params * Type * Where * Body)
     | (QName <<= QElement++[1])
     | (QElement <<= wfFuncId * TypeArgs)
     | (Op <<= wfFuncId * TypeArgs)
@@ -215,7 +230,8 @@ namespace vc
   inline const auto wfPassANF =
       wfPassOperators
     | (Function <<=
-        wfFuncLhs * wfFuncId * TypeParams * Params * Type * Labels)[Ident]
+        wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Labels)
+        [Ident]
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfBodyANF++)

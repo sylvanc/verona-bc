@@ -1,6 +1,6 @@
 main(): i32
 {
-  let x = 5;
-  let f = y -> y + x;
-  i32(f 1);
+  let x = i32 5;
+  let f = y -> {let z = i32 1; y + x + z}
+  f (i32 1);
 }

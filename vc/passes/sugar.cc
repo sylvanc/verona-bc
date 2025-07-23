@@ -25,7 +25,7 @@ namespace vc
         // Turn lambdas into anonymous classes.
         In(Expr) * T(Lambda)[Lambda]
             << (T(TypeParams)[TypeParams] * T(Params)[Params] * T(Type)[Type] *
-                T(Body)[Body]) >>
+                T(Where)[Where] * T(Body)[Body]) >>
           [](Match& _) {
             auto lambda = _(Lambda);
             std::set<Location> freevars;
@@ -39,7 +39,11 @@ namespace vc
               }
               else if (node == Ident)
               {
-                if (node->lookup(lambda).empty())
+                auto def = lookup(node);
+
+                if (
+                  def && def->in({ParamDef, Let, Var}) &&
+                  node->lookup(lambda).empty())
                   freevars.emplace(node->location());
               }
 
@@ -48,8 +52,17 @@ namespace vc
 
             auto id = _.fresh(l_lambda);
             Node classbody = ClassBody;
+            Node typeargs = TypeArgs;
+
+            for (auto& tp : *_(TypeParams))
+            {
+              typeargs
+                << (TypeName
+                    << (TypeElement << (Ident ^ tp / Ident) << TypeArgs));
+            }
+
             auto type = Type
-              << (TypeName << (TypeElement << (Ident ^ id) << TypeArgs));
+              << (TypeName << (TypeElement << (Ident ^ id) << typeargs));
 
             Node create_params = Params;
             Node create_args = Args;
@@ -59,12 +72,6 @@ namespace vc
             Node apply_body = Body;
             Node new_args;
 
-            // TODO: free variables
-            // - field for each one
-            // - create param for each one
-            // - create arg for each one
-            // - new arg for each one
-            // - unpack each one in apply
             for (auto& freevar : freevars)
             {
               classbody << (FieldDef << (Ident ^ freevar) << Type << Body);
@@ -92,30 +99,30 @@ namespace vc
 
             apply_body << *_(Body);
 
-            return Seq << (Lift
-                           << ClassBody
-                           << (ClassDef
-                               << (Ident ^ id) << TypeParams
-                               << (classbody
-                                   << (Function
-                                       << Rhs << (Ident ^ "create")
-                                       << TypeParams << create_params << type
-                                       << (Body << (Expr << New << new_args)))
-                                   << (Function << Rhs << (Ident ^ "apply")
-                                                << _(TypeParams) << apply_params
-                                                << _(Type) << apply_body))))
-                       << (Call
-                           << (QName
-                               << (QElement << (Ident ^ id) << TypeArgs)
-                               << (QElement << (Ident ^ "create") << TypeArgs))
-                           << create_args);
+            return Seq
+              << (Lift << ClassBody
+                       << (ClassDef
+                           << (Ident ^ id) << _(TypeParams) << _(Where)
+                           << (classbody
+                               << (Function
+                                   << Rhs << (Ident ^ "create") << TypeParams
+                                   << create_params << type << Where
+                                   << (Body << (Expr << New << new_args)))
+                               << (Function << Rhs << (Ident ^ "apply")
+                                            << TypeParams << apply_params
+                                            << _(Type) << Where
+                                            << apply_body))))
+              << (Call << (QName
+                           << (QElement << (Ident ^ id) << TypeArgs)
+                           << (QElement << (Ident ^ "create") << TypeArgs))
+                       << create_args);
           },
 
         // Default arguments.
         In(ClassBody) * T(Function)[Function]
             << (T(Lhs, Rhs)[Lhs] * T(Ident, SymbolId)[Ident] *
                 T(TypeParams)[TypeParams] * T(Params)[Params] * T(Type)[Type] *
-                T(Body)[Body]) >>
+                T(Where)[Where] * T(Body)[Body]) >>
           [](Match& _) -> Node {
           auto params = _(Params);
           if (params->empty())
@@ -138,19 +145,19 @@ namespace vc
 
           args << (Expr << (ExprSeq << *body));
 
-          return Seq << (Function
-                         << clone(_(Lhs)) << clone(ident)
-                         << clone(_(TypeParams)) << params_0 << clone(_(Type))
-                         << (Body
-                             << (Expr
-                                 << call_func(ident, _(TypeParams), args))))
+          return Seq << (Function << clone(_(Lhs)) << clone(ident)
+                                  << clone(_(TypeParams)) << params_0
+                                  << clone(_(Type)) << clone(_(Where))
+                                  << (Body
+                                      << (Expr << call_func(
+                                            ident, _(TypeParams), args))))
                      << _(Function);
         },
 
         // Auto-RHS.
         In(ClassBody) * T(Function)[Function]
             << (T(Lhs) * T(Ident, SymbolId)[Ident] * T(TypeParams)[TypeParams] *
-                T(Params)[Params] * T(Type)[Type]) >>
+                T(Params)[Params] * T(Type)[Type] * T(Where)[Where]) >>
           [](Match& _) -> Node {
           // Check if an RHS function with the same name and arity exists.
           auto ident = _(Ident);
@@ -182,7 +189,7 @@ namespace vc
           // Create the RHS function.
           auto rhs =
             Function << Rhs << clone(ident) << clone(_(TypeParams))
-                     << clone(_(Params)) << type
+                     << clone(_(Params)) << type << clone(_(Where))
                      << (Body
                          << (Expr
                              << (Load

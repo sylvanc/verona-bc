@@ -2,13 +2,21 @@
 
 ## Current Work
 
+- RHS functions for `ValueParam`?
+
 Move `new`, `ref`, `try` to structure?
 
-Lambdas to classes.
+Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
-- Patterns for lambdas.
-  - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
-  - If a lambda can be a pattern, pattern matching becomes a series of `else`.
+- How do we have stateful lambdas?
+  - Use an object literal instead? `new { ... }`.
+
+Patterns for lambdas.
+- If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
+- If a lambda can be a pattern, pattern matching becomes a series of `else`.
+- A pattern can be any object that implements `==`.
+  - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
+- `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
 
 ## To Do
 
@@ -28,7 +36,7 @@ Tuples:
 - Flatten a tuple into another tuple.
 
 Calls:
-- Try, sub-call, tail-call.
+- Try, sub-call.
 
 Expressions:
 - Only allow `:::` in `std::builtin`.
@@ -49,7 +57,9 @@ Structure:
   - Like `ident.name`, but no first argument binding.
 - Compile time evaluation.
 
-Reachability.
+Generics.
+- Instantiate generic classes and functions with type arguments.
+  - Require explicit type arguments for now.
 - Reachability for mono-morphism.
 - Find all reachable classes and functions with their type arguments.
 
@@ -69,8 +79,6 @@ Types:
   - IR tuple type could be `[dyn]` of correct size with elements that type check.
 - Structural types.
 - Type assertions.
-- `where` clause instead of `T1: T2 = T3`?
-  - Then a value parameter can be `ident: type`.
 - Name resolution.
   - Look down through type aliases via union and intersection types.
   - Look down through type parameters. Need an upper bounds.

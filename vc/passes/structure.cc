@@ -15,14 +15,26 @@ namespace vc
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
+  const auto WherePat = T(Where) * (!T(Brace))++[Where];
+  const auto LambdaWherePat =
+    T(Where) * (!(T(Brace) / T(Symbol, "->")))++[Where];
   const auto ParamsPat = T(Paren) << (~T(List, Group) * End);
   const auto ElseLhsPat = (T(Else) << (T(Expr) * T(Block))) /
     (!T(Equals, Else) * (!T(Equals, Else))++);
 
   const auto NamedType =
     T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
+
   const auto SomeType =
-    T(TypeName, Union, Isect, RefType, TupleType, FuncType, NoArgType);
+    T(TypeName,
+      Union,
+      Isect,
+      RefType,
+      TupleType,
+      FuncType,
+      NoArgType,
+      SubType,
+      WhereNot);
 
   Node make_typename(NodeRange r)
   {
@@ -86,7 +98,7 @@ namespace vc
         T(Directory)[Directory] >>
           [](Match& _) {
             return (ClassDef ^ _(Directory))
-              << (Ident ^ _(Directory)->location()) << TypeParams
+              << (Ident ^ _(Directory)->location()) << TypeParams << Where
               << (ClassBody << (Group << Use << (Ident ^ "std") << DoubleColon
                                       << (Ident ^ "builtin"))
                             << *_[Directory]);
@@ -97,11 +109,11 @@ namespace vc
 
         // Class.
         In(ClassBody) * T(Group)
-            << (T(Ident)[Ident] * ~TypeParamsPat[TypeParams] *
+            << (T(Ident)[Ident] * ~TypeParamsPat[TypeParams] * ~WherePat *
                 T(Brace)[Brace]) >>
           [](Match& _) {
             return ClassDef << _(Ident) << (TypeParams << *_[TypeParams])
-                            << (ClassBody << *_[Brace]);
+                            << (Where << _[Where]) << (ClassBody << *_[Brace]);
           },
 
         // Field.
@@ -117,7 +129,7 @@ namespace vc
                            << (Params
                                << (ParamDef << (Ident ^ "self")
                                             << make_selftype(_(Ident)) << Body))
-                           << reftype
+                           << reftype << Where
                            << (Body
                                << (Expr
                                    << (FieldRef << (Expr << (Ident ^ "self"))
@@ -128,7 +140,8 @@ namespace vc
         In(ClassBody) * T(Group)
             << (~T(Ref)[Ref] * T(Ident, SymbolId)[Ident] *
                 ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
-                ~(T(Colon) * (!T(Brace))++[Type]) * T(Brace)[Brace]) >>
+                ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
+                T(Brace)[Brace]) >>
           [](Match& _) {
             Node side = _(Ref) ? Lhs : Rhs;
             Node body = Body;
@@ -138,9 +151,10 @@ namespace vc
             else
               body << *_[Brace];
 
-            return Function
-              << side << _(Ident) << (TypeParams << *_[TypeParams])
-              << (Params << *_[Params]) << (Type << _[Type]) << body;
+            return Function << side << _(Ident)
+                            << (TypeParams << *_[TypeParams])
+                            << (Params << *_[Params]) << (Type << _[Type])
+                            << (Where << _[Where]) << body;
           },
 
         // Type alias.
@@ -194,8 +208,11 @@ namespace vc
 
         In(TypeParams) * (T(Group) << (FieldPat * End)) >>
           [](Match& _) {
-            return TypeParam << _(Ident) << (Type << _[Type])
-                             << (Type << _[Body]);
+            if (!_[Type].empty())
+              return ValueParam << _(Ident) << (Type << _[Type])
+                                << (Body << (Group << _[Body]));
+
+            return TypeParam << _(Ident) << (Type << _[Body]);
           },
 
         In(TypeParams) * T(Group)[Group] >>
@@ -213,23 +230,24 @@ namespace vc
 
         // Types.
         // Type name.
-        In(Type)++ * --In(TypeElement) * NamedType[Type] >>
+        In(Type, Where)++ * --In(TypeElement) * NamedType[Type] >>
           [](Match& _) { return make_typename(_[Type]); },
 
         // Union type.
-        In(Type)++ * SomeType[Lhs] * T(SymbolId, "\\|") * SomeType[Rhs] >>
+        In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "\\|") *
+            SomeType[Rhs] >>
           [](Match& _) { return merge_type(Union, _(Lhs), _(Rhs)); },
 
         // Intersection type.
-        In(Type)++ * SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
+        In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
           [](Match& _) { return merge_type(Isect, _(Lhs), _(Rhs)); },
 
         // Reference type.
-        In(Type)++ * T(Ref) * SomeType[Type] >>
+        In(Type, Where)++ * T(Ref) * SomeType[Type] >>
           [](Match& _) { return RefType << _(Type); },
 
         // Tuple type.
-        In(Type)++ * T(List)[List] >>
+        In(Type, Where)++ * T(List)[List] >>
           [](Match& _) { return TupleType << *_[List]; },
 
         // Tuple type element.
@@ -237,7 +255,7 @@ namespace vc
           [](Match& _) { return _(Type); },
 
         // Function types are right associative.
-        In(Type)++ * (SomeType / T(Paren))[Lhs] * T(SymbolId, "->") *
+        In(Type, Where)++ * (SomeType / T(Paren))[Lhs] * T(SymbolId, "->") *
             SomeType[Rhs] >>
           [](Match& _) {
             if (_(Lhs) == FuncType)
@@ -249,17 +267,35 @@ namespace vc
             return FuncType << _(Lhs) << _(Rhs);
           },
 
+        // Negation type.
+        In(Type, Where)++ * T(SymbolId, "!") * SomeType[Type] >>
+          [](Match& _) { return WhereNot << _(Type); },
+
+        // Subtype.
+        In(Type, Where)++ * (SomeType / T(Paren))[Lhs] * T(SymbolId, "<") *
+            SomeType[Rhs] >>
+          [](Match& _) {
+            return SubType << (Type << _(Lhs)) << (Type << _(Rhs));
+          },
+
         // Empty parentheses is the "no arguments" type.
-        In(Type)++ * T(Paren) << End >>
+        In(Type, Where)++ * T(Paren) << End >>
           [](Match&) -> Node { return NoArgType; },
 
         // Type grouping.
-        In(Type)++* T(Paren) << (SomeType[Type] * End) >>
+        In(Type, Where)++* T(Paren) << (SomeType[Type] * End) >>
           [](Match& _) { return _(Type); },
 
         // Type grouping element.
-        In(Type)++ * In(Paren) * T(Group) << (SomeType[Type] * End) >>
+        In(Type, Where)++ * In(Paren) * T(Group) << (SomeType[Type] * End) >>
           [](Match& _) { return _(Type); },
+
+        // Where clauses.
+        In(Where, WhereAnd, WhereOr, WhereNot) * T(Isect)[Isect] >>
+          [](Match& _) { return WhereAnd << *_(Isect); },
+
+        In(Where, WhereAnd, WhereOr, WhereNot) * T(Union)[Union] >>
+          [](Match& _) { return WhereOr << *_(Union); },
 
         // Terminators.
         // Break, continue, return, raise, throw.
@@ -423,11 +459,13 @@ namespace vc
 
         // Lambda.
         In(Expr) * TypeParamsPat[TypeParams] * ParamsPat[Params] *
-            ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
+            ~(T(Colon) * (!(T(SymbolId, "->") / T(Where)))++[Type]) *
+            ~LambdaWherePat* T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
             return Lambda << (TypeParams << *_[TypeParams])
                           << (Params << *_[Params]) << (Type << _[Type])
+                          << (Where << _[Where])
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
@@ -437,7 +475,8 @@ namespace vc
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
             return Lambda << TypeParams << (Params << *_[Params])
-                          << (Type << _[Type]) << lambda_body(_(Brace), _[Rhs]);
+                          << (Type << _[Type]) << Where
+                          << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda with a single parameter.
@@ -449,13 +488,13 @@ namespace vc
                           << (Params
                               << (ParamDef << _(Ident) << (Type << _[Type])
                                            << Body))
-                          << Type << lambda_body(_(Brace), _[Rhs]);
+                          << Type << Where << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
-            return Lambda << TypeParams << Params << Type
+            return Lambda << TypeParams << Params << Type << Where
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
@@ -531,11 +570,16 @@ namespace vc
 
         In(Expr) * ElseLhsPat[Lhs] * (T(Else) << End) *
             (!T(Equals, Else) * (!T(Equals, Else))++)[Rhs] >>
-          [](Match& _) {
-            return Else << (Expr << _[Lhs])
-                        << (Block << TypeParams << Params << Type
-                                  << (Body << (Expr << _[Rhs])));
-          },
+          [](Match& _) -> Node {
+          // If the right-hand side is a brace, do nothing until it's
+          // transformed into a lambda.
+          if (_(Rhs) == Brace)
+            return NoChange;
+
+          return Else << (Expr << _[Lhs])
+                      << (Block << TypeParams << Params << Type << Where
+                                << (Body << (Expr << _[Rhs])));
+        },
 
         // While.
         In(Expr) * (T(While) << End) * (!T(Lambda))++[While] *
@@ -657,6 +701,51 @@ namespace vc
             if (!child->in(wfTypeElement))
             {
               node->replace(child, err(child, "Expected a type"));
+              ok = false;
+            }
+          }
+        }
+        else if (node->in({Where, WhereAnd, WhereOr, WhereNot}))
+        {
+          for (auto& child : *node)
+          {
+            if (!child->in({WhereAnd, WhereOr, WhereNot, SubType}))
+            {
+              node->replace(child, err(child, "Expected a constraint"));
+              ok = false;
+            }
+          }
+        }
+        else if (node == TypeParams)
+        {
+          for (auto& child : *node)
+          {
+            if (!child->in({TypeParam, ValueParam}))
+            {
+              node->replace(
+                child, err(child, "Expected a type or value parameter"));
+              ok = false;
+            }
+          }
+        }
+        else if (node == TypeArgs)
+        {
+          for (auto& child : *node)
+          {
+            if (!child->in({Type, Expr}))
+            {
+              node->replace(child, err(child, "Expected a type argument"));
+              ok = false;
+            }
+          }
+        }
+        else if (node == Params)
+        {
+          for (auto& child : *node)
+          {
+            if (!child->in({ParamDef, ValueParam}))
+            {
+              node->replace(child, err(child, "Expected a parameter"));
               ok = false;
             }
           }

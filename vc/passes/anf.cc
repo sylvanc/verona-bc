@@ -75,7 +75,7 @@ namespace vc
     auto fn = _.fresh(l_local);
     auto id = _.fresh(l_local);
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
-    auto arity = _[Args].size() + 1;
+    auto arity = _(Args) ? _(Args)->size() + 1 : 1;
     return Seq << (Lift << Body
                         << (Lookup << (LocalId ^ fn) << (LocalId ^ _(LocalId))
                                    << (ref ? Lhs : Rhs) << _(Ident)
@@ -241,11 +241,11 @@ namespace vc
         In(Body) * T(If)
             << (T(Expr)[Cond] *
                 (T(Block)
-                 << ((T(TypeParams) << End) * (T(Params) << End) *
-                     T(Type)[Type] * T(Body)[Body])) *
+                 << ((T(TypeParams) << End) * (T(Params) << End) * T(Type) *
+                     T(Where) * T(Body)[Body])) *
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
-            // TODO: what do we do with the Type?
+            // TODO: what do we do with Type and Where?
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
             return Seq << make_nomatch(_(LocalId))
@@ -269,11 +269,11 @@ namespace vc
         In(Body) * T(While)
             << (T(Expr)[Cond] *
                 (T(Block)
-                 << ((T(TypeParams) << End) * (T(Params) << End) *
-                     T(Type)[Type] * T(Body)[Body])) *
+                 << ((T(TypeParams) << End) * (T(Params) << End) * T(Type) *
+                     T(Where) * T(Body)[Body])) *
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
-            // TODO: what do we do with the Type?
+            // TODO: what do we do with Type and Where?
             auto cond = _.fresh(l_cond);
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
@@ -311,10 +311,10 @@ namespace vc
         In(Body) * T(Else)
             << (T(LocalId)[LocalId] *
                 (T(Block)
-                 << ((T(TypeParams) << End) * (T(Params) << End) *
-                     T(Type)[Type] * T(Body)[Body]))) >>
+                 << ((T(TypeParams) << End) * (T(Params) << End) * T(Type) *
+                     T(Where) * T(Body)[Body]))) >>
           [](Match& _) {
-            // TODO: what do we do with the Type?
+            // TODO: what do we do with Type and Where?
             auto id = _.fresh(l_local);
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
@@ -332,11 +332,6 @@ namespace vc
             << (T(LocalId)[Rhs] * T(LocalId)[Lhs] * T(LabelId)[LabelId]) >>
           [](Match& _) {
             return Seq << (Copy << _(Lhs) << _(Rhs)) << (Jump << _(LabelId));
-          },
-
-        In(Body) * T(Break, Continue)[Break] << (T(Expr) * End) >>
-          [](Match& _) {
-            return err(_(Break), "Break and continue must be inside a loop");
           },
 
         // Continuation label.
@@ -593,17 +588,16 @@ namespace vc
           auto body = node / Body;
           auto term = body->pop_back();
 
-          if (!term->in({LocalId, Return, Raise, Throw, Jump, Cond}))
-          {
-            // If the terminator is not a control flow node, it is an error.
-            node->replace(term, err(term, "Invalid terminator"));
-            ok = false;
-          }
-
           if (term == LocalId)
             node << (Return << term);
-          else
+          else if (term->in({Return, Raise, Throw, Jump, Cond}))
             node << term;
+          else
+          {
+            // If the terminator is not a control flow node, it is an error.
+            node << err(term, "Invalid terminator");
+            ok = false;
+          }
         }
         else if (node == Body)
         {
@@ -615,6 +609,12 @@ namespace vc
               ok = false;
             }
           }
+        }
+        else if (node->in({Break, Continue}))
+        {
+          node->parent()->replace(
+            node, err(node, "Break and continue must be inside a loop"));
+          ok = false;
         }
 
         return ok;

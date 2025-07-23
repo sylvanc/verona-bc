@@ -2,7 +2,8 @@ main(): i32
 {
   while false
   {
-    i32 0
+    i32 0;
+    break
   }
 
   if false
