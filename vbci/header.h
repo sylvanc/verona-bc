@@ -91,7 +91,9 @@ namespace vbci
           else if (nr->has_parent())
           {
             // Regions can only have a single entry point.
-            if (!loc::is_region(ploc) || (loc::to_region(ploc) != nr))
+            if (
+              !r->is_frame_local() &&
+              (!loc::is_region(ploc) || (loc::to_region(ploc) != nr)))
               return false;
           }
           else if (nr->is_ancestor_of(r))
@@ -103,15 +105,18 @@ namespace vbci
       }
 
       // At this point, the write barrier is satisfied.
-      if (
-        (ploc == nloc) || loc::is_stack(loc) ||
-        loc::to_region(loc)->is_frame_local())
-      {
-        // If the previous and next locations are the same, or if the location
-        // is a stack allocation, or if the location is a frame-local region, no
-        // action is needed.
+      // If loc is the stack or a frame-local region, no action is needed.
+      if (loc::is_stack(loc))
         return true;
-      }
+
+      auto r = loc::to_region(loc);
+
+      if (r->is_frame_local())
+        return true;
+
+      // If the previous and next locations are the same, no action is needed.
+      if (ploc == nloc)
+        return true;
 
       if (loc::is_region(ploc))
       {
@@ -129,8 +134,8 @@ namespace vbci
         auto nr = loc::to_region(nloc);
 
         // Set the parent if it's in a different region.
-        if (nloc != loc)
-          nr->set_parent(loc::to_region(loc));
+        if (!r->is_frame_local() && (r != nr))
+          nr->set_parent(r);
 
         // Decrement the region stack RC. This can't free the region.
         nr->stack_dec();

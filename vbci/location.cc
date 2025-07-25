@@ -59,16 +59,17 @@ namespace vbci
       }
       else
       {
-        // If hr is r, or hr's parent is r, we do nothing.
-        if ((hr == r) || (hr->get_parent() == Location(r)))
+        // If hr is r, we do nothing.
+        if (hr == r)
           continue;
 
         // If r is not frame-local, it can't point to a region that already has
-        // a parent.
+        // a parent, even if that parent is r (to preserve single entry point).
         if ((frame == loc::None) && hr->has_parent())
           return false;
 
-        // If hr is already an ancestor of r, we can't drag the allocation.
+        // If hr is already an ancestor of r, we can't drag the allocation, or
+        // we'll create a region cycle.
         if (hr->is_ancestor_of(r))
           return false;
 
@@ -80,17 +81,19 @@ namespace vbci
       }
     }
 
-    // Reparent regions.
-    for (auto& hr : regions)
-      hr->set_parent(r);
+    // Reparent regions if r is not frame-local.
+    if (frame == loc::None)
+    {
+      for (auto& hr : regions)
+        hr->set_parent(r);
+    }
+
+    // Reduce internal RC map by 1 for the initial entry edge.
+    rc_map[h]--;
 
     // Move objects and arrays to the new region.
     for (auto& [hh, rc] : rc_map)
     {
-      // If h == hh, reduce internal RC map by 1 for the initial entry edge.
-      if (h == hh)
-        rc--;
-
       // (hh->rc - rc) = stack rc. This works because frame-local regions are
       // always reference counted.
       assert(hh->get_rc() >= rc);
