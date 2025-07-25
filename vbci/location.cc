@@ -88,12 +88,13 @@ namespace vbci
         hr->set_parent(r);
     }
 
-    // Reduce internal RC map by 1 for the initial entry edge.
-    rc_map[h]--;
-
     // Move objects and arrays to the new region.
     for (auto& [hh, rc] : rc_map)
     {
+      // Reduce internal RC map by 1 for the initial entry edge.
+      if (hh == h)
+        rc--;
+
       // (hh->rc - rc) = stack rc. This works because frame-local regions are
       // always reference counted.
       assert(hh->get_rc() >= rc);
