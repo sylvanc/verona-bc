@@ -20,9 +20,9 @@ namespace vbci
 
     while (!wl.empty())
     {
-      h = wl.back();
+      Header* next_h = wl.back();
       wl.pop_back();
-      auto find = rc_map.find(h);
+      auto find = rc_map.find(next_h);
 
       if (find != rc_map.end())
       {
@@ -31,7 +31,7 @@ namespace vbci
         continue;
       }
 
-      auto loc = h->location();
+      auto loc = next_h->location();
 
       if (loc::is_immutable(loc))
         continue;
@@ -50,12 +50,12 @@ namespace vbci
           continue;
 
         // Initial internal RC count is 1.
-        rc_map[h] = 1;
+        rc_map[next_h] = 1;
 
-        if (h->is_array())
-          static_cast<Array*>(h)->trace(wl);
+        if (next_h->is_array())
+          static_cast<Array*>(next_h)->trace(wl);
         else
-          static_cast<Object*>(h)->trace(wl);
+          static_cast<Object*>(next_h)->trace(wl);
       }
       else
       {
