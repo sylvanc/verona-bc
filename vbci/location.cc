@@ -81,11 +81,16 @@ namespace vbci
       }
     }
 
-    // Reparent regions if r is not frame-local.
+    // Assign parent to regions if r is not frame-local.
     if (frame == loc::None)
     {
       for (auto& hr : regions)
+      {
         hr->set_parent(r);
+        // Decrease stack rc for this region, as a frame local entry point is
+        // now in r.
+        hr->stack_dec();
+      }
     }
 
     // Move objects and arrays to the new region.
