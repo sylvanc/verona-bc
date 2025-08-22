@@ -86,7 +86,7 @@ namespace vbci
           auto nr = Region::create(RegionType::RegionRC);
           nr->set_parent();
 
-          if (!drag_allocation(nr, next.get_header()))
+          if (!drag_allocation(nr, next.get_header(),prev_loc))
           {
             next = Value(Error::BadStore);
             nr->free_region();

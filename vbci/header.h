@@ -82,7 +82,7 @@ namespace vbci
           else if (nr->is_frame_local())
           {
             // Drag a frame-local allocation to a region.
-            if (!drag_allocation(r, next.get_header()))
+            if (!drag_allocation(r, next.get_header(),ploc))
               return false;
 
             // If this has succeeded, next has a new location.

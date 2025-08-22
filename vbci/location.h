@@ -64,5 +64,5 @@ namespace vbci
     }
   }
 
-  bool drag_allocation(Region* r, Header* h);
+  bool drag_allocation(Region* r, Header* h, Location pr);
 }

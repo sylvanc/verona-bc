@@ -6,8 +6,9 @@
 
 namespace vbci
 {
-  bool drag_allocation(Region* r, Header* h)
+  bool drag_allocation(Region* r, Header* h, Location ploc)
   {
+    bool pr_rc = 0;
     Location frame = loc::None;
 
     if (r->is_frame_local())
@@ -66,7 +67,20 @@ namespace vbci
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
         if ((frame == loc::None) && hr->has_parent())
-          return false;
+        {
+          if (loc::is_region(ploc))
+          {
+            auto pr = loc::to_region(ploc);
+            if (pr == hr)
+            {
+              if (pr_rc >= 1)
+                return false;
+              pr_rc += 1;
+            }
+            else
+              return false;
+          };
+        }
 
         // If hr is already an ancestor of r, we can't drag the allocation, or
         // we'll create a region cycle.
