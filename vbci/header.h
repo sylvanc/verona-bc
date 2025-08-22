@@ -125,6 +125,7 @@ namespace vbci
         pr->stack_inc();
 
         // Clear the parent if it's in a different region.
+        // TODO: don't do this if we actually don't want to clear the parent
         if (ploc != loc)
           pr->clear_parent();
       }

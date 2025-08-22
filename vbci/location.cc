@@ -100,7 +100,12 @@ namespace vbci
     {
       for (auto& hr : regions)
       {
-        hr->set_parent(r);
+        if(loc::is_region(ploc) && loc::to_region(ploc) == hr && pr_rc > 0){
+          // OK 
+        }
+          
+        else
+          hr->set_parent(r);
         // Decrease stack rc for this region, as a frame local entry point is
         // now in r.
         hr->stack_dec();
