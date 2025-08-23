@@ -83,7 +83,7 @@ namespace vbci
           else if (nr->is_frame_local())
           {
             // Drag a frame-local allocation to a region.
-            auto drag_result = drag_allocation(r, next.get_header(),ploc);
+            auto drag_result = drag_allocation(r, next.get_header(), ploc);
             if (!drag_result.first)
               return false;
 
@@ -128,6 +128,7 @@ namespace vbci
         pr->stack_inc();
 
         // Clear the parent if it's in a different region.
+
         if (ploc != loc && reparent_prev)
           pr->clear_parent();
       }
