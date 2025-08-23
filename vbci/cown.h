@@ -52,7 +52,7 @@ namespace vbci
     {
       return content;
     }
-
+    //TODO FIX THIS TO DEAL WITH NEW VERSION OF DRAG
     Value store(bool move, Value& v)
     {
       Value next;
@@ -85,8 +85,8 @@ namespace vbci
           // Drag a frame-local allocation to a fresh region.
           auto nr = Region::create(RegionType::RegionRC);
           nr->set_parent();
-
-          if (!drag_allocation(nr, next.get_header(),prev_loc))
+          auto drag_result = drag_allocation(nr, next.get_header(),prev_loc);
+          if (!drag_result.first)
           {
             next = Value(Error::BadStore);
             nr->free_region();

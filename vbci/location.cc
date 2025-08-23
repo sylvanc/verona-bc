@@ -6,7 +6,7 @@
 
 namespace vbci
 {
-  bool drag_allocation(Region* r, Header* h, Location ploc)
+  std::pair<bool,bool> drag_allocation(Region* r, Header* h, Location ploc)
   {
     bool pr_rc = 0;
     Location frame = loc::None;
@@ -39,7 +39,7 @@ namespace vbci
 
       // No region, even a frame-local one, can point to the stack.
       if (loc::is_stack(loc))
-        return false;
+        return std::pair(false,false);
 
       auto hr = loc::to_region(loc);
 
@@ -74,24 +74,24 @@ namespace vbci
             if (pr == hr)
             {
               if (pr_rc >= 1)
-                return false;
+                return std::pair(false,false);
               pr_rc += 1;
             }
             else
-              return false;
+              return std::pair(false,false);
           };
         }
 
         // If hr is already an ancestor of r, we can't drag the allocation, or
         // we'll create a region cycle.
         if (hr->is_ancestor_of(r))
-          return false;
+          return std::pair(false,false);
 
         // If r is not frame-local, it can't have multiple entry points to this
         // region.
         auto [it, ok] = regions.insert(hr);
         if ((frame == loc::None) && !ok)
-          return false;
+          return std::pair(false,false);
       }
     }
 
@@ -125,7 +125,7 @@ namespace vbci
       r->stack_inc(hh->get_rc() - rc);
       hh->move_region(r);
     }
-
-    return true;
+    bool reparent_prev = pr_rc == 0;
+    return std::pair(true,reparent_prev);
   }
 }
