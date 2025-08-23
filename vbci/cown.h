@@ -52,7 +52,7 @@ namespace vbci
     {
       return content;
     }
-    //TODO FIX THIS TO DEAL WITH NEW VERSION OF DRAG
+    // TODO FIX THIS TO DEAL WITH NEW VERSION OF DRAG
     Value store(bool move, Value& v)
     {
       Value next;
@@ -87,14 +87,17 @@ namespace vbci
           // Drag a frame-local allocation to a fresh region.
           nr = Region::create(RegionType::RegionRC);
           nr->set_parent();
-          auto drag_result = drag_allocation(nr, next.get_header(),prev_loc);
+          auto drag_result = drag_allocation(nr, next.get_header(), prev_loc);
           if (!drag_result.first)
           {
             next = Value(Error::BadStore);
             nr->free_region();
           }
-          else 
+          else
+          {
             unparent_prev = drag_result.second;
+            next_loc = next.location();
+          }
         }
         else if (r->has_parent())
         {
@@ -113,12 +116,14 @@ namespace vbci
 
       auto prev = std::move(content);
       content = std::move(next);
-      // Clear prev region parent if it's different from next, and assign a new parent if 
-      // drag occured and there was a reference from frame local to previous so now the 
-      // newly created region is the parent of the prev region
-      if(loc::is_region(prev_loc) && (prev_loc != next_loc)){
-        loc::to_region(prev_loc)->clear_parent(); 
-        if(!unparent_prev)
+      // Clear prev region parent if it's different from next, and assign a new
+      // parent if drag occured and there was a reference from frame local to
+      // previous so now the newly created region is the parent of the prev
+      // region
+      if (loc::is_region(prev_loc) && (prev_loc != next_loc))
+      {
+        loc::to_region(prev_loc)->clear_parent();
+        if (!unparent_prev)
           loc::to_region(prev_loc)->set_parent(nr);
       }
 
