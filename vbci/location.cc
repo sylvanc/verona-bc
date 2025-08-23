@@ -125,7 +125,7 @@ namespace vbci
       r->stack_inc(hh->get_rc() - rc);
       hh->move_region(r);
     }
-    bool reparent_prev = pr_rc == 0;
-    return std::pair(true,reparent_prev);
+    
+    return std::pair(true,pr_rc == 0);
   }
 }
