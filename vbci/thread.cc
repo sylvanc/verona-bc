@@ -973,7 +973,8 @@ namespace vbci
       {
         // Drag the frame-local allocation to the previous frame.
         auto& prev_frame = frames.at(frames.size() - 2);
-        auto drag_result = drag_allocation(&prev_frame.region, ret.get_header(),loc::None);
+        auto drag_result =
+          drag_allocation(&prev_frame.region, ret.get_header(), loc::None);
         if (!drag_result.first)
         {
           ret = Value(Error::BadStackEscape);
@@ -985,8 +986,7 @@ namespace vbci
         // Drag the frame-local allocation to a fresh region.
         auto r = Region::create(RegionType::RegionRC);
 
-        // TODO: is this correct here?
-        auto drag_result = drag_allocation(r, ret.get_header(),loc::None);
+        auto drag_result = drag_allocation(r, ret.get_header(), loc::None);
         if (!drag_result.first)
         {
           ret = Value(Error::BadStackEscape);
