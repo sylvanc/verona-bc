@@ -85,12 +85,14 @@ namespace vc
     void reify_typename(Node node);
     void reify_call(Node node);
     void reify_new(Node node);
+    void reify_primitive(Node node);
   };
 
   struct Reifications
   {
     // Keep the top of the AST to help resolve names.
     Node top;
+    Node builtin;
 
     // A map of definition site to all reifications of that definition.
     NodeMap<std::vector<Reification>> map;
@@ -651,6 +653,8 @@ namespace vc
           reify_call(node);
         else if (node == New)
           reify_new(node);
+        else if (node->in({Const, Convert}))
+          reify_primitive(node);
       });
 
     if ((status == Delay) && (delays == 0))
@@ -697,8 +701,55 @@ namespace vc
     rs->schedule(r.def, r.subst, true);
   }
 
+  void Reification::reify_primitive(Node node)
+  {
+    auto type = node / Type;
+    Node pdef;
+
+    if (type == None)
+      pdef = rs->builtin->lookdown(Location("none")).front();
+    else if (type == Bool)
+      pdef = rs->builtin->lookdown(Location("bool")).front();
+    else if (type == I8)
+      pdef = rs->builtin->lookdown(Location("i8")).front();
+    else if (type == I16)
+      pdef = rs->builtin->lookdown(Location("i16")).front();
+    else if (type == I32)
+      pdef = rs->builtin->lookdown(Location("i32")).front();
+    else if (type == I64)
+      pdef = rs->builtin->lookdown(Location("i64")).front();
+    else if (type == U8)
+      pdef = rs->builtin->lookdown(Location("u8")).front();
+    else if (type == U16)
+      pdef = rs->builtin->lookdown(Location("u16")).front();
+    else if (type == U32)
+      pdef = rs->builtin->lookdown(Location("u32")).front();
+    else if (type == U64)
+      pdef = rs->builtin->lookdown(Location("u64")).front();
+    else if (type == ILong)
+      pdef = rs->builtin->lookdown(Location("ilong")).front();
+    else if (type == ULong)
+      pdef = rs->builtin->lookdown(Location("ulong")).front();
+    else if (type == ISize)
+      pdef = rs->builtin->lookdown(Location("isize")).front();
+    else if (type == USize)
+      pdef = rs->builtin->lookdown(Location("usize")).front();
+    else if (type == F32)
+      pdef = rs->builtin->lookdown(Location("f32")).front();
+    else if (type == F64)
+      pdef = rs->builtin->lookdown(Location("f64")).front();
+
+    rs->schedule(pdef, {}, true);
+  }
+
   Reifications::Reifications(Node top) : top(top)
   {
+    // Get std::builtin.
+    builtin = top->lookdown(Location("std"))
+                .front()
+                ->lookdown(Location("builtin"))
+                .front();
+
     // Assume the main module is the first one.
     auto main_module = top->front();
     assert(main_module == ClassDef);

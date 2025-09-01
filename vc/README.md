@@ -4,13 +4,16 @@
 
 Reification.
 - Reify `lookup`.
-- Primitive types aren't picked up with `new`.
-  - Do them manually?
-  - Get them from `constant` and `convert`?
-- Try generic functions.
 - Strip out unreachable code, update flatten.
+  - Is the reification map all we need?
+  - Give things a fully-qualified name.
+  - Flatten classes without functions, instead add IR style methods.
+- Try generic functions.
 - If no default type argument: use `dyn`?
 - Test type aliases, make sure cycles are rejected.
+
+Flatten.
+- `ConstStr`.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
