@@ -34,6 +34,8 @@ namespace vc
 
   inline const auto TypeName = TokenDef("typename");
   inline const auto TypeElement = TokenDef("typeelement");
+  inline const auto TypeNameReified = TokenDef("typenamereified");
+  inline const auto TypePath = TokenDef("typepath");
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam =
     TokenDef("typeparam", flag::lookup | flag::shadowing);
@@ -62,8 +64,8 @@ namespace vc
   inline const auto Block = TokenDef("block", flag::symtab);
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
+  inline const auto QNameReified = TokenDef("qnamereified");
   inline const auto Op = TokenDef("op");
-  inline const auto Apply = TokenDef("apply");
   inline const auto Binop = TokenDef("binop");
   inline const auto Unop = TokenDef("unop");
   inline const auto Nulop = TokenDef("nulop");
@@ -77,6 +79,8 @@ namespace vc
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
 
+  inline const auto Reify = TokenDef("reify");
+
   inline const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
   inline const auto LiteralPat =
@@ -86,8 +90,8 @@ namespace vc
     T(ExprSeq,
       LocalId,
       Tuple,
-      QName,
-      Method,
+      New,
+      Ref,
       Call,
       CallDyn,
       Convert,
@@ -96,9 +100,9 @@ namespace vc
       Nulop);
 
   inline const auto ApplyRhsPat =
-    ApplyLhsPat / T(DontCare, If, While, For, When, Apply);
+    ApplyLhsPat / T(QName, Method, DontCare, If, While, For, When);
 
-  inline const auto ExprPat = ApplyRhsPat / (T(Else, Ref) << Any);
+  inline const auto ExprPat = ApplyRhsPat / T(Else);
 
   inline const auto wfType =
     TypeName | Union | Isect | RefType | TupleType | FuncType | NoArgType;
@@ -119,8 +123,8 @@ namespace vc
 
   inline const auto wfExprStructure = ExprSeq | DontCare | Ident | wfLiteral |
     String | RawString | Tuple | Let | Var | New | Lambda | QName | Op |
-    Method | Call | CallDyn | If | Else | While | For | When | Equals | Ref |
-    Try | Convert | Binop | Unop | Nulop | FieldRef | Load;
+    Method | If | Else | While | For | When | Equals | Ref | Try | Convert |
+    Binop | Unop | Nulop | FieldRef | Load;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -160,14 +164,12 @@ namespace vc
     | (FieldRef <<= Expr * FieldId)
     | (Load <<= Expr)
     | (Tuple <<= Expr++[2])
-    | (Lambda <<= TypeParams * Params * Type * Where * Body)
-    | (Block <<= TypeParams * Params * Type * Where * Body)
+    | (Lambda <<= Params * Type * Body)
+    | (Block <<= Params * Type * Body)
     | (QName <<= QElement++[1])
     | (QElement <<= wfFuncId * TypeArgs)
     | (Op <<= wfFuncId * TypeArgs)
     | (Method <<= Expr * wfFuncId * TypeArgs)
-    | (Call <<= QName * Args)
-    | (CallDyn <<= Method * Args)
     | (Args <<= Expr++)
     | (If <<= Expr * Block)
     | (Else <<= Expr * Block)
@@ -189,34 +191,36 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprSugar = wfExprStructure - Lambda;
+  inline const auto wfExprSugar = (wfExprStructure | Call) - Lambda;
 
   // clang-format off
   inline const auto wfPassSugar =
       wfPassStructure
     | (ParamDef <<= Ident * Type)[Ident]
+    | (Call <<= QName * Args)
     | (Expr <<= wfExprSugar++)
     ;
   // clang-format on
 
-  inline const auto wfExprApplication = (wfExprSugar | LocalId | Apply) - Ident;
+  inline const auto wfExprApplication =
+    (wfExprSugar | LocalId | CallDyn) - Ident - QName - Method;
 
   // clang-format off
   inline const auto wfPassApplication =
       wfPassSugar
+    | (Ref <<= Expr)
+    | (New <<= Args)
+    | (CallDyn <<= Method * Args)
     | (Expr <<= wfExprApplication++)
-    | (Apply <<= Expr++[2])
     ;
   // clang-format on
 
-  inline const auto wfExprOperators = wfExprApplication - (Op | Apply);
+  inline const auto wfExprOperators = wfExprApplication - Op;
 
   // clang-format off
   inline const auto wfPassOperators =
       wfPassApplication
     | (Expr <<= wfExprOperators)
-    | (New <<= ~Expr)
-    | (Ref <<= Expr)
     | (Try <<= Expr)
     ;
   // clang-format on
@@ -247,9 +251,8 @@ namespace vc
     | (NewArrayConst <<= wfDst * Type * wfLit)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
-    | (FnPointer <<= wfFuncLhs * QName)
     | (Lookup <<= wfDst * wfSrc * wfFuncLhs * wfFuncId * TypeArgs * Int)
-    | (Call <<= wfDst * FnPointer * Args)
+    | (Call <<= wfDst * wfFuncLhs * QName * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
@@ -310,6 +313,26 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto wfTypeReified = TypeNameReified | Union | Isect | RefType |
+    TupleType | FuncType | NoArgType;
+
+  // clang-format off
+  inline const auto wfPassReify =
+      wfPassANF
+    | (Use <<= TypeNameReified)[Include]
+    | (TypePath <<= Ident++[1])
+    | (TypeNameReified <<= TypePath * Int)
+    | (Type <<= ~wfTypeReified)
+    | (Union <<= wfTypeReified++[2])
+    | (Isect <<= wfTypeReified++[2])
+    | (RefType <<= wfTypeReified)
+    | (TupleType <<= wfTypeReified++[2])
+    | (FuncType <<= (Lhs >>= wfTypeReified) * (Rhs >>= wfTypeReified))
+    | (QNameReified <<= TypePath * Int)
+    | (Call <<= wfDst * wfFuncLhs * QNameReified * Args)
+    ;
+  // clang-format on
+
   Node seq_to_args(Node seq);
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
@@ -319,9 +342,10 @@ namespace vc
 
   Parse parser(std::shared_ptr<Bytecode> state);
   PassDef structure();
+  PassDef sugar();
   PassDef application();
   PassDef operators();
   PassDef anf();
-  PassDef sugar();
+  PassDef reify();
   PassDef flatten();
 }

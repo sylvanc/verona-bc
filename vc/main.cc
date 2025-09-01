@@ -17,6 +17,7 @@ int main(int argc, char** argv)
      application(),
      operators(),
      anf(),
+     reify(),
      flatten(),
      assignids(state),
      validids(state),

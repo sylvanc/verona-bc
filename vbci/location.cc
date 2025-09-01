@@ -105,6 +105,7 @@ namespace vbci
 
         // Decrease stack rc for this region, as a frame local entry point is
         // now in r.
+        hr->set_parent(r);
         hr->stack_dec();
       }
     }
