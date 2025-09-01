@@ -9,14 +9,6 @@ namespace vc
       wfPassOperators,
       dir::topdown,
       {
-        // New.
-        In(Expr) * (T(New) << End) * ExprPat[Expr] >>
-          [](Match& _) { return New << (Expr << _(Expr)); },
-
-        // Ref.
-        In(Expr) * (T(Ref) << End) * ExprPat[Expr] >>
-          [](Match& _) { return Ref << (Expr << _(Expr)); },
-
         // Try.
         In(Expr) * (T(Try) << End) * ExprPat[Expr] >>
           [](Match& _) { return Try << (Expr << _(Expr)); },
@@ -42,22 +34,6 @@ namespace vc
             return CallDyn << (Method << (Expr << _(Lhs)) << (_(Op) / Ident)
                                       << (_(Op) / TypeArgs))
                            << (Args << (Expr << _(Rhs)));
-          },
-
-        // Unpack apply: static call.
-        T(Apply) << ((T(Expr) << T(QName)[QName]) * T(Expr)++[Expr]) >>
-          [](Match& _) { return Call << _(QName) << (Args << _[Expr]); },
-
-        // Unpack apply: dynamic call.
-        T(Apply) << ((T(Expr) << T(Method)[Method]) * T(Expr)++[Expr]) >>
-          [](Match& _) { return CallDyn << _(Method) << (Args << _[Expr]); },
-
-        // Unpack apply: insert call to `apply`.
-        T(Apply) << (T(Expr)[Lhs] * T(Expr)++[Expr]) >>
-          [](Match& _) {
-            return CallDyn << (Method << _(Lhs) << (Ident ^ "apply")
-                                      << TypeArgs)
-                           << (Args << _[Expr]);
           },
       }};
 

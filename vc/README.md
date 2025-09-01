@@ -2,14 +2,24 @@
 
 ## Current Work
 
-- RHS functions for `ValueParam`?
-
-Move `new`, `ref`, `try` to structure?
+Reification.
+- Reify `lookup`.
+- Primitive types aren't picked up with `new`.
+  - Do them manually?
+  - Get them from `constant` and `convert`?
+- Try generic functions.
+- Strip out unreachable code, update flatten.
+- If no default type argument: use `dyn`?
+- Test type aliases, make sure cycles are rejected.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
-- How do we have stateful lambdas?
-  - Use an object literal instead? `new { ... }`.
+- Type parameters can be "free" in a lambda.
+
+## To Do
+
+RHS functions for `ValueParam`? Or treat them like `ParamDef`?
+- Treat them as much as possible as a `TypeParam`.
 
 Patterns for lambdas.
 - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
@@ -17,8 +27,6 @@ Patterns for lambdas.
 - A pattern can be any object that implements `==`.
   - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
 - `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
-
-## To Do
 
 Assign:
 - Rename shadowed variables.
@@ -44,10 +52,13 @@ Expressions:
 - Partial application, `_`.
 
 Syntax:
+- How to put a dynamic type in a tuple or function type?
+- `where` clause on a type alias.
 - Zero-argument function calls.
   - How do we call a zero-argument lambda?
   - How do we refer to a zero-argument function without calling it?
 - Braces and else: it doesn't work if there's a comment in between.
+- Object literals: `new { ... }`.
 
 Structure:
 - Default field values.
@@ -56,12 +67,6 @@ Structure:
 - Could allow `ident::name` (lookup, no call).
   - Like `ident.name`, but no first argument binding.
 - Compile time evaluation.
-
-Generics.
-- Instantiate generic classes and functions with type arguments.
-  - Require explicit type arguments for now.
-- Reachability for mono-morphism.
-- Find all reachable classes and functions with their type arguments.
 
 Standard library:
 - Primitive type conversions.
@@ -78,6 +83,8 @@ Types:
 - IR types for: union, intersection, tuple, function.
   - IR tuple type could be `[dyn]` of correct size with elements that type check.
 - Structural types.
+- Turn function types into structural types.
+- Can type parameters take type arguments?
 - Type assertions.
 - Name resolution.
   - Look down through type aliases via union and intersection types.

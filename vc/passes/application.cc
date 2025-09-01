@@ -9,67 +9,100 @@ namespace vc
       wfPassApplication,
       dir::topdown,
       {
-        // TypeName resolution.
-        T(TypeName)[TypeName] >> [](Match& _) -> Node {
-          auto def = resolve(_(TypeName));
-
-          if (def == Error)
-            return def;
-
-          return NoChange;
-        },
-
-        // QName resolution.
-        T(QName)[QName] >> [](Match& _) -> Node {
-          auto def = resolve(_(QName));
-
-          if (def == Error)
-            return def;
-
-          if (def->in({ClassDef, TypeAlias, TypeParam}))
-            return _(QName) << (QElement << (Ident ^ "create") << TypeArgs);
-
-          assert(def == Function);
-          return NoChange;
-        },
-
         // Ident resolution.
         In(Expr) * T(Ident)[Ident] >>
           [](Match& _) {
             auto ident = _(Ident);
-            auto def = lookup(ident);
+            auto defs = ident->lookup();
 
-            if (!def)
+            for (auto& def : defs)
             {
-              // Not found, treat it as an operator.
-              return Op << _(Ident) << TypeArgs;
-            }
-            else if (def->in({ClassDef, TypeAlias, TypeParam}))
-            {
-              // This will later be turned into create-sugar.
-              return QName << (QElement << ident << TypeArgs);
-            }
-            else if (def->in({ParamDef, Let, Var}))
-            {
-              if (!def->precedes(ident))
-                return err(ident, "Identifier used before definition");
+              if (def->in({ParamDef, Let, Var}))
+              {
+                if (!def->precedes(ident))
+                  return err(ident, "Identifier used before definition");
 
-              return LocalId ^ ident;
+                return LocalId ^ ident;
+              }
             }
 
-            assert(def == Error);
-            return def;
+            // Not a local, treat it as a static call.
+            return QName << (QElement << ident << TypeArgs);
           },
 
-        // Application.
-        In(Expr) * ApplyLhsPat[Lhs] * ApplyRhsPat[Rhs] >>
+        // Ref.
+        In(Expr) * (T(Ref) << End) * (T(ExprSeq) / ApplyRhsPat)[Rhs] >>
+          [](Match& _) { return Ref << (Expr << _(Rhs)); },
+
+        // C-style new.
+        In(Expr) * (T(New) << End) * T(ExprSeq)[ExprSeq] >>
+          [](Match& _) { return New << seq_to_args(_(ExprSeq)); },
+
+        // C-style static call.
+        In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
+          [](Match& _) { return Call << _(QName) << seq_to_args(_(ExprSeq)); },
+
+        // C-style dynamic call.
+        In(Expr) * T(Method)[Method] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            return Apply << (Expr << _(Lhs)) << (Expr << _(Rhs));
+            return CallDyn << _(Method) << seq_to_args(_(ExprSeq));
           },
 
-        // Extend an existing application.
-        In(Expr) * T(Apply)[Lhs] * ApplyRhsPat[Rhs] >>
-          [](Match& _) { return _(Lhs) << (Expr << _(Rhs)); },
+        // C-style apply sugar.
+        In(Expr) * ApplyLhsPat[Lhs] * T(ExprSeq)[Rhs] >>
+          [](Match& _) {
+            return CallDyn << (Method << _(Lhs) << (Ident ^ "apply")
+                                      << TypeArgs)
+                           << seq_to_args(_(ExprSeq));
+          },
+
+        // ML-style new.
+        In(Expr) * (T(New) << End) * ApplyRhsPat++[Rhs] >>
+          [](Match& _) {
+            Node args = Args;
+
+            for (auto& arg : _[Rhs])
+              args << (Expr << arg);
+
+            return New << args;
+          },
+
+        // ML-style static call.
+        // This also turns a lone QName into a zero-argument call.
+        In(Expr) * T(QName)[QName] * ApplyRhsPat++[Rhs] >>
+          [](Match& _) {
+            Node args = Args;
+
+            for (auto& arg : _[Rhs])
+              args << (Expr << arg);
+
+            return Call << _(QName) << args;
+          },
+
+        // ML-style dynamic call.
+        // This also turns a lone Method into a zero-argument call.
+        In(Expr) * T(Method)[Method] * ApplyRhsPat++[Rhs] >>
+          [](Match& _) {
+            Node args = Args;
+
+            for (auto& arg : _[Rhs])
+              args << (Expr << arg);
+
+            return CallDyn << _(Method) << args;
+          },
+
+        // ML-style apply sugar.
+        In(Expr) * ApplyLhsPat[Lhs] * (ApplyRhsPat * ApplyRhsPat++)[Rhs] >>
+          [](Match& _) {
+            Node args = Args;
+
+            for (auto& arg : _[Rhs])
+              args << (Expr << arg);
+
+            return CallDyn << (Method << _(Lhs) << (Ident ^ "apply")
+                                      << TypeArgs)
+                           << args;
+          },
       }};
 
     return p;

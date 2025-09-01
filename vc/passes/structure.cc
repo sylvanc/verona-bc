@@ -16,8 +16,6 @@ namespace vc
     ~(T(Equals) * Any++[Body]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
   const auto WherePat = T(Where) * (!T(Brace))++[Where];
-  const auto LambdaWherePat =
-    T(Where) * (!(T(Brace) / T(Symbol, "->")))++[Where];
   const auto ParamsPat = T(Paren) << (~T(List, Group) * End);
   const auto ElseLhsPat = (T(Else) << (T(Expr) * T(Block))) /
     (!T(Equals, Else) * (!T(Equals, Else))++);
@@ -458,24 +456,11 @@ namespace vc
           [](Match& _) { return Var << _(Ident) << (Type << _[Type]); },
 
         // Lambda.
-        In(Expr) * TypeParamsPat[TypeParams] * ParamsPat[Params] *
-            ~(T(Colon) * (!(T(SymbolId, "->") / T(Where)))++[Type]) *
-            ~LambdaWherePat* T(SymbolId, "->") *
-            (T(Brace)[Brace] / Any++[Rhs]) >>
-          [](Match& _) {
-            return Lambda << (TypeParams << *_[TypeParams])
-                          << (Params << *_[Params]) << (Type << _[Type])
-                          << (Where << _[Where])
-                          << lambda_body(_(Brace), _[Rhs]);
-          },
-
-        // Lambda without type parameters.
         In(Expr) * ParamsPat[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << TypeParams << (Params << *_[Params])
-                          << (Type << _[Type]) << Where
+            return Lambda << (Params << *_[Params]) << (Type << _[Type])
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
@@ -484,18 +469,16 @@ namespace vc
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << TypeParams
-                          << (Params
+            return Lambda << (Params
                               << (ParamDef << _(Ident) << (Type << _[Type])
                                            << Body))
-                          << Type << Where << lambda_body(_(Brace), _[Rhs]);
+                          << Type << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
-            return Lambda << TypeParams << Params << Type << Where
-                          << lambda_body(_(Brace), _[Rhs]);
+            return Lambda << Params << Type << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Qualified name.
@@ -530,10 +513,13 @@ namespace vc
           },
 
         // Method.
-        In(Expr) * (T(Ident) / ApplyLhsPat)[Expr] * T(Dot) *
-            T(Ident, SymbolId)[Ident] * ~TypeArgsPat[TypeArgs] >>
+        In(Expr) *
+            (LiteralPat /
+             T(Ident, QName, Method, ExprSeq, Convert, Binop, Unop, Nulop))
+              [Lhs] *
+            T(Dot) * T(Ident, SymbolId)[Ident] * ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
-            return Method << (Expr << _(Expr)) << _(Ident)
+            return Method << (Expr << _(Lhs)) << _(Ident)
                           << (TypeArgs << *_[TypeArgs]);
           },
 
@@ -541,16 +527,6 @@ namespace vc
         In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
             return Op << _(SymbolId) << (TypeArgs << *_[TypeArgs]);
-          },
-
-        // Static call.
-        In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) { return Call << _(QName) << seq_to_args(_(ExprSeq)); },
-
-        // Dynamic call.
-        In(Expr) * T(Method)[Method] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) {
-            return CallDyn << _(Method) << seq_to_args(_(ExprSeq));
           },
 
         // If.

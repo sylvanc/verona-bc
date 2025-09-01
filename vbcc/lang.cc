@@ -4,7 +4,22 @@
 
 namespace vbcc
 {
+  Node err(const std::string& msg)
+  {
+    return Error << errmsg(msg);
+  }
+
   Node err(Node node, const std::string& msg)
+  {
+    return Error << errmsg(msg) << errloc(node);
+  }
+
+  Node errmsg(const std::string& msg)
+  {
+    return ErrorMsg ^ msg;
+  }
+
+  Node errloc(Node node)
   {
     auto loc = node;
 
@@ -15,10 +30,10 @@ namespace vbcc
       loc = loc->parent();
     }
 
-    if (loc && (loc != node))
-      node = loc->type() ^ loc;
+    if (loc)
+      loc = loc->type() ^ loc;
 
-    return Error << (ErrorMsg ^ msg) << node;
+    return loc;
   }
 
   ValueType val(Node ptype)

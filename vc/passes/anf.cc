@@ -62,9 +62,8 @@ namespace vc
     auto id = _.fresh(l_local);
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
     return Seq << (Lift << Body
-                        << (Call << (LocalId ^ id)
-                                 << (FnPointer << (ref ? Lhs : Rhs) << _(QName))
-                                 << (Args << *_[Args])))
+                        << (Call << (LocalId ^ id) << (ref ? Lhs : Rhs)
+                                 << _(QName) << (Args << *_[Args])))
                << res;
   }
 
@@ -102,15 +101,9 @@ namespace vc
           },
 
         // New
-        In(Expr) * T(New) << End >>
-          [](Match&) { return New << (Expr << Tuple); },
-
-        In(Expr) * T(New) << T(LocalId)[LocalId] >>
-          [](Match& _) { return New << (Expr << (Tuple << _(LocalId))); },
-
-        In(Expr) * T(New) << (T(Expr) << T(Tuple)[Tuple]) >>
+        In(Expr) * T(New) << T(Args)[Args] >>
           [](Match& _) {
-            auto args = _(Tuple);
+            auto args = _(Args);
             auto fields = field_count(args->parent(ClassBody));
 
             if (fields != args->size())
@@ -119,7 +112,7 @@ namespace vc
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
                                 << (New << (LocalId ^ id) << make_selftype(args)
-                                        << (Args << *args)))
+                                        << args))
                        << (LocalId ^ id);
           },
 
@@ -240,12 +233,10 @@ namespace vc
         // TODO: distinguish typetest by param count
         In(Body) * T(If)
             << (T(Expr)[Cond] *
-                (T(Block)
-                 << ((T(TypeParams) << End) * (T(Params) << End) * T(Type) *
-                     T(Where) * T(Body)[Body])) *
+                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body])) *
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
-            // TODO: what do we do with Type and Where?
+            // TODO: what do we do with Type?
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
             return Seq << make_nomatch(_(LocalId))
@@ -268,12 +259,10 @@ namespace vc
         // While body.
         In(Body) * T(While)
             << (T(Expr)[Cond] *
-                (T(Block)
-                 << ((T(TypeParams) << End) * (T(Params) << End) * T(Type) *
-                     T(Where) * T(Body)[Body])) *
+                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body])) *
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
-            // TODO: what do we do with Type and Where?
+            // TODO: what do we do with Type?
             auto cond = _.fresh(l_cond);
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
@@ -310,11 +299,9 @@ namespace vc
         // TODO: distinguish typetest by param count
         In(Body) * T(Else)
             << (T(LocalId)[LocalId] *
-                (T(Block)
-                 << ((T(TypeParams) << End) * (T(Params) << End) * T(Type) *
-                     T(Where) * T(Body)[Body]))) >>
+                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body]))) >>
           [](Match& _) {
-            // TODO: what do we do with Type and Where?
+            // TODO: what do we do with Type?
             auto id = _.fresh(l_local);
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
@@ -369,10 +356,12 @@ namespace vc
         },
 
         // Replace Let with LocalId.
+        // TODO: what about the Type?
         In(Expr, Lhs) * T(Let)[Let] >>
           [](Match& _) { return LocalId ^ (_(Let) / Ident); },
 
         // Lift variable declarations.
+        // TODO: what about the Type?
         In(Expr, Lhs) * T(Var)[Var] >>
           [](Match& _) {
             return Seq << (Lift << Body << _(Var))
@@ -619,6 +608,7 @@ namespace vc
 
         return ok;
       });
+
       return 0;
     });
 

@@ -153,8 +153,6 @@ namespace vc
       {
         T(ClassDef)[ClassDef] >>
           [=](Match& _) {
-            // TODO: this isn't preserving enough structure to do `resolve`
-
             auto def = _(ClassDef);
             auto prim = primitive_type(def);
             Node fields = Fields;
@@ -200,7 +198,8 @@ namespace vc
                                     << clone(child / Labels)));
 
                 if (
-                  !*has_main && ((child / Ident)->location().view() == "main"))
+                  !*has_main && (def->parent() == Top) &&
+                  ((child / Ident)->location().view() == "main"))
                 {
                   *has_main = true;
                   auto id = _.fresh();
@@ -275,11 +274,10 @@ namespace vc
           },
 
         T(Call)
-            << (T(LocalId)[LocalId] * T(FnPointer)[FnPointer] *
+            << (T(LocalId)[LocalId] * T(Lhs, Rhs)[Ref] * T(QName)[QName] *
                 T(Args)[Args]) >>
           [](Match& _) {
-            auto fp = _(FnPointer);
-            auto def = resolve_qname(fp / QName, fp / Lhs, _(Args)->size());
+            auto def = resolve_qname(_(QName), _(Ref), _(Args)->size());
             return Call << _(LocalId) << make_functionid(def) << _(Args);
           },
       }};
@@ -296,10 +294,6 @@ namespace vc
         }
         else if (node == Var)
         {
-          // TODO: is this needed?
-          if (!node->parent(Func))
-            return ok;
-
           (node->parent(Func) / Vars) << (LocalId ^ (node / Ident));
           to_remove.push_back(node);
           ok = false;

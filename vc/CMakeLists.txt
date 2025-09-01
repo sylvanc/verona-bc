@@ -4,10 +4,12 @@ add_executable(vc
   passes/flatten.cc
   passes/operators.cc
   passes/parser.cc
+  passes/reify.cc
   passes/sugar.cc
   passes/structure.cc
   lang.cc
   main.cc
+  subtype.cc
 )
 
 if(MSVC)
