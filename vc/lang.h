@@ -64,7 +64,6 @@ namespace vc
   inline const auto Block = TokenDef("block", flag::symtab);
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
-  inline const auto QNameReified = TokenDef("qnamereified");
   inline const auto Op = TokenDef("op");
   inline const auto Binop = TokenDef("binop");
   inline const auto Unop = TokenDef("unop");
@@ -313,13 +312,19 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfTypeReified = TypeNameReified | Union | Isect | RefType |
-    TupleType | FuncType | NoArgType;
+  inline const auto wfTypeReified =
+    ClassId | Union | Isect | RefType | TupleType | FuncType | NoArgType;
 
   // clang-format off
   inline const auto wfPassReify =
       wfPassANF
-    | (Use <<= TypeNameReified)[Include]
+    | (Top <<= (Class | Function)++)
+    | (Class <<= ClassId * Fields * Methods)[ClassId]
+    | (Fields <<= Field++)
+    | (Field <<= FieldId * Type)
+    | (Methods <<= Method++)
+    | (Method <<= MethodId * FunctionId)
+    | (Function <<= FunctionId * Params * Type * Labels)[FunctionId]
     | (TypePath <<= Ident++[1])
     | (TypeNameReified <<= TypePath * Int)
     | (Type <<= ~wfTypeReified)
@@ -328,14 +333,17 @@ namespace vc
     | (RefType <<= wfTypeReified)
     | (TupleType <<= wfTypeReified++[2])
     | (FuncType <<= (Lhs >>= wfTypeReified) * (Rhs >>= wfTypeReified))
-    | (QNameReified <<= TypePath * Int)
-    | (Call <<= wfDst * wfFuncLhs * QNameReified * Args)
+    | (Lookup <<= wfDst * wfSrc * MethodId)
+    | (Call <<= wfDst * FunctionId * Args)
     ;
   // clang-format on
 
+  size_t parse_int(Node node);
   Node seq_to_args(Node seq);
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
+
+  // TODO: delete these.
   Node lookup(Node ident);
   Node resolve(Node name);
   Node resolve_qname(Node qname, Node side, size_t arity);

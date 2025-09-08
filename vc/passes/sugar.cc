@@ -40,10 +40,10 @@ namespace vc
               {
                 auto defs = node->lookup();
 
-                if (
-                  (defs.size() == 1) &&
-                  defs.front()->in({ParamDef, Let, Var}) &&
-                  node->lookup(lambda).empty())
+                if (std::any_of(defs.begin(), defs.end(), [&](auto& d) {
+                      return d->in({ParamDef, Let, Var}) &&
+                        node->lookup(lambda).empty();
+                    }))
                   freevars.emplace(node->location());
               }
 

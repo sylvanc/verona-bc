@@ -1,7 +1,20 @@
 #include "lang.h"
 
+#include <vbcc/from_chars.h>
+
 namespace vc
 {
+  size_t parse_int(Node node)
+  {
+    auto view = node->location().view();
+    auto first = view.data();
+    auto last = first + view.size();
+
+    size_t i;
+    std::from_chars(first, last, i, 10);
+    return i;
+  }
+
   Node seq_to_args(Node seq)
   {
     assert(seq == ExprSeq);

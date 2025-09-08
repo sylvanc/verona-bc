@@ -33,7 +33,12 @@ namespace vc
   Node make_nomatch(Node localid)
   {
     assert(localid == LocalId);
-    return New << (LocalId ^ localid) << type_nomatch() << Args;
+    return Call << (LocalId ^ localid) << Rhs
+                << (QName << (QElement << (Ident ^ "std") << TypeArgs)
+                          << (QElement << (Ident ^ "builtin") << TypeArgs)
+                          << (QElement << (Ident ^ "nomatch") << TypeArgs)
+                          << (QElement << (Ident ^ "create") << TypeArgs))
+                << Args;
   }
 
   Node test_nomatch(Node dst, Node src)

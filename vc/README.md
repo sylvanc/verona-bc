@@ -3,17 +3,13 @@
 ## Current Work
 
 Reification.
-- Reify `lookup`.
-- Strip out unreachable code, update flatten.
-  - Is the reification map all we need?
-  - Give things a fully-qualified name.
-  - Flatten classes without functions, instead add IR style methods.
-- Try generic functions.
-- If no default type argument: use `dyn`?
+- Mark types as primitives.
+- Don't fail on method instantiation failure.
+  - Mark as "delete on error".
+  - On completion of run, check if it contains errors.
 - Test type aliases, make sure cycles are rejected.
-
-Flatten.
-- `ConstStr`.
+- If no default type argument: use `dyn`?
+- Update flatten. Rename: `ir`?
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.

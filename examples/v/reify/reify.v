@@ -1,23 +1,36 @@
 range[A = i32]
 {
   curr: A;
-  high: A;
+  stop: A;
   step: A;
 
-  create(curr: A, high: A, step: A = A(1))
+  create(curr: A, stop: A, step: A = A(1))
   {
-    new (curr, high, step)
+    // TODO: check curr <= stop if step > 0, curr >= stop if step < 0
+    new (curr, stop, step)
   }
 
   has_next(self: range[A]): bool
   {
-    self.curr < self.high
+    if (self.step < A(0))
+    {
+      self.curr > self.stop
+    }
+    else
+    {
+      self.curr < self.stop
+    }
   }
 
   next(self: range[A]): A
   {
     self.curr = self.curr + self.step
   }
+}
+
+id[A](x: A): A
+{
+  x
 }
 
 main(): i32
@@ -30,5 +43,5 @@ main(): i32
     sum = sum + r.next
   }
 
-  sum
+  id[i32](sum)
 }

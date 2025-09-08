@@ -2,7 +2,6 @@
 #include "../subtype.h"
 
 #include <stack>
-#include <vbcc/from_chars.h>
 
 namespace vc
 {
@@ -39,6 +38,10 @@ namespace vc
     // a `use` include to see if there's a definition available.
     bool errors;
 
+    // The result. This is a TypeNameReified (for a TypeName) or a FunctionId
+    // (for a QName).
+    Node result;
+
     PathReification(Reifications* rs, Subst& subst, Node path);
     PathReification(
       Reifications* rs, Subst& subst, Node path, Node ref, Node args);
@@ -62,11 +65,17 @@ namespace vc
     // This is the original definition.
     Node def;
 
+    // This is the reification index.
+    size_t index;
+
     // This is a map of TypeParam to Type.
     Subst subst;
 
-    // This is a TypeNameReified or QNameReified representing this reification.
-    Node name;
+    // The type substitutions using the TypeParam nodes from def, not instance.
+    Subst subst_orig;
+
+    // This is a TypeNameReified for a ClassDef. Anything else is empty.
+    Node reified_name;
 
     // This is a cloned instance of the original ClassDef, TypeAlias, or
     // Function (or a reference to the original if there are no substitutions).
@@ -77,16 +86,26 @@ namespace vc
     ReifyResult status;
     size_t delays;
 
+    // These are class reifications that want this reification as a method.
+    std::vector<std::pair<Node, Node>> wants_method;
+
     Reification(Reifications* rs, Node def, size_t i, Subst& subst);
 
     bool instantiate();
     void run();
+    void want_method(Node cls, Node method_id);
 
     void reify_typename(Node node);
     void reify_call(Node node);
     void reify_new(Node node);
     void reify_primitive(Node node);
+    void reify_lookup(Node node);
+    void reify_lookups();
   };
+
+  // Lookup by name and arity and get a vector of invariant type arguments.
+  using Lookups =
+    std::map<Location, std::map<size_t, std::vector<std::pair<Node, Node>>>>;
 
   struct Reifications
   {
@@ -100,12 +119,17 @@ namespace vc
     // A work list of definition site and index into the reification list.
     std::stack<std::pair<Node, size_t>> wl;
 
-    Reifications(Node top);
+    // LHS and RHS lookups.
+    Lookups lhs_lookups;
+    Lookups rhs_lookups;
 
+    Reifications(Node top);
     void run();
+
     std::pair<Reification&, bool> schedule(Node def, Subst subst, bool enqueue);
     Reification& get_reification(Node type);
     std::pair<Node, Subst> get_def_subst(Node type);
+    void add_lookup(Node lookup);
   };
 
   PathReification::PathReification(Reifications* rs, Subst& subst, Node path)
@@ -147,12 +171,16 @@ namespace vc
         // If this hasn't been reified, or fails, we're done.
         auto r = do_schedule(def, true);
 
-        if (r != Ok)
+        if (r == Fail)
+          continue;
+
+        if (r == Delay)
           return r;
 
         // Explore down this path.
         errors = false;
         r = do_path(0);
+        errors = true;
 
         // Nothing found, try other paths.
         if (r == Fail)
@@ -221,11 +249,10 @@ namespace vc
 
     if (!found)
     {
-      path << (err("Type not found") << errloc(elem));
-      return Fail;
+      curr_def = path->parent(ClassDef);
+      return do_path(0);
     }
 
-    errors = true;
     return do_path(1);
   }
 
@@ -257,10 +284,9 @@ namespace vc
       {
         // Schedule the function for reification.
         auto&& [target_r, fresh] = rs->schedule(curr_def, subst, true);
-        curr_def = clone(target_r.name);
+        result = target_r.instance / Ident;
       }
-
-      if (curr_def != QNameReified)
+      else
       {
         if (errors)
           path << (err("Expected a function") << errloc(path->back()));
@@ -272,12 +298,12 @@ namespace vc
     {
       // Schedule the class for reification.
       auto&& [target_r, fresh] = rs->schedule(curr_def, subst, false);
-      curr_def = clone(target_r.name);
+      result = target_r.reified_name;
     }
     else
     {
       // Return the reified non-class result of a TypeAlias.
-      curr_def = clone(curr_def);
+      result = curr_def;
     }
 
     return Ok;
@@ -387,21 +413,7 @@ namespace vc
     if (r != Ok)
       return r;
 
-    r = do_schedule(def, true);
-
-    if (r == Fail)
-    {
-      if (errors)
-      {
-        path
-          << (err("This depends on a type alias which in turn depends on this")
-              << errloc(typeargs->parent())
-              << errmsg("The type alias is defined here:")
-              << errloc(def / Ident));
-      }
-    }
-
-    return r;
+    return do_schedule(def, true);
   }
 
   ReifyResult
@@ -433,13 +445,7 @@ namespace vc
     }
 
     // Get the default type arguments for this def.
-    auto r = default_typeargs(def / TypeParams, typeargs);
-
-    if (r != Ok)
-      return r;
-
-    curr_def = def;
-    return Ok;
+    return default_typeargs(def / TypeParams, typeargs);
   }
 
   ReifyResult PathReification::default_typeargs(Node typeparams, Node typeargs)
@@ -530,18 +536,21 @@ namespace vc
   {
     auto&& [target_r, fresh] = rs->schedule(def, subst, enqueue);
 
+    if (def == ClassDef)
+    {
+      curr_def = target_r.def;
+      subst = target_r.subst_orig;
+      return Ok;
+    }
+
     if (target_r.status == Ok)
     {
       // This has already been resolved. If we can continue looking down
       // through this, get the definition site and the substitutions.
-      if (def == ClassDef)
+      if (def == TypeAlias)
       {
-        curr_def = target_r.def;
-        subst = target_r.subst;
-      }
-      else if (def == TypeAlias)
-      {
-        std::tie(curr_def, subst) = rs->get_def_subst(target_r.instance / Type);
+        std::tie(curr_def, subst) =
+          rs->get_def_subst((target_r.instance / Type)->front());
       }
       else if (def == Use)
       {
@@ -564,20 +573,32 @@ namespace vc
     {
       // This reification was scheduled previously, but is delayed (circular
       // dependency) or failed.
+      if (errors)
+      {
+        path
+          << (err("This depends on something which in turn depends on this")
+              << errloc(path) << errmsg("The dependency is defined here:")
+              << errloc(def / Ident));
+      }
+
       return Fail;
     }
   }
 
   Reification::Reification(Reifications* rs, Node def, size_t i, Subst& subst)
-  : rs(rs), def(def), subst(subst), status(Ok), delays(0)
+  : rs(rs),
+    def(def),
+    index(i),
+    subst(subst),
+    subst_orig(subst),
+    status(Ok),
+    delays(0)
   {
-    if (def->in({ClassDef, TypeAlias, Function}))
+    if (def == ClassDef)
     {
       // Build a reified name that's the path plus an integer indicating which
       // index it is.
       Node path = TypePath << clone(def / Ident);
-      name = (def == Function) ? QNameReified : TypeNameReified;
-      name << path << (Int ^ std::to_string(i));
       auto p = def->parent(ClassDef);
 
       while (p)
@@ -585,6 +606,8 @@ namespace vc
         path->push_front(clone(p / Ident));
         p = p->parent(ClassDef);
       }
+
+      reified_name = TypeNameReified << path << (Int ^ std::to_string(i));
     }
   }
 
@@ -594,27 +617,56 @@ namespace vc
     if (instance)
       return false;
 
-    // If no substitutions are needed, we can just use the original.
-    if (subst.empty())
-    {
-      instance = def;
-      return true;
-    }
-
     // Clone the original and put it in the parent.
     instance = clone(def);
     def->parent() << instance;
 
+    // For classes, throw away all functions.
+    if (def == ClassDef)
+    {
+      auto body = instance / ClassBody;
+      Nodes remove;
+
+      std::for_each(body->begin(), body->end(), [&](Node& n) {
+        if (n == Function)
+          remove.push_back(n);
+      });
+
+      for (auto& n : remove)
+        body->replace(n);
+    }
+
     // A `use` has no identifier. Don't build the symbol table for it, to
     // avoid getting repetitive includes.
-    if (instance->in({ClassDef, TypeAlias, Function}))
+    if (def->in({ClassDef, TypeAlias, Function}))
     {
-      // Create name based on the reification index.
-      instance / Ident = Ident ^
-        (std::format(
-          "{}[{}]",
-          (name / TypePath)->back()->location().view(),
-          (name / Int)->location().view()));
+      // Create fully qualified name.
+      auto id = std::string((def / Ident)->location().view());
+
+      if (def == Function)
+      {
+        id = std::format(
+          "{}.{}{}",
+          id,
+          (def / Params)->size(),
+          (def / Lhs) == Lhs ? ".ref" : "");
+      }
+
+      id = std::format("{}[{}]", id, index);
+      auto p = def->parent(ClassDef);
+
+      while (p)
+      {
+        id = std::format("{}.{}", (p / Ident)->location().view(), id);
+        p = p->parent(ClassDef);
+      }
+
+      if (def == ClassDef)
+        instance / Ident = ClassId ^ id;
+      else if (def == TypeAlias)
+        instance / Ident = TypeId ^ id;
+      else if (def == Function)
+        instance / Ident = FunctionId ^ id;
 
       // Remap cloned type parameters.
       auto num_tp = (instance / TypeParams)->size();
@@ -655,6 +707,8 @@ namespace vc
           reify_new(node);
         else if (node->in({Const, Convert}))
           reify_primitive(node);
+        else if (node == Lookup)
+          reify_lookup(node);
       });
 
     if ((status == Delay) && (delays == 0))
@@ -666,7 +720,30 @@ namespace vc
         instance << (err("Doesn't resolve to a class") << errloc(instance));
         status = Fail;
       }
+      else if (instance == ClassDef)
+      {
+        reify_lookups();
+      }
+      else if (instance == Function)
+      {
+        for (auto& [cls, method_id] : wants_method)
+          (cls / ClassBody)
+            << (Method << clone(method_id) << clone(instance / Ident));
+
+        wants_method.clear();
+      }
     }
+  }
+
+  void Reification::want_method(Node cls, Node method_id)
+  {
+    assert(def == Function);
+
+    if (instance && (status == Ok))
+      (cls / ClassBody)
+        << (Method << clone(method_id) << clone(instance / Ident));
+    else
+      wants_method.emplace_back(cls, method_id);
   }
 
   void Reification::reify_typename(Node node)
@@ -675,7 +752,7 @@ namespace vc
     auto r = p.run();
 
     if (r == Ok)
-      node->parent()->replace(node, p.curr_def);
+      node->parent()->replace(node, clone(p.result));
     else if (r == Delay)
       delays++;
     else
@@ -688,7 +765,7 @@ namespace vc
     auto r = p.run();
 
     if (r == Ok)
-      node / QName = p.curr_def;
+      node / QName = clone(p.result);
     else if (r == Delay)
       delays++;
     else
@@ -698,7 +775,7 @@ namespace vc
   void Reification::reify_new(Node node)
   {
     auto& r = rs->get_reification((node / Type)->front());
-    rs->schedule(r.def, r.subst, true);
+    rs->schedule(r.def, r.subst_orig, true);
   }
 
   void Reification::reify_primitive(Node node)
@@ -740,6 +817,67 @@ namespace vc
       pdef = rs->builtin->lookdown(Location("f64")).front();
 
     rs->schedule(pdef, {}, true);
+  }
+
+  void Reification::reify_lookup(Node node)
+  {
+    rs->add_lookup(node);
+  }
+
+  void Reification::reify_lookups()
+  {
+    auto f = [&](auto& kv, Node side) {
+      auto& name = kv.first;
+      auto& map = kv.second;
+      auto defs = def->lookdown(name);
+
+      for (auto& func : defs)
+      {
+        if ((func != Function) || ((func / Lhs) != side->type()))
+          continue;
+
+        auto tp = func / TypeParams;
+        auto tp_count = tp->size();
+        auto arg_count = (func / Params)->size();
+
+        std::for_each(map.begin(), map.end(), [&](auto& kv2) {
+          auto arity = kv2.first;
+          auto& v = kv2.second;
+
+          if (arity != arg_count)
+            return;
+
+          std::for_each(v.begin(), v.end(), [&](auto& pair) {
+            auto& ta = pair.first;
+            auto& method_id = pair.second;
+
+            if (ta->size() != tp_count)
+              return;
+
+            // Extend the class substitution map with the new type arguments.
+            auto fsubst = subst_orig;
+
+            for (size_t i = 0; i < tp->size(); i++)
+              fsubst[tp->at(i)] = ta->at(i);
+
+            // TODO: if this fails, don't report an error, and delete the
+            // reification.
+            auto&& [r, fresh] = rs->schedule(func, fsubst, true);
+            r.want_method(instance, method_id);
+          });
+        });
+      }
+    };
+
+    std::for_each(
+      rs->lhs_lookups.begin(), rs->lhs_lookups.end(), [&](auto& kv) {
+        return f(kv, Lhs);
+      });
+
+    std::for_each(
+      rs->rhs_lookups.begin(), rs->rhs_lookups.end(), [&](auto& kv) {
+        return f(kv, Rhs);
+      });
   }
 
   Reifications::Reifications(Node top) : top(top)
@@ -790,6 +928,67 @@ namespace vc
     while (!wl.empty())
     {
       auto [wl_def, wl_i] = wl.top();
+
+      if (wl_def == Lookup)
+      {
+        // Lookups don't get delayed, so pop it immediately.
+        wl.pop();
+
+        // For each completed, reified class, check for a compatible function,
+        // reify the function, and add the method.
+        auto hand = (wl_def / Lhs)->type();
+        auto name = (wl_def / Ident)->location();
+        auto ta = wl_def / TypeArgs;
+        auto ta_count = ta->size();
+        auto arg_count = parse_int(wl_def / Int);
+        auto method_id = wl_def->back();
+
+        std::for_each(map.begin(), map.end(), [&](auto& kv) {
+          if (kv.first != ClassDef)
+            return;
+
+          auto defs = kv.first->lookdown(name);
+          Node func;
+
+          for (auto& def : defs)
+          {
+            if (
+              (def == Function) && ((def / Lhs) == hand) &&
+              ((def / TypeParams)->size() == ta_count) &&
+              ((def / Params)->size() == arg_count))
+            {
+              // We have a compatible function.
+              func = def;
+              break;
+            }
+          }
+
+          if (!func)
+            return;
+
+          auto tp = func / TypeParams;
+
+          for (auto& r : kv.second)
+          {
+            if ((r.status != Ok) || !r.instance)
+              continue;
+
+            // Extend the class substitution map with the new type arguments.
+            auto subst = r.subst_orig;
+
+            for (size_t i = 0; i < tp->size(); i++)
+              subst[tp->at(i)] = ta->at(i);
+
+            // TODO: if this fails, don't report an error, and delete the
+            // reification.
+            auto&& [r_func, fresh] = schedule(func, subst, true);
+            r_func.want_method(r.instance, method_id);
+          }
+        });
+
+        continue;
+      }
+
       auto& r = map[wl_def][wl_i];
 
       if (r.status != Delay)
@@ -807,6 +1006,40 @@ namespace vc
   std::pair<Reification&, bool>
   Reifications::schedule(Node def, Subst subst, bool enqueue)
   {
+    // Remove unassociated type parameters.
+    if (def->in({ClassDef, TypeAlias, Function}))
+    {
+      Nodes remove;
+
+      std::for_each(subst.begin(), subst.end(), [&](auto& kv) {
+        auto& tp = kv.first;
+        auto name = (tp / Ident)->location();
+        auto found = false;
+        auto p = def;
+
+        while (p)
+        {
+          auto tps = p / TypeParams;
+
+          if (std::any_of(
+                tps->begin(), tps->end(), [&](auto& d) { return d == tp; }))
+          {
+            found = true;
+            break;
+          }
+
+          p = p->parent(ClassDef);
+        }
+
+        if (!found)
+          remove.push_back(tp);
+      });
+
+      for (auto& tp : remove)
+        subst.erase(tp);
+    }
+
+    // Search for an existing reification with invariant substitutions.
     auto& r = map[def];
     size_t i = 0;
     bool fresh = false;
@@ -821,7 +1054,6 @@ namespace vc
             subst.begin(),
             subst.end(),
             [&](auto& lhs, auto& rhs) {
-              assert(lhs.first == rhs.first);
               return subtype(lhs.second, rhs.second) &&
                 subtype(rhs.second, lhs.second);
             }))
@@ -859,13 +1091,7 @@ namespace vc
       def = defs.front();
     }
 
-    auto view = (type / Int)->location().view();
-    auto first = view.data();
-    auto last = first + view.size();
-
-    size_t i;
-    std::from_chars(first, last, i, 10);
-    return map.at(def).at(i);
+    return map.at(def).at(parse_int(type / Int));
   }
 
   std::pair<Node, Subst> Reifications::get_def_subst(Node type)
@@ -876,16 +1102,182 @@ namespace vc
       return {type, {}};
 
     auto& r = get_reification(type);
-    return {r.def, r.subst};
+    return {r.def, r.subst_orig};
+  }
+
+  void Reifications::add_lookup(Node lookup)
+  {
+    assert(lookup == Lookup);
+    auto& l = (lookup / Lhs) == Lhs ? lhs_lookups : rhs_lookups;
+    auto& v = l[(lookup / Ident)->location()][parse_int(lookup / Int)];
+    Node ta = lookup / TypeArgs;
+    auto count = ta->size();
+    size_t i = 0;
+    Node method_id;
+
+    for (; i < v.size(); i++)
+    {
+      auto& v_ta = v[i].first;
+      method_id = v[i].second;
+
+      if (v_ta->size() != count)
+        continue;
+
+      bool found = true;
+
+      for (size_t j = 0; j < count; j++)
+      {
+        if (
+          !subtype(v_ta->at(j), ta->at(j)) || !subtype(ta->at(j), v_ta->at(j)))
+        {
+          found = false;
+          break;
+        }
+      }
+
+      if (found)
+        break;
+    }
+
+    if (i == v.size())
+    {
+      auto id = std::format(
+        "{}.{}{}[{}]",
+        (lookup / Ident)->location().view(),
+        (lookup / Int)->location().view(),
+        (lookup / Lhs) == Lhs ? ".ref" : "",
+        i);
+
+      method_id = MethodId ^ id;
+      v.emplace_back(ta, method_id);
+      wl.push({lookup, i});
+    }
+
+    lookup << clone(method_id);
   }
 
   PassDef reify()
   {
-    PassDef p{"reify", wfPassReify, dir::bottomup | dir::once, {}};
+    PassDef p{
+      "reify",
+      wfPassReify,
+      dir::bottomup | dir::once,
+      {
+        // Lift reified functions.
+        T(Function)[Function] << (T(Lhs, Rhs) * T(FunctionId)) >>
+          [](Match& _) -> Node {
+          auto f = _(Function);
+          return Lift << Top
+                      << (Function << (f / Ident) << (f / Params) << (f / Type)
+                                   << (f / Labels));
+        },
+
+        // Delete unreified functions.
+        T(Function)[Function] << (T(Lhs, Rhs) * T(Ident, SymbolId)) >>
+          [](Match& _) -> Node {
+          if (_(Function)->get_contains_error())
+            return NoChange;
+
+          return {};
+        },
+
+        // Lift reified classes.
+        // TODO: mark as primitive
+        T(ClassDef)[ClassDef] << T(ClassId) >> [](Match& _) -> Node {
+          auto c = _(ClassDef);
+          Node f = Fields;
+          Node m = Methods;
+          auto cls = Class << (c / Ident) << f << m;
+
+          for (auto& n : *(c / ClassBody))
+          {
+            if (n == FieldDef)
+              f << (Field << (FieldId ^ (n / Ident)) << (n / Type));
+            else if (n == Method)
+              m << n;
+          }
+
+          return Lift << Top << cls;
+        },
+
+        // Delete use statements.
+        T(Use)[Use] >> [](Match& _) -> Node {
+          if (_(Use)->get_contains_error())
+            return NoChange;
+
+          return {};
+        },
+
+        // Delete type aliases.
+        T(TypeAlias)[TypeAlias] >> [](Match& _) -> Node {
+          if (_(TypeAlias)->get_contains_error())
+            return NoChange;
+
+          return {};
+        },
+
+        // Strip handedness from function calls.
+        T(Call)
+            << (T(LocalId)[Lhs] * T(Lhs, Rhs) * T(FunctionId)[FunctionId] *
+                T(Args)[Args]) >>
+          [](Match& _) -> Node {
+          return Call << _(Lhs) << _(FunctionId) << _(Args);
+        },
+
+        // Use a MethodId in Lookup.
+        T(Lookup)
+            << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Lhs, Rhs) *
+                T(Ident, SymbolId) * T(TypeArgs) * T(Int) *
+                T(MethodId)[MethodId]) >>
+          [](Match& _) -> Node {
+          return Lookup << _(Lhs) << _(Rhs) << _(MethodId);
+        },
+
+        // Replace TypeNameReified with ClassId.
+        T(TypeNameReified)[TypeNameReified] >> [](Match& _) -> Node {
+          auto tn = _(TypeNameReified);
+          std::string id;
+
+          for (auto& ident : *(tn / TypePath))
+            id = std::format(
+              "{}{}{}", id, id.empty() ? "" : ".", ident->location().view());
+
+          id = std::format("{}[{}]", id, parse_int(tn / Int));
+          return ClassId ^ id;
+        },
+      }};
 
     p.pre([=](auto top) {
       Reifications reifications(top);
       reifications.run();
+      return 0;
+    });
+
+    // Delete remaining ClassDef. Do this late, otherwise lifting doesn't work.
+    p.post([=](auto top) {
+      Nodes to_remove;
+
+      top->traverse([&](auto node) {
+        bool ok = true;
+
+        if (node == Error)
+        {
+          ok = false;
+        }
+        else if (node == ClassDef)
+        {
+          if (!node->get_contains_error())
+            to_remove.push_back(node);
+
+          ok = false;
+        }
+
+        return ok;
+      });
+
+      for (auto& node : to_remove)
+        node->parent()->replace(node);
+
       return 0;
     });
 
