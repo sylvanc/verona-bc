@@ -636,8 +636,6 @@ namespace vc
         body->replace(n);
     }
 
-    // A `use` has no identifier. Don't build the symbol table for it, to
-    // avoid getting repetitive includes.
     if (def->in({ClassDef, TypeAlias, Function}))
     {
       // Create fully qualified name.
@@ -815,6 +813,8 @@ namespace vc
       pdef = rs->builtin->lookdown(Location("f32")).front();
     else if (type == F64)
       pdef = rs->builtin->lookdown(Location("f64")).front();
+    else
+      assert(false);
 
     rs->schedule(pdef, {}, true);
   }
@@ -1182,19 +1182,80 @@ namespace vc
         },
 
         // Lift reified classes.
-        // TODO: mark as primitive
         T(ClassDef)[ClassDef] << T(ClassId) >> [](Match& _) -> Node {
           auto c = _(ClassDef);
-          Node f = Fields;
+          auto name = (c / Ident)->location().view();
+          bool primitive = false;
+
+          // Check for a primitive type.
+          if (name.starts_with("std.builtin."))
+          {
+            primitive = true;
+
+            if (name.ends_with("none[0]"))
+              c / Ident = None;
+            else if (name.ends_with("bool[0]"))
+              c / Ident = Bool;
+            else if (name.ends_with("i8[0]"))
+              c / Ident = I8;
+            else if (name.ends_with("i16[0]"))
+              c / Ident = I16;
+            else if (name.ends_with("i32[0]"))
+              c / Ident = I32;
+            else if (name.ends_with("i64[0]"))
+              c / Ident = I64;
+            else if (name.ends_with("u8[0]"))
+              c / Ident = U8;
+            else if (name.ends_with("u16[0]"))
+              c / Ident = U16;
+            else if (name.ends_with("u32[0]"))
+              c / Ident = U32;
+            else if (name.ends_with("u64[0]"))
+              c / Ident = U64;
+            else if (name.ends_with("ilong[0]"))
+              c / Ident = ILong;
+            else if (name.ends_with("ulong[0]"))
+              c / Ident = ULong;
+            else if (name.ends_with("isize[0]"))
+              c / Ident = ISize;
+            else if (name.ends_with("usize[0]"))
+              c / Ident = USize;
+            else if (name.ends_with("f32[0]"))
+              c / Ident = F32;
+            else if (name.ends_with("f64[0]"))
+              c / Ident = F64;
+            else
+              primitive = false;
+          }
+
+          Node f;
           Node m = Methods;
-          auto cls = Class << (c / Ident) << f << m;
+          auto cls = (primitive ? Primitive : Class) << (c / Ident);
+
+          if (!primitive)
+          {
+            f = Fields;
+            cls << f;
+          }
+
+          cls << m;
 
           for (auto& n : *(c / ClassBody))
           {
             if (n == FieldDef)
+            {
+              if (primitive)
+              {
+                n->parent() << err(n, "Primitive types can't have fields.");
+                return NoChange;
+              }
+
               f << (Field << (FieldId ^ (n / Ident)) << (n / Type));
+            }
             else if (n == Method)
+            {
               m << n;
+            }
           }
 
           return Lift << Top << cls;

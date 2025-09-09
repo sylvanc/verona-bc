@@ -3,13 +3,13 @@
 ## Current Work
 
 Reification.
-- Mark types as primitives.
 - Don't fail on method instantiation failure.
   - Mark as "delete on error".
   - On completion of run, check if it contains errors.
 - Test type aliases, make sure cycles are rejected.
 - If no default type argument: use `dyn`?
 - Update flatten. Rename: `ir`?
+  - Don't need it? Turn `Type` into an IR type.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
@@ -84,15 +84,6 @@ Types:
 - Structural types.
 - Turn function types into structural types.
 - Can type parameters take type arguments?
-- Type assertions.
-- Name resolution.
-  - Look down through type aliases via union and intersection types.
-  - Look down through type parameters. Need an upper bounds.
-    - Restrict to type parameters as the first path element?
-    - Still causes a lookup problem:
-      1. Class `C` has type parameter `T`.
-      2. Class `C` has type alias `A = T::U`.
-      3. `C[X]::A` should resolve to `X::U`, which means tracking.
 
 ## Syntax
 

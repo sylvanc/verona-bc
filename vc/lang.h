@@ -104,7 +104,7 @@ namespace vc
   inline const auto ExprPat = ApplyRhsPat / T(Else);
 
   inline const auto wfType =
-    TypeName | Union | Isect | RefType | TupleType | FuncType | NoArgType;
+    TypeName | Union | Isect | RefType | TupleType | FuncType;
 
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
@@ -152,7 +152,7 @@ namespace vc
     | (Isect <<= wfType++[2])
     | (RefType <<= wfType)
     | (TupleType <<= wfType++[2])
-    | (FuncType <<= (Lhs >>= wfType) * (Rhs >>= wfType))
+    | (FuncType <<= (Lhs >>= wfType | NoArgType) * (Rhs >>= wfType))
     | (WhereAnd <<= wfWhere++[2])
     | (WhereOr <<= wfWhere++[2])
     | (WhereNot <<= wfWhere)
@@ -313,12 +313,13 @@ namespace vc
   // clang-format on
 
   inline const auto wfTypeReified =
-    ClassId | Union | Isect | RefType | TupleType | FuncType | NoArgType;
+    wfPrimitiveType | ClassId | Union | Isect | RefType | TupleType | FuncType;
 
   // clang-format off
   inline const auto wfPassReify =
       wfPassANF
-    | (Top <<= (Class | Function)++)
+    | (Top <<= (Primitive | Class | Function)++)
+    | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
     | (Class <<= ClassId * Fields * Methods)[ClassId]
     | (Fields <<= Field++)
     | (Field <<= FieldId * Type)
@@ -332,7 +333,8 @@ namespace vc
     | (Isect <<= wfTypeReified++[2])
     | (RefType <<= wfTypeReified)
     | (TupleType <<= wfTypeReified++[2])
-    | (FuncType <<= (Lhs >>= wfTypeReified) * (Rhs >>= wfTypeReified))
+    | (FuncType <<=
+        (Lhs >>= wfTypeReified | NoArgType) * (Rhs >>= wfTypeReified))
     | (Lookup <<= wfDst * wfSrc * MethodId)
     | (Call <<= wfDst * FunctionId * Args)
     ;

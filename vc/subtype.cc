@@ -124,7 +124,7 @@ namespace vc
 
     bool subtype_atomic(Node& l, Node& r)
     {
-      // The atomic types are tuples, ref types, and type names.
+      // The atomic types are tuples, ref types, type names, and primitives.
       // Tuples must be the same arity and each element must be a subtype.
       if (r == TupleType)
       {
@@ -145,6 +145,27 @@ namespace vc
       else if (r == TypeNameReified)
       {
         // Reified type names are subtypes if they're identical.
+        return r->equals(l);
+      }
+      else if (r->in(
+                 {None,
+                  Bool,
+                  I8,
+                  I16,
+                  I32,
+                  I64,
+                  U8,
+                  U16,
+                  U32,
+                  U64,
+                  ISize,
+                  USize,
+                  ILong,
+                  ULong,
+                  F32,
+                  F64}))
+      {
+        // Primitive are subtypes if they're identical.
         return r->equals(l);
       }
 

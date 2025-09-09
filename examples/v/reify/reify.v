@@ -33,9 +33,15 @@ id[A](x: A): A
   x
 }
 
+use cycle1 = cycle2;
+use cycle2 = cycle1;
+
 main(): i32
 {
-  let r = range(0, 10);
+  // let f = cycle1;
+
+  use foo[A = i32] = range[A];
+  let r = foo(0, 10);
   var sum = i32 0;
 
   while r.has_next
