@@ -4,7 +4,7 @@ range[A = i32]
   stop: A;
   step: A;
 
-  create(curr: A, stop: A, step: A = A(1))
+  create(curr: A, stop: A, step: A = A(1)): range[A]
   {
     // TODO: check curr <= stop if step > 0, curr >= stop if step < 0
     new (curr, stop, step)
@@ -39,9 +39,11 @@ use cycle2 = cycle1;
 main(): i32
 {
   // let f = cycle1;
+  let a = array[i32](usize 10);
+  let a0 = a(usize 0);
 
   use foo[A = i32] = range[A];
-  let r = foo(0, 10);
+  let r = foo(i32 0, i32 10);
   var sum = i32 0;
 
   while r.has_next

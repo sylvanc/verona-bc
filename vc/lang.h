@@ -116,14 +116,14 @@ namespace vc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
-    Tanh | Asinh | Acosh | Atanh;
+    Tanh | Asinh | Acosh | Atanh | Len;
 
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfExprStructure = ExprSeq | DontCare | Ident | wfLiteral |
     String | RawString | Tuple | Let | Var | New | Lambda | QName | Op |
     Method | If | Else | While | For | When | Equals | Ref | Try | Convert |
-    Binop | Unop | Nulop | FieldRef | Load;
+    Binop | Unop | Nulop | NewArray | ArrayRef | FieldRef | Load;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -187,6 +187,8 @@ namespace vc
     | (Binop <<= (Op >>= wfBinop) * Args)
     | (Unop <<= (Op >>= wfUnop) * Args)
     | (Nulop <<= (Op >>= wfNulop) * Args)
+    | (ArrayRef <<= Args)
+    | (NewArray <<= Type * Args)
     ;
   // clang-format on
 
@@ -225,9 +227,9 @@ namespace vc
   // clang-format on
 
   inline const auto wfBodyANF = Use | TypeAlias | Const | ConstStr | Convert |
-    Copy | Move | RegisterRef | FieldRef | ArrayRefConst | New | NewArrayConst |
-    Load | Store | Lookup | Call | CallDyn | Typetest | Var | wfBinop | wfUnop |
-    wfNulop;
+    Copy | Move | RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New |
+    NewArray | NewArrayConst | Load | Store | Lookup | Call | CallDyn |
+    Typetest | Var | wfBinop | wfUnop | wfNulop | Len;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -245,8 +247,10 @@ namespace vc
     | (Move <<= wfDst * wfSrc)
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
+    | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
     | (New <<= wfDst * Type * Args)
+    | (NewArray <<= wfDst * Type * wfSrc)
     | (NewArrayConst <<= wfDst * Type * wfLit)
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
@@ -309,34 +313,7 @@ namespace vc
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)
     | (Const_NaN <<= wfDst)
-    ;
-  // clang-format on
-
-  inline const auto wfTypeReified =
-    wfPrimitiveType | ClassId | Union | Isect | RefType | TupleType | FuncType;
-
-  // clang-format off
-  inline const auto wfPassReify =
-      wfPassANF
-    | (Top <<= (Primitive | Class | Function)++)
-    | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
-    | (Class <<= ClassId * Fields * Methods)[ClassId]
-    | (Fields <<= Field++)
-    | (Field <<= FieldId * Type)
-    | (Methods <<= Method++)
-    | (Method <<= MethodId * FunctionId)
-    | (Function <<= FunctionId * Params * Type * Labels)[FunctionId]
-    | (TypePath <<= Ident++[1])
-    | (TypeNameReified <<= TypePath * Int)
-    | (Type <<= ~wfTypeReified)
-    | (Union <<= wfTypeReified++[2])
-    | (Isect <<= wfTypeReified++[2])
-    | (RefType <<= wfTypeReified)
-    | (TupleType <<= wfTypeReified++[2])
-    | (FuncType <<=
-        (Lhs >>= wfTypeReified | NoArgType) * (Rhs >>= wfTypeReified))
-    | (Lookup <<= wfDst * wfSrc * MethodId)
-    | (Call <<= wfDst * FunctionId * Args)
+    | (Len <<= wfDst * wfSrc)
     ;
   // clang-format on
 

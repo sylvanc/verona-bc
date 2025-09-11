@@ -1,7 +1,6 @@
 add_executable(vc
   passes/anf.cc
   passes/application.cc
-  passes/flatten.cc
   passes/operators.cc
   passes/parser.cc
   passes/reify.cc
@@ -9,6 +8,9 @@ add_executable(vc
   passes/structure.cc
   lang.cc
   main.cc
+  pathreification.cc
+  reification.cc
+  reifications.cc
   subtype.cc
 )
 

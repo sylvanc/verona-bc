@@ -121,6 +121,37 @@ namespace vc
                        << (LocalId ^ id);
           },
 
+        // New array.
+        In(Expr) * T(NewArray)[NewArray]
+            << (T(Type)[Type] *
+                (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[LocalId])))) >>
+          [](Match& _) {
+            auto type = _(Type);
+            auto size = _(LocalId);
+            auto id = _.fresh(l_local);
+
+            return Seq << (Lift << Body
+                                << (NewArray << (LocalId ^ id) << type << size))
+                       << (LocalId ^ id);
+          },
+
+        // Array reference.
+        In(Expr) * (T(ArrayRef)[ArrayRef] << T(Args)[Args]) >>
+          [](Match& _) {
+            auto args = _(Args);
+
+            if (args->size() != 2)
+              return err(_(ArrayRef), "arrayref requires two arguments");
+
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (ArrayRef << (LocalId ^ id)
+                                        << (Arg << ArgCopy << args->front())
+                                        << args->back()))
+                       << (LocalId ^ id);
+          },
+
         // Tuple creation.
         In(Expr) * T(Tuple)[Tuple] << (T(LocalId)++ * End) >>
           [](Match& _) {
@@ -416,16 +447,6 @@ namespace vc
         In(Lhs) * CallDynPat >>
           [](Match& _) { return make_calldyn(_, true, true); },
 
-        // 0-argument dynamic call.
-        In(Expr) * T(Ref) << (T(Expr) << MethodPat) >>
-          [](Match& _) { return make_calldyn(_, false, true); },
-
-        In(Expr) * MethodPat >>
-          [](Match& _) { return make_calldyn(_, false, false); },
-
-        In(Lhs) * MethodPat >>
-          [](Match& _) { return make_calldyn(_, true, true); },
-
         // Static call.
         In(Expr) * (T(Ref) << (T(Expr) << CallPat)) >>
           [](Match& _) { return make_call(_, false, true); },
@@ -435,17 +456,7 @@ namespace vc
 
         In(Lhs) * CallPat >> [](Match& _) { return make_call(_, true, true); },
 
-        // 0-argument static call.
-        In(Expr) * (T(Ref) << (T(Expr) << T(QName)[QName])) >>
-          [](Match& _) { return make_call(_, false, true); },
-
-        In(Expr) * T(QName)[QName] >>
-          [](Match& _) { return make_call(_, false, false); },
-
-        In(Lhs) * T(QName)[QName] >>
-          [](Match& _) { return make_call(_, true, true); },
-
-        // Treat all Args as ArgCopy at this stage.
+        // Treat all Args as ArgCopy, the IR will optimize to moves.
         In(Args) * T(LocalId)[LocalId] >>
           [](Match& _) { return Arg << ArgCopy << _(LocalId); },
 
@@ -575,6 +586,10 @@ namespace vc
         if (node == Error)
         {
           ok = false;
+        }
+        else if (node->get_contains_error())
+        {
+          // Do nothing.
         }
         else if (node == Label)
         {

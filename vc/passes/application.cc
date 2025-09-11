@@ -49,9 +49,9 @@ namespace vc
           },
 
         // C-style apply sugar.
-        In(Expr) * ApplyLhsPat[Lhs] * T(ExprSeq)[Rhs] >>
+        In(Expr) * ApplyLhsPat[Expr] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            return CallDyn << (Method << _(Lhs) << (Ident ^ "apply")
+            return CallDyn << (Method << (Expr << _(Expr)) << (Ident ^ "apply")
                                       << TypeArgs)
                            << seq_to_args(_(ExprSeq));
           },
@@ -99,7 +99,7 @@ namespace vc
             for (auto& arg : _[Rhs])
               args << (Expr << arg);
 
-            return CallDyn << (Method << _(Lhs) << (Ident ^ "apply")
+            return CallDyn << (Method << (Expr << _(Lhs)) << (Ident ^ "apply")
                                       << TypeArgs)
                            << args;
           },

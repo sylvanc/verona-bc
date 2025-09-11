@@ -18,7 +18,6 @@ int main(int argc, char** argv)
      operators(),
      anf(),
      reify(),
-     flatten(),
      assignids(state),
      validids(state),
      liveness(state)},

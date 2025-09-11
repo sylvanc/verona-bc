@@ -6,11 +6,11 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, RefType};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,     Int,
-    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple,   Let,
-    Var,     New,      Lambda,   QName,  Method,    Call,     CallDyn, If,
-    While,   For,      When,     Equals, Else,      Ref,      Try,     Op,
-    Convert, Binop,    Unop,     Nulop,  FieldRef,  Load};
+    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,      Int,
+    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple,    Let,
+    Var,     New,      Lambda,   QName,  Method,    Call,     CallDyn,  If,
+    While,   For,      When,     Equals, Else,      Ref,      Try,      Op,
+    Convert, Binop,    Unop,     Nulop,  NewArray,  ArrayRef, FieldRef, Load};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -430,6 +430,8 @@ namespace vc
             return Unop << Acosh << seq_to_args(_(ExprSeq));
           else if (id == "atanh")
             return Unop << Atanh << seq_to_args(_(ExprSeq));
+          else if (id == "len")
+            return Unop << Len << seq_to_args(_(ExprSeq));
           else if (id == "none")
             return Nulop << None << seq_to_args(_(ExprSeq));
           else if (id == "e")
@@ -440,8 +442,36 @@ namespace vc
             return Nulop << Const_Inf << seq_to_args(_(ExprSeq));
           else if (id == "nan")
             return Nulop << Const_NaN << seq_to_args(_(ExprSeq));
+          else if (id == "arrayref")
+            return ArrayRef << seq_to_args(_(ExprSeq));
 
           return NoChange;
+        },
+
+        In(Expr) * T(TripleColon) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
+          [](Match& _) -> Node {
+          auto qname = _(QName);
+
+          if (qname->size() != 1)
+            return err(qname, "Unknown builtin");
+
+          auto elem = qname->front();
+          auto id = (elem / Ident)->location().view();
+
+          if (id != "newarray")
+            return err(qname, "Unknown builtin");
+
+          auto ta = elem / TypeArgs;
+
+          if (ta->size() != 1)
+            return err(qname, "Expected a single type argument");
+
+          auto seq = _(ExprSeq);
+
+          if (seq->size() != 1)
+            return err(seq, "Expected a single argument");
+
+          return NewArray << (Type << *ta->front()) << seq_to_args(seq);
         },
 
         // Expressions.
@@ -619,6 +649,10 @@ namespace vc
         if (node == Error)
         {
           ok = false;
+        }
+        else if (node->get_contains_error())
+        {
+          // Do nothing.
         }
         else if (node == Group)
         {

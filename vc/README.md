@@ -2,14 +2,28 @@
 
 ## Current Work
 
+Move the `TypeId` for Header into Class.
+In Header and `Cown`, store a `uint32_t` index into a Class vector.
+- This allows arrays and `cown` to also have a Class associated with them.
+This leaves `ref`. Keep a map of `TypeId` to Class for `ref`. Also use this to populate the class index for objects, arrays, and `cown`.
+
 Reification.
+- Arrays.
+  - Need to reify array as a primitive. There's no `new`, so it doesn't get generated.
+    - Problem: need a separate method table for every type of array.
+    - This is because apply returns a T. Is it ok for this to be `dyn`?
+    - Separate `vtable` lookup for arrays based on `TypeId`?
+      - Could do the same for `ref T` and `cown T`.
+      - `Value::type_id` gives a useful value for `array`, `ref`, and `cown`.
+  - Emit as `Array T` IR type.
 - Don't fail on method instantiation failure.
   - Mark as "delete on error".
-  - On completion of run, check if it contains errors.
+  - On completion of `run`, check if it contains errors.
+- Need `ref` primitive, covering `FieldRef`, `ArrayRef`, and `RegisterRef`? This would allow `ref` load to be `*x` or `x()`.
+  - Same problem as array: need a separate method table for every type of `ref`.
+- Implement `cown`.
 - Test type aliases, make sure cycles are rejected.
-- If no default type argument: use `dyn`?
-- Update flatten. Rename: `ir`?
-  - Don't need it? Turn `Type` into an IR type.
+- Optimize dynamic calls as static when there's a known type for the receiver.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
@@ -30,6 +44,7 @@ Patterns for lambdas.
 Assign:
 - Rename shadowed variables.
 - Need to be able to load a `localid`.
+  - This is for when a local is of type `ref T`.
   - Keyword? Or a method on `ref`?
 
 Control flow:
@@ -49,6 +64,7 @@ Expressions:
 - Only allow `:::` in `std::builtin`.
 - Array operations for `std::builtin`.
 - Partial application, `_`.
+- Unescape strings.
 
 Syntax:
 - How to put a dynamic type in a tuple or function type?
@@ -71,8 +87,16 @@ Standard library:
 - Primitive type conversions.
 - Array.
 - String.
+- `stdin`, `stdout`, `stderr`.
 
 Packages:
+- CLI.
+- Network.
+- Hash map, hash set, ordered map, ordered set, list, deque, vector, span.
+- Persistent collections.
+- Sort.
+
+Software engineering:
 - Code reuse.
 - Public, private.
 - Use libgit2 for fetching dependencies.

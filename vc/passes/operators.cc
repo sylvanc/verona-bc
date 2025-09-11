@@ -45,6 +45,10 @@ namespace vc
         {
           ok = false;
         }
+        else if (node->get_contains_error())
+        {
+          // Do nothing.
+        }
         else if (node == Expr)
         {
           if (node->size() != 1)
