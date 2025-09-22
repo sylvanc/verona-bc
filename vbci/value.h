@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ident.h"
-#include "types.h"
 #include "platform.h"
 
 #include <cmath>
@@ -115,7 +114,7 @@ namespace vbci
     void to_addr(ValueType t, void* v, bool move);
 
     ValueType type();
-    TypeId type_id();
+    uint32_t type_id();
 
     bool is_readonly();
     bool is_header();

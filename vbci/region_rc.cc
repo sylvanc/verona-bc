@@ -14,9 +14,10 @@ namespace vbci
     return obj;
   }
 
-  Array* RegionRC::array(TypeId type_id, size_t size)
+  Array* RegionRC::array(uint32_t type_id, size_t size)
   {
-    auto rep = Program::get().layout_type_id(type_id);
+    auto content_type_id = Program::get().unarray(type_id);
+    auto rep = Program::get().layout_type_id(content_type_id);
     auto mem = new uint8_t[Array::size_of(size, rep.second->size)];
     auto arr = Array::create(
       mem, Location(this), type_id, rep.first, size, rep.second->size);
@@ -48,9 +49,11 @@ namespace vbci
 
   void RegionRC::free_contents()
   {
+    auto& program = Program::get();
+
     for (auto h : headers)
     {
-      if (h->is_array())
+      if (program.is_array(h->get_type_id()))
         static_cast<Array*>(h)->finalize();
       else
         static_cast<Object*>(h)->finalize();

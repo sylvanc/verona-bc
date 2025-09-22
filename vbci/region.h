@@ -3,7 +3,6 @@
 #include "classes.h"
 #include "ident.h"
 #include "location.h"
-#include "types.h"
 
 #include <vbci.h>
 
@@ -23,7 +22,7 @@ namespace vbci
     static Region* create(RegionType type);
 
     virtual Object* object(Class& cls) = 0;
-    virtual Array* array(TypeId type_id, size_t size) = 0;
+    virtual Array* array(uint32_t type_id, size_t size) = 0;
     virtual void rfree(Header* h) = 0;
     virtual void insert(Header* h) = 0;
     virtual void remove(Header* h) = 0;

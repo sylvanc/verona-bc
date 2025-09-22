@@ -30,9 +30,9 @@ namespace vbci
     Func func;
     bool vararg;
 
-    std::vector<TypeId> param_types;
+    std::vector<uint32_t> param_types;
     std::vector<ValueType> param_value_types;
-    TypeId return_type;
+    uint32_t return_type;
     ValueType return_value_type;
 
     std::vector<ffi_type*> param_ffi_types;
@@ -41,14 +41,14 @@ namespace vbci
   public:
     Symbol(Func func, bool vararg);
 
-    void param(TypeId type_id);
-    void ret(TypeId type_id);
+    void param(uint32_t type_id);
+    void ret(uint32_t type_id);
     bool prepare();
 
     bool varargs();
-    std::vector<TypeId>& params();
+    std::vector<uint32_t>& params();
     std::vector<ValueType>& paramvals();
-    TypeId ret();
+    uint32_t ret();
     ValueType retval();
 
     void varparam(ffi_type* ffit);

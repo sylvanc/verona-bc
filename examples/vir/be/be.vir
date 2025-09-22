@@ -47,15 +47,15 @@ func @behavior2_apply($self: @behavior2, $promise_v: ref i32): none
 func @main(): i32
   $bool = const bool true
   $make_cown_bool = region arena @make_cown_bool($bool)
-  $cown1 = when() $make_cown_bool
+  $cown1 = when(): bool $make_cown_bool
   $i32 = const i32 42
   $make_cown_i32 = region arena @make_cown_i32($i32)
-  $cown2 = when() $make_cown_i32
+  $cown2 = when(): i32 $make_cown_i32
   $ro_cown2 = read $cown2
   $b1 = region arena @behavior1($i32)
-  $promise = when($cown1, $ro_cown2) $b1
+  $promise = when($cown1, $ro_cown2): i32 $b1
   $ro_promise = read $promise
   $b2 = region arena @behavior2()
-  $_ = when ($ro_promise) $b2
+  $_ = when ($ro_promise): none $b2
   $zero = const i32 0
   ret $zero

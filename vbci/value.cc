@@ -1,8 +1,8 @@
 #include "array.h"
 #include "cown.h"
 #include "object.h"
-#include "program.h"
 #include "platform.h"
+#include "program.h"
 
 namespace vbci
 {
@@ -16,10 +16,10 @@ namespace vbci
   Value::Value(int16_t i16) : i16(i16), tag(ValueType::I16) {}
   Value::Value(int32_t i32) : i32(i32), tag(ValueType::I32) {}
   Value::Value(int64_t i64) : i64(i64), tag(ValueType::I64) {}
-  #ifdef PLATFORM_IS_MACOSX
+#ifdef PLATFORM_IS_MACOSX
   Value::Value(long ilong) : ilong(ilong), tag(ValueType::ILong) {}
   Value::Value(unsigned long ulong) : ulong(ulong), tag(ValueType::ULong) {}
-  #endif
+#endif
   Value::Value(float f32) : f32(f32), tag(ValueType::F32) {}
   Value::Value(double f64) : f64(f64), tag(ValueType::F64) {}
   Value::Value(void* ptr) : ptr(ptr), tag(ValueType::Ptr) {}
@@ -313,7 +313,7 @@ namespace vbci
       inc();
   }
 
-  TypeId Value::type_id()
+  uint32_t Value::type_id()
   {
     switch (tag)
     {
@@ -324,29 +324,31 @@ namespace vbci
         return arr->get_type_id();
 
       case ValueType::Cown:
-        return cown->cown_type_id();
+        return cown->get_type_id();
 
       case ValueType::RegisterRef:
-        return val->type_id().make_ref();
+        return Program::get().ref(val->type_id());
 
       case ValueType::FieldRef:
-        return obj->field_type_id(idx).make_ref();
+        return Program::get().ref(obj->field_type_id(idx));
 
       case ValueType::ArrayRef:
-        return arr->content_type_id().make_ref();
+        return Program::get().ref(arr->content_type_id());
 
       case ValueType::CownRef:
-        return cown->content_type_id().make_ref();
+        return Program::get().ref(cown->content_type_id());
 
+      // Return dyn as the type id for function pointers.
       case ValueType::Function:
-        return TypeId::dyn();
+        return DynId;
 
+      // Return dyn as the type id for errors.
       case ValueType::Error:
       case ValueType::Invalid:
-        return TypeId::dyn();
+        return DynId;
 
       default:
-        return TypeId::val(tag);
+        return +tag;
     }
   }
 
@@ -853,13 +855,7 @@ namespace vbci
 
   Function* Value::method(size_t w)
   {
-    if (tag == ValueType::Object)
-      return obj->method(w);
-
-    if (+tag > +ValueType::F64)
-      return nullptr;
-
-    return Program::get().primitive(+tag).method(w);
+    return Program::get().cls(type_id()).method(w);
   }
 
   Value Value::convert(ValueType to)

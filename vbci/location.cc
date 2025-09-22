@@ -8,6 +8,7 @@ namespace vbci
 {
   bool drag_allocation(Region* r, Header* h)
   {
+    auto& program = Program::get();
     Location frame = loc::None;
 
     if (r->is_frame_local())
@@ -52,7 +53,7 @@ namespace vbci
         // Initial internal RC count is 1.
         rc_map[next_h] = 1;
 
-        if (next_h->is_array())
+        if (program.is_array(next_h->get_type_id()))
           static_cast<Array*>(next_h)->trace(wl);
         else
           static_cast<Object*>(next_h)->trace(wl);

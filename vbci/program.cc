@@ -66,18 +66,20 @@ namespace vbci
     return &functions.at(idx);
   }
 
-  Class& Program::primitive(size_t idx)
+  Class& Program::cls(uint32_t type_id)
   {
-    // This will never be out of bounds.
-    return primitives.at(idx);
-  }
-
-  Class& Program::cls(TypeId type_id)
-  {
-    if (!type_id.is_class())
+    if (type_id >= classes.size())
       throw Value(Error::BadType);
 
-    return classes.at(type_id.cls());
+    return classes.at(type_id);
+  }
+
+  ComplexType& Program::complex_type(uint32_t type_id)
+  {
+    if (!is_complex(type_id))
+      throw Value(Error::BadType);
+
+    return complex_types.at(type_id - min_complex_type_id);
   }
 
   Value& Program::global(size_t idx)
@@ -86,14 +88,6 @@ namespace vbci
       throw Value(Error::UnknownGlobal);
 
     return globals.at(idx);
-  }
-
-  ComplexType& Program::complex_type(size_t idx)
-  {
-    if (idx >= complex_types.size())
-      throw Value(Error::BadType);
-
-    return complex_types.at(idx);
   }
 
   ffi_type* Program::value_type()
@@ -123,6 +117,16 @@ namespace vbci
     return value;
   }
 
+  uint32_t Program::get_typeid_arg()
+  {
+    return typeid_arg;
+  }
+
+  uint32_t Program::get_typeid_argv()
+  {
+    return typeid_argv;
+  }
+
   Array* Program::get_argv()
   {
     return argv;
@@ -138,7 +142,7 @@ namespace vbci
     auto arr = Array::create(
       new uint8_t[Array::size_of(str_size, ffi_type_uint8.size)],
       loc::Immutable,
-      TypeId::val(ValueType::U8),
+      typeid_arg,
       ValueType::U8,
       str_size,
       ffi_type_uint8.size);
@@ -163,7 +167,7 @@ namespace vbci
     start_loop();
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
-    auto ret = Thread::run_async(&functions.at(MainFuncId));
+    auto ret = Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
     sched.run();
     stop_loop();
 
@@ -184,13 +188,17 @@ namespace vbci
     return exit_code;
   }
 
-  std::pair<ValueType, ffi_type*> Program::layout_type_id(TypeId type_id)
+  std::pair<ValueType, ffi_type*> Program::layout_type_id(uint32_t type_id)
   {
-    if (type_id.is_val())
+    if (type_id == DynId)
     {
-      auto t = type_id.val();
-
-      switch (t)
+      // Dynamic.
+      return {ValueType::Invalid, &ffi_type_value};
+    }
+    else if (type_id < NumPrimitiveClasses)
+    {
+      // Primitive type.
+      switch (ValueType(type_id))
       {
         case ValueType::None:
           return {ValueType::None, &ffi_type_void};
@@ -231,72 +239,187 @@ namespace vbci
         case ValueType::Ptr:
           return {ValueType::Ptr, &ffi_type_pointer};
         default:
-          assert(false);
-          return {ValueType::Invalid, &ffi_type_void};
+          break;
       }
     }
-    else if (type_id.is_class())
+    else if (type_id < min_complex_type_id)
     {
+      // Class type.
       return {ValueType::Object, &ffi_type_pointer};
     }
-    else if (type_id.is_array())
+    else if (type_id < (min_complex_type_id + complex_types.size()))
     {
-      return {ValueType::Array, &ffi_type_pointer};
-    }
-    else if (type_id.is_cown())
-    {
-      return {ValueType::Cown, &ffi_type_pointer};
-    }
-    else if (type_id.is_complex())
-    {
-      auto idx = type_id.complex();
-      assert(idx < complex_types.size());
-      return layout_complex_type(complex_types.at(idx));
+      // Complex type.
+      auto& c = complex_types.at(type_id - min_complex_type_id);
+
+      switch (c.tag)
+      {
+        case TypeTag::Array:
+          return {ValueType::Array, &ffi_type_pointer};
+        case TypeTag::Cown:
+          return {ValueType::Cown, &ffi_type_pointer};
+        case TypeTag::Ref:
+          return {ValueType::Invalid, &ffi_type_value};
+        case TypeTag::Union:
+          return layout_union_type(c);
+        default:
+          break;
+      }
     }
 
-    // Dyn, ref.
+    assert(false);
+    return {ValueType::Invalid, &ffi_type_void};
+  }
+
+  std::pair<ValueType, ffi_type*> Program::layout_union_type(ComplexType& t)
+  {
+    assert(t.tag == TypeTag::Union);
+    auto& child = t.children.at(0);
+    auto rep = layout_type_id(child);
+    bool ok = true;
+
+    for (size_t i = 1; i < t.children.size(); i++)
+    {
+      if (rep != layout_type_id(t.children.at(i)))
+      {
+        ok = false;
+        break;
+      }
+    }
+
+    // If all elements of the union have the same representation, use it.
+    if (ok)
+      return rep;
+
+    // Otherwise, use the generic Value representation.
     return {ValueType::Invalid, &ffi_type_value};
   }
 
-  std::pair<ValueType, ffi_type*> Program::layout_complex_type(ComplexType& t)
+  bool Program::is_complex(uint32_t type_id)
   {
-    switch (t.tag)
+    return type_id >= min_complex_type_id;
+  }
+
+  bool Program::is_array(uint32_t type_id)
+  {
+    return is_complex(type_id) && (complex_type(type_id).tag == TypeTag::Array);
+  }
+
+  bool Program::is_ref(uint32_t type_id)
+  {
+    return is_complex(type_id) && (complex_type(type_id).tag == TypeTag::Ref);
+  }
+
+  bool Program::is_cown(uint32_t type_id)
+  {
+    return is_complex(type_id) && (complex_type(type_id).tag == TypeTag::Cown);
+  }
+
+  bool Program::is_union(uint32_t type_id)
+  {
+    return is_complex(type_id) && (complex_type(type_id).tag == TypeTag::Union);
+  }
+
+  uint32_t Program::unarray(uint32_t type_id)
+  {
+    auto& t = complex_type(type_id);
+
+    if (t.tag != TypeTag::Array)
+      throw Value(Error::BadType);
+
+    return t.children.at(0);
+  }
+
+  uint32_t Program::uncown(uint32_t type_id)
+  {
+    auto& t = complex_type(type_id);
+
+    if (t.tag != TypeTag::Cown)
+      throw Value(Error::BadType);
+
+    return t.children.at(0);
+  }
+
+  uint32_t Program::unref(uint32_t type_id)
+  {
+    auto& t = complex_type(type_id);
+
+    if (t.tag != TypeTag::Ref)
+      throw Value(Error::BadType);
+
+    return t.children.at(0);
+  }
+
+  uint32_t Program::ref(uint32_t type_id)
+  {
+    auto it = ref_map.find(type_id);
+
+    if (it == ref_map.end())
+      return typeid_ref_dyn;
+
+    return it->second;
+  }
+
+  bool Program::subtype(uint32_t sub, uint32_t super)
+  {
+    // Everything is a subtype of dynamic.
+    if (super == DynId)
+      return true;
+
+    // Dynamic is a subtype of nothing.
+    if (sub == DynId)
+      return false;
+
+    // If it's the same, we're done.
+    if (sub == super)
+      return true;
+
+    if (is_union(sub))
     {
-      case ComplexType::Tag::Base:
-        return layout_type_id(TypeId::leb(t.type_id));
+      // All elements of sub must be subtypes of super.
+      auto& sub_t = complex_type(sub);
 
-      case ComplexType::Tag::Ref:
-        return {ValueType::Invalid, &ffi_type_pointer};
-
-      case ComplexType::Tag::Array:
-        return {ValueType::Array, &ffi_type_pointer};
-
-      case ComplexType::Tag::Cown:
-        return {ValueType::Cown, &ffi_type_pointer};
-
-      case ComplexType::Tag::Union:
+      for (auto c : sub_t.children)
       {
-        // If all elements of the union have the same representation, use it.
-        // There are no unions of unions, so can examine just the next typeid.
-        auto& child = t.children.at(0);
-        auto rep = layout_complex_type(child);
-        bool ok = true;
-
-        for (size_t i = 0; i < t.children.size(); i++)
-        {
-          if (rep != layout_complex_type(t.children.at(i)))
-          {
-            ok = false;
-            break;
-          }
-        }
-
-        if (ok)
-          return rep;
-
-        return {ValueType::Invalid, &ffi_type_value};
+        if (!subtype(c, super))
+          return false;
       }
+
+      return true;
     }
+
+    if (is_union(super))
+    {
+      // Sub must be a subtype of one of the elements of super.
+      auto& super_t = complex_type(super);
+
+      for (auto c : super_t.children)
+      {
+        if (subtype(sub, c))
+          return true;
+      }
+
+      return false;
+    }
+
+    if (is_complex(sub))
+    {
+      // Sub is an array, cown, or ref. Sub must be invariant with super.
+      if (!is_complex(super))
+        return false;
+
+      auto& sub_t = complex_type(sub);
+      auto& super_t = complex_type(super);
+
+      if (sub_t.tag != super_t.tag)
+        return false;
+
+      auto sub_elem = sub_t.children.at(0);
+      auto super_elem = super_t.children.at(0);
+      return subtype(sub_elem, super_elem) && subtype(super_elem, sub_elem);
+    }
+
+    return false;
   }
 
   std::string Program::debug_info(Function* func, PC pc)
@@ -379,7 +502,7 @@ namespace vbci
   std::string Program::di_class(Class& cls)
   {
     if (di == PC(-1))
-      return std::format("class {}", cls.type_id.cls());
+      return std::format("class {}", cls.type_id);
 
     auto pc = di + cls.debug_info;
     return di_strings.at(uleb(pc));
@@ -414,16 +537,13 @@ namespace vbci
 
   void Program::setup_argv(std::vector<std::string>& args)
   {
-    auto type_u8 = TypeId::val(ValueType::U8);
-    auto arg_rep = layout_type_id(type_u8);
-
-    auto type_argv = TypeId::argv();
-    auto argv_rep = layout_type_id(type_argv);
+    auto arg_rep = layout_type_id(typeid_arg);
+    auto argv_rep = layout_type_id(typeid_argv);
 
     argv = Array::create(
       new uint8_t[Array::size_of(args.size(), argv_rep.second->size)],
       loc::Stack,
-      type_argv,
+      typeid_argv,
       argv_rep.first,
       args.size(),
       argv_rep.second->size);
@@ -435,7 +555,7 @@ namespace vbci
       auto arg = Array::create(
         new uint8_t[Array::size_of(str_size, arg_rep.second->size)],
         loc::Stack,
-        type_u8,
+        typeid_arg,
         arg_rep.first,
         str_size,
         arg_rep.second->size);
@@ -455,7 +575,6 @@ namespace vbci
   {
     content.clear();
     functions.clear();
-    primitives.clear();
     classes.clear();
     globals.clear();
 
@@ -507,13 +626,17 @@ namespace vbci
 
     // String table.
     string_table(pc, strings);
+    auto num_classes = uleb(pc);
+    auto num_complex_primitives = uleb(pc);
+    classes.resize(NumPrimitiveClasses + num_classes + num_complex_primitives);
+    min_complex_type_id = NumPrimitiveClasses + num_classes;
+    uint32_t class_id = 0;
 
     // Primitive classes.
-    primitives.resize(NumPrimitiveClasses);
-
-    for (auto& cls : primitives)
+    for (size_t i = 0; i < NumPrimitiveClasses; i++)
     {
-      cls.type_id = TypeId::dyn();
+      auto& cls = classes.at(class_id);
+      cls.type_id = class_id++;
       cls.debug_info = size_t(-1);
 
       if (!parse_methods(cls, pc))
@@ -521,17 +644,27 @@ namespace vbci
     }
 
     // User-defined classes.
-    auto num_classes = uleb(pc);
-    classes.resize(num_classes);
-    size_t class_id = 0;
-
-    for (auto& cls : classes)
+    for (size_t i = 0; i < num_classes; i++)
     {
-      cls.type_id = TypeId::cls(class_id++);
+      auto& cls = classes.at(class_id);
+      cls.type_id = class_id++;
       cls.debug_info = uleb(pc);
 
       if (!parse_fields(cls, pc))
         return false;
+
+      if (!parse_methods(cls, pc))
+        return false;
+
+      class_id++;
+    }
+
+    // Complex primitive classes.
+    for (size_t i = 0; i < num_complex_primitives; i++)
+    {
+      auto& cls = classes.at(class_id);
+      cls.type_id = class_id++;
+      cls.debug_info = size_t(-1);
 
       if (!parse_methods(cls, pc))
         return false;
@@ -564,16 +697,15 @@ namespace vbci
 
       auto num_params = uleb(pc);
       for (size_t j = 0; j < num_params; j++)
-        symbol.param(TypeId::leb(uleb(pc)));
+        symbol.param(uleb(pc));
 
-      symbol.ret(TypeId::leb(uleb(pc)));
+      symbol.ret(uleb(pc));
     }
 
     // Functions.
-    auto num_functions = uleb(pc);
-    functions.resize(num_functions);
+    functions.resize(uleb(pc));
 
-    if (num_functions == 0)
+    if (functions.empty())
     {
       logging::Error() << file << ": has no functions" << std::endl;
       return false;
@@ -592,23 +724,34 @@ namespace vbci
       return false;
     }
 
-    if (!(functions.at(MainFuncId).return_type < TypeId::val(ValueType::I32)))
+    if (!subtype(functions.at(MainFuncId).return_type, +ValueType::I32))
     {
       logging::Error() << file << ": `main` must return i32" << std::endl;
       return false;
     }
 
     // Complex types.
-    auto num_types = uleb(pc);
-    complex_types.resize(num_types);
+    complex_types.resize(uleb(pc));
+    uint32_t type_id = min_complex_type_id;
 
     for (auto& t : complex_types)
-    {
-      auto pt = &t;
+      parse_complex_type(t, type_id++, pc);
 
-      if (!parse_complex_type(pt, pc))
-        return false;
-    }
+    typeid_cown_i32 = min_complex_type_id;
+    assert(complex_type(typeid_cown_i32).tag == TypeTag::Cown);
+    assert(complex_type(typeid_cown_i32).children.at(0) == +ValueType::I32);
+
+    typeid_arg = min_complex_type_id + 1;
+    assert(complex_type(typeid_arg).tag == TypeTag::Array);
+    assert(complex_type(typeid_arg).children.at(0) == +ValueType::U8);
+
+    typeid_argv = min_complex_type_id + 2;
+    assert(complex_type(typeid_argv).tag == TypeTag::Array);
+    assert(complex_type(typeid_argv).children.at(0) == typeid_arg);
+
+    typeid_ref_dyn = min_complex_type_id + 3;
+    assert(complex_type(typeid_ref_dyn).tag == TypeTag::Ref);
+    assert(complex_type(typeid_ref_dyn).children.at(0) == DynId);
 
     // Prepare symbols now that all type information is available.
     for (auto& symbol : symbols)
@@ -618,12 +761,6 @@ namespace vbci
         logging::Error() << file << ": couldn't prepare symbol" << std::endl;
         return false;
       }
-    }
-
-    for (auto& cls : primitives)
-    {
-      if (!fixup_methods(cls))
-        return false;
     }
 
     for (auto& cls : classes)
@@ -664,9 +801,9 @@ namespace vbci
     f.param_types.resize(params);
 
     for (size_t i = 0; i < params; i++)
-      f.param_types.at(i) = TypeId::leb(uleb(pc));
+      f.param_types.at(i) = uleb(pc);
 
-    f.return_type = TypeId::leb(uleb(pc));
+    f.return_type = uleb(pc);
 
     // Labels.
     f.labels.resize(uleb(pc));
@@ -693,7 +830,7 @@ namespace vbci
     {
       auto& f = cls.fields.at(i);
       cls.field_map.emplace(uleb(pc), i);
-      f.type_id = TypeId::leb(uleb(pc));
+      f.type_id = uleb(pc);
     }
 
     return true;
@@ -744,82 +881,34 @@ namespace vbci
     return true;
   }
 
-  bool Program::parse_complex_type(ComplexType*& t, PC& pc)
+  void Program::parse_complex_type(ComplexType& t, uint32_t type_id, PC& pc)
   {
-    auto nest = [](ComplexType*& t, auto tag) {
-      if (t->depth == 0)
-      {
-        t->tag = tag;
-        t->depth = 1;
-      }
-      else if (t->tag == tag)
-      {
-        t->depth++;
-      }
-      else
-      {
-        t->children.resize(1);
-        t = &t->children.at(0);
-        t->tag = tag;
-        t->depth = 1;
-      }
-    };
+    t.tag = TypeTag(uleb(pc));
 
-    while (true)
+    switch (t.tag)
     {
-      auto type = uleb(pc);
-
-      switch (type)
+      case TypeTag::Array:
+      case TypeTag::Cown:
       {
-        case type::Ref:
-        {
-          nest(t, ComplexType::Tag::Ref);
-          break;
-        }
+        t.children.push_back(uleb(pc));
+        break;
+      }
 
-        case type::Cown:
-        {
-          nest(t, ComplexType::Tag::Cown);
-          break;
-        }
+      case TypeTag::Ref:
+      {
+        auto child = uleb(pc);
+        t.children.push_back(child);
+        ref_map[child] = type_id;
+        break;
+      }
 
-        case type::Array:
-        {
-          nest(t, ComplexType::Tag::Array);
-          break;
-        }
+      case TypeTag::Union:
+      {
+        auto size = uleb(pc);
 
-        case type::Union:
-        {
-          nest(t, ComplexType::Tag::Union);
-          auto size = uleb(pc);
-          t->children.resize(size);
-
-          for (auto& child : t->children)
-          {
-            auto pchild = &child;
-
-            if (!parse_complex_type(pchild, pc))
-              return false;
-          }
-
-          return true;
-        }
-
-        default:
-        {
-          // This is dyn, a primitive, or a class.
-          if (
-            (type != type::Dyn) && !type::is_val(type) && !type::is_class(type))
-          {
-            logging::Error() << file << ": malformed complex type" << std::endl;
-            return false;
-          }
-
-          nest(t, ComplexType::Tag::Base);
-          t->type_id = type;
-          return true;
-        }
+        for (size_t i = 0; i < size; i++)
+          t.children.push_back(uleb(pc));
+        break;
       }
     }
   }

@@ -20,6 +20,7 @@ namespace vbci
   bool freeze(Value& v)
   {
     // This will never encounter a stack allocation.
+    auto& program = Program::get();
     std::vector<Region*> regions;
     std::vector<Header*> entry_points;
     std::vector<Header*> dfs;
@@ -93,7 +94,7 @@ namespace vbci
         pending.push_back(h);
         dfs.push_back(post_order(h));
 
-        if (h->is_array())
+        if (program.is_array(h->get_type_id()))
           static_cast<Array*>(h)->trace(dfs);
         else
           static_cast<Object*>(h)->trace(dfs);

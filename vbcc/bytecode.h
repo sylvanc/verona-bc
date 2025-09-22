@@ -29,7 +29,7 @@ namespace vbcc
     Bitset out;
 
     void resize(size_t size);
-    std::pair<bool,std::string> def(size_t r, Node& node, bool var);
+    std::pair<bool, std::string> def(size_t r, Node& node, bool var);
     bool use(size_t r, Node& node);
     bool kill(size_t r);
     void automove(size_t r);
@@ -73,6 +73,7 @@ namespace vbcc
 
     std::vector<Node> typealiases;
     std::vector<Node> primitives;
+    std::vector<Node> complex_primitives;
     std::vector<Node> classes;
     std::vector<FuncState> functions;
     std::vector<Node> symbols;
@@ -85,9 +86,9 @@ namespace vbcc
 
     void set_path(const std::filesystem::path& path);
 
-    std::optional<size_t> get_type_id(Node id);
-    Node get_type(Node id);
-    bool add_type(Node type);
+    std::optional<size_t> get_typealias_id(Node id);
+    Node get_typealias(Node id);
+    bool add_typealias(Node type);
 
     std::optional<size_t> get_class_id(Node id);
     bool add_class(Node cls);
@@ -109,9 +110,6 @@ namespace vbcc
     void add_library(Node lib);
 
     void gen(std::filesystem::path output, bool strip);
-
     size_t typ(Node type);
-    bool encode_simple_type(Node type, size_t& id);
-    void encode_type(std::vector<uint8_t>& b, Node type);
   };
 }

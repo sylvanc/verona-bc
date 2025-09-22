@@ -14,28 +14,31 @@ namespace vbci
   struct Cown : public verona::rt::VCown<Cown>
   {
   private:
-    TypeId type_id;
+    uint32_t type_id;
     Value content;
 
-    Cown(TypeId type_id) : type_id(type_id.cown())
+    Cown(uint32_t type_id) : type_id(type_id)
     {
+      if (!Program::get().is_cown(type_id))
+        throw Value(Error::BadType);
+
       inc();
     }
 
   public:
-    static Cown* create(TypeId type_id)
+    static Cown* create(uint32_t type_id)
     {
       return new Cown(type_id);
     }
 
-    TypeId cown_type_id()
+    uint32_t get_type_id()
     {
       return type_id;
     }
 
-    TypeId content_type_id()
+    uint32_t content_type_id()
     {
-      return type_id.uncown();
+      return Program::get().uncown(type_id);
     }
 
     void inc()
@@ -63,7 +66,9 @@ namespace vbci
         next = v;
 
       // Allow any cown to contain an error.
-      if (!next.is_error() && !(next.type_id() < content_type_id()))
+      if (
+        !next.is_error() &&
+        !Program::get().subtype(next.type_id(), content_type_id()))
         next = Value(Error::BadType);
 
       auto prev_loc = content.location();

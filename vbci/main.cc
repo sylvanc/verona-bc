@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 #include "logging.h"
 #include "program.h"
-#include "types.h"
 
 #include <CLI/CLI.hpp>
 #include <uv.h>

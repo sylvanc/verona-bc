@@ -9,20 +9,45 @@ namespace vbcc
       wfIR,
       dir::bottomup | dir::once,
       {
+        // Accumulate complex primitive classes. This happens in this pass to
+        // be able to call state->typ(), which depends on all user-defined
+        // classes already having been assigned an id.
+        T(Primitive)[Primitive] << (T(Array, Ref, Cown)[Type] * T(Methods)) >>
+          [state](Match& _) -> Node {
+          auto primitive = _(Primitive);
+          auto type = _(Type);
+          auto type_id = state->typ(type);
+          auto idx = type_id - (state->classes.size() + NumPrimitiveClasses);
+
+          if (state->complex_primitives.size() <= idx)
+            state->complex_primitives.resize(idx + 1);
+
+          auto& slot = state->complex_primitives.at(idx);
+
+          if (slot)
+          {
+            state->error = true;
+            return err(type, "duplicate primitive class");
+          }
+
+          slot = primitive;
+          return NoChange;
+        },
+
         T(TypeId)[TypeId] >> [state](Match& _) -> Node {
-          auto id = state->get_type_id(_(TypeId));
+          auto id = state->get_typealias_id(_(TypeId));
 
           if (!id)
           {
             state->error = true;
-            return err(_(TypeId), "unknown type");
+            return err(_(TypeId), "unknown type alias");
           }
 
           return NoChange;
         },
 
         T(ClassId)[ClassId] >> [state](Match& _) -> Node {
-          auto type_id = state->get_type_id(_(ClassId));
+          auto type_id = state->get_typealias_id(_(ClassId));
 
           if (type_id)
             return TypeId ^ _(ClassId);
@@ -175,6 +200,42 @@ namespace vbcc
             return err(args, "wrong number of arguments");
           }
 
+          return NoChange;
+        },
+
+        // Check that all labels in a function are defined.
+        T(LabelId)[LabelId] >> [state](Match& _) -> Node {
+          auto label = _(LabelId);
+          auto& func_state = state->get_func(label->parent(Func) / FunctionId);
+
+          if (!func_state.get_label_id(label))
+          {
+            state->error = true;
+            return err(label, "undefined label");
+          }
+
+          return NoChange;
+        },
+
+        // Check that all registers in a function are defined.
+        T(LocalId)[LocalId] >> [state](Match& _) -> Node {
+          auto id = _(LocalId);
+          auto& func_state = state->get_func(id->parent(Func) / FunctionId);
+
+          if (!func_state.get_register_id(id))
+          {
+            state->error = true;
+            return err(id, "undefined register");
+          }
+
+          return NoChange;
+        },
+
+        // Internalize unescaped string literals.
+        T(ConstStr)[ConstStr] >> [state](Match& _) -> Node {
+          auto str = unescape((_(ConstStr) / String)->location().view());
+          ST::exec().string(str);
+          _(ConstStr) / String = String ^ str;
           return NoChange;
         },
       }};

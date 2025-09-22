@@ -38,7 +38,7 @@ func @timer_cb0($self: @timer): none
   ret $none
 
 func @print_home(): none
-  $home = stack u8[256]
+  $home = stack [u8] 256
   $home_ptr = makeptr $home
   $home_len = len $home
   $home_len_ptr = makeptr $home_len

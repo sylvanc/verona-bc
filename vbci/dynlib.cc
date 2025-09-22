@@ -7,12 +7,12 @@ namespace vbci
 {
   Symbol::Symbol(Func func, bool vararg) : func(func), vararg(vararg) {}
 
-  void Symbol::param(TypeId type_id)
+  void Symbol::param(uint32_t type_id)
   {
     param_types.push_back(type_id);
   }
 
-  void Symbol::ret(TypeId type_id)
+  void Symbol::ret(uint32_t type_id)
   {
     return_type = type_id;
   }
@@ -54,7 +54,7 @@ namespace vbci
     return vararg;
   }
 
-  std::vector<TypeId>& Symbol::params()
+  std::vector<uint32_t>& Symbol::params()
   {
     return param_types;
   }
@@ -64,7 +64,7 @@ namespace vbci
     return param_value_types;
   }
 
-  TypeId Symbol::ret()
+  uint32_t Symbol::ret()
   {
     return return_type;
   }

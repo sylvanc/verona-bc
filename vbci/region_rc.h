@@ -19,7 +19,7 @@ namespace vbci
     RegionRC() : Region(), finalizing(false) {}
 
     Object* object(Class& cls);
-    Array* array(TypeId type_id, size_t size);
+    Array* array(uint32_t type_id, size_t size);
 
     void rfree(Header* h);
     void insert(Header* h);

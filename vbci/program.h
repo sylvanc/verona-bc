@@ -6,7 +6,6 @@
 #include "function.h"
 #include "ident.h"
 #include "logging.h"
-#include "types.h"
 #include "value.h"
 
 #include <bit>
@@ -32,10 +31,10 @@ namespace vbci
     std::vector<std::string> strings;
 
     std::vector<Function> functions;
-    std::vector<Class> primitives;
     std::vector<Class> classes;
     std::vector<ComplexType> complex_types;
     std::vector<Value> globals;
+    std::unordered_map<uint32_t, uint32_t> ref_map;
 
     std::vector<Dynlib> libs;
     std::vector<Symbol> symbols;
@@ -43,6 +42,11 @@ namespace vbci
     ffi_type ffi_type_value;
     std::vector<ffi_type*> ffi_type_value_elements;
 
+    uint32_t min_complex_type_id;
+    uint32_t typeid_cown_i32;
+    uint32_t typeid_arg;
+    uint32_t typeid_argv;
+    uint32_t typeid_ref_dyn;
     Array* argv = nullptr;
 
     PC di = PC(-1);
@@ -55,15 +59,16 @@ namespace vbci
 
     Symbol& symbol(size_t idx);
     Function* function(size_t idx);
-    Class& primitive(size_t idx);
-    Class& cls(TypeId type_id);
+    Class& cls(uint32_t type_id);
+    ComplexType& complex_type(uint32_t type_id);
     Value& global(size_t idx);
-    ComplexType& complex_type(size_t idx);
     ffi_type* value_type();
 
     int64_t sleb(size_t& pc);
     uint64_t uleb(size_t& pc);
 
+    uint32_t get_typeid_arg();
+    uint32_t get_typeid_argv();
     Array* get_argv();
     Array* get_string(size_t idx);
 
@@ -72,8 +77,19 @@ namespace vbci
       size_t num_threads,
       std::vector<std::string> args);
 
-    std::pair<ValueType, ffi_type*> layout_type_id(TypeId type_id);
-    std::pair<ValueType, ffi_type*> layout_complex_type(ComplexType& t);
+    std::pair<ValueType, ffi_type*> layout_type_id(uint32_t type_id);
+    std::pair<ValueType, ffi_type*> layout_union_type(ComplexType& t);
+
+    bool is_complex(uint32_t type_id);
+    bool is_array(uint32_t type_id);
+    bool is_ref(uint32_t type_id);
+    bool is_cown(uint32_t type_id);
+    bool is_union(uint32_t type_id);
+    uint32_t unarray(uint32_t type_id);
+    uint32_t uncown(uint32_t type_id);
+    uint32_t unref(uint32_t type_id);
+    uint32_t ref(uint32_t type_id);
+    bool subtype(uint32_t sub, uint32_t super);
 
     std::string debug_info(Function* func, PC pc);
     std::string di_function(Function* func);
@@ -88,7 +104,7 @@ namespace vbci
     bool parse_fields(Class& cls, PC& pc);
     bool parse_methods(Class& cls, PC& pc);
     bool fixup_methods(Class& cls);
-    bool parse_complex_type(ComplexType*& t, PC& pc);
+    void parse_complex_type(ComplexType& t, uint32_t type_id, PC& pc);
 
     std::string str(size_t& pc);
     void string_table(size_t& pc, std::vector<std::string>& table);

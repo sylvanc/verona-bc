@@ -293,7 +293,7 @@ namespace vbci
     auto arr = Array::create(
       new uint8_t[Array::size_of(suggested_size, ffi_type_uint8.size)],
       loc::Immutable,
-      vbci::TypeId::val(ValueType::U8),
+      Program::get().get_typeid_arg(),
       ValueType::U8,
       suggested_size,
       ffi_type_uint8.size);

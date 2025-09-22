@@ -36,39 +36,56 @@ namespace vbcc
             return err(_(Type) / TypeId, "type shadows class name");
           }
 
-          if (!state->add_type(_(Type)))
+          if (!state->add_typealias(_(Type)))
           {
             state->error = true;
-            return err(_(Type) / TypeId, "duplicate class name");
+            return err(_(Type) / TypeId, "duplicate type alias name");
           }
 
           return NoChange;
         },
 
-        // Accumulate primitive classes.
-        T(Primitive)[Primitive] >> [state](Match& _) -> Node {
-          auto primitive = _(Primitive);
-          auto vtype = val(primitive / Type);
-          auto& slot = state->primitives.at(+vtype);
+        // Accumulate non-complex primitive classes.
+        T(Primitive)[Primitive]
+            << (T(None,
+                  Bool,
+                  I8,
+                  I16,
+                  I32,
+                  I64,
+                  U8,
+                  U16,
+                  U32,
+                  U64,
+                  ILong,
+                  ULong,
+                  ISize,
+                  USize,
+                  F32,
+                  F64,
+                  Ptr)[Type] *
+                T(Methods)) >>
+          [state](Match& _) -> Node {
+          auto& slot = state->primitives.at(+val(_(Type)));
 
           if (slot)
           {
             state->error = true;
-            return err(primitive / Type, "duplicate primitive class");
+            return err(_(Type), "duplicate primitive class");
           }
 
-          slot = primitive;
+          slot = _(Primitive);
           return NoChange;
         },
 
         // Accumulate user-defined classes.
         T(Class)[Class] >> [state](Match& _) -> Node {
-          auto type_id = state->get_type_id(_(Class) / ClassId);
+          auto type_id = state->get_typealias_id(_(Class) / ClassId);
 
           if (type_id)
           {
             state->error = true;
-            return err(_(Type) / TypeId, "class shadows type name");
+            return err(_(Type) / TypeId, "class shadows type alias name");
           }
 
           if (!state->add_class(_(Class)))
@@ -94,7 +111,7 @@ namespace vbcc
           if (!state->get_func_id(method / FunctionId))
           {
             state->error = true;
-            return err(method / Rhs, "unknown function");
+            return err(method / FunctionId, "unknown function");
           }
 
           return NoChange;
@@ -165,42 +182,6 @@ namespace vbcc
         Def[Body] >> [state](Match& _) -> Node {
           auto dst = _(Body) / LocalId;
           state->get_func(dst->parent(Func) / FunctionId).add_register(dst);
-          return NoChange;
-        },
-
-        // Check that all labels in a function are defined.
-        T(LabelId)[LabelId] >> [state](Match& _) -> Node {
-          auto label = _(LabelId);
-          auto& func_state = state->get_func(label->parent(Func) / FunctionId);
-
-          if (!func_state.get_label_id(label))
-          {
-            state->error = true;
-            return err(label, "undefined label");
-          }
-
-          return NoChange;
-        },
-
-        // Check that all registers in a function are defined.
-        T(LocalId)[LocalId] >> [state](Match& _) -> Node {
-          auto id = _(LocalId);
-          auto& func_state = state->get_func(id->parent(Func) / FunctionId);
-
-          if (!func_state.get_register_id(id))
-          {
-            state->error = true;
-            return err(id, "undefined register");
-          }
-
-          return NoChange;
-        },
-
-        // Internalize unescaped string literals.
-        T(ConstStr)[ConstStr] >> [state](Match& _) -> Node {
-          auto str = unescape((_(ConstStr) / String)->location().view());
-          ST::exec().string(str);
-          _(ConstStr) / String = String ^ str;
           return NoChange;
         },
       }};

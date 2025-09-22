@@ -5,7 +5,6 @@
 #include "header.h"
 #include "program.h"
 #include "thread.h"
-#include "types.h"
 
 #include <format>
 
@@ -30,7 +29,7 @@ namespace vbci
       return *this;
     }
 
-    TypeId field_type_id(size_t idx)
+    uint32_t field_type_id(size_t idx)
     {
       return cls().fields.at(idx).type_id;
     }
@@ -48,11 +47,6 @@ namespace vbci
         throw Value(Error::BadField);
 
       return find->second;
-    }
-
-    Function* method(size_t w)
-    {
-      return cls().method(w);
     }
 
     Function* finalizer()
@@ -76,7 +70,7 @@ namespace vbci
     {
       auto& f = cls().fields.at(idx);
 
-      if (!(v.type_id() < f.type_id))
+      if (!Program::get().subtype(v.type_id(), f.type_id))
         throw Value(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;

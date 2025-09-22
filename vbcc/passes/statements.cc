@@ -6,6 +6,8 @@ namespace vbcc
     T(I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize);
   const auto FloatType = T(F32, F64);
   const auto PrimitiveType = T(None, Bool) / IntType / FloatType;
+  const auto BuiltinType =
+    PrimitiveType / T(Ptr) / (T(Array, Ref, Cown) << Any);
   const auto TypeNoUnion =
     PrimitiveType / T(Ptr, Dyn, GlobalId) / (T(Array, Ref, Cown) << Any);
   const auto TypePat = (TypeNoUnion / (T(Union) << Any)) * --(T(Union) << End);
@@ -15,8 +17,6 @@ namespace vbcc
 
   const auto Dst = T(LocalId)[LocalId] * T(Equals);
   const auto RegionType = T(RegionRC, RegionGC, RegionArena);
-  const auto ArrayDynArg = T(LBracket) * T(LocalId)[Rhs] * T(RBracket);
-  const auto ArrayConstArg = T(LBracket) * IntLiteral[Rhs] * T(RBracket);
   const auto SymbolParams = T(LParen) *
     (~(TypePat * (T(Comma) * TypePat)++))[Params] *
     ~(T(Comma) * T(Vararg)[Vararg]) * T(RParen);
@@ -280,10 +280,10 @@ namespace vbcc
           [](Match& _) { return Type << (TypeId ^ _(GlobalId)) << _(Type); },
 
         // Primitive class.
-        (T(Primitive) << End) * PrimitiveType[Type] >>
+        (T(Primitive) << End) * BuiltinType[Type] >>
           [](Match& _) { return Primitive << _(Type) << Methods; },
 
-        (T(Primitive) << PrimitiveType)[Primitive] * T(GlobalId)[Lhs] *
+        (T(Primitive) << Any)[Primitive] * T(GlobalId)[Lhs] *
             T(GlobalId)[Rhs] >>
           [](Match& _) {
             (_(Primitive) / Methods)
@@ -365,7 +365,7 @@ namespace vbcc
         Dst * T(Convert) * PrimitiveType[Type] * T(LocalId)[Rhs] >>
           [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },
 
-        // Allocation.
+        // Object allocation.
         Dst * T(New) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
             return New << _(LocalId) << (ClassId ^ _(GlobalId))
@@ -392,10 +392,11 @@ namespace vbcc
                           << callargs(_[Args]);
           },
 
-        Dst * T(New) * TypePat[Type] * ArrayDynArg >>
+        // Array allocation.
+        Dst * T(New) * T(Array)[Type] * T(LocalId)[Rhs] >>
           [](Match& _) { return NewArray << _(LocalId) << _(Type) << _(Rhs); },
 
-        Dst * T(New) * TypePat[Type] * ArrayConstArg >>
+        Dst * T(New) * T(Array)[Type] * IntLiteral[Rhs] >>
           [](Match& _) {
             auto r = check_literal(U64, _(Rhs));
             if (r)
@@ -404,12 +405,12 @@ namespace vbcc
             return NewArrayConst << _(LocalId) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Stack) * TypePat[Type] * ArrayDynArg >>
+        Dst * T(Stack) * T(Array)[Type] * T(LocalId)[Rhs] >>
           [](Match& _) {
             return StackArray << _(LocalId) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Stack) * TypePat[Type] * ArrayConstArg >>
+        Dst * T(Stack) * T(Array)[Type] * IntLiteral[Rhs] >>
           [](Match& _) {
             auto r = check_literal(U64, _(Rhs));
             if (r)
@@ -418,12 +419,12 @@ namespace vbcc
             return StackArrayConst << _(LocalId) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Heap) * T(LocalId)[Lhs] * TypePat[Type] * ArrayDynArg >>
+        Dst * T(Heap) * T(LocalId)[Lhs] * T(Array)[Type] * T(LocalId)[Rhs] >>
           [](Match& _) {
             return HeapArray << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Heap) * T(LocalId)[Lhs] * TypePat[Type] * ArrayConstArg >>
+        Dst * T(Heap) * T(LocalId)[Lhs] * T(Array)[Type] * IntLiteral[Rhs] >>
           [](Match& _) {
             auto r = check_literal(U64, _(Rhs));
             if (r)
@@ -432,12 +433,12 @@ namespace vbcc
             return HeapArrayConst << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Region) * RegionType[Lhs] * TypePat[Type] * ArrayDynArg >>
+        Dst * T(Region) * RegionType[Lhs] * T(Array)[Type] * T(LocalId)[Rhs] >>
           [](Match& _) {
             return RegionArray << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
           },
 
-        Dst * T(Region) * RegionType[Lhs] * TypePat[Type] * ArrayConstArg >>
+        Dst * T(Region) * RegionType[Lhs] * T(Array)[Type] * IntLiteral[Rhs] >>
           [](Match& _) {
             auto r = check_literal(U64, _(Rhs));
             if (r)
@@ -549,9 +550,10 @@ namespace vbcc
           },
 
         // When.
-        Dst * T(When) * CallArgs[Args] * T(LocalId)[Rhs] >>
+        Dst * T(When) * CallArgs[Args] * T(Colon) * TypePat[Type] *
+            T(LocalId)[Rhs] >>
           [](Match& _) {
-            return When << _(LocalId) << callargs(_[Args])
+            return When << _(LocalId) << callargs(_[Args]) << (Cown << _(Type))
                         << (Arg << ArgCopy << _(Rhs));
           },
 

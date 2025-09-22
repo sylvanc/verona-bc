@@ -10,11 +10,17 @@
 
 namespace vbci
 {
+  struct ComplexType
+  {
+    TypeTag tag;
+    std::vector<uint32_t> children;
+  };
+
   struct Field
   {
     size_t offset;
     size_t size;
-    TypeId type_id;
+    uint32_t type_id;
     ValueType value_type;
   };
 
@@ -22,8 +28,8 @@ namespace vbci
   {
     size_t size;
     size_t debug_info;
-    TypeId type_id;
     Object* singleton;
+    uint32_t type_id;
 
     // Precalculate an offset into the object for each field name.
     std::unordered_map<size_t, size_t> field_map;

@@ -19,10 +19,11 @@ namespace vbci
       ARC arc;
     };
 
-    TypeId type_id;
+    uint32_t type_id;
 
   protected:
-    Header(Location loc, TypeId type_id) : loc(loc), rc(1), type_id(type_id) {}
+    Header(Location loc, uint32_t type_id) : loc(loc), rc(1), type_id(type_id)
+    {}
 
     bool write_barrier(Value& prev, Value& next)
     {
@@ -199,7 +200,7 @@ namespace vbci
     }
 
   public:
-    TypeId get_type_id()
+    uint32_t get_type_id()
     {
       return type_id;
     }
@@ -207,11 +208,6 @@ namespace vbci
     RC get_rc()
     {
       return rc;
-    }
-
-    bool is_array()
-    {
-      return type_id.is_array();
     }
 
     Location location()

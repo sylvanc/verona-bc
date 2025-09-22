@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ident.h"
+
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -21,37 +23,9 @@ namespace vbci
     Idx top;
 
   public:
-    Idx save()
-    {
-      return top;
-    }
-
-    void restore(const Idx& idx)
-    {
-      top = idx;
-    }
-
-    void* alloc(size_t size)
-    {
-      if (size > ChunkSize)
-        return nullptr;
-
-      if ((top.offset + size) > ChunkSize)
-      {
-        top.chunk++;
-        top.offset = 0;
-      }
-
-      if (top.chunk >= chunks.size())
-      {
-        chunks.emplace_back();
-        top.chunk = chunks.size() - 1;
-        top.offset = 0;
-      }
-
-      auto ret = &chunks.at(top.chunk).at(top.offset);
-      top.offset += size;
-      return ret;
-    }
+    Idx save();
+    void restore(const Idx& idx);
+    void* alloc(size_t size);
+    Array* array(Location frame_id, uint32_t type_id, size_t size);
   };
 }

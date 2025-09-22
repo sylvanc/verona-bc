@@ -1,17 +1,49 @@
+primitive [i32]
+  @index @array_i32_index
+
+func @array_i32_create($len: usize): [i32]
+  $a = new [i32] $len
+  ret $a
+
+func @array_i32_index($a: [i32], $idx: usize): ref i32
+  $a0 = ref $a $idx
+  ret $a0
+
+primitive ref i32
+  @load @ref_i32_load
+  @store @ref_i32_store
+
+func @ref_i32_load($a: ref i32): i32
+  $v = load $a
+  ret $v
+
+func @ref_i32_store($a: ref i32, $v: i32): i32
+  $prev = store $a $v
+  ret $prev
+
 func @main(): i32
   $i = const usize 10
-  $a = stack i32[$i]
-  $b = stack i32[10]
+  $a = stack [i32] $i
+  $b = stack [i32] 10
+  $c = call @array_i32_create($i)
   $a0 = ref $a 0
   $idx = const usize 0
   $b0 = ref $b $idx
+  $index = lookup $c @index
+  $c0 = call $index($c, $idx)
   $j = const i32 66
   $0 = store $a0 $j
   $1 = store $b0 $j
+  $ref_store = lookup $c0 @store
+  $2 = call $ref_store($c0, $j)
   $k0 = load $a0
   $k1 = load $b0
-  $eq = eq $k0 $k1
-  cond $eq ^eq ^ne
+  $ref_load = lookup $c0 @load
+  $k2 = call $ref_load($c0)
+  $eq1 = eq $k0 $k1
+  $eq2 = eq $k1 $k2
+  $eq3 = and $eq1 $eq2
+  cond $eq3 ^eq ^ne
 ^eq
   $r = const i32 1
   ret $r

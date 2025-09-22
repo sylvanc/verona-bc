@@ -47,8 +47,6 @@ int main(int argc, char** argv)
   if (state->error)
     return -1;
 
-  wf::push_back(wfIR);
   state->gen(opts.bytecode_file, opts.strip);
-  wf::pop_front();
   return 0;
 }

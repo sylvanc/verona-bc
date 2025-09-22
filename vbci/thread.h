@@ -29,7 +29,7 @@ namespace vbci
     std::vector<Value*> ffi_arg_vals;
 
   public:
-    static Value run_async(Function* func);
+    static Value run_async(uint32_t type_id, Function* func);
 
     template<typename... Ts>
     static void run_sync(Function* func, Ts... argv)
@@ -71,7 +71,7 @@ namespace vbci
     void tailcall(Function* func);
     void teardown(bool tailcall = false);
     void branch(size_t label);
-    void check_args(std::vector<TypeId>& types, bool vararg = false);
+    void check_args(std::vector<uint32_t>& types, bool vararg = false);
     void check_args(std::vector<Field>& fields);
     Value& arg(size_t idx);
     void drop_args();

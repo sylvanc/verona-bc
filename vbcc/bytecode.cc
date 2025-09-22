@@ -318,6 +318,15 @@ namespace vbcc
   {
     primitives.resize(NumPrimitiveClasses);
 
+    // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv), and
+    // `ref dyn` (unknown RegisterRef types).
+    wf::push_back(wfIR);
+    typ(Cown << I32);
+    typ(Array << U8);
+    typ(Array << (Array << U8));
+    typ(Ref << Dyn);
+    wf::pop_front();
+
     // Reserve a function ID for `@main`.
     functions.push_back(FuncState(nullptr));
     func_ids.insert({ST::di().string("@main"), MainFuncId});
@@ -335,7 +344,7 @@ namespace vbcc
       compilation_path = compilation_path.parent_path();
   }
 
-  std::optional<size_t> Bytecode::get_type_id(Node id)
+  std::optional<size_t> Bytecode::get_typealias_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = type_ids.find(name);
@@ -346,14 +355,14 @@ namespace vbcc
     return find->second;
   }
 
-  Node Bytecode::get_type(Node id)
+  Node Bytecode::get_typealias(Node id)
   {
     auto name = ST::di().string(id);
     auto find = type_ids.find(name);
     return typealiases.at(find->second);
   }
 
-  bool Bytecode::add_type(Node type)
+  bool Bytecode::add_typealias(Node type)
   {
     auto name = ST::di().string(type / TypeId);
     auto find = type_ids.find(name);
@@ -531,6 +540,8 @@ namespace vbcc
 
   void Bytecode::gen(std::filesystem::path output, bool strip)
   {
+    wf::push_back(wfIR);
+
     if (output.empty())
       output = compilation_path.stem().replace_extension(".vbc");
 
@@ -554,8 +565,9 @@ namespace vbcc
     for (size_t i = 0; i < ST::exec().size(); i++)
       hdr << ST::exec().at(i);
 
-    // Reserve the first type for [u8], for argv.
-    typ(Array << U8);
+    // Class and complex primitive count.
+    hdr << uleb(classes.size());
+    hdr << uleb(complex_primitives.size());
 
     // Primitive classes.
     for (auto& p : primitives)
@@ -578,8 +590,6 @@ namespace vbcc
     }
 
     // Classes.
-    hdr << uleb(classes.size());
-
     for (auto& c : classes)
     {
       hdr << uleb(di.size());
@@ -603,6 +613,26 @@ namespace vbcc
         hdr << uleb(*get_method_id(method / MethodId))
             << uleb(*get_func_id(method / FunctionId));
         di << uleb(ST::di().string(method / MethodId));
+      }
+    }
+
+    // Complex primitive classes.
+    for (auto& p : complex_primitives)
+    {
+      if (p)
+      {
+        auto methods = p / Methods;
+        hdr << uleb(methods->size());
+
+        for (auto& method : *methods)
+        {
+          hdr << uleb(*get_method_id(method / MethodId))
+              << uleb(*get_func_id(method / FunctionId));
+        }
+      }
+      else
+      {
+        hdr << uleb(0);
       }
     }
 
@@ -1023,7 +1053,7 @@ namespace vbcc
           {
             onearg(stmt / Arg);
             args(stmt / Args);
-            code << uleb(+Op::When) << dst(stmt);
+            code << uleb(+Op::When) << dst(stmt) << uleb(typ(stmt / Cown));
           }
           else if (stmt == Typetest)
           {
@@ -1317,107 +1347,90 @@ namespace vbcc
     {
       logging::Error() << "Error writing to: " << output << std::endl;
     }
+
+    wf::pop_front();
   }
 
   size_t Bytecode::typ(Node type)
   {
     // If it's a TypeId, encode what it maps to instead.
     if (type == TypeId)
-      type = get_type(type) / Type;
+      type = get_typealias(type) / Type;
 
-    size_t id;
-    if (encode_simple_type(type, id))
-      return id;
+    if (type == Dyn)
+    {
+      return DynId;
+    }
+    else if (type->in(
+               {None,
+                Bool,
+                I8,
+                U8,
+                I16,
+                U16,
+                I32,
+                U32,
+                I64,
+                U64,
+                ILong,
+                ULong,
+                ISize,
+                USize,
+                F32,
+                F64,
+                Ptr}))
+    {
+      return +val(type);
+    }
+    else if (type == ClassId)
+    {
+      // Class IDs are offset for primitive types.
+      return *get_class_id(type) + NumPrimitiveClasses;
+    }
 
     // Encode complex types.
     std::vector<uint8_t> b;
-    encode_type(b, type);
+
+    if (type == Array)
+    {
+      b << uleb(+TypeTag::Array) << uleb(typ(type / Type));
+    }
+    else if (type == Cown)
+    {
+      b << uleb(+TypeTag::Cown) << uleb(typ(type / Type));
+    }
+    else if (type == Ref)
+    {
+      b << uleb(+TypeTag::Ref) << uleb(typ(type / Type));
+    }
+    else if (type == Union)
+    {
+      b << uleb(+TypeTag::Union);
+      b << uleb(type->size());
+
+      std::vector<size_t> child_types;
+
+      for (auto& child : *type)
+        child_types.push_back(typ(child));
+
+      std::sort(child_types.begin(), child_types.end());
+      child_types.erase(
+        std::unique(child_types.begin(), child_types.end()), child_types.end());
+
+      for (auto t : child_types)
+        b << uleb(t);
+    }
 
     // Check if we already have this type encoded.
     auto find = type_map.find(b);
     if (find != type_map.end())
-      return type::complex(find->second);
+      return find->second;
 
-    // Otherwise, add it to the type map.
-    id = type_map.size();
+    // Otherwise, add it to the type map. Complex type IDs are offset for
+    // primitive types and class IDs.
+    auto id = type_map.size() + classes.size() + NumPrimitiveClasses;
     type_map.insert({b, id});
     types.push_back(b);
-    return type::complex(id);
-  }
-
-  bool Bytecode::encode_simple_type(Node type, size_t& id)
-  {
-    // Handle simple types.
-    if (type->in(
-          {None,
-           Bool,
-           I8,
-           U8,
-           I16,
-           U16,
-           I32,
-           U32,
-           I64,
-           U64,
-           ILong,
-           ULong,
-           ISize,
-           USize,
-           F32,
-           F64,
-           Ptr}))
-    {
-      id = type::val(val(type));
-      return true;
-    }
-    else if (type == Dyn)
-    {
-      id = type::Dyn;
-      return true;
-    }
-    else if (type == ClassId)
-    {
-      id = type::cls(*get_class_id(type));
-      return true;
-    }
-
-    return false;
-  }
-
-  void Bytecode::encode_type(std::vector<uint8_t>& b, Node type)
-  {
-    size_t id;
-
-    if (encode_simple_type(type, id))
-    {
-      b << uleb(id);
-    }
-    else if (type == TypeId)
-    {
-      encode_type(b, get_type(type) / Type);
-    }
-    else if (type == Ref)
-    {
-      b << uleb(type::Ref);
-      encode_type(b, type / Type);
-    }
-    else if (type == Cown)
-    {
-      b << uleb(type::Cown);
-      encode_type(b, type / Type);
-    }
-    else if (type == Array)
-    {
-      b << uleb(type::Array);
-      encode_type(b, type / Type);
-    }
-    else if (type == Union)
-    {
-      b << uleb(type::Union);
-      b << uleb(type->size());
-
-      for (auto& child : *type)
-        encode_type(b, child);
-    }
+    return id;
   }
 }

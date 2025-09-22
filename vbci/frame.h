@@ -1,7 +1,6 @@
 #pragma once
 
 #include "stack.h"
-#include "types.h"
 #include "value.h"
 #include "region_rc.h"
 

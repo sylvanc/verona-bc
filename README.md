@@ -60,7 +60,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
     * No way to do it in a non-RC region.
 * Types.
   * Raise and throw signatures on functions.
-  * Function types? Not strictly needed, as this can be encoded as objects.
+  * Function types. For function pointers, not closures.
   * Cache type check results? Would also prevent circular type checks.
   * `imm` and other memory location types?
 * Initializing global values.
@@ -76,10 +76,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * FFI with `libffi`.
   * Can we wrap returned `struct` as objects?
   * Platform-specific FFI. Only load for the runtime platform.
-* I/O with `libuv`.
-  * Do everything asynchronously.
-  * Yield the current thread when waiting for I/O.
-  * Need more than one Thread per scheduler thread.
 * Sockets.
   * TCP/TLS server?
   * UDP?

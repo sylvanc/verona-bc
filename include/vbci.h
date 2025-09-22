@@ -22,6 +22,8 @@ namespace vbci
   inline const auto MainFuncId = size_t(0);
   inline const auto FinalMethodId = size_t(0);
   inline const auto ApplyMethodId = size_t(1);
+  inline const auto DynId = uint32_t(-1);
+
 
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
   // known to be signed integers (zigzag SLEB128) or floats (bitcast zigzag
@@ -261,6 +263,7 @@ namespace vbci
     // acquired cowns as arguments. With a function pointer, it takes just the
     // acquired cowns.
     // Arg0 = dst.
+    // Arg1 = cown type ID.
     When,
 
     // Returns true if the dynamic type of src is a subtype of the type ID.
@@ -394,6 +397,14 @@ namespace vbci
     Invalid,
   };
 
+  enum class TypeTag : uint8_t
+  {
+    Array,
+    Cown,
+    Ref,
+    Union,
+  };
+
   enum class RegionType
   {
     RegionRC,
@@ -432,6 +443,11 @@ namespace vbci
     return static_cast<size_t>(v);
   }
 
+  inline constexpr size_t operator+(TypeTag v)
+  {
+    return static_cast<size_t>(v);
+  }
+
   inline constexpr size_t operator+(RegionType r)
   {
     return static_cast<size_t>(r);
@@ -448,47 +464,4 @@ namespace vbci
   }
 
   inline const auto NumPrimitiveClasses = +ValueType::Ptr + 1;
-
-  namespace type
-  {
-    inline const auto Shift = 1u;
-    inline const auto Mask = (1 << Shift) - 1;
-    inline const auto Simple = 0;
-    inline const auto Complex = 1;
-    inline const auto Dyn = (NumPrimitiveClasses + 0) << Shift;
-    inline const auto Ref = (NumPrimitiveClasses + 1) << Shift;
-    inline const auto Cown = (NumPrimitiveClasses + 2) << Shift;
-    inline const auto Array = (NumPrimitiveClasses + 3) << Shift;
-    inline const auto Union = (NumPrimitiveClasses + 4) << Shift;
-
-    inline bool is_val(uint32_t t)
-    {
-      return ((t & Mask) == Simple) && (t < Dyn);
-    }
-
-    inline bool is_class(uint32_t t)
-    {
-      return ((t & Mask) == Simple) && (t > Union);
-    }
-
-    inline bool is_complex(uint32_t t)
-    {
-      return (t & Mask) == Complex;
-    }
-
-    inline uint32_t val(ValueType t)
-    {
-      return +t << Shift;
-    }
-
-    inline uint32_t cls(size_t idx)
-    {
-      return (idx + NumPrimitiveClasses + 5) << Shift;
-    }
-
-    inline uint32_t complex(size_t idx)
-    {
-      return (idx << Shift) | Complex;
-    }
-  };
 }

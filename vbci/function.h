@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "ident.h"
 
 #include <cstddef>
 #include <vector>
@@ -10,9 +10,9 @@ namespace vbci
   struct Function
   {
     std::vector<PC> labels;
-    std::vector<TypeId> param_types;
+    std::vector<uint32_t> param_types;
     size_t registers;
-    TypeId return_type;
+    uint32_t return_type;
     size_t debug_info;
   };
 }

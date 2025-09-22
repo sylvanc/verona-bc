@@ -203,8 +203,8 @@ namespace vbcc
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
-  inline const auto wfType =
-    wfPrimitiveType | Ptr | Dyn | ClassId | TypeId | Array | Ref | Cown | Union;
+  inline const auto wfBuiltinType = wfPrimitiveType | Ptr | Array | Ref | Cown;
+  inline const auto wfType = wfBuiltinType | Dyn | ClassId | TypeId | Union;
 
   inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
   inline const auto wfLiteral =
@@ -255,7 +255,7 @@ namespace vbcc
         (Vararg >>= Vararg | None) * FFIParams * (Return >>= wfType))
     | (FFIParams <<= wfType++)
     | (Type <<= TypeId * (Type >>= wfType))
-    | (Primitive <<= (Type >>= wfPrimitiveType) * Methods)
+    | (Primitive <<= (Type >>= wfBuiltinType) * Methods)
     | (Class <<= ClassId * Fields * Methods)
     | (Fields <<= Field++)
     | (Field <<= FieldId * (Type >>= wfType))
@@ -304,7 +304,7 @@ namespace vbcc
     | (Try <<= wfDst * FunctionId * Args)
     | (TryDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
-    | (When <<= wfDst * Args * Arg)
+    | (When <<= wfDst * Args * Cown * Arg)
     | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)

@@ -16,14 +16,11 @@ namespace vbci
 
     Array(
       Location loc,
-      TypeId type_id,
+      uint32_t type_id,
       ValueType value_type,
       size_t size,
       size_t stride)
-    : Header(loc, type_id.array()),
-      size(size),
-      stride(stride),
-      value_type(value_type)
+    : Header(loc, type_id), size(size), stride(stride), value_type(value_type)
     {
       if (value_type == ValueType::Invalid)
       {
@@ -42,7 +39,7 @@ namespace vbci
     static Array* create(
       void* mem,
       Location loc,
-      TypeId type_id,
+      uint32_t type_id,
       ValueType value_type,
       size_t size,
       size_t stride)
@@ -55,9 +52,9 @@ namespace vbci
       return sizeof(Array) + (size * stride);
     }
 
-    TypeId content_type_id()
+    uint32_t content_type_id()
     {
-      return get_type_id().unarray();
+      return Program::get().unarray(get_type_id());
     }
 
     size_t get_size()
@@ -85,7 +82,7 @@ namespace vbci
 
     Value store(bool move, size_t idx, Value& v)
     {
-      if (!(v.type_id() < content_type_id()))
+      if (!Program::get().subtype(v.type_id(), content_type_id()))
         throw Value(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);

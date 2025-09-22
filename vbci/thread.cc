@@ -7,9 +7,13 @@
 
 namespace vbci
 {
-  Value Thread::run_async(Function* func)
+  Value Thread::run_async(uint32_t type_id, Function* func)
   {
-    auto result = Cown::create(func->return_type);
+    auto result = Cown::create(type_id);
+
+    if (!Program::get().subtype(func->return_type, result->content_type_id()))
+      throw Value(Error::BadType);
+
     auto b = verona::rt::BehaviourCore::make(1, run_behavior, sizeof(Value));
     new (&b->get_slots()[0]) verona::rt::Slot(result);
     new (b->get_body<Value>()) Value(func);
@@ -208,7 +212,7 @@ namespace vbci
         case Op::New:
         {
           auto& dst = frame->local(leb());
-          auto& cls = program->cls(TypeId::leb(leb()));
+          auto& cls = program->cls(leb());
 
           if (cls.singleton)
           {
@@ -225,7 +229,7 @@ namespace vbci
         case Op::Stack:
         {
           auto& dst = frame->local(leb());
-          auto& cls = program->cls(TypeId::leb(leb()));
+          auto& cls = program->cls(leb());
 
           if (cls.singleton)
           {
@@ -247,7 +251,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto region = frame->local(leb()).region();
-          auto& cls = program->cls(TypeId::leb(leb()));
+          auto& cls = program->cls(leb());
 
           if (cls.singleton)
           {
@@ -265,7 +269,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto region = Region::create(leb<RegionType>());
-          auto& cls = program->cls(TypeId::leb(leb()));
+          auto& cls = program->cls(leb());
 
           if (cls.singleton)
           {
@@ -283,7 +287,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto size = frame->local(leb()).get_size();
-          auto type_id = TypeId::leb(leb());
+          auto type_id = leb();
           dst = frame->region.array(type_id, size);
           break;
         }
@@ -291,7 +295,7 @@ namespace vbci
         case Op::NewArrayConst:
         {
           auto& dst = frame->local(leb());
-          auto type_id = TypeId::leb(leb());
+          auto type_id = leb();
           auto size = leb();
           dst = frame->region.array(type_id, size);
           break;
@@ -301,23 +305,17 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto size = frame->local(leb()).get_size();
-          auto type_id = TypeId::leb(leb());
-          auto rep = program->layout_type_id(type_id);
-          auto mem = stack.alloc(Array::size_of(size, rep.second->size));
-          dst = Array::create(
-            mem, frame->frame_id, type_id, rep.first, size, rep.second->size);
+          auto type_id = leb();
+          dst = stack.array(frame->frame_id, type_id, size);
           break;
         }
 
         case Op::StackArrayConst:
         {
           auto& dst = frame->local(leb());
-          auto type_id = TypeId::leb(leb());
+          auto type_id = leb();
           auto size = leb();
-          auto rep = program->layout_type_id(type_id);
-          auto mem = stack.alloc(Array::size_of(size, rep.second->size));
-          dst = Array::create(
-            mem, frame->frame_id, type_id, rep.first, size, rep.second->size);
+          dst = stack.array(frame->frame_id, type_id, size);
           break;
         }
 
@@ -326,7 +324,7 @@ namespace vbci
           auto& dst = frame->local(leb());
           auto region = frame->local(leb()).region();
           auto size = frame->local(leb()).get_size();
-          auto type_id = TypeId::leb(leb());
+          auto type_id = leb();
           dst = region->array(type_id, size);
           break;
         }
@@ -335,7 +333,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto region = frame->local(leb()).region();
-          auto type_id = TypeId::leb(leb());
+          auto type_id = leb();
           auto size = leb();
           dst = region->array(type_id, size);
           break;
@@ -346,7 +344,7 @@ namespace vbci
           auto& dst = frame->local(leb());
           auto region = Region::create(leb<RegionType>());
           auto size = frame->local(leb()).get_size();
-          auto type_id = TypeId::leb(leb());
+          auto type_id = leb();
           dst = region->array(type_id, size);
           break;
         }
@@ -355,7 +353,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto region = Region::create(leb<RegionType>());
-          auto type_id = TypeId::leb(leb());
+          auto type_id = leb();
           auto size = leb();
           dst = region->array(type_id, size);
           break;
@@ -604,7 +602,7 @@ namespace vbci
 
           auto ret = symbol.call(ffi_arg_addrs);
 
-          if (!ret.is_error() && !(ret.type_id() < symbol.ret()))
+          if (!ret.is_error() && !program->subtype(ret.type_id(), symbol.ret()))
             throw Value(Error::BadType);
 
           frame->local(dst) = ret;
@@ -618,6 +616,7 @@ namespace vbci
             throw Value(Error::BadArgs);
 
           auto& dst = frame->local(leb());
+          auto type_id = leb();
           auto& be = frame->arg(0);
           bool closure;
           Function* apply;
@@ -652,7 +651,7 @@ namespace vbci
           if (closure)
           {
             // First argument is the behavior itself.
-            if (!(be.type_id() < params.at(0)))
+            if (!program->subtype(be.type_id(), params.at(0)))
               throw Value(Error::BadArgs);
 
             // First cown argument is at index 1.
@@ -664,16 +663,20 @@ namespace vbci
           for (size_t i = first_cown; i < args; i++)
           {
             auto cown = frame->arg(i).get_cown();
-            auto type_id = cown->content_type_id().make_ref();
+            auto ref_type = program->ref(cown->content_type_id());
 
-            if (!(type_id < params.at(i)))
+            if (!program->subtype(ref_type, params.at(i)))
               throw Value(Error::BadArgs);
           }
 
           args = 0;
 
           // Create the result cown.
-          auto result = Cown::create(apply->return_type);
+          auto result = Cown::create(type_id);
+
+          if (!program->subtype(apply->return_type, result->content_type_id()))
+            throw Value(Error::BadType);
+
           dst = result;
 
           // Slot 0 is the result cown.
@@ -716,8 +719,7 @@ namespace vbci
         {
           auto& dst = frame->local(leb());
           auto& src = frame->local(leb());
-          auto type_id = TypeId::leb(leb());
-          dst = src.type_id() < type_id;
+          dst = program->subtype(src.type_id(), leb());
           break;
         }
 
@@ -997,7 +999,9 @@ namespace vbci
     switch (condition)
     {
       case Condition::Return:
-        if (!ret.is_error() && !(ret.type_id() < frame->func->return_type))
+        if (
+          !ret.is_error() &&
+          !program->subtype(ret.type_id(), frame->func->return_type))
         {
           ret = Value(Error::BadType);
           condition = Condition::Throw;
@@ -1123,7 +1127,7 @@ namespace vbci
     frame->pc = frame->func->labels.at(label);
   }
 
-  void Thread::check_args(std::vector<TypeId>& types, bool vararg)
+  void Thread::check_args(std::vector<uint32_t>& types, bool vararg)
   {
     if ((args < types.size()) || (!vararg && (args > types.size())))
     {
@@ -1133,7 +1137,7 @@ namespace vbci
 
     for (size_t i = 0; i < types.size(); i++)
     {
-      if (!(arg(i).type_id() < types.at(i)))
+      if (!program->subtype(arg(i).type_id(), types.at(i)))
       {
         drop_args();
         throw Value(Error::BadType);
@@ -1153,7 +1157,7 @@ namespace vbci
 
     for (size_t i = 0; i < args; i++)
     {
-      if (!(frame->arg(i).type_id() < fields.at(i).type_id))
+      if (!program->subtype(frame->arg(i).type_id(), fields.at(i).type_id))
       {
         frame->drop_args(args);
         throw Value(Error::BadType);
