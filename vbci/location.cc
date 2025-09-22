@@ -63,26 +63,20 @@ namespace vbci
         // If hr is r, we do nothing.
         if (hr == r)
           continue;
-        // TODO : is this really the best sequence of ifs?
+
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
         if ((frame == loc::None) && hr->has_parent())
         {
-          if (loc::is_region(ploc))
+          // if hr is the previous region, then as long as there is only one
+          // reference into hr from frame locals we are dragging into r, it's
+          // ok. (this reference will replace the old one from r still leaving
+          // only one entry point to hr)
+          if (loc::is_region(ploc) && loc::to_region(ploc) == hr)
           {
-            auto pr = loc::to_region(ploc);
-            // if this reference from frame local is actually to something in
-            // the previous region, then as long as there is only one reference
-            // it's ok (this reference will replace the old one, still leaving
-            // only one entry point)
-            if (pr == hr)
-            {
-              if (pr_rc >= 1)
-                return std::pair(false, false);
-              pr_rc += 1;
-            }
-            else
+            if (pr_rc >= 1)
               return std::pair(false, false);
+            pr_rc += 1;
           }
           else
             return std::pair(false, false);
