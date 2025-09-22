@@ -28,7 +28,7 @@ namespace vbci
     {
       auto ploc = prev.location();
       auto nloc = next.location();
-      bool reparent_prev = true;
+      bool unparent_prev = true;
 
       if (loc::is_immutable(loc))
       {
@@ -89,7 +89,7 @@ namespace vbci
 
             // If this has succeeded, next has a new location.
             nloc = next.location();
-            reparent_prev = drag_result.second;
+            unparent_prev = drag_result.second;
           }
           else if (nr->has_parent())
           {
@@ -129,7 +129,7 @@ namespace vbci
 
         // Clear the parent if it's in a different region.
 
-        if (ploc != loc && reparent_prev)
+        if (ploc != loc && unparent_prev)
           pr->clear_parent();
       }
 
