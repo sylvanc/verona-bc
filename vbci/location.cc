@@ -71,6 +71,10 @@ namespace vbci
           if (loc::is_region(ploc))
           {
             auto pr = loc::to_region(ploc);
+            // if this reference from frame local is actually to something in 
+            // the previous region, then as long as there is only one reference
+            // it's ok (this reference will replace the old one, still leaving)
+            // only one entry point
             if (pr == hr)
             {
               if (pr_rc >= 1)
@@ -79,7 +83,10 @@ namespace vbci
             }
             else
               return std::pair(false,false);
-          };
+          }
+          else 
+            return std::pair(false,false);
+
         }
 
         // If hr is already an ancestor of r, we can't drag the allocation, or
