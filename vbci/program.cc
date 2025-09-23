@@ -439,7 +439,7 @@ namespace vbci
     for (size_t i = 0; i < func->registers; i++)
       uleb(di_pc);
 
-    while (cur_pc < pc)
+    while (cur_pc <= pc)
     {
       auto u = uleb(di_pc);
       auto op = u & 0x03;
@@ -465,11 +465,15 @@ namespace vbci
       }
     }
 
+    if (di_file == no_value)
+      return std::format(
+        " --> function {}:{}", static_cast<void*>(func), di_offset);
+
     auto filename = di_strings.at(di_file);
     auto source = get_source_file(filename);
 
     if (!source)
-      return std::format(" --> {}:{}", filename, std::to_string(di_offset));
+      return std::format(" --> {}:{}", filename, di_offset);
 
     auto [line, col] = source->linecol(di_offset);
     auto src_line = source->line(line);
@@ -655,8 +659,6 @@ namespace vbci
 
       if (!parse_methods(cls, pc))
         return false;
-
-      class_id++;
     }
 
     // Complex primitive classes.

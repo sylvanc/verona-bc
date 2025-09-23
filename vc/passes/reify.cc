@@ -194,6 +194,19 @@ namespace vc
                 T(MethodId)[MethodId]) >>
           [](Match& _) { return Lookup << _(Lhs) << _(Rhs) << _(MethodId); },
 
+        // Pass [T] instead of T to NewArray and NewArrayConst.
+        T(NewArray)
+            << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(LocalId)[Rhs]) >>
+          [](Match& _) {
+            return NewArray << _(Lhs) << (Array << _(Type)) << _(Rhs);
+          },
+
+        T(NewArrayConst)
+            << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(Int)[Rhs]) >>
+          [](Match& _) {
+            return NewArrayConst << _(Lhs) << (Array << _(Type)) << _(Rhs);
+          },
+
         // Elide unused copies.
         T(Copy) << (T(LocalId)[Lhs] * T(LocalId)) >> [](Match& _) -> Node {
           auto lhs = _(Lhs);

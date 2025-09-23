@@ -318,15 +318,6 @@ namespace vbcc
   {
     primitives.resize(NumPrimitiveClasses);
 
-    // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv), and
-    // `ref dyn` (unknown RegisterRef types).
-    wf::push_back(wfIR);
-    typ(Cown << I32);
-    typ(Array << U8);
-    typ(Array << (Array << U8));
-    typ(Ref << Dyn);
-    wf::pop_front();
-
     // Reserve a function ID for `@main`.
     functions.push_back(FuncState(nullptr));
     func_ids.insert({ST::di().string("@main"), MainFuncId});

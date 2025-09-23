@@ -3,12 +3,11 @@
 ## Current Work
 
 Reification.
+- Implement `ref[T]`, `cown[T]` built-ins.
 - A `FieldRef` or `ArrayRef` should instantiate a type. Ignore `RegisterRef`.
 - Don't fail on method instantiation failure.
   - Mark as "delete on error".
   - On completion of `run`, check if it contains errors.
-- Emit `array[T]` as the IR type `[T]` instead of a class ID.
-- Implement `ref[T]`, `cown[T]` built-ins.
 - Test type aliases, make sure cycles are rejected.
 - Optimize dynamic calls as static when there's a known type for the receiver.
 
@@ -45,13 +44,12 @@ Tuples:
 - Flatten a tuple into another tuple.
 
 Calls:
-- Try, sub-call.
+- Try (rename to `catch`?), sub-call.
 
 Expressions:
 - Only allow `:::` in `std::builtin`.
-- Array operations for `std::builtin`.
 - Partial application, `_`.
-- Unescape strings.
+- Unescape strings. Currently happens in `validids`.
 
 Syntax:
 - How to put a dynamic type in a tuple or function type?
@@ -72,7 +70,7 @@ Structure:
 
 Standard library:
 - Primitive type conversions.
-- Array.
+- `ref`, `cown`.
 - String.
 - `stdin`, `stdout`, `stderr`.
 

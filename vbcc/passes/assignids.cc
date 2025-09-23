@@ -199,6 +199,13 @@ namespace vbcc
           label.resize(func_state.register_names.size());
       }
 
+      // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv), and
+      // `ref dyn` (unknown RegisterRef types). This has to happen after all
+      // classes have been added, but before any complex primitives.
+      state->typ(Cown << I32);
+      state->typ(Array << U8);
+      state->typ(Array << (Array << U8));
+      state->typ(Ref << Dyn);
       return 0;
     });
 

@@ -77,11 +77,30 @@ namespace vc
       }
 
       if (def == ClassDef)
-        instance / Ident = ClassId ^ id;
+      {
+        if (def->parent(ClassDef) == rs->builtin)
+        {
+          auto name = (def / Ident)->location().view();
+
+          if (name == "array")
+            instance / Ident = Array << clone(subst.begin()->second);
+          else if (name == "ref")
+            instance / Ident = Ref << clone(subst.begin()->second);
+          else if (name == "cown")
+            instance / Ident = Cown << clone(subst.begin()->second);
+        }
+
+        if ((instance / Ident) == Ident)
+          instance / Ident = ClassId ^ id;
+      }
       else if (def == TypeAlias)
+      {
         instance / Ident = TypeId ^ id;
+      }
       else if (def == Function)
+      {
         instance / Ident = FunctionId ^ id;
+      }
 
       // Remap cloned type parameters.
       auto num_tp = (instance / TypeParams)->size();

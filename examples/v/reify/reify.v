@@ -40,7 +40,6 @@ main(): i32
 {
   // let f = cycle1;
   let a = array[i32](usize 10);
-  let a0 = a(usize 0);
 
   use foo[A = i32] = range[A];
   let r = foo(i32 0, i32 10);
@@ -51,5 +50,6 @@ main(): i32
     sum = sum + r.next
   }
 
-  id[i32](sum)
+  a(usize 0) = sum;
+  a(usize 0)
 }
