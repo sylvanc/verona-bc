@@ -10,29 +10,28 @@ namespace vc
       dir::topdown,
       {
         // Ident resolution.
-        In(Expr) * T(Ident)[Ident] >>
-          [](Match& _) {
-            auto ident = _(Ident);
-            auto defs = ident->lookup();
+        In(Expr) * T(Ident)[Ident] >> [](Match& _) -> Node {
+          auto ident = _(Ident);
 
-            for (auto& def : defs)
+          if (ident->location().view() == "ref")
+            return Ref;
+
+          auto defs = ident->lookup();
+
+          for (auto& def : defs)
+          {
+            if (def->in({ParamDef, Let, Var}))
             {
-              if (def->in({ParamDef, Let, Var}))
-              {
-                if (!def->precedes(ident))
-                  return err(ident, "Identifier used before definition");
+              if (!def->precedes(ident))
+                return err(ident, "Identifier used before definition");
 
-                return LocalId ^ ident;
-              }
+              return LocalId ^ ident;
             }
+          }
 
-            // Not a local, treat it as a static call.
-            return QName << (QElement << ident << TypeArgs);
-          },
-
-        // Ref.
-        In(Expr) * (T(Ref) << End) * (T(ExprSeq) / ApplyRhsPat)[Rhs] >>
-          [](Match& _) { return Ref << (Expr << _(Rhs)); },
+          // Not a local, treat it as a static call.
+          return QName << (QElement << ident << TypeArgs);
+        },
 
         // C-style new.
         In(Expr) * (T(New) << End) * T(ExprSeq)[ExprSeq] >>

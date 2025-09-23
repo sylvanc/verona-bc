@@ -3,14 +3,15 @@
 namespace vc
 {
   const std::initializer_list<Token> wfTypeElement = {
-    TypeName, Union, Isect, FuncType, TupleType, RefType};
+    TypeName, Union, Isect, FuncType, TupleType};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,      Int,
-    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple,    Let,
-    Var,     New,      Lambda,   QName,  Method,    Call,     CallDyn,  If,
-    While,   For,      When,     Equals, Else,      Ref,      Try,      Op,
-    Convert, Binop,    Unop,     Nulop,  NewArray,  ArrayRef, FieldRef, Load};
+    ExprSeq,  DontCare, Ident,    True,     False,  Bin,       Oct,
+    Int,      Hex,      Float,    HexFloat, String, RawString, DontCare,
+    Tuple,    Let,      Var,      New,      Lambda, QName,     Method,
+    Call,     CallDyn,  If,       While,    For,    When,      Equals,
+    Else,     Try,      Op,       Convert,  Binop,  Unop,      Nulop,
+    NewArray, ArrayRef, FieldRef, Load};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -23,16 +24,8 @@ namespace vc
   const auto NamedType =
     T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
 
-  const auto SomeType =
-    T(TypeName,
-      Union,
-      Isect,
-      RefType,
-      TupleType,
-      FuncType,
-      NoArgType,
-      SubType,
-      WhereNot);
+  const auto SomeType = T(
+    TypeName, Union, Isect, TupleType, FuncType, NoArgType, SubType, WhereNot);
 
   Node make_typename(NodeRange r)
   {
@@ -118,8 +111,12 @@ namespace vc
         In(ClassBody) * T(Group) << (FieldPat * End) >>
           [](Match& _) {
             auto type = clone(Type << _[Type]);
-            Node reftype =
-              _[Type].empty() ? Type : Type << (RefType << _[Type]);
+            Node reftype = _[Type].empty() ? Type :
+                                             Type
+                << (TypeName
+                    << (TypeElement << (Ident ^ "ref")
+                                    << (TypeArgs << (Type << _[Type]))));
+
             return Seq << (FieldDef << clone(_(Ident)) << type
                                     << (Body << (Group << _[Body])))
                        << (Function
@@ -136,12 +133,12 @@ namespace vc
 
         // Function.
         In(ClassBody) * T(Group)
-            << (~T(Ref)[Ref] * T(Ident, SymbolId)[Ident] *
+            << (~T(Ident, "ref")[Lhs] * T(Ident, SymbolId)[Ident] *
                 ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
                 ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
                 T(Brace)[Brace]) >>
           [](Match& _) {
-            Node side = _(Ref) ? Lhs : Rhs;
+            Node side = _(Lhs) ? Lhs : Rhs;
             Node body = Body;
 
             if (_(Brace)->empty())
@@ -239,10 +236,6 @@ namespace vc
         // Intersection type.
         In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
           [](Match& _) { return merge_type(Isect, _(Lhs), _(Rhs)); },
-
-        // Reference type.
-        In(Type, Where)++ * T(Ref) * SomeType[Type] >>
-          [](Match& _) { return RefType << _(Type); },
 
         // Tuple type.
         In(Type, Where)++ * T(List)[List] >>
@@ -704,7 +697,7 @@ namespace vc
             ok = false;
           }
         }
-        else if (node->in({Union, Isect, RefType, TupleType}))
+        else if (node->in({Union, Isect, TupleType}))
         {
           for (auto& child : *node)
           {

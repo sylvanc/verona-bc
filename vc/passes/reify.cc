@@ -59,9 +59,6 @@ namespace vc
         T(ClassId)[ClassId] >>
           [](Match& _) { return classid_to_primitive(_(ClassId)); },
 
-        // Turn RefType into Ref.
-        T(RefType)[RefType] >> [](Match& _) { return Ref << *_(RefType); },
-
         // Turn FuncType into Dyn.
         T(FuncType) >> [](Match&) -> Node { return Dyn; },
 
@@ -255,7 +252,11 @@ namespace vc
         }
         else if (node == Var)
         {
-          (node->parent(Func) / Vars) << (LocalId ^ (node / Ident));
+          auto f = node->parent(Func);
+
+          if (f)
+            (f / Vars) << (LocalId ^ (node / Ident));
+
           to_remove.push_back(node);
           ok = false;
         }

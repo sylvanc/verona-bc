@@ -113,7 +113,15 @@ namespace vc
       }
 
       // Build the symbol table.
-      wfPassANF.build_st(instance);
+      for (auto& child : *instance)
+      {
+        if (!wfPassANF.build_st(child))
+        {
+          child << (err("Invalid definition") << errloc(child));
+          status = Fail;
+          return true;
+        }
+      }
     }
 
     return true;
@@ -149,6 +157,8 @@ namespace vc
           reify_f64();
         else if (node == Lookup)
           reify_lookup(node);
+        else if (node->in({FieldRef, ArrayRef, RegisterRef}))
+          reify_ref(node);
       });
 
     if ((status == Delay) && (delays == 0))
@@ -231,7 +241,6 @@ namespace vc
 
   void Reification::reify_newarray(Node node)
   {
-    // TODO:
     Subst s;
     auto pdef = rs->builtin->lookdown(Location("array")).front();
     s[(pdef / TypeParams)->front()] = node / Type;
@@ -296,6 +305,14 @@ namespace vc
   void Reification::reify_lookup(Node node)
   {
     rs->add_lookup(node);
+  }
+
+  void Reification::reify_ref(Node /*node*/)
+  {
+    Subst s;
+    auto pdef = rs->builtin->lookdown(Location("ref")).front();
+    s[(pdef / TypeParams)->front()] = Type << Dyn;
+    rs->schedule(pdef, s, true);
   }
 
   void Reification::reify_lookups()

@@ -51,6 +51,8 @@ namespace vc
     void reify_bool();
     void reify_f64();
     void reify_lookup(Node node);
+    void reify_ref(Node node);
+
     void reify_lookups();
   };
 }

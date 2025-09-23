@@ -46,7 +46,6 @@ namespace vc
   inline const auto RawString = TokenDef("rawstring", flag::print);
 
   inline const auto Isect = TokenDef("isect");
-  inline const auto RefType = TokenDef("reftype");
   inline const auto TupleType = TokenDef("tupletype");
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
@@ -86,26 +85,13 @@ namespace vc
     T(True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
 
   inline const auto ApplyLhsPat = LiteralPat /
-    T(ExprSeq,
-      LocalId,
-      Tuple,
-      New,
-      Ref,
-      Call,
-      CallDyn,
-      Convert,
-      Binop,
-      Unop,
-      Nulop);
+    T(ExprSeq, LocalId, Tuple, New, Call, CallDyn, Convert, Binop, Unop, Nulop);
 
   inline const auto ApplyRhsPat =
     ApplyLhsPat / T(QName, Method, DontCare, If, While, For, When);
 
-  inline const auto ExprPat = ApplyRhsPat / T(Else);
-
-  inline const auto wfType =
-    TypeName | Union | Isect | RefType | TupleType | FuncType;
-
+  inline const auto ExprPat = ApplyRhsPat / T(Ref, Else);
+  inline const auto wfType = TypeName | Union | Isect | TupleType | FuncType;
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
   inline const auto wfBody =
@@ -122,8 +108,8 @@ namespace vc
 
   inline const auto wfExprStructure = ExprSeq | DontCare | Ident | wfLiteral |
     String | RawString | Tuple | Let | Var | New | Lambda | QName | Op |
-    Method | If | Else | While | For | When | Equals | Ref | Try | Convert |
-    Binop | Unop | Nulop | NewArray | ArrayRef | FieldRef | Load;
+    Method | If | Else | While | For | When | Equals | Try | Convert | Binop |
+    Unop | Nulop | NewArray | ArrayRef | FieldRef | Load;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -150,7 +136,6 @@ namespace vc
     | (Type <<= ~wfType)
     | (Union <<= wfType++[2])
     | (Isect <<= wfType++[2])
-    | (RefType <<= wfType)
     | (TupleType <<= wfType++[2])
     | (FuncType <<= (Lhs >>= wfType | NoArgType) * (Rhs >>= wfType))
     | (WhereAnd <<= wfWhere++[2])
@@ -204,12 +189,11 @@ namespace vc
   // clang-format on
 
   inline const auto wfExprApplication =
-    (wfExprSugar | LocalId | CallDyn) - Ident - QName - Method;
+    (wfExprSugar | Ref | LocalId | CallDyn) - Ident - QName - Method;
 
   // clang-format off
   inline const auto wfPassApplication =
       wfPassSugar
-    | (Ref <<= Expr)
     | (New <<= Args)
     | (CallDyn <<= Method * Args)
     | (Expr <<= wfExprApplication++)
@@ -222,6 +206,7 @@ namespace vc
   inline const auto wfPassOperators =
       wfPassApplication
     | (Expr <<= wfExprOperators)
+    | (Ref <<= Expr)
     | (Try <<= Expr)
     ;
   // clang-format on

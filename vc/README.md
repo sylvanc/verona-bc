@@ -3,8 +3,7 @@
 ## Current Work
 
 Reification.
-- Implement `ref[T]`, `cown[T]` built-ins.
-- A `FieldRef` or `ArrayRef` should instantiate a type. Ignore `RegisterRef`.
+- Implement `cown[T]` built-in.
 - Don't fail on method instantiation failure.
   - Mark as "delete on error".
   - On completion of `run`, check if it contains errors.

@@ -136,19 +136,14 @@ namespace vc
                  r->end(),
                  [&](auto& t, auto& u) { return reduce(t, u); });
       }
-      else if (r == RefType)
-      {
-        // Ref types are subtypes if the inner types are invariant.
-        return (l == RefType) && reduce(l / RefType, r / RefType) &&
-          reduce(r / RefType, l / RefType);
-      }
       else if (r == TypeNameReified)
       {
         // Reified type names are subtypes if they're identical.
         return r->equals(l);
       }
       else if (r->in(
-                 {None,
+                 {Dyn,
+                  None,
                   Bool,
                   I8,
                   I16,
@@ -165,11 +160,10 @@ namespace vc
                   F32,
                   F64}))
       {
-        // Primitive are subtypes if they're identical.
+        // Dynamic and primitives are subtypes if they're identical.
         return r->equals(l);
       }
 
-      // TODO:
       return false;
     }
   };

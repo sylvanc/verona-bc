@@ -173,14 +173,6 @@ namespace vc
               return NoChange;
           }
 
-          // If Type is a RefType, unwrap it, otherwise empty.
-          auto type = _(Type);
-
-          if (!type->empty() && (type->front() == RefType))
-            type = Type << clone(type->front()->front());
-          else
-            type = Type;
-
           // Forward the arguments.
           Node args = Args;
 
@@ -190,11 +182,11 @@ namespace vc
           // Create the RHS function.
           auto rhs =
             Function << Rhs << clone(ident) << clone(_(TypeParams))
-                     << clone(_(Params)) << type << clone(_(Where))
+                     << clone(_(Params)) << Type << clone(_(Where))
                      << (Body
                          << (Expr
                              << (Load
-                                 << (Expr << Ref
+                                 << (Expr << (Ident ^ "ref")
                                           << call_func(
                                                ident, _(TypeParams), args)))));
 

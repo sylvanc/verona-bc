@@ -10,7 +10,7 @@ array[T]
     :::len(self)
   }
 
-  ref apply(self: array[T], index: usize): ref T
+  ref apply(self: array[T], index: usize): ref[T]
   {
     :::arrayref(self, index)
   }

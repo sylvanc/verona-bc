@@ -50,6 +50,7 @@ main(): i32
     sum = sum + r.next
   }
 
-  a(usize 0) = sum;
-  a(usize 0)
+  let a0 = ref a(usize 0);
+  *a0 = sum;
+  *a0
 }

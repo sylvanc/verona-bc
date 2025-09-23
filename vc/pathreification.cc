@@ -375,7 +375,7 @@ namespace vc
 
       if (dflt->empty())
       {
-        subst[typeparams->at(i)] = Dyn;
+        subst[typeparams->at(i)] = Type << Dyn;
         return Ok;
       }
 
