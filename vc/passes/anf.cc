@@ -566,17 +566,21 @@ namespace vc
         // Discard non-terminal LocalId.
         In(Body) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
 
-        // Compact an ExprSeq with only one element.
-        T(ExprSeq) << (Any[Expr] * End) >> [](Match& _) { return _(Expr); },
+        // Decompose expression sequences.
+        T(ExprSeq)[ExprSeq] >> [](Match& _) -> Node {
+          auto p = _(ExprSeq);
 
-        // Discard leading LocalId in ExprSeq.
-        In(ExprSeq) * T(LocalId) * ++Any >> [](Match&) -> Node { return {}; },
+          if (p->empty())
+            return err(p, "Unexpected empty parentheses");
 
-        // An empty ExprSeq is not an expression.
-        T(ExprSeq)[ExprSeq] << End >>
-          [](Match& _) {
-            return err(_(ExprSeq), "Unexpected empty parentheses");
-          },
+          Node seq = Seq;
+
+          for (size_t i = 0; i < p->size() - 1; ++i)
+            seq << (Lift << Body << p->at(i));
+
+          seq << p->back();
+          return seq;
+        },
       }};
 
     p.post([](auto top) {

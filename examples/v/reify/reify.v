@@ -28,29 +28,22 @@ range[A = i32]
   }
 }
 
-id[A](x: A): A
-{
-  x
-}
-
-use cycle1 = cycle2;
-use cycle2 = cycle1;
+// use cycle1 = cycle2;
+// use cycle2 = cycle1;
 
 main(): i32
 {
   // let f = cycle1;
   let a = array[i32](usize 10);
-
-  use foo[A = i32] = range[A];
-  let r = foo(i32 0, i32 10);
+  let r = range(i32 0, i32 10);
   var sum = i32 0;
 
-  while r.has_next
+  for r v ->
   {
-    sum = sum + r.next
+    sum = sum + v;
   }
 
   let a0 = ref a(usize 0);
   *a0 = sum;
-  *a0
+  a(usize 0)
 }

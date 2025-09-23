@@ -593,7 +593,50 @@ namespace vc
         // For.
         In(Expr) * (T(For) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
           [](Match& _) {
-            return For << (Expr << _[For]) << (Block << *_(Lambda));
+            auto params = _(Lambda) / Params;
+            auto type = _(Lambda) / Type;
+            auto body = _(Lambda) / Body;
+
+            if (params->empty())
+              return err(_(Lambda), "For loop must have parameters");
+
+            // Unpack arguments.
+            Node lhs = Tuple;
+
+            for (auto& p : *params)
+            {
+              if (!(p / Body)->empty())
+                return err(p, "For loop parameter can't have a default value");
+
+              lhs << (Expr << (Let << (p / Ident) << (p / Type)));
+            }
+
+            if (lhs->size() == 1)
+              lhs = lhs->front();
+            else
+              lhs = Expr << lhs;
+
+            // On each iteration, call `next` on the iterator and assign the
+            // result to the loop variable(s).
+            auto id = _.fresh(Location("it"));
+            body->push_front(
+              Expr
+              << (Equals << lhs
+                         << (Expr
+                             << (Method << (Expr << (Ident ^ id))
+                                        << (Ident ^ "next") << TypeArgs))));
+
+            return ExprSeq << (Expr
+                               << (Equals
+                                   << (Expr << (Let << (Ident ^ id) << Type))
+                                   << (Expr << _[For])))
+                           << (Expr
+                               << (While
+                                   << (Expr
+                                       << (Method << (Expr << (Ident ^ id))
+                                                  << (Ident ^ "has_next")
+                                                  << TypeArgs))
+                                   << (Block << Params << type << body)));
           },
 
         // When.
