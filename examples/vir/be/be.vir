@@ -1,20 +1,20 @@
 lib
   @printval = "printval"(dyn): none
 
-class @make_cown_bool
+class @closure_bool
   @val: bool
-  @apply @make_cown_bool_apply
+  @apply @closure_bool_apply
 
-func @make_cown_bool_apply($self: @make_cown_bool): bool
+func @closure_bool_apply($self: @closure_bool): bool
   $val_ref = ref $self @val
   $r = load $val_ref
   ret $r
 
-class @make_cown_i32
+class @closure_i32
   @val: i32
-  @apply @make_cown_i32_apply
+  @apply @closure_i32_apply
 
-func @make_cown_i32_apply($self: @make_cown_i32): i32
+func @closure_i32_apply($self: @closure_i32): i32
   $val_ref = ref $self @val
   $r = load $val_ref
   ret $r
@@ -46,16 +46,18 @@ func @behavior2_apply($self: @behavior2, $promise_v: ref i32): none
 
 func @main(): i32
   $bool = const bool true
-  $make_cown_bool = region arena @make_cown_bool($bool)
-  $cown1 = when(): bool $make_cown_bool
+  $closure_bool = region arena @closure_bool($bool)
+  $be1 = lookup $closure_bool @apply
+  $cown1 = when $be1($closure_bool): bool
   $i32 = const i32 42
-  $make_cown_i32 = region arena @make_cown_i32($i32)
-  $cown2 = when(): i32 $make_cown_i32
+  $closure_i32 = region arena @closure_i32($i32)
+  $cown2 = when @closure_i32_apply($closure_i32): i32
   $ro_cown2 = read $cown2
-  $b1 = region arena @behavior1($i32)
-  $promise = when($cown1, $ro_cown2): i32 $b1
+  $closure1 = region arena @behavior1($i32)
+  $promise = when @behavior1_apply($closure1, $cown1, $ro_cown2): i32
   $ro_promise = read $promise
-  $b2 = region arena @behavior2()
-  $_ = when ($ro_promise): none $b2
+  $closure2 = region arena @behavior2()
+  $be4 = lookup @behavior2_apply
+  $_ = when($ro_promise): none $be4($closure2)
   $zero = const i32 0
   ret $zero

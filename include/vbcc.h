@@ -191,6 +191,7 @@ namespace vbcc
   inline const auto SubcallDyn = TokenDef("subcalldyn");
   inline const auto TryDyn = TokenDef("trydyn");
   inline const auto TailcallDyn = TokenDef("tailcalldyn");
+  inline const auto WhenDyn = TokenDef("whendyn");
   inline const auto ConstStr = TokenDef("conststr");
 
   // Convenient names.
@@ -224,8 +225,8 @@ namespace vbcc
     StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
-    Subcall | SubcallDyn | Try | TryDyn | FFI | When | Typetest | wfBinop |
-    wfUnop | wfConst;
+    Subcall | SubcallDyn | Try | TryDyn | FFI | When | WhenDyn | Typetest |
+    wfBinop | wfUnop | wfConst;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -304,7 +305,8 @@ namespace vbcc
     | (Try <<= wfDst * FunctionId * Args)
     | (TryDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
-    | (When <<= wfDst * Args * Cown * Arg)
+    | (When <<= wfDst * FunctionId * Args * Cown)
+    | (WhenDyn <<= wfDst * wfSrc * Args * Cown)
     | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)

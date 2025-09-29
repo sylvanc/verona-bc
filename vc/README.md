@@ -2,8 +2,14 @@
 
 ## Current Work
 
+Check use before definition in `let x = ... x ...`.
+
+Concurrency.
+- When pushes function pointer, optional closure data, then cowns.
+  - Change the VC emitter.
+- Test `when` with multiple `cown`.
+
 Reification.
-- Implement `cown[T]` built-in.
 - Don't fail on method instantiation failure.
   - Mark as "delete on error".
   - On completion of `run`, check if it contains errors.
@@ -27,13 +33,7 @@ Patterns for lambdas.
 - `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
 
 Assign:
-- Rename shadowed variables.
-- Need to be able to load a `localid`.
-  - This is for when a local is of type `ref T`.
-  - Keyword? Or a method on `ref`?
-
-Control flow:
-- For, When.
+- Rename shadowed variables in `if`, `while`.
 
 Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
@@ -44,6 +44,7 @@ Tuples:
 
 Calls:
 - Try (rename to `catch`?), sub-call.
+- Raise, throw.
 
 Expressions:
 - Only allow `:::` in `std::builtin`.
@@ -69,7 +70,6 @@ Structure:
 
 Standard library:
 - Primitive type conversions.
-- `ref`, `cown`.
 - String.
 - `stdin`, `stdout`, `stderr`.
 
@@ -92,76 +92,3 @@ Types:
 - Structural types.
 - Turn function types into structural types.
 - Can type parameters take type arguments?
-
-## Syntax
-
-```rs
-
-top = class*
-
-typename = ident typeargs? ('::' ident typeargs?)*
-typearg = type | '#' expr
-typeargs = '[' typearg (',' typearg)* ']'
-
-// No precedence, read left to right.
-type = typename
-     | type '|' type // Union.
-     | type '&' type // Intersection.
-     | type ',' type // Tuple.
-     | type '->' type // Function. Right associative.
-     | '(' type ')' // Parentheses for grouping.
-
-typeparam = ident (':' type)? ('=' type)?
-typeparams = '[' (typeparam (',' typeparam)*)? ']'
-
-// Classes.
-class = ident typeparams? '{' classbody '}'
-classbody = (class | import | typealias | field | function)*
-import = 'use' typename
-typealias = 'use' ident typeparams? '=' type
-field = ident (':' type)? ('=' expr)?
-
-// Functions.
-function = ident typeparams? params (':' type)? '{' body '}'
-params = '(' param (',' param)* ')'
-param = ident (':' type)? ('=' expr)?
-body =
-     ( import | typealias | 'break' | 'continue' | 'return' expr
-     | 'raise' expr | 'throw' expr | expr
-     )*
-
-// Expressions.
-lambda = typeparams? params (':' type)? '->' (expr | '{' body '}')
-       | '{' body '}'
-qname = typename '::' (ident | symbol) typeargs?
-      | ident typeargs
-
-// Expression binding.
-strong = '(' expr ')' // exprseq
-       | 'let' ident (':' type)?
-       | 'var' ident (':' type)?
-       | literal
-       | expr (',' expr)+
-       | lambda
-       | ident
-       | expr '.' (ident | symbol) typeargs? // method
-       | qname // function
-       | qname exprseq // static call
-       | method exprseq // dynamic call
-       | 'if' expr lambda
-       | 'while' expr lambda
-       | 'for' expr lambda
-medium = apply expr // extend apply
-       | expr expr // apply
-weak   = 'ref' expr
-       | 'try' expr
-       | symbol typeargs? expr // dynamic call
-       | expr symbol typeargs? expr // dynamic call
-       | expr 'else' expr
-       | expr '=' expr
-       | apply
-         // qname: static call
-         // method: dynamic call
-         // other: dynamic call of `apply`
-
-```

@@ -24,7 +24,6 @@ namespace vbci
   inline const auto ApplyMethodId = size_t(1);
   inline const auto DynId = uint32_t(-1);
 
-
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
   // known to be signed integers (zigzag SLEB128) or floats (bitcast zigzag
   // ULEB128).
@@ -224,7 +223,7 @@ namespace vbci
 
     // Set a value as an argument index in the next frame. Use this to set up
     // the arguments for an object allocation or a function call. Arguments are
-    // set up in order, and cleared on a call, tailcall, ore return.
+    // set up in order, and cleared on a call, tailcall, or return.
     // Arg0 = src.
     ArgMove,
     ArgCopy,
@@ -257,14 +256,17 @@ namespace vbci
     // Arg1 = symbol ID.
     FFI,
 
-    // Set up the arguments with the behavior closure or function pointer first,
-    // followed by the cowns to be acquired. The behavior closure must have an
-    // @apply method where the implementation takes the behavior and the
-    // acquired cowns as arguments. With a function pointer, it takes just the
-    // acquired cowns.
+    // Set up the arguments with one optional non-cown argument (for closures),
+    // followed by the cowns to be acquired.
     // Arg0 = dst.
     // Arg1 = cown type ID.
-    When,
+    // Arg2 = function ID.
+    WhenStatic,
+
+    // Arg0 = dst.
+    // Arg1 = cown type ID.
+    // Arg2 = function pointer.
+    WhenDynamic,
 
     // Returns true if the dynamic type of src is a subtype of the type ID.
     // Arg0 = dst.

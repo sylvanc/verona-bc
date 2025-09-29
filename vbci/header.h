@@ -247,8 +247,24 @@ namespace vbci
         assert(loc::is_region(loc));
         auto r = loc::to_region(loc);
 
-        // TODO: drag frame-local? delay when stack RC > 1 ?
-        return r->sendable();
+        if (r->sendable())
+          return true;
+
+        if (r->is_frame_local())
+        {
+          // Drag a frame-local allocation to a region.
+          auto nr = Region::create(RegionType::RegionRC);
+
+          if (!drag_allocation(nr, this))
+            return false;
+
+          if (nr->sendable())
+            return true;
+
+          // TODO: delay if stack_rc > 1?
+        }
+
+        return false;
       }
     }
 

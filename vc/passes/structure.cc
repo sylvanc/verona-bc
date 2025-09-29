@@ -596,35 +596,36 @@ namespace vc
             auto params = _(Lambda) / Params;
             auto type = _(Lambda) / Type;
             auto body = _(Lambda) / Body;
-
-            if (params->empty())
-              return err(_(Lambda), "For loop must have parameters");
-
-            // Unpack arguments.
-            Node lhs = Tuple;
-
-            for (auto& p : *params)
-            {
-              if (!(p / Body)->empty())
-                return err(p, "For loop parameter can't have a default value");
-
-              lhs << (Expr << (Let << (p / Ident) << (p / Type)));
-            }
-
-            if (lhs->size() == 1)
-              lhs = lhs->front();
-            else
-              lhs = Expr << lhs;
-
-            // On each iteration, call `next` on the iterator and assign the
-            // result to the loop variable(s).
             auto id = _.fresh(Location("it"));
-            body->push_front(
-              Expr
-              << (Equals << lhs
-                         << (Expr
-                             << (Method << (Expr << (Ident ^ id))
-                                        << (Ident ^ "next") << TypeArgs))));
+
+            if (!params->empty())
+            {
+              // Unpack arguments.
+              Node lhs = Tuple;
+
+              for (auto& p : *params)
+              {
+                if (!(p / Body)->empty())
+                  return err(
+                    p, "For loop parameter can't have a default value");
+
+                lhs << (Expr << (Let << (p / Ident) << (p / Type)));
+              }
+
+              if (lhs->size() == 1)
+                lhs = lhs->front();
+              else
+                lhs = Expr << lhs;
+
+              // On each iteration, call `next` on the iterator and assign the
+              // result to the loop variable(s).
+              body->push_front(
+                Expr
+                << (Equals << lhs
+                           << (Expr
+                               << (Method << (Expr << (Ident ^ id))
+                                          << (Ident ^ "next") << TypeArgs))));
+            }
 
             return ExprSeq << (Expr
                                << (Equals
@@ -640,9 +641,19 @@ namespace vc
           },
 
         // When.
-        In(Expr) * (T(When) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
+        In(Expr) * (T(When) << End) * T(ExprSeq)[ExprSeq] * T(Lambda)[Lambda] >>
           [](Match& _) {
-            return When << (Expr << _[For]) << (Block << *_(Lambda));
+            auto lambda = _(Lambda);
+            return When << seq_to_args(_(ExprSeq)) << clone(lambda / Type)
+                        << (Expr << lambda);
+          },
+
+        In(Expr) * (T(When) << End) * (!T(Lambda))++[When] *
+            T(Lambda)[Lambda] >>
+          [](Match& _) {
+            auto lambda = _(Lambda);
+            return When << (Args << (Expr << _[When])) << clone(lambda / Type)
+                        << (Expr << lambda);
           },
 
         // Assignment is right-associative.
@@ -829,6 +840,18 @@ namespace vc
           {
             node->replace(
               node->front(), err(node->front(), "Expected no arguments"));
+            ok = false;
+          }
+        }
+        else if (node == When)
+        {
+          auto lambda = (node / Expr)->front();
+
+          if ((node / Args)->size() != (lambda / Params)->size())
+          {
+            node->replace(
+              node->front(),
+              err(node->front(), "When argument count must match lambda"));
             ok = false;
           }
         }

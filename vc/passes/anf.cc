@@ -391,6 +391,18 @@ namespace vc
           return seq;
         },
 
+        // When.
+        In(Expr) * T(When)
+            << (T(Args)[Args] * T(Type)[Type] * T(LocalId)[Rhs]) >>
+          [](Match& _) {
+            // TODO:
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (When << (LocalId ^ id) << _(Args) << _(Type)
+                                         << (Arg << ArgCopy << _(Rhs))))
+                       << (LocalId ^ id);
+          },
+
         // Replace Let with LocalId.
         // TODO: what about the Type?
         In(Expr, Lhs) * T(Let)[Let] >>

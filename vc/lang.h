@@ -159,7 +159,7 @@ namespace vc
     | (Else <<= Expr * Block)
     | (While <<= Expr * Block)
     | (For <<= Expr * Block)
-    | (When <<= Expr * Block)
+    | (When <<= Args * Type * Expr)
     | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
@@ -188,12 +188,21 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto wfExprIdent = (wfExprSugar | Ref | LocalId) - Ident;
+
+  // clang-format off
+  inline const auto wfPassIdent =
+      wfPassSugar
+    | (Expr <<= wfExprIdent++)
+    ;
+  // clang-format on
+
   inline const auto wfExprApplication =
-    (wfExprSugar | Ref | LocalId | CallDyn) - Ident - QName - Method;
+    (wfExprIdent | CallDyn) - QName - Method;
 
   // clang-format off
   inline const auto wfPassApplication =
-      wfPassSugar
+      wfPassIdent
     | (New <<= Args)
     | (CallDyn <<= Method * Args)
     | (Expr <<= wfExprApplication++)
@@ -214,7 +223,7 @@ namespace vc
   inline const auto wfBodyANF = Use | TypeAlias | Const | ConstStr | Convert |
     Copy | Move | RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New |
     NewArray | NewArrayConst | Load | Store | Lookup | Call | CallDyn |
-    Typetest | Var | wfBinop | wfUnop | wfNulop | Len;
+    Typetest | Var | When | wfBinop | wfUnop | wfNulop | Len;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -250,6 +259,7 @@ namespace vc
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
     | (Jump <<= LabelId)
+    | (When <<= wfDst * Args * Type * Arg)
     | (Add <<= wfDst * wfLhs * wfRhs)
     | (Sub <<= wfDst * wfLhs * wfRhs)
     | (Mul <<= wfDst * wfLhs * wfRhs)
@@ -307,17 +317,12 @@ namespace vc
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
 
-  // TODO: delete these.
-  Node lookup(Node ident);
-  Node resolve(Node name);
-  Node resolve_qname(Node qname, Node side, size_t arity);
-
   Parse parser(std::shared_ptr<Bytecode> state);
   PassDef structure();
   PassDef sugar();
+  PassDef ident();
   PassDef application();
   PassDef operators();
   PassDef anf();
-  PassDef reify();
-  PassDef flatten();
+  PassDef reify(std::shared_ptr<Bytecode> state);
 }

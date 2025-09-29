@@ -75,6 +75,7 @@ namespace vbci
     void check_args(std::vector<Field>& fields);
     Value& arg(size_t idx);
     void drop_args();
+    void queue_behavior(Value& result, uint32_t type_id, Function* func);
 
     template<typename T = size_t>
     T leb()

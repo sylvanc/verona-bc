@@ -9,30 +9,6 @@ namespace vc
       wfPassApplication,
       dir::topdown,
       {
-        // Ident resolution.
-        In(Expr) * T(Ident)[Ident] >> [](Match& _) -> Node {
-          auto ident = _(Ident);
-
-          if (ident->location().view() == "ref")
-            return Ref;
-
-          auto defs = ident->lookup();
-
-          for (auto& def : defs)
-          {
-            if (def->in({ParamDef, Let, Var}))
-            {
-              if (!def->precedes(ident))
-                return err(ident, "Identifier used before definition");
-
-              return LocalId ^ ident;
-            }
-          }
-
-          // Not a local, treat it as a static call.
-          return QName << (QElement << ident << TypeArgs);
-        },
-
         // C-style new.
         In(Expr) * (T(New) << End) * T(ExprSeq)[ExprSeq] >>
           [](Match& _) { return New << seq_to_args(_(ExprSeq)); },

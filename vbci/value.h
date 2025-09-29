@@ -116,10 +116,12 @@ namespace vbci
     ValueType type();
     uint32_t type_id();
 
+    bool is_invalid();
     bool is_readonly();
     bool is_header();
     bool is_function();
     bool is_sendable();
+    bool is_cown();
     bool is_error();
 
     bool get_bool();

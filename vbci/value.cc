@@ -352,6 +352,11 @@ namespace vbci
     }
   }
 
+  bool Value::is_invalid()
+  {
+    return tag == ValueType::Invalid;
+  }
+
   bool Value::is_readonly()
   {
     return readonly;
@@ -398,6 +403,11 @@ namespace vbci
       default:
         return true;
     }
+  }
+
+  bool Value::is_cown()
+  {
+    return tag == ValueType::Cown;
   }
 
   bool Value::is_error()

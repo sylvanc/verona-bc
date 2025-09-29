@@ -549,12 +549,20 @@ namespace vbcc
                        << callargs(_[Args]);
           },
 
-        // When.
-        Dst * T(When) * CallArgs[Args] * T(Colon) * TypePat[Type] *
-            T(LocalId)[Rhs] >>
+        // Static When.
+        Dst * T(When) * T(GlobalId)[GlobalId] * CallArgs[Args] * T(Colon) *
+            TypePat[Type] >>
           [](Match& _) {
-            return When << _(LocalId) << callargs(_[Args]) << (Cown << _(Type))
-                        << (Arg << ArgCopy << _(Rhs));
+            return When << _(LocalId) << (FunctionId ^ _(GlobalId))
+                        << callargs(_[Args]) << (Cown << _(Type));
+          },
+
+        // Dynamic When.
+        Dst * T(When) * T(LocalId)[Lhs] * CallArgs[Args] * T(Colon) *
+            TypePat[Type] >>
+          [](Match& _) {
+            return WhenDyn << _(LocalId) << _(Lhs) << callargs(_[Args])
+                           << (Cown << _(Type));
           },
 
         // Type test.

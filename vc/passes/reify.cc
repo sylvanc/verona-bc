@@ -46,9 +46,10 @@ namespace vc
     return NoChange;
   }
 
-  PassDef reify()
+  PassDef reify(std::shared_ptr<Bytecode> state)
   {
     auto rs = std::make_shared<Reifications>();
+    rs->state = state;
 
     PassDef p{
       "reify",

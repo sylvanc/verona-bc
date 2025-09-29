@@ -28,13 +28,9 @@ range[A = i32]
   }
 }
 
-// use cycle1 = cycle2;
-// use cycle2 = cycle1;
-
 main(): i32
 {
-  // let f = cycle1;
-  let a = array[i32](usize 10);
+  let a = array[i32](10.usize);
   let r = range(i32 0, i32 10);
   var sum = i32 0;
 
@@ -45,5 +41,22 @@ main(): i32
 
   let a0 = ref a(usize 0);
   *a0 = sum;
-  a(usize 0)
+  let x = *a0;
+
+  let cownx = when ()
+  {
+    x
+  }
+
+  let cownx2 = when (cownx) y ->
+  {
+    y * 2
+  }
+
+  let cownx3 = when (cownx, cownx2) (y, z) ->
+  {
+    y + z
+  }
+
+  x
 }

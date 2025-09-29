@@ -214,4 +214,79 @@ f64
   {
     :::nan()
   }
+
+  bool(self: f64): bool
+  {
+    self != 0.f64
+  }
+
+  i8(self: f64): i8
+  {
+    :::convi8(self)
+  }
+
+  i16(self: f64): i16
+  {
+    :::convi16(self)
+  }
+
+  i32(self: f64): i32
+  {
+    :::convi32(self)
+  }
+
+  i64(self: f64): i64
+  {
+    :::convi64(self)
+  }
+
+  u8(self: f64): u8
+  {
+    :::convu8(self)
+  }
+
+  u16(self: f64): u16
+  {
+    :::convu16(self)
+  }
+
+  u32(self: f64): u32
+  {
+    :::convu32(self)
+  }
+
+  u64(self: f64): u64
+  {
+    :::convu64(self)
+  }
+
+  ilong(self: f64): ilong
+  {
+    :::convilong(self)
+  }
+
+  ulong(self: f64): ulong
+  {
+    :::convulong(self)
+  }
+
+  isize(self: f64): isize
+  {
+    :::convisize(self)
+  }
+
+  usize(self: f64): usize
+  {
+    :::convusize(self)
+  }
+
+  f32(self: f64): f32
+  {
+    :::convf32(self)
+  }
+
+  f64(self: f64): f64
+  {
+    self
+  }
 }

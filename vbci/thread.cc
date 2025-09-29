@@ -14,9 +14,11 @@ namespace vbci
     if (!Program::get().subtype(func->return_type, result->content_type_id()))
       throw Value(Error::BadType);
 
-    auto b = verona::rt::BehaviourCore::make(1, run_behavior, sizeof(Value));
+    auto b =
+      verona::rt::BehaviourCore::make(1, run_behavior, sizeof(Value) * 2);
     new (&b->get_slots()[0]) verona::rt::Slot(result);
-    new (b->get_body<Value>()) Value(func);
+    new (&b->get_body<Value>()[0]) Value(func);
+    new (&b->get_body<Value>()[1]) Value();
     verona::rt::BehaviourCore::schedule_many(&b, 1);
     return Value(result, false);
   }
@@ -53,28 +55,22 @@ namespace vbci
     assert(!frame);
     assert(!args);
     auto b = verona::rt::BehaviourCore::from_work(work);
-    auto closure = b->get_body<Value>();
+    auto values = b->get_body<Value>();
+    behavior = values[0].function();
+    auto& closure = values[1];
 
-    if (closure->is_function())
+    if (!closure.is_invalid())
     {
-      // This is a function pointer.
-      behavior = closure->function();
-    }
-    else
-    {
-      // This is a closure, populate the self argument.
-      behavior = closure->method(ApplyMethodId);
-
-      if (closure->is_header())
+      if (closure.is_header())
       {
-        auto r = closure->get_header()->region();
+        auto r = closure.get_header()->region();
 
         // Clear the parent region, as it's no longer acquired by the behaviour.
         if (r)
           r->clear_parent();
       }
 
-      locals.at(args++) = std::move(*closure);
+      locals.at(args++) = std::move(closure);
     }
 
     // Populate cown arguments.
@@ -88,7 +84,7 @@ namespace vbci
       locals.at(args++) = Value(cown, slots[i].is_read_only());
     }
 
-    // Execute the function.
+    // Store the function return value in the result cown.
     auto ret = thread_run(behavior);
     result->store(true, ret);
     verona::rt::BehaviourCore::finished(work);
@@ -610,108 +606,21 @@ namespace vbci
           break;
         }
 
-        case Op::When:
+        case Op::WhenStatic:
         {
-          if (args < 1)
-            throw Value(Error::BadArgs);
-
           auto& dst = frame->local(leb());
           auto type_id = leb();
-          auto& be = frame->arg(0);
-          bool closure;
-          Function* apply;
+          auto func = program->function(leb());
+          queue_behavior(dst, type_id, func);
+          break;
+        }
 
-          if (be.is_function())
-          {
-            apply = be.function();
-            closure = false;
-
-            if (apply->param_types.size() != (args - 1))
-              throw Value(Error::BadArgs);
-          }
-          else
-          {
-            apply = be.method(ApplyMethodId);
-            closure = true;
-
-            if (!apply)
-              throw Value(Error::MethodNotFound);
-
-            if (apply->param_types.size() != args)
-              throw Value(Error::BadArgs);
-
-            if (!be.is_sendable())
-              throw Value(Error::BadArgs);
-          }
-
-          auto& params = apply->param_types;
-          size_t num_cowns = args;
-          size_t first_cown = 0;
-
-          if (closure)
-          {
-            // First argument is the behavior itself.
-            if (!program->subtype(be.type_id(), params.at(0)))
-              throw Value(Error::BadArgs);
-
-            // First cown argument is at index 1.
-            first_cown++;
-            num_cowns--;
-          }
-
-          // Check that all other args are cowns of the right type.
-          for (size_t i = first_cown; i < args; i++)
-          {
-            auto cown = frame->arg(i).get_cown();
-            auto ref_type = program->ref(cown->content_type_id());
-
-            if (!program->subtype(ref_type, params.at(i)))
-              throw Value(Error::BadArgs);
-          }
-
-          args = 0;
-
-          // Create the result cown.
-          auto result = Cown::create(type_id);
-
-          if (!program->subtype(apply->return_type, result->content_type_id()))
-            throw Value(Error::BadType);
-
-          dst = result;
-
-          // Slot 0 is the result cown.
-          auto b = verona::rt::BehaviourCore::make(
-            num_cowns + 1, run_behavior, sizeof(Value));
-          auto slots = b->get_slots();
-          new (&slots[0]) verona::rt::Slot(result);
-
-          for (size_t i = 0; i < num_cowns; i++)
-          {
-            // The first cown argument position depends on whether this is a
-            // closure or not.
-            auto arg = std::move(frame->arg(first_cown + i));
-
-            // Offset the slot by 1 to account for the result cown.
-            auto& slot = slots[i + 1];
-            new (&slot) verona::rt::Slot(arg.get_cown());
-            slot.set_move();
-
-            if (arg.is_readonly())
-              slot.set_read_only();
-          }
-
-          if (be.is_header())
-          {
-            auto r = be.get_header()->region();
-
-            // Set the region parent, as it's captured by the behavior.
-            if (r)
-              r->set_parent();
-          }
-
-          auto value = new (b->get_body<Value>()) Value();
-          *value = std::move(be);
-          verona::rt::BehaviourCore::schedule_many(&b, 1);
+        case Op::WhenDynamic:
+        {
+          auto& dst = frame->local(leb());
+          auto type_id = leb();
+          auto func = frame->local(leb()).function();
+          queue_behavior(dst, type_id, func);
           break;
         }
 
@@ -1190,5 +1099,98 @@ namespace vbci
     }
 
     args = 0;
+  }
+
+  void Thread::queue_behavior(Value& result, uint32_t type_id, Function* func)
+  {
+    if (func->param_types.size() != args)
+      throw Value(Error::BadArgs);
+
+    auto& params = func->param_types;
+    bool is_closure = false;
+    size_t num_cowns = args;
+    size_t first_cown = 0;
+
+    if (args > 0)
+    {
+      auto& closure = frame->arg(0);
+
+      if (!closure.is_cown())
+      {
+        // The first argument is the closure data.
+        is_closure = true;
+
+        if (!program->subtype(closure.type_id(), params.at(0)))
+          throw Value(Error::BadArgs);
+
+        if (!closure.is_sendable())
+          throw Value(Error::BadArgs);
+
+        num_cowns--;
+        first_cown++;
+      }
+    }
+
+    // Check that all other args are cowns of the right type.
+    for (size_t i = first_cown; i < args; i++)
+    {
+      auto cown = frame->arg(i).get_cown();
+      auto ref_type = program->ref(cown->content_type_id());
+
+      if (!program->subtype(ref_type, params.at(i)))
+        throw Value(Error::BadArgs);
+    }
+
+    args = 0;
+
+    // Create the result cown.
+    auto result_cown = Cown::create(type_id);
+
+    if (!program->subtype(func->return_type, result_cown->content_type_id()))
+      throw Value(Error::BadType);
+
+    result = result_cown;
+
+    // Slot 0 is the result cown.
+    auto b = verona::rt::BehaviourCore::make(
+      num_cowns + 1, run_behavior, sizeof(Value) * 2);
+    auto slots = b->get_slots();
+    new (&slots[0]) verona::rt::Slot(result_cown);
+
+    for (size_t i = 0; i < num_cowns; i++)
+    {
+      // The first cown argument position depends on whether this is a
+      // closure or not.
+      auto arg = std::move(frame->arg(first_cown + i));
+
+      // Offset the slot by 1 to account for the result cown.
+      auto& slot = slots[i + 1];
+      new (&slot) verona::rt::Slot(arg.get_cown());
+      slot.set_move();
+
+      if (arg.is_readonly())
+        slot.set_read_only();
+    }
+
+    new (&b->get_body<Value>()[0]) Value(func);
+    auto cvalue = new (&b->get_body<Value>()[1]) Value();
+
+    if (is_closure)
+    {
+      auto& closure = frame->arg(1);
+
+      if (closure.is_header())
+      {
+        auto r = closure.get_header()->region();
+
+        // Set the region parent, as it's captured by the behavior.
+        if (r)
+          r->set_parent();
+      }
+
+      *cvalue = std::move(closure);
+    }
+
+    verona::rt::BehaviourCore::schedule_many(&b, 1);
   }
 }

@@ -62,8 +62,7 @@ namespace vc
             for (auto& tp : *typeparams)
             {
               typeargs
-                << (TypeName
-                    << (TypeElement << (Ident ^ tp / Ident) << TypeArgs));
+                << (TypeName << (TypeElement << (Ident ^ tp) << TypeArgs));
             }
 
             auto type = Type
@@ -97,23 +96,28 @@ namespace vc
               new_args << (Expr << (Ident ^ freevar));
             }
 
+            if (new_args->size() == 0)
+              new_args = ExprSeq;
+            else if (new_args->size() == 1)
+              new_args = ExprSeq << new_args->front();
+            else
+              new_args = ExprSeq << (Expr << new_args);
+
             apply_body << *_(Body);
 
             return Seq
-              << (Lift
-                  << ClassBody
-                  << (ClassDef
-                      << (Ident ^ id) << typeparams << Where
-                      << (classbody
-                          << (Function
-                              << Rhs << (Ident ^ "create") << TypeParams
-                              << create_params << type << Where
-                              << (Body
-                                  << (Expr << New
-                                           << (ExprSeq << (Expr << new_args)))))
-                          << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                                       << apply_params << _(Type) << Where
-                                       << apply_body))))
+              << (Lift << ClassBody
+                       << (ClassDef
+                           << (Ident ^ id) << typeparams << Where
+                           << (classbody
+                               << (Function
+                                   << Rhs << (Ident ^ "create") << TypeParams
+                                   << create_params << type << Where
+                                   << (Body << (Expr << New << new_args)))
+                               << (Function << Rhs << (Ident ^ "apply")
+                                            << TypeParams << apply_params
+                                            << _(Type) << Where
+                                            << apply_body))))
               << (Call << (QName
                            << (QElement << (Ident ^ id) << clone(typeargs)))
                        << create_args);
@@ -177,7 +181,7 @@ namespace vc
           Node args = Args;
 
           for (auto& param : *_(Params))
-            args << (Expr << clone(param / Ident));
+            args << (Expr << (Ident ^ (param / Ident)));
 
           // Create the RHS function.
           auto rhs =

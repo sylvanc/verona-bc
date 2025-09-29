@@ -104,4 +104,79 @@ usize
   {
     :::not(self)
   }
+
+  bool(self: usize): bool
+  {
+    self != 0.usize
+  }
+
+  i8(self: usize): i8
+  {
+    :::convi8(self)
+  }
+
+  i16(self: usize): i16
+  {
+    :::convi16(self)
+  }
+
+  i32(self: usize): i32
+  {
+    :::convi32(self)
+  }
+
+  i64(self: usize): i64
+  {
+    :::convi64(self)
+  }
+
+  u8(self: usize): u8
+  {
+    :::convu8(self)
+  }
+
+  u16(self: usize): u16
+  {
+    :::convu16(self)
+  }
+
+  u32(self: usize): u32
+  {
+    :::convu32(self)
+  }
+
+  u64(self: usize): u64
+  {
+    :::convu64(self)
+  }
+
+  ilong(self: usize): ilong
+  {
+    :::convilong(self)
+  }
+
+  ulong(self: usize): ulong
+  {
+    :::convulong(self)
+  }
+
+  isize(self: usize): isize
+  {
+    :::convisize(self)
+  }
+
+  usize(self: usize): usize
+  {
+    self
+  }
+
+  f32(self: usize): f32
+  {
+    :::convf32(self)
+  }
+
+  f64(self: usize): f64
+  {
+    :::convf64(self)
+  }
 }

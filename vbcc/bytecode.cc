@@ -1042,9 +1042,15 @@ namespace vbcc
           }
           else if (stmt == When)
           {
-            onearg(stmt / Arg);
             args(stmt / Args);
-            code << uleb(+Op::When) << dst(stmt) << uleb(typ(stmt / Cown));
+            code << uleb(+Op::WhenStatic) << dst(stmt) << uleb(typ(stmt / Cown))
+                 << fn(stmt);
+          }
+          else if (stmt == WhenDyn)
+          {
+            args(stmt / Args);
+            code << uleb(+Op::WhenDynamic) << dst(stmt)
+                 << uleb(typ(stmt / Cown)) << src(stmt);
           }
           else if (stmt == Typetest)
           {

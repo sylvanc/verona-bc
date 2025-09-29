@@ -106,6 +106,7 @@ namespace vbcc
       TryDyn,
       FFI,
       When,
+      WhenDyn,
       Typetest);
 
   Parse parser(std::shared_ptr<Bytecode> state);

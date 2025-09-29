@@ -1,0 +1,424 @@
+vc
+anf
+(top
+  {
+    alloc = classdef}
+  (classdef
+    {
+      cell = classdef
+      main = function
+      include }
+    (ident 5:alloc)
+    (typeparams)
+    (where)
+    (classbody
+      (use
+        (typename
+          (typeelement
+            (ident 3:std)
+            (typeargs))
+          (typeelement
+            (ident 7:builtin)
+            (typeargs))))
+      (classdef
+        {
+          create =
+            function
+            function
+          f =
+            function
+            function}
+        (ident 4:cell)
+        (typeparams)
+        (where)
+        (classbody
+          (fielddef
+            (ident 1:f)
+            (type
+              (typename
+                (typeelement
+                  (ident 3:i32)
+                  (typeargs))))
+            (body))
+          (function
+            {
+              self = paramdef}
+            (lhs)
+            (ident 1:f)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (typeelement
+                      (ident 4:cell)
+                      (typeargs))))))
+            (type
+              (typename
+                (typeelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (typeelement
+                          (ident 3:i32)
+                          (typeargs))))))))
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (fieldref
+                    (localid 7:local$6)
+                    (arg
+                      (argcopy)
+                      (localid 4:self))
+                    (fieldid 1:f)))
+                (ret
+                  (localid 7:local$6)))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 1:f)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (typeelement
+                      (ident 4:cell)
+                      (typeargs))))))
+            (type)
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (call
+                    (localid 7:local$0)
+                    (lhs)
+                    (qname
+                      (qelement
+                        (ident 4:cell)
+                        (typeargs))
+                      (qelement
+                        (ident 1:f)
+                        (typeargs)))
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 4:self))))
+                  (load
+                    (localid 8:local$17)
+                    (localid 7:local$0)))
+                (ret
+                  (localid 8:local$17)))))
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (typeelement
+                  (ident 4:cell)
+                  (typeargs))))
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (const
+                    (localid 8:local$18)
+                    (u64)
+                    (int 1:0))
+                  (call
+                    (localid 7:local$7)
+                    (rhs)
+                    (qname
+                      (qelement
+                        (ident 3:i32)
+                        (typeargs)))
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 8:local$18))))
+                  (call
+                    (localid 7:local$1)
+                    (rhs)
+                    (qname
+                      (qelement
+                        (ident 4:cell)
+                        (typeargs))
+                      (qelement
+                        (ident 6:create)
+                        (typeargs)))
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 7:local$7)))))
+                (ret
+                  (localid 7:local$1)))))
+          (function
+            {
+              f = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 1:f)
+                (type
+                  (typename
+                    (typeelement
+                      (ident 3:i32)
+                      (typeargs))))))
+            (type
+              (typename
+                (typeelement
+                  (ident 4:cell)
+                  (typeargs))))
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (expr
+                    (calldyn
+                      (method
+                        (expr
+                          (error
+                            (errormsg 39:New requires an argument for each field)
+                            (args)))
+                        (ident 5:apply)
+                        (typeargs))
+                      (args
+                        (arg
+                          (argcopy)
+                          (localid 1:f)))))))))))
+      (function
+        {
+          b = var}
+        (rhs)
+        (ident 4:main)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (typeelement
+              (ident 3:i32)
+              (typeargs))))
+        (where)
+        (labels
+          (label
+            (labelid 5:start)
+            (body
+              (call
+                (localid 7:local$2)
+                (rhs)
+                (qname
+                  (qelement
+                    (ident 4:cell)
+                    (typeargs)))
+                (args))
+              (copy
+                (localid 8:local$19)
+                (localid 1:a))
+              (copy
+                (localid 1:a)
+                (localid 7:local$2))
+              (var
+                (ident 1:b)
+                (type))
+              (const
+                (localid 8:local$20)
+                (u64)
+                (int 1:1))
+              (const
+                (localid 8:local$21)
+                (u64)
+                (int 1:2))
+              (lookup
+                (localid 8:local$29)
+                (localid 8:local$20)
+                (rhs)
+                (symbolid 1:+)
+                (typeargs)
+                (int 1:2))
+              (calldyn
+                (localid 8:local$30)
+                (localid 8:local$29)
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 8:local$20))
+                  (arg
+                    (argcopy)
+                    (localid 8:local$21))))
+              (call
+                (localid 7:local$8)
+                (rhs)
+                (qname
+                  (qelement
+                    (ident 3:i32)
+                    (typeargs)))
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 8:local$30))))
+              (call
+                (localid 7:local$3)
+                (rhs)
+                (qname
+                  (qelement
+                    (ident 4:cell)
+                    (typeargs)))
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 7:local$8))))
+              (copy
+                (localid 8:local$22)
+                (localid 1:b))
+              (copy
+                (localid 1:b)
+                (localid 7:local$3))
+              (const
+                (localid 8:local$23)
+                (u64)
+                (int 1:3))
+              (const
+                (localid 8:local$24)
+                (u64)
+                (int 1:4))
+              (lookup
+                (localid 8:local$31)
+                (localid 8:local$23)
+                (rhs)
+                (symbolid 1:+)
+                (typeargs)
+                (int 1:2))
+              (calldyn
+                (localid 8:local$32)
+                (localid 8:local$31)
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 8:local$23))
+                  (arg
+                    (argcopy)
+                    (localid 8:local$24))))
+              (call
+                (localid 7:local$9)
+                (rhs)
+                (qname
+                  (qelement
+                    (ident 3:i32)
+                    (typeargs)))
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 8:local$32))))
+              (call
+                (localid 7:local$4)
+                (rhs)
+                (qname
+                  (qelement
+                    (ident 4:cell)
+                    (typeargs)))
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 7:local$9))))
+              (copy
+                (localid 8:local$25)
+                (localid 1:b))
+              (copy
+                (localid 1:b)
+                (localid 7:local$4))
+              (const
+                (localid 8:local$10)
+                (u64)
+                (int 1:3))
+              (call
+                (localid 7:local$5)
+                (rhs)
+                (qname
+                  (qelement
+                    (ident 3:i32)
+                    (typeargs)))
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 8:local$10))))
+              (lookup
+                (localid 8:local$11)
+                (localid 1:a)
+                (lhs)
+                (ident 1:f)
+                (typeargs)
+                (int 1:1))
+              (calldyn
+                (localid 8:local$12)
+                (localid 8:local$11)
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 1:a))))
+              (store
+                (localid 8:local$26)
+                (localid 8:local$12)
+                (arg
+                  (argcopy)
+                  (localid 7:local$5)))
+              (lookup
+                (localid 8:local$13)
+                (localid 1:a)
+                (rhs)
+                (ident 1:f)
+                (typeargs)
+                (int 1:1))
+              (calldyn
+                (localid 8:local$14)
+                (localid 8:local$13)
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 1:a))))
+              (lookup
+                (localid 8:local$15)
+                (localid 1:b)
+                (rhs)
+                (ident 1:f)
+                (typeargs)
+                (int 1:1))
+              (calldyn
+                (localid 8:local$16)
+                (localid 8:local$15)
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 1:b))))
+              (lookup
+                (localid 8:local$27)
+                (localid 8:local$14)
+                (rhs)
+                (symbolid 1:+)
+                (typeargs)
+                (int 1:2))
+              (calldyn
+                (localid 8:local$28)
+                (localid 8:local$27)
+                (args
+                  (arg
+                    (argcopy)
+                    (localid 8:local$14))
+                  (arg
+                    (argcopy)
+                    (localid 8:local$16)))))
+            (ret
+              (localid 8:local$28))))))))
