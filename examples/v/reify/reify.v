@@ -50,12 +50,12 @@ main(): i32
 
   let cownx2 = when (cownx) y ->
   {
-    y * 2
+    *y * 2.i32
   }
 
   let cownx3 = when (cownx, cownx2) (y, z) ->
   {
-    y + z
+    *y + *z
   }
 
   x

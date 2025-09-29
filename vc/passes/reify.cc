@@ -205,6 +205,14 @@ namespace vc
             return NewArrayConst << _(Lhs) << (Array << _(Type)) << _(Rhs);
           },
 
+        // Use WhenDyn instead of When, and pass cown T instead of T.
+        T(When)
+            << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Args)[Args] *
+                Any[Type]) >>
+          [](Match& _) {
+            return WhenDyn << _(Lhs) << _(Rhs) << _(Args) << (Cown << _(Type));
+          },
+
         // Elide unused copies.
         T(Copy) << (T(LocalId)[Lhs] * T(LocalId)) >> [](Match& _) -> Node {
           auto lhs = _(Lhs);

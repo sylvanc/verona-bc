@@ -14,7 +14,6 @@ Reification.
   - Mark as "delete on error".
   - On completion of `run`, check if it contains errors.
 - Test type aliases, make sure cycles are rejected.
-- Optimize dynamic calls as static when there's a known type for the receiver.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
@@ -69,9 +68,10 @@ Structure:
 - Compile time evaluation.
 
 Standard library:
-- Primitive type conversions.
 - String.
 - `stdin`, `stdout`, `stderr`.
+- Arguments, environment.
+- File system.
 
 Packages:
 - CLI.
@@ -92,3 +92,6 @@ Types:
 - Structural types.
 - Turn function types into structural types.
 - Can type parameters take type arguments?
+
+Optimization:
+- Optimize dynamic calls as static when there's a known type for the receiver.

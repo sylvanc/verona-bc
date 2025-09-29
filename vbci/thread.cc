@@ -1166,7 +1166,6 @@ namespace vbci
       // Offset the slot by 1 to account for the result cown.
       auto& slot = slots[i + 1];
       new (&slot) verona::rt::Slot(arg.get_cown());
-      slot.set_move();
 
       if (arg.is_readonly())
         slot.set_read_only();
@@ -1177,7 +1176,7 @@ namespace vbci
 
     if (is_closure)
     {
-      auto& closure = frame->arg(1);
+      auto& closure = frame->arg(0);
 
       if (closure.is_header())
       {

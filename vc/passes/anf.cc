@@ -395,11 +395,20 @@ namespace vc
         In(Expr) * T(When)
             << (T(Args)[Args] * T(Type)[Type] * T(LocalId)[Rhs]) >>
           [](Match& _) {
-            // TODO:
+            auto args = _(Args);
+            auto lambda = _(Rhs);
+            args->push_front(Arg << ArgCopy << clone(lambda));
+
+            auto f = _.fresh(l_local);
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (When << (LocalId ^ id) << _(Args) << _(Type)
-                                         << (Arg << ArgCopy << _(Rhs))))
+            return Seq << (Lift
+                           << Body
+                           << (Lookup << (LocalId ^ f) << lambda << Rhs
+                                      << (Ident ^ "apply") << TypeArgs
+                                      << (Int ^ std::to_string(args->size()))))
+                       << (Lift << Body
+                                << (When << (LocalId ^ id) << (LocalId ^ f)
+                                         << _(Args) << _(Type)))
                        << (LocalId ^ id);
           },
 

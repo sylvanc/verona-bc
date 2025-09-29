@@ -259,7 +259,7 @@ namespace vc
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
     | (Jump <<= LabelId)
-    | (When <<= wfDst * Args * Type * Arg)
+    | (When <<= wfDst * wfSrc * Args * Type)
     | (Add <<= wfDst * wfLhs * wfRhs)
     | (Sub <<= wfDst * wfLhs * wfRhs)
     | (Mul <<= wfDst * wfLhs * wfRhs)

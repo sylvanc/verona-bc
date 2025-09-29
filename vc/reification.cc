@@ -328,15 +328,6 @@ namespace vc
     auto pdef = rs->builtin->lookdown(Location("cown")).front();
     s[(pdef / TypeParams)->front()] = type;
     rs->schedule(pdef, s, true);
-    node / Type = Cown << type->front();
-
-    auto lookup = Lookup << LocalId << LocalId << Rhs << (Ident ^ "apply")
-                         << TypeArgs
-                         << (Int ^ std::to_string((node / Args)->size() + 1));
-    rs->add_lookup(lookup);
-
-    auto method_id = lookup->back();
-    rs->state->method_ids.insert({ST::di().string(method_id), ApplyMethodId});
   }
 
   void Reification::reify_lookups()
