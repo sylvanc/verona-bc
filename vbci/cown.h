@@ -52,7 +52,7 @@ namespace vbci
     {
       return content;
     }
-
+    // TODO FIX THIS TO DEAL WITH NEW VERSION OF DRAG
     Value store(bool move, Value& v)
     {
       Value next;
