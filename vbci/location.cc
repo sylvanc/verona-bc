@@ -8,7 +8,7 @@ namespace vbci
 {
   std::pair<bool, bool> drag_allocation(Region* r, Header* h, Location ploc)
   {
-    bool pr_rc = 0;
+    bool pr_rc = false;
     Location frame = loc::None;
 
     if (r->is_frame_local())
@@ -100,13 +100,9 @@ namespace vbci
     {
       for (auto& hr : regions)
       {
-        if (loc::is_region(ploc) && loc::to_region(ploc) == hr && pr_rc > 0)
-        {
-          // OK
-        }
-
-        else
+        if (!loc::is_region(ploc) || loc::to_region(ploc) != hr)
           hr->set_parent(r);
+
         // Decrease stack rc for this region, as a frame local entry point is
         // now in r.
         hr->stack_dec();
