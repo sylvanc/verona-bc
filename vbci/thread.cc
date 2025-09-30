@@ -885,7 +885,7 @@ namespace vbci
         // Drag the frame-local allocation to the previous frame.
         auto& prev_frame = frames.at(frames.size() - 2);
 
-        if (!drag_allocation(&prev_frame.region, ret.get_header()))
+        if (!drag_allocation(&prev_frame.region, ret.get_header(),loc::None).first)
         {
           ret = Value(Error::BadStackEscape);
           condition = Condition::Throw;
@@ -896,7 +896,7 @@ namespace vbci
         // Drag the frame-local allocation to a fresh region.
         auto r = Region::create(RegionType::RegionRC);
 
-        if (!drag_allocation(r, ret.get_header()))
+        if (!drag_allocation(r, ret.get_header(),loc::None).first)
         {
           ret = Value(Error::BadStackEscape);
           condition = Condition::Throw;
