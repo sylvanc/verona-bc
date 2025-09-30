@@ -59,6 +59,8 @@ namespace vbci
     Value store(bool move, Value& v)
     {
       Value next;
+      bool unparent_prev = true;
+      Region* nr;
 
       if (move)
         next = std::move(v);
@@ -88,13 +90,19 @@ namespace vbci
         if (r->is_frame_local())
         {
           // Drag a frame-local allocation to a fresh region.
-          auto nr = Region::create(RegionType::RegionRC);
+          nr = Region::create(RegionType::RegionRC);
           nr->set_parent();
 
-          if (!drag_allocation(nr, next.get_header()))
+          auto drag_result = drag_allocation(nr, next.get_header(), prev_loc);
+          if (!drag_result.first)
           {
             next = Value(Error::BadStore);
             nr->free_region();
+          }
+          else
+          {
+            unparent_prev = drag_result.second;
+            next_loc = next.location();
           }
         }
         else if (r->has_parent())
@@ -117,8 +125,11 @@ namespace vbci
 
       // Clear prev region parent if it's different from next.
       if (loc::is_region(prev_loc) && (prev_loc != next_loc))
+      {
         loc::to_region(prev_loc)->clear_parent();
-
+        if (!unparent_prev)
+          loc::to_region(prev_loc)->set_parent(nr);
+      }
       return prev;
     }
 
