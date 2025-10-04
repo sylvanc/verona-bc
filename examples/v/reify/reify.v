@@ -1,45 +1,53 @@
-range[A = i32]
-{
-  curr: A;
-  stop: A;
-  step: A;
+use "./tempgit" "main";
 
-  create(curr: A, stop: A, step: A = A(1)): range[A]
-  {
-    // TODO: check curr <= stop if step > 0, curr >= stop if step < 0
-    new (curr, stop, step)
-  }
+// range[A = i32]
+// {
+//   curr: A;
+//   stop: A;
+//   step: A;
 
-  has_next(self: range[A]): bool
-  {
-    if (self.step < A(0))
-    {
-      self.curr > self.stop
-    }
-    else
-    {
-      self.curr < self.stop
-    }
-  }
+//   create(curr: A, stop: A, step: A = A(1)): range[A]
+//   {
+//     // TODO: check curr <= stop if step > 0, curr >= stop if step < 0
+//     new (curr, stop, step)
+//   }
 
-  next(self: range[A]): A
-  {
-    self.curr = self.curr + self.step
-  }
-}
+//   has_next(self: range[A]): bool
+//   {
+//     if (self.step < A(0))
+//     {
+//       self.curr > self.stop
+//     }
+//     else
+//     {
+//       self.curr < self.stop
+//     }
+//   }
+
+//   next(self: range[A]): A
+//   {
+//     self.curr = self.curr + self.step
+//   }
+// }
+
+// ::: "optional.library.name"
+// {
+//   getargv = "getargv"(): array[array[u8]];
+//   printf = "printf"(ptr, ...): i32;
+// }
 
 main(): i32
 {
   let a = array[i32](10.usize);
-  let r = range(i32 0, i32 10);
-  var sum = i32 0;
+  let r = range(0.i32, 10.i32);
+  var sum = 0.i32;
 
   for r v ->
   {
     sum = sum + v;
   }
 
-  let a0 = ref a(usize 0);
+  let a0 = ref a(0.usize);
   *a0 = sum;
   let x = *a0;
 
@@ -48,14 +56,14 @@ main(): i32
     x
   }
 
-  let cownx2 = when (cownx) y ->
+  let cownx2 = when cownx x ->
   {
-    *y * 2.i32
+    *x * 2.i32
   }
 
-  let cownx3 = when (cownx, cownx2) (y, z) ->
+  let cownx3 = when (cownx.read, cownx2.read) (x, x2) ->
   {
-    *y + *z
+    *x + *x2
   }
 
   x

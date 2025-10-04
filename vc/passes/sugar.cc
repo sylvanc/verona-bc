@@ -139,12 +139,18 @@ namespace vc
           if (body->empty())
             return NoChange;
 
-          (last_param / Body) = Body;
+          // Generate a function with one fewer parameters.
           auto ident = _(Ident);
           auto params_0 = clone(params);
           params_0->pop_back();
+
+          // Remove the default value from all parameters.
+          for (auto& param : *params)
+            (param / Body) = Body;
+
           Node args = Args;
 
+          // Call the original function with the default final argument.
           for (auto& param : *params_0)
             args << (Expr << clone(param / Ident));
 

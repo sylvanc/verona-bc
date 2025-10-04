@@ -5,4 +5,9 @@ cown[T]
     // TODO: throw
     none
   }
+
+  read(self: cown[T]): cown[T]
+  {
+    :::read(self)
+  }
 }

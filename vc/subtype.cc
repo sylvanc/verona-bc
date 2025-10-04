@@ -164,6 +164,7 @@ namespace vc
         return r->equals(l);
       }
 
+      assert(false);
       return false;
     }
   };

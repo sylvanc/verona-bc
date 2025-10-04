@@ -12,8 +12,6 @@ namespace vc
 
   struct Reifications
   {
-    std::shared_ptr<Bytecode> state;
-
     // Keep the top of the AST to help resolve names.
     Node top;
     Node builtin;

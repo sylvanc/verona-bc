@@ -380,6 +380,7 @@ namespace vc
       }
 
       // Reify the default type argument in place.
+      // TODO: this doesn't seem to work
       auto r = Reification(rs, dflt, 0, subst);
       r.instantiate();
       r.run();

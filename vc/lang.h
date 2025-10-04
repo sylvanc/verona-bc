@@ -102,7 +102,7 @@ namespace vc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
-    Tanh | Asinh | Acosh | Atanh | Len;
+    Tanh | Asinh | Acosh | Atanh | Len | Read;
 
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -223,7 +223,7 @@ namespace vc
   inline const auto wfBodyANF = Use | TypeAlias | Const | ConstStr | Convert |
     Copy | Move | RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New |
     NewArray | NewArrayConst | Load | Store | Lookup | Call | CallDyn |
-    Typetest | Var | When | wfBinop | wfUnop | wfNulop | Len;
+    Typetest | Var | When | wfBinop | wfUnop | wfNulop;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -309,6 +309,7 @@ namespace vc
     | (Const_Inf <<= wfDst)
     | (Const_NaN <<= wfDst)
     | (Len <<= wfDst * wfSrc)
+    | (Read <<= wfDst * wfSrc)
     ;
   // clang-format on
 
@@ -318,11 +319,11 @@ namespace vc
   Node make_selftype(Node node);
 
   Parse parser(std::shared_ptr<Bytecode> state);
-  PassDef structure();
+  PassDef structure(const Parse& parse);
   PassDef sugar();
   PassDef ident();
   PassDef application();
   PassDef operators();
   PassDef anf();
-  PassDef reify(std::shared_ptr<Bytecode> state);
+  PassDef reify();
 }

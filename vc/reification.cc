@@ -35,6 +35,7 @@ namespace vc
       return false;
 
     // Clone the original and put it in the parent.
+    status = Delay;
     instance = clone(def);
     def->parent() << instance;
 

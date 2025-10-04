@@ -39,7 +39,18 @@ namespace vc
       size_t str_end;
       Location loc;
 
-      ParseState() : re_dir("[_[:alpha:]][_[:alnum:]]*?") {}
+      ParseState() : re_dir("[_[:alpha:]][_[:alnum:]]*?")
+      {
+        reset();
+      }
+
+      void reset()
+      {
+        depth = 0;
+        str_start = 0;
+        str_end = 0;
+        loc = {};
+      }
     };
 
     Parse p(depth::subdirectories, wfParser);
@@ -51,10 +62,10 @@ namespace vc
       return RE2::FullMatch(path.filename().string(), ps->re_dir);
     });
 
-    p.postfile([=](auto&, auto&, auto) { ps->depth = 0; });
-
     p.postparse([=](auto& pp, auto& path, auto ast) {
-      state->set_path(path);
+      if (state)
+        state->set_path(path);
+
       auto stdlib = pp.executable().parent_path() / "std";
 
       if (path != stdlib)
@@ -106,11 +117,11 @@ namespace vc
         "false\\b" >> [](auto& m) { m.add(False); },
 
         // Hex float.
-        "[-]?0x[_[:xdigit:]]+\\.[_[:xdigit:]]+(?:p[+-][_[:digit:]]+)?\\b" >>
+        "0x[[:xdigit:]]+\\.[[:xdigit:]]+(?:p[+-][[:digit:]]+)?\\b" >>
           [](auto& m) { m.add(HexFloat); },
 
         // Float.
-        "[-]?[[:digit:]]+\\.[[:digit:]]+(?:e[+-]?[[:digit:]]+)?\\b" >>
+        "[[:digit:]]+\\.[[:digit:]]+(?:e[+-]?[[:digit:]]+)?\\b" >>
           [](auto& m) { m.add(Float); },
 
         // Bin.
@@ -123,7 +134,7 @@ namespace vc
         "0x[[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
 
         // Int.
-        "[-]?[[:digit:]]+\\b" >> [](auto& m) { m.add(Int); },
+        "[[:digit:]]+\\b" >> [](auto& m) { m.add(Int); },
 
         // Escaped string.
         "\"((?:\\\"|[^\"])*?)\"" >> [](auto& m) { m.add(String, 1); },
@@ -237,6 +248,8 @@ namespace vc
 
       if (m.mode() == "string")
         m.error("Unterminated string starting at ", ps->loc);
+
+      ps->reset();
     });
 
     return p;

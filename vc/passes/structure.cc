@@ -1,3 +1,4 @@
+#include "../dependency.h"
 #include "../lang.h"
 
 namespace vc
@@ -78,7 +79,7 @@ namespace vc
     return Body << (Expr << rhs);
   }
 
-  PassDef structure()
+  PassDef structure(const Parse& parse)
   {
     PassDef p{
       "structure",
@@ -152,32 +153,32 @@ namespace vc
                             << (Where << _[Where]) << body;
           },
 
+        // Dependency alias.
+        T(Group)[Group]
+            << (T(Use) * T(Ident)[Ident] * T(Equals) * T(String)[Lhs] *
+                T(String)[Rhs] * ~T(String)[Directory]) >>
+          [](Match& _) {
+            return Use << _(Ident) << _(Lhs) << _(Rhs) << _(Directory);
+          },
+
+        // Dependency import.
+        T(Group)[Group]
+            << (T(Use) * T(String)[Lhs] * T(String)[Rhs] *
+                ~T(String)[Directory]) >>
+          [](Match& _) { return Use << _(Lhs) << _(Rhs) << _(Directory); },
+
         // Type alias.
         T(Group)[Group]
             << (T(Use) * T(Ident)[Ident] * ~TypeParamsPat[TypeParams] *
                 T(Equals) * Any++[Type]) >>
           [](Match& _) {
-            if (!_(Group)->parent()->in({ClassBody, Body}))
-              return err(_(Group), "Type alias can't be used as an expression");
-
             return TypeAlias << _(Ident) << (TypeParams << *_[TypeParams])
                              << (Type << _[Type]);
           },
 
         // Import.
         T(Group)[Group] << (T(Use) * NamedType[Type] * End) >>
-          [](Match& _) {
-            if (!_(Group)->parent()->in({ClassBody, Body}))
-              return err(_(Group), "Import can't be used as an expression");
-
-            return Use << make_typename(_[Type]);
-          },
-
-        // Produce an error for anything else in a class body.
-        In(ClassBody) * T(Group)[Group] >>
-          [](Match& _) {
-            return err(_(Group), "Can't appear in a class body");
-          },
+          [](Match& _) { return Use << make_typename(_[Type]); },
 
         // Parameters.
         T(Params) << (T(List)[List] * End) >>
@@ -425,6 +426,8 @@ namespace vc
             return Unop << Atanh << seq_to_args(_(ExprSeq));
           else if (id == "len")
             return Unop << Len << seq_to_args(_(ExprSeq));
+          else if (id == "read")
+            return Unop << Read << seq_to_args(_(ExprSeq));
           else if (id == "none")
             return Nulop << None << seq_to_args(_(ExprSeq));
           else if (id == "e")
@@ -689,7 +692,9 @@ namespace vc
         T(Expr) << End >> [](Match&) -> Node { return {}; },
       }};
 
-    p.post([](auto top) {
+    p.post([&](auto top) -> size_t {
+      Nodes deps;
+
       top->traverse([&](auto node) {
         bool ok = true;
 
@@ -705,6 +710,59 @@ namespace vc
         {
           node->parent()->replace(node, err(node, "Syntax error"));
           ok = false;
+        }
+        else if ((node == Use) && (node->front() != TypeName))
+        {
+          // This is a package dependency.
+          ok = false;
+          size_t i = 0;
+          auto id = node->at(i++);
+          Node url;
+
+          if (id == Ident)
+            url = node->at(i++);
+          else
+            url = std::move(id);
+
+          auto tag = node->at(i++);
+          auto dir = node->size() > i ? node->at(i) : Node();
+
+          // Clone or update the dependency.
+          Dependency dep(url, tag, dir);
+
+          if (!dep.fetch())
+            return false;
+
+          // Parse the dependency.
+          auto p_ast = parse.sub_parse(dep.src_path);
+
+          // If there's no AST, there were no source files.
+          if (!p_ast)
+          {
+            node << err(url, "Dependency has no source files");
+            return false;
+          }
+
+          if (p_ast->get_contains_error())
+          {
+            top << p_ast;
+            node << err(url, "Failed to parse dependency");
+            return false;
+          }
+
+          // Insert the dependency's AST.
+          assert(p_ast == Directory);
+          deps.push_back((Directory ^ dep.hash) << *p_ast);
+
+          // Rewrite the Use.
+          auto tn = TypeName << (TypeElement << (Ident ^ dep.hash) << TypeArgs);
+
+          if (id)
+            id = TypeAlias << id << TypeParams << (Type << tn);
+          else
+            id = Use << tn;
+
+          node->parent()->replace(node, id);
         }
         else if (node == Expr)
         {
@@ -858,6 +916,15 @@ namespace vc
 
         return ok;
       });
+
+      if (!deps.empty())
+      {
+        for (auto& d : deps)
+          top << d;
+
+        auto [ast, count, changes] = p.run(top);
+        return changes;
+      }
 
       return 0;
     });

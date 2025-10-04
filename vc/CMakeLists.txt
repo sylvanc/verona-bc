@@ -24,7 +24,11 @@ endif()
 
 target_link_libraries(vc
   vbc::vbcc
+  OpenSSL::Crypto
+  OpenSSL::SSL
   CLI11::CLI11
+  libgit2
+  libgit2package
 )
 
 # Copy the stdlib to the install directory

@@ -12,6 +12,9 @@ set(SNMALLOC_BUILD_TESTING OFF CACHE INTERNAL "Turn off snmalloc tests")
 set(SNMALLOC_STATIC_LIBRARY_PREFIX OFF CACHE INTERNAL "")
 set(VERONA_RT_ONLY_HEADER_LIBRARY OFF CACHE INTERNAL "Verona RT header library")
 
+include(cmake/libffi.cmake)
+find_package(OpenSSL REQUIRED)
+
 # Used to provide
 #  FetchContent_MakeAvailable_ExcludeFromAll
 FetchContent_Declare(
@@ -49,8 +52,16 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable_ExcludeFromAll(libuv)
 
-include(cmake/libffi.cmake)
-find_package(OpenSSL REQUIRED)
+# This isn't detecting correctly on WSL2.
+set(GIT_USE_STAT_MTIM 1)
+
+FetchContent_Declare(
+  libgit2
+  GIT_REPOSITORY https://github.com/libgit2/libgit2
+  GIT_TAG        0060d9cf5666f015b1067129bd874c6cc4c9c7ac
+)
+
+FetchContent_MakeAvailable_ExcludeFromAll(libgit2)
 
 # Use snmalloc clangformat target
 clangformat_targets()

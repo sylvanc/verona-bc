@@ -1,28 +1,32 @@
 #include "lang.h"
 
+#include <git2.h>
 #include <trieste/driver.h>
-#include <vbcc.h>
 #include <vbcc/bytecode.h>
-#include <vbcc/lang.h>
 
 int main(int argc, char** argv)
 {
   using namespace vc;
 
   auto state = std::make_shared<Bytecode>();
+  auto parse = vc::parser(state);
+  auto struc = vc::structure(parse);
+
   Reader reader{
     "vc",
-    {structure(),
-     sugar(),
-     ident(),
-     application(),
-     operators(),
-     anf(),
-     reify(state),
-     assignids(state),
-     validids(state),
-     liveness(state)},
-    vc::parser(state)};
+    {
+      struc,
+      sugar(),
+      ident(),
+      application(),
+      operators(),
+      anf(),
+      reify(),
+      vbcc::assignids(state),
+      vbcc::validids(state),
+      vbcc::liveness(state),
+    },
+    parse};
 
   struct Options : public trieste::Options
   {
@@ -40,7 +44,10 @@ int main(int argc, char** argv)
 
   Options opts;
   Driver d(reader, &opts);
+
+  git_libgit2_init();
   auto r = d.run(argc, argv);
+  git_libgit2_shutdown();
 
   if (r != 0)
     return r;

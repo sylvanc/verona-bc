@@ -1,18 +1,29 @@
+// This is a bag of bytes, not a UTF-8 string. It can contain nulls, and is
+// always null-terminated.
 string
 {
   // Underlying storage as bytes.
   bytes: array[u8];
+  size: usize;
 
   // Create a string from an existing array of bytes.
-  create(bytes: array[u8] = array[u8](usize 0)): string
+  create(bytes: array[u8] = array[u8](usize 0), size: usize = -1.usize): string
   {
-    new bytes
-  }
+    // TODO: passed in size?
+    let len = bytes.size;
+    var i = 0.usize;
 
-  // Length of the string in bytes.
-  size(self: string): usize
-  {
-    self.bytes.size()
+    while i < len
+    {
+      if bytes(i) == 0.u8
+      {
+        break
+      }
+
+      i = i + 1.usize
+    }
+
+    new (bytes, i)
   }
 
   // Indexing returns a ref[u8] so callers can read/write bytes.

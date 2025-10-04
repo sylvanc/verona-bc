@@ -89,6 +89,7 @@ namespace vbci
 
       default:
         assert(false);
+        return "unknown error";
     }
   }
 }

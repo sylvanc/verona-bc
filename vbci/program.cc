@@ -541,8 +541,8 @@ namespace vbci
 
   void Program::setup_argv(std::vector<std::string>& args)
   {
-    auto arg_rep = layout_type_id(typeid_arg);
-    auto argv_rep = layout_type_id(typeid_argv);
+    auto arg_rep = layout_type_id(unarray(typeid_arg));
+    auto argv_rep = layout_type_id(unarray(typeid_argv));
 
     argv = Array::create(
       new uint8_t[Array::size_of(args.size(), argv_rep.second->size)],

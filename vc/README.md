@@ -4,25 +4,17 @@
 
 Check use before definition in `let x = ... x ...`.
 
-Concurrency.
-- When pushes function pointer, optional closure data, then cowns.
-  - Change the VC emitter.
-- Test `when` with multiple `cown`.
-
 Reification.
 - Don't fail on method instantiation failure.
   - Mark as "delete on error".
   - On completion of `run`, check if it contains errors.
 - Test type aliases, make sure cycles are rejected.
 
+## To Do
+
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
 - Type parameters can be "free" in a lambda.
-
-## To Do
-
-RHS functions for `ValueParam`? Or treat them like `ParamDef`?
-- Treat them as much as possible as a `TypeParam`.
 
 Patterns for lambdas.
 - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
@@ -53,23 +45,21 @@ Expressions:
 Syntax:
 - How to put a dynamic type in a tuple or function type?
 - `where` clause on a type alias.
-- Zero-argument function calls.
-  - How do we call a zero-argument lambda?
-  - How do we refer to a zero-argument function without calling it?
+- How do we refer to a zero-argument function without calling it?
 - Braces and else: it doesn't work if there's a comment in between.
 - Object literals: `new { ... }`.
+- Grouping characters in numbers: `1_000_000`.
 
 Structure:
 - Default field values.
 - Auto create, member conflict.
 - Can auto-RHS conflict with default arguments? Seems yes.
-- Could allow `ident::name` (lookup, no call).
-  - Like `ident.name`, but no first argument binding.
 - Compile time evaluation.
 
 Standard library:
-- String.
+- FFI.
 - `stdin`, `stdout`, `stderr`.
+- String.
 - Arguments, environment.
 - File system.
 
@@ -83,8 +73,9 @@ Packages:
 Software engineering:
 - Code reuse.
 - Public, private.
-- Use libgit2 for fetching dependencies.
-- FFI.
+
+RHS functions for `ValueParam`? Or treat them like `ParamDef`?
+- Treat them as much as possible as a `TypeParam`.
 
 Types:
 - IR types for: union, intersection, tuple, function.

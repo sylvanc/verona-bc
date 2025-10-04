@@ -207,10 +207,7 @@ namespace vc
     }
 
     if (enqueue && r[i].instantiate())
-    {
-      r[i].status = Delay;
       wl.push({def, i});
-    }
 
     return {r[i], fresh};
   };
