@@ -34,10 +34,19 @@ namespace vc
     if (instance)
       return false;
 
-    // Clone the original and put it in the parent.
     status = Delay;
-    instance = clone(def);
-    def->parent() << instance;
+
+    if (def == Symbol)
+    {
+      // Don't clone symbols.
+      instance = def;
+    }
+    else
+    {
+      // Clone the original and put it in the parent.
+      instance = clone(def);
+      def->parent() << instance;
+    }
 
     // For classes, throw away all functions.
     if (def == ClassDef)
@@ -213,11 +222,23 @@ namespace vc
     auto r = p.run();
 
     if (r == Ok)
+    {
       node->parent()->replace(node, clone(p.result));
+
+      if (def == Symbol)
+      {
+        auto& rf = rs->get_reification(p.result);
+        rs->schedule(rf.def, rf.subst_orig, true);
+      }
+    }
     else if (r == Delay)
+    {
       delays++;
+    }
     else
+    {
       status = Fail;
+    }
   }
 
   void Reification::reify_call(Node node)

@@ -9,7 +9,9 @@ namespace vc
 
     if (name.starts_with("std.builtin."))
     {
-      if (name.ends_with("none[0]"))
+      if (name.ends_with("any[0]"))
+        return Dyn;
+      else if (name.ends_with("none[0]"))
         return None;
       else if (name.ends_with("bool[0]"))
         return Bool;
@@ -129,6 +131,10 @@ namespace vc
         T(ParamDef) << (T(Ident)[Ident] * Any[Type]) >>
           [](Match& _) { return Param << (LocalId ^ _(Ident)) << _(Type); },
 
+        // Lift library definitions.
+        In(ClassBody) * T(Lib)[Lib] >>
+          [](Match& _) { return Lift << Top << _(Lib); },
+
         // Lift reified functions.
         T(Function)[Function] << (T(Lhs, Rhs) * T(FunctionId)) >>
           [](Match& _) {
@@ -149,8 +155,14 @@ namespace vc
 
           if (!primitive)
           {
+            // Primitives don't have fields.
             f = Fields;
             cls << f;
+          }
+          else if ((c / Ident) == Dyn)
+          {
+            // Don't emit an implementation for `any`.
+            return {};
           }
 
           cls << m;
@@ -238,6 +250,16 @@ namespace vc
       }};
 
     p.pre([=](auto top) {
+      top->traverse([&](auto node) {
+        if (node == Symbol)
+        {
+          rs->schedule(node, {}, true);
+          return false;
+        }
+
+        return true;
+      });
+
       rs->start(top);
       rs->run();
       return 0;

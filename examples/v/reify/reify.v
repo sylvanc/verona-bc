@@ -30,11 +30,10 @@ use "./tempgit" "main";
 //   }
 // }
 
-// ::: "optional.library.name"
-// {
-//   getargv = "getargv"(): array[array[u8]];
-//   printf = "printf"(ptr, ...): i32;
-// }
+use
+{
+  printval = "printval"(any): none;
+}
 
 main(): i32
 {
@@ -53,17 +52,22 @@ main(): i32
 
   let cownx = when ()
   {
+    :::printval(x);
     x
   }
 
   let cownx2 = when cownx x ->
   {
-    *x * 2.i32
+    let r = *x * 2.i32;
+    :::printval(r);
+    r
   }
 
   let cownx3 = when (cownx.read, cownx2.read) (x, x2) ->
   {
-    *x + *x2
+    let r = *x + *x2;
+    :::printval(r);
+    r
   }
 
   x

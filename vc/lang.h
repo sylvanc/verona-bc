@@ -85,7 +85,17 @@ namespace vc
     T(True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
 
   inline const auto ApplyLhsPat = LiteralPat /
-    T(ExprSeq, LocalId, Tuple, New, Call, CallDyn, Convert, Binop, Unop, Nulop);
+    T(ExprSeq,
+      LocalId,
+      Tuple,
+      New,
+      Call,
+      CallDyn,
+      Convert,
+      Binop,
+      Unop,
+      Nulop,
+      FFI);
 
   inline const auto ApplyRhsPat =
     ApplyLhsPat / T(QName, Method, DontCare, If, While, For, When);
@@ -109,7 +119,7 @@ namespace vc
   inline const auto wfExprStructure = ExprSeq | DontCare | Ident | wfLiteral |
     String | RawString | Tuple | Let | Var | New | Lambda | QName | Op |
     Method | If | Else | While | For | When | Equals | Try | Convert | Binop |
-    Unop | Nulop | NewArray | ArrayRef | FieldRef | Load;
+    Unop | Nulop | FFI | NewArray | ArrayRef | FieldRef | Load;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -118,7 +128,13 @@ namespace vc
   inline const auto wfPassStructure =
       (Top <<= ClassDef++)
     | (ClassDef <<= Ident * TypeParams * Where * ClassBody)[Ident]
-    | (ClassBody <<= (ClassDef | Use | TypeAlias | FieldDef | Function)++)
+    | (ClassBody <<= (ClassDef | Use | TypeAlias | Lib | FieldDef | Function)++)
+    | (Lib <<= String * Symbols)
+    | (Symbols <<= Symbol++)
+    | (Symbol <<=
+        SymbolId * (Lhs >>= String) * (Rhs >>= String) *
+        (Vararg >>= Vararg | None) * FFIParams * Type)
+    | (FFIParams <<= Type++)
     | (Use <<= TypeName)[Include]
     | (TypeAlias <<= Ident * TypeParams * Type)[Ident]
     | (Where <<= ~wfWhere)
@@ -172,6 +188,7 @@ namespace vc
     | (Binop <<= (Op >>= wfBinop) * Args)
     | (Unop <<= (Op >>= wfUnop) * Args)
     | (Nulop <<= (Op >>= wfNulop) * Args)
+    | (FFI <<= SymbolId * Args)
     | (ArrayRef <<= Args)
     | (NewArray <<= Type * Args)
     ;
@@ -223,7 +240,7 @@ namespace vc
   inline const auto wfBodyANF = Use | TypeAlias | Const | ConstStr | Convert |
     Copy | Move | RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New |
     NewArray | NewArrayConst | Load | Store | Lookup | Call | CallDyn |
-    Typetest | Var | When | wfBinop | wfUnop | wfNulop;
+    Typetest | Var | When | wfBinop | wfUnop | wfNulop | FFI;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -310,6 +327,7 @@ namespace vc
     | (Const_NaN <<= wfDst)
     | (Len <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)
+    | (FFI <<= wfDst * SymbolId * Args)
     ;
   // clang-format on
 

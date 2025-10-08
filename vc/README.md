@@ -12,6 +12,10 @@ Reification.
 
 ## To Do
 
+Calls.
+- Try (rename to `catch`?), sub-call.
+- Raise, throw.
+
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
 - Type parameters can be "free" in a lambda.
@@ -33,17 +37,11 @@ Tuples:
   - `apply` method on `array`?
 - Flatten a tuple into another tuple.
 
-Calls:
-- Try (rename to `catch`?), sub-call.
-- Raise, throw.
-
 Expressions:
-- Only allow `:::` in `std::builtin`.
 - Partial application, `_`.
 - Unescape strings. Currently happens in `validids`.
 
 Syntax:
-- How to put a dynamic type in a tuple or function type?
 - `where` clause on a type alias.
 - How do we refer to a zero-argument function without calling it?
 - Braces and else: it doesn't work if there's a comment in between.
@@ -56,14 +54,13 @@ Structure:
 - Can auto-RHS conflict with default arguments? Seems yes.
 - Compile time evaluation.
 
-Standard library:
-- FFI.
-- `stdin`, `stdout`, `stderr`.
+Builtin:
 - String.
 - Arguments, environment.
-- File system.
 
 Packages:
+- `stdin`, `stdout`, `stderr`.
+- File system.
 - CLI.
 - Network.
 - Hash map, hash set, ordered map, ordered set, list, deque, vector, span.
@@ -71,8 +68,14 @@ Packages:
 - Sort.
 
 Software engineering:
+- Shapes.
 - Code reuse.
 - Public, private.
+
+Security:
+- Integrate package management with signed and transparent statements and policies?
+- LFI sandboxing?
+- Control over FFI and built-in access?
 
 RHS functions for `ValueParam`? Or treat them like `ParamDef`?
 - Treat them as much as possible as a `TypeParam`.

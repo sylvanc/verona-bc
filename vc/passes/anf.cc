@@ -562,6 +562,16 @@ namespace vc
                        << (LocalId ^ id);
           },
 
+        // FFI call.
+        In(Expr, Lhs) * T(FFI) << (T(SymbolId)[SymbolId] * T(Args)[Args]) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (FFI << (LocalId ^ id) << _(SymbolId) << _(Args)))
+                       << (LocalId ^ id);
+          },
+
         // Compact LocalId.
         T(Expr, Lhs) << (T(LocalId)[LocalId] * End) >>
           [](Match& _) { return _(LocalId); },

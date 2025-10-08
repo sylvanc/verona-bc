@@ -7,12 +7,11 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq,  DontCare, Ident,    True,     False,  Bin,       Oct,
-    Int,      Hex,      Float,    HexFloat, String, RawString, DontCare,
-    Tuple,    Let,      Var,      New,      Lambda, QName,     Method,
-    Call,     CallDyn,  If,       While,    For,    When,      Equals,
-    Else,     Try,      Op,       Convert,  Binop,  Unop,      Nulop,
-    NewArray, ArrayRef, FieldRef, Load};
+    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,      Int,
+    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple,    Let,
+    Var,     New,      Lambda,   QName,  Method,    Call,     CallDyn,  If,
+    While,   For,      When,     Equals, Else,      Try,      Op,       Convert,
+    Binop,   Unop,     Nulop,    FFI,    NewArray,  ArrayRef, FieldRef, Load};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -154,7 +153,7 @@ namespace vc
           },
 
         // Dependency alias.
-        T(Group)[Group]
+        T(Group)
             << (T(Use) * T(Ident)[Ident] * T(Equals) * T(String)[Lhs] *
                 T(String)[Rhs] * ~T(String)[Directory]) >>
           [](Match& _) {
@@ -162,13 +161,13 @@ namespace vc
           },
 
         // Dependency import.
-        T(Group)[Group]
+        T(Group)
             << (T(Use) * T(String)[Lhs] * T(String)[Rhs] *
                 ~T(String)[Directory]) >>
           [](Match& _) { return Use << _(Lhs) << _(Rhs) << _(Directory); },
 
         // Type alias.
-        T(Group)[Group]
+        T(Group)
             << (T(Use) * T(Ident)[Ident] * ~TypeParamsPat[TypeParams] *
                 T(Equals) * Any++[Type]) >>
           [](Match& _) {
@@ -177,8 +176,59 @@ namespace vc
           },
 
         // Import.
-        T(Group)[Group] << (T(Use) * NamedType[Type] * End) >>
+        T(Group) << (T(Use) * NamedType[Type] * End) >>
           [](Match& _) { return Use << make_typename(_[Type]); },
+
+        // FFI library.
+        T(Group) << (T(Use) * ~T(String)[String] * T(Brace)[Brace] * End) >>
+          [](Match& _) {
+            return Lib << (_[String] || (String ^ ""))
+                       << (Symbols << *_[Brace]);
+          },
+
+        // FFI symbol.
+        In(Symbols) * T(Group)
+            << (T(Ident)[Ident] * T(Equals) * T(String)[Lhs] * ~T(String)[Rhs] *
+                ParamsPat[Params] * T(Colon) * Any++[Type]) >>
+          [](Match& _) {
+            auto params = _(Params);
+            Node ffiparams = FFIParams;
+            Node vararg;
+
+            if (!params->empty())
+            {
+              if (params->front() == Group)
+              {
+                // If it's a single element, put the contents in a type.
+                ffiparams << (Type << *params->front());
+              }
+              else
+              {
+                // Otherwise, it's a list, add multiple types.
+                assert(params->front() == List);
+
+                for (auto& p : *params)
+                  ffiparams << (Type << *p->front());
+              }
+            }
+
+            if (
+              !ffiparams->empty() && (ffiparams->back()->size() == 1) &&
+              (ffiparams->back()->front() == Vararg))
+            {
+              // Check for `...` at the end of the types.
+              ffiparams->pop_back();
+              vararg = Vararg;
+            }
+            else
+            {
+              vararg = None;
+            }
+
+            return Symbol << (SymbolId ^ _(Ident)) << _(Lhs)
+                          << (_[Rhs] || String ^ "") << vararg << ffiparams
+                          << (Type << _[Type]);
+          },
 
         // Parameters.
         T(Params) << (T(List)[List] * End) >>
@@ -303,7 +353,7 @@ namespace vc
           return b << e;
         },
 
-        // Builtins.
+        // FFI and builtins.
         In(Expr) * T(TripleColon) * T(Ident)[Ident] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) -> Node {
           auto id = _(Ident)->location().view();
@@ -441,7 +491,8 @@ namespace vc
           else if (id == "arrayref")
             return ArrayRef << seq_to_args(_(ExprSeq));
 
-          return NoChange;
+          // Emit an ffi call.
+          return FFI << (SymbolId ^ _(Ident)) << seq_to_args(_(ExprSeq));
         },
 
         In(Expr) * T(TripleColon) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>

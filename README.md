@@ -42,14 +42,11 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 ## To-Do List
 
 * Tail-call optimization.
-* Local region.
-  * Can't send a local region object - auto-move to a fresh region?
-    * Don't just call `is_sendable` in thread `when` handler.
-    * Do delayed-send?
-      * Allow creating a behavior with `exec_count_down` 1 higher.
-      * Expose a decrement function for that.
-      * Set the region parent to be the behavior.
-      * When stack RC goes to 0, decrement the behavior's `exec_count_down`.
+* Do delayed-send when the closure still has stack references?
+  * Allow creating a behavior with `exec_count_down` 1 higher.
+  * Expose a decrement function for that.
+  * Set the region parent to be the behavior.
+  * When stack RC goes to 0, decrement the behavior's `exec_count_down`.
 * Do programs ever need to create null pointers?
 * Is it ok to immortalize a stack allocated object? Seems like no?
 * Merge, freeze, extract.
@@ -76,6 +73,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 * FFI with `libffi`.
   * Can we wrap returned `struct` as objects?
   * Platform-specific FFI. Only load for the runtime platform.
+  * Use `libffi` closures to create function pointers with captures.
 * Sockets.
   * TCP/TLS server?
   * UDP?
