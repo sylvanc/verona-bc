@@ -1,35 +1,5 @@
 use "./tempgit" "main";
 
-// range[A = i32]
-// {
-//   curr: A;
-//   stop: A;
-//   step: A;
-
-//   create(curr: A, stop: A, step: A = A(1)): range[A]
-//   {
-//     // TODO: check curr <= stop if step > 0, curr >= stop if step < 0
-//     new (curr, stop, step)
-//   }
-
-//   has_next(self: range[A]): bool
-//   {
-//     if (self.step < A(0))
-//     {
-//       self.curr > self.stop
-//     }
-//     else
-//     {
-//       self.curr < self.stop
-//     }
-//   }
-
-//   next(self: range[A]): A
-//   {
-//     self.curr = self.curr + self.step
-//   }
-// }
-
 use
 {
   printval = "printval"(any): none;
@@ -70,5 +40,5 @@ main(): i32
     r
   }
 
-  x
+  0.i32
 }

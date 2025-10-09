@@ -8,11 +8,8 @@ namespace vc
   {
     top = t;
 
-    // Get std::builtin.
-    builtin = top->lookdown(Location("std"))
-                .front()
-                ->lookdown(Location("builtin"))
-                .front();
+    // Get builtin.
+    builtin = top->lookdown(Location("builtin")).front();
 
     // Assume the main module is the first one.
     auto main_module = top->front();

@@ -66,10 +66,10 @@ namespace vc
       if (state)
         state->set_path(path);
 
-      auto stdlib = pp.executable().parent_path() / "std";
+      auto builtin = pp.executable().parent_path() / "builtin";
 
-      if (path != stdlib)
-        ast << pp.sub_parse(stdlib);
+      if (path != builtin)
+        ast << pp.sub_parse(builtin);
 
       return 0;
     });

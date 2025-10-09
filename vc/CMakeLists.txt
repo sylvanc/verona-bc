@@ -32,6 +32,6 @@ target_link_libraries(vc
 )
 
 # Copy the stdlib to the install directory
-install(DIRECTORY std DESTINATION vc)
+install(DIRECTORY builtin DESTINATION vc)
 
 install(TARGETS vc RUNTIME DESTINATION vc)

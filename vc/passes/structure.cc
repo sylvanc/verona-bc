@@ -90,8 +90,7 @@ namespace vc
           [](Match& _) {
             return (ClassDef ^ _(Directory))
               << (Ident ^ _(Directory)->location()) << TypeParams << Where
-              << (ClassBody << (Group << Use << (Ident ^ "std") << DoubleColon
-                                      << (Ident ^ "builtin"))
+              << (ClassBody << (Group << Use << (Ident ^ "builtin"))
                             << *_[Directory]);
           },
 
