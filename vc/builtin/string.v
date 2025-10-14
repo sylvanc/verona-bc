@@ -23,7 +23,7 @@ string
       i = i + 1.usize
     }
 
-    new (bytes, i)
+    new {bytes = bytes, size = i}
   }
 
   // Indexing returns a ref[u8] so callers can read/write bytes.

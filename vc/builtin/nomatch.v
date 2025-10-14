@@ -2,6 +2,6 @@ nomatch
 {
   create(): nomatch
   {
-    new
+    new {}
   }
 }

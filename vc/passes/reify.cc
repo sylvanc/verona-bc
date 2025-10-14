@@ -145,7 +145,8 @@ namespace vc
           },
 
         // Lift reified classes.
-        T(ClassDef)[ClassDef] << !T(Ident) >> [](Match& _) -> Node {
+        T(ClassDef)[ClassDef] << (T(Shape, None) * !T(Ident)) >>
+          [](Match& _) -> Node {
           auto c = _(ClassDef);
           bool primitive = (c / Ident) != ClassId;
 

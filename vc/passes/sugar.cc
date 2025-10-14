@@ -75,11 +75,11 @@ namespace vc
               << (ParamDef << (Ident ^ "self") << clone(type) << Body)
               << *_(Params);
             Node apply_body = Body;
-            Node new_args = Tuple;
+            Node new_args = NewArgs;
 
             for (auto& freevar : freevars)
             {
-              classbody << (FieldDef << (Ident ^ freevar) << Type << Body);
+              classbody << (FieldDef << (Ident ^ freevar) << Type);
               create_params << (ParamDef << (Ident ^ freevar) << Type << Body);
               create_args << (Expr << (Ident ^ freevar));
 
@@ -93,31 +93,25 @@ namespace vc
                                     << (FieldRef << (Expr << (Ident ^ "self"))
                                                  << (FieldId ^ freevar)))))));
 
-              new_args << (Expr << (Ident ^ freevar));
+              new_args
+                << (NewArg << (Ident ^ freevar) << (Expr << (Ident ^ freevar)));
             }
-
-            if (new_args->size() == 0)
-              new_args = ExprSeq;
-            else if (new_args->size() == 1)
-              new_args = ExprSeq << new_args->front();
-            else
-              new_args = ExprSeq << (Expr << new_args);
 
             apply_body << *_(Body);
 
             return Seq
-              << (Lift << ClassBody
-                       << (ClassDef
-                           << (Ident ^ id) << typeparams << Where
-                           << (classbody
-                               << (Function
-                                   << Rhs << (Ident ^ "create") << TypeParams
-                                   << create_params << type << Where
-                                   << (Body << (Expr << New << new_args)))
-                               << (Function << Rhs << (Ident ^ "apply")
-                                            << TypeParams << apply_params
-                                            << _(Type) << Where
-                                            << apply_body))))
+              << (Lift
+                  << ClassBody
+                  << (ClassDef
+                      << None << (Ident ^ id) << typeparams << Type << Where
+                      << (classbody
+                          << (Function << Rhs << (Ident ^ "create")
+                                       << TypeParams << create_params << type
+                                       << Where
+                                       << (Body << (Expr << (New << new_args))))
+                          << (Function << Rhs << (Ident ^ "apply") << TypeParams
+                                       << apply_params << _(Type) << Where
+                                       << apply_body))))
               << (Call << (QName
                            << (QElement << (Ident ^ id) << clone(typeargs)))
                        << create_args);

@@ -103,15 +103,10 @@ namespace vc
             return Labels << (Label << (LabelId ^ "start") << _(Body));
           },
 
-        // New
-        In(Expr) * T(New) << T(Args)[Args] >>
+        // New.
+        In(Expr) * T(New) << T(NewArgs)[NewArgs] >>
           [](Match& _) {
-            auto args = _(Args);
-            auto fields = field_count(args->parent(ClassBody));
-
-            if (fields != args->size())
-              return err(args, "New requires an argument for each field");
-
+            auto args = _(NewArgs);
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
                                 << (New << (LocalId ^ id) << make_selftype(args)

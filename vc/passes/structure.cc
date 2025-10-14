@@ -13,11 +13,12 @@ namespace vc
     While,   For,      When,     Equals, Else,      Try,      Op,       Convert,
     Binop,   Unop,     Nulop,    FFI,    NewArray,  ArrayRef, FieldRef, Load};
 
-  const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
-    ~(T(Equals) * Any++[Body]);
+  const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
   const auto WherePat = T(Where) * (!T(Brace))++[Where];
   const auto ParamsPat = T(Paren) << (~T(List, Group) * End);
+  const auto ParamPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
+    ~(T(Equals) * Any++[Body]);
   const auto ElseLhsPat = (T(Else) << (T(Expr) * T(Block))) /
     (!T(Equals, Else) * (!T(Equals, Else))++);
 
@@ -89,7 +90,7 @@ namespace vc
         T(Directory)[Directory] >>
           [](Match& _) {
             return (ClassDef ^ _(Directory))
-              << (Ident ^ _(Directory)->location()) << TypeParams << Where
+              << None << (Ident ^ _(Directory)) << TypeParams << Type << Where
               << (ClassBody << (Group << Use << (Ident ^ "builtin"))
                             << *_[Directory]);
           },
@@ -99,35 +100,42 @@ namespace vc
 
         // Class.
         In(ClassBody) * T(Group)
-            << (T(Ident)[Ident] * ~TypeParamsPat[TypeParams] * ~WherePat *
+            << (~T(Shape)[Shape] * T(Ident)[Ident] *
+                ~TypeParamsPat[TypeParams] *
+                ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
                 T(Brace)[Brace]) >>
           [](Match& _) {
-            return ClassDef << _(Ident) << (TypeParams << *_[TypeParams])
-                            << (Where << _[Where]) << (ClassBody << *_[Brace]);
+            return ClassDef << (_[Shape] || None) << _(Ident)
+                            << (TypeParams << *_[TypeParams])
+                            << (Type << _[Type]) << (Where << _[Where])
+                            << (ClassBody << *_[Brace]);
           },
 
         // Field.
         In(ClassBody) * T(Group) << (FieldPat * End) >>
           [](Match& _) {
-            auto type = clone(Type << _[Type]);
-            Node reftype = _[Type].empty() ? Type :
-                                             Type
+            auto id = _(Ident);
+            auto type = Type << _[Type];
+            auto self = make_selftype(id);
+            Node reftype = Type;
+
+            if (!type->empty())
+              reftype
                 << (TypeName
                     << (TypeElement << (Ident ^ "ref")
-                                    << (TypeArgs << (Type << _[Type]))));
+                                    << (TypeArgs << clone(type))));
 
-            return Seq << (FieldDef << clone(_(Ident)) << type
-                                    << (Body << (Group << _[Body])))
+            return Seq << (FieldDef << id << type)
                        << (Function
-                           << Lhs << clone(_(Ident)) << TypeParams
+                           << Lhs << clone(id) << TypeParams
                            << (Params
-                               << (ParamDef << (Ident ^ "self")
-                                            << make_selftype(_(Ident)) << Body))
+                               << (ParamDef << (Ident ^ "self") << self
+                                            << Body))
                            << reftype << Where
                            << (Body
                                << (Expr
                                    << (FieldRef << (Expr << (Ident ^ "self"))
-                                                << (FieldId ^ _(Ident))))));
+                                                << (FieldId ^ id)))));
           },
 
         // Function.
@@ -135,12 +143,22 @@ namespace vc
             << (~T(Ident, "ref")[Lhs] * T(Ident, SymbolId)[Ident] *
                 ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
                 ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
-                T(Brace)[Brace]) >>
+                ~T(Brace)[Brace]) >>
           [](Match& _) {
             Node side = _(Lhs) ? Lhs : Rhs;
             Node body = Body;
+            auto brace = _(Brace);
 
-            if (_(Brace)->empty())
+            if (!brace)
+            {
+              auto cls = _(Ident)->parent(ClassDef);
+
+              if ((cls / Shape) != Shape)
+                return err(
+                  _(Ident), "Function prototypes are only allowed in shapes");
+            }
+
+            if (!brace || brace->empty())
               body << (Expr << (Ident ^ "none"));
             else
               body << *_[Brace];
@@ -234,7 +252,7 @@ namespace vc
           [](Match& _) { return Params << *_[List]; },
 
         // Parameter.
-        In(Params) * (T(Group) << (FieldPat * End)) >>
+        In(Params) * (T(Group) << (ParamPat * End)) >>
           [](Match& _) {
             Node body = Body;
 
@@ -251,7 +269,7 @@ namespace vc
         T(TypeParams) << (T(List)[List] * End) >>
           [](Match& _) { return TypeParams << *_[List]; },
 
-        In(TypeParams) * (T(Group) << (FieldPat * End)) >>
+        In(TypeParams) * (T(Group) << (ParamPat * End)) >>
           [](Match& _) {
             if (!_[Type].empty())
               return ValueParam << _(Ident) << (Type << _[Type])
@@ -531,6 +549,18 @@ namespace vc
             ~(T(Colon) * (!T(Equals))++[Type]) >>
           [](Match& _) { return Var << _(Ident) << (Type << _[Type]); },
 
+        // New.
+        In(Expr) * (T(New) << End) *
+            (T(Brace)[Brace] << (~T(List, Group) * End)) >>
+          [](Match& _) { return New << (NewArgs << *_(Brace)); },
+
+        T(NewArgs) << (T(List)[List] * End) >>
+          [](Match& _) { return NewArgs << *_(List); },
+
+        In(NewArgs) *
+            (T(Group) << (T(Ident)[Ident] * T(Equals) * Any++[Expr] * End)) >>
+          [](Match& _) { return NewArg << _(Ident) << (Expr << _[Expr]); },
+
         // Lambda.
         In(Expr) * ParamsPat[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
@@ -629,7 +659,7 @@ namespace vc
             return NoChange;
 
           return Else << (Expr << _[Lhs])
-                      << (Block << TypeParams << Params << Type << Where
+                      << (Block << Params << Type
                                 << (Body << (Expr << _[Rhs])));
         },
 
@@ -761,6 +791,34 @@ namespace vc
           node->parent()->replace(node, err(node, "Syntax error"));
           ok = false;
         }
+        else if (node == ClassDef)
+        {
+          // Can only reuse code from a typename or a tuple of typenames.
+          Node reuse = node / Type;
+
+          if (!reuse->empty())
+          {
+            reuse = reuse->front();
+
+            if (reuse == TupleType)
+            {
+              for (auto& elem : *reuse)
+              {
+                if (elem != TypeName)
+                {
+                  reuse->replace(elem, err(elem, "Expected a type name"));
+                  ok = false;
+                }
+              }
+            }
+            else if (reuse != TypeName)
+            {
+              reuse->parent()->replace(
+                reuse, err(reuse, "Expected a type name"));
+              ok = false;
+            }
+          }
+        }
         else if ((node == Use) && (node->front() != TypeName))
         {
           // This is a package dependency.
@@ -823,6 +881,23 @@ namespace vc
               node->replace(child, err(child, "Expected an expression"));
               ok = false;
             }
+          }
+        }
+        else if (node == New)
+        {
+          auto shape = node->parent(ClassDef) / Shape;
+
+          if (shape == Shape)
+          {
+            node->parent()->replace(
+              node, err(node, "Can't instantiate a shape"));
+            ok = false;
+          }
+
+          if (node->size() != 1)
+          {
+            node << err(node, "Expected field initializers");
+            ok = false;
           }
         }
         else if (node == Type)
@@ -908,9 +983,20 @@ namespace vc
         {
           for (auto& child : *node)
           {
-            if (!child->in({ParamDef, ValueParam}))
+            if (child != ParamDef)
             {
               node->replace(child, err(child, "Expected a parameter"));
+              ok = false;
+            }
+          }
+        }
+        else if (node == NewArgs)
+        {
+          for (auto& child : *node)
+          {
+            if (child != NewArg)
+            {
+              node->replace(child, err(child, "Expected a field initializer"));
               ok = false;
             }
           }

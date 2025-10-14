@@ -20,6 +20,7 @@ namespace vc
   inline const auto DontCare = TokenDef("dontcare");
   inline const auto Ident = TokenDef("ident", flag::print);
   inline const auto Use = TokenDef("use");
+  inline const auto Shape = TokenDef("shape");
 
   inline const auto ClassDef = TokenDef(
     "classdef", flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
@@ -67,6 +68,8 @@ namespace vc
   inline const auto Binop = TokenDef("binop");
   inline const auto Unop = TokenDef("unop");
   inline const auto Nulop = TokenDef("nulop");
+  inline const auto NewArgs = TokenDef("newargs");
+  inline const auto NewArg = TokenDef("newarg");
 
   inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
   inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
@@ -127,7 +130,9 @@ namespace vc
   // clang-format off
   inline const auto wfPassStructure =
       (Top <<= ClassDef++)
-    | (ClassDef <<= Ident * TypeParams * Where * ClassBody)[Ident]
+    | (ClassDef <<=
+        (Shape >>= Shape | None) * Ident * TypeParams * Type * Where *
+        ClassBody)[Ident]
     | (ClassBody <<= (ClassDef | Use | TypeAlias | Lib | FieldDef | Function)++)
     | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
@@ -138,7 +143,7 @@ namespace vc
     | (Use <<= TypeName)[Include]
     | (TypeAlias <<= Ident * TypeParams * Type)[Ident]
     | (Where <<= ~wfWhere)
-    | (FieldDef <<= Ident * Type * Body)
+    | (FieldDef <<= Ident * Type)
     | (Function <<=
         wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Body)[Ident]
     | (TypeName <<= TypeElement++[1])
@@ -179,6 +184,9 @@ namespace vc
     | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
+    | (New <<= NewArgs)
+    | (NewArgs <<= NewArg++)
+    | (NewArg <<= Ident * Expr)
     | (Break <<= Expr)
     | (Continue <<= Expr)
     | (Return <<= Expr)
@@ -220,7 +228,6 @@ namespace vc
   // clang-format off
   inline const auto wfPassApplication =
       wfPassIdent
-    | (New <<= Args)
     | (CallDyn <<= Method * Args)
     | (Expr <<= wfExprApplication++)
     ;
@@ -260,7 +267,8 @@ namespace vc
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
-    | (New <<= wfDst * Type * Args)
+    | (New <<= wfDst * Type * NewArgs)
+    | (NewArg <<= Ident * wfSrc)
     | (NewArray <<= wfDst * Type * wfSrc)
     | (NewArrayConst <<= wfDst * Type * wfLit)
     | (Load <<= wfDst * wfSrc)

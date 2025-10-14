@@ -2,6 +2,18 @@
 
 ## Current Work
 
+Code re-use.
+- Do inclusion during reification.
+  - We have reified type arguments, pass them in.
+  - Bind `self` as well.
+  - Go last to first, and don't insert if the class element already exists.
+  - Only fields? Functions via call and lookup?
+  - Acyclic inclusion only, but it's fine to have diamond inheritance.
+- `self` type? Special subtype rules for `self` on the receiver?
+
+Dependencies.
+- Not picking up new commits when using `main` as the ref.
+
 Check use before definition in `let x = ... x ...`.
 
 Reification.
@@ -33,8 +45,6 @@ Assign:
 Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
 - Destructing when the tuple is too long ignores the extra elements. Should it?
-- What's the syntax for tuple element reference?
-  - `apply` method on `array`?
 - Flatten a tuple into another tuple.
 
 Expressions:
@@ -45,11 +55,9 @@ Syntax:
 - `where` clause on a type alias.
 - How do we refer to a zero-argument function without calling it?
 - Braces and else: it doesn't work if there's a comment in between.
-- Object literals: `new { ... }`.
 - Grouping characters in numbers: `1_000_000`.
 
 Structure:
-- Default field values.
 - Auto create, member conflict.
 - Can auto-RHS conflict with default arguments? Seems yes.
 - Compile time evaluation.
@@ -68,8 +76,6 @@ Packages:
 - Sort.
 
 Software engineering:
-- Shapes.
-- Code reuse.
 - Public, private.
 
 Security:

@@ -9,10 +9,6 @@ namespace vc
       wfPassApplication,
       dir::topdown,
       {
-        // C-style new.
-        In(Expr) * (T(New) << End) * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) { return New << seq_to_args(_(ExprSeq)); },
-
         // C-style static call.
         In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) { return Call << _(QName) << seq_to_args(_(ExprSeq)); },
@@ -29,17 +25,6 @@ namespace vc
             return CallDyn << (Method << (Expr << _(Expr)) << (Ident ^ "apply")
                                       << TypeArgs)
                            << seq_to_args(_(ExprSeq));
-          },
-
-        // ML-style new.
-        In(Expr) * (T(New) << End) * ApplyRhsPat++[Rhs] >>
-          [](Match& _) {
-            Node args = Args;
-
-            for (auto& arg : _[Rhs])
-              args << (Expr << arg);
-
-            return New << args;
           },
 
         // ML-style static call.

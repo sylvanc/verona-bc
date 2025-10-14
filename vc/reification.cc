@@ -259,8 +259,64 @@ namespace vc
 
   void Reification::reify_new(Node node)
   {
+    // Skip if this has already been reified.
+    if ((node / NewArgs) == Args)
+      return;
+
     auto& r = rs->get_reification((node / Type)->front());
     rs->schedule(r.def, r.subst_orig, true);
+
+    if (r.status == Ok)
+    {
+      assert(r.instance == ClassDef);
+      node / Type = r.reified_name;
+      auto body = r.instance / ClassBody;
+      Node args = Args;
+      std::map<Location, Node> argmap;
+
+      for (auto& arg : *(node / NewArgs))
+        argmap[(arg / Ident)->location()] = arg / Rhs;
+
+      for (auto& f : *body)
+      {
+        if (f == FieldDef)
+        {
+          auto& name = (f / Ident)->location();
+          auto find = argmap.find(name);
+
+          if (find != argmap.end())
+          {
+            args << (Arg << ArgCopy << find->second);
+            argmap.erase(find);
+          }
+          else
+          {
+            auto msg = std::format("Missing initializer for `{}`", name.view());
+            node << err(node, msg);
+          }
+        }
+      }
+
+      if (!argmap.empty())
+      {
+        for (auto& kv : argmap)
+        {
+          auto msg =
+            std::format("Unknown field initializer `{}`", kv.first.view());
+          node << err(node, msg);
+        }
+      }
+
+      node / NewArgs = args;
+    }
+    else if (r.status == Delay)
+    {
+      delays++;
+    }
+    else
+    {
+      status = Fail;
+    }
   }
 
   void Reification::reify_newarray(Node node)
