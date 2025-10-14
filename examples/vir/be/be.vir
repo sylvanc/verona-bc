@@ -58,6 +58,6 @@ func @main(): i32
   $ro_promise = read $promise
   $closure2 = region arena @behavior2()
   $be4 = lookup @behavior2_apply
-  $_ = when($ro_promise): none $be4($closure2)
+  $_ = when $be4($closure2, $ro_promise): none
   $zero = const i32 0
   ret $zero
