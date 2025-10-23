@@ -41,9 +41,14 @@ namespace vbci
       timer.data = this;
 
       struct addrinfo hints = {
+        .ai_flags = 0,
         .ai_family = AF_UNSPEC,
         .ai_socktype = SOCK_STREAM,
-        .ai_protocol = IPPROTO_TCP};
+        .ai_protocol = IPPROTO_TCP,
+        .ai_addrlen = 0,
+        .ai_addr = nullptr,
+        .ai_canonname = nullptr,
+        .ai_next = nullptr};
 
       uv_getaddrinfo(uv_default_loop(), &ga, on_resolved, host, port, &hints);
       add_external();
