@@ -1,4 +1,4 @@
-name: Verona Runtime CI
+name: Verona BC CI
 
 on:
   push:
@@ -15,14 +15,15 @@ jobs:
         # standard
         variant: [ "Standard" ]
 
-        platform: [ "ubuntu-latest", "windows-latest", "mac-latest" ]
+        platform: [ "ubuntu-latest" ]
+#        platform: [ "ubuntu-latest", "windows-latest", "mac-latest" ]
 
 
         build-type: [ "Release", "Debug" ]
                 
         include:
           - platform: "ubuntu-latest"
-            cmake-flags: "-G Ninja"
+            cmake-flags: "-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
             dependencies: "sudo apt install ninja-build lldb"
           
           - variant: "Sanitizer"
@@ -31,14 +32,14 @@ jobs:
             cmake-flags: "-G Ninja -DSANITIZER=address,undefined -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
             dependencies: "sudo apt install ninja-build"
 
-          - platform: "windows-latest"
-            build-type: "Debug"
-            # Exclude perf tests in Debug on Windows as they take too long.
-            ctest-flags: "-E perf"
+          # - platform: "windows-latest"
+          #   build-type: "Debug"
+          #   # Exclude perf tests in Debug on Windows as they take too long.
+          #   ctest-flags: "-E perf"
           
-          - platform: "mac-latest"
-            cmake-flags: ""
-            dependencies: ""
+          # - platform: "mac-latest"
+          #   cmake-flags: ""
+          #   dependencies: ""
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{matrix.platform}}
