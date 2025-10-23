@@ -1233,6 +1233,10 @@ namespace vbcc
           {
             code << uleb(+Op::Atanh) << dst(stmt) << src(stmt);
           }
+          else if (stmt == Bits)
+          {
+            code << uleb(+Op::Bits) << dst(stmt) << src(stmt);
+          }
           else if (stmt == Len)
           {
             code << uleb(+Op::Len) << dst(stmt) << src(stmt);

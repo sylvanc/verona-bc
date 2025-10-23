@@ -7,11 +7,11 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,    True,   False,     Bin,      Oct,      Int,
-    Hex,     Float,    HexFloat, String, RawString, DontCare, Tuple,    Let,
-    Var,     New,      Lambda,   QName,  Method,    Call,     CallDyn,  If,
-    While,   For,      When,     Equals, Else,      Try,      Op,       Convert,
-    Binop,   Unop,     Nulop,    FFI,    NewArray,  ArrayRef, FieldRef, Load};
+    ExprSeq, DontCare, Ident,    True,     False,     Bin,     Oct,   Int,
+    Hex,     Float,    HexFloat, String,   RawString, Tuple,   Let,   Var,
+    New,     Lambda,   QName,    If,       While,     For,     When,  Equals,
+    Else,    Try,      Op,       Infix,    Dot,       Convert, Binop, Unop,
+    Nulop,   FFI,      NewArray, ArrayRef, FieldRef,  Load};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -90,7 +90,7 @@ namespace vc
         T(Directory)[Directory] >>
           [](Match& _) {
             return (ClassDef ^ _(Directory))
-              << None << (Ident ^ _(Directory)) << TypeParams << Type << Where
+              << None << (Ident ^ _(Directory)) << TypeParams << Where
               << (ClassBody << (Group << Use << (Ident ^ "builtin"))
                             << *_[Directory]);
           },
@@ -101,14 +101,11 @@ namespace vc
         // Class.
         In(ClassBody) * T(Group)
             << (~T(Shape)[Shape] * T(Ident)[Ident] *
-                ~TypeParamsPat[TypeParams] *
-                ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
-                T(Brace)[Brace]) >>
+                ~TypeParamsPat[TypeParams] * ~WherePat * T(Brace)[Brace]) >>
           [](Match& _) {
             return ClassDef << (_[Shape] || None) << _(Ident)
                             << (TypeParams << *_[TypeParams])
-                            << (Type << _[Type]) << (Where << _[Where])
-                            << (ClassBody << *_[Brace]);
+                            << (Where << _[Where]) << (ClassBody << *_[Brace]);
           },
 
         // Field.
@@ -618,21 +615,29 @@ namespace vc
               << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs]));
           },
 
-        // Method.
-        In(Expr) *
-            (LiteralPat /
-             T(Ident, QName, Method, ExprSeq, Convert, Binop, Unop, Nulop))
-              [Lhs] *
-            T(Dot) * T(Ident, SymbolId)[Ident] * ~TypeArgsPat[TypeArgs] >>
+        // Dot.
+        In(Expr) * (T(Dot) << End) * T(Ident, SymbolId)[Ident] *
+            ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
-            return Method << (Expr << _(Lhs)) << _(Ident)
-                          << (TypeArgs << *_[TypeArgs]);
+            return Dot << _(Ident) << (TypeArgs << *_[TypeArgs]);
           },
 
         // Operator.
         In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
             return Op << _(SymbolId) << (TypeArgs << *_[TypeArgs]);
+          },
+
+        // Infix.
+        In(Expr) * T(QName)[QName] * T(Colon) >>
+          [](Match& _) { return Infix << _(QName); },
+
+        In(Expr) * T(Ident)[Ident] * ~T(TypeArgs)[TypeArgs] *
+            T(Colon) >>
+          [](Match& _) {
+            return Infix
+              << (QName
+                  << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs])));
           },
 
         // If.
@@ -705,9 +710,8 @@ namespace vc
               body->push_front(
                 Expr
                 << (Equals << lhs
-                           << (Expr
-                               << (Method << (Expr << (Ident ^ id))
-                                          << (Ident ^ "next") << TypeArgs))));
+                           << (Expr << (Ident ^ id)
+                                    << (Dot << (Ident ^ "next") << TypeArgs))));
             }
 
             return ExprSeq << (Expr
@@ -716,10 +720,9 @@ namespace vc
                                    << (Expr << _[For])))
                            << (Expr
                                << (While
-                                   << (Expr
-                                       << (Method << (Expr << (Ident ^ id))
-                                                  << (Ident ^ "has_next")
-                                                  << TypeArgs))
+                                   << (Expr << (Ident ^ id)
+                                            << (Dot << (Ident ^ "has_next")
+                                                    << TypeArgs))
                                    << (Block << Params << type << body)));
           },
 
@@ -790,34 +793,6 @@ namespace vc
         {
           node->parent()->replace(node, err(node, "Syntax error"));
           ok = false;
-        }
-        else if (node == ClassDef)
-        {
-          // Can only reuse code from a typename or a tuple of typenames.
-          Node reuse = node / Type;
-
-          if (!reuse->empty())
-          {
-            reuse = reuse->front();
-
-            if (reuse == TupleType)
-            {
-              for (auto& elem : *reuse)
-              {
-                if (elem != TypeName)
-                {
-                  reuse->replace(elem, err(elem, "Expected a type name"));
-                  ok = false;
-                }
-              }
-            }
-            else if (reuse != TypeName)
-            {
-              reuse->parent()->replace(
-                reuse, err(reuse, "Expected a type name"));
-              ok = false;
-            }
-          }
         }
         else if ((node == Use) && (node->front() != TypeName))
         {

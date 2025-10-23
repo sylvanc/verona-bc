@@ -21,6 +21,7 @@ namespace vc
   inline const auto Ident = TokenDef("ident", flag::print);
   inline const auto Use = TokenDef("use");
   inline const auto Shape = TokenDef("shape");
+  inline const auto Hash = TokenDef("hash");
 
   inline const auto ClassDef = TokenDef(
     "classdef", flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
@@ -65,6 +66,7 @@ namespace vc
   inline const auto QName = TokenDef("qname");
   inline const auto QElement = TokenDef("qelement");
   inline const auto Op = TokenDef("op");
+  inline const auto Infix = TokenDef("infix");
   inline const auto Binop = TokenDef("binop");
   inline const auto Unop = TokenDef("unop");
   inline const auto Nulop = TokenDef("nulop");
@@ -80,30 +82,38 @@ namespace vc
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
 
-  inline const auto Reify = TokenDef("reify");
-
   inline const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
-  inline const auto LiteralPat =
-    T(True, False, Bin, Oct, Int, Hex, Float, HexFloat, String, RawString);
-
-  inline const auto ApplyLhsPat = LiteralPat /
-    T(ExprSeq,
-      LocalId,
-      Tuple,
-      New,
-      Call,
-      CallDyn,
+  const auto LhsPat =
+    T(True,
+      False,
+      Bin,
+      Oct,
+      Int,
+      Hex,
+      Float,
+      HexFloat,
+      String,
+      RawString,
       Convert,
       Binop,
       Unop,
       Nulop,
-      FFI);
+      FFI,
+      NewArray,
+      ArrayRef,
+      LocalId,
+      ExprSeq,
+      New,
+      If,
+      While,
+      For,
+      When,
+      Call,
+      CallDyn);
 
-  inline const auto ApplyRhsPat =
-    ApplyLhsPat / T(QName, Method, DontCare, If, While, For, When);
+  const auto RhsPat = (LhsPat / T(DontCare, QName)) * ~T(Dot);
 
-  inline const auto ExprPat = ApplyRhsPat / T(Ref, Else);
   inline const auto wfType = TypeName | Union | Isect | TupleType | FuncType;
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
@@ -120,9 +130,9 @@ namespace vc
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfExprStructure = ExprSeq | DontCare | Ident | wfLiteral |
-    String | RawString | Tuple | Let | Var | New | Lambda | QName | Op |
-    Method | If | Else | While | For | When | Equals | Try | Convert | Binop |
-    Unop | Nulop | FFI | NewArray | ArrayRef | FieldRef | Load;
+    String | RawString | Tuple | Let | Var | New | Lambda | QName | Op | Infix |
+    Dot | If | Else | While | For | When | Equals | Hash | Try | Convert |
+    Binop | Unop | Nulop | FFI | NewArray | ArrayRef | FieldRef | Load;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -131,7 +141,7 @@ namespace vc
   inline const auto wfPassStructure =
       (Top <<= ClassDef++)
     | (ClassDef <<=
-        (Shape >>= Shape | None) * Ident * TypeParams * Type * Where *
+        (Shape >>= Shape | None) * Ident * TypeParams * Where *
         ClassBody)[Ident]
     | (ClassBody <<= (ClassDef | Use | TypeAlias | Lib | FieldDef | Function)++)
     | (Lib <<= String * Symbols)
@@ -174,7 +184,8 @@ namespace vc
     | (QName <<= QElement++[1])
     | (QElement <<= wfFuncId * TypeArgs)
     | (Op <<= wfFuncId * TypeArgs)
-    | (Method <<= Expr * wfFuncId * TypeArgs)
+    | (Infix <<= QName)
+    | (Dot <<= wfFuncId * TypeArgs)
     | (Args <<= Expr++)
     | (If <<= Expr * Block)
     | (Else <<= Expr * Block)
@@ -222,18 +233,17 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprApplication =
-    (wfExprIdent | CallDyn) - QName - Method;
+  inline const auto wfExprApplication = (wfExprIdent | CallDyn) - QName - Dot;
 
   // clang-format off
   inline const auto wfPassApplication =
       wfPassIdent
-    | (CallDyn <<= Method * Args)
+    | (CallDyn <<= Expr * wfFuncId * TypeArgs * Args)
     | (Expr <<= wfExprApplication++)
     ;
   // clang-format on
 
-  inline const auto wfExprOperators = wfExprApplication - Op;
+  inline const auto wfExprOperators = wfExprApplication - Op - Infix;
 
   // clang-format off
   inline const auto wfPassOperators =

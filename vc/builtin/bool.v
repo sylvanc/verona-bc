@@ -60,7 +60,7 @@ bool
     :::max(self, other)
   }
 
-  not(self: bool): bool
+  !(self: bool): bool
   {
     :::not(self)
   }

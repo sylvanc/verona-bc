@@ -142,6 +142,7 @@ namespace vbcc
   inline const auto Asinh = TokenDef("asinh");
   inline const auto Acosh = TokenDef("acosh");
   inline const auto Atanh = TokenDef("atanh");
+  inline const auto Bits = TokenDef("bits");
   inline const auto Len = TokenDef("len");
   inline const auto MakePtr = TokenDef("makeptr");
   inline const auto Read = TokenDef("read");
@@ -216,7 +217,7 @@ namespace vbcc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
-    Tanh | Asinh | Acosh | Atanh | Len | MakePtr | Read;
+    Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -363,6 +364,7 @@ namespace vbcc
     | (Asinh <<= wfDst * wfSrc)
     | (Acosh <<= wfDst * wfSrc)
     | (Atanh <<= wfDst * wfSrc)
+    | (Bits <<= wfDst * wfSrc)
     | (Len <<= wfDst * wfSrc)
     | (MakePtr <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)

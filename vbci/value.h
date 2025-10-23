@@ -228,12 +228,99 @@ namespace vbci
 
     Value op_eq(Value& v)
     {
-      return binop<std::equal_to<>>(v);
+      if (tag != v.tag)
+        return false;
+
+      switch (tag)
+      {
+        case ValueType::None:
+          return true;
+
+        case ValueType::Bool:
+          return b == v.b;
+
+        case ValueType::I8:
+          return i8 == v.i8;
+
+        case ValueType::I16:
+          return i16 == v.i16;
+
+        case ValueType::I32:
+          return i32 == v.i32;
+
+        case ValueType::I64:
+          return i64 == v.i64;
+
+        case ValueType::U8:
+          return u8 == v.u8;
+
+        case ValueType::U16:
+          return u16 == v.u16;
+
+        case ValueType::U32:
+          return u32 == v.u32;
+
+        case ValueType::U64:
+          return u64 == v.u64;
+
+        case ValueType::ILong:
+          return ilong == v.ilong;
+
+        case ValueType::ULong:
+          return ulong == v.ulong;
+
+        case ValueType::ISize:
+          return isize == v.isize;
+
+        case ValueType::USize:
+          return usize == v.usize;
+
+        case ValueType::F32:
+          return f32 == v.f32;
+
+        case ValueType::F64:
+          return f64 == v.f64;
+
+        case ValueType::Ptr:
+          return ptr == v.ptr;
+
+        case ValueType::Object:
+          return obj == v.obj;
+
+        case ValueType::Array:
+          return arr == v.arr;
+
+        case ValueType::Cown:
+          return cown == v.cown;
+
+        case ValueType::RegisterRef:
+          return val == v.val;
+
+        case ValueType::FieldRef:
+          return (obj == v.obj) && (idx == v.idx);
+
+        case ValueType::ArrayRef:
+          return (arr == v.arr) && (idx == v.idx);
+
+        case ValueType::CownRef:
+          return cown == v.cown;
+
+        case ValueType::Function:
+          return func == v.func;
+
+        case ValueType::Error:
+          return err.error == v.err.error;
+
+        case ValueType::Invalid:
+          return true;
+      }
     }
 
     Value op_ne(Value& v)
     {
-      return binop<std::not_equal_to<>>(v);
+      auto r = op_eq(v);
+      r.b = !r.b;
+      return r;
     }
 
     Value op_lt(Value& v)
@@ -416,6 +503,7 @@ namespace vbci
       return unop<nounop, nounop, nounop, atanh>();
     }
 
+    Value op_bits();
     Value op_len();
     Value op_ptr();
     Value op_read();
@@ -610,6 +698,12 @@ namespace vbci
     {
       switch (tag)
       {
+        case ValueType::None:
+          return 0;
+
+        case ValueType::Bool:
+          return b;
+
         case ValueType::I8:
           return i8;
 
@@ -652,6 +746,33 @@ namespace vbci
         case ValueType::F64:
           return f64;
 
+        case ValueType::Ptr:
+          return reinterpret_cast<size_t>(ptr);
+
+        case ValueType::Object:
+          return reinterpret_cast<size_t>(obj);
+
+        case ValueType::Array:
+          return reinterpret_cast<size_t>(arr);
+
+        case ValueType::Cown:
+          return reinterpret_cast<size_t>(cown);
+
+        case ValueType::RegisterRef:
+          return reinterpret_cast<size_t>(val);
+
+        case ValueType::FieldRef:
+          return reinterpret_cast<size_t>(obj) + idx + 1;
+
+        case ValueType::ArrayRef:
+          return reinterpret_cast<size_t>(arr) + idx + 1;
+
+        case ValueType::CownRef:
+          return reinterpret_cast<size_t>(cown) + 1;
+
+        case ValueType::Function:
+          return reinterpret_cast<size_t>(func);
+
         default:
           throw Value(Error::BadOperand);
       }
@@ -662,6 +783,13 @@ namespace vbci
     {
       switch (tag)
       {
+        case ValueType::None:
+          break;
+
+        case ValueType::Bool:
+          b = !!value;
+          break;
+
         case ValueType::I8:
           i8 = value;
           break;

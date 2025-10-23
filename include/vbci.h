@@ -353,6 +353,7 @@ namespace vbci
     Acosh,
     Atanh,
 
+    Bits,
     Len,
     Ptr,
 

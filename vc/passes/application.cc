@@ -13,56 +13,51 @@ namespace vc
         In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) { return Call << _(QName) << seq_to_args(_(ExprSeq)); },
 
-        // C-style dynamic call.
-        In(Expr) * T(Method)[Method] * T(ExprSeq)[ExprSeq] >>
+        // C-style dynamic call on a 0-arg static call.
+        In(Expr) * T(QName)[QName] *
+            (T(Dot) << (T(Ident, SymbolId)[Ident] * T(TypeArgs)[TypeArgs])) *
+            T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            return CallDyn << _(Method) << seq_to_args(_(ExprSeq));
+            return CallDyn << (Expr << (Call << _(QName) << Args)) << _(Ident)
+                           << _(TypeArgs) << seq_to_args(_(ExprSeq));
           },
 
-        // C-style apply sugar.
-        In(Expr) * ApplyLhsPat[Expr] * T(ExprSeq)[ExprSeq] >>
+        // C-style dynamic call.
+        In(Expr) * LhsPat[Lhs] *
+            (T(Dot) << (T(Ident, SymbolId)[Ident] * T(TypeArgs)[TypeArgs])) *
+            T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            return CallDyn << (Method << (Expr << _(Expr)) << (Ident ^ "apply")
-                                      << TypeArgs)
+            return CallDyn << (Expr << _(Lhs)) << _(Ident) << _(TypeArgs)
                            << seq_to_args(_(ExprSeq));
           },
 
-        // ML-style static call.
-        // This also turns a lone QName into a zero-argument call.
-        In(Expr) * T(QName)[QName] * ApplyRhsPat++[Rhs] >>
+        // C-style apply sugar.
+        In(Expr) * LhsPat[Lhs] * T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            Node args = Args;
-
-            for (auto& arg : _[Rhs])
-              args << (Expr << arg);
-
-            return Call << _(QName) << args;
+            return CallDyn << (Expr << _(Lhs)) << (Ident ^ "apply") << TypeArgs
+                           << seq_to_args(_(ExprSeq));
           },
 
-        // ML-style dynamic call.
-        // This also turns a lone Method into a zero-argument call.
-        In(Expr) * T(Method)[Method] * ApplyRhsPat++[Rhs] >>
+        // ML-style arguments.
+        // Turn them into a C-style ExprSeq.
+        In(Expr) * ((LhsPat / T(QName)) * ~T(Dot))[Lhs] *
+            (RhsPat * RhsPat++)[Rhs] >>
+          [](Match& _) { return Seq << _[Lhs] << (Rhs << _[Rhs]); },
+
+        // Turn RHS elements in to Expr nodes.
+        In(Rhs) * RhsPat[Rhs] >>
+          [](Match& _) -> Node { return Expr << _[Rhs]; },
+
+        // Turn an RHS with just Expr nodes into an ExprSeq.
+        In(Expr) * (T(Rhs)[Rhs] << (T(Expr)++ * End)) >>
           [](Match& _) {
-            Node args = Args;
-
-            for (auto& arg : _[Rhs])
-              args << (Expr << arg);
-
-            return CallDyn << _(Method) << args;
+            return Seq << (ExprSeq << (Expr << (Tuple << *_[Rhs])));
           },
 
-        // ML-style apply sugar.
-        In(Expr) * ApplyLhsPat[Lhs] * (ApplyRhsPat * ApplyRhsPat++)[Rhs] >>
-          [](Match& _) {
-            Node args = Args;
-
-            for (auto& arg : _[Rhs])
-              args << (Expr << arg);
-
-            return CallDyn << (Method << (Expr << _(Lhs)) << (Ident ^ "apply")
-                                      << TypeArgs)
-                           << args;
-          },
+        // 0-arg calls.
+        In(Expr) * ((T(QName) * ~T(Dot)) / (LhsPat * T(Dot)))[Expr] *
+            --T(Rhs, ExprSeq) >>
+          [](Match& _) { return Seq << _[Expr] << ExprSeq; },
       }};
 
     return p;

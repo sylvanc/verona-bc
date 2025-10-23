@@ -73,13 +73,18 @@ namespace vbcc
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({Convert, Copy,   HeapArrayConst, ArrayRef, Load,
-                             Store,   Lookup, Typetest,       Neg,      Not,
-                             Abs,     Ceil,   Floor,          Exp,      Log,
-                             Sqrt,    Cbrt,   IsInf,          IsNaN,    Sin,
-                             Cos,     Tan,    Asin,           Acos,     Atan,
-                             Sinh,    Cosh,   Tanh,           Asinh,    Acosh,
-                             Atanh,   Len,    MakePtr,        Read}))
+          else if (node->in({Convert,  Copy,     HeapArrayConst,
+                             ArrayRef, Load,     Store,
+                             Lookup,   Typetest, Neg,
+                             Not,      Abs,      Ceil,
+                             Floor,    Exp,      Log,
+                             Sqrt,     Cbrt,     IsInf,
+                             IsNaN,    Sin,      Cos,
+                             Tan,      Asin,     Acos,
+                             Atan,     Sinh,     Cosh,
+                             Tanh,     Asinh,    Acosh,
+                             Atanh,    Bits,     Len,
+                             MakePtr,  Read}))
           {
             use(node / Rhs);
             def(node / LocalId);

@@ -65,6 +65,7 @@ namespace vbcc
       Asinh,
       Acosh,
       Atanh,
+      Bits,
       Len,
       MakePtr,
       Read);

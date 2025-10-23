@@ -100,18 +100,18 @@ namespace vc
             apply_body << *_(Body);
 
             return Seq
-              << (Lift
-                  << ClassBody
-                  << (ClassDef
-                      << None << (Ident ^ id) << typeparams << Type << Where
-                      << (classbody
-                          << (Function << Rhs << (Ident ^ "create")
-                                       << TypeParams << create_params << type
-                                       << Where
-                                       << (Body << (Expr << (New << new_args))))
-                          << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                                       << apply_params << _(Type) << Where
-                                       << apply_body))))
+              << (Lift << ClassBody
+                       << (ClassDef
+                           << None << (Ident ^ id) << typeparams << Where
+                           << (classbody
+                               << (Function
+                                   << Rhs << (Ident ^ "create") << TypeParams
+                                   << create_params << type << Where
+                                   << (Body << (Expr << (New << new_args))))
+                               << (Function << Rhs << (Ident ^ "apply")
+                                            << TypeParams << apply_params
+                                            << _(Type) << Where
+                                            << apply_body))))
               << (Call << (QName
                            << (QElement << (Ident ^ id) << clone(typeargs)))
                        << create_args);

@@ -49,14 +49,8 @@ namespace vc
   const auto CallPat = T(Call)[Call] << (T(QName)[QName] * T(Args)[Args]);
 
   const auto CallDynPat = T(CallDyn)[CallDyn]
-    << ((T(Method)
-         << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
-             T(TypeArgs)[TypeArgs])) *
-        T(Args)[Args]);
-
-  const auto MethodPat = T(Method)[Method]
     << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
-        T(TypeArgs)[TypeArgs]);
+        T(TypeArgs)[TypeArgs] * T(Args)[Args]);
 
   Node make_call(Match& _, bool lvalue, bool ref)
   {
@@ -491,6 +485,19 @@ namespace vc
             return Seq << (Lift << Body
                                 << (Load << (LocalId ^ id) << _(LocalId)))
                        << (Ref << (LocalId ^ id));
+          },
+
+        // Hash.
+        In(Expr) * T(Hash) << (T(LocalId)[LocalId]) >>
+          [](Match& _) {
+            auto id0 = _.fresh(l_local);
+            auto id1 = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (Bits << (LocalId ^ id0) << _(LocalId)))
+                       << (Lift << Body
+                                << (Convert << (LocalId ^ id1) << U64
+                                            << (LocalId ^ id0)))
+                       << (LocalId ^ id1);
           },
 
         // Load, from auto-RHS fields.

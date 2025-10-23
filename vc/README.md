@@ -2,17 +2,20 @@
 
 ## Current Work
 
-Code re-use.
-- Do inclusion during reification.
-  - We have reified type arguments, pass them in.
-  - Bind `self` as well.
-  - Go last to first, and don't insert if the class element already exists.
-  - Only fields? Functions via call and lookup?
-  - Acyclic inclusion only, but it's fine to have diamond inheritance.
-- `self` type? Special subtype rules for `self` on the receiver?
+Infix syntax makes `is` look bad:
+```rs
 
-Dependencies.
-- Not picking up new commits when using `main` as the ref.
+if self.curr:is:self.a
+{
+  ...
+}
+
+if self.curr is: self.a
+{
+  ...
+}
+
+```
 
 Check use before definition in `let x = ... x ...`.
 
@@ -23,6 +26,9 @@ Reification.
 - Test type aliases, make sure cycles are rejected.
 
 ## To Do
+
+Dependencies.
+- Not picking up new commits when using `main` as the ref.
 
 Calls.
 - Try (rename to `catch`?), sub-call.
@@ -56,6 +62,7 @@ Syntax:
 - How do we refer to a zero-argument function without calling it?
 - Braces and else: it doesn't work if there's a comment in between.
 - Grouping characters in numbers: `1_000_000`.
+- Region creation.
 
 Structure:
 - Auto create, member conflict.
@@ -63,10 +70,10 @@ Structure:
 - Compile time evaluation.
 
 Builtin:
-- String.
-- Arguments, environment.
+- String. Just so that string literals have a type that isn't `array[u8]`.
 
 Packages:
+- Arguments, environment.
 - `stdin`, `stdout`, `stderr`.
 - File system.
 - CLI.
@@ -90,7 +97,8 @@ Types:
 - IR types for: union, intersection, tuple, function.
   - IR tuple type could be `[dyn]` of correct size with elements that type check.
 - Structural types.
-- Turn function types into structural types.
+  - `self` type? Special subtype rules for `self` on the receiver?
+- Turn function types into structural types?
 - Can type parameters take type arguments?
 
 Optimization:

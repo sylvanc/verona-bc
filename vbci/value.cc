@@ -1,3 +1,5 @@
+#include "value.h"
+
 #include "array.h"
 #include "cown.h"
 #include "object.h"
@@ -467,7 +469,7 @@ namespace vbci
     if (tag != ValueType::USize)
       throw Value(Error::BadConversion);
 
-    return get<size_t>();
+    return usize;
   }
 
   void* Value::to_ffi()
@@ -536,6 +538,43 @@ namespace vbci
 
       default:
         return this;
+    }
+  }
+
+  Value Value::op_bits()
+  {
+    switch (tag)
+    {
+      case ValueType::None:
+      case ValueType::Bool:
+      case ValueType::I8:
+      case ValueType::U8:
+        return convert(ValueType::U8);
+
+      case ValueType::I16:
+      case ValueType::U16:
+        return convert(ValueType::U16);
+
+      case ValueType::I32:
+      case ValueType::U32:
+        return convert(ValueType::U32);
+
+      case ValueType::I64:
+      case ValueType::U64:
+        return convert(ValueType::U64);
+
+      case ValueType::ILong:
+      case ValueType::ULong:
+        return convert(ValueType::ULong);
+
+      case ValueType::F32:
+        return Value(ValueType::U32, std::bit_cast<uint32_t>(f32));
+
+      case ValueType::F64:
+        return Value(ValueType::U64, std::bit_cast<uint64_t>(f64));
+
+      default:
+        return convert(ValueType::USize);
     }
   }
 
@@ -870,9 +909,7 @@ namespace vbci
 
   Value Value::convert(ValueType to)
   {
-    if (
-      (tag < ValueType::I8) || (tag > ValueType::F64) || (to < ValueType::I8) ||
-      (to > ValueType::F64))
+    if ((tag > ValueType::Function) || (to > ValueType::F64))
       throw Value(Error::BadConversion);
 
     if (tag == to)

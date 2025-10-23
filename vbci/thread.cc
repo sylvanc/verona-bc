@@ -786,6 +786,8 @@ namespace vbci
           do_unop(acosh);
         case Op::Atanh:
           do_unop(atanh);
+        case Op::Bits:
+          do_unop(bits);
         case Op::Len:
           do_unop(len);
         case Op::Ptr:
