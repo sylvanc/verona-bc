@@ -1,0 +1,37 @@
+vbcc
+validids
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 9:@printval)
+        (string 8:printval)
+        (string 0:)
+        (none)
+        (ffiparams
+          (dyn))
+        (none))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 1:4))
+          (ffi
+            (localid 2:$_)
+            (symbolid 9:@printval)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$r)))))
+        (ret
+          (localid 2:$r))))))

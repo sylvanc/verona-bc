@@ -1,0 +1,42 @@
+vbcc
+assignids
+(top
+  {}
+  (class
+    (classid 2:@A)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (i32)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 2:$i)
+            (i32)
+            (int 2:99))
+          (stack
+            (localid 2:$a)
+            (classid 2:@A)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$i))))
+          (fieldref
+            (localid 4:$ref)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 2:@f))
+          (load
+            (localid 2:$j)
+            (localid 4:$ref)))
+        (ret
+          (localid 2:$j))))))
