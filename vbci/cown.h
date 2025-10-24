@@ -21,8 +21,6 @@ namespace vbci
     {
       if (!Program::get().is_cown(type_id))
         throw Value(Error::BadType);
-
-      inc();
     }
 
   public:
