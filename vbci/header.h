@@ -29,6 +29,7 @@ namespace vbci
     {
       auto ploc = prev.location();
       auto nloc = next.location();
+      bool unparent_prev = true;
 
       if (loc::is_immutable(loc))
       {
@@ -82,7 +83,19 @@ namespace vbci
           }
           else if (nr->is_frame_local())
           {
+            // OK to clear parent here because if no stack references,
+            // prev region can be deallocated. If stack ref exists,
+            // wont be deallocated
+
+            if (loc::is_region(ploc) && !loc::to_region(ploc)->is_frame_local())
+            {
+              loc::to_region(ploc)->clear_parent();
+              // we have already unparented it, and will possibly reparent
+              unparent_prev = false;
+            }
+
             // Drag a frame-local allocation to a region.
+
             if (!drag_allocation(r, next.get_header()))
               return false;
 
@@ -126,7 +139,7 @@ namespace vbci
         pr->stack_inc();
 
         // Clear the parent if it's in a different region.
-        if (ploc != loc)
+        if (ploc != loc && unparent_prev)
           pr->clear_parent();
       }
 

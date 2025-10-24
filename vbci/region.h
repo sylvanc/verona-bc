@@ -109,7 +109,6 @@ namespace vbci
     void set_parent()
     {
       assert(!has_parent());
-      assert(stack_rc > 0);
       parent = loc::Immutable;
     }
 
