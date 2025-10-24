@@ -16,7 +16,7 @@ namespace vbci
     }
 
     singleton = nullptr;
-    auto program = Program::get();
+    auto& program = Program::get();
     std::vector<ffi_type*> ffi_types;
 
     for (auto& f : fields)

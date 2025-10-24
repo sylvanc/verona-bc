@@ -57,6 +57,17 @@ namespace vbci
   public:
     static Program& get();
 
+    // Disable copy constructors
+    Program(const Program&) = delete;
+    Program& operator=(const Program&) = delete;
+
+    // Default constructor
+    Program() = default;
+
+    // Move constructors
+    Program(Program&&) = default;
+    Program& operator=(Program&&) = default;
+
     Symbol& symbol(size_t idx);
     Function* function(size_t idx);
     Class& cls(uint32_t type_id);

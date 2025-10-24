@@ -155,7 +155,7 @@ namespace vbci
 
     void finalize()
     {
-      auto c = cls();
+      auto& c = cls();
       auto& f = c.fields;
       auto fin = c.finalizer();
 
