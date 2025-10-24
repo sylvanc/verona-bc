@@ -24,7 +24,7 @@ namespace vbci
     Object& init(Frame* frame, Class& cls)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        store(true, i, frame->arg(i));
+        store<true>(true, i, frame->arg(i));
 
       return *this;
     }
@@ -66,6 +66,7 @@ namespace vbci
       return Value::from_addr(f.value_type, addr);
     }
 
+    template <bool no_previous = false>
     Value store(bool move, size_t idx, Value& v)
     {
       auto& f = cls().fields.at(idx);
@@ -74,7 +75,12 @@ namespace vbci
         throw Value(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
-      auto prev = Value::from_addr(f.value_type, addr);
+
+      Value prev;
+      // If we don't need the previous value, skip loading it.
+      // Also, it is probably uninitialized memory, so loading is very bad.
+      if constexpr (!no_previous)
+        prev = Value::from_addr(f.value_type, addr);
 
       if (!write_barrier(prev, v))
         throw Value(Error::BadStore);
@@ -155,7 +161,7 @@ namespace vbci
 
     void finalize()
     {
-      auto c = cls();
+      auto& c = cls();
       auto& f = c.fields;
       auto fin = c.finalizer();
 

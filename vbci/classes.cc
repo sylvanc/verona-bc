@@ -16,7 +16,7 @@ namespace vbci
     }
 
     singleton = nullptr;
-    auto program = Program::get();
+    auto& program = Program::get();
     std::vector<ffi_type*> ffi_types;
 
     for (auto& f : fields)
@@ -65,5 +65,15 @@ namespace vbci
       return nullptr;
 
     return find->second;
+  }
+
+  Class::~Class()
+  {
+    if (singleton)
+    {
+      // Don't finalize the singleton objects, but do collect the
+      // memory to appease LSAN.
+      delete[] reinterpret_cast<uint8_t*>(singleton);
+    }
   }
 }

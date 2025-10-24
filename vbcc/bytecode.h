@@ -109,7 +109,7 @@ namespace vbcc
     std::optional<size_t> get_library_id(Node id);
     void add_library(Node lib);
 
-    void gen(std::filesystem::path output, bool strip);
+    void gen(std::filesystem::path output, bool strip, bool reproducible);
     size_t typ(Node type);
   };
 }

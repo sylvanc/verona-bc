@@ -29,7 +29,7 @@ namespace vbci
   void RegionRC::rfree(Header* h)
   {
     headers.erase(h);
-    delete h;
+    delete[] reinterpret_cast<uint8_t*>(h);
   }
 
   void RegionRC::insert(Header* h)

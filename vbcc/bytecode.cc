@@ -529,7 +529,7 @@ namespace vbcc
     libraries.push_back(lib);
   }
 
-  void Bytecode::gen(std::filesystem::path output, bool strip)
+  void Bytecode::gen(std::filesystem::path output, bool strip, bool reproducible)
   {
     wf::push_back(wfIR);
 
@@ -545,7 +545,7 @@ namespace vbcc
     hdr << uleb(CurrentVersion);
 
     // Add the compilation path to the string table.
-    auto comp_path = ST::di().string(compilation_path.string());
+    auto comp_path = ST::di().string(reproducible ? "/reproducible" : compilation_path.string());
 
     // The compilation path.
     di << uleb(comp_path);
