@@ -11,9 +11,6 @@ namespace vbci
       // Create an immortal singleton object for empty classes.
       size = sizeof(Object);
       auto mem = new uint8_t[size];
-#if defined(LEAK_SANITIZER)
-      __lsan_ignore_object(mem);
-#endif
       singleton = Object::create(mem, *this, loc::Immortal);
       return true;
     }
