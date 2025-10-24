@@ -1,0 +1,249 @@
+vbcc
+assignids
+(top
+  {}
+  (primitive
+    (array
+      (i32))
+    (methods
+      (method
+        (methodid 6:@index)
+        (functionid 16:@array_i32_index))))
+  (func
+    (functionid 17:@array_i32_create)
+    (params
+      (param
+        (localid 4:$len)
+        (usize)))
+    (array
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 17:^array_i32_create)
+        (body
+          (newarray
+            (localid 2:$a)
+            (array
+              (i32))
+            (localid 4:$len)))
+        (ret
+          (localid 2:$a)))))
+  (func
+    (functionid 16:@array_i32_index)
+    (params
+      (param
+        (localid 2:$a)
+        (array
+          (i32)))
+      (param
+        (localid 4:$idx)
+        (usize)))
+    (ref
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 16:^array_i32_index)
+        (body
+          (arrayref
+            (localid 3:$a0)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (localid 4:$idx)))
+        (ret
+          (localid 3:$a0)))))
+  (primitive
+    (ref
+      (i32))
+    (methods
+      (method
+        (methodid 5:@load)
+        (functionid 13:@ref_i32_load))
+      (method
+        (methodid 6:@store)
+        (functionid 14:@ref_i32_store))))
+  (func
+    (functionid 13:@ref_i32_load)
+    (params
+      (param
+        (localid 2:$a)
+        (ref
+          (i32))))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 13:^ref_i32_load)
+        (body
+          (load
+            (localid 2:$v)
+            (localid 2:$a)))
+        (ret
+          (localid 2:$v)))))
+  (func
+    (functionid 14:@ref_i32_store)
+    (params
+      (param
+        (localid 2:$a)
+        (ref
+          (i32)))
+      (param
+        (localid 2:$v)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 14:^ref_i32_store)
+        (body
+          (store
+            (localid 5:$prev)
+            (localid 2:$a)
+            (arg
+              (argcopy)
+              (localid 2:$v))))
+        (ret
+          (localid 5:$prev)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 2:$i)
+            (usize)
+            (int 2:10))
+          (stackarray
+            (localid 2:$a)
+            (array
+              (i32))
+            (localid 2:$i))
+          (stackarrayconst
+            (localid 2:$b)
+            (array
+              (i32))
+            (int 2:10))
+          (call
+            (localid 2:$c)
+            (functionid 17:@array_i32_create)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$i))))
+          (arrayrefconst
+            (localid 3:$a0)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (int 1:0))
+          (const
+            (localid 4:$idx)
+            (usize)
+            (int 1:0))
+          (arrayref
+            (localid 3:$b0)
+            (arg
+              (argcopy)
+              (localid 2:$b))
+            (localid 4:$idx))
+          (lookup
+            (localid 6:$index)
+            (localid 2:$c)
+            (methodid 6:@index))
+          (calldyn
+            (localid 3:$c0)
+            (localid 6:$index)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$c))
+              (arg
+                (argcopy)
+                (localid 4:$idx))))
+          (const
+            (localid 2:$j)
+            (i32)
+            (int 2:66))
+          (store
+            (localid 2:$0)
+            (localid 3:$a0)
+            (arg
+              (argcopy)
+              (localid 2:$j)))
+          (store
+            (localid 2:$1)
+            (localid 3:$b0)
+            (arg
+              (argcopy)
+              (localid 2:$j)))
+          (lookup
+            (localid 10:$ref_store)
+            (localid 3:$c0)
+            (methodid 6:@store))
+          (calldyn
+            (localid 2:$2)
+            (localid 10:$ref_store)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$c0))
+              (arg
+                (argcopy)
+                (localid 2:$j))))
+          (load
+            (localid 3:$k0)
+            (localid 3:$a0))
+          (load
+            (localid 3:$k1)
+            (localid 3:$b0))
+          (lookup
+            (localid 9:$ref_load)
+            (localid 3:$c0)
+            (methodid 5:@load))
+          (calldyn
+            (localid 3:$k2)
+            (localid 9:$ref_load)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$c0))))
+          (eq
+            (localid 4:$eq1)
+            (localid 3:$k0)
+            (localid 3:$k1))
+          (eq
+            (localid 4:$eq2)
+            (localid 3:$k1)
+            (localid 3:$k2))
+          (and
+            (localid 4:$eq3)
+            (localid 4:$eq1)
+            (localid 4:$eq2)))
+        (cond
+          (localid 4:$eq3)
+          (labelid 3:^eq)
+          (labelid 3:^ne)))
+      (label
+        (labelid 3:^eq)
+        (body
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 1:1)))
+        (ret
+          (localid 2:$r)))
+      (label
+        (labelid 3:^ne)
+        (body
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 2:-1)))
+        (ret
+          (localid 2:$r))))))

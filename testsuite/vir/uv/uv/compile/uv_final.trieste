@@ -1,0 +1,340 @@
+vbcc
+liveness
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 9:@printval)
+        (string 8:printval)
+        (string 0:)
+        (none)
+        (ffiparams
+          (dyn))
+        (none))
+      (symbol
+        (symbolid 5:@puts)
+        (string 4:puts)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (i32))
+      (symbol
+        (symbolid 14:@uv_os_homedir)
+        (string 13:uv_os_homedir)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (ptr))
+        (i32))
+      (symbol
+        (symbolid 13:@async_create)
+        (string 12:async_create)
+        (string 0:)
+        (none)
+        (ffiparams
+          (i32))
+        (ptr))
+      (symbol
+        (symbolid 12:@async_close)
+        (string 11:async_close)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (none))
+      (symbol
+        (symbolid 14:@async_set_arg)
+        (string 13:async_set_arg)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (dyn))
+        (bool))
+      (symbol
+        (symbolid 14:@async_set_cb0)
+        (string 13:async_set_cb0)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (dyn))
+        (bool))
+      (symbol
+        (symbolid 10:@async_cb0)
+        (string 9:async_cb0)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (none))
+      (symbol
+        (symbolid 15:@uv_timer_start)
+        (string 14:uv_timer_start)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (ptr)
+          (u64)
+          (u64))
+        (i32))
+      (symbol
+        (symbolid 14:@uv_timer_stop)
+        (string 13:uv_timer_stop)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (i32))))
+  (class
+    (classid 6:@timer)
+    (fields
+      (field
+        (fieldid 7:@handle)
+        (ptr))
+      (field
+        (fieldid 8:@counter)
+        (usize)))
+    (methods
+      (method
+        (methodid 4:@cb0)
+        (functionid 10:@timer_cb0))))
+  (func
+    (functionid 10:@timer_cb0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 6:@timer)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^timer_cb0)
+        (body
+          (const
+            (localid 4:$one)
+            (usize)
+            (int 1:1))
+          (const
+            (localid 5:$done)
+            (usize)
+            (int 1:3))
+          (fieldref
+            (localid 12:$counter_ref)
+            (arg
+              (argcopy)
+              (localid 5:$self))
+            (fieldid 8:@counter))
+          (load
+            (localid 8:$counter)
+            (localid 12:$counter_ref))
+          (ge
+            (localid 5:$cond)
+            (localid 8:$counter)
+            (localid 5:$done)))
+        (cond
+          (localid 5:$cond)
+          (labelid 5:^done)
+          (labelid 9:^not_done)))
+      (label
+        (labelid 5:^done)
+        (body
+          (fieldref
+            (localid 11:$handle_ref)
+            (arg
+              (argmove)
+              (localid 5:$self))
+            (fieldid 7:@handle))
+          (load
+            (localid 7:$handle)
+            (localid 11:$handle_ref))
+          (ffi
+            (localid 2:$0)
+            (symbolid 14:@uv_timer_stop)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$handle))))
+          (ffi
+            (localid 2:$1)
+            (symbolid 12:@async_close)
+            (args
+              (arg
+                (argmove)
+                (localid 7:$handle)))))
+        (jump
+          (labelid 7:^return)))
+      (label
+        (labelid 9:^not_done)
+        (body
+          (add
+            (localid 9:$counter2)
+            (localid 8:$counter)
+            (localid 4:$one))
+          (ffi
+            (localid 2:$2)
+            (symbolid 9:@printval)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:$counter2))))
+          (store
+            (localid 2:$3)
+            (localid 12:$counter_ref)
+            (arg
+              (argmove)
+              (localid 9:$counter2))))
+        (jump
+          (labelid 7:^return)))
+      (label
+        (labelid 7:^return)
+        (body
+          (const
+            (localid 5:$none)
+            (none)
+            (none)))
+        (ret
+          (localid 5:$none)))))
+  (func
+    (functionid 11:@print_home)
+    (params)
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 11:^print_home)
+        (body
+          (stackarrayconst
+            (localid 5:$home)
+            (array
+              (u8))
+            (int 3:256))
+          (makeptr
+            (localid 9:$home_ptr)
+            (localid 5:$home))
+          (len
+            (localid 9:$home_len)
+            (localid 5:$home))
+          (makeptr
+            (localid 13:$home_len_ptr)
+            (localid 9:$home_len))
+          (ffi
+            (localid 2:$0)
+            (symbolid 14:@uv_os_homedir)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:$home_ptr))
+              (arg
+                (argmove)
+                (localid 13:$home_len_ptr))))
+          (ffi
+            (localid 2:$1)
+            (symbolid 5:@puts)
+            (args
+              (arg
+                (argmove)
+                (localid 9:$home_ptr))))
+          (const
+            (localid 4:$ret)
+            (none)
+            (none)))
+        (ret
+          (localid 4:$ret)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (call
+            (localid 2:$0)
+            (functionid 11:@print_home)
+            (args))
+          (const
+            (localid 11:$timer_type)
+            (i32)
+            (int 2:13))
+          (ffi
+            (localid 8:$timer_h)
+            (symbolid 13:@async_create)
+            (args
+              (arg
+                (argmove)
+                (localid 11:$timer_type))))
+          (const
+            (localid 8:$counter)
+            (usize)
+            (int 1:0))
+          (region
+            (localid 6:$timer)
+            (rc)
+            (classid 6:@timer)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:$timer_h))
+              (arg
+                (argmove)
+                (localid 8:$counter))))
+          (lookup
+            (localid 4:$cb0)
+            (localid 6:$timer)
+            (methodid 4:@cb0))
+          (ffi
+            (localid 2:$1)
+            (symbolid 14:@async_set_arg)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:$timer_h))
+              (arg
+                (argmove)
+                (localid 6:$timer))))
+          (ffi
+            (localid 2:$2)
+            (symbolid 14:@async_set_cb0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:$timer_h))
+              (arg
+                (argmove)
+                (localid 4:$cb0))))
+          (const
+            (localid 8:$timeout)
+            (u64)
+            (int 4:1000))
+          (fnpointer
+            (localid 10:$async_cb0)
+            (symbolid 10:@async_cb0))
+          (ffi
+            (localid 2:$3)
+            (symbolid 15:@uv_timer_start)
+            (args
+              (arg
+                (argmove)
+                (localid 8:$timer_h))
+              (arg
+                (argmove)
+                (localid 10:$async_cb0))
+              (arg
+                (argcopy)
+                (localid 8:$timeout))
+              (arg
+                (argmove)
+                (localid 8:$timeout))))
+          (const
+            (localid 4:$ret)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 4:$ret))))))

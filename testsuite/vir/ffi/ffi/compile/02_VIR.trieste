@@ -1,0 +1,64 @@
+vbcc
+VIR
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 7:@malloc)
+        (string 6:malloc)
+        (string 0:)
+        (none)
+        (ffiparams
+          (usize))
+        (ptr))
+      (symbol
+        (symbolid 5:@free)
+        (string 4:free)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (none))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 5:$size)
+            (usize)
+            (int 1:8))
+          (ffi
+            (localid 5:$addr)
+            (symbolid 7:@malloc)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$size))))
+          (ffi
+            (localid 5:$free)
+            (symbolid 5:@free)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$addr))))
+          (const
+            (localid 2:$x)
+            (usize)
+            (int 2:12))
+          (add
+            (localid 2:$y)
+            (localid 5:$size)
+            (localid 2:$x))
+          (convert
+            (localid 2:$z)
+            (i32)
+            (localid 2:$y)))
+        (ret
+          (localid 2:$z))))))
