@@ -66,4 +66,14 @@ namespace vbci
 
     return find->second;
   }
+
+  Class::~Class()
+  {
+    if (singleton)
+    {
+      // Don't finalize the singleton objects, but do collect the
+      // memory to appease LSAN.
+      delete[] reinterpret_cast<uint8_t*>(singleton);
+    }
+  }
 }

@@ -41,5 +41,6 @@ namespace vbci
     bool calc_size();
     Function* finalizer();
     Function* method(size_t w);
+    ~Class();
   };
 }
