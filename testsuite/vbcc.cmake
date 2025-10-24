@@ -1,7 +1,7 @@
 # Arguments for testing vbcc samples
 macro(toolinvoke ARGS testfile outputdir)
   get_filename_component(test_name ${testfile} NAME_WE)
-  set(${ARGS} build ${testfile} -b ${outputdir}/${test_name}.vbc -o ${outputdir}/${test_name}_final.trieste --dump_passes ${outputdir}) 
+  set(${ARGS} build ${testfile} -b ${outputdir}/${test_name}.vbc -r -o ${outputdir}/${test_name}_final.trieste --dump_passes ${outputdir}) 
 endmacro()
 
 # Regular expression to match test files
