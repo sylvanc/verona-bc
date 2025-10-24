@@ -6,10 +6,9 @@
 
 namespace vbci
 {
-  std::pair<bool, bool> drag_allocation(Region* r, Header* h, Location ploc)
+  bool drag_allocation(Region* r, Header* h)
   {
     auto& program = Program::get();
-    bool pr_refd = false;
     Location frame = loc::None;
 
     if (r->is_frame_local())
@@ -40,7 +39,7 @@ namespace vbci
 
       // No region, even a frame-local one, can point to the stack.
       if (loc::is_stack(loc))
-        return std::pair(false, false);
+        return false;
 
       auto hr = loc::to_region(loc);
 
@@ -68,30 +67,18 @@ namespace vbci
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
         if ((frame == loc::None) && hr->has_parent())
-        {
-          // if hr is the previous region, then as long as there is only one
-          // reference into hr from frame locals we are dragging into r, it's
-          // ok. (this reference will replace the old one from r still leaving
-          // only one entry point to hr)
-          if (loc::is_region(ploc) && loc::to_region(ploc) == hr)
-          {
-            if (pr_refd >= 1)
-              return std::pair(false, false);
-            pr_refd += 1;
-          }
-          else
-            return std::pair(false, false);
-        }
+          return false;
+
         // If hr is already an ancestor of r, we can't drag the allocation, or
         // we'll create a region cycle.
         if (hr->is_ancestor_of(r))
-          return std::pair(false, false);
+          return false;
 
         // If r is not frame-local, it can't have multiple entry points to this
         // region.
         auto [it, ok] = regions.insert(hr);
         if ((frame == loc::None) && !ok)
-          return std::pair(false, false);
+          return false;
       }
     }
 
@@ -100,9 +87,7 @@ namespace vbci
     {
       for (auto& hr : regions)
       {
-        if (!loc::is_region(ploc) || loc::to_region(ploc) != hr)
-          hr->set_parent(r);
-
+        hr->set_parent(r);
         // Decrease stack rc for this region, as a frame local entry point is
         // now in r.
         hr->stack_dec();
@@ -123,7 +108,7 @@ namespace vbci
       hh->move_region(r);
     }
 
-    return std::pair(true, !pr_refd);
+    return true;
     ;
   }
 }

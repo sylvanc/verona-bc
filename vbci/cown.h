@@ -93,15 +93,20 @@ namespace vbci
           nr = Region::create(RegionType::RegionRC);
           nr->set_parent();
 
-          auto drag_result = drag_allocation(nr, next.get_header(), prev_loc);
-          if (!drag_result.first)
+          // if ploc is a region, must be not frame local
+          if (loc::is_region(prev_loc))
+          {
+            loc::to_region(prev_loc)->clear_parent();
+            unparent_prev = false;
+          }
+
+          if (!drag_allocation(nr, next.get_header()))
           {
             next = Value(Error::BadStore);
             nr->free_region();
           }
           else
           {
-            unparent_prev = drag_result.second;
             next_loc = next.location();
           }
         }
@@ -126,9 +131,8 @@ namespace vbci
       // Clear prev region parent if it's different from next.
       if (loc::is_region(prev_loc) && (prev_loc != next_loc))
       {
-        loc::to_region(prev_loc)->clear_parent();
-        if (!unparent_prev)
-          loc::to_region(prev_loc)->set_parent(nr);
+        if (unparent_prev)
+          loc::to_region(prev_loc)->clear_parent();
       }
       return prev;
     }

@@ -64,5 +64,5 @@ namespace vbci
     }
   }
 
-  std::pair<bool,bool> drag_allocation(Region* r, Header* h, Location pr);
+  bool drag_allocation(Region* r, Header* h);
 }

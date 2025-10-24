@@ -83,15 +83,24 @@ namespace vbci
           }
           else if (nr->is_frame_local())
           {
+            // OK to clear parent here because if no stack references,
+            // prev region can be deallocated. If stack ref exists,
+            // wont be deallocated
+
+            if (loc::is_region(ploc) && !loc::to_region(ploc)->is_frame_local())
+            {
+              loc::to_region(ploc)->clear_parent();
+              // we have already unparented it, and will possibly reparent
+              unparent_prev = false;
+            }
+
             // Drag a frame-local allocation to a region.
-            // Drag a frame-local allocation to a region.
-            auto drag_result = drag_allocation(r, next.get_header(), ploc);
-            if (!drag_result.first)
+
+            if (!drag_allocation(r, next.get_header()))
               return false;
 
             // If this has succeeded, next has a new location.
             nloc = next.location();
-            unparent_prev = drag_result.second;
           }
           else if (nr->has_parent())
           {
@@ -259,7 +268,7 @@ namespace vbci
           // Drag a frame-local allocation to a region.
           auto nr = Region::create(RegionType::RegionRC);
 
-          if (!drag_allocation(nr, this,loc::None).first)
+          if (!drag_allocation(nr, this))
             return false;
 
           if (nr->sendable())
