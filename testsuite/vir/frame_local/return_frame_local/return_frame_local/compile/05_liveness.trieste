@@ -1,0 +1,152 @@
+vbcc
+liveness
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 7:@printf)
+        (string 6:printf)
+        (string 0:)
+        (vararg)
+        (ffiparams
+          (ptr))
+        (i32))))
+  (class
+    (classid 2:@B)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (bool)))
+    (methods))
+  (class
+    (classid 2:@A)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (classid 2:@B)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 5:$true)
+            (bool)
+            (true))
+          (new
+            (localid 2:$b)
+            (classid 2:@B)
+            (args
+              (arg
+                (argmove)
+                (localid 5:$true))))
+          (call
+            (localid 2:$a)
+            (functionid 7:@make_a)
+            (args
+              (arg
+                (argmove)
+                (localid 2:$b))))
+          (fieldref
+            (localid 12:$a_field_ref)
+            (arg
+              (argmove)
+              (localid 2:$a))
+            (fieldid 2:@f))
+          (load
+            (localid 8:$a_field)
+            (localid 12:$a_field_ref))
+          (fieldref
+            (localid 12:$b_field_ref)
+            (arg
+              (argmove)
+              (localid 8:$a_field))
+            (fieldid 2:@f))
+          (load
+            (localid 8:$b_field)
+            (localid 12:$b_field_ref))
+          (const
+            (localid 8:$ret_val)
+            (i32)
+            (int 2:42))
+          (conststr
+            (localid 4:$fmt)
+            (string 3:%s
+))
+          (makeptr
+            (localid 8:$fmt_ptr)
+            (localid 4:$fmt)))
+        (cond
+          (localid 8:$b_field)
+          (labelid 5:^true)
+          (labelid 6:^false)))
+      (label
+        (labelid 5:^true)
+        (body
+          (conststr
+            (localid 12:$string_true)
+            (string 4:true))
+          (makeptr
+            (localid 9:$ptr_true)
+            (localid 12:$string_true))
+          (ffi
+            (localid 4:$out)
+            (symbolid 7:@printf)
+            (args
+              (arg
+                (argmove)
+                (localid 8:$fmt_ptr))
+              (arg
+                (argmove)
+                (localid 9:$ptr_true)))))
+        (ret
+          (localid 8:$ret_val)))
+      (label
+        (labelid 6:^false)
+        (body
+          (conststr
+            (localid 13:$string_false)
+            (string 5:false))
+          (makeptr
+            (localid 10:$ptr_false)
+            (localid 13:$string_false))
+          (ffi
+            (localid 4:$out)
+            (symbolid 7:@printf)
+            (args
+              (arg
+                (argmove)
+                (localid 8:$fmt_ptr))
+              (arg
+                (argmove)
+                (localid 10:$ptr_false)))))
+        (ret
+          (localid 8:$ret_val)))))
+  (func
+    (functionid 7:@make_a)
+    (params
+      (param
+        (localid 2:$b)
+        (classid 2:@B)))
+    (classid 2:@A)
+    (vars)
+    (labels
+      (label
+        (labelid 7:^make_a)
+        (body
+          (new
+            (localid 6:$ret_a)
+            (classid 2:@A)
+            (args
+              (arg
+                (argmove)
+                (localid 2:$b)))))
+        (ret
+          (localid 6:$ret_a))))))

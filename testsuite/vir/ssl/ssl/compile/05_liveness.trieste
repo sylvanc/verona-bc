@@ -1,0 +1,583 @@
+vbcc
+liveness
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 8:@getargv)
+        (string 7:getargv)
+        (string 0:)
+        (none)
+        (ffiparams)
+        (array
+          (array
+            (u8))))
+      (symbol
+        (symbolid 5:@puts)
+        (string 4:puts)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (i32))
+      (symbol
+        (symbolid 6:@write)
+        (string 5:write)
+        (string 0:)
+        (none)
+        (ffiparams
+          (i32)
+          (ptr)
+          (usize))
+        (isize))
+      (symbol
+        (symbolid 15:@happy_eyeballs)
+        (string 14:happy_eyeballs)
+        (string 0:)
+        (none)
+        (ffiparams
+          (dyn)
+          (dyn)
+          (ptr)
+          (ptr)
+          (i32))
+        (bool))
+      (symbol
+        (symbolid 12:@async_close)
+        (string 11:async_close)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (none))
+      (symbol
+        (symbolid 14:@async_set_arg)
+        (string 13:async_set_arg)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (dyn))
+        (bool))
+      (symbol
+        (symbolid 14:@async_set_cb1)
+        (string 13:async_set_cb1)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (dyn))
+        (bool))
+      (symbol
+        (symbolid 10:@async_cb1)
+        (string 9:async_cb1)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (none))
+      (symbol
+        (symbolid 17:@async_read_start)
+        (string 16:async_read_start)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (dyn))
+        (bool))
+      (symbol
+        (symbolid 12:@async_write)
+        (string 11:async_write)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (array
+            (u8)))
+        (none))
+      (symbol
+        (symbolid 12:@uv_strerror)
+        (string 11:uv_strerror)
+        (string 0:)
+        (none)
+        (ffiparams
+          (i32))
+        (ptr))
+      (symbol
+        (symbolid 11:@ssl_client)
+        (string 10:ssl_client)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (ptr))
+        (ptr))
+      (symbol
+        (symbolid 10:@ssl_close)
+        (string 9:ssl_close)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (none))
+      (symbol
+        (symbolid 9:@ssl_read)
+        (string 8:ssl_read)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (array
+            (u8)))
+        (i32))
+      (symbol
+        (symbolid 10:@ssl_write)
+        (string 9:ssl_write)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (array
+            (u8)))
+        (none))
+      (symbol
+        (symbolid 14:@ssl_plaintext)
+        (string 13:ssl_plaintext)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (union
+          (array
+            (u8))
+          (none)))))
+  (class
+    (classid 5:@Conn)
+    (fields
+      (field
+        (fieldid 4:@ssl)
+        (ptr)))
+    (methods
+      (method
+        (methodid 4:@cb1)
+        (functionid 9:@conn_cb1))
+      (method
+        (methodid 8:@cb_read)
+        (functionid 10:@conn_read))))
+  (func
+    (functionid 9:@conn_cb1)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 5:@Conn))
+      (param
+        (localid 7:$status)
+        (i32)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 9:^conn_cb1)
+        (body
+          (fieldref
+            (localid 8:$ssl_ref)
+            (arg
+              (argmove)
+              (localid 5:$self))
+            (fieldid 4:@ssl))
+          (load
+            (localid 4:$ssl)
+            (localid 8:$ssl_ref))
+          (ffi
+            (localid 2:$0)
+            (symbolid 10:@ssl_close)
+            (args
+              (arg
+                (argmove)
+                (localid 4:$ssl))))
+          (ffi
+            (localid 12:$status_text)
+            (symbolid 12:@uv_strerror)
+            (args
+              (arg
+                (argmove)
+                (localid 7:$status))))
+          (ffi
+            (localid 2:$1)
+            (symbolid 5:@puts)
+            (args
+              (arg
+                (argmove)
+                (localid 12:$status_text))))
+          (const
+            (localid 5:$none)
+            (none)
+            (none)))
+        (ret
+          (localid 5:$none)))))
+  (func
+    (functionid 10:@conn_read)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 5:@Conn))
+      (param
+        (localid 5:$data)
+        (array
+          (u8))))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^conn_read)
+        (body
+          (const
+            (localid 7:$stdout)
+            (i32)
+            (int 1:1))
+          (fieldref
+            (localid 8:$ssl_ref)
+            (arg
+              (argmove)
+              (localid 5:$self))
+            (fieldid 4:@ssl))
+          (load
+            (localid 4:$ssl)
+            (localid 8:$ssl_ref))
+          (ffi
+            (localid 2:$0)
+            (symbolid 9:@ssl_read)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:$ssl))
+              (arg
+                (argmove)
+                (localid 5:$data)))))
+        (jump
+          (labelid 6:^while)))
+      (label
+        (labelid 6:^while)
+        (body
+          (ffi
+            (localid 10:$plaintext)
+            (symbolid 14:@ssl_plaintext)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:$ssl))))
+          (typetest
+            (localid 5:$done)
+            (localid 10:$plaintext)
+            (none)))
+        (cond
+          (localid 5:$done)
+          (labelid 5:^done)
+          (labelid 5:^body)))
+      (label
+        (labelid 5:^body)
+        (body
+          (makeptr
+            (localid 5:$text)
+            (localid 10:$plaintext))
+          (len
+            (localid 4:$len)
+            (localid 10:$plaintext))
+          (ffi
+            (localid 2:$1)
+            (symbolid 6:@write)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$stdout))
+              (arg
+                (argmove)
+                (localid 5:$text))
+              (arg
+                (argmove)
+                (localid 4:$len)))))
+        (jump
+          (labelid 6:^while)))
+      (label
+        (labelid 5:^done)
+        (body
+          (const
+            (localid 5:$none)
+            (none)
+            (none)))
+        (ret
+          (localid 5:$none)))))
+  (class
+    (classid 9:@Eyeballs)
+    (fields
+      (field
+        (fieldid 5:@host)
+        (array
+          (u8))))
+    (methods
+      (method
+        (methodid 3:@cb)
+        (functionid 12:@eyeballs_cb))))
+  (func
+    (functionid 12:@eyeballs_cb)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 9:@Eyeballs))
+      (param
+        (localid 6:$tcp_h)
+        (ptr))
+      (param
+        (localid 7:$status)
+        (i32)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 12:^eyeballs_cb)
+        (body
+          (const
+            (localid 5:$zero)
+            (i32)
+            (int 1:0))
+          (eq
+            (localid 3:$eq)
+            (localid 7:$status)
+            (localid 5:$zero)))
+        (cond
+          (localid 3:$eq)
+          (labelid 8:^success)
+          (labelid 8:^failure)))
+      (label
+        (labelid 8:^success)
+        (body
+          (fieldref
+            (localid 9:$host_ref)
+            (arg
+              (argmove)
+              (localid 5:$self))
+            (fieldid 5:@host))
+          (load
+            (localid 5:$host)
+            (localid 9:$host_ref))
+          (makeptr
+            (localid 9:$host_ptr)
+            (localid 5:$host))
+          (ffi
+            (localid 4:$ssl)
+            (symbolid 11:@ssl_client)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$tcp_h))
+              (arg
+                (argmove)
+                (localid 9:$host_ptr))))
+          (region
+            (localid 5:$conn)
+            (rc)
+            (classid 5:@Conn)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:$ssl))))
+          (conststr
+            (localid 5:$msg0)
+            (string 22:GET / HTTP/1.1
+Host: ))
+          (conststr
+            (localid 5:$msg1)
+            (string 23:
+Connection: close
+
+))
+          (ffi
+            (localid 2:$0)
+            (symbolid 10:@ssl_write)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:$ssl))
+              (arg
+                (argmove)
+                (localid 5:$msg0))))
+          (ffi
+            (localid 2:$1)
+            (symbolid 10:@ssl_write)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:$ssl))
+              (arg
+                (argmove)
+                (localid 5:$host))))
+          (ffi
+            (localid 2:$2)
+            (symbolid 10:@ssl_write)
+            (args
+              (arg
+                (argmove)
+                (localid 4:$ssl))
+              (arg
+                (argmove)
+                (localid 5:$msg1))))
+          (lookup
+            (localid 4:$cb1)
+            (localid 5:$conn)
+            (methodid 4:@cb1))
+          (lookup
+            (localid 8:$cb_read)
+            (localid 5:$conn)
+            (methodid 8:@cb_read))
+          (ffi
+            (localid 2:$3)
+            (symbolid 14:@async_set_arg)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$tcp_h))
+              (arg
+                (argmove)
+                (localid 5:$conn))))
+          (ffi
+            (localid 2:$4)
+            (symbolid 14:@async_set_cb1)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$tcp_h))
+              (arg
+                (argmove)
+                (localid 4:$cb1))))
+          (ffi
+            (localid 2:$5)
+            (symbolid 17:@async_read_start)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$tcp_h))
+              (arg
+                (argmove)
+                (localid 8:$cb_read)))))
+        (jump
+          (labelid 5:^done)))
+      (label
+        (labelid 8:^failure)
+        (body
+          (ffi
+            (localid 4:$err)
+            (symbolid 12:@uv_strerror)
+            (args
+              (arg
+                (argmove)
+                (localid 7:$status))))
+          (ffi
+            (localid 2:$6)
+            (symbolid 5:@puts)
+            (args
+              (arg
+                (argmove)
+                (localid 4:$err)))))
+        (jump
+          (labelid 5:^done)))
+      (label
+        (labelid 5:^done)
+        (body
+          (const
+            (localid 5:$none)
+            (none)
+            (none)))
+        (ret
+          (localid 5:$none)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 3:$i0)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 3:$i1)
+            (usize)
+            (int 1:1))
+          (const
+            (localid 3:$i2)
+            (usize)
+            (int 1:2))
+          (ffi
+            (localid 5:$argv)
+            (symbolid 8:@getargv)
+            (args))
+          (arrayref
+            (localid 9:$arg0_ref)
+            (arg
+              (argcopy)
+              (localid 5:$argv))
+            (localid 3:$i0))
+          (arrayref
+            (localid 9:$arg1_ref)
+            (arg
+              (argmove)
+              (localid 5:$argv))
+            (localid 3:$i1))
+          (load
+            (localid 5:$host)
+            (localid 9:$arg0_ref))
+          (load
+            (localid 5:$port)
+            (localid 9:$arg1_ref))
+          (region
+            (localid 9:$eyeballs)
+            (rc)
+            (classid 9:@Eyeballs)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$host))))
+          (lookup
+            (localid 3:$cb)
+            (localid 9:$eyeballs)
+            (methodid 3:@cb))
+          (makeptr
+            (localid 9:$host_ptr)
+            (localid 5:$host))
+          (makeptr
+            (localid 9:$port_ptr)
+            (localid 5:$port))
+          (const
+            (localid 6:$delay)
+            (i32)
+            (int 3:100))
+          (ffi
+            (localid 2:$0)
+            (symbolid 15:@happy_eyeballs)
+            (args
+              (arg
+                (argmove)
+                (localid 9:$eyeballs))
+              (arg
+                (argmove)
+                (localid 3:$cb))
+              (arg
+                (argmove)
+                (localid 9:$host_ptr))
+              (arg
+                (argmove)
+                (localid 9:$port_ptr))
+              (arg
+                (argmove)
+                (localid 6:$delay))))
+          (const
+            (localid 4:$ret)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 4:$ret))))))
