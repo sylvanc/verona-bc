@@ -112,8 +112,6 @@ namespace vc
       Call,
       CallDyn);
 
-  const auto RhsPat = (LhsPat / T(DontCare, QName)) * ~T(Dot);
-
   inline const auto wfType = TypeName | Union | Isect | TupleType | FuncType;
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
@@ -151,7 +149,7 @@ namespace vc
         (Vararg >>= Vararg | None) * FFIParams * Type)
     | (FFIParams <<= Type++)
     | (Use <<= TypeName)[Include]
-    | (TypeAlias <<= Ident * TypeParams * Type)[Ident]
+    | (TypeAlias <<= Ident * TypeParams * Where * Type)[Ident]
     | (Where <<= ~wfWhere)
     | (FieldDef <<= Ident * Type)
     | (Function <<=

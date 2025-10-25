@@ -2,6 +2,8 @@
 
 namespace vc
 {
+  const auto MLArg = (LhsPat / T(DontCare, QName)) * T(Dot)++;
+
   PassDef application()
   {
     PassDef p{
@@ -38,15 +40,14 @@ namespace vc
                            << seq_to_args(_(ExprSeq));
           },
 
-        // ML-style arguments.
-        // Turn them into a C-style ExprSeq.
+        // ML-style arguments. Turn them into a C-style ExprSeq.
+        // No need for multiple dots on the LHS, as those will get handled.
         In(Expr) * ((LhsPat / T(QName)) * ~T(Dot))[Lhs] *
-            (RhsPat * RhsPat++)[Rhs] >>
+            (MLArg * MLArg++)[Rhs] >>
           [](Match& _) { return Seq << _[Lhs] << (Rhs << _[Rhs]); },
 
         // Turn RHS elements in to Expr nodes.
-        In(Rhs) * RhsPat[Rhs] >>
-          [](Match& _) -> Node { return Expr << _[Rhs]; },
+        In(Rhs) * MLArg[Rhs] >> [](Match& _) -> Node { return Expr << _[Rhs]; },
 
         // Turn an RHS with just Expr nodes into an ExprSeq.
         In(Expr) * (T(Rhs)[Rhs] << (T(Expr)++ * End)) >>
@@ -54,7 +55,8 @@ namespace vc
             return Seq << (ExprSeq << (Expr << (Tuple << *_[Rhs])));
           },
 
-        // 0-arg calls.
+        // 0-arg calls. This only happens if it's not followed by an ExprSeq or
+        // at least one MLArg.
         In(Expr) * ((T(QName) * ~T(Dot)) / (LhsPat * T(Dot)))[Expr] *
             --T(Rhs, ExprSeq) >>
           [](Match& _) { return Seq << _[Expr] << ExprSeq; },
