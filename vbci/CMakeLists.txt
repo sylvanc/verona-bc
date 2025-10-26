@@ -27,7 +27,7 @@ if(MSVC)
   target_compile_options(vbci PRIVATE /W4 /WX /wd5030 /bigobj)
 else()
   target_compile_options(vbci PRIVATE
-    -Wall -Wextra -Werror -Wshadow
+    -Wall -Wextra -Werror -Wno-class-memaccess
     -flto -ffunction-sections -fdata-sections
     )
   target_link_options(vbci PRIVATE -rdynamic -flto)

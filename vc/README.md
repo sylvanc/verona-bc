@@ -84,10 +84,10 @@ RHS functions for `ValueParam`? Or treat them like `ParamDef`?
 Types:
 - Structural types.
   - `self` type? Special subtype rules for `self` on the receiver?
+  - Turn function types into structural types.
 - Infer type arguments in expressions.
 - IR types for: union, intersection, tuple, function.
   - IR tuple type could be `[dyn]` of correct size with elements that type check.
-- Turn function types into structural types?
 - Can type parameters take type arguments?
 
 Optimization:
