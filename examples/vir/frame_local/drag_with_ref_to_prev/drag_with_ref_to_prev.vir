@@ -15,6 +15,7 @@ func @main() : i32
     $a2 = new @A($b)
     $c = region rc @C($a1) // region 2
     $field_ref = ref $c @f
+    // ok because ref from c to a1 will no longer be valid so still only 1 entry into region 1
     $old = store $field_ref $a2 
 
     $ret_val = const i32 42 
