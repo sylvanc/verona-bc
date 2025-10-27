@@ -2,20 +2,9 @@
 
 ## Current Work
 
-Infix syntax makes `is` look bad:
-```rs
-
-if self.curr:is:self.a
-{
-  ...
-}
-
-if self.curr is: self.a
-{
-  ...
-}
-
-```
+Compilation path.
+- Local builds have none. Set this as a `vbci` flag.
+- Release builds encode a git repo and ref?
 
 Check use before definition in `let x = ... x ...`.
 
@@ -55,13 +44,12 @@ Tuples:
 
 Expressions:
 - Partial application, `_`.
-- Unescape strings. Currently happens in `validids`.
 
 Syntax:
-- `where` clause on a type alias.
-- How do we refer to a zero-argument function without calling it?
 - Braces and else: it doesn't work if there's a comment in between.
-- Grouping characters in numbers: `1_000_000`.
+- Literals.
+  - Grouping characters in numbers: `1_000_000`.
+  - Unescape strings. Currently happens in `validids`.
 - Region creation.
 
 Structure:
@@ -94,11 +82,12 @@ RHS functions for `ValueParam`? Or treat them like `ParamDef`?
 - Treat them as much as possible as a `TypeParam`.
 
 Types:
-- IR types for: union, intersection, tuple, function.
-  - IR tuple type could be `[dyn]` of correct size with elements that type check.
 - Structural types.
   - `self` type? Special subtype rules for `self` on the receiver?
-- Turn function types into structural types?
+  - Turn function types into structural types.
+- Infer type arguments in expressions.
+- IR types for: union, intersection, tuple, function.
+  - IR tuple type could be `[dyn]` of correct size with elements that type check.
 - Can type parameters take type arguments?
 
 Optimization:

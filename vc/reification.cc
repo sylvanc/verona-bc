@@ -63,6 +63,13 @@ namespace vc
         body->replace(n);
     }
 
+    // Can't shape functions without implementations.
+    if ((def == Function) && ((def->parent(ClassDef) / Shape) == Shape))
+    {
+      instance << err(instance, "Can't call a function prototype");
+      status = Fail;
+    }
+
     if (def->in({ClassDef, TypeAlias, Function}))
     {
       // Create fully qualified name.

@@ -15,7 +15,7 @@ namespace vc
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
-  const auto WherePat = T(Where) * (!T(Brace))++[Where];
+  const auto WherePat = T(Where) * (!T(Brace, Equals))++[Where];
   const auto ParamsPat = T(Paren) << (~T(List, Group) * End);
   const auto ParamPat = T(Ident)[Ident] * ~(T(Colon) * (!T(Equals))++[Type]) *
     ~(T(Equals) * Any++[Body]);
@@ -145,14 +145,17 @@ namespace vc
             Node side = _(Lhs) ? Lhs : Rhs;
             Node body = Body;
             auto brace = _(Brace);
+            auto shape = (_(Ident)->parent(ClassDef) / Shape) == Shape;
 
-            if (!brace)
+            if (brace && shape)
             {
-              auto cls = _(Ident)->parent(ClassDef);
-
-              if ((cls / Shape) != Shape)
-                return err(
-                  _(Ident), "Function prototypes are only allowed in shapes");
+              return err(
+                _(Ident), "Function implementations are not allowed in shapes");
+            }
+            else if (!brace && !shape)
+            {
+              return err(
+                _(Ident), "Function prototypes are only allowed in shapes");
             }
 
             if (!brace || brace->empty())
@@ -183,10 +186,10 @@ namespace vc
         // Type alias.
         T(Group)
             << (T(Use) * T(Ident)[Ident] * ~TypeParamsPat[TypeParams] *
-                T(Equals) * Any++[Type]) >>
+                ~WherePat * T(Equals) * Any++[Type]) >>
           [](Match& _) {
             return TypeAlias << _(Ident) << (TypeParams << *_[TypeParams])
-                             << (Type << _[Type]);
+                             << (Where << _[Where]) << (Type << _[Type]);
           },
 
         // Import.
@@ -547,9 +550,14 @@ namespace vc
           [](Match& _) { return Var << _(Ident) << (Type << _[Type]); },
 
         // New.
-        In(Expr) * (T(New) << End) *
+        In(Expr) * (T(New)[New] << End) *
             (T(Brace)[Brace] << (~T(List, Group) * End)) >>
-          [](Match& _) { return New << (NewArgs << *_(Brace)); },
+          [](Match& _) {
+            if ((_(New)->parent(ClassDef) / Shape) == Shape)
+              return err(_(New), "Can't instantiate a shape");
+
+            return New << (NewArgs << *_(Brace));
+          },
 
         T(NewArgs) << (T(List)[List] * End) >>
           [](Match& _) { return NewArgs << *_(List); },
@@ -632,8 +640,7 @@ namespace vc
         In(Expr) * T(QName)[QName] * T(Colon) >>
           [](Match& _) { return Infix << _(QName); },
 
-        In(Expr) * T(Ident)[Ident] * ~T(TypeArgs)[TypeArgs] *
-            T(Colon) >>
+        In(Expr) * T(Ident)[Ident] * ~T(TypeArgs)[TypeArgs] * T(Colon) >>
           [](Match& _) {
             return Infix
               << (QName
@@ -841,7 +848,7 @@ namespace vc
           auto tn = TypeName << (TypeElement << (Ident ^ dep.hash) << TypeArgs);
 
           if (id)
-            id = TypeAlias << id << TypeParams << (Type << tn);
+            id = TypeAlias << id << TypeParams << Where << (Type << tn);
           else
             id = Use << tn;
 
@@ -860,15 +867,6 @@ namespace vc
         }
         else if (node == New)
         {
-          auto shape = node->parent(ClassDef) / Shape;
-
-          if (shape == Shape)
-          {
-            node->parent()->replace(
-              node, err(node, "Can't instantiate a shape"));
-            ok = false;
-          }
-
           if (node->size() != 1)
           {
             node << err(node, "Expected field initializers");

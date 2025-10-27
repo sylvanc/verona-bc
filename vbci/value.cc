@@ -959,12 +959,6 @@ namespace vbci
       case ValueType::U64:
         return std::to_string(u64);
 
-      case ValueType::F32:
-        return std::to_string(f32);
-
-      case ValueType::F64:
-        return std::to_string(f64);
-
       case ValueType::ILong:
         return std::to_string(ilong);
 
@@ -976,6 +970,12 @@ namespace vbci
 
       case ValueType::USize:
         return std::to_string(usize);
+
+      case ValueType::F32:
+        return std::to_string(f32);
+
+      case ValueType::F64:
+        return std::to_string(f64);
 
       case ValueType::Ptr:
         return std::format("ptr {}", ptr);
@@ -1019,6 +1019,11 @@ namespace vbci
 
       case ValueType::Invalid:
         return "invalid";
+
+      default:
+        // Unreachable.
+        assert(false);
+        return "unknown";
     }
   }
 }

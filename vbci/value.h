@@ -101,9 +101,9 @@ namespace vbci
     {
       static_assert(
         sizeof(Value) == sizeof(ValueBits), "ValueBits must match Value size");
-      ValueBits b;
-      std::memcpy(&b, this, sizeof(ValueBits));
-      return b;
+      ValueBits bits;
+      std::memcpy(&bits, this, sizeof(ValueBits));
+      return bits;
     }
 
     static Value none();
@@ -313,6 +313,11 @@ namespace vbci
 
         case ValueType::Invalid:
           return true;
+
+        default:
+          // Unreachable.
+          assert(false);
+          return false;
       }
     }
 
@@ -609,16 +614,16 @@ namespace vbci
           return OpU{}(u64);
 
         case ValueType::ILong:
-          return platform_tag(tag, Value(OpI{}(ilong)));
+          return platform_tag(this->tag, Value(OpI{}(ilong)));
 
         case ValueType::ULong:
-          return platform_tag(tag, Value(OpU{}(ulong)));
+          return platform_tag(this->tag, Value(OpU{}(ulong)));
 
         case ValueType::ISize:
-          return platform_tag(tag, Value(OpI{}(isize)));
+          return platform_tag(this->tag, Value(OpI{}(isize)));
 
         case ValueType::USize:
-          return platform_tag(tag, Value(OpU{}(usize)));
+          return platform_tag(this->tag, Value(OpU{}(usize)));
 
         case ValueType::F32:
           return OpF{}(f32);
@@ -638,10 +643,10 @@ namespace vbci
       typename OpF = OpU>
     Value binop(Value& v)
     {
-      if (tag != v.tag)
+      if (this->tag != v.tag)
         throw Value(Error::MismatchedTypes);
 
-      switch (tag)
+      switch (this->tag)
       {
         case ValueType::Bool:
           return OpB{}(b, v.b);
@@ -671,16 +676,16 @@ namespace vbci
           return OpU{}(u64, v.u64);
 
         case ValueType::ILong:
-          return platform_tag(tag, Value(OpI{}(ilong, v.ilong)));
+          return platform_tag(this->tag, Value(OpI{}(ilong, v.ilong)));
 
         case ValueType::ULong:
-          return platform_tag(tag, Value(OpU{}(ulong, v.ulong)));
+          return platform_tag(this->tag, Value(OpU{}(ulong, v.ulong)));
 
         case ValueType::ISize:
-          return platform_tag(tag, Value(OpI{}(isize, v.isize)));
+          return platform_tag(this->tag, Value(OpI{}(isize, v.isize)));
 
         case ValueType::USize:
-          return platform_tag(tag, Value(OpU{}(usize, v.usize)));
+          return platform_tag(this->tag, Value(OpU{}(usize, v.usize)));
 
         case ValueType::F32:
           return OpF{}(f32, v.f32);

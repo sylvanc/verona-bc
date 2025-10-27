@@ -1,4 +1,4 @@
-use "./tempgit" "main";
+use "https://github.com/sylvanc/iterwise" "main";
 
 use
 {
@@ -7,10 +7,11 @@ use
 
 main(): i32
 {
-  let a = array[i32](10.usize);
-  // let r = range 0.i32 10.i32;
-  let r = range(0.i32, 5.i32) chain[i32]: range(5.i32, 10.i32);
+  let a = array[i32] 10.usize;
+  // let r = range[i32](0.i32, 5.i32) chain[i32]: range[i32](5.i32, 10.i32);
+  let r = range[i32] 0.i32 5.i32 chain[i32]: range[i32] 5.i32 10.i32;
   // let r = range(0, 5) chain: range(5, 10);
+  // let r = range 0 5 chain: range 5 10;
   var sum = 0.i32;
 
   for r v ->

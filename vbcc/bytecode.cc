@@ -640,7 +640,7 @@ namespace vbcc
       hdr << uleb(*get_library_id(symbol->parent(Lib)))
           << uleb(ST::exec().string(symbol / Lhs))
           << uleb(ST::exec().string(symbol / Rhs))
-          << uleb((symbol / Vararg) == Vararg)
+          << uleb(((symbol / Vararg) == Vararg) ? 1 : 0)
           << uleb((symbol / FFIParams)->size());
 
       for (auto& param : *(symbol / FFIParams))
@@ -799,9 +799,9 @@ namespace vbcc
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t));
 
               if ((stmt / Rhs) == True)
-                code << uleb(true);
+                code << uleb(1);
               else
-                code << uleb(false);
+                code << uleb(0);
             }
             else if (t == I8)
             {
