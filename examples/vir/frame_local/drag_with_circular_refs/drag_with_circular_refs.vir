@@ -1,0 +1,39 @@
+type @c_or_d = @C | @D 
+
+class @A 
+    @f : @c_or_d 
+
+class @D 
+    @f : bool 
+
+class @B 
+    @f : @A 
+
+class @C 
+    @f : @B 
+
+
+func @main() : i32 
+    $true = const bool true 
+    $d = new @D($true)
+    $a = new @A($d)
+
+    $blah  = call @foo($a)
+
+    $ret_val = const i32 42 
+    ret $ret_val
+
+
+func @foo($a : @A) : i32 
+    $b = new @B($a) 
+    $blah = call @bar($a,$b)
+    $ret_val = const i32 42
+    ret $ret_val 
+
+func @bar($a : @A, $b : @B) : i32
+    $c = new @C($b)
+    $ref = ref $a @f 
+    $old_val = store $ref $c
+
+    $ret_val = const i32 42 
+    ret $ret_val

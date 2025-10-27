@@ -1,0 +1,15 @@
+class @B 
+    @f : bool 
+
+class @A
+    @f : @B 
+
+func @main() : i32 
+    $true = const bool true 
+    $b1 = region rc @B($true)
+    // add reference from frame local to a region, then parent the region
+    $a1 = new @A($b1)
+    $a2 = region rc @A($b1)
+    
+    $ret_val = const i32 42 
+    ret $ret_val

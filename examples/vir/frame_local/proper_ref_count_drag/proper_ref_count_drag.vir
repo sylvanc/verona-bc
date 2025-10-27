@@ -1,0 +1,22 @@
+class @B 
+    @f : bool
+
+class @A 
+    @f : @B
+
+class @C 
+    @f : @A
+
+func @main():i32 
+    $true = const bool true 
+    $b = region rc @B($true)
+    $a = new @A($b)
+    $c = region rc @C($a)
+
+    $ret_val = const i32 42 
+    ret $ret_val
+    
+
+
+
+
