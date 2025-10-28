@@ -319,8 +319,11 @@ namespace vbcc
     primitives.resize(NumPrimitiveClasses);
 
     // Reserve a function ID for `@main`.
-    functions.push_back(FuncState(nullptr));
-    func_ids.insert({ST::di().string("@main"), MainFuncId});
+    auto main_name = ST::di().string("@main");
+    auto func_main = FuncState(nullptr);
+    func_main.name = main_name;
+    functions.push_back(func_main);
+    func_ids.insert({main_name, MainFuncId});
 
     // Reserve method IDs.
     method_ids.insert({ST::di().string("@final"), FinalMethodId});
