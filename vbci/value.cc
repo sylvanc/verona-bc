@@ -66,13 +66,13 @@ namespace vbci
 
   Value::Value(const Value& that)
   {
-    std::memcpy(this, &that, sizeof(Value));
+    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
     inc();
   }
 
   Value::Value(Value&& that) noexcept
   {
-    std::memcpy(this, &that, sizeof(Value));
+    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
     that.tag = ValueType::Invalid;
   }
 
@@ -82,7 +82,7 @@ namespace vbci
       return *this;
 
     dec();
-    std::memcpy(this, &that, sizeof(Value));
+    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
     inc();
     return *this;
   }
@@ -93,7 +93,7 @@ namespace vbci
       return *this;
 
     dec();
-    std::memcpy(this, &that, sizeof(Value));
+    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
     that.tag = ValueType::Invalid;
     return *this;
   }
@@ -214,7 +214,7 @@ namespace vbci
         break;
 
       default:
-        std::memcpy(&value, v, sizeof(Value));
+        std::memcpy(static_cast<void*>(&value), v, sizeof(Value));
         break;
     }
 
