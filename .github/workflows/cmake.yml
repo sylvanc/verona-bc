@@ -43,9 +43,9 @@ jobs:
           #   # Exclude perf tests in Debug on Windows as they take too long.
           #   ctest-flags: "-E perf"
           
-          # - platform: "mac-latest"
-          #   cmake-flags: ""
-          #   dependencies: ""
+          - platform: "mac-latest"
+            cmake-flags: ""
+            dependencies: ""
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{matrix.platform}}
