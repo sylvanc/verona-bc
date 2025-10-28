@@ -27,9 +27,13 @@ if(MSVC)
   target_compile_options(vbci PRIVATE /W4 /WX /wd5030 /bigobj)
 else()
   target_compile_options(vbci PRIVATE
-    -Wall -Wextra -Werror -Wno-class-memaccess
+    -Wall -Wextra -Werror
     -flto -ffunction-sections -fdata-sections
     )
+  # Add GCC-specific warning suppression only for GCC
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(vbci PRIVATE -Wno-class-memaccess)
+  endif()
   target_link_options(vbci PRIVATE -rdynamic -flto)
   check_linker_flag(CXX "-Wl,--gc-sections" LINKER_SUPPORTS_GC_SECTIONS)
   if(LINKER_SUPPORTS_GC_SECTIONS)
