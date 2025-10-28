@@ -23,6 +23,14 @@ target_include_directories(vbci SYSTEM PRIVATE
   ${snmalloc_SOURCE_DIR}
 )
 
+include(CheckCCompilerFlag)
+
+# check if -Wno-class-memaccess is available
+check_cxx_compiler_flag("-Wno-class-memaccess" HAS_NO_CLASS_MEMACCESS)
+if(HAS_NO_CLASS_MEMACCESS)
+  target_compile_options(vbci PRIVATE -Wno-class-memaccess)
+endif()
+
 if(MSVC)
   target_compile_options(vbci PRIVATE /W4 /WX /wd5030 /bigobj)
 else()
@@ -30,10 +38,7 @@ else()
     -Wall -Wextra -Werror
     -flto -ffunction-sections -fdata-sections
     )
-  # Add GCC-specific warning suppression only for GCC
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(vbci PRIVATE -Wno-class-memaccess)
-  endif()
+
   target_link_options(vbci PRIVATE -rdynamic -flto)
   check_linker_flag(CXX "-Wl,--gc-sections" LINKER_SUPPORTS_GC_SECTIONS)
   if(LINKER_SUPPORTS_GC_SECTIONS)
