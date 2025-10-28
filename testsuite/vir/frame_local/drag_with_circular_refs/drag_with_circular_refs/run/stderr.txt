@@ -1,0 +1,129 @@
+=================================================================
+==553==ERROR: AddressSanitizer: heap-use-after-free on address 0x5020002f1510 at pc 0x61a29141539f bp 0x7fff1bc87690 sp 0x7fff1bc87680
+READ of size 8 at 0x5020002f1510 thread T0
+    #0 0x61a29141539e in std::__detail::_Hash_node<vbci::Header*, false>::_M_next() const /usr/include/c++/13/bits/hashtable_policy.h:381
+    #1 0x61a2916b799d in std::__detail::_Node_iterator_base<vbci::Header*, false>::_M_incr() /usr/include/c++/13/bits/hashtable_policy.h:398
+    #2 0x61a2916b67df in std::__detail::_Node_iterator<vbci::Header*, true, false>::operator++() /usr/include/c++/13/bits/hashtable_policy.h:450
+    #3 0x61a2916b5b0d in vbci::RegionRC::free_contents() /home/mjp41/verona-bc/vbci/region_rc.cc:54
+    #4 0x61a291705630 in vbci::Thread::teardown(bool) /home/mjp41/verona-bc/vbci/thread.cc:1026
+    #5 0x61a291703fa0 in vbci::Thread::popframe(vbci::Value&, vbci::Condition) /home/mjp41/verona-bc/vbci/thread.cc:927
+    #6 0x61a2916f71ad in vbci::Thread::step() /home/mjp41/verona-bc/vbci/thread.cc:649
+    #7 0x61a2916eadc9 in vbci::Thread::thread_run(vbci::Function*) /home/mjp41/verona-bc/vbci/thread.cc:99
+    #8 0x61a2916eabd9 in vbci::Thread::thread_run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:88
+    #9 0x61a2916e9ed0 in vbci::Thread::run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:50
+    #10 0x61a2915e7971 in verona::rt::Work::run() /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/work.h:34
+    #11 0x61a29165456a in void verona::rt::SchedulerThread::run_inner<>(void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/schedulerthread.h:213
+    #12 0x61a291644ef6 in void verona::rt::SchedulerThread::run<>(verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/schedulerthread.h:115
+    #13 0x61a291654b69 in void verona::rt::ThreadPoolBuilder::run_with_affinity<verona::rt::SchedulerThread*, void (*)()>(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/pal/threadpoolbuilder.h:39
+    #14 0x61a291654e64 in void verona::rt::ThreadPoolBuilder::add_thread_impl<unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>(void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/pal/threadpoolbuilder.h:30
+    #15 0x61a291644f6b in void verona::rt::ThreadPoolBuilder::add_thread<verona::rt::SchedulerThread*, void (*)()>(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/pal/threadpoolbuilder.h:61
+    #16 0x61a29162ebce in void verona::rt::ThreadPool<verona::rt::SchedulerThread>::run_with_startup<>(void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/threadpool.h:241
+    #17 0x61a291615609 in verona::rt::ThreadPool<verona::rt::SchedulerThread>::run() /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/threadpool.h:222
+    #18 0x61a2915f1d37 in vbci::Program::run(std::filesystem::__cxx11::path&, unsigned long, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >) /home/mjp41/verona-bc/vbci/program.cc:171
+    #19 0x61a291516f07 in main /home/mjp41/verona-bc/vbci/main.cc:44
+    #20 0x786190a2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 274eec488d230825a136fa9c4d85370fed7a0a5e)
+    #21 0x786190a2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 274eec488d230825a136fa9c4d85370fed7a0a5e)
+    #22 0x61a2913eea14 in _start (/home/mjp41/verona-bc/build/vbci/vbci+0x581a14) (BuildId: b23a3d9a49887c4342b22b23d54e081675984afe)
+
+0x5020002f1510 is located 0 bytes inside of 16-byte region [0x5020002f1510,0x5020002f1520)
+freed by thread T0 here:
+    #0 0x7861920ff5e8 in operator delete(void*, unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:164
+    #1 0x61a29141744f in std::__new_allocator<std::__detail::_Hash_node<vbci::Header*, false> >::deallocate(std::__detail::_Hash_node<vbci::Header*, false>*, unsigned long) /usr/include/c++/13/bits/new_allocator.h:172
+    #2 0x61a29141619e in std::allocator<std::__detail::_Hash_node<vbci::Header*, false> >::deallocate(std::__detail::_Hash_node<vbci::Header*, false>*, unsigned long) /usr/include/c++/13/bits/allocator.h:210
+    #3 0x61a29141619e in std::allocator_traits<std::allocator<std::__detail::_Hash_node<vbci::Header*, false> > >::deallocate(std::allocator<std::__detail::_Hash_node<vbci::Header*, false> >&, std::__detail::_Hash_node<vbci::Header*, false>*, unsigned long) /usr/include/c++/13/bits/alloc_traits.h:517
+    #4 0x61a29141619e in std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<vbci::Header*, false> > >::_M_deallocate_node_ptr(std::__detail::_Hash_node<vbci::Header*, false>*) /usr/include/c++/13/bits/hashtable_policy.h:2022
+    #5 0x61a29141551a in std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<vbci::Header*, false> > >::_M_deallocate_node(std::__detail::_Hash_node<vbci::Header*, false>*) /usr/include/c++/13/bits/hashtable_policy.h:2012
+    #6 0x61a2916bcd07 in std::_Hashtable<vbci::Header*, vbci::Header*, std::allocator<vbci::Header*>, std::__detail::_Identity, std::equal_to<vbci::Header*>, std::hash<vbci::Header*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_erase(unsigned long, std::__detail::_Hash_node_base*, std::__detail::_Hash_node<vbci::Header*, false>*) /usr/include/c++/13/bits/hashtable.h:2353
+    #7 0x61a2916b9a2f in std::_Hashtable<vbci::Header*, vbci::Header*, std::allocator<vbci::Header*>, std::__detail::_Identity, std::equal_to<vbci::Header*>, std::hash<vbci::Header*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_erase(std::integral_constant<bool, true>, vbci::Header* const&) /usr/include/c++/13/bits/hashtable.h:2396
+    #8 0x61a2916b75dc in std::_Hashtable<vbci::Header*, vbci::Header*, std::allocator<vbci::Header*>, std::__detail::_Identity, std::equal_to<vbci::Header*>, std::hash<vbci::Header*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::erase(vbci::Header* const&) /usr/include/c++/13/bits/hashtable.h:984
+    #9 0x61a2916b6534 in std::unordered_set<vbci::Header*, std::hash<vbci::Header*>, std::equal_to<vbci::Header*>, std::allocator<vbci::Header*> >::erase(vbci::Header* const&) /usr/include/c++/13/bits/unordered_set.h:553
+    #10 0x61a2916b529a in vbci::RegionRC::rfree(vbci::Header*) /home/mjp41/verona-bc/vbci/region_rc.cc:31
+    #11 0x61a291788e97 in vbci::Object::dec(bool) /home/mjp41/verona-bc/vbci/object.h:104
+    #12 0x61a291790eef in vbci::Value::dec(bool) /home/mjp41/verona-bc/vbci/value.cc:683
+    #13 0x61a29179188e in vbci::Value::field_drop() /home/mjp41/verona-bc/vbci/value.cc:782
+    #14 0x61a2916b482e in vbci::Object::finalize() /home/mjp41/verona-bc/vbci/object.h:179
+    #15 0x61a291788bfa in vbci::Object::dec(bool) /home/mjp41/verona-bc/vbci/object.h:99
+    #16 0x61a291790eef in vbci::Value::dec(bool) /home/mjp41/verona-bc/vbci/value.cc:683
+    #17 0x61a29179188e in vbci::Value::field_drop() /home/mjp41/verona-bc/vbci/value.cc:782
+    #18 0x61a2916b482e in vbci::Object::finalize() /home/mjp41/verona-bc/vbci/object.h:179
+    #19 0x61a291788bfa in vbci::Object::dec(bool) /home/mjp41/verona-bc/vbci/object.h:99
+    #20 0x61a291790eef in vbci::Value::dec(bool) /home/mjp41/verona-bc/vbci/value.cc:683
+    #21 0x61a29179188e in vbci::Value::field_drop() /home/mjp41/verona-bc/vbci/value.cc:782
+    #22 0x61a2916b482e in vbci::Object::finalize() /home/mjp41/verona-bc/vbci/object.h:179
+    #23 0x61a2916b5b01 in vbci::RegionRC::free_contents() /home/mjp41/verona-bc/vbci/region_rc.cc:59
+    #24 0x61a291705630 in vbci::Thread::teardown(bool) /home/mjp41/verona-bc/vbci/thread.cc:1026
+    #25 0x61a291703fa0 in vbci::Thread::popframe(vbci::Value&, vbci::Condition) /home/mjp41/verona-bc/vbci/thread.cc:927
+    #26 0x61a2916f71ad in vbci::Thread::step() /home/mjp41/verona-bc/vbci/thread.cc:649
+    #27 0x61a2916eadc9 in vbci::Thread::thread_run(vbci::Function*) /home/mjp41/verona-bc/vbci/thread.cc:99
+    #28 0x61a2916eabd9 in vbci::Thread::thread_run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:88
+    #29 0x61a2916e9ed0 in vbci::Thread::run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:50
+    #30 0x61a2915e7971 in verona::rt::Work::run() /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/work.h:34
+    #31 0x61a29165456a in void verona::rt::SchedulerThread::run_inner<>(void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/schedulerthread.h:213
+
+previously allocated by thread T0 here:
+    #0 0x7861920fe548 in operator new(unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:95
+    #1 0x61a2916c01b6 in std::__new_allocator<std::__detail::_Hash_node<vbci::Header*, false> >::allocate(unsigned long, void const*) /usr/include/c++/13/bits/new_allocator.h:151
+    #2 0x61a2916bf16d in std::allocator<std::__detail::_Hash_node<vbci::Header*, false> >::allocate(unsigned long) /usr/include/c++/13/bits/allocator.h:198
+    #3 0x61a2916bf16d in std::allocator_traits<std::allocator<std::__detail::_Hash_node<vbci::Header*, false> > >::allocate(std::allocator<std::__detail::_Hash_node<vbci::Header*, false> >&, unsigned long) /usr/include/c++/13/bits/alloc_traits.h:482
+    #4 0x61a2916bf16d in std::__detail::_Hash_node<vbci::Header*, false>* std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<vbci::Header*, false> > >::_M_allocate_node<vbci::Header*&>(vbci::Header*&) /usr/include/c++/13/bits/hashtable_policy.h:1990
+    #5 0x61a2916bcf46 in std::_Hashtable<vbci::Header*, vbci::Header*, std::allocator<vbci::Header*>, std::__detail::_Identity, std::equal_to<vbci::Header*>, std::hash<vbci::Header*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_Scoped_node::_Scoped_node<vbci::Header*&>(std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<vbci::Header*, false> > >*, vbci::Header*&) /usr/include/c++/13/bits/hashtable.h:307
+    #6 0x61a2916b9ba4 in std::pair<std::__detail::_Node_iterator<vbci::Header*, true, false>, bool> std::_Hashtable<vbci::Header*, vbci::Header*, std::allocator<vbci::Header*>, std::__detail::_Identity, std::equal_to<vbci::Header*>, std::hash<vbci::Header*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_emplace<vbci::Header*&>(std::integral_constant<bool, true>, vbci::Header*&) /usr/include/c++/13/bits/hashtable.h:2087
+    #7 0x61a2916b7697 in std::pair<std::__detail::_Node_iterator<vbci::Header*, true, false>, bool> std::_Hashtable<vbci::Header*, vbci::Header*, std::allocator<vbci::Header*>, std::__detail::_Identity, std::equal_to<vbci::Header*>, std::hash<vbci::Header*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::emplace<vbci::Header*&>(vbci::Header*&) /usr/include/c++/13/bits/hashtable.h:961
+    #8 0x61a2916b65dc in std::pair<std::__detail::_Node_iterator<vbci::Header*, true, false>, bool> std::unordered_set<vbci::Header*, std::hash<vbci::Header*>, std::equal_to<vbci::Header*>, std::allocator<vbci::Header*> >::emplace<vbci::Header*&>(vbci::Header*&) /usr/include/c++/13/bits/unordered_set.h:385
+    #9 0x61a2916b5446 in vbci::RegionRC::insert(vbci::Header*) /home/mjp41/verona-bc/vbci/region_rc.cc:37
+    #10 0x61a291426c76 in vbci::Header::move_region(vbci::Region*) /home/mjp41/verona-bc/vbci/header.h:245
+    #11 0x61a29142986a in vbci::drag_allocation(vbci::Region*, vbci::Header*) /home/mjp41/verona-bc/vbci/location.cc:108
+    #12 0x61a2915d9f36 in vbci::Header::write_barrier(vbci::Value&, vbci::Value&) /home/mjp41/verona-bc/vbci/header.h:99
+    #13 0x61a291797d50 in vbci::Value vbci::Object::store<false>(bool, unsigned long, vbci::Value&) /home/mjp41/verona-bc/vbci/object.h:85
+    #14 0x61a2917931f2 in vbci::Value::store(bool, vbci::Value&) /home/mjp41/verona-bc/vbci/value.cc:892
+    #15 0x61a2916f339c in vbci::Thread::step() /home/mjp41/verona-bc/vbci/thread.cc:453
+    #16 0x61a2916eadc9 in vbci::Thread::thread_run(vbci::Function*) /home/mjp41/verona-bc/vbci/thread.cc:99
+    #17 0x61a2916eabd9 in vbci::Thread::thread_run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:88
+    #18 0x61a2916e9ed0 in vbci::Thread::run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:50
+    #19 0x61a2915e7971 in verona::rt::Work::run() /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/work.h:34
+    #20 0x61a29165456a in void verona::rt::SchedulerThread::run_inner<>(void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/schedulerthread.h:213
+    #21 0x61a291644ef6 in void verona::rt::SchedulerThread::run<>(verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/schedulerthread.h:115
+    #22 0x61a291654b69 in void verona::rt::ThreadPoolBuilder::run_with_affinity<verona::rt::SchedulerThread*, void (*)()>(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/pal/threadpoolbuilder.h:39
+    #23 0x61a291654e64 in void verona::rt::ThreadPoolBuilder::add_thread_impl<unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>(void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/pal/threadpoolbuilder.h:30
+    #24 0x61a291644f6b in void verona::rt::ThreadPoolBuilder::add_thread<verona::rt::SchedulerThread*, void (*)()>(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/pal/threadpoolbuilder.h:61
+    #25 0x61a29162ebce in void verona::rt::ThreadPool<verona::rt::SchedulerThread>::run_with_startup<>(void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/threadpool.h:241
+    #26 0x61a291615609 in verona::rt::ThreadPool<verona::rt::SchedulerThread>::run() /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/sched/threadpool.h:222
+    #27 0x61a2915f1d37 in vbci::Program::run(std::filesystem::__cxx11::path&, unsigned long, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >) /home/mjp41/verona-bc/vbci/program.cc:171
+    #28 0x61a291516f07 in main /home/mjp41/verona-bc/vbci/main.cc:44
+    #29 0x786190a2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 274eec488d230825a136fa9c4d85370fed7a0a5e)
+    #30 0x786190a2a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 274eec488d230825a136fa9c4d85370fed7a0a5e)
+    #31 0x61a2913eea14 in _start (/home/mjp41/verona-bc/build/vbci/vbci+0x581a14) (BuildId: b23a3d9a49887c4342b22b23d54e081675984afe)
+
+SUMMARY: AddressSanitizer: heap-use-after-free /usr/include/c++/13/bits/hashtable_policy.h:381 in std::__detail::_Hash_node<vbci::Header*, false>::_M_next() const
+Shadow bytes around the buggy address:
+  0x5020002f1280: fa fa 00 00 fa fa 00 00 fa fa 00 00 fa fa 00 00
+  0x5020002f1300: fa fa 00 00 fa fa 00 00 fa fa 00 00 fa fa 00 00
+  0x5020002f1380: fa fa 00 00 fa fa 00 00 fa fa 00 00 fa fa 00 00
+  0x5020002f1400: fa fa fd fd fa fa fd fd fa fa fd fd fa fa fd fa
+  0x5020002f1480: fa fa fd fd fa fa fd fa fa fa fd fa fa fa fd fd
+=>0x5020002f1500: fa fa[fd]fd fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5020002f1580: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5020002f1600: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5020002f1680: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5020002f1700: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x5020002f1780: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==553==ABORTING
