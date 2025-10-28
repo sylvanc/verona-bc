@@ -113,7 +113,7 @@ namespace vbci
       finalize();
 
       if (loc::is_immutable(location()))
-        delete this;
+        delete[] reinterpret_cast<uint8_t*>(this);
       else
         region()->rfree(this);
     }
