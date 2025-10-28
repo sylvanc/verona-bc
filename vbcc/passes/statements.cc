@@ -40,7 +40,7 @@ namespace vbcc
     auto view = value->location().view();
     auto first = view.data();
     auto last = first + view.size();
-    std::from_chars_result r;
+    std::from_chars_result r{nullptr, std::errc()};
     T t;
 
     if (value == Bin)
@@ -67,7 +67,7 @@ namespace vbcc
     auto view = value->location().view();
     auto first = view.data();
     auto last = first + view.size();
-    std::from_chars_result r;
+    std::from_chars_result r{nullptr, std::errc()};
     T t;
 
     if (value == Float)
