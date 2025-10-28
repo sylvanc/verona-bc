@@ -23,9 +23,15 @@ jobs:
                 
         include:
           - platform: "ubuntu-latest"
+            cmake-flags: "-G Ninja"
+            dependencies: "sudo apt install ninja-build lldb"
+
+          - variant: "Clang"
+            platform: "ubuntu-latest"
+            build-type: "Release"
             cmake-flags: "-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
             dependencies: "sudo apt install ninja-build lldb"
-          
+
           - variant: "Sanitizer"
             platform: "ubuntu-latest"
             build-type: "Release"

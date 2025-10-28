@@ -10,7 +10,7 @@ namespace vc
     auto first = view.data();
     auto last = first + view.size();
 
-    size_t i;
+    size_t i{0};
     std::from_chars(first, last, i, 10);
     return i;
   }
