@@ -84,6 +84,19 @@ install(CODE [[
   file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
   ]])
 
+# Test if from_chars is available
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+  #include <charconv>
+  #include <string>
+  int main() {
+    std::string s{\"123\"};
+    int value;
+    std::from_chars(s.data(), s.data() + s.size(), value);
+    return 0;
+  }
+" HAS_FROM_CHARS)
+
 add_subdirectory(vbcc)
 add_subdirectory(vbci)
 add_subdirectory(vc)
