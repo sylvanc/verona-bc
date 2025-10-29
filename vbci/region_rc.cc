@@ -50,6 +50,7 @@ namespace vbci
   void RegionRC::free_contents()
   {
     auto& program = Program::get();
+    finalizing = true;
 
     for (auto h : headers)
     {
