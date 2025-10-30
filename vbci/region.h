@@ -1,6 +1,7 @@
 #pragma once
 
 #include "classes.h"
+#include "collect.h"
 #include "ident.h"
 #include "location.h"
 
@@ -135,6 +136,16 @@ namespace vbci
     {
       assert(!has_parent());
       assert(stack_rc == 0);
+      collect(this);
+    }
+
+    /** Deallocate the region and its contents.
+     *
+     * This should not be called directly, but rather call free_region(), which
+     * will handle issues with reentrancy.
+     */
+    void deallocate()
+    {
       free_contents();
       delete this;
     }

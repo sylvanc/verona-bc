@@ -2,6 +2,7 @@ include(CheckLinkerFlag)
 
 add_executable(vbci
   classes.cc
+  collect.cc
   dynlib.cc
   frame.cc
   freeze.cc

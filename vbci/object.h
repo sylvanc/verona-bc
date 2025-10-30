@@ -94,6 +94,17 @@ namespace vbci
       if (base_dec(reg))
         return;
 
+      collect(this);
+    }
+
+    /**
+     * Deallocate this object.
+     * 
+     * This should not be called directly, but rather by the collector
+     * to correctly handle re-entrancy.
+     */
+    void deallocate()
+    {
       // This object isn't in a cycle. It can be immediately finalized and then
       // freed.
       finalize();

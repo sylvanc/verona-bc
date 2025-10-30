@@ -100,6 +100,16 @@ namespace vbci
       if (base_dec(reg))
         return;
 
+      collect(this);
+    }
+
+    /**
+     * Finalises and deallocates the array, this should not be
+     * called directly due to issues with re-entrancy.
+     * Instead, use collect(Array*), or dec(..).
+     */
+    void deallocate()
+    {
       finalize();
 
       if (loc::is_immutable(location()))
