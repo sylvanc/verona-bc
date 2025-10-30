@@ -29,6 +29,14 @@ namespace vbci
       return new Cown(type_id);
     }
 
+    ~Cown()
+    {
+      auto prev_loc = content.location();
+      if (loc::is_region(prev_loc))
+        loc::to_region(prev_loc)->clear_parent();
+      content.drop();
+    }
+
     uint32_t get_type_id()
     {
       return type_id;
