@@ -169,7 +169,12 @@ namespace vbci
         case ValueType::Invalid:
         {
           for (size_t i = 0; i < size; i++)
-            load(i).field_drop();
+          {
+            void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * i);
+            auto prev = Value::from_addr(value_type, addr);
+
+            field_drop(prev);
+          }
           break;
         }
 

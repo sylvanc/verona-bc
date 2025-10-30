@@ -112,15 +112,23 @@ namespace vbci
       parent = loc::Immutable;
     }
 
-    void clear_parent()
+    /**
+      * Clear the parent of this region.
+      *
+      * If the region's stack RC is zero, returns true, indicating that the region
+      * should be freed.
+      * Otherwise, returns false.
+      */
+    bool clear_parent()
     {
       assert(has_parent());
-      assert(stack_rc > 0);
 
-      if (loc::is_region(parent))
+      if (loc::is_region(parent) && (stack_rc > 0))
         loc::to_region(parent)->stack_dec();
 
       parent = loc::None;
+      // TODO: Should this just deallocate the region directly?
+      return stack_rc == 0;
     }
 
     void free_region()

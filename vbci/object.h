@@ -176,8 +176,11 @@ namespace vbci
           case ValueType::Object:
           case ValueType::Array:
           case ValueType::Invalid:
-            load(i).field_drop();
+          {
+            auto prev = load(i);
+            field_drop(prev);
             break;
+          }
 
           default:
             break;

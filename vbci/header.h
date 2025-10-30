@@ -158,6 +158,36 @@ namespace vbci
       return true;
     }
 
+    void field_drop(Value& prev)
+    {
+      // Like write barrier, but for dropping a field. Returns the previous
+      // value.
+      auto ploc = prev.location();
+      prev.field_drop();
+
+      // Same region no additional work.
+      if (ploc == loc)
+        return;
+
+      // If the previous location is not a region, nothing more to do.
+      if (!loc::is_region(ploc))
+        return;
+
+      auto pr = loc::to_region(ploc);
+      if (!loc::is_region(loc))
+        return;
+
+      auto r = loc::to_region(loc);
+      if (r->is_frame_local())
+      {
+        pr->stack_dec();
+        return;
+      }
+
+      if (pr->clear_parent())
+        pr->free_region();
+    }
+
     Header* get_scc()
     {
       assert(loc::is_immutable(loc));
