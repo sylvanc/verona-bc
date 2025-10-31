@@ -1,0 +1,153 @@
+vbcc
+validids
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 7:@printf)
+        (string 6:printf)
+        (string 0:)
+        (vararg)
+        (ffiparams
+          (ptr))
+        (i32))))
+  (class
+    (classid 2:@A)
+    (fields
+      (field
+        (fieldid 3:@f1)
+        (bool)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 5:$true)
+            (bool)
+            (true))
+          (new
+            (localid 2:$a)
+            (classid 2:@A)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$true))))
+          (call
+            (localid 4:$res)
+            (functionid 4:@foo)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$a))))
+          (fieldref
+            (localid 6:$ref_2)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 3:@f1))
+          (load
+            (localid 6:$val_a)
+            (localid 6:$ref_2))
+          (conststr
+            (localid 4:$fmt)
+            (string 3:%s
+))
+          (makeptr
+            (localid 8:$fmt_ptr)
+            (localid 4:$fmt)))
+        (cond
+          (localid 6:$val_a)
+          (labelid 5:^true)
+          (labelid 6:^false)))
+      (label
+        (labelid 5:^true)
+        (body
+          (conststr
+            (localid 12:$string_true)
+            (string 4:true))
+          (makeptr
+            (localid 9:$ptr_true)
+            (localid 12:$string_true))
+          (ffi
+            (localid 4:$out)
+            (symbolid 7:@printf)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:$fmt_ptr))
+              (arg
+                (argcopy)
+                (localid 9:$ptr_true))))
+          (const
+            (localid 8:$ret_val)
+            (i32)
+            (int 2:42)))
+        (ret
+          (localid 8:$ret_val)))
+      (label
+        (labelid 6:^false)
+        (body
+          (conststr
+            (localid 13:$string_false)
+            (string 5:false))
+          (makeptr
+            (localid 10:$ptr_false)
+            (localid 13:$string_false))
+          (ffi
+            (localid 4:$out)
+            (symbolid 7:@printf)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:$fmt_ptr))
+              (arg
+                (argcopy)
+                (localid 10:$ptr_false))))
+          (const
+            (localid 8:$ret_val)
+            (i32)
+            (int 2:42)))
+        (ret
+          (localid 8:$ret_val)))))
+  (func
+    (functionid 4:@foo)
+    (params
+      (param
+        (localid 2:$a)
+        (classid 2:@A)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 4:^foo)
+        (body
+          (const
+            (localid 6:$false)
+            (bool)
+            (false))
+          (fieldref
+            (localid 6:$ref_1)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 3:@f1))
+          (store
+            (localid 8:$old_val)
+            (localid 6:$ref_1)
+            (arg
+              (argcopy)
+              (localid 6:$false)))
+          (const
+            (localid 8:$ret_val)
+            (bool)
+            (true)))
+        (ret
+          (localid 8:$ret_val))))))

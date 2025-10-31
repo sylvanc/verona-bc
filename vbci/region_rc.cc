@@ -61,6 +61,6 @@ namespace vbci
     }
 
     for (auto h : headers)
-      delete h;
+      delete[] reinterpret_cast<uint8_t*>(h);
   }
 }

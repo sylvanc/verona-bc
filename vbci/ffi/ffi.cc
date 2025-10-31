@@ -282,7 +282,7 @@ namespace vbci
     if (cb)
       delete cb;
 
-    delete handle;
+    delete[] reinterpret_cast<uint8_t*>(handle);
     remove_external();
   }
 

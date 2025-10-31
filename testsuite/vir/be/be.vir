@@ -1,0 +1,63 @@
+lib
+  @printval = "printval"(dyn): none
+
+class @closure_bool
+  @val: bool
+  @apply @closure_bool_apply
+
+func @closure_bool_apply($self: @closure_bool): bool
+  $val_ref = ref $self @val
+  $r = load $val_ref
+  ret $r
+
+class @closure_i32
+  @val: i32
+  @apply @closure_i32_apply
+
+func @closure_i32_apply($self: @closure_i32): i32
+  $val_ref = ref $self @val
+  $r = load $val_ref
+  ret $r
+
+class @behavior1
+  @a: i32
+  @apply @behavior1_apply
+
+func @behavior1_apply(
+  $self: @behavior1, $cown1_v: ref bool, $cown2_v: ref i32): i32
+  $a_ref = ref $self @a
+  $a = load $a_ref
+  $prev = load $cown1_v
+  $next = not $prev
+  $0 = store $cown1_v $next
+  $1 = ffi @printval($prev)
+  $2 = ffi @printval($next)
+  $b = load $cown2_v
+  $c = add $a $b
+  ret $c
+
+class @behavior2
+  @apply @behavior2_apply
+
+func @behavior2_apply($self: @behavior2, $promise_v: ref i32): none
+  $a = load $promise_v
+  $_ = ffi @printval($a)
+  ret $_
+
+func @main(): i32
+  $bool = const bool true
+  $closure_bool = region arena @closure_bool($bool)
+  $be1 = lookup $closure_bool @apply
+  $cown1 = when $be1($closure_bool): bool
+  $i32 = const i32 42
+  $closure_i32 = region arena @closure_i32($i32)
+  $cown2 = when @closure_i32_apply($closure_i32): i32
+  $ro_cown2 = read $cown2
+  $closure1 = region arena @behavior1($i32)
+  $promise = when @behavior1_apply($closure1, $cown1, $ro_cown2): i32
+  $ro_promise = read $promise
+  $closure2 = new @behavior2()
+  $be4 = lookup @behavior2_apply
+  $_ = when $be4($closure2, $ro_promise): none
+  $zero = const i32 0
+  ret $zero

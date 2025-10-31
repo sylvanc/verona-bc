@@ -1,0 +1,146 @@
+vbcc
+statements
+(top
+  {}
+  (type
+    (typeid 7:@c_or_d)
+    (union
+      (classid 2:@C)
+      (classid 2:@D)))
+  (class
+    (classid 2:@A)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (classid 7:@c_or_d)))
+    (methods))
+  (class
+    (classid 2:@D)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (bool)))
+    (methods))
+  (class
+    (classid 2:@B)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (classid 2:@A)))
+    (methods))
+  (class
+    (classid 2:@C)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (classid 2:@B)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels))
+  (labelid 5:^main)
+  (const
+    (localid 5:$true)
+    (bool)
+    (true))
+  (new
+    (localid 2:$d)
+    (classid 2:@D)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$true))))
+  (new
+    (localid 2:$a)
+    (classid 2:@A)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$d))))
+  (call
+    (localid 5:$blah)
+    (functionid 4:@foo)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$a))))
+  (const
+    (localid 8:$ret_val)
+    (i32)
+    (int 2:42))
+  (ret
+    (localid 8:$ret_val))
+  (func
+    (functionid 4:@foo)
+    (params
+      (param
+        (localid 2:$a)
+        (classid 2:@A)))
+    (i32)
+    (vars)
+    (labels))
+  (labelid 4:^foo)
+  (new
+    (localid 2:$b)
+    (classid 2:@B)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$a))))
+  (call
+    (localid 5:$blah)
+    (functionid 4:@bar)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$a))
+      (arg
+        (argcopy)
+        (localid 2:$b))))
+  (const
+    (localid 8:$ret_val)
+    (i32)
+    (int 2:42))
+  (ret
+    (localid 8:$ret_val))
+  (func
+    (functionid 4:@bar)
+    (params
+      (param
+        (localid 2:$a)
+        (classid 2:@A))
+      (param
+        (localid 2:$b)
+        (classid 2:@B)))
+    (i32)
+    (vars)
+    (labels))
+  (labelid 4:^bar)
+  (new
+    (localid 2:$c)
+    (classid 2:@C)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$b))))
+  (fieldref
+    (localid 4:$ref)
+    (arg
+      (argcopy)
+      (localid 2:$a))
+    (fieldid 2:@f))
+  (store
+    (localid 8:$old_val)
+    (localid 4:$ref)
+    (arg
+      (argcopy)
+      (localid 2:$c)))
+  (const
+    (localid 8:$ret_val)
+    (i32)
+    (int 2:42))
+  (ret
+    (localid 8:$ret_val)))

@@ -39,7 +39,7 @@ set(TRIESTE_BUILD_PARSERS Off)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 15414ab447b1256c7950a2082988b19699cf1f84
+  GIT_TAG 16d137c95efc75db9eec361edf7d6d24f7d2ea7d
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)

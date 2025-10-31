@@ -1,0 +1,60 @@
+vbcc
+VIR
+(top
+  {}
+  (class
+    (classid 2:@B)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (bool)))
+    (methods))
+  (class
+    (classid 2:@A)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (classid 2:@B)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 5:$true)
+            (bool)
+            (true))
+          (region
+            (localid 3:$b1)
+            (rc)
+            (classid 2:@B)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$true))))
+          (new
+            (localid 3:$a1)
+            (classid 2:@A)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$b1))))
+          (region
+            (localid 3:$a2)
+            (rc)
+            (classid 2:@A)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$b1))))
+          (const
+            (localid 8:$ret_val)
+            (i32)
+            (int 2:42)))
+        (ret
+          (localid 8:$ret_val))))))
