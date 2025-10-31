@@ -754,6 +754,7 @@ namespace vbci
 
   void Value::immortalize()
   {
+    LOG(Trace) << "Immortalizing value of type " << int(tag) << "@" << this;
     switch (tag)
     {
       case ValueType::Object:

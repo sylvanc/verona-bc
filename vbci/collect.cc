@@ -61,6 +61,7 @@ namespace vbci
     if (!in_collection)
       return false;
 
+    LOG(Trace) << "Adding to worklist: " << static_cast<void*>(h);
     worklist.emplace(Tag<T>::value, h);
     return true;
   }
@@ -80,6 +81,7 @@ namespace vbci
       auto n = worklist.front();
       worklist.pop();
 
+      LOG(Trace) << "Processing work item: " << static_cast<void*>(n.header);
       switch (n.type)
       {
         case CollectorType::Object:

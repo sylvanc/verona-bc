@@ -13,7 +13,9 @@ namespace vbci
   struct Object : public Header
   {
   private:
-    Object(Location loc, Class& cls) : Header(loc, cls.type_id) {}
+    Object(Location loc, Class& cls) : Header(loc, cls.type_id) {
+      LOG(Trace) << "Creating object of class " << cls.type_id << "@" << this;
+    }
 
   public:
     static Object* create(void* mem, Class& cls, Location loc)
@@ -172,6 +174,8 @@ namespace vbci
 
     void finalize()
     {
+      LOG(Trace) << "Finalizing fields of object of class " << cls().type_id << "@" << this;
+
       auto& c = cls();
       auto& f = c.fields;
       auto fin = c.finalizer();

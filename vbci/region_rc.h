@@ -4,6 +4,7 @@
 
 #include <cstdlib>
 #include <unordered_set>
+#include <iostream>
 
 namespace vbci
 {
@@ -16,7 +17,10 @@ namespace vbci
     bool finalizing;
 
   public:
-    RegionRC() : Region(), finalizing(false) {}
+    RegionRC() : Region(), finalizing(false)
+    {
+      LOG(Trace) << "Created RegionRC @" << this;
+    }
 
     Object* object(Class& cls);
     Array* array(uint32_t type_id, size_t size);
@@ -26,5 +30,9 @@ namespace vbci
     void remove(Header* h);
     bool enable_rc();
     void free_contents();
+
+    ~RegionRC() {
+      LOG(Trace) << "Destroyed RegionRC @" << this;
+    }
   };
 }

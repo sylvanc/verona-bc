@@ -61,6 +61,9 @@ namespace vbci
     }
 
     for (auto h : headers)
+    {
+      LOG(Trace) << "Deallocating header @" << h;
       delete[] reinterpret_cast<uint8_t*>(h);
+    }
   }
 }

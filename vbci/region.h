@@ -5,7 +5,9 @@
 #include "ident.h"
 #include "location.h"
 
+#include <iostream>
 #include <vbci.h>
+#include "logging.h"
 
 namespace vbci
 {
@@ -35,11 +37,16 @@ namespace vbci
       if ((stack_rc == 0) && loc::is_region(parent))
         loc::to_region(parent)->stack_inc();
 
+      LOG(Trace) << "Region @" << this << " stack_rc incremented from "
+                << stack_rc << " to " << (stack_rc + inc);
+
       stack_rc += inc;
     }
 
     bool stack_dec()
     {
+      LOG(Trace) << "Region @" << this << " stack_rc decremented from "
+                << stack_rc << " to " << (stack_rc - 1);
       if (--stack_rc == 0)
       {
         if (!has_parent())
@@ -114,12 +121,11 @@ namespace vbci
     }
 
     /**
-      * Clear the parent of this region.
-      *
-      * If the region's stack RC is zero, returns true, indicating that the region
-      * should be freed.
-      * Otherwise, returns false.
-      */
+     * Clear the parent of this region.
+     *
+     * If the region's stack RC is zero, returns true, indicating that the
+     * region should be freed. Otherwise, returns false.
+     */
     bool clear_parent()
     {
       assert(has_parent());
