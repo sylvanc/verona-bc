@@ -108,6 +108,20 @@ namespace vc
 
         if (git_remote_fetch(remote, nullptr, &fetch_opts, nullptr) != 0)
           return git_err(url, "Failed to fetch from remote 'origin'");
+
+        auto branch = std::format("{}/{}", git_remote_name(remote), str_tag);
+        git_reference* ref = nullptr;
+
+        if (
+          git_branch_lookup(&ref, repo, branch.c_str(), GIT_BRANCH_REMOTE) == 0)
+        {
+          const git_oid* oid = git_reference_target(ref);
+
+          if (oid != nullptr)
+            git_commit_lookup(&commit, repo, oid);
+
+          git_reference_free(ref);
+        }
       }
       else
       {
@@ -127,17 +141,43 @@ namespace vc
           return git_err(url, "Failed to clone dependency");
       }
 
-      // Resolve the revision (tag name or hash).
-      if (git_revparse_single(&obj, repo, str_tag.c_str()) != 0)
-        return git_err(tag, "Failed to resolve dependency revision");
+      // If it wasn't a remote branch, try a DWIM ref.
+      if (commit == nullptr)
+      {
+        git_reference* ref = nullptr;
 
-      // Peel to a commit (tags can point to tag objects).
-      git_object* peeled = nullptr;
+        if (git_reference_dwim(&ref, repo, str_tag.c_str()) == 0)
+        {
+          git_reference* resolved = nullptr;
 
-      if (git_object_peel(&peeled, obj, GIT_OBJECT_COMMIT) != 0)
-        return git_err(tag, "Failed to peel to commit");
+          if (git_reference_resolve(&resolved, ref) == 0)
+          {
+            const git_oid* oid = git_reference_target(resolved);
 
-      commit = (git_commit*)peeled;
+            if (oid != nullptr)
+              git_commit_lookup(&commit, repo, oid);
+
+            git_reference_free(resolved);
+          }
+
+          git_reference_free(ref);
+        }
+      }
+
+      // If we couldn't resolve, try as a direct commit hash.
+      if (commit == nullptr)
+      {
+        if (git_revparse_single(&obj, repo, str_tag.c_str()) != 0)
+          return git_err(tag, "Failed to resolve dependency revision");
+
+        // Peel to a commit (tags can point to tag objects).
+        git_object* peeled = nullptr;
+
+        if (git_object_peel(&peeled, obj, GIT_OBJECT_COMMIT) != 0)
+          return git_err(tag, "Failed to peel to commit");
+
+        commit = (git_commit*)peeled;
+      }
 
       // Checkout the commit tree.
       git_checkout_options co;

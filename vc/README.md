@@ -5,6 +5,7 @@
 Compilation path.
 - Local builds have none. Set this as a `vbci` flag.
 - Release builds encode a git repo and ref?
+- Or, PDB style debug info with source files embedded (VDB). Compress with `zstd`?
 
 Check use before definition in `let x = ... x ...`.
 
@@ -15,9 +16,6 @@ Reification.
 - Test type aliases, make sure cycles are rejected.
 
 ## To Do
-
-Dependencies.
-- Not picking up new commits when using `main` as the ref.
 
 Calls.
 - Try (rename to `catch`?), sub-call.
