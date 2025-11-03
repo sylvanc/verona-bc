@@ -73,8 +73,9 @@ namespace vc
           auto& r = rs->get_reification(tn);
 
           // If it's an unreified type, remove it.
+          // TODO: probably wrong
           if (!r.instance)
-            return {};
+            return Dyn;
 
           assert(r.instance == ClassDef);
           auto id = r.instance / Ident;
@@ -117,15 +118,11 @@ namespace vc
           return NoChange;
         },
 
-        // An empty type is Dyn.
-        T(Type)[Type] >> [](Match& _) -> Node {
-          auto t = _(Type);
+        // A type variable is Dyn.
+        T(TypeVar) >> [](Match&) -> Node { return Dyn; },
 
-          if (t->empty())
-            return Dyn;
-
-          return t->front();
-        },
+        // Strip the wrapping Type node.
+        T(Type) << Any[Type] >> [](Match& _) -> Node { return _(Type); },
 
         // Turn a ParamDef into a Param.
         T(ParamDef) << (T(Ident)[Ident] * Any[Type]) >>

@@ -176,7 +176,7 @@ namespace vbci
 
     if (ret_val.is_error())
     {
-      LOG(Debug) << ret.to_string();
+      LOG(Error) << ret_val.to_string();
       exit_code = -1;
     }
     else
@@ -597,7 +597,7 @@ namespace vbci
 
     if (!f)
     {
-      logging::Error() << file << ": couldn't load" << std::endl;
+      LOG(Error) << file << ": couldn't load" << std::endl;
       return false;
     }
 
@@ -608,7 +608,7 @@ namespace vbci
 
     if (!f)
     {
-      logging::Error() << file << ": couldn't read" << std::endl;
+      LOG(Error) << file << ": couldn't read" << std::endl;
       return false;
     }
 
@@ -616,15 +616,14 @@ namespace vbci
 
     if (uleb(pc) != MagicNumber)
     {
-      logging::Error() << file << ": does not start with the magic number"
-                       << std::endl;
+      LOG(Error) << file << ": does not start with the magic number"
+                 << std::endl;
       return false;
     }
 
     if (uleb(pc) != CurrentVersion)
     {
-      logging::Error() << file << ": has an unknown version number"
-                       << std::endl;
+      LOG(Error) << file << ": has an unknown version number" << std::endl;
       return false;
     }
 
@@ -689,8 +688,8 @@ namespace vbci
 
       if (!func)
       {
-        logging::Error() << file << ": couldn't load symbol " << name << "@"
-                         << version << std::endl;
+        LOG(Error) << file << ": couldn't load symbol " << name << "@"
+                   << version << std::endl;
         return false;
       }
 
@@ -709,7 +708,7 @@ namespace vbci
 
     if (functions.empty())
     {
-      logging::Error() << file << ": has no functions" << std::endl;
+      LOG(Error) << file << ": has no functions" << std::endl;
       return false;
     }
 
@@ -721,14 +720,13 @@ namespace vbci
 
     if (functions.at(MainFuncId).param_types.size() != 0)
     {
-      logging::Error() << file << ": `main` must take zero parameters"
-                       << std::endl;
+      LOG(Error) << file << ": `main` must take zero parameters" << std::endl;
       return false;
     }
 
     if (!subtype(functions.at(MainFuncId).return_type, +ValueType::I32))
     {
-      logging::Error() << file << ": `main` must return i32" << std::endl;
+      LOG(Error) << file << ": `main` must return i32" << std::endl;
       return false;
     }
 
@@ -760,7 +758,7 @@ namespace vbci
     {
       if (!symbol.prepare())
       {
-        logging::Error() << file << ": couldn't prepare symbol" << std::endl;
+        LOG(Error) << file << ": couldn't prepare symbol" << std::endl;
         return false;
       }
     }
@@ -812,7 +810,7 @@ namespace vbci
 
     if (f.labels.empty())
     {
-      logging::Error() << file << ": function has no labels" << std::endl;
+      LOG(Error) << file << ": function has no labels" << std::endl;
       return false;
     }
 
@@ -865,8 +863,8 @@ namespace vbci
       {
         if (func.param_types.size() != 1)
         {
-          logging::Error() << file << ": finalizer must have one parameter"
-                           << std::endl;
+          LOG(Error) << file << ": finalizer must have one parameter"
+                     << std::endl;
           return false;
         }
       }
@@ -875,8 +873,7 @@ namespace vbci
     // Calculate the class size.
     if (!cls.calc_size())
     {
-      logging::Error() << file << ": couldn't calculate class size"
-                       << std::endl;
+      LOG(Error) << file << ": couldn't calculate class size" << std::endl;
       return false;
     }
 

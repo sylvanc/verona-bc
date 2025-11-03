@@ -1,5 +1,7 @@
 #include "subtype.h"
 
+#include "bounds.h"
+
 namespace vc
 {
   struct Sequent
@@ -10,6 +12,19 @@ namespace vc
     Nodes l_atomic;
     Nodes r_atomic;
 
+    BoundsMap bounds;
+    UnionFind uf;
+
+    bool sub_reduce(Sequent&& that)
+    {
+      if (!that.reduce())
+        return false;
+
+      bounds.merge(that.bounds);
+      uf.merge(that.uf);
+      return true;
+    }
+
     bool reduce(Node& l, Node& r)
     {
       // Start a fresh reduction.
@@ -17,21 +32,21 @@ namespace vc
       Sequent seq;
       seq.l_pending.push_back(l);
       seq.r_pending.push_back(r);
-      return seq.reduce();
+      return sub_reduce(std::move(seq));
     }
 
     bool l_reduce(Node& t)
     {
       Sequent seq(*this);
       seq.l_pending.push_back(t);
-      return seq.reduce();
+      return sub_reduce(std::move(seq));
     }
 
     bool r_reduce(Node& t)
     {
       Sequent seq(*this);
       seq.r_pending.push_back(t);
-      return seq.reduce();
+      return sub_reduce(std::move(seq));
     }
 
     bool reduce()
@@ -80,9 +95,9 @@ namespace vc
 
         if (l == Isect)
         {
-          // Γ, A, B ⊢ Δ
+          // Π ⊩ Γ, A, B ⊢ Δ
           // ---
-          // Γ, (A & B) ⊢ Δ
+          // Π ⊩ Γ, (A & B) ⊢ Δ
 
           // LHS isect becomes LHS formulae.
           for (auto& t : *l)
@@ -90,10 +105,10 @@ namespace vc
         }
         else if (l == Union)
         {
-          // Γ, A ⊢ Δ
-          // Γ, B ⊢ Δ
+          // Π ⊩ Γ, A ⊢ Δ
+          // Π ⊩ Γ, B ⊢ Δ
           // ---
-          // Γ, (A | B) ⊢ Δ
+          // Π ⊩ Γ, (A | B) ⊢ Δ
 
           // LHS union is a sequent split.
           for (auto& t : *l)
@@ -114,11 +129,21 @@ namespace vc
       if (l_atomic.empty() || r_atomic.empty())
         return false;
 
-      // G, A |- D, A
+      // Π ⊩ Γ, A |- Δ, A
+      // If any element in LHS is a subtype of any element in RHS, succeed.
+      if (any_lr([&](Node& l, Node& r) { return subtype_atomic(l, r); }))
+        return true;
+
+      // If a type variable can be bound to make LHS <: RHS, do so and succeed.
+      return any_lr([&](Node& l, Node& r) { return bind_typevar(l, r); });
+    }
+
+    template<typename F>
+    bool any_lr(F&& f)
+    {
       return std::any_of(l_atomic.begin(), l_atomic.end(), [&](Node& l) {
-        return std::any_of(r_atomic.begin(), r_atomic.end(), [&](Node& r) {
-          return subtype_atomic(l, r);
-        });
+        return std::any_of(
+          r_atomic.begin(), r_atomic.end(), [&](Node& r) { return f(l, r); });
       });
     }
 
@@ -163,8 +188,37 @@ namespace vc
         // Dynamic and primitives are subtypes if they're identical.
         return r->equals(l);
       }
+      else if ((r == TypeVar) || (l == TypeVar))
+      {
+        // Don't infer type variable bindings here.
+        return r->equals(l);
+      }
 
       assert(false);
+      return false;
+    }
+
+    bool bind_typevar(Node& l, Node& r)
+    {
+      if (l == TypeVar)
+      {
+        if (r == TypeVar)
+        {
+          uf.unite(l, r);
+          return true;
+        }
+
+        // r is upper bounds for l
+        bounds[l].use(r);
+        return true;
+      }
+      else if (r == TypeVar)
+      {
+        // l is lower bounds for r
+        bounds[r].assign(l);
+        return true;
+      }
+
       return false;
     }
   };

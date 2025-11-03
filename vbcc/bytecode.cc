@@ -532,7 +532,8 @@ namespace vbcc
     libraries.push_back(lib);
   }
 
-  void Bytecode::gen(std::filesystem::path output, bool strip, bool reproducible)
+  void
+  Bytecode::gen(std::filesystem::path output, bool strip, bool reproducible)
   {
     wf::push_back(wfIR);
 
@@ -548,7 +549,8 @@ namespace vbcc
     hdr << uleb(CurrentVersion);
 
     // Add the compilation path to the string table.
-    auto comp_path = ST::di().string(reproducible ? "/reproducible" : compilation_path.string());
+    auto comp_path = ST::di().string(
+      reproducible ? "/reproducible" : compilation_path.string());
 
     // The compilation path.
     di << uleb(comp_path);
@@ -1348,9 +1350,7 @@ namespace vbcc
     f.write(reinterpret_cast<const char*>(code.data()), code.size());
 
     if (!f)
-    {
       logging::Error() << "Error writing to: " << output << std::endl;
-    }
 
     wf::pop_front();
   }

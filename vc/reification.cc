@@ -158,20 +158,37 @@ namespace vc
         if (delays > 0)
           return;
 
+        // TODO: type inference
+        // Const, ConstStr, Convert
+        // RegisterRef, FieldRef, ArrayRef, ArrayRefConst
+        // Load, Store
+        // Call, Lookup, CallDyn
+        // Typetest, When, wfBinop, wfUnop
+
         if (node == TypeName)
           reify_typename(node);
-        else if (node == Call)
-          reify_call(node);
+        else if (node == Function)
+          bounds.ret().use(node / Type);
+        else if (node == ParamDef)
+          bounds[node / Ident].assign(node / Type);
+        else if (node->in({Return, Raise, Throw}))
+          uf.unite_ret(node / LocalId);
+        else if (node == Copy)
+          uf.unite(node / LocalId, node / Rhs);
         else if (node == New)
           reify_new(node);
-        else if (node == NewArray)
+        else if (node->in({NewArray, NewArrayConst}))
           reify_newarray(node);
+        else if (node == FFI)
+          reify_ffi(node);
         else if (node->in({Const, Convert}))
           reify_primitive(node);
         else if (node->in({Eq, Ne, Lt, Le, Gt, Ge}))
-          reify_bool();
+          reify_bool(node);
         else if (node->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
-          reify_f64();
+          reify_f64(node);
+        else if (node == Call)
+          reify_call(node);
         else if (node == Lookup)
           reify_lookup(node);
         else if (node->in({FieldRef, ArrayRef, RegisterRef}))
@@ -264,6 +281,64 @@ namespace vc
       status = Fail;
   }
 
+  void Reification::reify_ffi(Node node)
+  {
+    auto sym = node / SymbolId;
+    auto args = node / Args;
+    auto body = node->parent(ClassBody);
+
+    while (body)
+    {
+      for (auto& m : *body)
+      {
+        if (m != Lib)
+          continue;
+
+        for (auto& s : *(m / Symbols))
+        {
+          if (!(s / SymbolId)->equals(sym))
+            continue;
+
+          auto params = s / FFIParams;
+          auto varargs = (s / Vararg) == Vararg;
+          auto type = s / Type;
+
+          if (!varargs && (args->size() != params->size()))
+          {
+            auto msg = std::format(
+              "FFI call to `{}` expects {} arguments, got {}",
+              sym->location().view(),
+              params->size(),
+              args->size());
+            node << err(node, msg);
+            status = Fail;
+            return;
+          }
+
+          if (varargs && (args->size() < params->size()))
+          {
+            auto msg = std::format(
+              "FFI call to `{}` expects at least {} arguments, got {}",
+              sym->location().view(),
+              params->size(),
+              args->size());
+            node << err(node, msg);
+            status = Fail;
+            return;
+          }
+
+          for (size_t i = 0; i < args->size(); i++)
+            bounds[args->at(i) / Rhs].use(params->at(i));
+
+          bounds[node / LocalId].assign(type);
+          return;
+        }
+      }
+
+      body = body->parent(ClassBody);
+    }
+  }
+
   void Reification::reify_new(Node node)
   {
     // Skip if this has already been reified.
@@ -277,6 +352,8 @@ namespace vc
     {
       assert(r.instance == ClassDef);
       node / Type = r.reified_name;
+      bounds[node / LocalId].assign(r.reified_name);
+
       auto body = r.instance / ClassBody;
       Node args = Args;
       std::map<Location, Node> argmap;
@@ -293,6 +370,7 @@ namespace vc
 
           if (find != argmap.end())
           {
+            bounds[find->second].use(f / Type);
             args << (Arg << ArgCopy << find->second);
             argmap.erase(find);
           }
@@ -331,7 +409,14 @@ namespace vc
     Subst s;
     auto pdef = rs->builtin->lookdown(Location("array")).front();
     s[(pdef / TypeParams)->front()] = node / Type;
-    rs->schedule(pdef, s, true);
+    auto&& [r, fresh] = rs->schedule(pdef, s, true);
+
+    if (r.status == Ok)
+      bounds[node / LocalId].assign(r.reified_name);
+    else if (r.status == Delay)
+      delays++;
+    else
+      status = Fail;
   }
 
   void Reification::reify_primitive(Node node)
@@ -377,16 +462,18 @@ namespace vc
     rs->schedule(pdef, {}, true);
   }
 
-  void Reification::reify_bool()
+  void Reification::reify_bool(Node node)
   {
     auto pdef = rs->builtin->lookdown(Location("bool")).front();
-    rs->schedule(pdef, {}, true);
+    auto&& [r, fresh] = rs->schedule(pdef, {}, true);
+    bounds[node / LocalId].assign(r.reified_name);
   }
 
-  void Reification::reify_f64()
+  void Reification::reify_f64(Node node)
   {
     auto pdef = rs->builtin->lookdown(Location("f64")).front();
-    rs->schedule(pdef, {}, true);
+    auto&& [r, fresh] = rs->schedule(pdef, {}, true);
+    bounds[node / LocalId].assign(r.reified_name);
   }
 
   void Reification::reify_lookup(Node node)
@@ -394,25 +481,36 @@ namespace vc
     rs->add_lookup(node);
   }
 
+  // void Reification::reify_fieldref(Node node)
+  // {
+  //   // TODO: only happens when the enclosing type is the arg
+  // }
+
   void Reification::reify_ref(Node /*node*/)
   {
+    // TODO: not always ref[any]
     Subst s;
     auto pdef = rs->builtin->lookdown(Location("ref")).front();
-    s[(pdef / TypeParams)->front()] = Type << Dyn;
+    s[(pdef / TypeParams)->front()] = Type
+      << (TypeNameReified << (TypePath << (Ident ^ "builtin")
+                                       << (Ident ^ "any"))
+                          << (Int ^ "0"));
     rs->schedule(pdef, s, true);
   }
 
   void Reification::reify_when(Node node)
   {
-    auto type = node / Type;
-
-    if (type->empty())
-      type << Dyn;
-
     Subst s;
     auto pdef = rs->builtin->lookdown(Location("cown")).front();
-    s[(pdef / TypeParams)->front()] = type;
-    rs->schedule(pdef, s, true);
+    s[(pdef / TypeParams)->front()] = node / Type;
+    auto&& [r, fresh] = rs->schedule(pdef, s, true);
+
+    if (r.status == Ok)
+      bounds[node / LocalId].assign(r.reified_name);
+    else if (r.status == Delay)
+      delays++;
+    else
+      status = Fail;
   }
 
   void Reification::reify_lookups()
