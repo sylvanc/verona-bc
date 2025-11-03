@@ -2,7 +2,7 @@
 
 #include <vbci.h>
 
-#if defined(PLATFORM_IS_MACOSX)
+#ifndef HAS_FROM_CHARS
 
 // Apple Clang does not include from_chars, so we provide our own
 #  include <system_error>
