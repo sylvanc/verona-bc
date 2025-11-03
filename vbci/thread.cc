@@ -264,18 +264,17 @@ namespace vbci
         case Op::Region:
         {
           auto& dst = frame->local(leb());
-          auto region = Region::create(leb<RegionType>());
+          auto region_type = leb<RegionType>();
           auto& cls = program->cls(leb());
 
           if (cls.singleton)
           {
-            dst = cls.singleton;
+            throw Value(Error::BadRegionEntryPoint);
           }
-          else
-          {
-            check_args(cls.fields);
-            dst = &region->object(cls)->init(frame, cls);
-          }
+
+          check_args(cls.fields);
+          auto region = Region::create(region_type);
+          dst = &region->object(cls)->init(frame, cls);
           break;
         }
 

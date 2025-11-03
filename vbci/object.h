@@ -13,7 +13,9 @@ namespace vbci
   struct Object : public Header
   {
   private:
-    Object(Location loc, Class& cls) : Header(loc, cls.type_id) {}
+    Object(Location loc, Class& cls) : Header(loc, cls.type_id) {
+      LOG(Trace) << "Creating object of class " << cls.type_id << "@" << this;
+    }
 
   public:
     static Object* create(void* mem, Class& cls, Location loc)
@@ -94,6 +96,17 @@ namespace vbci
       if (base_dec(reg))
         return;
 
+      collect(this);
+    }
+
+    /**
+     * Deallocate this object.
+     * 
+     * This should not be called directly, but rather by the collector
+     * to correctly handle re-entrancy.
+     */
+    void deallocate()
+    {
       // This object isn't in a cycle. It can be immediately finalized and then
       // freed.
       finalize();
@@ -161,6 +174,8 @@ namespace vbci
 
     void finalize()
     {
+      LOG(Trace) << "Finalizing fields of object of class " << cls().type_id << "@" << this;
+
       auto& c = cls();
       auto& f = c.fields;
       auto fin = c.finalizer();
@@ -176,8 +191,11 @@ namespace vbci
           case ValueType::Object:
           case ValueType::Array:
           case ValueType::Invalid:
-            load(i).field_drop();
+          {
+            auto prev = load(i);
+            field_drop(prev);
             break;
+          }
 
           default:
             break;

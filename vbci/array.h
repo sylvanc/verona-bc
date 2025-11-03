@@ -100,10 +100,20 @@ namespace vbci
       if (base_dec(reg))
         return;
 
+      collect(this);
+    }
+
+    /**
+     * Finalises and deallocates the array, this should not be
+     * called directly due to issues with re-entrancy.
+     * Instead, use collect(Array*), or dec(..).
+     */
+    void deallocate()
+    {
       finalize();
 
       if (loc::is_immutable(location()))
-        delete this;
+        delete[] reinterpret_cast<uint8_t*>(this);
       else
         region()->rfree(this);
     }
@@ -169,7 +179,12 @@ namespace vbci
         case ValueType::Invalid:
         {
           for (size_t i = 0; i < size; i++)
-            load(i).field_drop();
+          {
+            void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * i);
+            auto prev = Value::from_addr(value_type, addr);
+
+            field_drop(prev);
+          }
           break;
         }
 

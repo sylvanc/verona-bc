@@ -26,7 +26,19 @@ namespace vbci
   public:
     static Cown* create(uint32_t type_id)
     {
-      return new Cown(type_id);
+      auto cown = new Cown(type_id);
+      LOG(Trace) << "Created cown @" << cown;
+      return cown;
+    }
+
+    ~Cown()
+    {
+      LOG(Trace) << "Destroying cown @" << this;
+      auto prev_loc = content.location();
+      if (loc::is_region(prev_loc))
+        loc::to_region(prev_loc)->clear_parent();
+      content.drop();
+      LOG(Trace) << "Destroyed cown @" << this;
     }
 
     uint32_t get_type_id()
@@ -41,11 +53,13 @@ namespace vbci
 
     void inc()
     {
+      LOG(Trace) << "Incrementing cown @" << this;
       acquire(this);
     }
 
     void dec()
     {
+      LOG(Trace) << "Decrementing cown @" << this;
       release(this);
     }
 
@@ -87,6 +101,7 @@ namespace vbci
 
         if (r->is_frame_local())
         {
+          LOG(Trace) << "Dragging frame-local allocation to new region:" << r;
           // Drag a frame-local allocation to a fresh region.
           nr = Region::create(RegionType::RegionRC);
           nr->set_parent();
@@ -115,6 +130,7 @@ namespace vbci
         }
         else
         {
+          LOG(Trace) << "Adding region: " << r << " to cown " << this;
           // Set the region parent to this cown.
           r->set_parent();
         }
@@ -130,7 +146,11 @@ namespace vbci
       if (loc::is_region(prev_loc) && (prev_loc != next_loc))
       {
         if (unparent_prev)
+        {
+          LOG(Trace) << "Removing region: " << loc::to_region(prev_loc)
+                    << " from cown " << this;
           loc::to_region(prev_loc)->clear_parent();
+        }
       }
       return prev;
     }

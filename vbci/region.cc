@@ -3,6 +3,7 @@
 #include "region_arena.h"
 #include "region_rc.h"
 #include "value.h"
+#include <iostream>
 
 namespace vbci
 {
@@ -11,10 +12,18 @@ namespace vbci
     switch (type)
     {
       case RegionType::RegionArena:
-        return new RegionArena();
+        {
+          auto result = new RegionArena();
+          LOG(Trace) << "Created RegionArena @" << result;
+          return result;
+        }
 
       case RegionType::RegionRC:
-        return new RegionRC();
+        {
+          auto result = new RegionRC();
+          LOG(Trace) << "Created RegionRC @" << result;
+          return result;
+        }
 
       default:
         throw Value(Error::UnknownRegionType);

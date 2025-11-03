@@ -1,0 +1,46 @@
+vbcc
+statements
+(top
+  {}
+  (class
+    (classid 2:@A)
+    (fields
+      (field
+        (fieldid 3:@f1)
+        (i32)))
+    (methods))
+  (class
+    (classid 2:@B)
+    (fields
+      (field
+        (fieldid 3:@f1)
+        (classid 2:@A)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels))
+  (labelid 5:^main)
+  (const
+    (localid 2:$i)
+    (i32)
+    (int 2:42))
+  (new
+    (localid 2:$a)
+    (classid 2:@A)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$i))))
+  (region
+    (localid 2:$b)
+    (rc)
+    (classid 2:@B)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$a))))
+  (ret
+    (localid 2:$i)))

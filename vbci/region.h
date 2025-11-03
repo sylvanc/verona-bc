@@ -1,10 +1,13 @@
 #pragma once
 
 #include "classes.h"
+#include "collect.h"
 #include "ident.h"
 #include "location.h"
 
+#include <iostream>
 #include <vbci.h>
+#include "logging.h"
 
 namespace vbci
 {
@@ -34,11 +37,16 @@ namespace vbci
       if ((stack_rc == 0) && loc::is_region(parent))
         loc::to_region(parent)->stack_inc();
 
+      LOG(Trace) << "Region @" << this << " stack_rc incremented from "
+                << stack_rc << " to " << (stack_rc + inc);
+
       stack_rc += inc;
     }
 
     bool stack_dec()
     {
+      LOG(Trace) << "Region @" << this << " stack_rc decremented from "
+                << stack_rc << " to " << (stack_rc - 1);
       if (--stack_rc == 0)
       {
         if (!has_parent())
@@ -112,21 +120,38 @@ namespace vbci
       parent = loc::Immutable;
     }
 
-    void clear_parent()
+    /**
+     * Clear the parent of this region.
+     *
+     * If the region's stack RC is zero, returns true, indicating that the
+     * region should be freed. Otherwise, returns false.
+     */
+    bool clear_parent()
     {
       assert(has_parent());
-      assert(stack_rc > 0);
 
-      if (loc::is_region(parent))
+      if (loc::is_region(parent) && (stack_rc > 0))
         loc::to_region(parent)->stack_dec();
 
       parent = loc::None;
+      // TODO: Should this just deallocate the region directly?
+      return stack_rc == 0;
     }
 
     void free_region()
     {
       assert(!has_parent());
       assert(stack_rc == 0);
+      collect(this);
+    }
+
+    /** Deallocate the region and its contents.
+     *
+     * This should not be called directly, but rather call free_region(), which
+     * will handle issues with reentrancy.
+     */
+    void deallocate()
+    {
       free_contents();
       delete this;
     }

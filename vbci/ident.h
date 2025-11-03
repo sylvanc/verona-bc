@@ -29,6 +29,7 @@ namespace vbci
     BadStackEscape,
     BadArgs,
     BadType,
+    BadRegionEntryPoint,
   };
 
   using PC = size_t;
@@ -86,6 +87,8 @@ namespace vbci
         return "bad args";
       case Error::BadType:
         return "bad type";
+      case Error::BadRegionEntryPoint:
+        return "bad region entry point";
 
       default:
         assert(false);
