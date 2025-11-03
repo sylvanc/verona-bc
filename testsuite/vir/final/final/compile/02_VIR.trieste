@@ -1,0 +1,87 @@
+vbcc
+VIR
+(top
+  {}
+  (class
+    (classid 4:@Foo)
+    (fields
+      (field
+        (fieldid 2:@a)
+        (i32)))
+    (methods
+      (method
+        (methodid 6:@final)
+        (functionid 10:@Foo_final))))
+  (func
+    (functionid 10:@Foo_final)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 4:@Foo)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^Foo_final)
+        (body
+          (fieldref
+            (localid 4:$ref)
+            (arg
+              (argcopy)
+              (localid 5:$self))
+            (fieldid 2:@a))
+          (load
+            (localid 2:$a)
+            (localid 4:$ref)))
+        (ret
+          (localid 2:$a)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 2:$a)
+            (i32)
+            (int 2:99))
+          (stack
+            (localid 5:$foo0)
+            (classid 4:@Foo)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$a))))
+          (region
+            (localid 5:$foo1)
+            (rc)
+            (classid 4:@Foo)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$a))))
+          (heap
+            (localid 5:$foo2)
+            (localid 5:$foo1)
+            (classid 4:@Foo)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$a))))
+          (region
+            (localid 5:$foo3)
+            (arena)
+            (classid 4:@Foo)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$a))))
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 1:3)))
+        (ret
+          (localid 2:$r))))))

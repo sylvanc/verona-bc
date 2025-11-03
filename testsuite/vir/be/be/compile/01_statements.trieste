@@ -1,0 +1,289 @@
+vbcc
+statements
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 9:@printval)
+        (string 8:printval)
+        (string 0:)
+        (none)
+        (ffiparams
+          (dyn))
+        (none))))
+  (class
+    (classid 13:@closure_bool)
+    (fields
+      (field
+        (fieldid 4:@val)
+        (bool)))
+    (methods
+      (method
+        (methodid 6:@apply)
+        (functionid 19:@closure_bool_apply))))
+  (func
+    (functionid 19:@closure_bool_apply)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 13:@closure_bool)))
+    (bool)
+    (vars)
+    (labels))
+  (labelid 19:^closure_bool_apply)
+  (fieldref
+    (localid 8:$val_ref)
+    (arg
+      (argcopy)
+      (localid 5:$self))
+    (fieldid 4:@val))
+  (load
+    (localid 2:$r)
+    (localid 8:$val_ref))
+  (ret
+    (localid 2:$r))
+  (class
+    (classid 12:@closure_i32)
+    (fields
+      (field
+        (fieldid 4:@val)
+        (i32)))
+    (methods
+      (method
+        (methodid 6:@apply)
+        (functionid 18:@closure_i32_apply))))
+  (func
+    (functionid 18:@closure_i32_apply)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 12:@closure_i32)))
+    (i32)
+    (vars)
+    (labels))
+  (labelid 18:^closure_i32_apply)
+  (fieldref
+    (localid 8:$val_ref)
+    (arg
+      (argcopy)
+      (localid 5:$self))
+    (fieldid 4:@val))
+  (load
+    (localid 2:$r)
+    (localid 8:$val_ref))
+  (ret
+    (localid 2:$r))
+  (class
+    (classid 10:@behavior1)
+    (fields
+      (field
+        (fieldid 2:@a)
+        (i32)))
+    (methods
+      (method
+        (methodid 6:@apply)
+        (functionid 16:@behavior1_apply))))
+  (func
+    (functionid 16:@behavior1_apply)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 10:@behavior1))
+      (param
+        (localid 8:$cown1_v)
+        (ref
+          (bool)))
+      (param
+        (localid 8:$cown2_v)
+        (ref
+          (i32))))
+    (i32)
+    (vars)
+    (labels))
+  (labelid 16:^behavior1_apply)
+  (fieldref
+    (localid 6:$a_ref)
+    (arg
+      (argcopy)
+      (localid 5:$self))
+    (fieldid 2:@a))
+  (load
+    (localid 2:$a)
+    (localid 6:$a_ref))
+  (load
+    (localid 5:$prev)
+    (localid 8:$cown1_v))
+  (not
+    (localid 5:$next)
+    (localid 5:$prev))
+  (store
+    (localid 2:$0)
+    (localid 8:$cown1_v)
+    (arg
+      (argcopy)
+      (localid 5:$next)))
+  (ffi
+    (localid 2:$1)
+    (symbolid 9:@printval)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$prev))))
+  (ffi
+    (localid 2:$2)
+    (symbolid 9:@printval)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$next))))
+  (load
+    (localid 2:$b)
+    (localid 8:$cown2_v))
+  (add
+    (localid 2:$c)
+    (localid 2:$a)
+    (localid 2:$b))
+  (ret
+    (localid 2:$c))
+  (class
+    (classid 10:@behavior2)
+    (fields)
+    (methods
+      (method
+        (methodid 6:@apply)
+        (functionid 16:@behavior2_apply))))
+  (func
+    (functionid 16:@behavior2_apply)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 10:@behavior2))
+      (param
+        (localid 10:$promise_v)
+        (ref
+          (i32))))
+    (none)
+    (vars)
+    (labels))
+  (labelid 16:^behavior2_apply)
+  (load
+    (localid 2:$a)
+    (localid 10:$promise_v))
+  (ffi
+    (localid 2:$_)
+    (symbolid 9:@printval)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$a))))
+  (ret
+    (localid 2:$_))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels))
+  (labelid 5:^main)
+  (const
+    (localid 5:$bool)
+    (bool)
+    (true))
+  (region
+    (localid 13:$closure_bool)
+    (arena)
+    (classid 13:@closure_bool)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$bool))))
+  (lookup
+    (localid 4:$be1)
+    (localid 13:$closure_bool)
+    (methodid 6:@apply))
+  (whendyn
+    (localid 6:$cown1)
+    (localid 4:$be1)
+    (args
+      (arg
+        (argcopy)
+        (localid 13:$closure_bool)))
+    (cown
+      (bool)))
+  (const
+    (localid 4:$i32)
+    (i32)
+    (int 2:42))
+  (region
+    (localid 12:$closure_i32)
+    (arena)
+    (classid 12:@closure_i32)
+    (args
+      (arg
+        (argcopy)
+        (localid 4:$i32))))
+  (when
+    (localid 6:$cown2)
+    (functionid 18:@closure_i32_apply)
+    (args
+      (arg
+        (argcopy)
+        (localid 12:$closure_i32)))
+    (cown
+      (i32)))
+  (read
+    (localid 9:$ro_cown2)
+    (localid 6:$cown2))
+  (region
+    (localid 9:$closure1)
+    (arena)
+    (classid 10:@behavior1)
+    (args
+      (arg
+        (argcopy)
+        (localid 4:$i32))))
+  (when
+    (localid 8:$promise)
+    (functionid 16:@behavior1_apply)
+    (args
+      (arg
+        (argcopy)
+        (localid 9:$closure1))
+      (arg
+        (argcopy)
+        (localid 6:$cown1))
+      (arg
+        (argcopy)
+        (localid 9:$ro_cown2)))
+    (cown
+      (i32)))
+  (read
+    (localid 11:$ro_promise)
+    (localid 8:$promise))
+  (new
+    (localid 9:$closure2)
+    (classid 10:@behavior2)
+    (args))
+  (fnpointer
+    (localid 4:$be4)
+    (functionid 16:@behavior2_apply))
+  (whendyn
+    (localid 2:$_)
+    (localid 4:$be4)
+    (args
+      (arg
+        (argcopy)
+        (localid 9:$closure2))
+      (arg
+        (argcopy)
+        (localid 11:$ro_promise)))
+    (cown
+      (none)))
+  (const
+    (localid 5:$zero)
+    (i32)
+    (int 1:0))
+  (ret
+    (localid 5:$zero)))

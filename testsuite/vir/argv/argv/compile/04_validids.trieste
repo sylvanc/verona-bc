@@ -1,0 +1,133 @@
+vbcc
+validids
+(top
+  {}
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 8:@getargv)
+        (string 7:getargv)
+        (string 0:)
+        (none)
+        (ffiparams)
+        (array
+          (array
+            (u8))))
+      (symbol
+        (symbolid 5:@puts)
+        (string 4:puts)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr))
+        (i32))
+      (symbol
+        (symbolid 7:@printf)
+        (string 6:printf)
+        (string 0:)
+        (vararg)
+        (ffiparams
+          (ptr))
+        (i32))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars
+      (localid 5:$argi))
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 4:$one)
+            (usize)
+            (int 1:1))
+          (conststr
+            (localid 4:$fmt)
+            (string 8:%s (%d)
+))
+          (makeptr
+            (localid 8:$fmt_ptr)
+            (localid 4:$fmt))
+          (conststr
+            (localid 3:$hi)
+            (string 17:Hello, world! ⛄))
+          (makeptr
+            (localid 7:$hi_ptr)
+            (localid 3:$hi))
+          (ffi
+            (localid 2:$0)
+            (symbolid 7:@printf)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:$fmt_ptr))
+              (arg
+                (argcopy)
+                (localid 7:$hi_ptr))
+              (arg
+                (argcopy)
+                (localid 4:$one))))
+          (ffi
+            (localid 5:$argv)
+            (symbolid 8:@getargv)
+            (args))
+          (len
+            (localid 5:$argc)
+            (localid 5:$argv))
+          (const
+            (localid 5:$argi)
+            (usize)
+            (int 1:0)))
+        (jump
+          (labelid 5:^cond)))
+      (label
+        (labelid 5:^cond)
+        (body
+          (lt
+            (localid 5:$cont)
+            (localid 5:$argi)
+            (localid 5:$argc)))
+        (cond
+          (localid 5:$cont)
+          (labelid 5:^loop)
+          (labelid 5:^done)))
+      (label
+        (labelid 5:^loop)
+        (body
+          (arrayref
+            (localid 8:$arg_ref)
+            (arg
+              (argcopy)
+              (localid 5:$argv))
+            (localid 5:$argi))
+          (load
+            (localid 4:$arg)
+            (localid 8:$arg_ref))
+          (makeptr
+            (localid 8:$arg_ptr)
+            (localid 4:$arg))
+          (ffi
+            (localid 2:$1)
+            (symbolid 5:@puts)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:$arg_ptr))))
+          (add
+            (localid 5:$argi)
+            (localid 5:$argi)
+            (localid 4:$one)))
+        (jump
+          (labelid 5:^cond)))
+      (label
+        (labelid 5:^done)
+        (body
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 2:$r))))))
