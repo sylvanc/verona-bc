@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pathreification.h"
+#include "bounds.h"
 
 namespace vc
 {
@@ -37,6 +38,10 @@ namespace vc
     // These are class reifications that want this reification as a method.
     NodeMap<Node> wants_method;
 
+    // Bounds for type inference.
+    BoundsMap bounds;
+    UnionFind uf;
+
     Reification(Reifications* rs, Node def, size_t i, Subst& subst);
 
     bool instantiate();
@@ -45,11 +50,12 @@ namespace vc
 
     void reify_typename(Node node);
     void reify_call(Node node);
+    void reify_ffi(Node node);
     void reify_new(Node node);
     void reify_newarray(Node node);
     void reify_primitive(Node node);
-    void reify_bool();
-    void reify_f64();
+    void reify_bool(Node node);
+    void reify_f64(Node node);
     void reify_lookup(Node node);
     void reify_ref(Node node);
     void reify_when(Node node);

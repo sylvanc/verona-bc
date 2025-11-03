@@ -15,6 +15,9 @@ Reification.
   - On completion of `run`, check if it contains errors.
 - Test type aliases, make sure cycles are rejected.
 
+Types.
+- Determine `when` type from the `when / Rhs` function type.
+
 ## To Do
 
 Calls.

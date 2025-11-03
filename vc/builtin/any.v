@@ -1,1 +1,1 @@
-any {}
+shape any {}

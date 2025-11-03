@@ -45,6 +45,11 @@ namespace vc
     return Args << (Expr << seq);
   }
 
+  Node make_type(Match& _, NodeRange r)
+  {
+    return Type << (r || (TypeVar ^ _.fresh(l_typevar)));
+  }
+
   Node make_typeargs(Node typeparams)
   {
     Node ta = TypeArgs;

@@ -79,14 +79,17 @@ namespace vc
 
             for (auto& freevar : freevars)
             {
-              classbody << (FieldDef << (Ident ^ freevar) << Type);
-              create_params << (ParamDef << (Ident ^ freevar) << Type << Body);
+              auto typevar = make_type(_);
+              classbody << (FieldDef << (Ident ^ freevar) << typevar);
+              create_params
+                << (ParamDef << (Ident ^ freevar) << clone(typevar) << Body);
               create_args << (Expr << (Ident ^ freevar));
 
               apply_body
                 << (Expr
                     << (Equals
-                        << (Expr << (Let << (Ident ^ freevar) << Type))
+                        << (Expr
+                            << (Let << (Ident ^ freevar) << clone(typevar)))
                         << (Expr
                             << (Load
                                 << (Expr
@@ -186,7 +189,7 @@ namespace vc
           // Create the RHS function.
           auto rhs =
             Function << Rhs << clone(ident) << clone(_(TypeParams))
-                     << clone(_(Params)) << Type << clone(_(Where))
+                     << clone(_(Params)) << make_type(_) << clone(_(Where))
                      << (Body
                          << (Expr
                              << (Load

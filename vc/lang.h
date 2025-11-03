@@ -51,6 +51,7 @@ namespace vc
   inline const auto TupleType = TokenDef("tupletype");
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
+  inline const auto TypeVar = TokenDef("typevar", flag::print);
 
   inline const auto WhereAnd = TokenDef("whereand");
   inline const auto WhereOr = TokenDef("whereor");
@@ -112,7 +113,8 @@ namespace vc
       Call,
       CallDyn);
 
-  inline const auto wfType = TypeName | Union | Isect | TupleType | FuncType;
+  inline const auto wfType =
+    TypeName | Union | Isect | TupleType | FuncType | TypeVar;
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
   inline const auto wfBody =
@@ -162,7 +164,7 @@ namespace vc
     | (TypeArgs <<= (Type | Expr)++)
     | (Params <<= ParamDef++)
     | (ParamDef <<= Ident * Type * Body)[Ident]
-    | (Type <<= ~wfType)
+    | (Type <<= wfType)
     | (Union <<= wfType++[2])
     | (Isect <<= wfType++[2])
     | (TupleType <<= wfType++[2])
@@ -347,8 +349,11 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto l_typevar = Location("typevar");
+
   size_t parse_int(Node node);
   Node seq_to_args(Node seq);
+  Node make_type(Match& _, NodeRange r = {});
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
 

@@ -373,9 +373,9 @@ namespace vc
     {
       Node dflt = typeparams->at(i) / Type;
 
-      if (dflt->empty())
+      if (dflt->front() == TypeVar)
       {
-        subst[typeparams->at(i)] = Type << Dyn;
+        subst[typeparams->at(i)] = dflt;
         return Ok;
       }
 

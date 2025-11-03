@@ -142,13 +142,17 @@ namespace vc
         // Tuple creation.
         In(Expr) * T(Tuple)[Tuple] << (T(LocalId)++ * End) >>
           [](Match& _) {
-            // Allocate a [dyn] of the right size.
+            // Allocate an array[any] of the right size.
             auto tuple = _(Tuple);
             auto id = _.fresh(l_local);
             auto seq = Seq
               << (Lift << Body
                        << (NewArrayConst
-                           << (LocalId ^ id) << Type
+                           << (LocalId ^ id)
+                           << (Type
+                               << (TypeName
+                                   << (TypeElement << (Ident ^ "any")
+                                                   << (TypeArgs))))
                            << (Int ^ std::to_string(tuple->size()))));
 
             // Copy the elements into the array.
@@ -249,7 +253,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body << (_(If) << (LocalId ^ id)))
-                       << (Var << (Ident ^ id) << Type);
+                       << (Var << (Ident ^ id) << make_type(_));
           },
 
         // If body.
@@ -276,7 +280,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body << (_(While) << (LocalId ^ id)))
-                       << (Var << (Ident ^ id) << Type);
+                       << (Var << (Ident ^ id) << make_type(_));
           },
 
         // While body.

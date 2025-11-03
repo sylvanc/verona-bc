@@ -4,7 +4,7 @@
 namespace vc
 {
   const std::initializer_list<Token> wfTypeElement = {
-    TypeName, Union, Isect, FuncType, TupleType};
+    TypeName, Union, Isect, FuncType, TupleType, TypeVar};
 
   const std::initializer_list<Token> wfExprElement = {
     ExprSeq, DontCare, Ident,    True,     False,     Bin,     Oct,   Int,
@@ -112,15 +112,8 @@ namespace vc
         In(ClassBody) * T(Group) << (FieldPat * End) >>
           [](Match& _) {
             auto id = _(Ident);
-            auto type = Type << _[Type];
+            auto type = make_type(_, _[Type]);
             auto self = make_selftype(id);
-            Node reftype = Type;
-
-            if (!type->empty())
-              reftype
-                << (TypeName
-                    << (TypeElement << (Ident ^ "ref")
-                                    << (TypeArgs << clone(type))));
 
             return Seq << (FieldDef << id << type)
                        << (Function
@@ -128,7 +121,12 @@ namespace vc
                            << (Params
                                << (ParamDef << (Ident ^ "self") << self
                                             << Body))
-                           << reftype << Where
+                           << (Type
+                               << (TypeName
+                                   << (TypeElement
+                                       << (Ident ^ "ref")
+                                       << (TypeArgs << clone(type)))))
+                           << Where
                            << (Body
                                << (Expr
                                    << (FieldRef << (Expr << (Ident ^ "self"))
@@ -165,7 +163,7 @@ namespace vc
 
             return Function << side << _(Ident)
                             << (TypeParams << *_[TypeParams])
-                            << (Params << *_[Params]) << (Type << _[Type])
+                            << (Params << *_[Params]) << make_type(_, _[Type])
                             << (Where << _[Where]) << body;
           },
 
@@ -186,7 +184,7 @@ namespace vc
         // Type alias.
         T(Group)
             << (T(Use) * T(Ident)[Ident] * ~TypeParamsPat[TypeParams] *
-                ~WherePat * T(Equals) * Any++[Type]) >>
+                ~WherePat * T(Equals) * (Any * Any++)[Type]) >>
           [](Match& _) {
             return TypeAlias << _(Ident) << (TypeParams << *_[TypeParams])
                              << (Where << _[Where]) << (Type << _[Type]);
@@ -206,7 +204,7 @@ namespace vc
         // FFI symbol.
         In(Symbols) * T(Group)
             << (T(Ident)[Ident] * T(Equals) * T(String)[Lhs] * ~T(String)[Rhs] *
-                ParamsPat[Params] * T(Colon) * Any++[Type]) >>
+                ParamsPat[Params] * T(Colon) * (Any * Any++)[Type]) >>
           [](Match& _) {
             auto params = _(Params);
             Node ffiparams = FFIParams;
@@ -259,7 +257,7 @@ namespace vc
             if (!_[Body].empty())
               body << (Group << _[Body]);
 
-            return ParamDef << _(Ident) << (Type << _[Type]) << body;
+            return ParamDef << _(Ident) << make_type(_, _[Type]) << body;
           },
 
         In(Params) * T(Group)[Group] >>
@@ -275,7 +273,7 @@ namespace vc
               return ValueParam << _(Ident) << (Type << _[Type])
                                 << (Body << (Group << _[Body]));
 
-            return TypeParam << _(Ident) << (Type << _[Body]);
+            return TypeParam << _(Ident) << make_type(_, _[Body]);
           },
 
         In(TypeParams) * T(Group)[Group] >>
@@ -288,7 +286,7 @@ namespace vc
         In(TypeArgs) * (T(Group) << (!T(Const) * Any++)[Type]) >>
           [](Match& _) { return Type << _[Type]; },
 
-        In(TypeArgs) * (T(Group) << (T(Const) * Any++[Expr])) >>
+        In(TypeArgs) * (T(Group) << (T(Const) * (Any * Any++)[Expr])) >>
           [](Match& _) { return Expr << _[Expr]; },
 
         // Types.
@@ -542,12 +540,12 @@ namespace vc
         // Let.
         In(Expr) * (T(Let) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
-          [](Match& _) { return Let << _(Ident) << (Type << _[Type]); },
+          [](Match& _) { return Let << _(Ident) << make_type(_, _[Type]); },
 
         // Var.
         In(Expr) * (T(Var) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
-          [](Match& _) { return Var << _(Ident) << (Type << _[Type]); },
+          [](Match& _) { return Var << _(Ident) << make_type(_, _[Type]); },
 
         // New.
         In(Expr) * (T(New)[New] << End) *
@@ -571,7 +569,7 @@ namespace vc
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << (Params << *_[Params]) << (Type << _[Type])
+            return Lambda << (Params << *_[Params]) << make_type(_, _[Type])
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
@@ -581,15 +579,16 @@ namespace vc
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
             return Lambda << (Params
-                              << (ParamDef << _(Ident) << (Type << _[Type])
+                              << (ParamDef << _(Ident) << make_type(_, _[Type])
                                            << Body))
-                          << Type << lambda_body(_(Brace), _[Rhs]);
+                          << make_type(_) << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
-            return Lambda << Params << Type << lambda_body(_(Brace), _[Rhs]);
+            return Lambda << Params << make_type(_)
+                          << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Qualified name.
@@ -671,7 +670,7 @@ namespace vc
             return NoChange;
 
           return Else << (Expr << _[Lhs])
-                      << (Block << Params << Type
+                      << (Block << Params << make_type(_)
                                 << (Body << (Expr << _[Rhs])));
         },
 
@@ -723,7 +722,8 @@ namespace vc
 
             return ExprSeq << (Expr
                                << (Equals
-                                   << (Expr << (Let << (Ident ^ id) << Type))
+                                   << (Expr
+                                       << (Let << (Ident ^ id) << make_type(_)))
                                    << (Expr << _[For])))
                            << (Expr
                                << (While

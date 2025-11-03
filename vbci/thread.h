@@ -58,7 +58,7 @@ namespace vbci
       auto ret = thread_run(func);
 
       if (ret.is_error())
-        LOG(Debug) << ret.to_string();
+        LOG(Error) << ret.to_string();
 
       ret.drop();
     }
