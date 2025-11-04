@@ -4,6 +4,7 @@
 #include "cown.h"
 #include "object.h"
 #include "program.h"
+#include <ostream>
 
 namespace vbci
 {
@@ -101,6 +102,221 @@ namespace vbci
     return std::move(locals.at(0));
   }
 
+  std::ostream& operator<<(std::ostream& os, Op op)
+  {
+    switch (op)
+    {
+      case Op::Global:
+        return os << "Global";
+      case Op::Const:
+        return os << "Const";
+      case Op::String:
+        return os << "String";
+      case Op::Convert:
+        return os << "Convert";
+      case Op::New:
+        return os << "New";
+      case Op::Stack:
+        return os << "Stack";
+      case Op::Heap:
+        return os << "Heap";
+      case Op::Region:
+        return os << "Region";
+      case Op::NewArray:
+        return os << "NewArray";
+      case Op::NewArrayConst:
+        return os << "NewArrayConst";
+      case Op::StackArray:
+        return os << "StackArray";
+      case Op::StackArrayConst:
+        return os << "StackArrayConst";
+      case Op::HeapArray:
+        return os << "HeapArray";
+      case Op::HeapArrayConst:
+        return os << "HeapArrayConst";
+      case Op::RegionArray:
+        return os << "RegionArray";
+      case Op::RegionArrayConst:
+        return os << "RegionArrayConst";
+      case Op::Copy:
+        return os << "Copy";
+      case Op::Move:
+        return os << "Move";
+      case Op::Drop:
+        return os << "Drop";
+      case Op::RegisterRef:
+        return os << "RegisterRef";
+      case Op::FieldRefMove:
+        return os << "FieldRefMove";
+      case Op::FieldRefCopy:
+        return os << "FieldRefCopy";
+      case Op::ArrayRefMove:
+        return os << "ArrayRefMove";
+      case Op::ArrayRefCopy:
+        return os << "ArrayRefCopy";
+      case Op::ArrayRefMoveConst:
+        return os << "ArrayRefMoveConst";
+      case Op::ArrayRefCopyConst:
+        return os << "ArrayRefCopyConst";
+      case Op::Load:
+        return os << "Load";
+      case Op::StoreMove:
+        return os << "StoreMove";
+      case Op::StoreCopy:
+        return os << "StoreCopy";
+      case Op::LookupStatic:
+        return os << "LookupStatic";
+      case Op::LookupDynamic:
+        return os << "LookupDynamic";
+      case Op::LookupFFI:
+        return os << "LookupFFI";
+      case Op::ArgMove:
+        return os << "ArgMove";
+      case Op::ArgCopy:
+        return os << "ArgCopy";
+      case Op::CallStatic:
+        return os << "CallStatic";
+      case Op::CallDynamic:
+        return os << "CallDynamic";
+      case Op::SubcallStatic:
+        return os << "SubcallStatic";
+      case Op::SubcallDynamic:
+        return os << "SubcallDynamic";
+      case Op::TryStatic:
+        return os << "TryStatic";
+      case Op::TryDynamic:
+        return os << "TryDynamic";
+      case Op::FFI:
+        return os << "FFI";
+      case Op::WhenStatic:
+        return os << "WhenStatic";
+      case Op::WhenDynamic:
+        return os << "WhenDynamic";
+      case Op::Typetest:
+        return os << "Typetest";
+      case Op::TailcallStatic:
+        return os << "TailcallStatic";
+      case Op::TailcallDynamic:
+        return os << "TailcallDynamic";
+      case Op::Return:
+        return os << "Return";
+      case Op::Raise:
+        return os << "Raise";
+      case Op::Throw:
+        return os << "Throw";
+      case Op::Cond:
+        return os << "Cond";
+      case Op::Jump:
+        return os << "Jump";
+      case Op::Add:
+        return os << "Add";
+      case Op::Sub:
+        return os << "Sub";
+      case Op::Mul:
+        return os << "Mul";
+      case Op::Div:
+        return os << "Div";
+      case Op::Mod:
+        return os << "Mod";
+      case Op::Pow:
+        return os << "Pow";
+      case Op::And:
+        return os << "And";
+      case Op::Or:
+        return os << "Or";
+      case Op::Xor:
+        return os << "Xor";
+      case Op::Shl:
+        return os << "Shl";
+      case Op::Shr:
+        return os << "Shr";
+      case Op::Eq:
+        return os << "Eq";
+      case Op::Ne:
+        return os << "Ne";
+      case Op::Lt:
+        return os << "Lt";
+      case Op::Le:
+        return os << "Le";
+      case Op::Gt:
+        return os << "Gt";
+      case Op::Ge:
+        return os << "Ge";
+      case Op::Min:
+        return os << "Min";
+      case Op::Max:
+        return os << "Max";
+      case Op::LogBase:
+        return os << "LogBase";
+      case Op::Atan2:
+        return os << "Atan2";
+      case Op::Neg:
+        return os << "Neg";
+      case Op::Not:
+        return os << "Not";
+      case Op::Abs:
+        return os << "Abs";
+      case Op::Ceil:
+        return os << "Ceil";
+      case Op::Floor:
+        return os << "Floor";
+      case Op::Exp:
+        return os << "Exp";
+      case Op::Log:
+        return os << "Log";
+      case Op::Sqrt:
+        return os << "Sqrt";
+      case Op::Cbrt:
+        return os << "Cbrt";
+      case Op::IsInf:
+        return os << "IsInf";
+      case Op::IsNaN:
+        return os << "IsNaN";
+      case Op::Sin:
+        return os << "Sin";
+      case Op::Cos:
+        return os << "Cos";
+      case Op::Tan:
+        return os << "Tan";
+      case Op::Asin:
+        return os << "Asin";
+      case Op::Acos:
+        return os << "Acos";
+      case Op::Atan:
+        return os << "Atan";
+      case Op::Sinh:
+        return os << "Sinh";
+      case Op::Cosh:
+        return os << "Cosh";
+      case Op::Tanh:
+        return os << "Tanh";
+      case Op::Asinh:
+        return os << "Asinh";
+      case Op::Acosh:
+        return os << "Acosh";
+      case Op::Atanh:
+        return os << "Atanh";
+      case Op::Bits:
+        return os << "Bits";
+      case Op::Len:
+        return os << "Len";
+      case Op::Ptr:
+        return os << "Ptr";
+      case Op::Read:
+        return os << "Read";
+      case Op::Const_E:
+        return os << "Const_E";
+      case Op::Const_Pi:
+        return os << "Const_Pi";
+      case Op::Const_Inf:
+        return os << "Const_Inf";
+      case Op::Const_NaN:
+        return os << "Const_NaN";
+      default:
+        return os << "Unknown";
+    }
+  }
+
   void Thread::step()
   {
     assert(frame);
@@ -113,77 +329,147 @@ namespace vbci
       {
         case Op::Global:
         {
-          auto& dst = frame->local(leb());
-          dst = program->global(leb());
+          auto dst_reg = leb();
+          auto global_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " global_id=" << global_id;
+          auto& dst = frame->local(dst_reg);
+          dst = program->global(global_id);
           break;
         }
 
         case Op::Const:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
           auto t = leb<ValueType>();
+          auto& dst = frame->local(dst_reg);
 
           switch (t)
           {
             case ValueType::None:
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=None";
               dst = Value::none();
               break;
 
             case ValueType::Bool:
-              dst = Value(leb<bool>());
+            {
+              auto value = leb<bool>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=Bool value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::I8:
-              dst = Value(leb<int8_t>());
+            {
+              auto value = leb<int8_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=I8 value=" << static_cast<int>(value);
+              dst = Value(value);
               break;
+            }
 
             case ValueType::I16:
-              dst = Value(leb<int16_t>());
+            {
+              auto value = leb<int16_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=I16 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::I32:
-              dst = Value(leb<int32_t>());
+            {
+              auto value = leb<int32_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=I32 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::I64:
-              dst = Value(leb<int64_t>());
+            {
+              auto value = leb<int64_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=I64 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::U8:
-              dst = Value(leb<uint8_t>());
+            {
+              auto value = leb<uint8_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=U8 value=" << static_cast<unsigned>(value);
+              dst = Value(value);
               break;
+            }
 
             case ValueType::U16:
-              dst = Value(leb<uint16_t>());
+            {
+              auto value = leb<uint16_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=U16 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::U32:
-              dst = Value(leb<uint32_t>());
+            {
+              auto value = leb<uint32_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=U32 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::U64:
-              dst = Value(leb<uint64_t>());
+            {
+              auto value = leb<uint64_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=U64 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::ILong:
-            case ValueType::ISize:
-              dst = Value::from_ffi(t, leb<int64_t>());
+            {
+              auto value = leb<int64_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=ILong value=" << value;
+              dst = Value::from_ffi(t, value);
               break;
+            }
+            case ValueType::ISize:
+            {
+              auto value = leb<int64_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=ISize value=" << value;
+              dst = Value::from_ffi(t, value);
+              break;
+            }
 
             case ValueType::ULong:
-            case ValueType::USize:
-              dst = Value::from_ffi(t, leb<uint64_t>());
+            {
+              auto value = leb<uint64_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=ULong value=" << value;
+              dst = Value::from_ffi(t, value);
               break;
+            }
+            case ValueType::USize:
+            {
+              auto value = leb<uint64_t>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=USize value=" << value;
+              dst = Value::from_ffi(t, value);
+              break;
+            }
 
             case ValueType::F32:
-              dst = Value(leb<float>());
+            {
+              auto value = leb<float>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=F32 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             case ValueType::F64:
-              dst = Value(leb<double>());
+            {
+              auto value = leb<double>();
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=F64 value=" << value;
+              dst = Value(value);
               break;
+            }
 
             default:
+              LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=Unknown(" << static_cast<int>(t) << ")";
               throw Value(Error::BadConversion);
           }
           break;
@@ -191,24 +477,33 @@ namespace vbci
 
         case Op::String:
         {
-          auto& dst = frame->local(leb());
-          dst = program->get_string(leb());
+          auto dst_reg = leb();
+          auto string_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " string_id=" << string_id;
+          auto& dst = frame->local(dst_reg);
+          dst = program->get_string(string_id);
           break;
         }
 
         case Op::Convert:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
           auto t = leb<ValueType>();
-          auto& src = frame->local(leb());
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type=" << static_cast<int>(t) << " src=" << src_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
           dst = src.convert(t);
           break;
         }
 
         case Op::New:
         {
-          auto& dst = frame->local(leb());
-          auto& cls = program->cls(leb());
+          auto dst_reg = leb();
+          auto class_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " class_id=" << class_id;
+          auto& dst = frame->local(dst_reg);
+          auto& cls = program->cls(class_id);
 
           if (cls.singleton)
           {
@@ -224,8 +519,11 @@ namespace vbci
 
         case Op::Stack:
         {
-          auto& dst = frame->local(leb());
-          auto& cls = program->cls(leb());
+          auto dst_reg = leb();
+          auto class_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " class_id=" << class_id;
+          auto& dst = frame->local(dst_reg);
+          auto& cls = program->cls(class_id);
 
           if (cls.singleton)
           {
@@ -245,9 +543,13 @@ namespace vbci
 
         case Op::Heap:
         {
-          auto& dst = frame->local(leb());
-          auto region = frame->local(leb()).region();
-          auto& cls = program->cls(leb());
+          auto dst_reg = leb();
+          auto region_reg = leb();
+          auto class_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " region=" << region_reg << " class_id=" << class_id;
+          auto& dst = frame->local(dst_reg);
+          auto region = frame->local(region_reg).region();
+          auto& cls = program->cls(class_id);
 
           if (cls.singleton)
           {
@@ -263,9 +565,12 @@ namespace vbci
 
         case Op::Region:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
           auto region_type = leb<RegionType>();
-          auto& cls = program->cls(leb());
+          auto class_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " region_type=" << static_cast<int>(region_type) << " class_id=" << class_id;
+          auto& dst = frame->local(dst_reg);
+          auto& cls = program->cls(class_id);
 
           if (cls.singleton)
           {
@@ -280,201 +585,276 @@ namespace vbci
 
         case Op::NewArray:
         {
-          auto& dst = frame->local(leb());
-          auto size = frame->local(leb()).get_size();
+          auto dst_reg = leb();
+          auto size_reg = leb();
           auto type_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " size_reg=" << size_reg << " type_id=" << type_id;
+          auto& dst = frame->local(dst_reg);
+          auto size = frame->local(size_reg).get_size();
           dst = frame->region.array(type_id, size);
           break;
         }
 
         case Op::NewArrayConst:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
           auto type_id = leb();
           auto size = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type_id=" << type_id << " size=" << size;
+          auto& dst = frame->local(dst_reg);
           dst = frame->region.array(type_id, size);
           break;
         }
 
         case Op::StackArray:
         {
-          auto& dst = frame->local(leb());
-          auto size = frame->local(leb()).get_size();
+          auto dst_reg = leb();
+          auto size_reg = leb();
           auto type_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " size_reg=" << size_reg << " type_id=" << type_id;
+          auto& dst = frame->local(dst_reg);
+          auto size = frame->local(size_reg).get_size();
           dst = stack.array(frame->frame_id, type_id, size);
           break;
         }
 
         case Op::StackArrayConst:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
           auto type_id = leb();
           auto size = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type_id=" << type_id << " size=" << size;
+          auto& dst = frame->local(dst_reg);
           dst = stack.array(frame->frame_id, type_id, size);
           break;
         }
 
         case Op::HeapArray:
         {
-          auto& dst = frame->local(leb());
-          auto region = frame->local(leb()).region();
-          auto size = frame->local(leb()).get_size();
+          auto dst_reg = leb();
+          auto region_reg = leb();
+          auto size_reg = leb();
           auto type_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " region=" << region_reg << " size_reg=" << size_reg << " type_id=" << type_id;
+          auto& dst = frame->local(dst_reg);
+          auto region = frame->local(region_reg).region();
+          auto size = frame->local(size_reg).get_size();
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::HeapArrayConst:
         {
-          auto& dst = frame->local(leb());
-          auto region = frame->local(leb()).region();
+          auto dst_reg = leb();
+          auto region_reg = leb();
           auto type_id = leb();
           auto size = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " region=" << region_reg << " type_id=" << type_id << " size=" << size;
+          auto& dst = frame->local(dst_reg);
+          auto region = frame->local(region_reg).region();
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::RegionArray:
         {
-          auto& dst = frame->local(leb());
-          auto region = Region::create(leb<RegionType>());
-          auto size = frame->local(leb()).get_size();
+          auto dst_reg = leb();
+          auto region_type = leb<RegionType>();
+          auto size_reg = leb();
           auto type_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " region_type=" << static_cast<int>(region_type) << " size_reg=" << size_reg << " type_id=" << type_id;
+          auto& dst = frame->local(dst_reg);
+          auto region = Region::create(region_type);
+          auto size = frame->local(size_reg).get_size();
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::RegionArrayConst:
         {
-          auto& dst = frame->local(leb());
-          auto region = Region::create(leb<RegionType>());
+          auto dst_reg = leb();
+          auto region_type = leb<RegionType>();
           auto type_id = leb();
           auto size = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " region_type=" << static_cast<int>(region_type) << " type_id=" << type_id << " size=" << size;
+          auto& dst = frame->local(dst_reg);
+          auto region = Region::create(region_type);
           dst = region->array(type_id, size);
           break;
         }
 
         case Op::Copy:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
           dst = src;
           break;
         }
 
         case Op::Move:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
           dst = std::move(src);
           break;
         }
 
         case Op::Drop:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg;
+          auto& dst = frame->local(dst_reg);
           dst.drop();
           break;
         }
 
         case Op::RegisterRef:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
           dst = Value(src, frame->frame_id);
           break;
         }
 
         case Op::FieldRefMove:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
-          dst = src.ref(true, leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          auto field_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " field_id=" << field_id;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
+          dst = src.ref(true, field_id);
           break;
         }
 
         case Op::FieldRefCopy:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
-          dst = src.ref(false, leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          auto field_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " field_id=" << field_id;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
+          dst = src.ref(false, field_id);
           break;
         }
 
         case Op::ArrayRefMove:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
-          auto& idx = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          auto idx_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " idx=" << idx_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
+          auto& idx = frame->local(idx_reg);
           dst = src.arrayref(true, idx.get_size());
           break;
         }
 
         case Op::ArrayRefCopy:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
-          auto& idx = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          auto idx_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " idx=" << idx_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
+          auto& idx = frame->local(idx_reg);
           dst = src.arrayref(false, idx.get_size());
           break;
         }
 
         case Op::ArrayRefMoveConst:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
           auto idx = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " idx=" << idx;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
           dst = src.arrayref(true, idx);
           break;
         }
 
         case Op::ArrayRefCopyConst:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
           auto idx = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " idx=" << idx;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
           dst = src.arrayref(false, idx);
           break;
         }
 
         case Op::Load:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
           dst = src.load();
           break;
         }
 
         case Op::StoreMove:
         {
-          auto& dst = frame->local(leb());
-          auto& ref = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto ref_reg = leb();
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " ref=" << ref_reg << " src=" << src_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& ref = frame->local(ref_reg);
+          auto& src = frame->local(src_reg);
           dst = ref.store(true, src);
           break;
         }
 
         case Op::StoreCopy:
         {
-          auto& dst = frame->local(leb());
-          auto& ref = frame->local(leb());
-          auto& src = frame->local(leb());
+          auto dst_reg = leb();
+          auto ref_reg = leb();
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " ref=" << ref_reg << " src=" << src_reg;
+          auto& dst = frame->local(dst_reg);
+          auto& ref = frame->local(ref_reg);
+          auto& src = frame->local(src_reg);
           dst = ref.store(false, src);
           break;
         }
 
         case Op::LookupStatic:
         {
-          auto& dst = frame->local(leb());
-          dst = program->function(leb());
+          auto dst_reg = leb();
+          auto func_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " func_id=" << func_id;
+          auto& dst = frame->local(dst_reg);
+          dst = program->function(func_id);
           break;
         }
 
         case Op::LookupDynamic:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
-          auto f = src.method(leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          auto method_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " method_id=" << method_id;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
+          auto f = src.method(method_id);
 
           if (!f)
             throw Value(Error::MethodNotFound);
@@ -485,23 +865,30 @@ namespace vbci
 
         case Op::LookupFFI:
         {
-          auto& dst = frame->local(leb());
-          dst = program->symbol(leb()).raw_pointer();
+          auto dst_reg = leb();
+          auto symbol_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " symbol_id=" << symbol_id;
+          auto& dst = frame->local(dst_reg);
+          dst = program->symbol(symbol_id).raw_pointer();
           break;
         }
 
         case Op::ArgMove:
         {
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " src=" << src_reg << " args=" << args;
           auto& dst = frame->arg(args++);
-          auto& src = frame->local(leb());
+          auto& src = frame->local(src_reg);
           dst = std::move(src);
           break;
         }
 
         case Op::ArgCopy:
         {
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " src=" << src_reg << " args=" << args;
           auto& dst = frame->arg(args++);
-          auto& src = frame->local(leb());
+          auto& src = frame->local(src_reg);
           dst = src;
           break;
         }
@@ -509,7 +896,9 @@ namespace vbci
         case Op::CallStatic:
         {
           auto dst = leb();
-          auto func = program->function(leb());
+          auto func_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst << " func_id=" << func_id;
+          auto func = program->function(func_id);
           pushframe(func, dst, CallType::Call);
           break;
         }
@@ -517,7 +906,9 @@ namespace vbci
         case Op::CallDynamic:
         {
           auto dst = leb();
-          auto func = frame->local(leb()).function();
+          auto func_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst << " func_reg=" << func_reg;
+          auto func = frame->local(func_reg).function();
           pushframe(func, dst, CallType::Call);
           break;
         }
@@ -525,7 +916,9 @@ namespace vbci
         case Op::SubcallStatic:
         {
           auto dst = leb();
-          auto func = program->function(leb());
+          auto func_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst << " func_id=" << func_id;
+          auto func = program->function(func_id);
           pushframe(func, dst, CallType::Subcall);
           break;
         }
@@ -533,7 +926,9 @@ namespace vbci
         case Op::SubcallDynamic:
         {
           auto dst = leb();
-          auto func = frame->local(leb()).function();
+          auto func_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst << " func_reg=" << func_reg;
+          auto func = frame->local(func_reg).function();
           pushframe(func, dst, CallType::Subcall);
           break;
         }
@@ -541,7 +936,9 @@ namespace vbci
         case Op::TryStatic:
         {
           auto dst = leb();
-          auto func = program->function(leb());
+          auto func_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst << " func_id=" << func_id;
+          auto func = program->function(func_id);
           pushframe(func, dst, CallType::Catch);
           break;
         }
@@ -549,7 +946,9 @@ namespace vbci
         case Op::TryDynamic:
         {
           auto dst = leb();
-          auto func = frame->local(leb()).function();
+          auto func_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst << " func_reg=" << func_reg;
+          auto func = frame->local(func_reg).function();
           pushframe(func, dst, CallType::Catch);
           break;
         }
@@ -557,8 +956,10 @@ namespace vbci
         case Op::FFI:
         {
           auto dst = leb();
+          auto symbol_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst << " symbol_id=" << symbol_id << " num_args=" << args;
           auto num_args = args;
-          auto& symbol = program->symbol(leb());
+          auto& symbol = program->symbol(symbol_id);
           auto& params = symbol.params();
           auto& paramvals = symbol.paramvals();
           check_args(params, symbol.varargs());
@@ -607,68 +1008,90 @@ namespace vbci
 
         case Op::WhenStatic:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
           auto type_id = leb();
-          auto func = program->function(leb());
+          auto func_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type_id=" << type_id << " func_id=" << func_id;
+          auto& dst = frame->local(dst_reg);
+          auto func = program->function(func_id);
           queue_behavior(dst, type_id, func);
           break;
         }
 
         case Op::WhenDynamic:
         {
-          auto& dst = frame->local(leb());
+          auto dst_reg = leb();
           auto type_id = leb();
-          auto func = frame->local(leb()).function();
+          auto func_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " type_id=" << type_id << " func_reg=" << func_reg;
+          auto& dst = frame->local(dst_reg);
+          auto func = frame->local(func_reg).function();
           queue_behavior(dst, type_id, func);
           break;
         }
 
         case Op::Typetest:
         {
-          auto& dst = frame->local(leb());
-          auto& src = frame->local(leb());
-          dst = program->subtype(src.type_id(), leb());
+          auto dst_reg = leb();
+          auto src_reg = leb();
+          auto type_id = leb();
+          LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg << " type_id=" << type_id;
+          auto& dst = frame->local(dst_reg);
+          auto& src = frame->local(src_reg);
+          dst = program->subtype(src.type_id(), type_id);
           break;
         }
 
         case Op::TailcallStatic:
         {
-          tailcall(program->function(leb()));
+          auto func_id = leb();
+          LOG(Trace) << "Opcode: " << op << " func_id=" << func_id;
+          tailcall(program->function(func_id));
           break;
         }
 
         case Op::TailcallDynamic:
         {
-          tailcall(frame->local(leb()).function());
+          auto func_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " func_reg=" << func_reg;
+          tailcall(frame->local(func_reg).function());
           break;
         }
 
         case Op::Return:
         {
-          auto ret = std::move(frame->local(leb()));
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " src=" << src_reg;
+          auto ret = std::move(frame->local(src_reg));
           popframe(ret, Condition::Return);
           break;
         }
 
         case Op::Raise:
         {
-          auto ret = std::move(frame->local(leb()));
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " src=" << src_reg;
+          auto ret = std::move(frame->local(src_reg));
           popframe(ret, Condition::Raise);
           break;
         }
 
         case Op::Throw:
         {
-          auto ret = std::move(frame->local(leb()));
+          auto src_reg = leb();
+          LOG(Trace) << "Opcode: " << op << " src=" << src_reg;
+          auto ret = std::move(frame->local(src_reg));
           popframe(ret, Condition::Throw);
           break;
         }
 
         case Op::Cond:
         {
-          auto& cond = frame->local(leb());
+          auto cond_reg = leb();
           auto on_true = leb();
           auto on_false = leb();
+          LOG(Trace) << "Opcode: " << op << " cond=" << cond_reg << " on_true=" << on_true << " on_false=" << on_false;
+          auto& cond = frame->local(cond_reg);
 
           if (cond.get_bool())
             branch(on_true);
@@ -679,18 +1102,25 @@ namespace vbci
 
         case Op::Jump:
         {
-          branch(leb());
+          auto target = leb();
+          LOG(Trace) << "Opcode: " << op << " target=" << target;
+          branch(target);
           break;
         }
 
-#define do_binop(op) \
+#define do_binop(opname) \
   { \
-    auto& dst = frame->local(leb()); \
-    auto& lhs = frame->local(leb()); \
-    auto& rhs = frame->local(leb()); \
-    dst = lhs.op_##op(rhs); \
+    auto dst_reg = leb(); \
+    auto lhs_reg = leb(); \
+    auto rhs_reg = leb(); \
+    LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " lhs=" << lhs_reg << " rhs=" << rhs_reg; \
+    auto& dst = frame->local(dst_reg); \
+    auto& lhs = frame->local(lhs_reg); \
+    auto& rhs = frame->local(rhs_reg); \
+    dst = lhs.op_##opname(rhs); \
     break; \
   }
+
         case Op::Add:
           do_binop(add);
         case Op::Sub:
@@ -701,6 +1131,8 @@ namespace vbci
           do_binop(div);
         case Op::Mod:
           do_binop(mod);
+        case Op::Pow:
+          do_binop(pow);
         case Op::And:
           do_binop(and);
         case Op::Or:
@@ -732,11 +1164,14 @@ namespace vbci
         case Op::Atan2:
           do_binop(atan2);
 
-#define do_unop(op) \
+#define do_unop(opname) \
   { \
-    auto& dst = frame->local(leb()); \
-    auto& src = frame->local(leb()); \
-    dst = src.op_##op(); \
+    auto dst_reg = leb(); \
+    auto src_reg = leb(); \
+    LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg; \
+    auto& dst = frame->local(dst_reg); \
+    auto& src = frame->local(src_reg); \
+    dst = src.op_##opname(); \
     break; \
   }
         case Op::Neg:
@@ -794,10 +1229,12 @@ namespace vbci
         case Op::Read:
           do_unop(read);
 
-#define do_const(op) \
+#define do_const(opname) \
   { \
-    auto dst = frame->local(leb()); \
-    dst = Value::op(); \
+    auto dst_reg = leb(); \
+    LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg; \
+    auto& dst = frame->local(dst_reg); \
+    dst = Value::opname(); \
     break; \
   }
         case Op::Const_E:
