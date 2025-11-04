@@ -1,0 +1,169 @@
+vbcc
+statements
+(top
+  {}
+  (type
+    (typeid 7:@A_or_B)
+    (union
+      (classid 2:@A)
+      (classid 2:@B)))
+  (class
+    (classid 10:@closure_a)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (classid 7:@A_or_B)))
+    (methods
+      (method
+        (methodid 6:@apply)
+        (functionid 16:@closure_a_apply))))
+  (class
+    (classid 2:@A)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (classid 2:@B)))
+    (methods))
+  (class
+    (classid 2:@B)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (bool)))
+    (methods))
+  (func
+    (functionid 16:@closure_a_apply)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 10:@closure_a)))
+    (classid 7:@A_or_B)
+    (vars)
+    (labels))
+  (labelid 16:^closure_a_apply)
+  (fieldref
+    (localid 10:$field_ref)
+    (arg
+      (argcopy)
+      (localid 5:$self))
+    (fieldid 2:@f))
+  (load
+    (localid 6:$field)
+    (localid 10:$field_ref))
+  (ret
+    (localid 6:$field))
+  (func
+    (functionid 10:@behavior1)
+    (params
+      (param
+        (localid 6:$cown1)
+        (ref
+          (classid 7:@A_or_B))))
+    (classid 7:@A_or_B)
+    (vars)
+    (labels))
+  (labelid 10:^behavior1)
+  (load
+    (localid 3:$a1)
+    (localid 6:$cown1))
+  (const
+    (localid 6:$false)
+    (bool)
+    (false))
+  (heap
+    (localid 2:$b)
+    (localid 3:$a1)
+    (classid 2:@B)
+    (args
+      (arg
+        (argcopy)
+        (localid 6:$false))))
+  (new
+    (localid 3:$a2)
+    (classid 2:@A)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$b))))
+  (store
+    (localid 4:$old)
+    (localid 6:$cown1)
+    (arg
+      (argcopy)
+      (localid 3:$a2)))
+  (load
+    (localid 4:$new)
+    (localid 6:$cown1))
+  (region
+    (localid 3:$b2)
+    (rc)
+    (classid 2:@B)
+    (args
+      (arg
+        (argcopy)
+        (localid 6:$false))))
+  (store
+    (localid 6:$extra)
+    (localid 6:$cown1)
+    (arg
+      (argcopy)
+      (localid 3:$b2)))
+  (ret
+    (localid 4:$new))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels))
+  (labelid 5:^main)
+  (const
+    (localid 5:$true)
+    (bool)
+    (true))
+  (region
+    (localid 2:$b)
+    (rc)
+    (classid 2:@B)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$true))))
+  (heap
+    (localid 10:$closure_a)
+    (localid 2:$b)
+    (classid 10:@closure_a)
+    (args
+      (arg
+        (argcopy)
+        (localid 2:$b))))
+  (lookup
+    (localid 16:$closure_a_apply)
+    (localid 10:$closure_a)
+    (methodid 6:@apply))
+  (drop
+    (localid 2:$b))
+  (whendyn
+    (localid 6:$cown1)
+    (localid 16:$closure_a_apply)
+    (args
+      (arg
+        (argcopy)
+        (localid 10:$closure_a)))
+    (cown
+      (classid 7:@A_or_B)))
+  (when
+    (localid 6:$cown2)
+    (functionid 10:@behavior1)
+    (args
+      (arg
+        (argcopy)
+        (localid 6:$cown1)))
+    (cown
+      (classid 7:@A_or_B)))
+  (const
+    (localid 8:$ret_val)
+    (i32)
+    (int 2:42))
+  (ret
+    (localid 8:$ret_val)))
