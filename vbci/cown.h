@@ -35,9 +35,13 @@ namespace vbci
     {
       LOG(Trace) << "Destroying cown @" << this;
       auto prev_loc = content.location();
-      if (loc::is_region(prev_loc))
-        loc::to_region(prev_loc)->clear_parent();
-      content.drop();
+      content.field_drop();
+      if (loc::is_region(prev_loc) && loc::to_region(prev_loc)->clear_parent())
+      {
+        LOG(Trace) << "Freeing region: " << loc::to_region(prev_loc)
+                  << " from cown " << this;
+        loc::to_region(prev_loc)->free_region();
+      }
       LOG(Trace) << "Destroyed cown @" << this;
     }
 
@@ -133,6 +137,10 @@ namespace vbci
           LOG(Trace) << "Adding region: " << r << " to cown " << this;
           // Set the region parent to this cown.
           r->set_parent();
+          // Remove the stack reference to this region, as we have moved it into
+          // the cown.
+          if (move)
+            r->stack_dec();
         }
       }
 
@@ -151,6 +159,7 @@ namespace vbci
                     << " from cown " << this;
           loc::to_region(prev_loc)->clear_parent();
         }
+        loc::to_region(prev_loc)->stack_inc();
       }
       return prev;
     }

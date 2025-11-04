@@ -850,8 +850,9 @@ namespace vbci
         break;
 
       case ValueType::CownRef:
-        v = cown->load();
-        break;
+        v = cown->load(); // THIS DOES AN INC!!!!
+        v.readonly = readonly;
+        return v;
 
       default:
         throw Value(Error::BadLoadTarget);
