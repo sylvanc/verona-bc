@@ -1,0 +1,96 @@
+vbcc
+liveness
+(top
+  {}
+  (class
+    (classid 11:@BoolObject)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (bool)))
+    (methods))
+  (type
+    (typeid 5:@Body)
+    (union
+      (classid 11:@BoolObject)
+      (bool)))
+  (func
+    (functionid 10:@behavior0)
+    (params)
+    (typeid 5:@Body)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^behavior0)
+        (body
+          (const
+            (localid 5:$true)
+            (bool)
+            (true))
+          (new
+            (localid 8:$ret_val)
+            (classid 11:@BoolObject)
+            (args
+              (arg
+                (argmove)
+                (localid 5:$true)))))
+        (ret
+          (localid 8:$ret_val)))))
+  (func
+    (functionid 10:@behavior1)
+    (params
+      (param
+        (localid 6:$cown1)
+        (ref
+          (typeid 5:@Body))))
+    (typeid 5:@Body)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^behavior1)
+        (body
+          (load
+            (localid 3:$a1)
+            (localid 6:$cown1))
+          (const
+            (localid 5:$true)
+            (bool)
+            (true))
+          (store
+            (localid 4:$old)
+            (localid 6:$cown1)
+            (arg
+              (argcopy)
+              (localid 5:$true))))
+        (ret
+          (localid 5:$true)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (when
+            (localid 6:$cown1)
+            (functionid 10:@behavior0)
+            (args)
+            (cown
+              (typeid 5:@Body)))
+          (when
+            (localid 6:$cown2)
+            (functionid 10:@behavior1)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$cown1)))
+            (cown
+              (typeid 5:@Body)))
+          (const
+            (localid 8:$ret_val)
+            (i32)
+            (int 2:42)))
+        (ret
+          (localid 8:$ret_val))))))
