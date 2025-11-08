@@ -6,7 +6,7 @@ namespace vbcc
     Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |
     LBracket | RBracket | Comma | Colon | Union | Vararg | wfRegionType |
     wfPrimitiveType | Ptr | Dyn | Ref | Cown | wfStatement | wfTerminator |
-    wfLiteral | String;
+    wfLiteral | String | RawString;
 
   // clang-format off
   const auto wfParser =

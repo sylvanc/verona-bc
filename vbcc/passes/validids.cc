@@ -232,10 +232,18 @@ namespace vbcc
         },
 
         // Internalize unescaped string literals.
-        T(ConstStr)[ConstStr] >> [state](Match& _) -> Node {
-          auto str = unescape((_(ConstStr) / String)->location().view());
-          ST::exec().string(str);
-          _(ConstStr) / String = String ^ str;
+        T(ConstStr)[ConstStr] << (T(LocalId)[LocalId] * T(String)[String]) >>
+          [](Match& _) -> Node {
+          auto content = unescape(_(String)->location().view());
+          ST::exec().string(content);
+          return ConstStr << _(LocalId) << (RawString ^ content);
+        },
+
+        // Internalize raw string literals.
+        T(ConstStr)[ConstStr]
+            << (T(LocalId)[LocalId] * T(RawString)[RawString]) >>
+          [](Match& _) -> Node {
+          ST::exec().string(_(RawString)->location().view());
           return NoChange;
         },
       }};

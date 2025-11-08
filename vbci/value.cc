@@ -554,36 +554,14 @@ namespace vbci
   {
     switch (tag)
     {
-      case ValueType::None:
-      case ValueType::Bool:
-      case ValueType::I8:
-      case ValueType::U8:
-        return convert(ValueType::U8);
-
-      case ValueType::I16:
-      case ValueType::U16:
-        return convert(ValueType::U16);
-
-      case ValueType::I32:
-      case ValueType::U32:
-        return convert(ValueType::U32);
-
-      case ValueType::I64:
-      case ValueType::U64:
-        return convert(ValueType::U64);
-
-      case ValueType::ILong:
-      case ValueType::ULong:
-        return convert(ValueType::ULong);
-
       case ValueType::F32:
-        return Value(ValueType::U32, std::bit_cast<uint32_t>(f32));
+        return Value(ValueType::U64, std::bit_cast<uint32_t>(f32));
 
       case ValueType::F64:
         return Value(ValueType::U64, std::bit_cast<uint64_t>(f64));
 
       default:
-        return convert(ValueType::USize);
+        return convert(ValueType::U64);
     }
   }
 
