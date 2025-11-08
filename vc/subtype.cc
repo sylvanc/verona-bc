@@ -204,6 +204,7 @@ namespace vc
       {
         if (r == TypeVar)
         {
+          // TODO: is this right, or should r be an upper bounds of l?
           uf.unite(l, r);
           return true;
         }
