@@ -131,7 +131,7 @@ namespace vbci
     Function* function();
     size_t get_size();
 
-    Location location();
+    Location location() const;
     Region* region();
     void immortalize();
 

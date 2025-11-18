@@ -699,7 +699,7 @@ namespace vbci
     }
   }
 
-  Location Value::location()
+  Location Value::location() const
   {
     switch (tag)
     {
