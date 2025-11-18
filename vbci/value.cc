@@ -441,7 +441,7 @@ namespace vbci
     return cown;
   }
 
-  Header* Value::get_header()
+  Header* Value::get_header() const
   {
     switch (tag)
     {

@@ -127,7 +127,7 @@ namespace vbci
     bool get_bool();
     int32_t get_i32();
     Cown* get_cown();
-    Header* get_header();
+    Header* get_header() const;
     Function* function();
     size_t get_size();
 
