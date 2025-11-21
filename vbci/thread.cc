@@ -26,7 +26,7 @@ namespace vbci
 
   std::pair<Function*, PC> Thread::debug_info()
   {
-    auto t = get();
+    auto& t = get();
 
     if (t.frame)
       return {t.frame->func, t.current_pc};
@@ -333,7 +333,7 @@ namespace vbci
           auto global_id = leb();
           LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " global_id=" << global_id;
           auto& dst = frame->local(dst_reg);
-          dst = program->global(global_id);
+          dst = program->global(global_id).copy();
           break;
         }
 
@@ -690,7 +690,7 @@ namespace vbci
           LOG(Trace) << "Opcode: " << op << " dst=" << dst_reg << " src=" << src_reg;
           auto& dst = frame->local(dst_reg);
           auto& src = frame->local(src_reg);
-          dst = src;
+          dst = src.copy();
           break;
         }
 
@@ -889,7 +889,7 @@ namespace vbci
           LOG(Trace) << "Opcode: " << op << " src=" << src_reg << " args=" << args;
           auto& dst = frame->arg(args++);
           auto& src = frame->local(src_reg);
-          dst = src;
+          dst = src.copy();
           break;
         }
 
@@ -1001,7 +1001,9 @@ namespace vbci
           if (!ret.is_error() && !program->subtype(ret.type_id(), symbol.ret()))
             throw Value(Error::BadType);
 
-          frame->local(dst) = ret;
+          // TODO: This was implicitly a copy, I have changed to move as I think that makes sense.
+          // Sylvan to review.
+          frame->local(dst) = std::move(ret);
           frame->drop_args(num_args);
           break;
         }

@@ -25,167 +25,202 @@ namespace vbci
     Header(Location loc, uint32_t type_id) : loc(loc), rc(1), type_id(type_id)
     {}
 
+    bool add_reference(const Value& next)
+    {
+      auto nloc = next.location();
+
+      if (loc::is_immutable(nloc))
+        return true;
+
+      if (loc::is_stack(loc))
+      {
+        if (loc::is_stack(nloc))
+          // Older frames can't point to newer frames.
+          return (loc >= nloc);
+
+        assert(loc::is_region(nloc));
+        auto nr = loc::to_region(nloc);
+
+        // Older frames can't point to newer frames.
+        if (nr->is_frame_local() && (loc < nr->get_parent()))
+          return false;
+
+        return true;
+      }
+
+      assert(loc::is_region(loc));
+
+      if (loc::is_stack(nloc))
+        // No region, even a frame-local one, can point to the stack.
+        return false;
+
+      assert(loc::is_region(nloc));
+      auto r = loc::to_region(loc);
+      auto nr = loc::to_region(nloc);
+
+      // Creating an interior region reference is fine and has no accounting.
+      if (r == nr)
+      {
+        // We need to remove the stack rc from the passed in value.
+        nr->stack_dec();
+        return true;
+      }
+
+      if (nr->is_frame_local())
+      {
+        // Drag a frame-local allocation to a region.
+        if (!drag_allocation(r, next.get_header()))
+          return false;
+
+        // If this has succeeded, next has a new location.
+        nloc = next.location();
+        nr = loc::to_region(nloc);
+        return true;
+      }
+
+      if (r->is_frame_local())
+        return true;
+
+      if (nr->has_parent())
+      {
+        // Regions can only have a single entry point,
+        // but frame-local regions are allowed.
+        return false;
+      }
+      else if (nr->is_ancestor_of(r))
+      {
+        // Regions can't form cycles.
+        return false;
+      }
+
+      // At this point, the write barrier is satisfied.
+      // If loc is the stack or a frame-local region, no action is needed
+      // as the stack RC was already provided by the register that was passed
+      // in.
+      assert(!loc::is_stack(loc));
+
+      assert(loc::is_region(nloc));
+
+      // Set the parent 
+      // it's in a different region.
+      assert(r != nr);
+      assert(!r->is_frame_local());
+      nr->set_parent(r);
+
+      // Decrement the region stack RC. This can't free the region as we just
+      // parented it.
+      nr->stack_dec();
+      return true;
+    }
+
+    /**
+     * @brief Remove a reference from the region meta-data.
+     * 
+     *
+     * It assumes the `prev` value will be stored into a register, so
+     * increments the stack reference count if the location is a region,
+     * and the underlying pointer didn't already come from a stack or
+     * frame-local region.
+     * 
+     * to_register: Indicates whether the value is going into a register.
+     * This will then perform the required stack RC increment.
+     */
+    template <bool to_register = true>
+    void remove_reference(const Value& prev)
+    {
+      auto ploc = prev.location();
+
+      if (!loc::is_region(ploc))
+        return;
+
+      assert(!loc::is_stack(ploc));
+
+      auto pr = loc::to_region(ploc);
+      auto r = loc::to_region(loc);
+
+      // Internal edges have no accounting.
+      if (pr == r) {
+        // As this is going into a register, increment the stack RC.
+        if (to_register)
+          pr->stack_inc();
+        return;
+      }
+
+      // Check if the region is frame-local and hence does not need unparenting.
+      if (pr->is_frame_local())
+        // This location already has a stack reference count, so no action is
+        // needed.
+        return;
+
+      // This is being removed from an object/array, and will land in a
+      // register, so we need to increment the stack RC to account for that.
+      if constexpr (to_register)
+        pr->stack_inc();
+
+      bool cleared = pr->clear_parent();
+      if constexpr (!to_register)
+        if (cleared)
+          pr->free_region();
+    }
+
+    // This is used when the write barrier fails, and we need to undo the
+    // effects of `remove_reference`.
+    template <bool to_register = true>
+    void restore_reference(const Value& prev)
+    {
+      auto ploc = prev.location();
+
+      if (!loc::is_region(ploc))
+        return;
+
+      auto pr = loc::to_region(ploc);
+      auto r = loc::to_region(loc);
+
+      if (pr == r)
+      {
+        if (to_register)
+          pr->stack_dec();
+        return;
+      }
+
+      if (r->is_frame_local())
+        return;
+
+      r->set_parent(loc::to_region(loc));
+
+      if (to_register)
+        r->stack_dec();
+    }
+
     bool write_barrier(Value& prev, Value& next)
     {
       auto ploc = prev.location();
       auto nloc = next.location();
-      bool unparent_prev = true;
 
       if (loc::is_immutable(loc))
-      {
         // Nothing can be stored to an immutable location.
         return false;
-      }
-      else if (loc::is_stack(loc))
-      {
-        if (loc::is_immutable(nloc))
-        {
-          // Ok.
-        }
-        else if (loc::is_stack(nloc))
-        {
-          // Older frames can't point to newer frames.
-          if (loc < nloc)
-            return false;
-        }
-        else
-        {
-          assert(loc::is_region(nloc));
-          auto nr = loc::to_region(nloc);
-
-          // Older frames can't point to newer frames.
-          if (nr->is_frame_local() && (loc < nr->get_parent()))
-            return false;
-        }
-      }
-      else
-      {
-        assert(loc::is_region(loc));
-
-        if (loc::is_immutable(nloc))
-        {
-          // Ok.
-        }
-        else if (loc::is_stack(nloc))
-        {
-          // No region, even a frame-local one, can point to the stack.
-          return false;
-        }
-        else
-        {
-          assert(loc::is_region(nloc));
-          auto r = loc::to_region(loc);
-          auto nr = loc::to_region(nloc);
-
-          if (r == nr)
-          {
-            // Ok.
-          }
-          else if (nr->is_frame_local())
-          {
-            // OK to clear parent here because if no stack references,
-            // prev region can be deallocated. If stack ref exists,
-            // wont be deallocated
-
-            if (loc::is_region(ploc) && !loc::to_region(ploc)->is_frame_local())
-            {
-              loc::to_region(ploc)->clear_parent();
-              // we have already unparented it, and will possibly reparent
-              unparent_prev = false;
-            }
-
-            // Drag a frame-local allocation to a region.
-
-            if (!drag_allocation(r, next.get_header()))
-              return false;
-
-            // If this has succeeded, next has a new location.
-            nloc = next.location();
-          }
-          else if (nr->has_parent())
-          {
-            // Regions can only have a single entry point.
-            if (
-              !r->is_frame_local() &&
-              (!loc::is_region(ploc) || (loc::to_region(ploc) != nr)))
-              return false;
-          }
-          else if (nr->is_ancestor_of(r))
-          {
-            // Regions can't form cycles.
-            return false;
-          }
-        }
-      }
-
-      // At this point, the write barrier is satisfied.
-      // If loc is the stack or a frame-local region, no action is needed.
-      if (loc::is_stack(loc))
-        return true;
-
-      auto r = loc::to_region(loc);
-
-      if (r->is_frame_local())
-        return true;
 
       // If the previous and next locations are the same, no action is needed.
       if (ploc == nloc)
         return true;
 
-      if (loc::is_region(ploc))
-      {
-        // Increment the region stack RC.
-        auto pr = loc::to_region(ploc);
-        pr->stack_inc();
+      // It is safe to first remove the previous reference, as that can't
+      // free the region being written to because we have set `to_register` to true,
+      // which increments the stack RC.
+      remove_reference<true>(prev);
 
-        // Clear the parent if it's in a different region.
-        if (ploc != loc && unparent_prev)
-          pr->clear_parent();
-      }
+      if (add_reference(next))
+        return true;
 
-      if (loc::is_region(nloc))
-      {
-        auto nr = loc::to_region(nloc);
-
-        // Set the parent if it's in a different region.
-        if (!r->is_frame_local() && (r != nr))
-          nr->set_parent(r);
-
-        // Decrement the region stack RC. This can't free the region.
-        nr->stack_dec();
-      }
-
-      return true;
+      // Adding the reference failed, so we need to restore the previous state.
+      restore_reference<true>(prev);
+      return false;
     }
 
     void field_drop(Value& prev)
     {
-      // Like write barrier, but for dropping a field. Returns the previous
-      // value.
-      auto ploc = prev.location();
-      prev.field_drop();
-
-      // Same region no additional work.
-      if (ploc == loc)
-        return;
-
-      // If the previous location is not a region, nothing more to do.
-      if (!loc::is_region(ploc))
-        return;
-
-      auto pr = loc::to_region(ploc);
-      if (!loc::is_region(loc))
-        return;
-
-      auto r = loc::to_region(loc);
-      if (r->is_frame_local())
-      {
-        pr->stack_dec();
-        return;
-      }
-
-      if (pr->clear_parent())
-        pr->free_region();
+      remove_reference<false>(prev);
     }
 
     Header* get_scc()
@@ -211,7 +246,8 @@ namespace vbci
       }
     }
 
-    bool base_dec(bool reg)
+    template <bool reg>
+    bool base_dec()
     {
       // Returns false if the allocation should be freed.
       if (loc::no_rc(loc))
@@ -311,7 +347,8 @@ namespace vbci
       }
     }
 
-    void inc(bool reg)
+    template <bool reg>
+    void inc()
     {
       if (loc::no_rc(loc))
         return;

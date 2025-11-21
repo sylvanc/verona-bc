@@ -39,7 +39,7 @@ namespace vbci
       if (loc::is_region(prev_loc) && loc::to_region(prev_loc)->clear_parent())
       {
         LOG(Trace) << "Freeing region: " << loc::to_region(prev_loc)
-                  << " from cown " << this;
+                   << " from cown " << this;
         loc::to_region(prev_loc)->free_region();
       }
       LOG(Trace) << "Destroyed cown @" << this;
@@ -69,19 +69,14 @@ namespace vbci
 
     Value load()
     {
-      return content;
+      return content.copy();
     }
 
-    Value store(bool move, Value& v)
+    Value store(bool move, Value& next)
     {
-      Value next;
+      bool bad_store = false;
       bool unparent_prev = true;
       Region* nr;
-
-      if (move)
-        next = std::move(v);
-      else
-        next = v;
 
       // Allow any cown to contain an error.
       if (
@@ -95,7 +90,7 @@ namespace vbci
       // Can't store a stack value in a cown.
       if (loc::is_stack(next_loc))
       {
-        next = Value(Error::BadStore);
+        bad_store = true;
       }
       else if (loc::is_region(next_loc) && (next_loc != prev_loc))
       {
@@ -119,18 +114,22 @@ namespace vbci
 
           if (!drag_allocation(nr, next.get_header()))
           {
-            next = Value(Error::BadStore);
+            bad_store = true;
             nr->free_region();
           }
           else
           {
-            next_loc = next.location();
+            next_loc = Location(nr);
+            // Remove the stack reference to this region, as we have moved it
+            // into the cown.
+            if (move)
+              r->stack_dec();
           }
         }
         else if (r->has_parent())
         {
           // If the region has a parent, it can't be stored.
-          next = Value(Error::BadStore);
+          bad_store = true;
         }
         else
         {
@@ -144,11 +143,19 @@ namespace vbci
         }
       }
 
-      if (next.is_error())
-        LOG(Debug) << next.to_string();
-
-      auto prev = std::move(content);
-      content = std::move(next);
+      Value prev = std::move(content);
+      if (bad_store)
+      {
+        LOG(Error) << next.to_string();
+        content = Value(Error::BadStore);
+      }
+      else
+      {
+        if (move)
+          content = std::move(next);
+        else
+          content = next.copy();
+      }
 
       // Clear prev region parent if it's different from next.
       if (loc::is_region(prev_loc) && (prev_loc != next_loc))
@@ -156,7 +163,7 @@ namespace vbci
         if (unparent_prev)
         {
           LOG(Trace) << "Removing region: " << loc::to_region(prev_loc)
-                    << " from cown " << this;
+                     << " from cown " << this;
           loc::to_region(prev_loc)->clear_parent();
         }
         loc::to_region(prev_loc)->stack_inc();

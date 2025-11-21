@@ -1,0 +1,28 @@
+
+=================================================================
+==27710==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 80 byte(s) in 1 object(s) allocated from:
+    #0 0x5e6d02d8ed32 in aligned_alloc (/home/mjp41/verona-bc/build/vbci/vbci+0x1a0d32) (BuildId: 40b06cc70f1aa81a53b49fdcc271f96233da7fb3)
+    #1 0x5e6d02ec976a in verona::rt::heap::aligned_alloc_snmalloc_size(unsigned long) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/boc/../region/../object/../ds/heap.h:15:12
+    #2 0x5e6d02f56a8d in void* verona::rt::heap::alloc<80ul>() /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/boc/../region/../object/../ds/heap.h:26:12
+    #3 0x5e6d02f5667e in verona::rt::VCown<vbci::Cown>::operator new(unsigned long) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/cpp/vobject.h:170:9
+    #4 0x5e6d02ee9696 in vbci::Cown::create(unsigned int) /home/mjp41/verona-bc/vbci/cown.h:29:19
+    #5 0x5e6d02f325fb in vbci::Thread::queue_behavior(vbci::Value&, unsigned int, vbci::Function*) /home/mjp41/verona-bc/vbci/thread.cc:1587:24
+    #6 0x5e6d02f1c042 in vbci::Thread::step() /home/mjp41/verona-bc/vbci/thread.cc:1019:11
+    #7 0x5e6d02efdb0f in vbci::Thread::thread_run(vbci::Function*) /home/mjp41/verona-bc/vbci/thread.cc:100:7
+    #8 0x5e6d02efd9d9 in vbci::Thread::thread_run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:89:16
+    #9 0x5e6d02ee99dc in vbci::Thread::run_behavior(verona::rt::Work*) /home/mjp41/verona-bc/vbci/thread.cc:51:11
+    #10 0x5e6d02eb7c40 in verona::rt::Work::run() /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/boc/../sched/work.h:34:7
+    #11 0x5e6d02eba87e in void verona::rt::SchedulerThread::run_inner<>(void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/boc/../sched/schedulerthread.h:213:15
+    #12 0x5e6d02eb781c in void verona::rt::SchedulerThread::run<>(verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/boc/../sched/schedulerthread.h:115:10
+    #13 0x5e6d02eb8bae in void verona::rt::ThreadPoolBuilder::run_with_affinity<verona::rt::SchedulerThread*, void (*)()>(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()) /home/mjp41/verona-bc/build/_deps/verona-rt-src/src/rt/boc/../sched/../pal/threadpoolbuilder.h:39:7
+    #14 0x5e6d02eba283 in void std::__invoke_impl<void, void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>(std::__invoke_other, void (*&&)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long&&, void (*&&)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*&&, void (*&&)()) /usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/invoke.h:61:14
+    #15 0x5e6d02eba1c4 in std::__invoke_result<void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>::type std::__invoke<void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>(void (*&&)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long&&, void (*&&)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*&&, void (*&&)()) /usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/invoke.h:96:14
+    #16 0x5e6d02eba0e0 in void std::thread::_Invoker<std::tuple<void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>>::_M_invoke<0ul, 1ul, 2ul, 3ul, 4ul>(std::_Index_tuple<0ul, 1ul, 2ul, 3ul, 4ul>) /usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/std_thread.h:292:13
+    #17 0x5e6d02eba074 in std::thread::_Invoker<std::tuple<void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>>::operator()() /usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/std_thread.h:299:11
+    #18 0x5e6d02eba058 in std::thread::_State_impl<std::thread::_Invoker<std::tuple<void (*)(unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()), unsigned long, void (*)(verona::rt::SchedulerThread*, void (*)()), verona::rt::SchedulerThread*, void (*)()>>>::_M_run() /usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/std_thread.h:244:13
+    #19 0x76b3318ecdb3 in execute_native_thread_routine /build/gcc-14-ig5ci0/gcc-14-14.2.0/build/x86_64-linux-gnu/libstdc++-v3/src/c++11/../../../../../src/libstdc++-v3/src/c++11/thread.cc:104:18
+    #20 0x5e6d02d8be16 in asan_thread_start(void*) asan_interceptors.cpp.o
+
+SUMMARY: AddressSanitizer: 80 byte(s) leaked in 1 allocation(s).

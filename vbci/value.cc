@@ -64,10 +64,12 @@ namespace vbci
       throw Value(Error::MethodNotFound);
   }
 
-  Value::Value(const Value& that)
+  Value Value::copy() const
   {
-    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
-    inc();
+    Value v;
+    std::memcpy(&v, this, sizeof(Value));
+    v.inc<true>();
+    return v;
   }
 
   Value::Value(Value&& that) noexcept
@@ -76,23 +78,12 @@ namespace vbci
     that.tag = ValueType::Invalid;
   }
 
-  Value& Value::operator=(const Value& that)
-  {
-    if (this == &that)
-      return *this;
-
-    dec();
-    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
-    inc();
-    return *this;
-  }
-
   Value& Value::operator=(Value&& that) noexcept
   {
     if (this == &that)
       return *this;
 
-    dec();
+    dec<true>(); // TODO: Is this a register or not.  Who the **** knows.
     std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
     that.tag = ValueType::Invalid;
     return *this;
@@ -309,10 +300,11 @@ namespace vbci
         break;
     }
 
+    // TODO: this should be at a higher level.
     if (move)
       tag = ValueType::Invalid;
     else
-      inc();
+      inc<true>();
   }
 
   uint32_t Value::type_id()
@@ -639,7 +631,7 @@ namespace vbci
   {
     if (tag == ValueType::Cown)
     {
-      Value r = *this;
+      Value r = (*this).copy();
       r.readonly = true;
       return r;
     }
@@ -647,20 +639,21 @@ namespace vbci
     throw Value(Error::BadOperand);
   }
 
-  void Value::inc(bool reg)
+  template<bool reg>
+  void Value::inc()
   {
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::FieldRef:
         if (!readonly)
-          obj->inc(reg);
+          obj->inc<reg>();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->inc(reg);
+          arr->inc<reg>();
         break;
 
       case ValueType::Cown:
@@ -672,25 +665,32 @@ namespace vbci
         break;
     }
   }
+  // Instantiate the templates
+  template void Value::inc<true>();
+  template void Value::inc<false>();
+  template void Value::dec<false>();
+  template void Value::dec<true>();
 
-  void Value::dec(bool reg)
+  template<bool reg>
+  void Value::dec()
   {
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::FieldRef:
         if (!readonly)
-          obj->dec(reg);
+          obj->dec<reg>();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->dec(reg);
+          arr->dec<reg>();
         break;
 
       case ValueType::Cown:
       case ValueType::CownRef:
+        // TODO register stuff here?
         cown->dec();
         break;
 
@@ -774,13 +774,14 @@ namespace vbci
 
   void Value::drop()
   {
-    dec();
+    // TODO: register or not
+    dec<true>();
     tag = ValueType::Invalid;
   }
 
   void Value::field_drop()
   {
-    dec(false);
+    dec<false>();
     tag = ValueType::Invalid;
   }
 
@@ -795,7 +796,8 @@ namespace vbci
         if (move)
           tag = ValueType::Invalid;
         else
-          inc();
+          // TODO register or not
+          inc<true>();
 
         return Value(obj, f, readonly);
       }
@@ -805,7 +807,8 @@ namespace vbci
         if (move)
           tag = ValueType::Invalid;
         else
-          inc();
+          // TODO register or not
+          inc<true>();
 
         return Value(cown, false);
       }
@@ -826,7 +829,8 @@ namespace vbci
     if (move)
       tag = ValueType::Invalid;
     else
-      inc();
+      // TODO register or not
+      inc<true>();
 
     return Value(arr, i, readonly);
   }
@@ -838,7 +842,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::RegisterRef:
-        v = *val;
+        v = (*val).copy();
         break;
 
       case ValueType::FieldRef:
@@ -858,7 +862,8 @@ namespace vbci
         throw Value(Error::BadLoadTarget);
     }
 
-    v.inc();
+    // TODO register or not
+    v.inc<true>();
     v.readonly = readonly;
     return v;
   }
@@ -885,7 +890,7 @@ namespace vbci
         if (move)
           *val = std::move(v);
         else
-          *val = v;
+          *val = v.copy();
 
         return prev;
       }
@@ -915,7 +920,7 @@ namespace vbci
       throw Value(Error::BadConversion);
 
     if (tag == to)
-      return *this;
+      return copy();
 
     Value v(to);
 

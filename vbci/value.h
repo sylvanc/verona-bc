@@ -64,35 +64,41 @@ namespace vbci
 
   public:
     Value();
-    Value(bool b);
-    Value(uint8_t u8);
-    Value(uint16_t u16);
-    Value(uint32_t u32);
-    Value(uint64_t u64);
-    Value(int8_t i8);
-    Value(int16_t i16);
-    Value(int32_t i32);
-    Value(int64_t i64);
-    Value(float f32);
-    Value(double f64);
-    Value(void* ptr);
-    Value(Object* obj);
-    Value(Object* obj, bool ro);
-    Value(Array* arr);
-    Value(Cown* cown);
-    Value(Value& val, size_t frame);
-    Value(Object* obj, size_t f, bool ro);
-    Value(Array* arr, size_t idx, bool ro);
-    Value(Cown* cown, bool ro);
-    Value(Error error);
-    Value(Function* func);
-    Value(const Value& that);
+    explicit Value(bool b);
+    explicit Value(uint8_t u8);
+    explicit Value(uint16_t u16);
+    explicit Value(uint32_t u32);
+    explicit Value(uint64_t u64);
+    explicit Value(int8_t i8);
+    explicit Value(int16_t i16);
+    explicit Value(int32_t i32);
+    explicit Value(int64_t i64);
+    explicit Value(float f32);
+    explicit Value(double f64);
+    explicit Value(void* ptr);
+    explicit Value(Object* obj);
+    explicit Value(Object* obj, bool ro);
+    explicit Value(Array* arr);
+    explicit Value(Cown* cown);
+    explicit Value(Value& val, size_t frame);
+    explicit Value(Object* obj, size_t f, bool ro);
+    explicit Value(Array* arr, size_t idx, bool ro);
+    explicit Value(Cown* cown, bool ro);
+    explicit Value(Error error);
+    explicit Value(Function* func);
+
+    // Disable copy semantics, we don't want these implicit
+    Value(const Value& that) = delete;
+    Value& operator=(const Value& that) = delete;
+
+    Value copy() const;
+
+    // Allow move semantics, no body does a move by accident in C++
     Value(Value&& that) noexcept;
-    Value& operator=(const Value& that);
     Value& operator=(Value&& that) noexcept;
 
     template<typename T>
-    Value(ValueType t, T v) : tag(t)
+    explicit Value(ValueType t, T v) : tag(t)
     {
       set<T>(v);
     }
@@ -534,8 +540,10 @@ namespace vbci
     }
 
   private:
-    void inc(bool reg = true);
-    void dec(bool reg = true);
+    template<bool reg>
+    void inc();
+    template<bool reg>
+    void dec();
 
     struct nounop
     {

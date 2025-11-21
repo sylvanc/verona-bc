@@ -45,6 +45,14 @@ namespace vbci
 
     static std::pair<Function*, PC> debug_info();
 
+    // Disable copy semantics
+    Thread(const Thread&) = delete;
+    Thread& operator=(const Thread&) = delete;
+
+    // Allow move semantics
+    Thread(Thread&&) = default;
+    Thread& operator=(Thread&&) = default;
+
   private:
     Thread();
     static Thread& get();
@@ -54,7 +62,7 @@ namespace vbci
     void thread_run_sync(Function* func, Ts... argv)
     {
       assert(args == 0);
-      ((arg(args++) = argv), ...);
+      ((arg(args++) = std::forward<Ts>(argv)), ...);
       auto ret = thread_run(func);
 
       if (ret.is_error())

@@ -95,9 +95,10 @@ namespace vbci
       return prev;
     }
 
-    void dec(bool reg)
+    template <bool reg>
+    void dec()
     {
-      if (base_dec(reg))
+      if (base_dec<reg>())
         return;
 
       collect(this);
