@@ -24,6 +24,7 @@ int main(int argc, char** argv)
     std::filesystem::path bytecode_file;
     bool strip = false;
     bool reproducible = false;
+    bool build = false;
 
     void configure(CLI::App& cli) override
     {
@@ -33,6 +34,10 @@ int main(int argc, char** argv)
         "-s,--strip", strip, "Strip debug information from the bytecode.");
       cli.add_flag(
         "-r,--reproducible", reproducible, "Make the build reproducible.");
+      cli.callback([this, &cli]()
+      {
+        build = cli.got_subcommand("build");
+      });
     }
   };
 
@@ -46,6 +51,8 @@ int main(int argc, char** argv)
   if (state->error)
     return -1;
 
-  state->gen(opts.bytecode_file, opts.strip, opts.reproducible);
+  if (opts.build)
+    state->gen(opts.bytecode_file, opts.strip, opts.reproducible);
+
   return 0;
 }
