@@ -70,7 +70,7 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build/
-      run: ctest -C ${{matrix.build-type}} -j 4 ${{matrix.ctest-flags}} --output-on-failure --timeout 400 --interactive-debug-mode 0 
+      run: ctest -C ${{matrix.build-type}} -j 4 ${{matrix.ctest-flags}} --output-on-failure --timeout 390 --interactive-debug-mode 0 
 
   # Job to run clang-format and report errors
   format:
