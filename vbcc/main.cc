@@ -36,7 +36,7 @@ int main(int argc, char** argv)
         "-r,--reproducible", reproducible, "Make the build reproducible.");
       cli.callback([this, &cli]()
       {
-        build = cli.got_subcommand("build");
+        build = cli.check_name("build");
       });
     }
   };
