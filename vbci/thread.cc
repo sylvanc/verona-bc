@@ -1696,7 +1696,7 @@ namespace vbci
     if (!program->subtype(func->return_type, result_cown->content_type_id()))
       throw Value(Error::BadType);
 
-    result = result_cown;
+    result = Value(result_cown);
 
     // Slot 0 is the result cown.
     auto b = verona::rt::BehaviourCore::make(

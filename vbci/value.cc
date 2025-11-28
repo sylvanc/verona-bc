@@ -96,7 +96,7 @@ namespace vbci
 
   Value Value::null()
   {
-    return static_cast<void*>(nullptr);
+    return Value(static_cast<void*>(nullptr));
   }
 
   ValueType Value::type()
@@ -582,45 +582,45 @@ namespace vbci
     switch (tag)
     {
       case ValueType::None:
-        return static_cast<void*>(nullptr);
+        return Value(static_cast<void*>(nullptr));
       case ValueType::Bool:
-        return &b;
+        return Value(&b);
       case ValueType::I8:
-        return &i8;
+        return Value(&i8);
       case ValueType::I16:
-        return &i16;
+        return Value(&i16);
       case ValueType::I32:
-        return &i32;
+        return Value(&i32);
       case ValueType::I64:
-        return &i64;
+        return Value(&i64);
       case ValueType::U8:
-        return &u8;
+        return Value(&u8);
       case ValueType::U16:
-        return &u16;
+        return Value(&u16);
       case ValueType::U32:
-        return &u32;
+        return Value(&u32);
       case ValueType::U64:
-        return &u64;
+        return Value(&u64);
       case ValueType::F32:
-        return &f32;
+        return Value(&f32);
       case ValueType::F64:
-        return &f64;
+        return Value(&f64);
       case ValueType::ILong:
-        return &ilong;
+        return Value(&ilong);
       case ValueType::ULong:
-        return &ulong;
+        return Value(&ulong);
       case ValueType::ISize:
-        return &isize;
+        return Value(&isize);
       case ValueType::USize:
-        return &usize;
+        return Value(&usize);
       case ValueType::Ptr:
-        return &ptr;
+        return Value(&ptr);
       case ValueType::Object:
-        return obj->get_pointer();
+        return Value(obj->get_pointer());
       case ValueType::Array:
-        return arr->get_pointer();
+        return Value(arr->get_pointer());
       case ValueType::Function:
-        return func;
+        return Value(func);
       default:
         throw Value(Error::BadOperand);
     }
