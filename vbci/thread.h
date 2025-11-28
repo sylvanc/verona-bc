@@ -68,7 +68,7 @@ namespace vbci
     void thread_run_sync(Function* func, Ts... argv)
     {
       assert(args == 0);
-      ((arg(args++) = argv), ...);
+      ((arg(args++) = std::forward<Ts>(argv)), ...);
       auto ret = thread_run(func);
 
       if (ret.is_error())

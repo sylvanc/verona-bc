@@ -87,9 +87,15 @@ namespace vbci
     Value(Cown* cown, bool ro);
     Value(Error error);
     Value(Function* func);
-    Value(const Value& that);
+
+    // Disable copy semantics, we don't want these implicit
+    Value(const Value& that) = delete;
+    Value& operator=(const Value& that) = delete;
+
+    Value copy() const;
+
+    // Allow move semantics, no body does a move by accident in C++
     Value(Value&& that) noexcept;
-    Value& operator=(const Value& that);
     Value& operator=(Value&& that) noexcept;
 
     template<typename T>

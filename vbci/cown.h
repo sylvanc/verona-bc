@@ -65,7 +65,7 @@ namespace vbci
 
     Value load()
     {
-      return content;
+      return content.copy();
     }
 
     Value store(bool move, Value& v)
@@ -77,7 +77,7 @@ namespace vbci
       if (move)
         next = std::move(v);
       else
-        next = v;
+        next = v.copy();
 
       // Allow any cown to contain an error.
       if (

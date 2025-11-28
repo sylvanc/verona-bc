@@ -64,27 +64,18 @@ namespace vbci
       throw Value(Error::MethodNotFound);
   }
 
-  Value::Value(const Value& that)
+  Value Value::copy() const
   {
-    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
-    inc();
+    Value v;
+    std::memcpy(&v, this, sizeof(Value));
+    v.inc(true);
+    return v;
   }
 
   Value::Value(Value&& that) noexcept
   {
     std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
     that.tag = ValueType::Invalid;
-  }
-
-  Value& Value::operator=(const Value& that)
-  {
-    if (this == &that)
-      return *this;
-
-    dec();
-    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
-    inc();
-    return *this;
   }
 
   Value& Value::operator=(Value&& that) noexcept
@@ -639,7 +630,7 @@ namespace vbci
   {
     if (tag == ValueType::Cown)
     {
-      Value r = *this;
+      Value r = (*this).copy();
       r.readonly = true;
       return r;
     }
@@ -838,7 +829,9 @@ namespace vbci
     switch (tag)
     {
       case ValueType::RegisterRef:
-        v = *val;
+        // TODO: This is doing an incref that was implicit,
+        // the code around here needs to be fixed.
+        v = (*val).copy();
         break;
 
       case ValueType::FieldRef:
@@ -884,7 +877,7 @@ namespace vbci
         if (move)
           *val = std::move(v);
         else
-          *val = v;
+          *val = v.copy();
 
         return prev;
       }
@@ -914,7 +907,7 @@ namespace vbci
       throw Value(Error::BadConversion);
 
     if (tag == to)
-      return *this;
+      return copy();
 
     Value v(to);
 

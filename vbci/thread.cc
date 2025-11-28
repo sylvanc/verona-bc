@@ -568,7 +568,7 @@ namespace vbci
       {
         case Op::Global:
         {
-          process([](Local dst, Global g) INLINE { dst.reg = g.global; });
+          process([](Local dst, Global g) INLINE { dst = g.global.copy(); });
           break;
         }
 
@@ -884,7 +884,7 @@ namespace vbci
 
         case Op::Copy:
         {
-          process([](Local dst, Local src) INLINE { dst.reg = src.reg; });
+          process([](Local dst, Local src) INLINE { dst = src->copy(); });
           break;
         }
 
@@ -1007,7 +1007,7 @@ namespace vbci
 
         case Op::ArgCopy:
         {
-          process([](Local src, ArgReg dst) INLINE { dst.reg = src.reg; });
+          process([](Local src, ArgReg dst) INLINE { dst = src->copy(); });
           break;
         }
 
@@ -1128,7 +1128,7 @@ namespace vbci
               !ret.is_error() && !program.subtype(ret.type_id(), symbol.ret()))
               throw Value(Error::BadType);
 
-            dst.reg = ret;
+            dst = std::move(ret);
             frame.drop_args(num_args);
           });
           break;
