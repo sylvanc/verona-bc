@@ -51,6 +51,14 @@ namespace vbci
 
     static std::pair<Function*, PC> debug_info();
 
+    // Disable copy semantics
+    Thread(const Thread&) = delete;
+    Thread& operator=(const Thread&) = delete;
+
+    // Allow move semantics
+    Thread(Thread&&) = delete;
+    Thread& operator=(Thread&&) = delete;
+
   private:
     Thread();
     static Thread& get();
