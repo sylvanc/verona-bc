@@ -1,0 +1,84 @@
+vbcc
+statements
+(top
+  {}
+  (class
+    (classid 4:@Foo)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (union
+          (classid 4:@Foo)
+          (bool))))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels))
+  (labelid 5:^main)
+  (const
+    (localid 5:$true)
+    (bool)
+    (true))
+  (region
+    (localid 3:$a1)
+    (rc)
+    (classid 4:@Foo)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$true))))
+  (heap
+    (localid 3:$a2)
+    (localid 3:$a1)
+    (classid 4:@Foo)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$true))))
+  (heap
+    (localid 3:$a3)
+    (localid 3:$a2)
+    (classid 4:@Foo)
+    (args
+      (arg
+        (argcopy)
+        (localid 5:$true))))
+  (fieldref
+    (localid 3:$r2)
+    (arg
+      (argcopy)
+      (localid 3:$a2))
+    (fieldid 2:@f))
+  (fieldref
+    (localid 3:$r3)
+    (arg
+      (argcopy)
+      (localid 3:$a3))
+    (fieldid 2:@f))
+  (store
+    (localid 5:$old1)
+    (localid 3:$r2)
+    (arg
+      (argcopy)
+      (localid 3:$a1)))
+  (store
+    (localid 5:$old2)
+    (localid 3:$r2)
+    (arg
+      (argcopy)
+      (localid 3:$a1)))
+  (store
+    (localid 5:$old3)
+    (localid 3:$r2)
+    (arg
+      (argcopy)
+      (localid 3:$a1)))
+  (const
+    (localid 8:$ret_val)
+    (i32)
+    (int 2:42))
+  (ret
+    (localid 8:$ret_val)))

@@ -1,0 +1,17 @@
+
+class @Foo
+    @f : @Foo | bool
+    
+func @main() : i32
+    $true = const bool true
+    $a1 = region rc @Foo($true)
+    $a2 = heap $a1 @Foo($true)
+    $a3 = heap $a2 @Foo($true)
+    $r2 = ref $a2 @f
+    $r3 = ref $a3 @f
+    $old1 = store $r2 $a1
+    $old2 = store $r2 $a1
+    $old3 = store $r2 $a1
+
+    $ret_val = const i32 42
+    ret $ret_val
