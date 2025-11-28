@@ -1,6 +1,7 @@
 #pragma once
 
 #include "frame.h"
+#include "logging.h"
 #include "platform.h"
 #include "program.h"
 #include "stack.h"
@@ -13,6 +14,8 @@ namespace vbci
 {
   struct Thread
   {
+    friend struct Operands;
+
   private:
     Stack stack;
     std::vector<Frame> frames;
@@ -27,6 +30,9 @@ namespace vbci
 
     std::vector<void*> ffi_arg_addrs;
     std::vector<Value*> ffi_arg_vals;
+#ifndef NDEBUG
+    logging::Trace instruction_log;
+#endif
 
   public:
     static Value run_async(uint32_t type_id, Function* func);
@@ -63,6 +69,9 @@ namespace vbci
       ret.drop();
     }
 
+    template<typename F>
+    void process(F f);
+
     void thread_run_behavior(verona::rt::Work* work);
     Value thread_run(Function* func);
     void step();
@@ -76,6 +85,16 @@ namespace vbci
     Value& arg(size_t idx);
     void drop_args();
     void queue_behavior(Value& result, uint32_t type_id, Function* func);
+
+    template<typename... Args>
+    SNMALLOC_FAST_PATH void trace_instruction(Args&&... args)
+    {
+#ifndef NDEBUG
+      (instruction_log << ... << std::forward<Args>(args));
+#else
+      snmalloc::UNUSED(args...);
+#endif
+    }
 
     template<typename T = size_t>
     SNMALLOC_FAST_PATH T leb()

@@ -78,7 +78,10 @@ namespace vbci
   void Frame::drop()
   {
     for (size_t i = 0; i < func->registers; i++)
+    {
+      LOG(Trace) << "Dropping frame local " << i;
       locals[base + i].drop();
+    }
   }
 
   void Frame::drop_args(size_t& args)

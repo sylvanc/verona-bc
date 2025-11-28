@@ -8,6 +8,7 @@
 #include <functional>
 #include <limits>
 #include <numbers>
+#include <ostream>
 
 namespace vbci
 {
@@ -144,7 +145,7 @@ namespace vbci
     Function* method(size_t w);
     Value convert(ValueType to);
 
-    std::string to_string();
+    std::string to_string() const;
 
 #define make_unop(name, func) \
   struct name \
@@ -856,4 +857,72 @@ namespace vbci
       }
     }
   };
+
+  inline std::ostream& operator<<(std::ostream& os, ValueType vt)
+  {
+    switch (vt)
+    {
+      case ValueType::None:
+        return os << "None";
+      case ValueType::Bool:
+        return os << "Bool";
+      case ValueType::I8:
+        return os << "I8";
+      case ValueType::I16:
+        return os << "I16";
+      case ValueType::I32:
+        return os << "I32";
+      case ValueType::I64:
+        return os << "I64";
+      case ValueType::U8:
+        return os << "U8";
+      case ValueType::U16:
+        return os << "U16";
+      case ValueType::U32:
+        return os << "U32";
+      case ValueType::U64:
+        return os << "U64";
+      case ValueType::ILong:
+        return os << "ILong";
+      case ValueType::ULong:
+        return os << "ULong";
+      case ValueType::ISize:
+        return os << "ISize";
+      case ValueType::USize:
+        return os << "USize";
+      case ValueType::F32:
+        return os << "F32";
+      case ValueType::F64:
+        return os << "F64";
+      case ValueType::Ptr:
+        return os << "Ptr";
+      case ValueType::Object:
+        return os << "Object";
+      case ValueType::Array:
+        return os << "Array";
+      case ValueType::Cown:
+        return os << "Cown";
+      case ValueType::RegisterRef:
+        return os << "RegisterRef";
+      case ValueType::FieldRef:
+        return os << "FieldRef";
+      case ValueType::ArrayRef:
+        return os << "ArrayRef";
+      case ValueType::CownRef:
+        return os << "CownRef";
+      case ValueType::Function:
+        return os << "Function";
+      case ValueType::Error:
+        return os << "Error";
+      case ValueType::Invalid:
+        return os << "Invalid";
+      default:
+        return os << "Unknown";
+    }
+  }
+
+  inline std::ostream& operator<<(std::ostream& os, const Value& v)
+  {
+    return os << v.to_string();
+  }
 }

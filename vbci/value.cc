@@ -926,7 +926,7 @@ namespace vbci
     return v;
   }
 
-  std::string Value::to_string()
+  std::string Value::to_string() const
   {
     switch (tag)
     {
