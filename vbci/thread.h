@@ -78,7 +78,7 @@ namespace vbci
     void queue_behavior(Value& result, uint32_t type_id, Function* func);
 
     template<typename T = size_t>
-    T leb()
+    SNMALLOC_FAST_PATH T leb()
     {
       if constexpr (
         (std::is_integral_v<T> && std::is_signed_v<T>) ||

@@ -95,14 +95,14 @@ namespace vbci
     return &ffi_type_value;
   }
 
-  int64_t Program::sleb(size_t& pc)
+  SNMALLOC_FAST_PATH int64_t Program::sleb(size_t& pc)
   {
     // This uses zigzag encoding.
     auto value = uleb(pc);
     return (value >> 1) ^ -(value & 1);
   }
 
-  uint64_t Program::uleb(size_t& pc)
+  SNMALLOC_FAST_PATH uint64_t Program::uleb(size_t& pc)
   {
     constexpr uint64_t max_shift = (sizeof(uint64_t) * 8) - 1;
     uint64_t value = 0;
@@ -110,7 +110,7 @@ namespace vbci
     for (uint64_t shift = 0; shift <= max_shift; shift += 7)
     {
       value |= (uint64_t(content.at(pc)) & 0x7F) << shift;
-      if ((content.at(pc++) & 0x80) == 0) [[likely]]
+      if (SNMALLOC_LIKELY((content.at(pc++) & 0x80) == 0)) [[likely]]
         break;
     }
 
