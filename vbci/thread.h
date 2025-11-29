@@ -77,9 +77,6 @@ namespace vbci
       ret.drop();
     }
 
-    template<typename F>
-    void process(F f);
-
     void thread_run_behavior(verona::rt::Work* work);
     Value thread_run(Function* func);
     void step();

@@ -323,12 +323,6 @@ namespace vbci
     verona::rt::BehaviourCore::finished(work);
   }
 
-  template<typename F>
-  SNMALLOC_FAST_PATH void Thread::process(F f)
-  {
-    Operands::process(*this, f);
-  }
-
   Value Thread::thread_run(Function* func)
   {
     auto depth = frames.size();
@@ -560,6 +554,10 @@ namespace vbci
     assert(frame);
     current_pc = frame->pc;
     auto op = leb<Op>();
+
+    auto process = [this](auto f) INLINE {
+      Operands::process(*this, f);
+    };
 
     trace_instruction("OP:", op);
     try
