@@ -64,9 +64,8 @@ namespace vc
 
     void reify_lookups();
 
-    bool is_type_builtin(Node& type);
-    bool is_type_float(Node& type);
-    bool is_type_int_or_float(Node& type);
+    void concrete_types(Nodes types, Node type);
+    Nodes literal_types(Nodes types, bool int_lit);
     void pick_literal_type(Node node);
   };
 }

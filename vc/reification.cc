@@ -160,73 +160,28 @@ namespace vc
           return;
 
         // TODO: type inference
-        // Const
         // RegisterRef, FieldRef, ArrayRef, ArrayRefConst
         // Load, Store
         // Lookup, CallDyn, When
 
-        // Don't bother with upper bounds for the use-side of intrinsics that
-        // are only used in builtin.
+        // Don't bother with bounds for intrinsics that are only used in
+        // builtin, unless they may introduce a new reified type.
         if (node == TypeName)
           reify_typename(node);
-        else if (node == Function)
-          bounds.ret().use(node / Type);
         else if (node == ParamDef)
           bounds[node / Ident].assign(node / Type);
         else if (node->in({Return, Raise, Throw}))
-          uf.unite_ret(node / LocalId);
+          bounds[node / LocalId].use(node->parent(Function) / Type);
         else if (node == New)
           reify_new(node);
         else if (node->in({NewArray, NewArrayConst}))
           reify_newarray(node);
         else if (node == ConstStr)
           reify_string(node);
-        else if (node->in({Eq, Ne, Typetest}))
-          bounds[node / LocalId].assign(reify_builtin("bool"));
-        else if (node->in({Lt, Le, Gt, Ge}))
-        {
-          uf.unite(node / Lhs, node / Rhs);
-          bounds[node / LocalId].assign(reify_builtin("bool"));
-        }
-        else if (node->in(
-                   {Add,
-                    Sub,
-                    Mul,
-                    Div,
-                    Mod,
-                    And,
-                    Or,
-                    Xor,
-                    Shl,
-                    Shr,
-                    Pow,
-                    LogBase,
-                    Atan2}))
-        {
-          uf.unite(node / LocalId, node / Lhs);
+        else if (node == Copy)
           uf.unite(node / LocalId, node / Rhs);
-        }
-        else if (node->in(
-                   {Copy,
-                    Read,
-                    Neg,
-                    Not,
-                    Abs,
-                    Ceil,
-                    Floor,
-                    Exp,
-                    Log,
-                    Sqrt,
-                    Cbrt,
-                    IsInf,
-                    IsNaN,
-                    Sin,
-                    Cos,
-                    Tan,
-                    Asin,
-                    Acos,
-                    Atan}))
-          uf.unite(node / LocalId, node / Rhs);
+        else if (node->in({Eq, Ne, Lt, Le, Gt, Ge, Typetest}))
+          bounds[node / LocalId].assign(reify_builtin("bool"));
         else if (node->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
           bounds[node / LocalId].assign(reify_builtin("f64"));
         else if (node == Bits)
@@ -553,6 +508,19 @@ namespace vc
 
   void Reification::reify_lookup(Node node)
   {
+    // TODO: method lookups
+    // unions and intersections?
+    // must exist on every type in a union, any type in an intersection
+    // use subtyping with type variables?
+    // auto receivers = uf.group(node / Rhs);
+    // Nodes types;
+
+    // for (auto& r : receivers)
+    // {
+    //   for (auto& t : bounds[r].lower)
+    //     concrete_types(types, t);
+    // }
+
     rs->add_lookup(node);
   }
 
@@ -636,43 +604,54 @@ namespace vc
       });
   }
 
+  void Reification::concrete_types(Nodes types, Node type)
+  {
+    type->traverse(
+      [&](Node& n) { return n->in({Isect, Union, TypeNameReified}); },
+      [&](Node& n) {
+        if (n == TypeNameReified)
+          types.push_back(n);
+
+        return true;
+      });
+  }
+
+  Nodes Reification::literal_types(Nodes types, bool int_lit)
+  {
+    Nodes result;
+
+    for (auto& t : types)
+    {
+      if (t != TypeNameReified)
+        continue;
+
+      auto& path = t->front();
+
+      if (
+        (path->size() == 2) && (path->front()->location().view() == "builtin"))
+      {
+        auto cls = path->back()->location().view();
+
+        if (
+          (cls == "f32") || (cls == "f64") ||
+          (int_lit &&
+           ((cls == "i8") || (cls == "i16") || (cls == "i32") ||
+            (cls == "i64") || (cls == "u8") || (cls == "u16") ||
+            (cls == "u32") || (cls == "u64") || (cls == "ilong") ||
+            (cls == "ulong") || (cls == "isize") || (cls == "usize"))))
+          result.push_back(t);
+      }
+    }
+
+    return result;
+  }
+
   void Reification::pick_literal_type(Node node)
   {
     if (!(node / Type)->in({U64, F64}))
       return;
 
-    bool int_lit = (node / Type) == U64;
     Nodes candidates;
-
-    auto find = [&](Node& type) {
-      type->traverse(
-        [&](Node& n) { return n->in({Isect, Union, TypeNameReified}); },
-        [&](Node& n) {
-          if (n == TypeNameReified)
-          {
-            auto& path = n->front();
-
-            if (
-              (path->size() == 2) &&
-              (path->front()->location().view() == "builtin"))
-            {
-              auto cls = path->back()->location().view();
-
-              if (
-                (cls == "f32") || (cls == "f64") ||
-                (int_lit &&
-                 ((cls == "i8") || (cls == "i16") || (cls == "i32") ||
-                  (cls == "i64") || (cls == "u8") || (cls == "u16") ||
-                  (cls == "u32") || (cls == "u64") || (cls == "ilong") ||
-                  (cls == "ulong") || (cls == "isize") || (cls == "usize"))))
-                candidates.push_back(n);
-            }
-          }
-
-          return true;
-        });
-    };
-
     auto locals = uf.group(node / LocalId);
 
     for (auto& l : locals)
@@ -681,10 +660,12 @@ namespace vc
       assert(b.lower.empty());
 
       for (auto t : b.upper)
-        find(t);
+        concrete_types(candidates, t);
     }
 
     // TODO: just use the first one?
+    // a concrete type that isn't from a union is "more precise".
+    candidates = literal_types(candidates, (node / Type) == U64);
     Node t = candidates.empty() ? reify_builtin("u64") : candidates.front();
     bounds[node / LocalId].assign(t);
 

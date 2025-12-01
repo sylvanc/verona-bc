@@ -1,7 +1,5 @@
 #include "subtype.h"
 
-#include "bounds.h"
-
 namespace vc
 {
   struct Sequent
@@ -13,7 +11,6 @@ namespace vc
     Nodes r_atomic;
 
     BoundsMap bounds;
-    UnionFind uf;
 
     bool sub_reduce(Sequent&& that)
     {
@@ -21,7 +18,6 @@ namespace vc
         return false;
 
       bounds.merge(that.bounds);
-      uf.merge(that.uf);
       return true;
     }
 
@@ -150,9 +146,9 @@ namespace vc
     bool subtype_atomic(Node& l, Node& r)
     {
       // The atomic types are tuples, ref types, type names, and primitives.
-      // Tuples must be the same arity and each element must be a subtype.
       if (r == TupleType)
       {
+        // Tuples must be the same arity and each element must be a subtype.
         return (l == TupleType) &&
           std::equal(
                  l->begin(),
@@ -202,13 +198,6 @@ namespace vc
     {
       if (l == TypeVar)
       {
-        if (r == TypeVar)
-        {
-          // TODO: is this right, or should r be an upper bounds of l?
-          uf.unite(l, r);
-          return true;
-        }
-
         // r is upper bounds for l
         bounds[l].use(r);
         return true;
@@ -233,5 +222,18 @@ namespace vc
     seq.l_pending.push_back(l->front());
     seq.r_pending.push_back(r->front());
     return seq.reduce();
+  }
+
+  bool subtype(const Node& l, const Node& r, BoundsMap& bounds)
+  {
+    assert(l == Type);
+    assert(r == Type);
+
+    Sequent seq;
+    seq.l_pending.push_back(l->front());
+    seq.r_pending.push_back(r->front());
+    bool res = seq.reduce();
+    bounds = std::move(seq.bounds);
+    return res;
   }
 }

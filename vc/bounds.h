@@ -4,8 +4,6 @@
 
 namespace vc
 {
-  inline const auto ret_loc = Location("$return");
-
   struct UnionFind
   {
     std::map<Location, Location> parent;
@@ -31,12 +29,6 @@ namespace vc
       assert(a->in({Ident, LocalId, TypeVar}));
       assert(b->in({Ident, LocalId, TypeVar}));
       unite(a->location(), b->location());
-    }
-
-    void unite_ret(const Node& a)
-    {
-      assert(a->in({Ident, LocalId, TypeVar}));
-      unite(a->location(), ret_loc);
     }
 
     void unite(const Location& a, const Location& b)
@@ -135,11 +127,6 @@ namespace vc
     {
       assert(node->in({Ident, LocalId, TypeVar}));
       return map[node->location()];
-    }
-
-    Bounds& ret()
-    {
-      return map[ret_loc];
     }
 
     void merge(BoundsMap& that)
