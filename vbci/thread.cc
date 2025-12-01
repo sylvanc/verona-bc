@@ -154,6 +154,17 @@ namespace vbci
       process<F, Args..., Class&>(self, fun, std::forward<Args>(args)..., cls);
     }
 
+    template<typename F, typename... Args>
+    SNMALLOC_FAST_PATH static void
+    load_function_ptr_param(Thread& self, F fun, Args... args)
+    {
+      size_t func_id = self.leb();
+      Function* func = self.program->function(func_id);
+      self.trace_instruction(" FunctionPtr=", func_id);
+      process<F, Args..., Function*>(
+        self, fun, std::forward<Args>(args)..., func);
+    }
+
     // Tail-recursive process passing the current parameter index
     template<typename F, typename... Args>
     SNMALLOC_FAST_PATH static void process(Thread& self, F fun, Args... args)
@@ -228,6 +239,11 @@ namespace vbci
           ArgReg arg{self.frame->arg(self.args++)};
           process<F, Args..., ArgReg>(
             self, fun, std::forward<Args>(args)..., arg);
+        }
+        else if constexpr (std::is_same_v<T, Function*>)
+        {
+          load_function_ptr_param<F, Args...>(
+            self, fun, std::forward<Args>(args)...);
         }
         else
         {
@@ -555,9 +571,7 @@ namespace vbci
     current_pc = frame->pc;
     auto op = leb<Op>();
 
-    auto process = [this](auto f) INLINE {
-      Operands::process(*this, f);
-    };
+    auto process = [this](auto f) INLINE { Operands::process(*this, f); };
 
     trace_instruction("OP:", op);
     try
@@ -970,8 +984,7 @@ namespace vbci
 
         case Op::LookupStatic:
         {
-          process([](Local dst, Constant<size_t> func_id, Program& program)
-                    INLINE { dst = Value(program.function(func_id)); });
+          process([](Local dst, Function* func) INLINE { dst = Value(func); });
           break;
         }
 
@@ -1011,13 +1024,8 @@ namespace vbci
 
         case Op::CallStatic:
         {
-          process([](
-                    Constant<size_t> dst_id,
-                    Constant<size_t> func_id,
-                    Thread& self,
-                    Program& program) INLINE {
-            self.pushframe(program.function(func_id), dst_id, CallType::Call);
-          });
+          process([](Constant<size_t> dst_id, Function* func, Thread& self)
+                    INLINE { self.pushframe(func, dst_id, CallType::Call); });
           break;
         }
 
@@ -1031,14 +1039,9 @@ namespace vbci
 
         case Op::SubcallStatic:
         {
-          process([](
-                    Constant<size_t> dst_id,
-                    Constant<size_t> func_id,
-                    Thread& self,
-                    Program& program) INLINE {
-            self.pushframe(
-              program.function(func_id), dst_id, CallType::Subcall);
-          });
+          process(
+            [](Constant<size_t> dst_id, Function* func, Thread& self)
+              INLINE { self.pushframe(func, dst_id, CallType::Subcall); });
           break;
         }
 
@@ -1052,13 +1055,8 @@ namespace vbci
 
         case Op::TryStatic:
         {
-          process([](
-                    Constant<size_t> dst_id,
-                    Constant<size_t> func_id,
-                    Thread& self,
-                    Program& program) INLINE {
-            self.pushframe(program.function(func_id), dst_id, CallType::Catch);
-          });
+          process([](Constant<size_t> dst_id, Function* func, Thread& self)
+                    INLINE { self.pushframe(func, dst_id, CallType::Catch); });
           break;
         }
 
