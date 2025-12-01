@@ -1,6 +1,7 @@
 #pragma once
 
 #include "frame.h"
+#include "logging.h"
 #include "platform.h"
 #include "program.h"
 #include "stack.h"
@@ -13,6 +14,8 @@ namespace vbci
 {
   struct Thread
   {
+    friend struct Operands;
+
   private:
     Stack stack;
     std::vector<Frame> frames;
@@ -27,6 +30,9 @@ namespace vbci
 
     std::vector<void*> ffi_arg_addrs;
     std::vector<Value*> ffi_arg_vals;
+#ifndef NDEBUG
+    logging::Trace instruction_log;
+#endif
 
   public:
     static Value run_async(uint32_t type_id, Function* func);
@@ -45,6 +51,14 @@ namespace vbci
 
     static std::pair<Function*, PC> debug_info();
 
+    // Disable copy semantics
+    Thread(const Thread&) = delete;
+    Thread& operator=(const Thread&) = delete;
+
+    // Allow move semantics
+    Thread(Thread&&) = delete;
+    Thread& operator=(Thread&&) = delete;
+
   private:
     Thread();
     static Thread& get();
@@ -54,7 +68,7 @@ namespace vbci
     void thread_run_sync(Function* func, Ts... argv)
     {
       assert(args == 0);
-      ((arg(args++) = argv), ...);
+      ((arg(args++) = std::forward<Ts>(argv)), ...);
       auto ret = thread_run(func);
 
       if (ret.is_error())
@@ -77,8 +91,18 @@ namespace vbci
     void drop_args();
     void queue_behavior(Value& result, uint32_t type_id, Function* func);
 
+    template<typename... Args>
+    SNMALLOC_FAST_PATH void trace_instruction(Args&&... args)
+    {
+#ifndef NDEBUG
+      (instruction_log << ... << std::forward<Args>(args));
+#else
+      snmalloc::UNUSED(args...);
+#endif
+    }
+
     template<typename T = size_t>
-    T leb()
+    SNMALLOC_FAST_PATH T leb()
     {
       if constexpr (
         (std::is_integral_v<T> && std::is_signed_v<T>) ||

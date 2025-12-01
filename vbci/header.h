@@ -253,7 +253,7 @@ namespace vbci
       return rc;
     }
 
-    Location location()
+    Location location() const
     {
       return loc;
     }

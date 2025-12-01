@@ -23,10 +23,10 @@ namespace vbci
       return new (mem) Object(loc, cls);
     }
 
-    Object& init(Frame* frame, Class& cls)
+    Object& init(Frame& frame, Class& cls)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        store<true>(true, i, frame->arg(i));
+        store<true>(true, i, frame.arg(i));
 
       return *this;
     }

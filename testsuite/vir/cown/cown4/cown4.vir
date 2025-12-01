@@ -1,0 +1,25 @@
+
+class @BoolObject
+    @f : bool
+
+type @Body = @BoolObject | bool
+
+func @behavior0 () : @Body
+    $true = const bool true
+    ret $true
+
+func @behavior1 ($cown1 : ref @Body) : @Body
+    $true = const bool true
+    $a1 = new @BoolObject($true)
+    $old1 = store $cown1 $true
+    $old2 = store $cown1 $a1
+    $old3 = store $cown1 $true
+    $old4 = store $cown1 $a1
+    ret $true
+    
+func @main() : i32 
+    $cown1 = when @behavior0() : @Body
+    $cown2 = when @behavior1($cown1) : @Body
+
+    $ret_val = const i32 42 
+    ret $ret_val

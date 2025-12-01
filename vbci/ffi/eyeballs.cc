@@ -25,7 +25,7 @@ namespace vbci
 
     Eyeballs(
       Value&& arg, Function* cb, const char* host, const char* port, int delay)
-    : arg(arg),
+    : arg(std::move(arg)),
       cb(cb),
       host(host),
       port(port),
@@ -77,7 +77,7 @@ namespace vbci
     {
       if (status < 0)
       {
-        Thread::run_sync(cb, arg, Value::null(), Value(status));
+        Thread::run_sync(cb, arg.copy(), Value::null(), Value(status));
         return;
       }
 
@@ -130,7 +130,7 @@ namespace vbci
         }
 
         close_all();
-        Thread::run_sync(cb, arg, Value(winner), Value(status));
+        Thread::run_sync(cb, arg.copy(), Value(winner), Value(status));
       }
 
       if (results < next)
@@ -139,7 +139,7 @@ namespace vbci
       if (!winner)
       {
         close_all();
-        Thread::run_sync(cb, arg, Value::null(), Value(status));
+        Thread::run_sync(cb, arg.copy(), Value::null(), Value(status));
       }
 
       delete this;

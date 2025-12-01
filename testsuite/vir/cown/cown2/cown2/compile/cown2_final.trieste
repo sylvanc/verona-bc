@@ -1,0 +1,82 @@
+vbcc
+liveness
+(top
+  {}
+  (class
+    (classid 11:@BoolObject)
+    (fields
+      (field
+        (fieldid 2:@f)
+        (bool)))
+    (methods))
+  (func
+    (functionid 10:@behavior0)
+    (params)
+    (classid 11:@BoolObject)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^behavior0)
+        (body
+          (const
+            (localid 5:$true)
+            (bool)
+            (true))
+          (new
+            (localid 8:$ret_val)
+            (classid 11:@BoolObject)
+            (args
+              (arg
+                (argmove)
+                (localid 5:$true)))))
+        (ret
+          (localid 8:$ret_val)))))
+  (func
+    (functionid 10:@behavior1)
+    (params
+      (param
+        (localid 6:$cown1)
+        (ref
+          (classid 11:@BoolObject))))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^behavior1)
+        (body
+          (const
+            (localid 8:$ret_val)
+            (i32)
+            (int 2:42)))
+        (ret
+          (localid 8:$ret_val)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (when
+            (localid 6:$cown1)
+            (functionid 10:@behavior0)
+            (args)
+            (cown
+              (classid 11:@BoolObject)))
+          (when
+            (localid 6:$cown2)
+            (functionid 10:@behavior1)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$cown1)))
+            (cown
+              (i32)))
+          (const
+            (localid 8:$ret_val)
+            (i32)
+            (int 2:42)))
+        (ret
+          (localid 8:$ret_val))))))

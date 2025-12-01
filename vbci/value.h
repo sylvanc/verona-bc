@@ -8,6 +8,7 @@
 #include <functional>
 #include <limits>
 #include <numbers>
+#include <ostream>
 
 namespace vbci
 {
@@ -64,35 +65,41 @@ namespace vbci
 
   public:
     Value();
-    Value(bool b);
-    Value(uint8_t u8);
-    Value(uint16_t u16);
-    Value(uint32_t u32);
-    Value(uint64_t u64);
-    Value(int8_t i8);
-    Value(int16_t i16);
-    Value(int32_t i32);
-    Value(int64_t i64);
-    Value(float f32);
-    Value(double f64);
-    Value(void* ptr);
-    Value(Object* obj);
-    Value(Object* obj, bool ro);
-    Value(Array* arr);
-    Value(Cown* cown);
-    Value(Value& val, size_t frame);
-    Value(Object* obj, size_t f, bool ro);
-    Value(Array* arr, size_t idx, bool ro);
-    Value(Cown* cown, bool ro);
-    Value(Error error);
-    Value(Function* func);
-    Value(const Value& that);
+    explicit Value(bool b);
+    explicit Value(uint8_t u8);
+    explicit Value(uint16_t u16);
+    explicit Value(uint32_t u32);
+    explicit Value(uint64_t u64);
+    explicit Value(int8_t i8);
+    explicit Value(int16_t i16);
+    explicit Value(int32_t i32);
+    explicit Value(int64_t i64);
+    explicit Value(float f32);
+    explicit Value(double f64);
+    explicit Value(void* ptr);
+    explicit Value(Object* obj);
+    explicit Value(Object* obj, bool ro);
+    explicit Value(Array* arr);
+    explicit Value(Cown* cown);
+    explicit Value(Value& val, size_t frame);
+    explicit Value(Object* obj, size_t f, bool ro);
+    explicit Value(Array* arr, size_t idx, bool ro);
+    explicit Value(Cown* cown, bool ro);
+    explicit Value(Error error);
+    explicit Value(Function* func);
+
+    // Disable copy semantics, we don't want these implicit
+    Value(const Value& that) = delete;
+    Value& operator=(const Value& that) = delete;
+
+    Value copy() const;
+
+    // Allow move semantics, no body does a move by accident in C++
     Value(Value&& that) noexcept;
-    Value& operator=(const Value& that);
     Value& operator=(Value&& that) noexcept;
 
     template<typename T>
-    Value(ValueType t, T v) : tag(t)
+    explicit Value(ValueType t, T v) : tag(t)
     {
       set<T>(v);
     }
@@ -127,11 +134,11 @@ namespace vbci
     bool get_bool();
     int32_t get_i32();
     Cown* get_cown();
-    Header* get_header();
+    Header* get_header() const;
     Function* function();
     size_t get_size();
 
-    Location location();
+    Location location() const;
     Region* region();
     void immortalize();
 
@@ -144,7 +151,7 @@ namespace vbci
     Function* method(size_t w);
     Value convert(ValueType to);
 
-    std::string to_string();
+    std::string to_string() const;
 
 #define make_unop(name, func) \
   struct name \
@@ -229,95 +236,95 @@ namespace vbci
     Value op_eq(Value& v)
     {
       if (tag != v.tag)
-        return false;
+        return Value(false);
 
       switch (tag)
       {
         case ValueType::None:
-          return true;
+          return Value(true);
 
         case ValueType::Bool:
-          return b == v.b;
+          return Value(b == v.b);
 
         case ValueType::I8:
-          return i8 == v.i8;
+          return Value(i8 == v.i8);
 
         case ValueType::I16:
-          return i16 == v.i16;
+          return Value(i16 == v.i16);
 
         case ValueType::I32:
-          return i32 == v.i32;
+          return Value(i32 == v.i32);
 
         case ValueType::I64:
-          return i64 == v.i64;
+          return Value(i64 == v.i64);
 
         case ValueType::U8:
-          return u8 == v.u8;
+          return Value(u8 == v.u8);
 
         case ValueType::U16:
-          return u16 == v.u16;
+          return Value(u16 == v.u16);
 
         case ValueType::U32:
-          return u32 == v.u32;
+          return Value(u32 == v.u32);
 
         case ValueType::U64:
-          return u64 == v.u64;
+          return Value(u64 == v.u64);
 
         case ValueType::ILong:
-          return ilong == v.ilong;
+          return Value(ilong == v.ilong);
 
         case ValueType::ULong:
-          return ulong == v.ulong;
+          return Value(ulong == v.ulong);
 
         case ValueType::ISize:
-          return isize == v.isize;
+          return Value(isize == v.isize);
 
         case ValueType::USize:
-          return usize == v.usize;
+          return Value(usize == v.usize);
 
         case ValueType::F32:
-          return f32 == v.f32;
+          return Value(f32 == v.f32);
 
         case ValueType::F64:
-          return f64 == v.f64;
+          return Value(f64 == v.f64);
 
         case ValueType::Ptr:
-          return ptr == v.ptr;
+          return Value(ptr == v.ptr);
 
         case ValueType::Object:
-          return obj == v.obj;
+          return Value(obj == v.obj);
 
         case ValueType::Array:
-          return arr == v.arr;
+          return Value(arr == v.arr);
 
         case ValueType::Cown:
-          return cown == v.cown;
+          return Value(cown == v.cown);
 
         case ValueType::RegisterRef:
-          return val == v.val;
+          return Value(val == v.val);
 
         case ValueType::FieldRef:
-          return (obj == v.obj) && (idx == v.idx);
+          return Value((obj == v.obj) && (idx == v.idx));
 
         case ValueType::ArrayRef:
-          return (arr == v.arr) && (idx == v.idx);
+          return Value((arr == v.arr) && (idx == v.idx));
 
         case ValueType::CownRef:
-          return cown == v.cown;
+          return Value(cown == v.cown);
 
         case ValueType::Function:
-          return func == v.func;
+          return Value(func == v.func);
 
         case ValueType::Error:
-          return err.error == v.err.error;
+          return Value(err.error == v.err.error);
 
         case ValueType::Invalid:
-          return true;
+          return Value(true);
 
         default:
           // Unreachable.
           assert(false);
-          return false;
+          return Value(false);
       }
     }
 
@@ -587,31 +594,31 @@ namespace vbci
       switch (tag)
       {
         case ValueType::Bool:
-          return OpB{}(b);
+          return Value(OpB{}(b));
 
         case ValueType::I8:
-          return OpI{}(i8);
+          return Value(OpI{}(i8));
 
         case ValueType::I16:
-          return OpI{}(i16);
+          return Value(OpI{}(i16));
 
         case ValueType::I32:
-          return OpI{}(i32);
+          return Value(OpI{}(i32));
 
         case ValueType::I64:
-          return OpI{}(i64);
+          return Value(OpI{}(i64));
 
         case ValueType::U8:
-          return OpU{}(u8);
+          return Value(OpU{}(u8));
 
         case ValueType::U16:
-          return OpU{}(u16);
+          return Value(OpU{}(u16));
 
         case ValueType::U32:
-          return OpU{}(u32);
+          return Value(OpU{}(u32));
 
         case ValueType::U64:
-          return OpU{}(u64);
+          return Value(OpU{}(u64));
 
         case ValueType::ILong:
           return platform_tag(this->tag, Value(OpI{}(ilong)));
@@ -626,10 +633,10 @@ namespace vbci
           return platform_tag(this->tag, Value(OpU{}(usize)));
 
         case ValueType::F32:
-          return OpF{}(f32);
+          return Value(OpF{}(f32));
 
         case ValueType::F64:
-          return OpF{}(f64);
+          return Value(OpF{}(f64));
 
         default:
           throw Value(Error::BadOperand);
@@ -649,31 +656,31 @@ namespace vbci
       switch (this->tag)
       {
         case ValueType::Bool:
-          return OpB{}(b, v.b);
+          return Value(OpB{}(b, v.b));
 
         case ValueType::I8:
-          return OpI{}(i8, v.i8);
+          return Value(OpI{}(i8, v.i8));
 
         case ValueType::I16:
-          return OpI{}(i16, v.i16);
+          return Value(OpI{}(i16, v.i16));
 
         case ValueType::I32:
-          return OpI{}(i32, v.i32);
+          return Value(OpI{}(i32, v.i32));
 
         case ValueType::I64:
-          return OpI{}(i64, v.i64);
+          return Value(OpI{}(i64, v.i64));
 
         case ValueType::U8:
-          return OpU{}(u8, v.u8);
+          return Value(OpU{}(u8, v.u8));
 
         case ValueType::U16:
-          return OpU{}(u16, v.u16);
+          return Value(OpU{}(u16, v.u16));
 
         case ValueType::U32:
-          return OpU{}(u32, v.u32);
+          return Value(OpU{}(u32, v.u32));
 
         case ValueType::U64:
-          return OpU{}(u64, v.u64);
+          return Value(OpU{}(u64, v.u64));
 
         case ValueType::ILong:
           return platform_tag(this->tag, Value(OpI{}(ilong, v.ilong)));
@@ -688,10 +695,10 @@ namespace vbci
           return platform_tag(this->tag, Value(OpU{}(usize, v.usize)));
 
         case ValueType::F32:
-          return OpF{}(f32, v.f32);
+          return Value(OpF{}(f32, v.f32));
 
         case ValueType::F64:
-          return OpF{}(f64, v.f64);
+          return Value(OpF{}(f64, v.f64));
 
         default:
           throw Value(Error::BadOperand);
@@ -856,4 +863,72 @@ namespace vbci
       }
     }
   };
+
+  inline std::ostream& operator<<(std::ostream& os, ValueType vt)
+  {
+    switch (vt)
+    {
+      case ValueType::None:
+        return os << "None";
+      case ValueType::Bool:
+        return os << "Bool";
+      case ValueType::I8:
+        return os << "I8";
+      case ValueType::I16:
+        return os << "I16";
+      case ValueType::I32:
+        return os << "I32";
+      case ValueType::I64:
+        return os << "I64";
+      case ValueType::U8:
+        return os << "U8";
+      case ValueType::U16:
+        return os << "U16";
+      case ValueType::U32:
+        return os << "U32";
+      case ValueType::U64:
+        return os << "U64";
+      case ValueType::ILong:
+        return os << "ILong";
+      case ValueType::ULong:
+        return os << "ULong";
+      case ValueType::ISize:
+        return os << "ISize";
+      case ValueType::USize:
+        return os << "USize";
+      case ValueType::F32:
+        return os << "F32";
+      case ValueType::F64:
+        return os << "F64";
+      case ValueType::Ptr:
+        return os << "Ptr";
+      case ValueType::Object:
+        return os << "Object";
+      case ValueType::Array:
+        return os << "Array";
+      case ValueType::Cown:
+        return os << "Cown";
+      case ValueType::RegisterRef:
+        return os << "RegisterRef";
+      case ValueType::FieldRef:
+        return os << "FieldRef";
+      case ValueType::ArrayRef:
+        return os << "ArrayRef";
+      case ValueType::CownRef:
+        return os << "CownRef";
+      case ValueType::Function:
+        return os << "Function";
+      case ValueType::Error:
+        return os << "Error";
+      case ValueType::Invalid:
+        return os << "Invalid";
+      default:
+        return os << "Unknown";
+    }
+  }
+
+  inline std::ostream& operator<<(std::ostream& os, const Value& v)
+  {
+    return os << v.to_string();
+  }
 }
