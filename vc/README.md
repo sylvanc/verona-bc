@@ -20,14 +20,8 @@ Compilation path.
 
 Check use before definition in `let x = ... x ...`.
 
-Reification.
-- Don't fail on method instantiation failure.
-  - Mark as "delete on error".
-  - On completion of `run`, check if it contains errors.
+Type aliases.
 - Test type aliases, make sure cycles are rejected.
-
-Built-in.
-- Get rid of `string`? Make string literals `array[u8]`.
 
 ## To Do
 
