@@ -160,7 +160,8 @@ namespace vbci
     {
       size_t func_id = self.leb();
       Function* func = self.program->function(func_id);
-      self.trace_instruction(" FunctionPtr=", func_id);
+      self.trace_instruction(
+        " FunctionPtr=", func_id, "(", self.program.di_function(func), ")");
       process<F, Args..., Function*>(
         self, fun, std::forward<Args>(args)..., func);
     }
@@ -1361,10 +1362,28 @@ namespace vbci
     }
   }
 
+  std::ostream& operator<<(std::ostream& os, CallType calltype)
+  {
+    switch (calltype)
+    {
+      case CallType::Call:
+        return os << "Call";
+      case CallType::Subcall:
+        return os << "Subcall";
+      case CallType::Catch:
+        return os << "Catch";
+      default:
+        return os << "Unknown";
+    }
+  }
+
   void Thread::pushframe(Function* func, size_t dst, CallType calltype)
   {
     if (!func)
       throw Value(Error::MethodNotFound);
+
+    LOG(Trace) << "Call " << program->di_function(func)
+               << " and calltype " << calltype;
 
     check_args(func->param_types);
 
