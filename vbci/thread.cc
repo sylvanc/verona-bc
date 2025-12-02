@@ -161,7 +161,7 @@ namespace vbci
       size_t func_id = self.leb();
       Function* func = self.program->function(func_id);
       self.trace_instruction(
-        " FunctionPtr=", func_id, "(", self.program.di_function(func), ")");
+        " FunctionPtr=", func_id, "(", self.program->di_function(func), ")");
       process<F, Args..., Function*>(
         self, fun, std::forward<Args>(args)..., func);
     }
