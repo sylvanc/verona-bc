@@ -1382,8 +1382,8 @@ namespace vbci
     if (!func)
       throw Value(Error::MethodNotFound);
 
-    LOG(Trace) << "Call " << program->di_function(func)
-               << " and calltype " << calltype;
+    LOG(Trace) << "Call " << program->di_function(func) << " and calltype "
+               << calltype;
 
     check_args(func->param_types);
 
