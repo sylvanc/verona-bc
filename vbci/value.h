@@ -514,10 +514,10 @@ namespace vbci
       return unop<nounop, nounop, nounop, atanh>();
     }
 
-    Value op_bits();
-    Value op_len();
-    Value op_ptr();
-    Value op_read();
+    Value op_bits() const;
+    Value op_len() const;
+    Value op_ptr() const;
+    Value op_read() const;
 
     static Value e()
     {

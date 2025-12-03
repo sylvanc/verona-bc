@@ -532,7 +532,7 @@ namespace vbci
     }
   }
 
-  Value Value::op_bits()
+  Value Value::op_bits() const
   {
     switch (tag)
     {
@@ -569,7 +569,7 @@ namespace vbci
     }
   }
 
-  Value Value::op_len()
+  Value Value::op_len() const
   {
     if (tag == ValueType::Array)
       return Value(ValueType::USize, arr->get_size());
@@ -577,7 +577,7 @@ namespace vbci
     throw Value(Error::BadOperand);
   }
 
-  Value Value::op_ptr()
+  Value Value::op_ptr() const
   {
     switch (tag)
     {
@@ -626,7 +626,7 @@ namespace vbci
     }
   }
 
-  Value Value::op_read()
+  Value Value::op_read() const
   {
     if (tag == ValueType::Cown)
     {
