@@ -120,20 +120,19 @@ namespace vbci
     static Value from_addr(ValueType t, void* v);
     void to_addr(ValueType t, void* v, bool move);
 
-    ValueType type();
-    uint32_t type_id();
+    ValueType type() const;
+    uint32_t type_id() const;
 
-    bool is_invalid();
-    bool is_readonly();
-    bool is_header();
-    bool is_function();
-    bool is_sendable();
-    bool is_cown();
-    bool is_error();
-
-    bool get_bool();
-    int32_t get_i32();
-    Cown* get_cown();
+    bool is_invalid() const;
+    bool is_readonly() const;
+    bool is_header() const;
+    bool is_function() const;
+    bool is_sendable() const;
+    bool is_cown() const;
+    bool is_error() const;
+    bool get_bool() const;
+    int32_t get_i32() const;
+    Cown* get_cown() const;
     Header* get_header() const;
     Function* function() const;
     size_t get_size() const;
@@ -146,9 +145,9 @@ namespace vbci
     void field_drop();
     Value ref(bool move, size_t field);
     Value arrayref(bool move, size_t i);
-    Value load();
+    Value load() const;
     Value store(bool move, Value& v);
-    Function* method(size_t w);
+    Function* method(size_t w) const;
     Value convert(ValueType to) const;
 
     std::string to_string() const;

@@ -99,7 +99,7 @@ namespace vbci
     return Value(static_cast<void*>(nullptr));
   }
 
-  ValueType Value::type()
+  ValueType Value::type() const
   {
     return tag;
   }
@@ -306,7 +306,7 @@ namespace vbci
       inc();
   }
 
-  uint32_t Value::type_id()
+  uint32_t Value::type_id() const
   {
     switch (tag)
     {
@@ -345,17 +345,17 @@ namespace vbci
     }
   }
 
-  bool Value::is_invalid()
+  bool Value::is_invalid() const
   {
     return tag == ValueType::Invalid;
   }
 
-  bool Value::is_readonly()
+  bool Value::is_readonly() const
   {
     return readonly;
   }
 
-  bool Value::is_header()
+  bool Value::is_header() const
   {
     switch (tag)
     {
@@ -368,12 +368,12 @@ namespace vbci
     }
   }
 
-  bool Value::is_function()
+  bool Value::is_function() const
   {
     return tag == ValueType::Function;
   }
 
-  bool Value::is_sendable()
+  bool Value::is_sendable() const
   {
     switch (tag)
     {
@@ -398,17 +398,17 @@ namespace vbci
     }
   }
 
-  bool Value::is_cown()
+  bool Value::is_cown() const
   {
     return tag == ValueType::Cown;
   }
 
-  bool Value::is_error()
+  bool Value::is_error() const
   {
     return tag == ValueType::Error;
   }
 
-  bool Value::get_bool()
+  bool Value::get_bool() const
   {
     if (tag != ValueType::Bool)
       throw Value(Error::BadConversion);
@@ -416,7 +416,7 @@ namespace vbci
     return b;
   }
 
-  int32_t Value::get_i32()
+  int32_t Value::get_i32() const
   {
     if (tag != ValueType::I32)
       throw Value(Error::BadConversion);
@@ -424,7 +424,7 @@ namespace vbci
     return i32;
   }
 
-  Cown* Value::get_cown()
+  Cown* Value::get_cown() const
   {
     if (tag != ValueType::Cown)
       throw Value(Error::BadConversion);
@@ -822,7 +822,7 @@ namespace vbci
     return Value(arr, i, readonly);
   }
 
-  Value Value::load()
+  Value Value::load() const
   {
     Value v;
 
@@ -896,7 +896,7 @@ namespace vbci
     }
   }
 
-  Function* Value::method(size_t w)
+  Function* Value::method(size_t w) const
   {
     return Program::get().cls(type_id()).method(w);
   }
