@@ -58,7 +58,7 @@ namespace vbci
 
         // If we transition from 1 to 0, we need to decrement the parent RC.
         if (loc::is_region(parent))
-          loc::to_region(parent)->stack_dec();
+          return loc::to_region(parent)->stack_dec();
       }
 
       return true;
