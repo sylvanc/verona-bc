@@ -89,7 +89,7 @@ namespace vbci
     SNMALLOC_FAST_PATH static void
     call_function_and_continue(F fun, Args... args)
     {
-      fun((args)...);
+      fun(std::forward<Args>(args)...);
     }
 
     template<typename F, typename... Args>
