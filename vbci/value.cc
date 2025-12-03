@@ -909,14 +909,10 @@ namespace vbci
     if (tag == to)
       return copy();
 
-    Value v(to);
-
     if (tag < ValueType::F32)
-      v.set(get<uint64_t>());
-    else
-      v.set(get<double>());
+      return Value(to, get<uint64_t>());
 
-    return v;
+    return Value(to, get<double>());
   }
 
   std::string Value::to_string() const
