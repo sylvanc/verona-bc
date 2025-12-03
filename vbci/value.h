@@ -135,11 +135,11 @@ namespace vbci
     int32_t get_i32();
     Cown* get_cown();
     Header* get_header() const;
-    Function* function();
-    size_t get_size();
+    Function* function() const;
+    size_t get_size() const;
 
     Location location() const;
-    Region* region();
+    Region* region() const;
     void immortalize();
 
     void drop();
@@ -149,7 +149,7 @@ namespace vbci
     Value load();
     Value store(bool move, Value& v);
     Function* method(size_t w);
-    Value convert(ValueType to);
+    Value convert(ValueType to) const;
 
     std::string to_string() const;
 
@@ -706,7 +706,7 @@ namespace vbci
     }
 
     template<typename T>
-    T get()
+    T get() const
     {
       switch (tag)
       {

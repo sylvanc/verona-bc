@@ -447,7 +447,7 @@ namespace vbci
     }
   }
 
-  Function* Value::function()
+  Function* Value::function() const
   {
     if (tag != ValueType::Function)
       return nullptr;
@@ -455,7 +455,7 @@ namespace vbci
     return func;
   }
 
-  size_t Value::get_size()
+  size_t Value::get_size() const
   {
     if (tag != ValueType::USize)
       throw Value(Error::BadConversion);
@@ -714,7 +714,7 @@ namespace vbci
     }
   }
 
-  Region* Value::region()
+  Region* Value::region() const
   {
     switch (tag)
     {
@@ -901,7 +901,7 @@ namespace vbci
     return Program::get().cls(type_id()).method(w);
   }
 
-  Value Value::convert(ValueType to)
+  Value Value::convert(ValueType to) const
   {
     if ((tag > ValueType::Function) || (to > ValueType::F64))
       throw Value(Error::BadConversion);
