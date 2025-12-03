@@ -173,67 +173,67 @@ namespace vbci
     } \
   }
 
-    Value op_add(Value& v)
+    Value op_add(const Value& v) const
     {
       return binop<nobinop, std::plus<>>(v);
     }
 
-    Value op_sub(Value& v)
+    Value op_sub(const Value& v) const
     {
       return binop<nobinop, std::minus<>>(v);
     }
 
-    Value op_mul(Value& v)
+    Value op_mul(const Value& v) const
     {
       return binop<nobinop, std::multiplies<>>(v);
     }
 
-    Value op_div(Value& v)
+    Value op_div(const Value& v) const
     {
       return binop<nobinop, std::divides<>>(v);
     }
 
     make_binop(fmod, std::fmod(lhs, rhs));
-    Value op_mod(Value& v)
+    Value op_mod(const Value& v) const
     {
       return binop<nobinop, std::modulus<>, std::modulus<>, fmod>(v);
     }
 
     make_binop(fpow, std::pow(lhs, rhs));
-    Value op_pow(Value& v)
+    Value op_pow(const Value& v) const
     {
       return binop<nobinop, nobinop, nobinop, fpow>(v);
     }
 
-    Value op_and(Value& v)
+    Value op_and(const Value& v) const
     {
       return binop<std::logical_and<>, std::bit_and<>, std::bit_and<>, nobinop>(
         v);
     }
 
-    Value op_or(Value& v)
+    Value op_or(const Value& v) const
     {
       return binop<std::logical_or<>, std::bit_or<>, std::bit_or<>, nobinop>(v);
     }
 
-    Value op_xor(Value& v)
+    Value op_xor(const Value& v) const
     {
       return binop<std::bit_xor<>, std::bit_xor<>, std::bit_xor<>, nobinop>(v);
     }
 
     make_binop(bit_left_shift, lhs << rhs);
-    Value op_shl(Value& v)
+    Value op_shl(const Value& v) const
     {
       return binop<nobinop, bit_left_shift, bit_left_shift, nobinop>(v);
     }
 
     make_binop(bit_right_shift, lhs >> rhs);
-    Value op_shr(Value& v)
+    Value op_shr(const Value& v) const
     {
       return binop<nobinop, bit_right_shift, bit_right_shift, nobinop>(v);
     }
 
-    Value op_eq(Value& v)
+    Value op_eq(const Value& v) const
     {
       if (tag != v.tag)
         return Value(false);
@@ -328,189 +328,189 @@ namespace vbci
       }
     }
 
-    Value op_ne(Value& v)
+    Value op_ne(const Value& v) const
     {
       auto r = op_eq(v);
       r.b = !r.b;
       return r;
     }
 
-    Value op_lt(Value& v)
+    Value op_lt(const Value& v) const
     {
       return binop<std::less<>>(v);
     }
 
-    Value op_le(Value& v)
+    Value op_le(const Value& v) const
     {
       return binop<std::less_equal<>>(v);
     }
 
-    Value op_gt(Value& v)
+    Value op_gt(const Value& v) const
     {
       return binop<std::greater<>>(v);
     }
 
-    Value op_ge(Value& v)
+    Value op_ge(const Value& v) const
     {
       return binop<std::greater_equal<>>(v);
     }
 
     make_binop(min, std::min(lhs, rhs));
-    Value op_min(Value& v)
+    Value op_min(const Value& v) const
     {
       return binop<min>(v);
     }
 
     make_binop(max, std::max(lhs, rhs));
-    Value op_max(Value& v)
+    Value op_max(const Value& v) const
     {
       return binop<max>(v);
     }
 
     make_binop(logbase, std::log(lhs) / std::log(rhs));
-    Value op_logbase(Value& v)
+    Value op_logbase(const Value& v) const
     {
       return binop<nobinop, nobinop, nobinop, logbase>(v);
     }
 
     make_binop(atan2, std::atan2(lhs, rhs));
-    Value op_atan2(Value& v)
+    Value op_atan2(const Value& v) const
     {
       return binop<nobinop, nobinop, nobinop, atan2>(v);
     }
 
-    Value op_neg()
+    Value op_neg() const
     {
       return unop<nounop, std::negate<>>();
     }
 
-    Value op_not()
+    Value op_not() const
     {
       return unop<std::logical_not<>, std::bit_not<>, std::bit_not<>, nounop>();
     }
 
     make_unop(abs, std::abs(arg));
-    Value op_abs()
+    Value op_abs() const
     {
       return unop<nounop, abs, nounop, abs>();
     }
 
     make_unop(ceil, std::ceil(arg));
-    Value op_ceil()
+    Value op_ceil() const
     {
       return unop<nounop, nounop, nounop, ceil>();
     }
 
     make_unop(floor, std::floor(arg));
-    Value op_floor()
+    Value op_floor() const
     {
       return unop<nounop, nounop, nounop, floor>();
     }
 
     make_unop(exp, std::exp(arg));
-    Value op_exp()
+    Value op_exp() const
     {
       return unop<nounop, nounop, nounop, exp>();
     }
 
     make_unop(log, std::log(arg));
-    Value op_log()
+    Value op_log() const
     {
       return unop<nounop, nounop, nounop, log>();
     }
 
     make_unop(sqrt, std::sqrt(arg));
-    Value op_sqrt()
+    Value op_sqrt() const
     {
       return unop<nounop, nounop, nounop, sqrt>();
     }
 
     make_unop(cbrt, std::cbrt(arg));
-    Value op_cbrt()
+    Value op_cbrt() const
     {
       return unop<nounop, nounop, nounop, cbrt>();
     }
 
     make_unop(isinf, std::isinf(arg));
-    Value op_isinf()
+    Value op_isinf() const
     {
       return unop<nounop, nounop, nounop, isinf>();
     }
 
     make_unop(isnan, std::isnan(arg));
-    Value op_isnan()
+    Value op_isnan() const
     {
       return unop<nounop, nounop, nounop, isnan>();
     }
 
     make_unop(sin, std::sin(arg));
-    Value op_sin()
+    Value op_sin() const
     {
       return unop<nounop, nounop, nounop, sin>();
     }
 
     make_unop(cos, std::cos(arg));
-    Value op_cos()
+    Value op_cos() const
     {
       return unop<nounop, nounop, nounop, cos>();
     }
 
     make_unop(tan, std::tan(arg));
-    Value op_tan()
+    Value op_tan() const
     {
       return unop<nounop, nounop, nounop, tan>();
     }
 
     make_unop(asin, std::asin(arg));
-    Value op_asin()
+    Value op_asin() const
     {
       return unop<nounop, nounop, nounop, asin>();
     }
 
     make_unop(acos, std::acos(arg));
-    Value op_acos()
+    Value op_acos() const
     {
       return unop<nounop, nounop, nounop, acos>();
     }
 
     make_unop(atan, std::atan(arg));
-    Value op_atan()
+    Value op_atan() const
     {
       return unop<nounop, nounop, nounop, atan>();
     }
 
     make_unop(sinh, std::sinh(arg));
-    Value op_sinh()
+    Value op_sinh() const
     {
       return unop<nounop, nounop, nounop, sinh>();
     }
 
     make_unop(cosh, std::cosh(arg));
-    Value op_cosh()
+    Value op_cosh() const
     {
       return unop<nounop, nounop, nounop, cosh>();
     }
 
     make_unop(tanh, std::tanh(arg));
-    Value op_tanh()
+    Value op_tanh() const
     {
       return unop<nounop, nounop, nounop, tanh>();
     }
 
     make_unop(asinh, std::asinh(arg));
-    Value op_asinh()
+    Value op_asinh() const
     {
       return unop<nounop, nounop, nounop, asinh>();
     }
 
     make_unop(acosh, std::acosh(arg));
-    Value op_acosh()
+    Value op_acosh() const
     {
       return unop<nounop, nounop, nounop, acosh>();
     }
 
     make_unop(atanh, std::atanh(arg));
-    Value op_atanh()
+    Value op_atanh() const
     {
       return unop<nounop, nounop, nounop, atanh>();
     }
@@ -589,7 +589,7 @@ namespace vbci
       typename OpI = OpB,
       typename OpU = OpI,
       typename OpF = OpU>
-    Value unop()
+    Value unop() const
     {
       switch (tag)
       {
@@ -648,7 +648,7 @@ namespace vbci
       typename OpI = OpB,
       typename OpU = OpI,
       typename OpF = OpU>
-    Value binop(Value& v)
+    Value binop(const Value& v) const
     {
       if (this->tag != v.tag)
         throw Value(Error::MismatchedTypes);
