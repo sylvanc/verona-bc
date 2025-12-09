@@ -1,0 +1,41 @@
+type @A_or_B = @A | @B 
+
+class @closure_a 
+    @f : @A_or_B
+    @apply @closure_a_apply
+
+class @A
+    @f : @B
+
+class @B
+    @f : bool
+
+func @closure_a_apply($self : @closure_a) : @A_or_B
+    $field_ref = ref $self @f
+    $field = load $field_ref 
+    ret $field
+
+
+func @behavior1 ($cown1 : ref @A_or_B) : @A_or_B
+    $a1 = load $cown1 
+    $false = const bool false 
+    $b = heap $a1 @B($false)
+    $a2 = new @A($b)
+    $old = store $cown1 $a2 
+    $new = load $cown1 
+    $b2 = region rc @B($false)
+    $extra = store $cown1 $b2
+    ret $new
+
+    
+func @main() : i32 
+    $true = const bool true 
+    $b = region rc @B($true)
+    $closure_a = heap $b @closure_a($b)
+    $closure_a_apply = lookup $closure_a @apply
+    drop $b
+    $cown1 = when $closure_a_apply($closure_a) : @A_or_B
+    $cown2 = when @behavior1($cown1) : @A_or_B
+    
+    $ret_val = const i32 42 
+    ret $ret_val
