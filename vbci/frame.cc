@@ -9,7 +9,7 @@ namespace vbci
     Function* func,
     Location frame_id,
     Stack::Idx save,
-    std::vector<Value>& locals,
+    std::vector<Register>& locals,
     size_t base,
     std::vector<Object*>& finalize,
     size_t finalize_base,
@@ -33,7 +33,7 @@ namespace vbci
     region.set_frame_id(frame_id);
   }
 
-  Value& Frame::local(size_t idx)
+  Register& Frame::local(size_t idx)
   {
     auto i = base + idx;
 
@@ -43,7 +43,7 @@ namespace vbci
     return locals.at(i);
   }
 
-  Value& Frame::arg(size_t idx)
+  Register& Frame::arg(size_t idx)
   {
     auto i = base + func->registers + idx;
 
@@ -53,9 +53,9 @@ namespace vbci
     return locals.at(i);
   }
 
-  std::span<Value> Frame::args(size_t args)
+  std::span<Register> Frame::args(size_t args)
   {
-    return std::span<Value>{
+    return std::span<Register>{
       locals.data() + base + func->registers,
       locals.data() + base + func->registers + args};
   }
@@ -80,14 +80,15 @@ namespace vbci
     for (size_t i = 0; i < func->registers; i++)
     {
       LOG(Trace) << "Dropping frame local " << i;
-      locals[base + i].drop();
+      LOG(Trace) << "  contents (" << locals[base + i] << ")";
+      locals[base + i].drop_reg();
     }
   }
 
   void Frame::drop_args(size_t& args)
   {
     for (size_t i = 0; i < args; i++)
-      locals[base + func->registers + i].drop();
+      locals[base + func->registers + i].drop_reg();
 
     args = 0;
   }

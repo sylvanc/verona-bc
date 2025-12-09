@@ -34,6 +34,7 @@ namespace vbci
 
   void RegionRC::insert(Header* h)
   {
+    LOG(Trace) << "Inserting header @" << h << " into RegionRC @" << this;
     headers.emplace(h);
   }
 

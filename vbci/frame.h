@@ -3,6 +3,7 @@
 #include "stack.h"
 #include "value.h"
 #include "region_rc.h"
+#include "register.h"
 
 #include <span>
 #include <vector>
@@ -15,7 +16,7 @@ namespace vbci
     Function* func;
     Location frame_id;
     Stack::Idx save;
-    std::vector<Value>& locals;
+    std::vector<Register>& locals;
     size_t base;
     std::vector<Object*>& finalize;
     size_t finalize_base;
@@ -28,7 +29,7 @@ namespace vbci
       Function* func,
       Location frame_id,
       Stack::Idx save,
-      std::vector<Value>& locals,
+      std::vector<Register>& locals,
       size_t base,
       std::vector<Object*>& finalize,
       size_t finalize_base,
@@ -36,9 +37,9 @@ namespace vbci
       size_t dst,
       CallType calltype);
 
-    Value& local(size_t idx);
-    Value& arg(size_t idx);
-    std::span<Value> args(size_t args);
+    Register& local(size_t idx);
+    Register& arg(size_t idx);
+    std::span<Register> args(size_t args);
     void push_finalizer(Object* obj);
     void drop();
     void drop_args(size_t& args);

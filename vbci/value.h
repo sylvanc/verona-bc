@@ -12,6 +12,11 @@
 
 namespace vbci
 {
+  struct Register;
+
+  template<bool is_move>
+  using Reg = std::conditional_t<is_move, Register, const Register&>;
+
   struct ValueBits
   {
     uint64_t hi;
@@ -45,7 +50,7 @@ namespace vbci
       float f32;
       double f64;
       void* ptr;
-      Value* val;
+      Register* reg;
       Object* obj;
       Array* arr;
       Cown* cown;
@@ -81,7 +86,7 @@ namespace vbci
     explicit Value(Object* obj, bool ro);
     explicit Value(Array* arr);
     explicit Value(Cown* cown);
-    explicit Value(Value& val, size_t frame);
+    explicit Value(Register& reg, size_t frame);
     explicit Value(Object* obj, size_t f, bool ro);
     explicit Value(Array* arr, size_t idx, bool ro);
     explicit Value(Cown* cown, bool ro);
@@ -92,7 +97,8 @@ namespace vbci
     Value(const Value& that) = delete;
     Value& operator=(const Value& that) = delete;
 
-    Value copy() const;
+    Value copy_value() const;
+    Register copy_reg() const;
 
     // Allow move semantics, no body does a move by accident in C++
     Value(Value&& that) noexcept;
@@ -117,8 +123,10 @@ namespace vbci
     static Value null();
     static Value from_ffi(ValueType t, uint64_t v);
     void* to_ffi();
-    static Value from_addr(ValueType t, void* v);
-    void to_addr(ValueType t, void* v, bool move);
+    static Register from_addr(ValueType t, void* v);
+
+    template<bool is_move>
+    void to_addr(ValueType t, void* v) const;
 
     ValueType type() const;
     uint32_t type_id() const;
@@ -141,12 +149,15 @@ namespace vbci
     Region* region() const;
     void immortalize();
 
-    void drop();
+    void drop_reg();
     void field_drop();
-    Value ref(bool move, size_t field);
-    Value arrayref(bool move, size_t i);
-    Value load() const;
-    Value store(bool move, Value& v);
+    Register ref(bool move, size_t field);
+    Register arrayref(bool move, size_t i) const;
+    Register load() const;
+    
+    template<bool is_move>
+    Register store(Reg<is_move> r) const;
+
     Function* method(size_t w) const;
     Value convert(ValueType to) const;
 
@@ -300,7 +311,7 @@ namespace vbci
           return Value(cown == v.cown);
 
         case ValueType::RegisterRef:
-          return Value(val == v.val);
+          return Value(reg == v.reg);
 
         case ValueType::FieldRef:
           return Value((obj == v.obj) && (idx == v.idx));
@@ -516,7 +527,7 @@ namespace vbci
 
     Value op_bits() const;
     Value op_len() const;
-    Value op_ptr() const;
+    Value op_ptr();
     Value op_read() const;
 
     static Value e()
@@ -539,10 +550,13 @@ namespace vbci
       return Value(std::numeric_limits<double>::quiet_NaN());
     }
 
-  private:
-    void inc(bool reg = true);
-    void dec(bool reg = true);
+    template<bool is_move>
+    void inc() const;
 
+    template<bool is_move>
+    void dec() const;
+
+  private:
     struct nounop
     {
       template<typename T>
@@ -770,7 +784,7 @@ namespace vbci
           return reinterpret_cast<size_t>(cown);
 
         case ValueType::RegisterRef:
-          return reinterpret_cast<size_t>(val);
+          return reinterpret_cast<size_t>(reg);
 
         case ValueType::FieldRef:
           return reinterpret_cast<size_t>(obj) + idx + 1;

@@ -26,7 +26,7 @@ namespace vbci
     Object& init(Frame& frame, Class& cls)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        store<true>(true, i, frame.arg(i));
+        store<true, true>(i, std::move(frame.arg(i)));
 
       return *this;
     }
@@ -68,8 +68,8 @@ namespace vbci
       return Value::from_addr(f.value_type, addr);
     }
 
-    template <bool no_previous = false>
-    Value store(bool move, size_t idx, Value& v)
+    template <bool is_move, bool no_previous = false>
+    Register store(size_t idx, Reg<is_move> v)
     {
       auto& f = cls().fields.at(idx);
 
@@ -78,25 +78,7 @@ namespace vbci
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
 
-      Value prev;
-      // If we don't need the previous value, skip loading it.
-      // Also, it is probably uninitialized memory, so loading is very bad.
-      if constexpr (!no_previous)
-        prev = Value::from_addr(f.value_type, addr);
-
-      if (!write_barrier(prev, v))
-        throw Value(Error::BadStore);
-
-      v.to_addr(f.value_type, addr, move);
-      return prev;
-    }
-
-    void dec(bool reg)
-    {
-      if (base_dec(reg))
-        return;
-
-      collect(this);
+      return Header::store<is_move, no_previous>(addr, f.value_type, std::forward<Reg<is_move>>(v));
     }
 
     /**

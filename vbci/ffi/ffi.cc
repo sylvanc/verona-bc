@@ -11,14 +11,14 @@ using namespace vbci;
 
 struct Callback
 {
-  Value arg;
+  Register arg;
   Function* cb_0;
   Function* cb_1;
   Function* cb_read;
   Function* cb_read_udp;
 
   Callback()
-  : arg(Value::none()),
+  : arg(Register(Value::none())),
     cb_0(nullptr),
     cb_1(nullptr),
     cb_read(nullptr),
@@ -27,7 +27,7 @@ struct Callback
 
   ~Callback()
   {
-    arg.drop();
+    arg.drop_reg();
   }
 };
 
@@ -171,13 +171,13 @@ VBCI_FFI bool async_set_cb1(uv_handle_t* handle, Value& f)
 VBCI_FFI void async_cb0(uv_handle_t* handle)
 {
   auto cb = reinterpret_cast<Callback*>(uv_handle_get_data(handle));
-  Thread::run_sync(cb->cb_0, cb->arg.copy());
+  Thread::run_sync(cb->cb_0, cb->arg.copy_reg());
 }
 
 VBCI_FFI void async_cb1(uv_handle_t* handle, int status)
 {
   auto cb = reinterpret_cast<Callback*>(uv_handle_get_data(handle));
-  Thread::run_sync(cb->cb_0, cb->arg.copy(), Value(status));
+  Thread::run_sync(cb->cb_0, cb->arg.copy_reg(), Value(status));
 }
 
 VBCI_FFI bool async_read_start(uv_stream_t* handle, Value& f)
@@ -195,7 +195,7 @@ VBCI_FFI bool async_read_start(uv_stream_t* handle, Value& f)
 
 VBCI_FFI void async_write(uv_stream_t* handle, Array* array_u8)
 {
-  array_u8->inc(false);
+  array_u8->inc<false>();
   auto req = new uv_write_t;
   req->data = array_u8;
 
@@ -204,7 +204,7 @@ VBCI_FFI void async_write(uv_stream_t* handle, Array* array_u8)
     .len = array_u8->get_size()};
 
   uv_write(req, handle, &buf, 1, [](uv_write_t* req, int) {
-    reinterpret_cast<Array*>(req->data)->dec(false);
+    reinterpret_cast<Array*>(req->data)->template dec<false>();
     delete req;
   });
 }
@@ -310,14 +310,14 @@ namespace vbci
     if (nread < 0)
     {
       if (buf->base)
-        (reinterpret_cast<Array*>(buf->base) - 1)->dec(false);
+        (reinterpret_cast<Array*>(buf->base) - 1)->dec<false>();
 
-      Thread::run_sync(cb->cb_1, cb->arg.copy(), Value(ValueType::I32, nread));
+      Thread::run_sync(cb->cb_1, cb->arg.copy_reg(), Value(ValueType::I32, nread));
       return;
     }
 
     auto array = reinterpret_cast<Array*>(buf->base) - 1;
     array->set_size(nread);
-    Thread::run_sync(cb->cb_read, cb->arg.copy(), Value(array));
+    Thread::run_sync(cb->cb_read, cb->arg.copy_reg(), Value(array));
   }
 }
