@@ -67,7 +67,7 @@ namespace vbci
   Value Value::copy_value() const
   {
     Value v;
-    std::memcpy(&v, this, sizeof(Value));
+    std::memcpy(static_cast<void*>(&v), this, sizeof(Value));
     v.inc<false>();
     return v;
   }
@@ -75,7 +75,7 @@ namespace vbci
   Register Value::copy_reg() const
   {
     Value v;
-    std::memcpy(&v, this, sizeof(Value));
+    std::memcpy(static_cast<void*>(&v), this, sizeof(Value));
     // Performed the required increment for moving into a register
     v.inc<true>();
     return Register(std::move(v));
