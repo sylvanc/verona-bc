@@ -33,6 +33,9 @@ namespace vbci
 
     void stack_inc(RC inc = 1)
     {
+      // TODO Should we restrict to only calling on non-frame-local regions?
+      //      assert(!is_frame_local());
+
       // If we transition from 0 to 1, we need to increment the parent RC.
       if ((stack_rc == 0) && loc::is_region(parent))
         loc::to_region(parent)->stack_inc();
@@ -45,6 +48,9 @@ namespace vbci
 
     bool stack_dec()
     {
+      // TODO Should we restrict to only calling on non-frame-local regions?
+      // assert(!is_frame_local());
+
       LOG(Trace) << "Region @" << this << " stack_rc decremented from "
                 << stack_rc << " to " << (stack_rc - 1);
       if (--stack_rc == 0)
@@ -58,7 +64,7 @@ namespace vbci
 
         // If we transition from 1 to 0, we need to decrement the parent RC.
         if (loc::is_region(parent))
-          loc::to_region(parent)->stack_dec();
+          return loc::to_region(parent)->stack_dec();
       }
 
       return true;

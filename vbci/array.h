@@ -80,27 +80,15 @@ namespace vbci
       return Value::from_addr(value_type, addr);
     }
 
-    Value store(bool move, size_t idx, Value& v)
+    template<bool is_move>
+    Register store(size_t idx, Reg<is_move> v)
     {
       if (!Program::get().subtype(v.type_id(), content_type_id()))
         throw Value(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
-      auto prev = Value::from_addr(value_type, addr);
 
-      if (!write_barrier(prev, v))
-        throw Value(Error::BadStore);
-
-      v.to_addr(value_type, addr, move);
-      return prev;
-    }
-
-    void dec(bool reg)
-    {
-      if (base_dec(reg))
-        return;
-
-      collect(this);
+      return Header::store<is_move>(addr, value_type, std::forward<Reg<is_move>>(v));
     }
 
     /**

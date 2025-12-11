@@ -162,7 +162,6 @@ namespace vbci
       exit_code = ret_val.get_i32();
     }
 
-    ret.drop();
     return exit_code;
   }
 
@@ -546,8 +545,8 @@ namespace vbci
       std::memcpy(p, str.c_str(), str_size);
       arg->set_size(str_size - 1);
 
-      auto arg_value = Value(arg);
-      argv->store(true, i, arg_value);
+      // TODO should this be a register, or should we have an unregister store?
+      argv->template store<true>(i, Register(Value(arg)));
     }
 
     argv->immortalize();

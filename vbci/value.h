@@ -12,6 +12,11 @@
 
 namespace vbci
 {
+  struct Register;
+
+  template<bool is_move>
+  using Reg = std::conditional_t<is_move, Register, const Register&>;
+
   struct ValueBits
   {
     uint64_t hi;
@@ -45,7 +50,7 @@ namespace vbci
       float f32;
       double f64;
       void* ptr;
-      Value* val;
+      Register* reg;
       Object* obj;
       Array* arr;
       Cown* cown;
@@ -81,7 +86,7 @@ namespace vbci
     explicit Value(Object* obj, bool ro);
     explicit Value(Array* arr);
     explicit Value(Cown* cown);
-    explicit Value(Value& val, size_t frame);
+    explicit Value(Register& reg, size_t frame);
     explicit Value(Object* obj, size_t f, bool ro);
     explicit Value(Array* arr, size_t idx, bool ro);
     explicit Value(Cown* cown, bool ro);
@@ -92,7 +97,8 @@ namespace vbci
     Value(const Value& that) = delete;
     Value& operator=(const Value& that) = delete;
 
-    Value copy() const;
+    Value copy_value() const;
+    Register copy_reg() const;
 
     // Allow move semantics, no body does a move by accident in C++
     Value(Value&& that) noexcept;
@@ -117,39 +123,43 @@ namespace vbci
     static Value null();
     static Value from_ffi(ValueType t, uint64_t v);
     void* to_ffi();
-    static Value from_addr(ValueType t, void* v);
-    void to_addr(ValueType t, void* v, bool move);
+    static Register from_addr(ValueType t, void* v);
 
-    ValueType type();
-    uint32_t type_id();
+    template<bool is_move>
+    void to_addr(ValueType t, void* v) const;
 
-    bool is_invalid();
-    bool is_readonly();
-    bool is_header();
-    bool is_function();
-    bool is_sendable();
-    bool is_cown();
-    bool is_error();
+    ValueType type() const;
+    uint32_t type_id() const;
 
-    bool get_bool();
-    int32_t get_i32();
-    Cown* get_cown();
+    bool is_invalid() const;
+    bool is_readonly() const;
+    bool is_header() const;
+    bool is_function() const;
+    bool is_sendable() const;
+    bool is_cown() const;
+    bool is_error() const;
+    bool get_bool() const;
+    int32_t get_i32() const;
+    Cown* get_cown() const;
     Header* get_header() const;
-    Function* function();
-    size_t get_size();
+    Function* function() const;
+    size_t get_size() const;
 
     Location location() const;
-    Region* region();
+    Region* region() const;
     void immortalize();
 
-    void drop();
+    void drop_reg();
     void field_drop();
-    Value ref(bool move, size_t field);
-    Value arrayref(bool move, size_t i);
-    Value load();
-    Value store(bool move, Value& v);
-    Function* method(size_t w);
-    Value convert(ValueType to);
+    Register ref(bool move, size_t field);
+    Register arrayref(bool move, size_t i) const;
+    Register load() const;
+    
+    template<bool is_move>
+    Register store(Reg<is_move> r) const;
+
+    Function* method(size_t w) const;
+    Value convert(ValueType to) const;
 
     std::string to_string() const;
 
@@ -173,67 +183,67 @@ namespace vbci
     } \
   }
 
-    Value op_add(Value& v)
+    Value op_add(const Value& v) const
     {
       return binop<nobinop, std::plus<>>(v);
     }
 
-    Value op_sub(Value& v)
+    Value op_sub(const Value& v) const
     {
       return binop<nobinop, std::minus<>>(v);
     }
 
-    Value op_mul(Value& v)
+    Value op_mul(const Value& v) const
     {
       return binop<nobinop, std::multiplies<>>(v);
     }
 
-    Value op_div(Value& v)
+    Value op_div(const Value& v) const
     {
       return binop<nobinop, std::divides<>>(v);
     }
 
     make_binop(fmod, std::fmod(lhs, rhs));
-    Value op_mod(Value& v)
+    Value op_mod(const Value& v) const
     {
       return binop<nobinop, std::modulus<>, std::modulus<>, fmod>(v);
     }
 
     make_binop(fpow, std::pow(lhs, rhs));
-    Value op_pow(Value& v)
+    Value op_pow(const Value& v) const
     {
       return binop<nobinop, nobinop, nobinop, fpow>(v);
     }
 
-    Value op_and(Value& v)
+    Value op_and(const Value& v) const
     {
       return binop<std::logical_and<>, std::bit_and<>, std::bit_and<>, nobinop>(
         v);
     }
 
-    Value op_or(Value& v)
+    Value op_or(const Value& v) const
     {
       return binop<std::logical_or<>, std::bit_or<>, std::bit_or<>, nobinop>(v);
     }
 
-    Value op_xor(Value& v)
+    Value op_xor(const Value& v) const
     {
       return binop<std::bit_xor<>, std::bit_xor<>, std::bit_xor<>, nobinop>(v);
     }
 
     make_binop(bit_left_shift, lhs << rhs);
-    Value op_shl(Value& v)
+    Value op_shl(const Value& v) const
     {
       return binop<nobinop, bit_left_shift, bit_left_shift, nobinop>(v);
     }
 
     make_binop(bit_right_shift, lhs >> rhs);
-    Value op_shr(Value& v)
+    Value op_shr(const Value& v) const
     {
       return binop<nobinop, bit_right_shift, bit_right_shift, nobinop>(v);
     }
 
-    Value op_eq(Value& v)
+    Value op_eq(const Value& v) const
     {
       if (tag != v.tag)
         return Value(false);
@@ -301,7 +311,7 @@ namespace vbci
           return Value(cown == v.cown);
 
         case ValueType::RegisterRef:
-          return Value(val == v.val);
+          return Value(reg == v.reg);
 
         case ValueType::FieldRef:
           return Value((obj == v.obj) && (idx == v.idx));
@@ -328,197 +338,197 @@ namespace vbci
       }
     }
 
-    Value op_ne(Value& v)
+    Value op_ne(const Value& v) const
     {
       auto r = op_eq(v);
       r.b = !r.b;
       return r;
     }
 
-    Value op_lt(Value& v)
+    Value op_lt(const Value& v) const
     {
       return binop<std::less<>>(v);
     }
 
-    Value op_le(Value& v)
+    Value op_le(const Value& v) const
     {
       return binop<std::less_equal<>>(v);
     }
 
-    Value op_gt(Value& v)
+    Value op_gt(const Value& v) const
     {
       return binop<std::greater<>>(v);
     }
 
-    Value op_ge(Value& v)
+    Value op_ge(const Value& v) const
     {
       return binop<std::greater_equal<>>(v);
     }
 
     make_binop(min, std::min(lhs, rhs));
-    Value op_min(Value& v)
+    Value op_min(const Value& v) const
     {
       return binop<min>(v);
     }
 
     make_binop(max, std::max(lhs, rhs));
-    Value op_max(Value& v)
+    Value op_max(const Value& v) const
     {
       return binop<max>(v);
     }
 
     make_binop(logbase, std::log(lhs) / std::log(rhs));
-    Value op_logbase(Value& v)
+    Value op_logbase(const Value& v) const
     {
       return binop<nobinop, nobinop, nobinop, logbase>(v);
     }
 
     make_binop(atan2, std::atan2(lhs, rhs));
-    Value op_atan2(Value& v)
+    Value op_atan2(const Value& v) const
     {
       return binop<nobinop, nobinop, nobinop, atan2>(v);
     }
 
-    Value op_neg()
+    Value op_neg() const
     {
       return unop<nounop, std::negate<>>();
     }
 
-    Value op_not()
+    Value op_not() const
     {
       return unop<std::logical_not<>, std::bit_not<>, std::bit_not<>, nounop>();
     }
 
     make_unop(abs, std::abs(arg));
-    Value op_abs()
+    Value op_abs() const
     {
       return unop<nounop, abs, nounop, abs>();
     }
 
     make_unop(ceil, std::ceil(arg));
-    Value op_ceil()
+    Value op_ceil() const
     {
       return unop<nounop, nounop, nounop, ceil>();
     }
 
     make_unop(floor, std::floor(arg));
-    Value op_floor()
+    Value op_floor() const
     {
       return unop<nounop, nounop, nounop, floor>();
     }
 
     make_unop(exp, std::exp(arg));
-    Value op_exp()
+    Value op_exp() const
     {
       return unop<nounop, nounop, nounop, exp>();
     }
 
     make_unop(log, std::log(arg));
-    Value op_log()
+    Value op_log() const
     {
       return unop<nounop, nounop, nounop, log>();
     }
 
     make_unop(sqrt, std::sqrt(arg));
-    Value op_sqrt()
+    Value op_sqrt() const
     {
       return unop<nounop, nounop, nounop, sqrt>();
     }
 
     make_unop(cbrt, std::cbrt(arg));
-    Value op_cbrt()
+    Value op_cbrt() const
     {
       return unop<nounop, nounop, nounop, cbrt>();
     }
 
     make_unop(isinf, std::isinf(arg));
-    Value op_isinf()
+    Value op_isinf() const
     {
       return unop<nounop, nounop, nounop, isinf>();
     }
 
     make_unop(isnan, std::isnan(arg));
-    Value op_isnan()
+    Value op_isnan() const
     {
       return unop<nounop, nounop, nounop, isnan>();
     }
 
     make_unop(sin, std::sin(arg));
-    Value op_sin()
+    Value op_sin() const
     {
       return unop<nounop, nounop, nounop, sin>();
     }
 
     make_unop(cos, std::cos(arg));
-    Value op_cos()
+    Value op_cos() const
     {
       return unop<nounop, nounop, nounop, cos>();
     }
 
     make_unop(tan, std::tan(arg));
-    Value op_tan()
+    Value op_tan() const
     {
       return unop<nounop, nounop, nounop, tan>();
     }
 
     make_unop(asin, std::asin(arg));
-    Value op_asin()
+    Value op_asin() const
     {
       return unop<nounop, nounop, nounop, asin>();
     }
 
     make_unop(acos, std::acos(arg));
-    Value op_acos()
+    Value op_acos() const
     {
       return unop<nounop, nounop, nounop, acos>();
     }
 
     make_unop(atan, std::atan(arg));
-    Value op_atan()
+    Value op_atan() const
     {
       return unop<nounop, nounop, nounop, atan>();
     }
 
     make_unop(sinh, std::sinh(arg));
-    Value op_sinh()
+    Value op_sinh() const
     {
       return unop<nounop, nounop, nounop, sinh>();
     }
 
     make_unop(cosh, std::cosh(arg));
-    Value op_cosh()
+    Value op_cosh() const
     {
       return unop<nounop, nounop, nounop, cosh>();
     }
 
     make_unop(tanh, std::tanh(arg));
-    Value op_tanh()
+    Value op_tanh() const
     {
       return unop<nounop, nounop, nounop, tanh>();
     }
 
     make_unop(asinh, std::asinh(arg));
-    Value op_asinh()
+    Value op_asinh() const
     {
       return unop<nounop, nounop, nounop, asinh>();
     }
 
     make_unop(acosh, std::acosh(arg));
-    Value op_acosh()
+    Value op_acosh() const
     {
       return unop<nounop, nounop, nounop, acosh>();
     }
 
     make_unop(atanh, std::atanh(arg));
-    Value op_atanh()
+    Value op_atanh() const
     {
       return unop<nounop, nounop, nounop, atanh>();
     }
 
-    Value op_bits();
-    Value op_len();
+    Value op_bits() const;
+    Value op_len() const;
     Value op_ptr();
-    Value op_read();
+    Value op_read() const;
 
     static Value e()
     {
@@ -540,10 +550,13 @@ namespace vbci
       return Value(std::numeric_limits<double>::quiet_NaN());
     }
 
-  private:
-    void inc(bool reg = true);
-    void dec(bool reg = true);
+    template<bool is_move>
+    void inc() const;
 
+    template<bool is_move>
+    void dec() const;
+
+  private:
     struct nounop
     {
       template<typename T>
@@ -589,7 +602,7 @@ namespace vbci
       typename OpI = OpB,
       typename OpU = OpI,
       typename OpF = OpU>
-    Value unop()
+    Value unop() const
     {
       switch (tag)
       {
@@ -648,7 +661,7 @@ namespace vbci
       typename OpI = OpB,
       typename OpU = OpI,
       typename OpF = OpU>
-    Value binop(Value& v)
+    Value binop(const Value& v) const
     {
       if (this->tag != v.tag)
         throw Value(Error::MismatchedTypes);
@@ -706,7 +719,7 @@ namespace vbci
     }
 
     template<typename T>
-    T get()
+    T get() const
     {
       switch (tag)
       {
@@ -771,7 +784,7 @@ namespace vbci
           return reinterpret_cast<size_t>(cown);
 
         case ValueType::RegisterRef:
-          return reinterpret_cast<size_t>(val);
+          return reinterpret_cast<size_t>(reg);
 
         case ValueType::FieldRef:
           return reinterpret_cast<size_t>(obj) + idx + 1;

@@ -15,9 +15,8 @@ namespace vbci
 {
   enum class CollectorType
   {
-    Object,
     Region,
-    Array
+    Header
   };
 
   // TODO: This could be optimised by borrowing low bits from the pointer if
@@ -35,21 +34,15 @@ namespace vbci
   struct Tag;
 
   template<>
-  struct Tag<Object>
+  struct Tag<Header>
   {
-    static constexpr CollectorType value = CollectorType::Object;
+    static constexpr CollectorType value = CollectorType::Header;
   };
 
   template<>
   struct Tag<Region>
   {
     static constexpr CollectorType value = CollectorType::Region;
-  };
-
-  template<>
-  struct Tag<Array>
-  {
-    static constexpr CollectorType value = CollectorType::Array;
   };
 
   static thread_local std::queue<WorkItem> worklist;
@@ -75,6 +68,7 @@ namespace vbci
 
     in_collection = true;
     add_work_list(h);
+    auto& program = Program::get();
 
     while (!worklist.empty())
     {
@@ -84,23 +78,24 @@ namespace vbci
       LOG(Trace) << "Processing work item: " << static_cast<void*>(n.header);
       switch (n.type)
       {
-        case CollectorType::Object:
-          static_cast<Object*>(n.header)->deallocate();
+        case CollectorType::Header:
+        {
+          auto h = static_cast<Header*>(n.header);
+          if (program.is_array(h->get_type_id()))
+            static_cast<Array*>(h)->deallocate();
+          else
+            static_cast<Object*>(h)->deallocate();
           break;
+        }
 
         case CollectorType::Region:
           static_cast<Region*>(n.header)->deallocate();
-          break;
-
-        case CollectorType::Array:
-          static_cast<Array*>(n.header)->deallocate();
           break;
       }
     }
     in_collection = false;
   }
 
-  template void collect<Object>(Object* h);
+  template void collect<Header>(Header* h);
   template void collect<Region>(Region* h);
-  template void collect<Array>(Array* h);
 } // namespace vbci
