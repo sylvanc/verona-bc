@@ -53,7 +53,7 @@ namespace vbci
   Symbol& Program::symbol(size_t idx)
   {
     if (idx >= symbols.size())
-      throw Value(Error::UnknownFFI);
+      Value::error(Error::UnknownFFI);
 
     return symbols.at(idx);
   }
@@ -69,7 +69,7 @@ namespace vbci
   Class& Program::cls(uint32_t type_id)
   {
     if (type_id >= classes.size())
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return classes.at(type_id);
   }
@@ -77,7 +77,7 @@ namespace vbci
   ComplexType& Program::complex_type(uint32_t type_id)
   {
     if (!is_complex(type_id))
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return complex_types.at(type_id - min_complex_type_id);
   }
@@ -85,7 +85,7 @@ namespace vbci
   Value& Program::global(size_t idx)
   {
     if (idx >= globals.size())
-      throw Value(Error::UnknownGlobal);
+      Value::error(Error::UnknownGlobal);
 
     return globals.at(idx);
   }
@@ -113,7 +113,7 @@ namespace vbci
   Array* Program::get_string(size_t idx)
   {
     if (idx >= strings.size())
-      throw Value(Error::UnknownGlobal);
+      Value::error(Error::UnknownGlobal);
 
     auto& str = strings.at(idx);
     auto str_size = str.size() + 1;
@@ -302,7 +302,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag != TypeTag::Array)
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return t.children.at(0);
   }
@@ -312,7 +312,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag != TypeTag::Cown)
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return t.children.at(0);
   }
@@ -322,7 +322,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag != TypeTag::Ref)
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return t.children.at(0);
   }

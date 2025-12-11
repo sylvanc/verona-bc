@@ -84,7 +84,7 @@ namespace vbci
     Register store(size_t idx, Reg<is_move> v)
     {
       if (!Program::get().subtype(v.type_id(), content_type_id()))
-        throw Value(Error::BadType);
+        Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
 

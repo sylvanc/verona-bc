@@ -230,7 +230,7 @@ namespace vbci
     Register store(void* addr, ValueType t, Reg<is_move> next) const
     {
       if (loc::is_immutable(loc))
-        throw Value(Error::BadStoreTarget);
+        Value::error(Error::BadStoreTarget);
 
       auto nloc = next.location();
 
@@ -279,7 +279,7 @@ namespace vbci
           restore_reference(ploc);
         }
 
-        throw Value(Error::BadStore);
+        Value::error(Error::BadStore);
       }
 
       if constexpr (!is_move)
