@@ -336,7 +336,12 @@ namespace vbci
     {
       auto cown = static_cast<Cown*>(slots[i].cown());
       // TODO: The locals needs an RC here, we should look how we can remove
-      // that
+      // that.  The verona runtime "behaviour" keeps this alive, but the
+      // Register would only receive a borrow, rather than a move. The current
+      // implementation considers all registers to have an RC associated. if we
+      // don't perform this inc, then the register invalidation code would break
+      // this.
+      // Perhaps needs a dynamic borrowed register reference?
       cown->inc();
       locals.at(args++) = Value(cown, slots[i].is_read_only());
     }

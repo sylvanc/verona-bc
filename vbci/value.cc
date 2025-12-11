@@ -675,7 +675,8 @@ namespace vbci
 
       case ValueType::Cown:
       case ValueType::CownRef:
-        // TODO Does this need to behave differently for registers?
+        // Cowns do not have a stack RC, so doesn't mater if it is
+        // a stack RC or not.
         cown->inc();
         break;
 
@@ -698,12 +699,13 @@ namespace vbci
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          // TODO Does this need to behave differently for registers?
           arr->dec<is_register>();
         break;
 
       case ValueType::Cown:
       case ValueType::CownRef:
+        // Cowns do not have a stack RC, so doesn't mater if it is
+        // a stack RC or not.
         cown->dec();
         break;
 
@@ -879,7 +881,6 @@ namespace vbci
         throw Value(Error::BadLoadTarget);
     }
 
-    // TODO register or not
     v.inc<true>();
     v.readonly = readonly;
     return Register(std::move(v));
@@ -888,7 +889,6 @@ namespace vbci
   template<bool is_move>
   Register Value::store(Reg<is_move> v) const
   {
-    // TODO HERE are stack refs correct for register refs?
     if (readonly)
       throw Value(Error::BadStoreTarget);
 
