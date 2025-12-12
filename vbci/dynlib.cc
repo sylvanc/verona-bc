@@ -77,7 +77,7 @@ namespace vbci
   void Symbol::varparam(ffi_type* ffit)
   {
     if (!vararg)
-      throw Value(Error::BadArgs);
+      Value::error(Error::BadArgs);
 
     param_ffi_types.push_back(ffit);
   }
@@ -85,12 +85,12 @@ namespace vbci
   Value Symbol::call(std::vector<void*>& args)
   {
     if (!func)
-      throw Value(Error::UnknownFFI);
+      Value::error(Error::UnknownFFI);
 
     if (vararg)
     {
       if (args.size() != param_ffi_types.size())
-        throw Value(Error::BadArgs);
+        Value::error(Error::BadArgs);
 
       if (
         ffi_prep_cif_var(
@@ -101,7 +101,7 @@ namespace vbci
           return_ffi_type,
           param_ffi_types.data()) != FFI_OK)
       {
-        throw Value(Error::BadArgs);
+        Value::error(Error::BadArgs);
       }
     }
 

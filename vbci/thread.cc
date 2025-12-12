@@ -263,7 +263,7 @@ namespace vbci
     auto result = Cown::create(type_id);
 
     if (!Program::get().subtype(func->return_type, result->content_type_id()))
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     auto b =
       verona::rt::BehaviourCore::make(1, run_behavior, sizeof(Value) * 2);
@@ -722,7 +722,7 @@ namespace vbci
                         }
 
                         default:
-                          throw Value(Error::BadConversion);
+                          Value::error(Error::BadConversion);
                       }
                     });
           break;
@@ -815,7 +815,7 @@ namespace vbci
                     Frame& frame) INLINE {
             if (cls.singleton)
             {
-              throw Value(Error::BadRegionEntryPoint);
+              Value::error(Error::BadRegionEntryPoint);
             }
 
             self.check_args(cls.fields);
@@ -1031,7 +1031,7 @@ namespace vbci
                 auto f = src.method(method_id);
 
                 if (!f)
-                  throw Value(Error::MethodNotFound);
+                  Value::error(Error::MethodNotFound);
 
                 dst = Value(f);
               });
@@ -1165,7 +1165,7 @@ namespace vbci
 
             if (
               !ret.is_error() && !program.subtype(ret.type_id(), symbol.ret()))
-              throw Value(Error::BadType);
+              Value::error(Error::BadType);
 
             dst = std::move(ret);
             frame.drop_args(num_args);
@@ -1402,7 +1402,7 @@ namespace vbci
           do_const(nan);
 
         default:
-          throw Value(Error::UnknownOpcode);
+          Value::error(Error::UnknownOpcode);
       }
     }
     catch (Value& v)
@@ -1429,7 +1429,7 @@ namespace vbci
   void Thread::pushframe(Function* func, size_t dst, CallType calltype)
   {
     if (!func)
-      throw Value(Error::MethodNotFound);
+      Value::error(Error::MethodNotFound);
 
     LOG(Trace) << "Call " << program->di_function(func) << " and calltype "
                << calltype;
@@ -1596,7 +1596,7 @@ namespace vbci
   void Thread::tailcall(Function* func)
   {
     if (!func)
-      throw Value(Error::MethodNotFound);
+      Value::error(Error::MethodNotFound);
 
     // Preserve the frame-local region.
     teardown(true);
@@ -1617,7 +1617,7 @@ namespace vbci
 
     // Can't tailcall with stack allocations.
     if (stack_escape)
-      throw Value(Error::BadStackEscape);
+      Value::error(Error::BadStackEscape);
 
     // Set the new function and program counter.
     frame->func = func;
@@ -1645,7 +1645,7 @@ namespace vbci
   void Thread::branch(size_t label)
   {
     if (label >= frame->func->labels.size())
-      throw Value(Error::BadLabel);
+      Value::error(Error::BadLabel);
 
     frame->pc = frame->func->labels.at(label);
   }
@@ -1655,7 +1655,7 @@ namespace vbci
     if ((args < types.size()) || (!vararg && (args > types.size())))
     {
       drop_args();
-      throw Value(Error::BadArgs);
+      Value::error(Error::BadArgs);
     }
 
     for (size_t i = 0; i < types.size(); i++)
@@ -1663,7 +1663,7 @@ namespace vbci
       if (!program->subtype(arg(i).type_id(), types.at(i)))
       {
         drop_args();
-        throw Value(Error::BadType);
+        Value::error(Error::BadType);
       }
     }
 
@@ -1675,7 +1675,7 @@ namespace vbci
     if (args != fields.size())
     {
       frame->drop_args(args);
-      throw Value(Error::BadArgs);
+      Value::error(Error::BadArgs);
     }
 
     for (size_t i = 0; i < args; i++)
@@ -1683,7 +1683,7 @@ namespace vbci
       if (!program->subtype(frame->arg(i).type_id(), fields.at(i).type_id))
       {
         frame->drop_args(args);
-        throw Value(Error::BadType);
+        Value::error(Error::BadType);
       }
     }
 
@@ -1719,7 +1719,7 @@ namespace vbci
   Thread::queue_behavior(Register& result, uint32_t type_id, Function* func)
   {
     if (func->param_types.size() != args)
-      throw Value(Error::BadArgs);
+      Value::error(Error::BadArgs);
 
     auto& params = func->param_types;
     bool is_closure = false;
@@ -1736,10 +1736,10 @@ namespace vbci
         is_closure = true;
 
         if (!program->subtype(closure.type_id(), params.at(0)))
-          throw Value(Error::BadArgs);
+          Value::error(Error::BadArgs);
 
         if (!closure.is_sendable())
-          throw Value(Error::BadArgs);
+          Value::error(Error::BadArgs);
 
         num_cowns--;
         first_cown++;
@@ -1753,7 +1753,7 @@ namespace vbci
       auto ref_type = program->ref(cown->content_type_id());
 
       if (!program->subtype(ref_type, params.at(i)))
-        throw Value(Error::BadArgs);
+        Value::error(Error::BadArgs);
     }
 
     args = 0;
@@ -1762,7 +1762,7 @@ namespace vbci
     auto result_cown = Cown::create(type_id);
 
     if (!program->subtype(func->return_type, result_cown->content_type_id()))
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     result = Value(result_cown);
 

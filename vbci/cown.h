@@ -20,7 +20,7 @@ namespace vbci
     Cown(uint32_t type_id) : type_id(type_id)
     {
       if (!Program::get().is_cown(type_id))
-        throw Value(Error::BadType);
+        Value::error(Error::BadType);
     }
 
   public:
@@ -119,7 +119,7 @@ namespace vbci
       if (
         !next.is_error() &&
         !Program::get().subtype(next.type_id(), content_type_id()))
-        throw Value(Error::BadType);
+        Value::error(Error::BadType);
 
       auto prev_loc = content.location();
       auto next_loc = next.location();
@@ -167,7 +167,7 @@ namespace vbci
           pr->set_parent();
           pr->stack_dec();
         }
-        throw Value(Error::BadStore);
+        Value::error(Error::BadStore);
       }
 
       // The code above has ensured we have suitable stack rc if required.

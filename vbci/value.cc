@@ -61,7 +61,7 @@ namespace vbci
   Value::Value(Function* func) : func(func), tag(ValueType::Function)
   {
     if (!func)
-      throw Value(Error::MethodNotFound);
+      Value::error(Error::MethodNotFound);
   }
 
   Value Value::copy_value() const
@@ -429,7 +429,7 @@ namespace vbci
   bool Value::get_bool() const
   {
     if (tag != ValueType::Bool)
-      throw Value(Error::BadConversion);
+      Value::error(Error::BadConversion);
 
     return b;
   }
@@ -437,7 +437,7 @@ namespace vbci
   int32_t Value::get_i32() const
   {
     if (tag != ValueType::I32)
-      throw Value(Error::BadConversion);
+      Value::error(Error::BadConversion);
 
     return i32;
   }
@@ -445,7 +445,7 @@ namespace vbci
   Cown* Value::get_cown() const
   {
     if (tag != ValueType::Cown)
-      throw Value(Error::BadConversion);
+      Value::error(Error::BadConversion);
 
     return cown;
   }
@@ -461,7 +461,7 @@ namespace vbci
         return arr;
 
       default:
-        throw Value(Error::BadConversion);
+        Value::error(Error::BadConversion);
     }
   }
 
@@ -476,7 +476,7 @@ namespace vbci
   size_t Value::get_size() const
   {
     if (tag != ValueType::USize)
-      throw Value(Error::BadConversion);
+      Value::error(Error::BadConversion);
 
     return usize;
   }
@@ -592,7 +592,7 @@ namespace vbci
     if (tag == ValueType::Array)
       return Value(ValueType::USize, arr->get_size());
 
-    throw Value(Error::BadOperand);
+    Value::error(Error::BadOperand);
   }
 
   Value Value::op_ptr()
@@ -640,7 +640,7 @@ namespace vbci
       case ValueType::Function:
         return Value(func);
       default:
-        throw Value(Error::BadOperand);
+        Value::error(Error::BadOperand);
     }
   }
 
@@ -653,7 +653,7 @@ namespace vbci
       return r;
     }
 
-    throw Value(Error::BadOperand);
+    Value::error(Error::BadOperand);
   }
 
   template<bool is_register>
@@ -764,7 +764,7 @@ namespace vbci
         break;
     }
 
-    throw Value(Error::BadAllocTarget);
+    Value::error(Error::BadAllocTarget);
   }
 
   void Value::immortalize()
@@ -831,17 +831,17 @@ namespace vbci
       }
 
       default:
-        throw Value(Error::BadRefTarget);
+        Value::error(Error::BadRefTarget);
     }
   }
 
   Register Value::arrayref(bool move, size_t i) const
   {
     if (tag != ValueType::Array)
-      throw Value(Error::BadRefTarget);
+      Value::error(Error::BadRefTarget);
 
     if (i >= arr->get_size())
-      throw Value(Error::BadArrayIndex);
+      Value::error(Error::BadArrayIndex);
 
     if (move)
       // Const can be ignored here as only required when move is false.
@@ -878,7 +878,7 @@ namespace vbci
         return r;
       }
       default:
-        throw Value(Error::BadLoadTarget);
+        Value::error(Error::BadLoadTarget);
     }
 
     v.inc<true>();
@@ -890,12 +890,12 @@ namespace vbci
   Register Value::store(Reg<is_move> v) const
   {
     if (readonly)
-      throw Value(Error::BadStoreTarget);
+      Value::error(Error::BadStoreTarget);
 
     // Currently only cowns provide read-only access.  That means it
     // is never valid to store a read-only reference any where.
     if (v.readonly)
-      throw Value(Error::BadStore);
+      Value::error(Error::BadStore);
 
     switch (tag)
     {
@@ -904,7 +904,7 @@ namespace vbci
         auto vloc = v.location();
 
         if (loc::is_stack(vloc) && (vloc > idx))
-          throw Value(Error::BadStoreTarget);
+          Value::error(Error::BadStoreTarget);
 
         // Should also check for frame local?
         if (loc::is_region(vloc) && loc::to_region(vloc)->is_frame_local())
@@ -914,7 +914,7 @@ namespace vbci
             // TODO This should perform a drag rather than failing.
             // We need to move the frame local region to the frame local
             // region associated with the register ref.
-            throw Value(Error::BadStoreTarget);
+            Value::error(Error::BadStoreTarget);
         }
 
         Register prev = std::move(*reg);
@@ -937,7 +937,7 @@ namespace vbci
         return cown->store<is_move>(std::forward<Reg<is_move>>(v));
 
       default:
-        throw Value(Error::BadStoreTarget);
+        Value::error(Error::BadStoreTarget);
     }
   }
 
@@ -953,7 +953,7 @@ namespace vbci
   Value Value::convert(ValueType to) const
   {
     if ((tag > ValueType::Function) || (to > ValueType::F64))
-      throw Value(Error::BadConversion);
+      Value::error(Error::BadConversion);
 
     if (tag == to)
       return copy_value();

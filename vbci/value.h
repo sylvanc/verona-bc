@@ -2,13 +2,14 @@
 
 #include "ident.h"
 #include "platform.h"
-
+#include "logging.h"
 #include <cmath>
 #include <cstring>
 #include <functional>
 #include <limits>
 #include <numbers>
 #include <ostream>
+#include <source_location>
 
 namespace vbci
 {
@@ -125,6 +126,16 @@ namespace vbci
     void* to_ffi();
     static Register from_addr(ValueType t, void* v);
 
+    [[noreturn]] static void error(
+      Error error,
+      const std::source_location& location = std::source_location::current())
+    {
+      LOG(Trace) << "Error raised by " << location.file_name() << '('
+                 << location.line() << ':' << location.column() << ") `"
+                 << location.function_name() << "`: " << errormsg(error);
+      throw Value(error);
+    }
+
     template<bool is_move>
     void to_addr(ValueType t, void* v) const;
 
@@ -154,7 +165,7 @@ namespace vbci
     Register ref(bool move, size_t field);
     Register arrayref(bool move, size_t i) const;
     Register load() const;
-    
+
     template<bool is_move>
     Register store(Reg<is_move> r) const;
 
@@ -562,7 +573,7 @@ namespace vbci
       template<typename T>
       constexpr T operator()(T&&) const
       {
-        throw Value(Error::BadOperand);
+        Value::error(Error::BadOperand);
       }
     };
 
@@ -571,7 +582,7 @@ namespace vbci
       template<typename T, typename U>
       constexpr T operator()(T&&, U&&) const
       {
-        throw Value(Error::BadOperand);
+        Value::error(Error::BadOperand);
       }
     };
 
@@ -652,7 +663,7 @@ namespace vbci
           return Value(OpF{}(f64));
 
         default:
-          throw Value(Error::BadOperand);
+          Value::error(Error::BadOperand);
       }
     }
 
@@ -664,7 +675,7 @@ namespace vbci
     Value binop(const Value& v) const
     {
       if (this->tag != v.tag)
-        throw Value(Error::MismatchedTypes);
+        Value::error(Error::MismatchedTypes);
 
       switch (this->tag)
       {
@@ -714,7 +725,7 @@ namespace vbci
           return Value(OpF{}(f64, v.f64));
 
         default:
-          throw Value(Error::BadOperand);
+          Value::error(Error::BadOperand);
       }
     }
 
@@ -799,7 +810,7 @@ namespace vbci
           return reinterpret_cast<size_t>(func);
 
         default:
-          throw Value(Error::BadOperand);
+          Value::error(Error::BadOperand);
       }
     }
 
@@ -872,7 +883,7 @@ namespace vbci
           break;
 
         default:
-          throw Value(Error::BadOperand);
+          Value::error(Error::BadOperand);
       }
     }
   };

@@ -46,7 +46,7 @@ namespace vbci
       auto& c = cls();
       auto find = c.field_map.find(field);
       if (find == c.field_map.end())
-        throw Value(Error::BadField);
+        Value::error(Error::BadField);
 
       return find->second;
     }
@@ -74,7 +74,7 @@ namespace vbci
       auto& f = cls().fields.at(idx);
 
       if (!Program::get().subtype(v.type_id(), f.type_id))
-        throw Value(Error::BadType);
+        Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
 

@@ -24,7 +24,7 @@ namespace vbci
         }
 
       default:
-        throw Value(Error::UnknownRegionType);
+        Value::error(Error::UnknownRegionType);
     }
   }
 }
