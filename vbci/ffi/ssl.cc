@@ -65,10 +65,10 @@ namespace vbci
       }
 
       for (auto array : plaintext)
-        array->dec(false);
+        array->dec();
 
       if (last_read.base)
-        (reinterpret_cast<Array*>(last_read.base) - 1)->dec(false);
+        (reinterpret_cast<Array*>(last_read.base) - 1)->dec();
     }
 
     void client(const char* hostname)

@@ -1,9 +1,11 @@
 #pragma once
 
 #include "frame.h"
+#include "logging.h"
 #include "platform.h"
 #include "program.h"
 #include "stack.h"
+#include "register.h"
 
 #include <type_traits>
 #include <unordered_set>
@@ -13,10 +15,12 @@ namespace vbci
 {
   struct Thread
   {
+    friend struct Operands;
+
   private:
     Stack stack;
     std::vector<Frame> frames;
-    std::vector<Value> locals;
+    std::vector<Register> locals;
     std::vector<Object*> finalize;
 
     Program* program;
@@ -26,10 +30,13 @@ namespace vbci
     size_t args;
 
     std::vector<void*> ffi_arg_addrs;
-    std::vector<Value*> ffi_arg_vals;
+    std::vector<Register*> ffi_arg_vals;
+#ifndef NDEBUG
+    logging::Trace instruction_log;
+#endif
 
   public:
-    static Value run_async(uint32_t type_id, Function* func);
+    static Register run_async(uint32_t type_id, Function* func);
 
     template<typename... Ts>
     static void run_sync(Function* func, Ts... argv)
@@ -45,6 +52,14 @@ namespace vbci
 
     static std::pair<Function*, PC> debug_info();
 
+    // Disable copy semantics
+    Thread(const Thread&) = delete;
+    Thread& operator=(const Thread&) = delete;
+
+    // Allow move semantics
+    Thread(Thread&&) = delete;
+    Thread& operator=(Thread&&) = delete;
+
   private:
     Thread();
     static Thread& get();
@@ -54,31 +69,39 @@ namespace vbci
     void thread_run_sync(Function* func, Ts... argv)
     {
       assert(args == 0);
-      ((arg(args++) = argv), ...);
+      ((arg(args++) = std::forward<Ts>(argv)), ...);
       auto ret = thread_run(func);
 
       if (ret.is_error())
         LOG(Error) << ret.to_string();
-
-      ret.drop();
     }
 
     void thread_run_behavior(verona::rt::Work* work);
-    Value thread_run(Function* func);
+    Register thread_run(Function* func);
     void step();
     void pushframe(Function* func, size_t dst, CallType calltype);
-    void popframe(Value& result, Condition condition);
+    void popframe(Register result, Condition condition);
     void tailcall(Function* func);
     void teardown(bool tailcall = false);
     void branch(size_t label);
     void check_args(std::vector<uint32_t>& types, bool vararg = false);
     void check_args(std::vector<Field>& fields);
-    Value& arg(size_t idx);
+    Register& arg(size_t idx);
     void drop_args();
-    void queue_behavior(Value& result, uint32_t type_id, Function* func);
+    void queue_behavior(Register& result, uint32_t type_id, Function* func);
+
+    template<typename... Args>
+    SNMALLOC_FAST_PATH void trace_instruction(Args&&... args)
+    {
+#ifndef NDEBUG
+      (instruction_log << ... << std::forward<Args>(args));
+#else
+      snmalloc::UNUSED(args...);
+#endif
+    }
 
     template<typename T = size_t>
-    T leb()
+    SNMALLOC_FAST_PATH T leb()
     {
       if constexpr (
         (std::is_integral_v<T> && std::is_signed_v<T>) ||

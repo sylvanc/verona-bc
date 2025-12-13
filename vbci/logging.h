@@ -293,6 +293,14 @@ namespace vbci::logging
       std::string result = strstream.get().str();
       return result;
     }
+
+    void dump_and_reset(detail::LogLevel level)
+    {
+      if (SNMALLOC_UNLIKELY(is_active()))
+        end();
+      if (SNMALLOC_UNLIKELY(level <= detail::report_level))
+        start(level);
+    }
   };
 
   namespace detail

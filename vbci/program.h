@@ -75,8 +75,27 @@ namespace vbci
     Value& global(size_t idx);
     ffi_type* value_type();
 
-    int64_t sleb(size_t& pc);
-    uint64_t uleb(size_t& pc);
+    SNMALLOC_FAST_PATH int64_t sleb(size_t& pc)
+    {
+      // This uses zigzag encoding.
+      auto value = uleb(pc);
+      return (value >> 1) ^ -(value & 1);
+    }
+
+    SNMALLOC_FAST_PATH uint64_t uleb(size_t& pc)
+    {
+      constexpr uint64_t max_shift = (sizeof(uint64_t) * 8) - 1;
+      uint64_t value = 0;
+
+      for (uint64_t shift = 0; shift <= max_shift; shift += 7)
+      {
+        value |= (uint64_t(content.at(pc)) & 0x7F) << shift;
+        if (SNMALLOC_LIKELY((content.at(pc++) & 0x80) == 0)) [[likely]]
+          break;
+      }
+
+      return value;
+    }
 
     uint32_t get_typeid_arg();
     uint32_t get_typeid_argv();

@@ -20,7 +20,7 @@ namespace vbci
     Cown(uint32_t type_id) : type_id(type_id)
     {
       if (!Program::get().is_cown(type_id))
-        throw Value(Error::BadType);
+        Value::error(Error::BadType);
     }
 
   public:
@@ -35,9 +35,13 @@ namespace vbci
     {
       LOG(Trace) << "Destroying cown @" << this;
       auto prev_loc = content.location();
-      if (loc::is_region(prev_loc))
-        loc::to_region(prev_loc)->clear_parent();
-      content.drop();
+      content.field_drop();
+      if (loc::is_region(prev_loc) && loc::to_region(prev_loc)->clear_parent())
+      {
+        LOG(Trace) << "Freeing region: " << loc::to_region(prev_loc)
+                   << " from cown " << this;
+        loc::to_region(prev_loc)->free_region();
+      }
       LOG(Trace) << "Destroyed cown @" << this;
     }
 
@@ -63,95 +67,117 @@ namespace vbci
       release(this);
     }
 
-    Value load()
+    Register load()
     {
-      return content;
+      return content.copy_reg();
     }
 
-    Value store(bool move, Value& v)
+    template<bool is_move>
+    bool add_region_reference(Reg<is_move>& next)
     {
-      Value next;
-      bool unparent_prev = true;
-      Region* nr;
+      auto next_loc = next.location();
+      // Can't store a stack value in a cown.
+      if (loc::is_stack(next_loc))
+        return false;
 
-      if (move)
-        next = std::move(v);
-      else
-        next = v;
+      // Primitives and immutables are always ok.
+      if (!loc::is_region(next_loc))
+        return true;
 
-      // Allow any cown to contain an error.
+      // It doesn't matter what the stack RC is, because all stack RC will be
+      // gone by the time this cown is available to any other behavior.
+      auto r = loc::to_region(next_loc);
+
+      if (r->is_frame_local())
+      {
+        // Drag a frame-local allocation to a fresh region.
+        r = Region::create(RegionType::RegionRC);
+        LOG(Trace) << "Dragging frame-local allocation to new region:" << r;
+
+        if (!drag_allocation(r, next.get_header()))
+        {
+          r->free_region();
+          return false;
+        }
+      }
+
+      if (r->has_parent())
+        // If the region has a parent, it can't be stored.
+        return false;
+
+      r->set_parent();
+      // Remove the stack reference to this region, as we have moved it
+      // into the cown.
+      if constexpr (is_move)
+        r->stack_dec();
+      return true;
+    }
+
+    template<bool is_move>
+    Register store(Reg<is_move> next)
+    {
       if (
         !next.is_error() &&
         !Program::get().subtype(next.type_id(), content_type_id()))
-        next = Value(Error::BadType);
+        Value::error(Error::BadType);
 
       auto prev_loc = content.location();
       auto next_loc = next.location();
 
-      // Can't store a stack value in a cown.
-      if (loc::is_stack(next_loc))
+      // If in the same location/region, we can be simple.
+      if (next_loc == prev_loc)
       {
-        next = Value(Error::BadStore);
-      }
-      else if (loc::is_region(next_loc) && (next_loc != prev_loc))
-      {
-        // It doesn't matter what the stack RC is, because all stack RC will be
-        // gone by the time this cown is available to any other behavior.
-        auto r = loc::to_region(next_loc);
+        Value prev = std::move(content);
 
-        if (r->is_frame_local())
+        if constexpr (is_move)
         {
-          LOG(Trace) << "Dragging frame-local allocation to new region:" << r;
-          // Drag a frame-local allocation to a fresh region.
-          nr = Region::create(RegionType::RegionRC);
-          nr->set_parent();
-
-          // if ploc is a region, must be not frame local
-          if (loc::is_region(prev_loc))
-          {
-            loc::to_region(prev_loc)->clear_parent();
-            unparent_prev = false;
-          }
-
-          if (!drag_allocation(nr, next.get_header()))
-          {
-            next = Value(Error::BadStore);
-            nr->free_region();
-          }
-          else
-          {
-            next_loc = next.location();
-          }
-        }
-        else if (r->has_parent())
-        {
-          // If the region has a parent, it can't be stored.
-          next = Value(Error::BadStore);
+          content = std::move(next);
         }
         else
         {
-          LOG(Trace) << "Adding region: " << r << " to cown " << this;
-          // Set the region parent to this cown.
-          r->set_parent();
+          content = next.copy_value();
+          // If we copied, need to increment stack RC as there is a new
+          // Register reference to this region.
+          if (loc::is_region(next_loc))
+            loc::to_region(next_loc)->stack_inc();
         }
+        return Register(std::move(prev));
       }
 
-      if (next.is_error())
-        LOG(Debug) << next.to_string();
-
-      auto prev = std::move(content);
-      content = std::move(next);
-
-      // Clear prev region parent if it's different from next.
-      if (loc::is_region(prev_loc) && (prev_loc != next_loc))
+      // if ploc is a region, must be not frame local
+      if (loc::is_region(prev_loc))
       {
-        if (unparent_prev)
-        {
-          LOG(Trace) << "Removing region: " << loc::to_region(prev_loc)
-                    << " from cown " << this;
-          loc::to_region(prev_loc)->clear_parent();
-        }
+        auto pr = loc::to_region(prev_loc);
+        LOG(Trace) << "Removing region: " << pr << " from cown " << this;
+        assert(!pr->is_frame_local());
+        // Previous value will land in a register, so increment stack RC.
+        pr->stack_inc();
+        // Need to clear parent before drag, incase the drag will
+        // reparent this region.
+        pr->clear_parent();
       }
+
+      if (!add_region_reference<is_move>(next))
+      {
+        // Failed to add references, need to restore the previous contents.
+        if (loc::is_region(prev_loc))
+        {
+          auto pr = loc::to_region(prev_loc);
+          LOG(Trace) << "Restoring region: " << pr << " to cown " << this;
+          pr->set_parent();
+          pr->stack_dec();
+        }
+        Value::error(Error::BadStore);
+      }
+
+      // The code above has ensured we have suitable stack rc if required.
+      Register prev{std::move(content)};
+
+      if constexpr (is_move)
+        content = std::move(next);
+      else
+        content = next.copy_value();
+
       return prev;
     }
 

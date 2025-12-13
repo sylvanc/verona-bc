@@ -53,7 +53,7 @@ namespace vbci
   Symbol& Program::symbol(size_t idx)
   {
     if (idx >= symbols.size())
-      throw Value(Error::UnknownFFI);
+      Value::error(Error::UnknownFFI);
 
     return symbols.at(idx);
   }
@@ -69,7 +69,7 @@ namespace vbci
   Class& Program::cls(uint32_t type_id)
   {
     if (type_id >= classes.size())
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return classes.at(type_id);
   }
@@ -77,7 +77,7 @@ namespace vbci
   ComplexType& Program::complex_type(uint32_t type_id)
   {
     if (!is_complex(type_id))
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return complex_types.at(type_id - min_complex_type_id);
   }
@@ -85,7 +85,7 @@ namespace vbci
   Value& Program::global(size_t idx)
   {
     if (idx >= globals.size())
-      throw Value(Error::UnknownGlobal);
+      Value::error(Error::UnknownGlobal);
 
     return globals.at(idx);
   }
@@ -93,28 +93,6 @@ namespace vbci
   ffi_type* Program::value_type()
   {
     return &ffi_type_value;
-  }
-
-  int64_t Program::sleb(size_t& pc)
-  {
-    // This uses zigzag encoding.
-    auto value = uleb(pc);
-    return (value >> 1) ^ -(value & 1);
-  }
-
-  uint64_t Program::uleb(size_t& pc)
-  {
-    constexpr uint64_t max_shift = (sizeof(uint64_t) * 8) - 1;
-    uint64_t value = 0;
-
-    for (uint64_t shift = 0; shift <= max_shift; shift += 7)
-    {
-      value |= (uint64_t(content.at(pc)) & 0x7F) << shift;
-      if ((content.at(pc++) & 0x80) == 0) [[likely]]
-        break;
-    }
-
-    return value;
   }
 
   uint32_t Program::get_typeid_arg()
@@ -135,7 +113,7 @@ namespace vbci
   Array* Program::get_string(size_t idx)
   {
     if (idx >= strings.size())
-      throw Value(Error::UnknownGlobal);
+      Value::error(Error::UnknownGlobal);
 
     auto& str = strings.at(idx);
     auto str_size = str.size() + 1;
@@ -184,7 +162,6 @@ namespace vbci
       exit_code = ret_val.get_i32();
     }
 
-    ret.drop();
     return exit_code;
   }
 
@@ -325,7 +302,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag != TypeTag::Array)
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return t.children.at(0);
   }
@@ -335,7 +312,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag != TypeTag::Cown)
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return t.children.at(0);
   }
@@ -345,7 +322,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag != TypeTag::Ref)
-      throw Value(Error::BadType);
+      Value::error(Error::BadType);
 
     return t.children.at(0);
   }
@@ -568,8 +545,8 @@ namespace vbci
       std::memcpy(p, str.c_str(), str_size);
       arg->set_size(str_size - 1);
 
-      auto arg_value = Value(arg);
-      argv->store(true, i, arg_value);
+      // TODO should this be a register, or should we have an unregister store?
+      argv->template store<true>(i, Register(Value(arg)));
     }
 
     argv->immortalize();

@@ -14,19 +14,17 @@ namespace vbci
       case RegionType::RegionArena:
         {
           auto result = new RegionArena();
-          LOG(Trace) << "Created RegionArena @" << result;
           return result;
         }
 
       case RegionType::RegionRC:
         {
           auto result = new RegionRC();
-          LOG(Trace) << "Created RegionRC @" << result;
           return result;
         }
 
       default:
-        throw Value(Error::UnknownRegionType);
+        Value::error(Error::UnknownRegionType);
     }
   }
 }

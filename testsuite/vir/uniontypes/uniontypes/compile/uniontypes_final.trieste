@@ -1,0 +1,141 @@
+vbcc
+liveness
+(top
+  {}
+  (type
+    (typeid 6:@union)
+    (union
+      (i32)
+      (classid 4:@Foo)))
+  (class
+    (classid 4:@Foo)
+    (fields
+      (field
+        (fieldid 2:@a)
+        (i32)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 2:$x)
+            (i32)
+            (int 2:99))
+          (stack
+            (localid 4:$foo)
+            (classid 4:@Foo)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$x))))
+          (fieldref
+            (localid 4:$ref)
+            (arg
+              (argcopy)
+              (localid 4:$foo))
+            (fieldid 2:@a))
+          (call
+            (localid 3:$r0)
+            (functionid 6:@func1)
+            (args
+              (arg
+                (argmove)
+                (localid 4:$foo))))
+          (call
+            (localid 3:$r1)
+            (functionid 6:@func1)
+            (args
+              (arg
+                (argmove)
+                (localid 2:$x))))
+          (call
+            (localid 3:$r2)
+            (functionid 6:@func2)
+            (args
+              (arg
+                (argmove)
+                (localid 4:$ref))))
+          (eq
+            (localid 3:$r3)
+            (localid 3:$r1)
+            (localid 3:$r2)))
+        (cond
+          (localid 3:$r3)
+          (labelid 5:^true)
+          (labelid 6:^false)))
+      (label
+        (labelid 5:^true)
+        (body)
+        (ret
+          (localid 3:$r1)))
+      (label
+        (labelid 6:^false)
+        (body)
+        (ret
+          (localid 3:$r2)))))
+  (func
+    (functionid 6:@func1)
+    (params
+      (param
+        (localid 2:$x)
+        (typeid 6:@union)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 6:^func1)
+        (body
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 1:1)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 6:@func2)
+    (params
+      (param
+        (localid 2:$x)
+        (ref
+          (i32))))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 6:^func2)
+        (body
+          (load
+            (localid 2:$y)
+            (localid 2:$x))
+          (typetest
+            (localid 2:$z)
+            (localid 2:$y)
+            (i32)))
+        (cond
+          (localid 2:$z)
+          (labelid 5:^true)
+          (labelid 6:^false)))
+      (label
+        (labelid 5:^true)
+        (body
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 3:100)))
+        (ret
+          (localid 2:$r)))
+      (label
+        (labelid 6:^false)
+        (body
+          (const
+            (localid 2:$r)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 2:$r))))))

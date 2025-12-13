@@ -38,6 +38,7 @@ else()
   target_compile_options(vbci PRIVATE
     -Wall -Wextra -Werror
     -flto -ffunction-sections -fdata-sections
+    -g # For better debugging experience
     )
 
   target_link_options(vbci PRIVATE -rdynamic -flto)

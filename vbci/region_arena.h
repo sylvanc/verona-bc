@@ -9,7 +9,10 @@ namespace vbci
     friend struct Region;
 
   protected:
-    RegionArena() : RegionRC() {}
+    RegionArena() : RegionRC()
+    {
+      LOG(Trace) << "Created RegionArena @" << this;
+    }
 
     bool enable_rc()
     {

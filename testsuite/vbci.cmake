@@ -1,6 +1,9 @@
 # Arguments for testing vbci samples
 macro(toolinvoke ARGS testfile outputdir)
+# Use the following line to disable tracing output from the vbci tool
   set(${ARGS} ${testfile}) 
+# Use the following line to enable tracing output from the vbci tool
+#  set(${ARGS} ${testfile} -l Trace)
 endmacro()
 
 # Regular expression to match test files
