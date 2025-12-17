@@ -2,21 +2,26 @@
 
 ## Current Work
 
+Type inference.
+- Create a `TypeVar` for integer and float literals?
+  - Upper bounds is the union of literal types.
+
+- References, load, store.
+- Lookup, dynamic call.
+- Determine type arguments from context:
+  - Call.
+  - Dynamic call.
+- Determine `when` type from the `when / Rhs` function type.
+
 Compilation path.
 - Local builds have none. Set this as a `vbci` flag.
 - Release builds encode a git repo and ref?
-- Or, PDB style debug info with source files embedded (VDB). Compress with `zstd`?
+- Or, PDB style debug info with source files embedded (VDB). Compress with `zstd`? `zlib` is in `libgit2`.
 
 Check use before definition in `let x = ... x ...`.
 
-Reification.
-- Don't fail on method instantiation failure.
-  - Mark as "delete on error".
-  - On completion of `run`, check if it contains errors.
+Type aliases.
 - Test type aliases, make sure cycles are rejected.
-
-Types.
-- Determine `when` type from the `when / Rhs` function type.
 
 ## To Do
 
@@ -45,12 +50,12 @@ Tuples:
 
 Expressions:
 - Partial application, `_`.
+- Short-circuiting.
 
 Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
 - Literals.
   - Grouping characters in numbers: `1_000_000`.
-  - Unescape strings. Currently happens in `validids`.
 - Region creation.
 
 Structure:

@@ -147,6 +147,7 @@ namespace vc
   void Reification::run()
   {
     delays = 0;
+    literals.clear();
 
     instance->traverse(
       [&](Node& node) {
@@ -159,36 +160,46 @@ namespace vc
           return;
 
         // TODO: type inference
-        // Const, ConstStr, Convert
         // RegisterRef, FieldRef, ArrayRef, ArrayRefConst
         // Load, Store
-        // Call, Lookup, CallDyn
-        // Typetest, When, wfBinop, wfUnop
+        // Lookup, CallDyn, When
 
+        // Don't bother with bounds for intrinsics that are only used in
+        // builtin, unless they may introduce a new reified type.
         if (node == TypeName)
           reify_typename(node);
-        else if (node == Function)
-          bounds.ret().use(node / Type);
         else if (node == ParamDef)
           bounds[node / Ident].assign(node / Type);
         else if (node->in({Return, Raise, Throw}))
-          uf.unite_ret(node / LocalId);
-        else if (node == Copy)
-          uf.unite(node / LocalId, node / Rhs);
+          bounds[node / LocalId].use(node->parent(Function) / Type);
         else if (node == New)
           reify_new(node);
         else if (node->in({NewArray, NewArrayConst}))
           reify_newarray(node);
-        else if (node == FFI)
-          reify_ffi(node);
-        else if (node->in({Const, Convert}))
-          reify_primitive(node);
-        else if (node->in({Eq, Ne, Lt, Le, Gt, Ge}))
-          reify_bool(node);
+        else if (node == ConstStr)
+          reify_string(node);
+        else if (node == Copy)
+          uf.unite(node / LocalId, node / Rhs);
+        else if (node->in({Eq, Ne, Lt, Le, Gt, Ge, Typetest}))
+          bounds[node / LocalId].assign(reify_builtin("bool"));
         else if (node->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
-          reify_f64(node);
+          bounds[node / LocalId].assign(reify_builtin("f64"));
+        else if (node == Bits)
+          bounds[node / LocalId].assign(reify_builtin("u64"));
+        else if (node == Len)
+          bounds[node / LocalId].assign(reify_builtin("usize"));
+        else if (node == MakePtr)
+          bounds[node / LocalId].assign(reify_builtin("ptr"));
+        else if (node == Convert)
+          reify_convert(node);
+        else if (node == Const)
+          reify_const(node);
         else if (node == Call)
           reify_call(node);
+        else if (node == FFI)
+          reify_ffi(node);
+
+        // TODO: from here
         else if (node == Lookup)
           reify_lookup(node);
         else if (node->in({FieldRef, ArrayRef, RegisterRef}))
@@ -208,10 +219,15 @@ namespace vc
       }
       else if (instance == ClassDef)
       {
+        // Add any (already reified) methods that were requested.
         reify_lookups();
       }
       else if (instance == Function)
       {
+        for (auto& node : literals)
+          pick_literal_type(node);
+
+        // Add this as a method to each requesting (already reified) class.
         std::for_each(wants_method.begin(), wants_method.end(), [&](auto& kv) {
           auto& cls = kv.first;
           auto& method_id = kv.second;
@@ -251,92 +267,16 @@ namespace vc
 
       if (def == Symbol)
       {
+        // If an FFI symbol is being reified, reify all types mentioned in the
+        // signature.
         auto& rf = rs->get_reification(p.result);
         rs->schedule(rf.def, rf.subst_orig, true);
       }
     }
     else if (r == Delay)
-    {
-      delays++;
-    }
-    else
-    {
-      status = Fail;
-    }
-  }
-
-  void Reification::reify_call(Node node)
-  {
-    if ((node / QName) != QName)
-      return;
-
-    PathReification p(rs, subst, node / QName, node / Lhs, node / Args);
-    auto r = p.run();
-
-    if (r == Ok)
-      node / QName = clone(p.result);
-    else if (r == Delay)
       delays++;
     else
       status = Fail;
-  }
-
-  void Reification::reify_ffi(Node node)
-  {
-    auto sym = node / SymbolId;
-    auto args = node / Args;
-    auto body = node->parent(ClassBody);
-
-    while (body)
-    {
-      for (auto& m : *body)
-      {
-        if (m != Lib)
-          continue;
-
-        for (auto& s : *(m / Symbols))
-        {
-          if (!(s / SymbolId)->equals(sym))
-            continue;
-
-          auto params = s / FFIParams;
-          auto varargs = (s / Vararg) == Vararg;
-          auto type = s / Type;
-
-          if (!varargs && (args->size() != params->size()))
-          {
-            auto msg = std::format(
-              "FFI call to `{}` expects {} arguments, got {}",
-              sym->location().view(),
-              params->size(),
-              args->size());
-            node << err(node, msg);
-            status = Fail;
-            return;
-          }
-
-          if (varargs && (args->size() < params->size()))
-          {
-            auto msg = std::format(
-              "FFI call to `{}` expects at least {} arguments, got {}",
-              sym->location().view(),
-              params->size(),
-              args->size());
-            node << err(node, msg);
-            status = Fail;
-            return;
-          }
-
-          for (size_t i = 0; i < args->size(); i++)
-            bounds[args->at(i) / Rhs].use(params->at(i));
-
-          bounds[node / LocalId].assign(type);
-          return;
-        }
-      }
-
-      body = body->parent(ClassBody);
-    }
   }
 
   void Reification::reify_new(Node node)
@@ -410,91 +350,186 @@ namespace vc
     auto pdef = rs->builtin->lookdown(Location("array")).front();
     s[(pdef / TypeParams)->front()] = node / Type;
     auto&& [r, fresh] = rs->schedule(pdef, s, true);
+    bounds[node / LocalId].assign(r.reified_name);
+  }
 
-    if (r.status == Ok)
-      bounds[node / LocalId].assign(r.reified_name);
-    else if (r.status == Delay)
+  void Reification::reify_string(Node node)
+  {
+    Subst s;
+    auto pdef = rs->builtin->lookdown(Location("array")).front();
+    s[(pdef / TypeParams)->front()] = Type << clone(reify_builtin("u8"));
+    auto&& [r, fresh] = rs->schedule(pdef, s, true);
+    bounds[node / LocalId].assign(r.reified_name);
+  }
+
+  Node Reification::reify_builtin(const std::string& name)
+  {
+    auto pdef = rs->builtin->lookdown(Location(name)).front();
+    auto&& [r, fresh] = rs->schedule(pdef, {}, true);
+    return r.reified_name;
+  }
+
+  void Reification::reify_convert(Node node)
+  {
+    auto type = node / Type;
+    Node r;
+
+    if (type == None)
+      r = reify_builtin("none");
+    else if (type == Bool)
+      r = reify_builtin("bool");
+    else if (type == I8)
+      r = reify_builtin("i8");
+    else if (type == I16)
+      r = reify_builtin("i16");
+    else if (type == I32)
+      r = reify_builtin("i32");
+    else if (type == I64)
+      r = reify_builtin("i64");
+    else if (type == U8)
+      r = reify_builtin("u8");
+    else if (type == U16)
+      r = reify_builtin("u16");
+    else if (type == U32)
+      r = reify_builtin("u32");
+    else if (type == U64)
+      r = reify_builtin("u64");
+    else if (type == ILong)
+      r = reify_builtin("ilong");
+    else if (type == ULong)
+      r = reify_builtin("ulong");
+    else if (type == ISize)
+      r = reify_builtin("isize");
+    else if (type == USize)
+      r = reify_builtin("usize");
+    else if (type == F32)
+      r = reify_builtin("f32");
+    else if (type == F64)
+      r = reify_builtin("f64");
+    else
+      assert(false);
+
+    bounds[node / LocalId].assign(r);
+  }
+
+  void Reification::reify_const(Node node)
+  {
+    auto type = node / Type;
+
+    if (type->in({U64, F64}))
+      literals.push_back(node);
+    else
+      reify_convert(node);
+  }
+
+  void Reification::reify_call(Node node)
+  {
+    if ((node / QName) != QName)
+      return;
+
+    Node args = node / Args;
+    PathReification p(rs, subst, node / QName, node / Lhs, args);
+    auto r = p.run();
+
+    if (r == Ok)
+    {
+      node / QName = clone(p.result / Ident);
+      auto params = p.result / Params;
+      assert(params->size() == args->size());
+
+      for (size_t i = 0; i < args->size(); i++)
+        bounds[args->at(i) / Rhs].use(params->at(i) / Type);
+
+      bounds[node / LocalId].assign(p.result / Type);
+    }
+    else if (r == Delay)
       delays++;
     else
       status = Fail;
   }
 
-  void Reification::reify_primitive(Node node)
+  void Reification::reify_ffi(Node node)
   {
-    auto type = node / Type;
-    Node pdef;
+    auto sym = node / SymbolId;
+    auto args = node / Args;
+    auto body = node->parent(ClassBody);
 
-    if (type == None)
-      pdef = rs->builtin->lookdown(Location("none")).front();
-    else if (type == Bool)
-      pdef = rs->builtin->lookdown(Location("bool")).front();
-    else if (type == I8)
-      pdef = rs->builtin->lookdown(Location("i8")).front();
-    else if (type == I16)
-      pdef = rs->builtin->lookdown(Location("i16")).front();
-    else if (type == I32)
-      pdef = rs->builtin->lookdown(Location("i32")).front();
-    else if (type == I64)
-      pdef = rs->builtin->lookdown(Location("i64")).front();
-    else if (type == U8)
-      pdef = rs->builtin->lookdown(Location("u8")).front();
-    else if (type == U16)
-      pdef = rs->builtin->lookdown(Location("u16")).front();
-    else if (type == U32)
-      pdef = rs->builtin->lookdown(Location("u32")).front();
-    else if (type == U64)
-      pdef = rs->builtin->lookdown(Location("u64")).front();
-    else if (type == ILong)
-      pdef = rs->builtin->lookdown(Location("ilong")).front();
-    else if (type == ULong)
-      pdef = rs->builtin->lookdown(Location("ulong")).front();
-    else if (type == ISize)
-      pdef = rs->builtin->lookdown(Location("isize")).front();
-    else if (type == USize)
-      pdef = rs->builtin->lookdown(Location("usize")).front();
-    else if (type == F32)
-      pdef = rs->builtin->lookdown(Location("f32")).front();
-    else if (type == F64)
-      pdef = rs->builtin->lookdown(Location("f64")).front();
-    else
-      assert(false);
+    while (body)
+    {
+      for (auto& m : *body)
+      {
+        if (m != Lib)
+          continue;
 
-    rs->schedule(pdef, {}, true);
-  }
+        for (auto& s : *(m / Symbols))
+        {
+          if (!(s / SymbolId)->equals(sym))
+            continue;
 
-  void Reification::reify_bool(Node node)
-  {
-    auto pdef = rs->builtin->lookdown(Location("bool")).front();
-    auto&& [r, fresh] = rs->schedule(pdef, {}, true);
-    bounds[node / LocalId].assign(r.reified_name);
-  }
+          auto params = s / FFIParams;
+          auto varargs = (s / Vararg) == Vararg;
+          auto type = s / Type;
 
-  void Reification::reify_f64(Node node)
-  {
-    auto pdef = rs->builtin->lookdown(Location("f64")).front();
-    auto&& [r, fresh] = rs->schedule(pdef, {}, true);
-    bounds[node / LocalId].assign(r.reified_name);
+          if (!varargs && (args->size() != params->size()))
+          {
+            auto msg = std::format(
+              "FFI call to `{}` expects {} arguments, got {}",
+              sym->location().view(),
+              params->size(),
+              args->size());
+            node << err(node, msg);
+            status = Fail;
+            return;
+          }
+
+          if (varargs && (args->size() < params->size()))
+          {
+            auto msg = std::format(
+              "FFI call to `{}` expects at least {} arguments, got {}",
+              sym->location().view(),
+              params->size(),
+              args->size());
+            node << err(node, msg);
+            status = Fail;
+            return;
+          }
+
+          for (size_t i = 0; i < args->size(); i++)
+            bounds[args->at(i) / Rhs].use(params->at(i));
+
+          bounds[node / LocalId].assign(type);
+          return;
+        }
+      }
+
+      body = body->parent(ClassBody);
+    }
   }
 
   void Reification::reify_lookup(Node node)
   {
+    // TODO: method lookups
+    // unions and intersections?
+    // must exist on every type in a union, any type in an intersection
+    // use subtyping with type variables?
+    // auto receivers = uf.group(node / Rhs);
+    // Nodes types;
+
+    // for (auto& r : receivers)
+    // {
+    //   for (auto& t : bounds[r].lower)
+    //     concrete_types(types, t);
+    // }
+
     rs->add_lookup(node);
   }
-
-  // void Reification::reify_fieldref(Node node)
-  // {
-  //   // TODO: only happens when the enclosing type is the arg
-  // }
 
   void Reification::reify_ref(Node /*node*/)
   {
     // TODO: not always ref[any]
     Subst s;
     auto pdef = rs->builtin->lookdown(Location("ref")).front();
-    s[(pdef / TypeParams)->front()] = Type
-      << (TypeNameReified << (TypePath << (Ident ^ "builtin")
-                                       << (Ident ^ "any"))
-                          << (Int ^ "0"));
+    s[(pdef / TypeParams)->front()] = Type << clone(reify_builtin("any"));
     rs->schedule(pdef, s, true);
   }
 
@@ -567,5 +602,108 @@ namespace vc
       rs->rhs_lookups.begin(), rs->rhs_lookups.end(), [&](auto& kv) {
         return f(kv, Rhs);
       });
+  }
+
+  void Reification::concrete_types(Nodes& types, Node type)
+  {
+    type->traverse(
+      [&](Node& n) { return n->in({Isect, Union, TypeNameReified}); },
+      [&](Node& n) {
+        if (n == TypeNameReified)
+          types.push_back(n);
+
+        return true;
+      });
+  }
+
+  Nodes Reification::literal_types(Nodes& types, bool int_lit)
+  {
+    Nodes result;
+
+    for (auto& t : types)
+    {
+      if (t != TypeNameReified)
+        continue;
+
+      auto& path = t->front();
+
+      if (
+        (path->size() != 2) || (path->front()->location().view() != "builtin"))
+        continue;
+
+      auto cls = path->back()->location().view();
+
+      if (
+        (cls == "f32") || (cls == "f64") ||
+        (int_lit &&
+         ((cls == "i8") || (cls == "i16") || (cls == "i32") || (cls == "i64") ||
+          (cls == "u8") || (cls == "u16") || (cls == "u32") || (cls == "u64") ||
+          (cls == "ilong") || (cls == "ulong") || (cls == "isize") ||
+          (cls == "usize"))))
+        result.push_back(t);
+    }
+
+    return result;
+  }
+
+  void Reification::pick_literal_type(Node node)
+  {
+    if (!(node / Type)->in({U64, F64}))
+      return;
+
+    Nodes candidates;
+    auto locals = uf.group(node / LocalId);
+
+    for (auto& l : locals)
+    {
+      auto& b = bounds[l];
+      assert(b.lower.empty());
+
+      for (auto t : b.upper)
+        concrete_types(candidates, t);
+    }
+
+    // TODO: just use the first one?
+    // a concrete type that isn't from a union is "more precise".
+    candidates = literal_types(candidates, (node / Type) == U64);
+    Node t = candidates.empty() ? reify_builtin("u64") : candidates.front();
+    bounds[node / LocalId].assign(t);
+
+    // Set the literal type.
+    auto& path = t->front();
+    assert(
+      (path->size() == 2) && (path->front()->location().view() == "builtin"));
+    auto cls = path->back()->location().view();
+
+    if (cls == "i8")
+      node / Type = I8;
+    else if (cls == "i16")
+      node / Type = I16;
+    else if (cls == "i32")
+      node / Type = I32;
+    else if (cls == "i64")
+      node / Type = I64;
+    else if (cls == "u8")
+      node / Type = U8;
+    else if (cls == "u16")
+      node / Type = U16;
+    else if (cls == "u32")
+      node / Type = U32;
+    else if (cls == "u64")
+      node / Type = U64;
+    else if (cls == "ilong")
+      node / Type = ILong;
+    else if (cls == "ulong")
+      node / Type = ULong;
+    else if (cls == "isize")
+      node / Type = ISize;
+    else if (cls == "usize")
+      node / Type = USize;
+    else if (cls == "f32")
+      node / Type = F32;
+    else if (cls == "f64")
+      node / Type = F64;
+    else
+      assert(false);
   }
 }

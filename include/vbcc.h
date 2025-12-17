@@ -163,6 +163,7 @@ namespace vbcc
   inline const auto Float = TokenDef("float", flag::print);
   inline const auto HexFloat = TokenDef("hexfloat", flag::print);
   inline const auto String = TokenDef("string", flag::print);
+  inline const auto RawString = TokenDef("rawstring", flag::print);
 
   // Structure.
   inline const auto Source = TokenDef("source");
@@ -274,7 +275,7 @@ namespace vbcc
     | (Offset <<= Int)
     | (Global <<= wfDst * GlobalId)
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
-    | (ConstStr <<= wfDst * String)
+    | (ConstStr <<= wfDst * (String >>= String | RawString))
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
     | (New <<= wfDst * ClassId * Args)
     | (Stack <<= wfDst * ClassId * Args)

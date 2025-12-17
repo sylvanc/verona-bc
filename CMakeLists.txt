@@ -54,8 +54,8 @@ FetchContent_MakeAvailable_ExcludeFromAll(libuv)
 
 # This isn't detecting correctly on WSL2.
 set(GIT_USE_STAT_MTIM 1)
+set(BUILD_TESTS OFF CACHE INTERNAL "Disable libgit2 tests")
 
-set (BUILD_TESTS OFF CACHE INTERNAL "Disable libgit2 tests")
 FetchContent_Declare(
   libgit2
   GIT_REPOSITORY https://github.com/libgit2/libgit2

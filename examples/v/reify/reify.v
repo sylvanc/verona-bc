@@ -7,9 +7,8 @@ use
 
 main(): i32
 {
-  // let r = range[i32](0.i32, 5.i32) chain[i32]: range[i32](5.i32, 10.i32);
-  let r = range[i32] 0.i32 5.i32 chain[i32]: range[i32] 5.i32 10.i32;
-  // let r = range 0 5 chain: range 5 10;
+  let r = range[i32] 0 5 chain[i32]: range[i32] 5 10 take[i32]: 9;
+  // let r = range 0 5 chain: range 5 10 take: 9;
   var sum = 0.i32;
 
   for r v ->
@@ -41,5 +40,5 @@ main(): i32
   //   r
   // }
 
-  0.i32
+  0
 }

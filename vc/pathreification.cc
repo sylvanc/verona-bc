@@ -154,15 +154,14 @@ namespace vc
       {
         // Schedule the function for reification.
         auto&& [target_r, fresh] = rs->schedule(curr_def, subst, true);
-        result = target_r.instance / Ident;
+        result = target_r.instance;
+        return target_r.status;
       }
-      else
-      {
-        if (errors)
-          path << (err("Expected a function") << errloc(path->back()));
 
-        return Fail;
-      }
+      if (errors)
+        path << (err("Expected a function") << errloc(path->back()));
+
+      return Fail;
     }
     else if (curr_def == ClassDef)
     {

@@ -37,8 +37,8 @@ namespace vc
     // a `use` include to see if there's a definition available.
     bool errors;
 
-    // The result. This is a reified_name or a TypeAlias reification (for a
-    // TypeName) or a FunctionId (for a QName).
+    // The result. This is a TypeNameReified for a ClassDef, or a reified
+    // instance for a TypeAlias or Function.
     Node result;
 
     PathReification(Reifications* rs, Subst& subst, Node path);
