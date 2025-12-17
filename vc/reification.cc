@@ -604,7 +604,7 @@ namespace vc
       });
   }
 
-  void Reification::concrete_types(Nodes types, Node type)
+  void Reification::concrete_types(Nodes& types, Node type)
   {
     type->traverse(
       [&](Node& n) { return n->in({Isect, Union, TypeNameReified}); },
@@ -616,7 +616,7 @@ namespace vc
       });
   }
 
-  Nodes Reification::literal_types(Nodes types, bool int_lit)
+  Nodes Reification::literal_types(Nodes& types, bool int_lit)
   {
     Nodes result;
 
@@ -628,19 +628,19 @@ namespace vc
       auto& path = t->front();
 
       if (
-        (path->size() == 2) && (path->front()->location().view() == "builtin"))
-      {
-        auto cls = path->back()->location().view();
+        (path->size() != 2) || (path->front()->location().view() != "builtin"))
+        continue;
 
-        if (
-          (cls == "f32") || (cls == "f64") ||
-          (int_lit &&
-           ((cls == "i8") || (cls == "i16") || (cls == "i32") ||
-            (cls == "i64") || (cls == "u8") || (cls == "u16") ||
-            (cls == "u32") || (cls == "u64") || (cls == "ilong") ||
-            (cls == "ulong") || (cls == "isize") || (cls == "usize"))))
-          result.push_back(t);
-      }
+      auto cls = path->back()->location().view();
+
+      if (
+        (cls == "f32") || (cls == "f64") ||
+        (int_lit &&
+         ((cls == "i8") || (cls == "i16") || (cls == "i32") || (cls == "i64") ||
+          (cls == "u8") || (cls == "u16") || (cls == "u32") || (cls == "u64") ||
+          (cls == "ilong") || (cls == "ulong") || (cls == "isize") ||
+          (cls == "usize"))))
+        result.push_back(t);
     }
 
     return result;

@@ -50,6 +50,7 @@ Tuples:
 
 Expressions:
 - Partial application, `_`.
+- Short-circuiting.
 
 Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
