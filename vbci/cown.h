@@ -35,12 +35,20 @@ namespace vbci
     {
       LOG(Trace) << "Destroying cown @" << this;
       auto prev_loc = content.location();
-      content.field_drop();
-      if (loc::is_region(prev_loc) && loc::to_region(prev_loc)->clear_parent())
+      Region* prev_region = nullptr;
+
+      if (prev_loc.is_region())
       {
-        LOG(Trace) << "Freeing region: " << loc::to_region(prev_loc)
-                   << " from cown " << this;
-        loc::to_region(prev_loc)->free_region();
+        prev_region = prev_loc.to_region();
+        prev_region->stack_inc();
+      }
+
+      content.field_drop();
+
+      if (prev_region != nullptr)
+      {
+        prev_region->clear_cown_owner();
+        prev_region->stack_dec();
       }
       LOG(Trace) << "Destroyed cown @" << this;
     }
@@ -77,35 +85,39 @@ namespace vbci
     {
       auto next_loc = next.location();
       // Can't store a stack value in a cown.
-      if (loc::is_stack(next_loc))
+      if (next_loc.is_stack())
         return false;
 
       // Primitives and immutables are always ok.
-      if (!loc::is_region(next_loc))
+      if (!next_loc.is_region_or_frame_local())
         return true;
 
-      // It doesn't matter what the stack RC is, because all stack RC will be
-      // gone by the time this cown is available to any other behavior.
-      auto r = loc::to_region(next_loc);
+      Region* r;
 
-      if (r->is_frame_local())
+      if (next_loc.is_frame_local())
       {
+        // It doesn't matter what the stack RC is, because all stack RC will be
+        // gone by the time this cown is available to any other behavior.
+
         // Drag a frame-local allocation to a fresh region.
         r = Region::create(RegionType::RegionRC);
         LOG(Trace) << "Dragging frame-local allocation to new region:" << r;
 
-        if (!drag_allocation(r, next.get_header()))
+        if (!drag_allocation(Location(r), next.get_header()))
         {
           r->free_region();
           return false;
         }
       }
+      else
+      {
+        r = next_loc.to_region();
+        if (r->has_owner())
+          // If the region has a parent, it can't be stored.
+          return false;
+      }
 
-      if (r->has_parent())
-        // If the region has a parent, it can't be stored.
-        return false;
-
-      r->set_parent();
+      r->set_cown_owner();
       // Remove the stack reference to this region, as we have moved it
       // into the cown.
       if constexpr (is_move)
@@ -138,33 +150,32 @@ namespace vbci
           content = next.copy_value();
           // If we copied, need to increment stack RC as there is a new
           // Register reference to this region.
-          if (loc::is_region(next_loc))
-            loc::to_region(next_loc)->stack_inc();
+          if (next_loc.is_region())
+            next_loc.to_region()->stack_inc();
         }
         return Register(std::move(prev));
       }
 
       // if ploc is a region, must be not frame local
-      if (loc::is_region(prev_loc))
+      if (prev_loc.is_region())
       {
-        auto pr = loc::to_region(prev_loc);
+        auto pr = prev_loc.to_region();
         LOG(Trace) << "Removing region: " << pr << " from cown " << this;
-        assert(!pr->is_frame_local());
         // Previous value will land in a register, so increment stack RC.
         pr->stack_inc();
         // Need to clear parent before drag, incase the drag will
         // reparent this region.
-        pr->clear_parent();
+        pr->clear_cown_owner();
       }
 
       if (!add_region_reference<is_move>(next))
       {
         // Failed to add references, need to restore the previous contents.
-        if (loc::is_region(prev_loc))
+        if (prev_loc.is_region())
         {
-          auto pr = loc::to_region(prev_loc);
+          auto pr = prev_loc.to_region();
           LOG(Trace) << "Restoring region: " << pr << " to cown " << this;
-          pr->set_parent();
+          pr->set_cown_owner();
           pr->stack_dec();
         }
         Value::error(Error::BadStore);

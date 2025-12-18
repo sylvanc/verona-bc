@@ -93,7 +93,7 @@ namespace vbci
       // freed.
       finalize();
 
-      if (loc::is_immutable(location()))
+      if (location().is_immutable())
         delete this;
       else
         region()->rfree(this);
@@ -132,7 +132,7 @@ namespace vbci
 
     void immortalize()
     {
-      if (location() == loc::Immortal)
+      if (location() == Location::immortal())
         return;
 
       mark_immortal();

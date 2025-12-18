@@ -87,7 +87,7 @@ namespace vbci
     explicit Value(Object* obj, bool ro);
     explicit Value(Array* arr);
     explicit Value(Cown* cown);
-    explicit Value(Register& reg, size_t frame);
+    explicit Value(Register& reg, Location frame);
     explicit Value(Object* obj, size_t f, bool ro);
     explicit Value(Array* arr, size_t idx, bool ro);
     explicit Value(Cown* cown, bool ro);

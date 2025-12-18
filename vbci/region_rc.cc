@@ -2,13 +2,15 @@
 
 #include "array.h"
 #include "object.h"
+#include "thread.h"
 
 namespace vbci
 {
   Object* RegionRC::object(Class& cls)
   {
     auto mem = new uint8_t[cls.size];
-    auto obj = Object::create(mem, cls, Location(this));
+    auto loc = Thread::region_location(this);
+    auto obj = Object::create(mem, cls, loc);
     headers.emplace(obj);
     stack_inc();
     return obj;
@@ -19,8 +21,9 @@ namespace vbci
     auto content_type_id = Program::get().unarray(type_id);
     auto rep = Program::get().layout_type_id(content_type_id);
     auto mem = new uint8_t[Array::size_of(size, rep.second->size)];
+    auto loc = Thread::region_location(this);
     auto arr = Array::create(
-      mem, Location(this), type_id, rep.first, size, rep.second->size);
+      mem, loc, type_id, rep.first, size, rep.second->size);
     headers.emplace(arr);
     stack_inc();
     return arr;
