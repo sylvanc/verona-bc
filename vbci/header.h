@@ -254,7 +254,7 @@ namespace vbci
           if constexpr (!is_move)
           {
             if (ploc.is_region())
-                ploc.to_region()->stack_inc();
+              ploc.to_region()->stack_inc();
           }
           return prev;
         }
@@ -400,43 +400,31 @@ namespace vbci
 
     bool sendable()
     {
-      if (loc.is_immutable())
-      {
-        return true;
-      }
-      else if (loc.is_stack())
+      if (loc.is_stack())
       {
         return false;
       }
-      else if (loc.no_rc())
+      else if (loc.is_frame_local())
       {
-        // Immortal values do not participate in region reference counting.
-        return true;
-      }
-      else
-      {
-        assert(loc.is_region_or_frame_local());
-        auto r = loc.to_region();
+        // Drag a frame-local allocation to a region.
+        auto nr = Region::create(RegionType::RegionRC);
 
+        if (!drag_allocation(Location(nr), this))
+          return false;
+
+        return (nr->sendable());
+
+        // TODO: delay if stack_rc > 1?
+      }
+      else if (loc.is_region())
+      {
+        auto r = loc.to_region();
         if (r->sendable())
           return true;
 
-        if (r->is_frame_local())
-        {
-          // Drag a frame-local allocation to a region.
-          auto nr = Region::create(RegionType::RegionRC);
-
-          if (!drag_allocation(Location(nr), this))
-            return false;
-
-          if (nr->sendable())
-            return true;
-
-          // TODO: delay if stack_rc > 1?
-        }
-
         return false;
       }
+      return true;
     }
 
     template<bool reg = false>
