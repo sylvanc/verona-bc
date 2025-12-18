@@ -37,6 +37,10 @@ namespace vbci
 
   public:
     static Register run_async(uint32_t type_id, Function* func);
+    static Region* frame_local_region(size_t index);
+    static bool is_frame_local_region(Region* region);
+    static size_t frame_local_index(Region* region);
+    static Location region_location(Region* region);
 
     template<typename... Ts>
     static void run_sync(Function* func, Ts... argv)

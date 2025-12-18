@@ -881,14 +881,16 @@ namespace vbci
       {
         auto vloc = v.location();
 
-        if (vloc.is_stack() && (vloc.raw() > idx))
+        auto ref_loc = Location::from_raw(idx);
+
+        if (vloc.is_stack() &&
+            (vloc.stack_index() > ref_loc.stack_index()))
           Value::error(Error::BadStoreTarget);
 
         // Should also check for frame local?
-        if (vloc.is_region() && vloc.to_region()->is_frame_local())
+        if (vloc.is_frame_local())
         {
-          auto vr = vloc.to_region();
-          if (vr->get_parent().raw() > idx)
+          if (vloc.frame_local_index() > ref_loc.stack_index())
             // TODO This should perform a drag rather than failing.
             // We need to move the frame local region to the frame local
             // region associated with the register ref.

@@ -30,7 +30,6 @@ namespace vbci
   {
     // The frame-local region always carries a stack RC.
     region.stack_inc();
-    region.set_frame_id(frame_id);
   }
 
   Register& Frame::local(size_t idx)

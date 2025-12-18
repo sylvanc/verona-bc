@@ -39,15 +39,19 @@ namespace vbci
       {
         if (nloc.is_stack())
           // Older frames can't point to newer frames.
-          return (loc >= nloc);
+          return loc.stack_index() >= nloc.stack_index();
 
-        assert(nloc.is_region());
+        assert(nloc.is_region_or_frame_local());
+
+        if (nloc.no_rc())
+          return true;
+
         auto nr = nloc.to_region();
 
         // Older frames can't point to newer frames.
-        if (nr->is_frame_local())
+        if (nloc.is_frame_local())
         {
-          if (loc < nr->get_parent())
+          if (loc.stack_index() < nloc.frame_local_index())
             return false;
 
           // Stack to frame local doesn't need a stack rc.
@@ -60,13 +64,17 @@ namespace vbci
         return true;
       }
 
-      assert(loc.is_region());
+      assert(loc.is_region_or_frame_local());
 
       if (nloc.is_stack())
         // No region, even a frame-local one, can point to the stack.
         return false;
 
-      assert(nloc.is_region());
+      assert(nloc.is_region_or_frame_local());
+
+      if (nloc.no_rc())
+        return true;
+
       auto r = loc.to_region();
       auto nr = nloc.to_region();
 
@@ -97,7 +105,7 @@ namespace vbci
       if (nr->is_frame_local())
       {
         // Drag a frame-local allocation to a region.
-        auto success = drag_allocation(r, next.get_header());
+        auto success = drag_allocation(loc, next.get_header());
         if (!success)
           return false;
         // TODO Should perhaps move this inside drag_allocation?
@@ -106,7 +114,7 @@ namespace vbci
         return true;
       }
 
-      if (nr->has_parent())
+      if (nr->has_owner())
       {
         // Regions can only have a single entry point,
         // but frame-local regions are allowed.
@@ -124,7 +132,7 @@ namespace vbci
       // in.
       assert(!loc.is_stack());
 
-      assert(nloc.is_region());
+      assert(nloc.is_region_or_frame_local());
 
       // Set the parent
       // it's in a different region.
@@ -156,7 +164,7 @@ namespace vbci
     template<bool to_register = true>
     bool remove_region_reference(Location ploc) const
     {
-      if (!ploc.is_region())
+      if (!ploc.is_region() || ploc.no_rc())
         return true;
 
       assert(!ploc.is_stack());
@@ -184,7 +192,7 @@ namespace vbci
         pr->stack_inc();
 
       // Internal edges cannot be parents
-      if (pr == r)
+      if (ploc == loc)
         return true;
 
       bool cleared = pr->clear_parent();
@@ -204,7 +212,7 @@ namespace vbci
     // `to_register == true` case for `remove_region_reference`.
     void restore_reference(Location ploc) const
     {
-      if (!ploc.is_region())
+      if (!ploc.is_region() || ploc.no_rc())
         return;
 
       auto pr = ploc.to_region();
@@ -255,7 +263,7 @@ namespace vbci
           // We have overwritten the previous value, so the classic RC invariant
           // is reestablished.
 
-          if (ploc.is_region() && !ploc.to_region()->is_frame_local())
+          if (ploc.is_region() && !ploc.is_frame_local() && !ploc.no_rc())
           {
             if constexpr (!is_move)
               ploc.to_region()->stack_inc();
@@ -386,18 +394,19 @@ namespace vbci
 
     Region* region()
     {
-      if (!loc.is_region())
+      if (!loc.is_region_or_frame_local() || loc.no_rc())
         return nullptr;
 
       return loc.to_region();
     }
 
-    void move_region(Region* to)
+    void move_region(Location to_loc, Region* to)
     {
-      if (loc.is_region())
+      if (loc.is_region_or_frame_local())
         loc.to_region()->remove(this);
 
-      loc = Location(to);
+      assert(to_loc.is_region_or_frame_local());
+      loc = to_loc;
       to->insert(this);
     }
 
@@ -411,9 +420,14 @@ namespace vbci
       {
         return false;
       }
+      else if (loc.no_rc())
+      {
+        // Immortal values do not participate in region reference counting.
+        return true;
+      }
       else
       {
-        assert(loc.is_region());
+        assert(loc.is_region_or_frame_local());
         auto r = loc.to_region();
 
         if (r->sendable())
@@ -424,7 +438,7 @@ namespace vbci
           // Drag a frame-local allocation to a region.
           auto nr = Region::create(RegionType::RegionRC);
 
-          if (!drag_allocation(nr, this))
+          if (!drag_allocation(Location(nr), this))
             return false;
 
           if (nr->sendable())
@@ -461,7 +475,7 @@ namespace vbci
 
     void stack_inc()
     {
-      if (loc.is_region())
+      if (loc.is_region_or_frame_local())
       {
         auto r = loc.to_region();
         r->stack_inc();
@@ -470,7 +484,7 @@ namespace vbci
 
     void stack_dec()
     {
-      if (loc.is_region())
+      if (loc.is_region_or_frame_local())
       {
         auto r = loc.to_region();
         r->stack_dec();

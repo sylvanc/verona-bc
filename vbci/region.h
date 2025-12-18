@@ -5,6 +5,7 @@
 #include "ident.h"
 #include "location.h"
 
+#include <cstdint>
 #include <iostream>
 #include <vbci.h>
 #include "logging.h"
@@ -14,11 +15,31 @@ namespace vbci
   struct Region
   {
   private:
-    Location parent;
+    /**
+     * `parent` encodes the ownership of this region:
+     *  - `nullptr` means the region currently has no owner.
+     *  - `cown_region()` identifies that the region is owned by a Cown. This
+     *    is a sentinel value used when a region is captured by a behaviour.
+     *  - Any other pointer represents the real parent region. In this case
+     *    stack reference counts are propagated along the parent chain so that
+     *    dropping the child when its stack RC reaches zero will either free it
+     *    or transfer the decrement to the parent.
+     *
+     * Consumers should prefer the helper accessors:
+     *  - `has_owner()` to test whether the field is non-null.
+     *  - `get_parent()` / `has_parent()` to work with only real (non-cown)
+     *    parents.
+     *  - `set_cown_owner()` / `clear_cown_owner()` to transition the sentinel
+     *    state used while a Cown owns the region.
+     */
+    Region* parent;
     RC stack_rc;
 
+    static Region* cown_region();
+
+
   protected:
-    Region() : parent(Location::none()), stack_rc(0) {}
+    Region() : parent(nullptr), stack_rc(0) {}
     virtual ~Region() = default;
 
   public:
@@ -37,8 +58,11 @@ namespace vbci
       //      assert(!is_frame_local());
 
       // If we transition from 0 to 1, we need to increment the parent RC.
-      if ((stack_rc == 0) && parent.is_region())
-        parent.to_region()->stack_inc();
+      if (stack_rc == 0)
+      {
+        if (auto p = get_parent())
+          p->stack_inc();
+      }
 
       LOG(Trace) << "Region @" << this << " stack_rc incremented from "
                 << stack_rc << " to " << (stack_rc + inc);
@@ -55,7 +79,7 @@ namespace vbci
                 << stack_rc << " to " << (stack_rc - 1);
       if (--stack_rc == 0)
       {
-        if (!has_parent())
+        if (!has_owner())
         {
           // Returns false if the region has been freed.
           free_region();
@@ -63,8 +87,8 @@ namespace vbci
         }
 
         // If we transition from 1 to 0, we need to decrement the parent RC.
-        if (parent.is_region())
-          return parent.to_region()->stack_dec();
+        if (auto p = get_parent())
+          return p->stack_dec();
       }
 
       return true;
@@ -72,9 +96,9 @@ namespace vbci
 
     bool is_ancestor_of(Region* r)
     {
-      while (r->parent.is_region())
+      while (auto p = r->get_parent())
       {
-        r = r->parent.to_region();
+        r = p;
 
         if (r == this)
           return true;
@@ -86,44 +110,45 @@ namespace vbci
     bool sendable()
     {
       assert(stack_rc > 0);
-      return !has_parent() && (stack_rc == 1);
+      return !has_owner() && (stack_rc == 1);
     }
 
-    bool has_parent()
+    bool has_owner() const
     {
-      return parent != Location::none();
+      return parent != nullptr;
     }
 
-    Location get_parent()
+    Region* get_parent() const
     {
-      return parent;
+      return (parent && (parent != cown_region())) ? parent : nullptr;
     }
 
-    bool is_frame_local()
+    bool has_parent() const
     {
-      return parent.is_stack();
+      return get_parent() != nullptr;
     }
 
-    void set_frame_id(Location frame_id)
+    Region* get_parent()
     {
-      assert(!has_parent());
-      assert(stack_rc > 0);
-      parent = frame_id;
+      return const_cast<Region*>(
+        static_cast<const Region*>(this)->get_parent());
     }
+
+    bool is_frame_local();
 
     void set_parent(Region* r)
     {
-      assert(!has_parent());
-      parent = Location(r);
+      assert(!has_owner());
+      parent = r;
 
       if (stack_rc > 0)
         r->stack_inc();
     }
 
-    void set_parent()
+    void set_cown_owner()
     {
-      assert(!has_parent());
-      parent = Location::immutable();
+      assert(!has_owner());
+      parent = cown_region();
     }
 
     /**
@@ -134,19 +159,28 @@ namespace vbci
      */
     bool clear_parent()
     {
-      assert(has_parent());
+      auto p = get_parent();
+      assert(p != nullptr);
 
-      if (parent.is_region() && (stack_rc > 0))
-        parent.to_region()->stack_dec();
+      if (stack_rc > 0)
+        p->stack_dec();
 
-      parent = Location::none();
+      parent = nullptr;
+      // TODO: Should this just deallocate the region directly?
+      return stack_rc == 0;
+    }
+
+    bool clear_cown_owner()
+    {
+      assert(parent == cown_region());
+      parent = nullptr;
       // TODO: Should this just deallocate the region directly?
       return stack_rc == 0;
     }
 
     void free_region()
     {
-      assert(!has_parent());
+      assert(!has_owner());
       assert(stack_rc == 0);
       collect(this);
     }

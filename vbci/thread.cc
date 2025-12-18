@@ -6,6 +6,7 @@
 #include "object.h"
 #include "program.h"
 
+#include <cstdlib>
 #include <iostream>
 
 #define INLINE SNMALLOC_FAST_PATH_LAMBDA
@@ -293,6 +294,51 @@ namespace vbci
     locals.resize(1024);
   }
 
+  Region* Thread::frame_local_region(size_t index)
+  {
+    auto& t = get();
+    assert(index < t.frames.size());
+    return &t.frames.at(index).region;
+  }
+
+  bool Thread::is_frame_local_region(Region* region)
+  {
+    auto& t = get();
+
+    for (auto& frame : t.frames)
+    {
+      if (&frame.region == region)
+        return !region->has_owner();
+    }
+
+    return false;
+  }
+
+  size_t Thread::frame_local_index(Region* region)
+  {
+    auto& t = get();
+
+    for (size_t i = 0; i < t.frames.size(); i++)
+    {
+      if (&t.frames[i].region == region)
+      {
+        assert(!region->has_owner());
+        return i;
+      }
+    }
+
+    LOG(Error) << "Region " << region << " is not frame-local";
+    abort();
+  }
+
+  Location Thread::region_location(Region* region)
+  {
+    if (is_frame_local_region(region))
+      return Location::frame_local(frame_local_index(region));
+
+    return Location(region);
+  }
+
   Thread& Thread::get()
   {
     thread_local Thread thread;
@@ -321,7 +367,7 @@ namespace vbci
 
         // Clear the parent region, as it's no longer acquired by the behaviour.
         if (r)
-          r->clear_parent();
+          r->clear_cown_owner();
       }
 
       locals.at(args++) = std::move(closure);
@@ -1491,15 +1537,17 @@ namespace vbci
       condition = Condition::Throw;
     }
     else if (
-      retloc.is_region() && retloc.to_region()->is_frame_local() &&
-      (retloc.to_region()->get_parent() == frame->frame_id))
+      retloc.is_frame_local() &&
+      (retloc.frame_local_index() == frame->frame_id.stack_index()))
     {
       if (frames.size() > 1)
       {
         // Drag the frame-local allocation to the previous frame.
         auto& prev_frame = frames.at(frames.size() - 2);
 
-        if (!drag_allocation(&prev_frame.region, ret.get_header()))
+        auto prev_loc = Location::frame_local(prev_frame.frame_id.stack_index());
+
+        if (!drag_allocation(prev_loc, ret.get_header()))
         {
           ret = Value(Error::BadStackEscape);
           condition = Condition::Throw;
@@ -1510,7 +1558,7 @@ namespace vbci
         // Drag the frame-local allocation to a fresh region.
         auto r = Region::create(RegionType::RegionRC);
 
-        if (!drag_allocation(r, ret.get_header()))
+        if (!drag_allocation(Location(r), ret.get_header()))
         {
           ret = Value(Error::BadStackEscape);
           condition = Condition::Throw;
@@ -1636,7 +1684,10 @@ namespace vbci
 
     // Finalize the frame-local region. A tailcall preserves the region.
     if (!tailcall)
+    {
+      assert(!frame->region.has_owner());
       frame->region.free_contents();
+    }
 
     // Pop the stack.
     stack.restore(frame->save);
@@ -1800,8 +1851,8 @@ namespace vbci
         auto r = closure.get_header()->region();
 
         // Set the region parent, as it's captured by the behavior.
-        if (r)
-          r->set_parent();
+        if (r && !r->has_owner())
+          r->set_cown_owner();
       }
 
       *cvalue = std::move(closure);
