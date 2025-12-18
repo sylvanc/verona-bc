@@ -1437,14 +1437,14 @@ namespace vbci
     check_args(func->param_types);
 
     // Set how we will handle non-local returns in the current frame.
-    Location frame_id = loc::Stack;
+    Location frame_id = Location::stack();
     size_t base = 0;
     size_t finalize_base = 0;
 
     if (frame)
     {
       frame->calltype = calltype;
-      frame_id = frame->frame_id + loc::FrameInc;
+      frame_id = frame->frame_id.next_stack_level();
       base = frame->base + frame->func->registers;
       finalize_base = frame->finalize_top;
     }
@@ -1491,8 +1491,8 @@ namespace vbci
       condition = Condition::Throw;
     }
     else if (
-      loc::is_region(retloc) && loc::to_region(retloc)->is_frame_local() &&
-      (loc::to_region(retloc)->get_parent() == frame->frame_id))
+      retloc.is_region() && retloc.to_region()->is_frame_local() &&
+      (retloc.to_region()->get_parent() == frame->frame_id))
     {
       if (frames.size() > 1)
       {

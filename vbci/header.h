@@ -32,17 +32,17 @@ namespace vbci
       constexpr bool is_copy = !is_move;
       auto nloc = next.location();
 
-      if (loc::is_immutable(nloc))
+      if (nloc.is_immutable())
         return true;
 
-      if (loc::is_stack(loc))
+      if (loc.is_stack())
       {
-        if (loc::is_stack(nloc))
+        if (nloc.is_stack())
           // Older frames can't point to newer frames.
           return (loc >= nloc);
 
-        assert(loc::is_region(nloc));
-        auto nr = loc::to_region(nloc);
+        assert(nloc.is_region());
+        auto nr = nloc.to_region();
 
         // Older frames can't point to newer frames.
         if (nr->is_frame_local())
@@ -60,15 +60,15 @@ namespace vbci
         return true;
       }
 
-      assert(loc::is_region(loc));
+      assert(loc.is_region());
 
-      if (loc::is_stack(nloc))
+      if (nloc.is_stack())
         // No region, even a frame-local one, can point to the stack.
         return false;
 
-      assert(loc::is_region(nloc));
-      auto r = loc::to_region(loc);
-      auto nr = loc::to_region(nloc);
+      assert(nloc.is_region());
+      auto r = loc.to_region();
+      auto nr = nloc.to_region();
 
       if (r->is_frame_local())
       {
@@ -122,9 +122,9 @@ namespace vbci
       // If loc is the stack or a frame-local region, no action is needed
       // as the stack RC was already provided by the register that was passed
       // in.
-      assert(!loc::is_stack(loc));
+      assert(!loc.is_stack());
 
-      assert(loc::is_region(nloc));
+      assert(nloc.is_region());
 
       // Set the parent
       // it's in a different region.
@@ -156,20 +156,20 @@ namespace vbci
     template<bool to_register = true>
     bool remove_region_reference(Location ploc) const
     {
-      if (!loc::is_region(ploc))
+      if (!ploc.is_region())
         return true;
 
-      assert(!loc::is_stack(ploc));
+      assert(!ploc.is_stack());
 
-      auto pr = loc::to_region(ploc);
-      auto r = loc::to_region(loc);
+      auto pr = ploc.to_region();
+      auto r = loc.to_region();
 
       // Check if the region is frame-local and hence does not need unparenting.
       if (pr->is_frame_local())
         // We don't need stack rc for frame_local regions either.
         return true;
 
-      if (r->is_frame_local())
+      if (r->is_frame_local())  // TODO are we missing a stack case here?
       {
         // This is being removed from an object/array that is frame local, and
         // will not land in register we need to remove its stack rc.
@@ -204,11 +204,11 @@ namespace vbci
     // `to_register == true` case for `remove_region_reference`.
     void restore_reference(Location ploc) const
     {
-      if (!loc::is_region(ploc))
+      if (!ploc.is_region())
         return;
 
-      auto pr = loc::to_region(ploc);
-      auto r = loc::to_region(loc);
+      auto pr = ploc.to_region();
+      auto r = loc.to_region();
 
       if (pr->is_frame_local())
         return;
@@ -221,7 +221,7 @@ namespace vbci
       // We need to reverse the order with respect to remove_region_reference
       // So reparent if we unparented, and then remove the stack inc.
       if (pr != r)
-        r->set_parent(loc::to_region(loc));
+        r->set_parent(loc.to_region());
 
       pr->stack_dec();
     }
@@ -229,7 +229,7 @@ namespace vbci
     template<bool is_move, bool no_previous = false>
     Register store(void* addr, ValueType t, Reg<is_move> next) const
     {
-      if (loc::is_immutable(loc))
+      if (loc.is_immutable())
         Value::error(Error::BadStoreTarget);
 
       auto nloc = next.location();
@@ -255,10 +255,10 @@ namespace vbci
           // We have overwritten the previous value, so the classic RC invariant
           // is reestablished.
 
-          if (loc::is_region(ploc) && !loc::to_region(ploc)->is_frame_local())
+          if (ploc.is_region() && !ploc.to_region()->is_frame_local())
           {
             if constexpr (!is_move)
-              loc::to_region(ploc)->stack_inc();
+              ploc.to_region()->stack_inc();
           }
           return prev;
         }
@@ -308,16 +308,16 @@ namespace vbci
 
     Header* get_scc()
     {
-      assert(loc::is_immutable(loc));
+      assert(loc.is_immutable());
       auto c = this;
-      auto p = loc::to_scc(loc);
+      auto p = loc.to_scc();
 
       if (!p)
         return c;
 
       while (true)
       {
-        auto gp = loc::to_scc(p->loc);
+        auto gp = p->loc.to_scc();
 
         if (!gp)
           return p;
@@ -334,16 +334,16 @@ namespace vbci
     bool dec_no_dealloc()
     {
       // Returns false if the allocation should be freed.
-      if (loc::no_rc(loc))
+      if (loc.no_rc())
         return false;
 
-      if (loc::is_immutable(loc))
+      if (loc.is_immutable())
       {
         // TODO: how do we correctly free an SCC?
         return --get_scc()->arc == 0;
       }
 
-      auto r = loc::to_region(loc);
+      auto r = loc.to_region();
       bool ret = false;
 
       if (r->enable_rc())
@@ -357,7 +357,7 @@ namespace vbci
 
     void mark_immortal()
     {
-      loc = loc::Immortal;
+      loc = Location::immortal();
     }
 
   public:
@@ -386,16 +386,16 @@ namespace vbci
 
     Region* region()
     {
-      if (!loc::is_region(loc))
+      if (!loc.is_region())
         return nullptr;
 
-      return loc::to_region(loc);
+      return loc.to_region();
     }
 
     void move_region(Region* to)
     {
-      if (loc::is_region(loc))
-        loc::to_region(loc)->remove(this);
+      if (loc.is_region())
+        loc.to_region()->remove(this);
 
       loc = Location(to);
       to->insert(this);
@@ -403,18 +403,18 @@ namespace vbci
 
     bool sendable()
     {
-      if (loc::is_immutable(loc))
+      if (loc.is_immutable())
       {
         return true;
       }
-      else if (loc::is_stack(loc))
+      else if (loc.is_stack())
       {
         return false;
       }
       else
       {
-        assert(loc::is_region(loc));
-        auto r = loc::to_region(loc);
+        assert(loc.is_region());
+        auto r = loc.to_region();
 
         if (r->sendable())
           return true;
@@ -440,16 +440,16 @@ namespace vbci
     template<bool reg = false>
     void inc()
     {
-      if (loc::no_rc(loc))
+      if (loc.no_rc())
         return;
 
-      if (loc::is_immutable(loc))
+      if (loc.is_immutable())
       {
         get_scc()->arc++;
         return;
       }
 
-      auto r = loc::to_region(loc);
+      auto r = loc.to_region();
 
       // If this RC inc comes from a register, increment the region stack RC.
       if (reg)
@@ -461,18 +461,18 @@ namespace vbci
 
     void stack_inc()
     {
-      if (loc::is_region(loc))
+      if (loc.is_region())
       {
-        auto r = loc::to_region(loc);
+        auto r = loc.to_region();
         r->stack_inc();
       }
     }
 
     void stack_dec()
     {
-      if (loc::is_region(loc))
+      if (loc.is_region())
       {
-        auto r = loc::to_region(loc);
+        auto r = loc.to_region();
         r->stack_dec();
       }
     }

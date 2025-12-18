@@ -100,7 +100,7 @@ namespace vbci
     {
       finalize();
 
-      if (loc::is_immutable(location()))
+      if (location().is_immutable())
         delete[] reinterpret_cast<uint8_t*>(this);
       else
         region()->rfree(this);
@@ -137,7 +137,7 @@ namespace vbci
 
     void immortalize()
     {
-      if (location() == loc::Immortal)
+      if (location() == Location::immortal())
         return;
 
       mark_immortal();

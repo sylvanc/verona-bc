@@ -9,7 +9,7 @@ namespace vbci
   bool drag_allocation(Region* r, Header* h)
   {
     auto& program = Program::get();
-    Location frame = loc::None;
+    Location frame = Location::none();
 
     if (r->is_frame_local())
       frame = r->get_parent();
@@ -34,14 +34,14 @@ namespace vbci
 
       auto loc = next_h->location();
 
-      if (loc::is_immutable(loc))
+      if (loc.is_immutable())
         continue;
 
       // No region, even a frame-local one, can point to the stack.
-      if (loc::is_stack(loc))
+      if (loc.is_stack())
         return false;
 
-      auto hr = loc::to_region(loc);
+      auto hr = loc.to_region();
 
       if (hr->is_frame_local())
       {
@@ -66,7 +66,7 @@ namespace vbci
 
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
-        if ((frame == loc::None) && hr->has_parent())
+        if ((frame == Location::none()) && hr->has_parent())
           return false;
 
         // If hr is already an ancestor of r, we can't drag the allocation, or
@@ -77,13 +77,13 @@ namespace vbci
         // If r is not frame-local, it can't have multiple entry points to this
         // region.
         auto [it, ok] = regions.insert(hr);
-        if ((frame == loc::None) && !ok)
+        if ((frame == Location::none()) && !ok)
           return false;
       }
     }
 
     // Assign parent to regions if r is not frame-local.
-    if (frame == loc::None)
+    if (frame == Location::none())
     {
       for (auto& hr : regions)
       {

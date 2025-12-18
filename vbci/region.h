@@ -18,7 +18,7 @@ namespace vbci
     RC stack_rc;
 
   protected:
-    Region() : parent(0), stack_rc(0) {}
+    Region() : parent(Location::none()), stack_rc(0) {}
     virtual ~Region() = default;
 
   public:
@@ -37,8 +37,8 @@ namespace vbci
       //      assert(!is_frame_local());
 
       // If we transition from 0 to 1, we need to increment the parent RC.
-      if ((stack_rc == 0) && loc::is_region(parent))
-        loc::to_region(parent)->stack_inc();
+      if ((stack_rc == 0) && parent.is_region())
+        parent.to_region()->stack_inc();
 
       LOG(Trace) << "Region @" << this << " stack_rc incremented from "
                 << stack_rc << " to " << (stack_rc + inc);
@@ -63,8 +63,8 @@ namespace vbci
         }
 
         // If we transition from 1 to 0, we need to decrement the parent RC.
-        if (loc::is_region(parent))
-          return loc::to_region(parent)->stack_dec();
+        if (parent.is_region())
+          return parent.to_region()->stack_dec();
       }
 
       return true;
@@ -72,9 +72,9 @@ namespace vbci
 
     bool is_ancestor_of(Region* r)
     {
-      while (loc::is_region(r->parent))
+      while (r->parent.is_region())
       {
-        r = loc::to_region(r->parent);
+        r = r->parent.to_region();
 
         if (r == this)
           return true;
@@ -91,7 +91,7 @@ namespace vbci
 
     bool has_parent()
     {
-      return parent != loc::None;
+      return parent != Location::none();
     }
 
     Location get_parent()
@@ -101,7 +101,7 @@ namespace vbci
 
     bool is_frame_local()
     {
-      return loc::is_stack(parent);
+      return parent.is_stack();
     }
 
     void set_frame_id(Location frame_id)
@@ -123,7 +123,7 @@ namespace vbci
     void set_parent()
     {
       assert(!has_parent());
-      parent = loc::Immutable;
+      parent = Location::immutable();
     }
 
     /**
@@ -136,10 +136,10 @@ namespace vbci
     {
       assert(has_parent());
 
-      if (loc::is_region(parent) && (stack_rc > 0))
-        loc::to_region(parent)->stack_dec();
+      if (parent.is_region() && (stack_rc > 0))
+        parent.to_region()->stack_dec();
 
-      parent = loc::None;
+      parent = Location::none();
       // TODO: Should this just deallocate the region directly?
       return stack_rc == 0;
     }
