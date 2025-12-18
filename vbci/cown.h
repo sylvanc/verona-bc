@@ -36,11 +36,11 @@ namespace vbci
       LOG(Trace) << "Destroying cown @" << this;
       auto prev_loc = content.location();
       content.field_drop();
-      if (loc::is_region(prev_loc) && loc::to_region(prev_loc)->clear_parent())
+      if (prev_loc.is_region() && prev_loc.to_region()->clear_parent())
       {
-        LOG(Trace) << "Freeing region: " << loc::to_region(prev_loc)
+        LOG(Trace) << "Freeing region: " << prev_loc.to_region()
                    << " from cown " << this;
-        loc::to_region(prev_loc)->free_region();
+        prev_loc.to_region()->free_region();
       }
       LOG(Trace) << "Destroyed cown @" << this;
     }
@@ -77,16 +77,16 @@ namespace vbci
     {
       auto next_loc = next.location();
       // Can't store a stack value in a cown.
-      if (loc::is_stack(next_loc))
+      if (next_loc.is_stack())
         return false;
 
       // Primitives and immutables are always ok.
-      if (!loc::is_region(next_loc))
+      if (!next_loc.is_region())
         return true;
 
       // It doesn't matter what the stack RC is, because all stack RC will be
       // gone by the time this cown is available to any other behavior.
-      auto r = loc::to_region(next_loc);
+      auto r = next_loc.to_region();
 
       if (r->is_frame_local())
       {
@@ -138,16 +138,16 @@ namespace vbci
           content = next.copy_value();
           // If we copied, need to increment stack RC as there is a new
           // Register reference to this region.
-          if (loc::is_region(next_loc))
-            loc::to_region(next_loc)->stack_inc();
+          if (next_loc.is_region())
+            next_loc.to_region()->stack_inc();
         }
         return Register(std::move(prev));
       }
 
       // if ploc is a region, must be not frame local
-      if (loc::is_region(prev_loc))
+      if (prev_loc.is_region())
       {
-        auto pr = loc::to_region(prev_loc);
+        auto pr = prev_loc.to_region();
         LOG(Trace) << "Removing region: " << pr << " from cown " << this;
         assert(!pr->is_frame_local());
         // Previous value will land in a register, so increment stack RC.
@@ -160,9 +160,9 @@ namespace vbci
       if (!add_region_reference<is_move>(next))
       {
         // Failed to add references, need to restore the previous contents.
-        if (loc::is_region(prev_loc))
+        if (prev_loc.is_region())
         {
-          auto pr = loc::to_region(prev_loc);
+          auto pr = prev_loc.to_region();
           LOG(Trace) << "Restoring region: " << pr << " to cown " << this;
           pr->set_parent();
           pr->stack_dec();

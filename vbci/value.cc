@@ -34,8 +34,8 @@ namespace vbci
   Value::Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
   Value::Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
 
-  Value::Value(Register& val, size_t frame)
-  : reg(&val), idx(frame), tag(ValueType::RegisterRef), readonly(0)
+  Value::Value(Register& val, Location frame)
+  : reg(&val), idx(frame.raw()), tag(ValueType::RegisterRef), readonly(0)
   {}
 
   Value::Value(Object* obj, size_t f, bool ro)
@@ -697,7 +697,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::RegisterRef:
-        return idx;
+        return Location::from_raw(idx);
 
       case ValueType::Object:
       case ValueType::FieldRef:
@@ -709,10 +709,10 @@ namespace vbci
 
       case ValueType::Cown:
       case ValueType::CownRef:
-        return loc::Immutable;
+        return Location::immutable();
 
       default:
-        return loc::Immortal;
+        return Location::immortal();
     }
   }
 
@@ -881,14 +881,14 @@ namespace vbci
       {
         auto vloc = v.location();
 
-        if (loc::is_stack(vloc) && (vloc > idx))
+        if (vloc.is_stack() && (vloc.raw() > idx))
           Value::error(Error::BadStoreTarget);
 
         // Should also check for frame local?
-        if (loc::is_region(vloc) && loc::to_region(vloc)->is_frame_local())
+        if (vloc.is_region() && vloc.to_region()->is_frame_local())
         {
-          auto vr = loc::to_region(vloc);
-          if (vr->get_parent() > idx)
+          auto vr = vloc.to_region();
+          if (vr->get_parent().raw() > idx)
             // TODO This should perform a drag rather than failing.
             // We need to move the frame local region to the frame local
             // region associated with the register ref.

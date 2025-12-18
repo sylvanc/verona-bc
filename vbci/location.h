@@ -4,7 +4,8 @@
 
 namespace vbci
 {
-  namespace loc
+
+  struct Location
   {
     static constexpr auto None = uintptr_t(0x0);
     static constexpr auto Stack = uintptr_t(0x1);
@@ -14,55 +15,135 @@ namespace vbci
     static constexpr auto Immortal = uintptr_t(-1) & ~Stack;
     static constexpr auto FrameInc = uintptr_t(0x4);
 
-    inline bool no_rc(Location loc)
+  private:
+    uintptr_t value;
+
+    constexpr Location() : value(None) {}
+    constexpr Location(uintptr_t v) : value(v) {}
+
+  public:
+    static constexpr Location from_raw(uintptr_t raw)
     {
-      return ((loc & Stack) != 0) || (loc == Immortal);
+      return Location(raw);
     }
 
-    inline bool is_region(Location loc)
+    static constexpr Location none()
     {
-      return (loc != None) && ((loc & Mask) == 0);
+      return Location(None);
+    };
+
+    static constexpr Location stack()
+    {
+      return Location(Stack);
+    };
+
+    static constexpr Location immutable()
+    {
+      return Location(Immutable);
+    };
+
+    static constexpr Location immortal()
+    {
+      return Location(Immortal);
+    };
+
+    explicit Location(Region* r) : value(reinterpret_cast<uintptr_t>(r)) {}
+
+    constexpr uintptr_t raw() const
+    {
+      return value;
     }
 
-    inline bool is_stack(Location loc)
+    constexpr bool is_none() const
     {
-      return (loc & Mask) == Stack;
+      return value == None;
     }
 
-    inline bool is_immutable(Location loc)
+    bool operator==(const Location& other) const
     {
-      return (loc & Mask) == Immutable;
+      return value == other.value;
     }
 
-    inline bool is_pending(Location loc)
+    bool operator!=(const Location& other) const
     {
-      return (loc & Mask) == Pending;
+      return value != other.value;
     }
 
-    inline Region* to_region(Location loc)
+    bool operator<(const Location& other) const
     {
-      assert(is_region(loc));
-      return reinterpret_cast<Region*>(loc);
+      return value < other.value;
     }
 
-    inline Header* to_scc(Location loc)
+    bool operator<=(const Location& other) const
     {
-      assert(is_immutable(loc));
-      return reinterpret_cast<Header*>(loc & ~Immutable);
+      return value <= other.value;
     }
 
-    inline Location pending(Location loc)
+    bool operator>(const Location& other) const
     {
-      assert(is_region(loc));
-      return loc | Pending;
+      return value > other.value;
     }
 
-    inline Location unpending(Location loc)
+    bool operator>=(const Location& other) const
     {
-      assert(is_pending(loc));
-      return loc & ~Pending;
+      return value >= other.value;
     }
-  }
+
+    bool no_rc() const
+    {
+      return ((value & Stack) != 0) || (value == Immortal);
+    }
+
+    bool is_region() const
+    {
+      return (value != None) && ((value & Mask) == 0);
+    }
+
+    bool is_stack() const
+    {
+      return (value & Mask) == Stack;
+    }
+
+    bool is_immutable() const
+    {
+      return (value & Mask) == Immutable;
+    }
+
+    bool is_pending() const
+    {
+      return (value & Mask) == Pending;
+    }
+
+    Region* to_region() const
+    {
+      assert(is_region());
+      return reinterpret_cast<Region*>(value);
+    }
+
+    Header* to_scc() const
+    {
+      assert(is_immutable());
+      return reinterpret_cast<Header*>(value & ~Immutable);
+    }
+
+    Location pending() const
+    {
+      assert(is_region());
+      return Location(value | Pending);
+    }
+
+    Location unpending() const
+    {
+      assert(is_pending());
+      return Location(value & ~Pending);
+    }
+
+    Location next_stack_level() const
+    {
+      assert(is_stack());
+      return Location(value + FrameInc);
+    }
+  };
 
   bool drag_allocation(Region* r, Header* h);
 }

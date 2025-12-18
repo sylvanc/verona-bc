@@ -74,7 +74,7 @@ namespace vbci
 
         auto hloc = h->location();
 
-        if (loc::is_region(hloc) && (h->region() != r))
+        if (hloc.is_region() && (h->region() != r))
         {
           // This is a different region, so we need to freeze it.
           // TODO: what if this region has a stack RC?
@@ -82,7 +82,7 @@ namespace vbci
           regions.push_back(h->region());
           continue;
         }
-        else if (loc::is_pending(hloc))
+        else if (hloc.is_pending())
         {
           // TODO: what if it's already pending?
         }

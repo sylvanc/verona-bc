@@ -119,7 +119,7 @@ namespace vbci
     auto str_size = str.size() + 1;
     auto arr = Array::create(
       new uint8_t[Array::size_of(str_size, ffi_type_uint8.size)],
-      loc::Immutable,
+      Location::immutable(),
       typeid_arg,
       ValueType::U8,
       str_size,
@@ -523,7 +523,7 @@ namespace vbci
 
     argv = Array::create(
       new uint8_t[Array::size_of(args.size(), argv_rep.second->size)],
-      loc::Stack,
+      Location::stack(),
       typeid_argv,
       argv_rep.first,
       args.size(),
@@ -535,7 +535,7 @@ namespace vbci
       auto str_size = str.size() + 1;
       auto arg = Array::create(
         new uint8_t[Array::size_of(str_size, arg_rep.second->size)],
-        loc::Stack,
+        Location::stack(),
         typeid_arg,
         arg_rep.first,
         str_size,
