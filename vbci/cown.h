@@ -92,12 +92,13 @@ namespace vbci
       if (!next_loc.is_region_or_frame_local())
         return true;
 
-      // It doesn't matter what the stack RC is, because all stack RC will be
-      // gone by the time this cown is available to any other behavior.
-      auto r = next_loc.to_region();
+      Region* r;
 
       if (next_loc.is_frame_local())
       {
+        // It doesn't matter what the stack RC is, because all stack RC will be
+        // gone by the time this cown is available to any other behavior.
+
         // Drag a frame-local allocation to a fresh region.
         r = Region::create(RegionType::RegionRC);
         LOG(Trace) << "Dragging frame-local allocation to new region:" << r;
@@ -108,10 +109,13 @@ namespace vbci
           return false;
         }
       }
-
-      if (r->has_owner())
-        // If the region has a parent, it can't be stored.
-        return false;
+      else
+      {
+        r = next_loc.to_region();
+        if (r->has_owner())
+          // If the region has a parent, it can't be stored.
+          return false;
+      }
 
       r->set_cown_owner();
       // Remove the stack reference to this region, as we have moved it

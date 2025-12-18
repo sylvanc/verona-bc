@@ -26,70 +26,80 @@ namespace vbci
     Header(Location loc, uint32_t type_id) : loc(loc), rc(1), type_id(type_id)
     {}
 
+    // clang-format off
+    /** 
+     * Add region reference  (ignoring classic RC operations for now)
+     *
+     *  | Location of | Location of Target                                                             |
+     *  | Source      | Stack          | Frame Local           | Region                    | Immutable |
+     *  |-------------|----------------|-----------------------|---------------------------|-----------|
+     *  | Stack       | Check Lifetime | Check lifetime, drag? | Stack inc (if not move)   |  Nop      |
+     *  | Frame Local | Not allowed    | Check lifetime, drag? | Stack inc (if not move)   |  Nop      |
+     *  | Region      | Not allowed    | Drag                  | Parent (stack dec if move)|  Nop      |
+     * 
+     * This returns false if the region reference cannot be added.
+     * It updates the stack RCs and parents as needed.
+     **/
+    // clang-format on
     template<bool is_move>
     bool add_region_reference(const Value& next) const
     {
       constexpr bool is_copy = !is_move;
       auto nloc = next.location();
+      auto cloc = loc;
 
       if (nloc.is_immutable())
         return true;
 
-      if (loc.is_stack())
+      if (nloc.is_stack())
       {
-        if (nloc.is_stack())
-          // Older frames can't point to newer frames.
-          return loc.stack_index() >= nloc.stack_index();
+        if (!cloc.is_stack())
+          return false;
 
-        assert(nloc.is_region_or_frame_local());
+        // nloc must outlive loc.
+        return cloc.stack_index() >= nloc.stack_index();
+      }
 
-        if (nloc.no_rc())
-          return true;
-
-        auto nr = nloc.to_region();
-
-        // Older frames can't point to newer frames.
-        if (nloc.is_frame_local())
+      if (nloc.is_frame_local())
+      {
+        if (cloc.is_stack())
         {
-          if (loc.stack_index() < nloc.frame_local_index())
-            return false;
-
-          // Stack to frame local doesn't need a stack rc.
+          // Check for outliving,
+          if (cloc.stack_index() >= nloc.frame_local_index())
+            return true;
+          // Drag if nloc doesn't outlive loc.
+          cloc = Location::frame_local(cloc.stack_index());
+        }
+        else if (
+          cloc.is_frame_local() &&
+          cloc.frame_local_index() >= nloc.frame_local_index())
+        {
+          // nloc must outlive loc.
+          // otherwise drag.
           return true;
         }
 
+        return drag_allocation(cloc, next.get_header());
+      }
+
+      // TODO still needed
+      if (nloc.no_rc())
+        return true;
+
+      assert(nloc.is_region());
+
+      if (cloc.is_stack() || cloc.is_frame_local())
+      {
+        auto nr = nloc.to_region();
+
+        // For copy, need to increase stack RC.
         if constexpr (is_copy)
-          // Copy so need to increase stack RC.
           nr->stack_inc();
         return true;
       }
 
-      assert(loc.is_region_or_frame_local());
-
-      if (nloc.is_stack())
-        // No region, even a frame-local one, can point to the stack.
-        return false;
-
-      assert(nloc.is_region_or_frame_local());
-
-      if (nloc.no_rc())
-        return true;
-
-      auto r = loc.to_region();
+      auto r = cloc.to_region();
       auto nr = nloc.to_region();
-
-      if (r->is_frame_local())
-      {
-        if (!nr->is_frame_local())
-        {
-          if constexpr (is_copy)
-          {
-            // Copy so need to increase stack RC.
-            nr->stack_inc();
-          }
-          return true;
-        }
-      }
 
       // Creating an interior region reference is fine and has no accounting.
       if (r == nr)
@@ -99,18 +109,6 @@ namespace vbci
         // stack rc.
         if constexpr (is_move)
           nr->stack_dec();
-        return true;
-      }
-
-      if (nr->is_frame_local())
-      {
-        // Drag a frame-local allocation to a region.
-        auto success = drag_allocation(loc, next.get_header());
-        if (!success)
-          return false;
-        // TODO Should perhaps move this inside drag_allocation?
-        if (is_move && !r->is_frame_local())
-          r->stack_dec();
         return true;
       }
 
@@ -126,18 +124,10 @@ namespace vbci
         return false;
       }
 
-      // At this point, the write barrier is satisfied.
-      // If loc is the stack or a frame-local region, no action is needed
-      // as the stack RC was already provided by the register that was passed
-      // in.
-      assert(!loc.is_stack());
-
-      assert(nloc.is_region_or_frame_local());
+      assert(cloc.is_region());
 
       // Set the parent
       // it's in a different region.
-      assert(r != nr);
-      assert(!r->is_frame_local());
       nr->set_parent(r);
 
       // For the move case, decrement the region stack RC. This can't free the
@@ -147,6 +137,7 @@ namespace vbci
       return true;
     }
 
+    // clang-format off
     /**
      * @brief Remove a reference from the region meta-data.
      *
@@ -160,31 +151,31 @@ namespace vbci
      * The underlying value will also be decrefed in the !to_register case.
      *
      * Returns false if the region has been freed.
+     * 
+     * | Location of | Location of old Target                                                                       |
+     * | Source      | Stack | Frame Local | Region                                                     | Immutable |
+     * |-------------|-------|-------------|------------------------------------------------------------|-----------|
+     * | Stack       |  Nop  | Nop         | Nop  (stack dec if dead)                                   |   Nop     |
+     * | Frame Local |  NA   | Nop         | Nop  (stack dec if dead)                                   |   Nop     |
+     * | Region      |  NA   | NA          | Unparent + (stack inc if live) unless same region, then Nop|   Nop     |
      */
+    // clang-format on
     template<bool to_register = true>
     bool remove_region_reference(Location ploc) const
     {
-      if (!ploc.is_region() || ploc.no_rc())
+      if (!ploc.is_region())
         return true;
 
-      assert(!ploc.is_stack());
-
-      auto pr = ploc.to_region();
-      auto r = loc.to_region();
-
-      // Check if the region is frame-local and hence does not need unparenting.
-      if (pr->is_frame_local())
-        // We don't need stack rc for frame_local regions either.
-        return true;
-
-      if (r->is_frame_local())  // TODO are we missing a stack case here?
+      if (loc.is_frame_local() || loc.is_stack())
       {
         // This is being removed from an object/array that is frame local, and
         // will not land in register we need to remove its stack rc.
         if constexpr (!to_register)
-          return pr->stack_dec();
+          return ploc.to_region()->stack_dec();
         return true;
       }
+
+      auto pr = ploc.to_region();
 
       // This is being removed from an object/array, and will land in a
       // register, so we need to increment the stack RC to account for that.
@@ -212,16 +203,13 @@ namespace vbci
     // `to_register == true` case for `remove_region_reference`.
     void restore_reference(Location ploc) const
     {
-      if (!ploc.is_region() || ploc.no_rc())
+      if (!ploc.is_region())
         return;
 
       auto pr = ploc.to_region();
       auto r = loc.to_region();
 
-      if (pr->is_frame_local())
-        return;
-
-      if (r->is_frame_local())
+      if (loc.is_frame_local() || loc.is_stack())
       {
         return;
       }
@@ -229,7 +217,7 @@ namespace vbci
       // We need to reverse the order with respect to remove_region_reference
       // So reparent if we unparented, and then remove the stack inc.
       if (pr != r)
-        r->set_parent(loc.to_region());
+        pr->set_parent(r);
 
       pr->stack_dec();
     }
@@ -263,10 +251,10 @@ namespace vbci
           // We have overwritten the previous value, so the classic RC invariant
           // is reestablished.
 
-          if (ploc.is_region() && !ploc.is_frame_local() && !ploc.no_rc())
+          if constexpr (!is_move)
           {
-            if constexpr (!is_move)
-              ploc.to_region()->stack_inc();
+            if (ploc.is_region())
+                ploc.to_region()->stack_inc();
           }
           return prev;
         }
