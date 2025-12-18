@@ -3,16 +3,27 @@
 #include "array.h"
 #include "header.h"
 #include "object.h"
+#include "thread.h"
 
 namespace vbci
 {
-  bool drag_allocation(Region* r, Header* h)
+  Region* Location::to_region() const
   {
-    auto& program = Program::get();
-    Location frame = Location::none();
+    if (is_frame_local())
+      return Thread::frame_local_region(frame_local_index());
 
-    if (r->is_frame_local())
-      frame = r->get_parent();
+    assert(is_region());
+    return reinterpret_cast<Region*>(value);
+  }
+
+  bool drag_allocation(Location dest_loc, Header* h)
+  {
+    assert(dest_loc.is_region_or_frame_local());
+
+    auto r = dest_loc.to_region();
+    bool frame_local = dest_loc.is_frame_local();
+
+    auto& program = Program::get();
 
     std::vector<Header*> wl;
     std::unordered_map<Header*, RC> rc_map;
@@ -41,14 +52,17 @@ namespace vbci
       if (loc.is_stack())
         return false;
 
-      auto hr = loc.to_region();
-
-      if (hr->is_frame_local())
+      if (loc.is_frame_local())
       {
         // Younger frames can point to older frames.
         // Older frames and non-frame-local regions drag the object.
-        if (frame >= hr->get_parent())
-          continue;
+        if (frame_local)
+        {
+          assert(dest_loc.is_frame_local());
+
+          if (dest_loc.frame_local_index() >= loc.frame_local_index())
+            continue;
+        }
 
         // Initial internal RC count is 1.
         rc_map[next_h] = 1;
@@ -60,13 +74,15 @@ namespace vbci
       }
       else
       {
+        auto hr = loc.to_region();
+
         // If hr is r, we do nothing.
         if (hr == r)
           continue;
 
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
-        if ((frame == Location::none()) && hr->has_parent())
+        if (!frame_local && hr->has_owner())
           return false;
 
         // If hr is already an ancestor of r, we can't drag the allocation, or
@@ -77,13 +93,13 @@ namespace vbci
         // If r is not frame-local, it can't have multiple entry points to this
         // region.
         auto [it, ok] = regions.insert(hr);
-        if ((frame == Location::none()) && !ok)
+        if (!frame_local && !ok)
           return false;
       }
     }
 
     // Assign parent to regions if r is not frame-local.
-    if (frame == Location::none())
+    if (!frame_local)
     {
       for (auto& hr : regions)
       {
@@ -105,7 +121,7 @@ namespace vbci
       // always reference counted.
       assert(hh->get_rc() >= rc);
       r->stack_inc(hh->get_rc() - rc);
-      hh->move_region(r);
+      hh->move_region(dest_loc, r);
     }
 
     return true;
