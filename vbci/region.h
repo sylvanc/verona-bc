@@ -54,9 +54,6 @@ namespace vbci
 
     void stack_inc(RC inc = 1)
     {
-      // TODO Should we restrict to only calling on non-frame-local regions?
-      //      assert(!is_frame_local());
-
       // If we transition from 0 to 1, we need to increment the parent RC.
       if (stack_rc == 0)
       {
@@ -72,9 +69,6 @@ namespace vbci
 
     bool stack_dec()
     {
-      // TODO Should we restrict to only calling on non-frame-local regions?
-      // assert(!is_frame_local());
-
       LOG(Trace) << "Region @" << this << " stack_rc decremented from "
                 << stack_rc << " to " << (stack_rc - 1);
       if (--stack_rc == 0)
@@ -134,8 +128,6 @@ namespace vbci
         static_cast<const Region*>(this)->get_parent());
     }
 
-    bool is_frame_local();
-
     void set_parent(Region* r)
     {
       assert(!has_owner());
@@ -159,7 +151,7 @@ namespace vbci
      */
     bool clear_parent()
     {
-      auto p = get_parent();
+    auto p = get_parent();
       assert(p != nullptr);
 
       if (stack_rc > 0)

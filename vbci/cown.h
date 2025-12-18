@@ -161,7 +161,6 @@ namespace vbci
       {
         auto pr = prev_loc.to_region();
         LOG(Trace) << "Removing region: " << pr << " from cown " << this;
-        assert(!pr->is_frame_local());
         // Previous value will land in a register, so increment stack RC.
         pr->stack_inc();
         // Need to clear parent before drag, incase the drag will

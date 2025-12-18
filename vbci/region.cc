@@ -64,10 +64,4 @@ namespace vbci
         Value::error(Error::UnknownRegionType);
     }
   }
-
-  bool Region::is_frame_local()
-  {
-    return Thread::is_frame_local_region(this);
-  }
-
 }
