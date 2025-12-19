@@ -16,30 +16,28 @@ namespace vbci
   {
   private:
     /**
-     * `parent` encodes the ownership of this region:
-     *  - `nullptr` means the region currently has no owner.
-     *  - `cown_region()` identifies that the region is owned by a Cown. This
-     *    is a sentinel value used when a region is captured by a behaviour.
-     *  - Any other pointer represents the real parent region. In this case
-     *    stack reference counts are propagated along the parent chain so that
-     *    dropping the child when its stack RC reaches zero will either free it
-     *    or transfer the decrement to the parent.
+     * `parent` encodes ownership information using the low two bits:
+     *  - `0` means the region currently has no owner.
+     *  - `tag == 0` and non-zero value stores the actual parent region pointer
+     *    (which is guaranteed to be at least 4-byte aligned).
+     *  - `tag == 1` marks that the region is owned by a cown while it is
+     *    captured by a behaviour.
+     *  - `tag == 2` marks that the region is frame-local and currently owned
+     *    by the running thread.
      *
-     * Consumers should prefer the helper accessors:
-     *  - `has_owner()` to test whether the field is non-null.
-     *  - `get_parent()` / `has_parent()` to work with only real (non-cown)
-     *    parents.
-     *  - `set_cown_owner()` / `clear_cown_owner()` to transition the sentinel
-     *    state used while a Cown owns the region.
+     * The helpers below should be preferred to reading or writing this field
+     * directly.
      */
-    Region* parent;
+    uintptr_t parent;
     RC stack_rc;
 
-    static Region* cown_region();
+    static constexpr uintptr_t parent_tag_mask = 0x3;
+    static constexpr uintptr_t parent_tag_cown = 0x1;
+    static constexpr uintptr_t parent_tag_frame_local = 0x2;
 
 
   protected:
-    Region() : parent(nullptr), stack_rc(0) {}
+    Region() : parent(0), stack_rc(0) {}
     virtual ~Region() = default;
 
   public:
@@ -54,11 +52,14 @@ namespace vbci
 
     void stack_inc(RC inc = 1)
     {
+      if (has_frame_local_owner())
+        return;
+
       // If we transition from 0 to 1, we need to increment the parent RC.
       if (stack_rc == 0)
       {
-        if (auto p = get_parent())
-          p->stack_inc();
+        if (has_parent())
+          get_parent()->stack_inc();
       }
 
       LOG(Trace) << "Region @" << this << " stack_rc incremented from "
@@ -69,6 +70,9 @@ namespace vbci
 
     bool stack_dec()
     {
+      if (has_frame_local_owner())
+        return true;
+
       LOG(Trace) << "Region @" << this << " stack_rc decremented from "
                 << stack_rc << " to " << (stack_rc - 1);
       if (--stack_rc == 0)
@@ -81,8 +85,8 @@ namespace vbci
         }
 
         // If we transition from 1 to 0, we need to decrement the parent RC.
-        if (auto p = get_parent())
-          return p->stack_dec();
+        if (has_parent())
+          return get_parent()->stack_dec();
       }
 
       return true;
@@ -90,9 +94,9 @@ namespace vbci
 
     bool is_ancestor_of(Region* r)
     {
-      while (auto p = r->get_parent())
+      while (r->has_parent())
       {
-        r = p;
+        r = r->get_parent();
 
         if (r == this)
           return true;
@@ -109,29 +113,26 @@ namespace vbci
 
     bool has_owner() const
     {
-      return parent != nullptr;
+      return (parent != 0);
     }
 
     Region* get_parent() const
     {
-      return (parent && (parent != cown_region())) ? parent : nullptr;
+      assert(has_parent());
+      return reinterpret_cast<Region*>(parent);
     }
 
     bool has_parent() const
     {
-      return get_parent() != nullptr;
-    }
-
-    Region* get_parent()
-    {
-      return const_cast<Region*>(
-        static_cast<const Region*>(this)->get_parent());
+      return (parent & ~parent_tag_mask) != 0;
     }
 
     void set_parent(Region* r)
     {
       assert(!has_owner());
-      parent = r;
+      auto raw = reinterpret_cast<uintptr_t>(r);
+      assert((raw & parent_tag_mask) == 0);
+      parent = raw;
 
       if (stack_rc > 0)
         r->stack_inc();
@@ -140,7 +141,13 @@ namespace vbci
     void set_cown_owner()
     {
       assert(!has_owner());
-      parent = cown_region();
+      parent = parent_tag_cown;
+    }
+
+    void set_frame_local_owner()
+    {
+      assert(parent == 0);
+      parent = parent_tag_frame_local;
     }
 
     /**
@@ -151,23 +158,33 @@ namespace vbci
      */
     bool clear_parent()
     {
-    auto p = get_parent();
+      auto p = get_parent();
       assert(p != nullptr);
 
       if (stack_rc > 0)
         p->stack_dec();
 
-      parent = nullptr;
+      parent = 0;
       // TODO: Should this just deallocate the region directly?
       return stack_rc == 0;
     }
 
     bool clear_cown_owner()
     {
-      assert(parent == cown_region());
-      parent = nullptr;
+      assert(parent == parent_tag_cown);
+      parent = 0;
       // TODO: Should this just deallocate the region directly?
       return stack_rc == 0;
+    }
+
+    bool has_cown_owner() const
+    {
+      return parent == parent_tag_cown;
+    }
+
+    bool has_frame_local_owner() const
+    {
+      return parent == parent_tag_frame_local;
     }
 
     void free_region()

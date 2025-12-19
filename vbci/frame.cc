@@ -28,8 +28,7 @@ namespace vbci
     dst(dst),
     calltype(calltype)
   {
-    // The frame-local region always carries a stack RC.
-    region.stack_inc();
+    region.set_frame_local_owner();
   }
 
   Register& Frame::local(size_t idx)

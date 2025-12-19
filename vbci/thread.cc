@@ -308,7 +308,7 @@ namespace vbci
     for (auto& frame : t.frames)
     {
       if (&frame.region == region)
-        return !region->has_owner();
+        return region->has_frame_local_owner();
     }
 
     return false;
@@ -322,7 +322,7 @@ namespace vbci
     {
       if (&t.frames[i].region == region)
       {
-        assert(!region->has_owner());
+        assert(region->has_frame_local_owner());
         return i;
       }
     }
@@ -1685,7 +1685,7 @@ namespace vbci
     // Finalize the frame-local region. A tailcall preserves the region.
     if (!tailcall)
     {
-      assert(!frame->region.has_owner());
+      assert(frame->region.has_frame_local_owner());
       frame->region.free_contents();
     }
 

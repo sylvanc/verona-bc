@@ -10,40 +10,6 @@
 
 namespace vbci
 {
-  namespace
-  {
-    struct CownParentRegion final : Region
-    {
-      Object* object(Class&) override
-      {
-        abort();
-        return nullptr;
-      }
-
-      Array* array(uint32_t, size_t) override
-      {
-        abort();
-        return nullptr;
-      }
-
-      void rfree(Header*) override {}
-      void insert(Header*) override {}
-      void remove(Header*) override {}
-      bool enable_rc() override
-      {
-        return false;
-      }
-
-      void free_contents() override {}
-    };
-  }
-
-  Region* Region::cown_region()
-  {
-    static CownParentRegion instance;
-    return &instance;
-  }
-
   Region* Region::create(RegionType type)
   {
     switch (type)
