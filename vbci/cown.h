@@ -103,7 +103,7 @@ namespace vbci
         r = Region::create(RegionType::RegionRC);
         LOG(Trace) << "Dragging frame-local allocation to new region:" << r;
 
-        if (!drag_allocation(Location(r), next.get_header()))
+        if (!drag_allocation<is_move>(Location(r), next.get_header()))
         {
           r->free_region();
           return false;

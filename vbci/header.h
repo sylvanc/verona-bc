@@ -79,7 +79,7 @@ namespace vbci
           return true;
         }
 
-        return drag_allocation(cloc, next.get_header());
+        return drag_allocation<is_move>(cloc, next.get_header());
       }
 
       // TODO still needed
@@ -390,10 +390,9 @@ namespace vbci
 
     void move_region(Location to_loc, Region* to)
     {
-      if (loc.is_region_or_frame_local())
-        loc.to_region()->remove(this);
-
       assert(to_loc.is_region_or_frame_local());
+
+      loc.to_region()->remove(this);
       loc = to_loc;
       to->insert(this);
     }
@@ -409,7 +408,8 @@ namespace vbci
         // Drag a frame-local allocation to a region.
         auto nr = Region::create(RegionType::RegionRC);
 
-        if (!drag_allocation(Location(nr), this))
+        // TODO: review is this a move or copy for the template parameter?
+        if (!drag_allocation<false>(Location(nr), this))
           return false;
 
         return (nr->sendable());

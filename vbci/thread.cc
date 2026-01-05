@@ -416,6 +416,7 @@ namespace vbci
     while (depth != frames.size())
       step();
 
+    LOG(Trace) << "thread_run completed! Result: " << locals.at(0);
     return std::move(locals.at(0));
   }
 
@@ -1547,7 +1548,7 @@ namespace vbci
 
         auto prev_loc = Location::frame_local(prev_frame.frame_id.stack_index());
 
-        if (!drag_allocation(prev_loc, ret.get_header()))
+        if (!drag_allocation<false>(prev_loc, ret.get_header()))
         {
           ret = Value(Error::BadStackEscape);
           condition = Condition::Throw;
@@ -1557,8 +1558,9 @@ namespace vbci
       {
         // Drag the frame-local allocation to a fresh region.
         auto r = Region::create(RegionType::RegionRC);
-
-        if (!drag_allocation(Location(r), ret.get_header()))
+        // This is a fresh region, so we need the stack rc from the entry, so do not
+        // count this as a move.
+        if (!drag_allocation<false>(Location(r), ret.get_header()))
         {
           ret = Value(Error::BadStackEscape);
           condition = Condition::Throw;
