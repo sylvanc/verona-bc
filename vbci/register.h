@@ -11,15 +11,26 @@ namespace vbci
 {
   struct Register : public Value
   {  
-  public:
-    Register() = default;
-
+  private:
     // This requires the value to already have both a classic RC to the underlying
     // dynamically allocated object if there is one, and a stack RC to the region if
     // it is a proper region reference.
     explicit Register(Value&& v) : Value(std::move(v))
     {
       // Should perform a stack inc here?
+    }
+
+  public:
+    Register() = default;
+
+    void set_no_stack_inc(Value&& v)
+    {
+      Value::operator=(std::move(v));
+    }
+
+    static Register mk_no_stack_inc(Value&& v)
+    {
+      return Register(std::move(v));
     }
 
     Register(Register&& v) = default;
@@ -29,11 +40,11 @@ namespace vbci
       drop_reg();
     }
 
-    void operator=(Value&& v)
-    {
-      drop_reg();
-      Value::operator=(std::move(v));
-    }
+    // void operator=(Value&& v)
+    // {
+    //   drop_reg();
+    //   Value::operator=(std::move(v));
+    // }
 
     void operator=(Register&& v)
     {

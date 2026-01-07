@@ -153,7 +153,7 @@ namespace vbci
           if (next_loc.is_region())
             next_loc.to_region()->stack_inc();
         }
-        return Register(std::move(prev));
+        return Register::mk_no_stack_inc(std::move(prev));
       }
 
       // if ploc is a region, must be not frame local
@@ -182,14 +182,14 @@ namespace vbci
       }
 
       // The code above has ensured we have suitable stack rc if required.
-      Register prev{std::move(content)};
+      Value prev{std::move(content)};
 
       if constexpr (is_move)
         content = std::move(next);
       else
         content = next.copy_value();
 
-      return prev;
+      return Register::mk_no_stack_inc(std::move(prev));
     }
 
     std::string to_string()

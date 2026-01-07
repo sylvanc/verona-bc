@@ -561,10 +561,10 @@ namespace vbci
       return Value(std::numeric_limits<double>::quiet_NaN());
     }
 
-    template<bool is_move>
+    template<bool is_register>
     void inc() const;
 
-    template<bool is_move>
+    template<bool is_register>
     void dec() const;
 
   private:

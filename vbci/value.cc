@@ -78,7 +78,7 @@ namespace vbci
     std::memcpy(static_cast<void*>(&v), this, sizeof(Value));
     // Performed the required increment for moving into a register
     v.inc<true>();
-    return Register(std::move(v));
+    return Register::mk_no_stack_inc(std::move(v));
   }
 
   Value::Value(Value&& that) noexcept
@@ -123,7 +123,8 @@ namespace vbci
 
   Register Value::from_addr(ValueType t, void* v)
   {
-    Register value(t);
+    // Surrounding code is responsible for ensuring correct stack rc management.
+    Register value = Register::mk_no_stack_inc(Value(t));
 
     switch (t)
     {
@@ -767,14 +768,21 @@ namespace vbci
 
   void Value::drop_reg()
   {
-    dec<true>();
-    tag = ValueType::Invalid;
+    // Extract the value to a temporary to ensure that
+    // any finalizers that dec may trigger see the invariant.
+    Value x{std::move(*this)};
+    assert(this->is_invalid() && "Value should be invalid after move");
+    x.dec<true>();
+    x.tag = ValueType::Invalid;
   }
 
   void Value::field_drop()
   {
-    dec<false>();
-    tag = ValueType::Invalid;
+    // Extract the value to a temporary to ensure that
+    // any finalizers that dec may trigger see the invariant.
+    Value x{std::move(this)};
+    x.dec<false>();
+    x.tag = ValueType::Invalid;
   }
 
   Register Value::ref(bool move, size_t field)
@@ -792,7 +800,7 @@ namespace vbci
           // on stack rc, as well as the object.
           inc<true>();
 
-        return Register(Value(obj, f, readonly));
+        return Register::mk_no_stack_inc(Value(obj, f, readonly));
       }
 
       case ValueType::Cown:
@@ -805,7 +813,7 @@ namespace vbci
 
         // Cowns don't need a stack rc, so can be freely lifted to
         // registers.
-        return Register(Value(cown, false));
+        return Register::mk_no_stack_inc(Value(cown, false));
       }
 
       default:
@@ -829,7 +837,7 @@ namespace vbci
       // on stack rc, as well as the object.
       inc<true>();
 
-    return Register(Value(arr, i, readonly));
+    return Register::mk_no_stack_inc(Value(arr, i, readonly));
   }
 
   Register Value::load() const
@@ -861,7 +869,7 @@ namespace vbci
 
     v.inc<true>();
     v.readonly = readonly;
-    return Register(std::move(v));
+    return Register::mk_no_stack_inc(std::move(v));
   }
 
   template<bool is_move>

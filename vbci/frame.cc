@@ -33,6 +33,8 @@ namespace vbci
 
   Register& Frame::local(size_t idx)
   {
+    assert(idx < func->registers && "Local index out of bounds");
+
     auto i = base + idx;
 
     while (i >= locals.size())
@@ -77,9 +79,12 @@ namespace vbci
   {
     for (size_t i = 0; i < func->registers; i++)
     {
-      LOG(Trace) << "Dropping frame local " << i;
-      LOG(Trace) << "  contents (" << locals[base + i] << ")";
+      if (locals[base + i].is_invalid())
+        continue;
+      LOG(Trace) << "Dropping frame local " << i << "  contents ("
+                 << locals[base + i] << ")";
       locals[base + i].drop_reg();
+      assert(locals[base + i].is_invalid());
     }
   }
 
@@ -89,5 +94,10 @@ namespace vbci
       locals[base + func->registers + i].drop_reg();
 
     args = 0;
+  }
+
+  RegionRC& Frame::get_frame_local_region()
+  {
+    return region;
   }
 }

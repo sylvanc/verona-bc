@@ -134,6 +134,13 @@ namespace vbci
       return (parent & ~parent_tag_mask) != 0;
     }
 
+#ifndef NDEBUG
+    RC get_stack_rc() const
+    {
+      return stack_rc;
+    }
+#endif
+
     void set_parent(Region* r)
     {
       LOG(Trace) << "Region @" << this << " setting parent region to @" << r;

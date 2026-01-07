@@ -34,5 +34,7 @@ namespace vbci
     ~RegionRC() {
       LOG(Trace) << "Destroyed RegionRC @" << this;
     }
+
+    void trace(std::vector<Header*>& list) const;
   };
 }

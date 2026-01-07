@@ -8,6 +8,12 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <source_location>
+
+#ifndef NDEBUG
+#  include <algorithm>
+#  include <unordered_map>
+#endif
 
 #define INLINE SNMALLOC_FAST_PATH_LAMBDA
 
@@ -178,6 +184,10 @@ namespace vbci
 #endif
         call_function_and_continue<F, Args...>(
           fun, std::forward<Args>(args)...);
+#ifndef NDEBUG
+        logging::Log log(logging::detail::LogLevel::Trace);
+        self.print_stack(log, true);
+#endif
       }
       else
       {
@@ -275,7 +285,7 @@ namespace vbci
 
     // Safe to convert to use Register this only contains a cown pointer, so
     // there is no requirement for a stack_rc.
-    return Register(Value(result, false));
+    return Register::mk_no_stack_inc(Value(result, false));
   }
 
   std::pair<Function*, PC> Thread::debug_info()
@@ -402,7 +412,7 @@ namespace vbci
     {
       // If we fail to store into the result cown, we need to store the error
       // instead.  It is always valid to store the error.
-      result->store<true>(Register(std::move(error_value)));
+      result->store<true>(Register::mk_no_stack_inc(std::move(error_value)));
     }
 
     verona::rt::BehaviourCore::finished(work);
@@ -413,11 +423,129 @@ namespace vbci
     auto depth = frames.size();
     pushframe(func, 0, CallType::Catch);
 
+    invariant();
+
     while (depth != frames.size())
       step();
 
     LOG(Trace) << "thread_run completed! Result: " << locals.at(0);
     return std::move(locals.at(0));
+  }
+
+  void Thread::print_stack(logging::Log& log, bool top_frame_only)
+  {
+    log << "Stack trace:" << std::endl;
+    for (ssize_t i = frames.size() - 1; i >= 0; i--)
+    {
+      auto& frame = frames[i];
+      log << "  at " << program->di_function(frame.func) << " (pc=" << frame.pc
+          << ")";
+
+      // print add the locals for this frame
+      for (size_t j = 0; j < frame.func->registers; j++)
+      {
+        if (frame.local(j).is_invalid())
+          continue;
+        log << std::endl << "    local[" << j << "] = " << frame.local(j);
+      }
+      if (top_frame_only)
+        break;
+      if (i != 0)
+        log << std::endl;
+    }
+
+    if (args == 0)
+      return;
+
+    log << std::endl << "  Args stack:";
+    for (size_t i = 0; i < args; i++)
+    {
+      log << std::endl << "    arg[" << i << "] = " << frame->arg(i);
+    }
+  }
+
+#ifndef NDEBUG
+  void Thread::check_stack_rc_invariant(std::source_location loc)
+  {
+    std::unordered_map<Region*, size_t> calc_stack_rcs;
+
+    auto visit_region = [&](Region* region) {
+      // Walk parent chain for every region we have not already seen.
+      // This accounts for the edge triggered stack RC from children to parents.
+      while (calc_stack_rcs.find(region) == calc_stack_rcs.end() &&
+             region->has_parent())
+      {
+        calc_stack_rcs[region] = 1;
+        region = region->get_parent();
+      }
+      calc_stack_rcs[region] += 1;
+    };
+
+    auto visit_value = [&](const Value& val) {
+      // Readonly values do not contribute to stack rcs.
+      if (val.is_readonly())
+        return;
+
+      auto loc = val.location();
+
+      if (!loc.is_region())
+        return;
+
+      auto region = loc.to_region();
+
+      visit_region(region);
+    };
+
+    // For each register in the local frame, if it is a region reference, then
+    for (auto& reg : locals)
+    {
+      visit_value(reg);
+    }
+
+    for (auto& frame : frames)
+    {
+      const auto& frame_local_region = frame.get_frame_local_region();
+      std::vector<Header*> nodes;
+      frame_local_region.trace(nodes);
+      for (auto header : nodes)
+      {
+        if (header->region()->has_frame_local_owner())
+          continue;
+        if (header->region()->has_cown_owner())
+          continue;
+        visit_region(header->region());
+      }
+    }
+
+    // Now compare calculated stack RCs with actual stack RCs.
+    for (const auto& [region, calc_stack_rc] : calc_stack_rcs)
+    {
+      auto actual_stack_rc = region->get_stack_rc();
+      // This check is currently allowing leaks, we should refine to
+      // exact equality.
+
+      if (calc_stack_rc > actual_stack_rc)
+      {
+        logging::Error log;
+        log << "Stack RC invariant violated at " << loc.file_name() << ":"
+            << loc.line() << ":" << loc.column() << " for Region " << region
+            << " calculated stack RC " << calc_stack_rc << " actual stack RC "
+            << actual_stack_rc << std::endl;
+
+        print_stack(log);
+      }
+      assert(calc_stack_rc <= actual_stack_rc && "Stack RC invariant violated");
+    }
+  }
+#endif
+
+  void Thread::invariant(std::source_location loc)
+  {
+#ifndef NDEBUG
+    check_stack_rc_invariant(loc);
+#else
+    snmalloc::UNUSED(loc);
+#endif
   }
 
   std::ostream& operator<<(std::ostream& os, Op op)
@@ -640,7 +768,13 @@ namespace vbci
     assert(frame);
     current_pc = frame->pc;
     auto op = leb<Op>();
-    auto process = [this](auto f) INLINE { Operands::process(*this, f); };
+    auto process =
+      [this](auto f, std::source_location loc = std::source_location::current())
+        INLINE {
+          Operands::process(*this, f);
+          // Check the invariant after running this instruction.
+          invariant(loc);
+        };
 
     trace_instruction("OP:", op);
     try
@@ -779,7 +913,9 @@ namespace vbci
         {
           process(
             [](Program& program, Register& dst, Constant<size_t> string_id)
-              INLINE { dst = Value(program.get_string(string_id)); });
+              INLINE { 
+                dst.set_no_stack_inc(Value(program.get_string(string_id)));
+              });
           break;
         }
 
@@ -801,7 +937,8 @@ namespace vbci
                       }
 
                       self.check_args(cls.fields);
-                      dst = Value(&frame.region.object(cls)->init(frame, cls));
+                      dst.set_no_stack_inc(
+                        Value(&frame.region.object(cls)->init(frame, cls)));
                     });
           break;
         }
@@ -825,7 +962,7 @@ namespace vbci
             auto obj =
               &Object::create(mem, cls, frame.frame_id)->init(frame, cls);
             frame.push_finalizer(obj);
-            dst = Value(obj);
+            dst.set_no_stack_inc(Value(obj));
           });
           break;
         }
@@ -847,7 +984,7 @@ namespace vbci
             }
 
             self.check_args(cls.fields);
-            dst = Value(&region->object(cls)->init(frame, cls));
+            dst.set_no_stack_inc(Value(&region->object(cls)->init(frame, cls)));
           });
           break;
         }
@@ -867,7 +1004,7 @@ namespace vbci
 
             self.check_args(cls.fields);
             auto region = Region::create(region_type);
-            dst = Value(&region->object(cls)->init(frame, cls));
+            dst.set_no_stack_inc(Value(&region->object(cls)->init(frame, cls)));
           });
           break;
         }
@@ -879,7 +1016,8 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id,
                     Frame& frame) INLINE {
-            dst = Value(frame.region.array(type_id, size.get_size()));
+            dst.set_no_stack_inc(
+              Value(frame.region.array(type_id, size.get_size())));
           });
           break;
         }
@@ -890,8 +1028,9 @@ namespace vbci
                     Register& dst,
                     Constant<size_t> type_id,
                     Constant<size_t> size,
-                    Frame& frame)
-                    INLINE { dst = Value(frame.region.array(type_id, size)); });
+                    Frame& frame) INLINE {
+            dst.set_no_stack_inc(Value(frame.region.array(type_id, size)));
+          });
           break;
         }
 
@@ -903,7 +1042,8 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id,
                     Frame& frame) INLINE {
-            dst = Value(stack.array(frame.frame_id, type_id, size.get_size()));
+            dst.set_no_stack_inc(
+              Value(stack.array(frame.frame_id, type_id, size.get_size())));
           });
           break;
         }
@@ -916,7 +1056,8 @@ namespace vbci
                     Constant<size_t> size,
                     Stack& stack,
                     Frame& frame) INLINE {
-            dst = Value(stack.array(frame.frame_id, type_id, size));
+            dst.set_no_stack_inc(
+              Value(stack.array(frame.frame_id, type_id, size)));
           });
           break;
         }
@@ -929,7 +1070,8 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id) INLINE {
             auto region = region_loc.region();
-            dst = Value(region->array(type_id, size.get_size()));
+            dst.set_no_stack_inc(
+              Value(region->array(type_id, size.get_size())));
           });
           break;
         }
@@ -942,7 +1084,7 @@ namespace vbci
                     Constant<size_t> type_id,
                     Constant<size_t> size) INLINE {
             auto region = region_loc.region();
-            dst = Value(region->array(type_id, size));
+            dst.set_no_stack_inc(Value(region->array(type_id, size)));
           });
           break;
         }
@@ -955,7 +1097,8 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id) INLINE {
             auto region = Region::create(region_type);
-            dst = Value(region->array(type_id, size.get_size()));
+            dst.set_no_stack_inc(
+              Value(region->array(type_id, size.get_size())));
           });
           break;
         }
@@ -968,7 +1111,7 @@ namespace vbci
                     Constant<size_t> type_id,
                     Constant<size_t> size) INLINE {
             auto region = Region::create(region_type);
-            dst = Value(region->array(type_id, size));
+            dst.set_no_stack_inc(Value(region->array(type_id, size)));
           });
           break;
         }
@@ -1454,7 +1597,10 @@ namespace vbci
     }
     catch (Value& v)
     {
-      popframe(Register(std::move(v)), Condition::Throw);
+      Register ret;
+      ret = std::move(v);
+      popframe(std::move(ret), Condition::Throw);
+      invariant();
     }
   }
 
@@ -1546,7 +1692,8 @@ namespace vbci
         // Drag the frame-local allocation to the previous frame.
         auto& prev_frame = frames.at(frames.size() - 2);
 
-        auto prev_loc = Location::frame_local(prev_frame.frame_id.stack_index());
+        auto prev_loc =
+          Location::frame_local(prev_frame.frame_id.stack_index());
 
         if (!drag_allocation<false>(prev_loc, ret.get_header()))
         {
@@ -1558,8 +1705,8 @@ namespace vbci
       {
         // Drag the frame-local allocation to a fresh region.
         auto r = Region::create(RegionType::RegionRC);
-        // This is a fresh region, so we need the stack rc from the entry, so do not
-        // count this as a move.
+        // This is a fresh region, so we need the stack rc from the entry, so do
+        // not count this as a move.
         if (!drag_allocation<false>(Location(r), ret.get_header()))
         {
           ret = Value(Error::BadStackEscape);
@@ -1677,6 +1824,7 @@ namespace vbci
 
   void Thread::teardown(bool tailcall)
   {
+    LOG(Trace) << "Tearing down frame " << program->di_function(frame->func);
     // Drop all frame registers.
     frame->drop();
 
@@ -1792,7 +1940,11 @@ namespace vbci
           Value::error(Error::BadArgs);
 
         if (!closure.is_sendable())
+        {
+          LOG(Error) << "Closure argument is not sendable: " << closure
+                     << " in region " << closure.get_header()->region();
           Value::error(Error::BadArgs);
+        }
 
         num_cowns--;
         first_cown++;

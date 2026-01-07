@@ -546,7 +546,8 @@ namespace vbci
       arg->set_size(str_size - 1);
 
       // TODO should this be a register, or should we have an unregister store?
-      argv->template store<true>(i, Register(Value(arg)));
+      // no stack increment required as it is in the stack.
+      argv->template store<true>(i, Register::mk_no_stack_inc(Value(arg)));
     }
 
     argv->immortalize();

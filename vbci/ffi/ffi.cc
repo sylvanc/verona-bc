@@ -18,7 +18,7 @@ struct Callback
   Function* cb_read_udp;
 
   Callback()
-  : arg(Register(Value::none())),
+  : arg(Register::mk_no_stack_inc(Value::none())),
     cb_0(nullptr),
     cb_1(nullptr),
     cb_read(nullptr),

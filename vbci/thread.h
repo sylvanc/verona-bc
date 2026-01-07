@@ -7,6 +7,7 @@
 #include "stack.h"
 #include "register.h"
 
+#include <source_location>
 #include <type_traits>
 #include <unordered_set>
 #include <verona.h>
@@ -93,6 +94,13 @@ namespace vbci
     Register& arg(size_t idx);
     void drop_args();
     void queue_behavior(Register& result, uint32_t type_id, Function* func);
+
+
+    void print_stack(logging::Log& log, bool top_frame_only = false);
+  #ifndef NDEBUG
+    void check_stack_rc_invariant(std::source_location);
+  #endif
+    void invariant(std::source_location loc = std::source_location::current());
 
     template<typename... Args>
     SNMALLOC_FAST_PATH void trace_instruction(Args&&... args)
