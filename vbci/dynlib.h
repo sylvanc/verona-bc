@@ -52,7 +52,7 @@ namespace vbci
     ValueType retval();
 
     void varparam(ffi_type* ffit);
-    Value call(std::vector<void*>& args);
+    Value call(std::vector<const void*>& args);
     void* raw_pointer();
   };
 

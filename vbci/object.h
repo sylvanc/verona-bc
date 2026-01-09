@@ -26,7 +26,7 @@ namespace vbci
     Object& init(Frame& frame, Class& cls)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        store<true, true>(i, std::move(frame.arg(i)));
+        exchange<true, true>(nullptr, i, std::move(frame.arg(i)));
 
       return *this;
     }
@@ -69,16 +69,16 @@ namespace vbci
     }
 
     template <bool is_move, bool no_previous = false>
-    Register store(size_t idx, Reg<is_move> v)
+    void exchange(Register* dst, size_t idx, Reg<is_move> v)
     {
       auto& f = cls().fields.at(idx);
 
-      if (!Program::get().subtype(v.type_id(), f.type_id))
+      if (!Program::get().subtype(v->type_id(), f.type_id))
         Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
 
-      return Header::store<is_move, no_previous>(addr, f.value_type, std::forward<Reg<is_move>>(v));
+      Header::exchange<is_move, no_previous>(dst, addr, f.value_type, std::forward<Reg<is_move>>(v));
     }
 
     /**

@@ -18,17 +18,17 @@ struct Callback
   Function* cb_read_udp;
 
   Callback()
-  : arg(Register::mk_no_stack_inc(Value::none())),
+  :
+    arg(Value::none()),
     cb_0(nullptr),
     cb_1(nullptr),
     cb_read(nullptr),
     cb_read_udp(nullptr)
-  {}
-
-  ~Callback()
   {
-    arg.drop_reg();
+    arg = Value::none();
   }
+
+  ~Callback() {}
 };
 
 VBCI_FFI bool platform_is_mac()
@@ -171,13 +171,13 @@ VBCI_FFI bool async_set_cb1(uv_handle_t* handle, Value& f)
 VBCI_FFI void async_cb0(uv_handle_t* handle)
 {
   auto cb = reinterpret_cast<Callback*>(uv_handle_get_data(handle));
-  Thread::run_sync(cb->cb_0, cb->arg.copy_reg());
+  Thread::run_sync(cb->cb_0, cb->arg);
 }
 
 VBCI_FFI void async_cb1(uv_handle_t* handle, int status)
 {
   auto cb = reinterpret_cast<Callback*>(uv_handle_get_data(handle));
-  Thread::run_sync(cb->cb_0, cb->arg.copy_reg(), Value(status));
+  Thread::run_sync(cb->cb_0, cb->arg, Value(status));
 }
 
 VBCI_FFI bool async_read_start(uv_stream_t* handle, Value& f)
@@ -312,12 +312,12 @@ namespace vbci
       if (buf->base)
         (reinterpret_cast<Array*>(buf->base) - 1)->dec<false>();
 
-      Thread::run_sync(cb->cb_1, cb->arg.copy_reg(), Value(ValueType::I32, nread));
+      Thread::run_sync(cb->cb_1, cb->arg, Value(ValueType::I32, nread));
       return;
     }
 
     auto array = reinterpret_cast<Array*>(buf->base) - 1;
     array->set_size(nread);
-    Thread::run_sync(cb->cb_read, cb->arg.copy_reg(), Value(array));
+    Thread::run_sync(cb->cb_read, cb->arg, Value(array));
   }
 }

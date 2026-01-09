@@ -3,6 +3,7 @@
 #include "array.h"
 #include "ffi/ffi.h"
 #include "thread.h"
+#include "cown.h"
 
 #include <dlfcn.h>
 #include <format>
@@ -149,7 +150,8 @@ namespace vbci
     sched.run();
     stop_loop();
 
-    auto ret_val = ret.load();
+    auto ret_val = ret.get_cown()->load();
+    ret.dec<false>();
     int exit_code;
 
     if (ret_val.is_error())
@@ -545,9 +547,12 @@ namespace vbci
       std::memcpy(p, str.c_str(), str_size);
       arg->set_size(str_size - 1);
 
-      // TODO should this be a register, or should we have an unregister store?
-      // no stack increment required as it is in the stack.
-      argv->template store<true>(i, Register::mk_no_stack_inc(Value(arg)));
+      // TODO Register use here is pointless, and we should optimise.
+      // Create a exchange that doesn't use reference counting.
+      Register dst; // There is no old value, add an array with no dst.
+      Register val;
+      val.replace_unsafe(Value(arg));
+      argv->template exchange<true>(dst, i, std::move(val));
     }
 
     argv->immortalize();

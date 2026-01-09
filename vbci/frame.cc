@@ -79,19 +79,19 @@ namespace vbci
   {
     for (size_t i = 0; i < func->registers; i++)
     {
-      if (locals[base + i].is_invalid())
+      if (locals[base + i]->is_invalid())
         continue;
       LOG(Trace) << "Dropping frame local " << i << "  contents ("
-                 << locals[base + i] << ")";
-      locals[base + i].drop_reg();
-      assert(locals[base + i].is_invalid());
+                 << locals[base + i].borrow() << ")";
+      locals[base + i].clear();
+      assert(locals[base + i]->is_invalid());
     }
   }
 
   void Frame::drop_args(size_t& args)
   {
     for (size_t i = 0; i < args; i++)
-      locals[base + func->registers + i].drop_reg();
+      locals[base + func->registers + i].clear();
 
     args = 0;
   }
