@@ -3,6 +3,7 @@
 #include "array.h"
 #include "ffi/ffi.h"
 #include "thread.h"
+#include "cown.h"
 
 #include <dlfcn.h>
 #include <format>
@@ -119,7 +120,7 @@ namespace vbci
     auto str_size = str.size() + 1;
     auto arr = Array::create(
       new uint8_t[Array::size_of(str_size, ffi_type_uint8.size)],
-      loc::Immutable,
+      Location::immutable(),
       typeid_arg,
       ValueType::U8,
       str_size,
@@ -149,7 +150,8 @@ namespace vbci
     sched.run();
     stop_loop();
 
-    auto ret_val = ret.load();
+    auto ret_val = ret.get_cown()->load();
+    ret.dec<false>();
     int exit_code;
 
     if (ret_val.is_error())
@@ -523,7 +525,7 @@ namespace vbci
 
     argv = Array::create(
       new uint8_t[Array::size_of(args.size(), argv_rep.second->size)],
-      loc::Stack,
+      Location::stack(),
       typeid_argv,
       argv_rep.first,
       args.size(),
@@ -535,7 +537,7 @@ namespace vbci
       auto str_size = str.size() + 1;
       auto arg = Array::create(
         new uint8_t[Array::size_of(str_size, arg_rep.second->size)],
-        loc::Stack,
+        Location::stack(),
         typeid_arg,
         arg_rep.first,
         str_size,
@@ -545,8 +547,11 @@ namespace vbci
       std::memcpy(p, str.c_str(), str_size);
       arg->set_size(str_size - 1);
 
-      // TODO should this be a register, or should we have an unregister store?
-      argv->template store<true>(i, Register(Value(arg)));
+      // TODO Register use here is pointless, and we should optimise.
+      // Create a exchange that doesn't use reference counting.
+      Register dst; // There is no old value, add an array with no dst.
+      Register val = ValueWithRC(arg);
+      argv->template exchange<true>(dst, i, std::move(val));
     }
 
     argv->immortalize();

@@ -81,14 +81,14 @@ namespace vbci
     }
 
     template<bool is_move>
-    Register store(size_t idx, Reg<is_move> v)
+    void exchange(Register& dst, size_t idx, Reg<is_move> v)
     {
-      if (!Program::get().subtype(v.type_id(), content_type_id()))
+      if (!Program::get().subtype(v->type_id(), content_type_id()))
         Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
 
-      return Header::store<is_move>(addr, value_type, std::forward<Reg<is_move>>(v));
+      Header::exchange<false>(&dst, addr, value_type, v);
     }
 
     /**
@@ -100,7 +100,7 @@ namespace vbci
     {
       finalize();
 
-      if (loc::is_immutable(location()))
+      if (location().is_immutable())
         delete[] reinterpret_cast<uint8_t*>(this);
       else
         region()->rfree(this);
@@ -137,7 +137,7 @@ namespace vbci
 
     void immortalize()
     {
-      if (location() == loc::Immortal)
+      if (location() == Location::immortal())
         return;
 
       mark_immortal();

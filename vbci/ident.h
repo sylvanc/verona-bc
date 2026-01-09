@@ -33,7 +33,7 @@ namespace vbci
   };
 
   using PC = size_t;
-  using Location = uintptr_t;
+  struct Location;
   using RC = uint32_t;
   using ARC = std::atomic<RC>;
 

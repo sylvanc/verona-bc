@@ -77,7 +77,7 @@ namespace vbci
     {
       if (status < 0)
       {
-        Thread::run_sync(cb, arg.copy_reg(), Value::null(), Value(status));
+        Thread::run_sync(cb, ValueWithoutRC(arg), ValueWithRC(Value::null()), ValueWithRC(status));
         return;
       }
 
@@ -130,7 +130,7 @@ namespace vbci
         }
 
         close_all();
-        Thread::run_sync(cb, arg.copy_reg(), Value(winner), Value(status));
+        Thread::run_sync(cb, ValueWithoutRC(arg), ValueWithRC(winner), ValueWithRC(status));
       }
 
       if (results < next)
@@ -139,7 +139,7 @@ namespace vbci
       if (!winner)
       {
         close_all();
-        Thread::run_sync(cb, arg.copy_reg(), Value::null(), Value(status));
+        Thread::run_sync(cb, ValueWithoutRC(arg), ValueWithRC(Value::null()), ValueWithRC(status));
       }
 
       delete this;
