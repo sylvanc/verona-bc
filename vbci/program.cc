@@ -550,8 +550,7 @@ namespace vbci
       // TODO Register use here is pointless, and we should optimise.
       // Create a exchange that doesn't use reference counting.
       Register dst; // There is no old value, add an array with no dst.
-      Register val;
-      val.replace_unsafe(Value(arg));
+      Register val = ValueWithRC(arg);
       argv->template exchange<true>(dst, i, std::move(val));
     }
 

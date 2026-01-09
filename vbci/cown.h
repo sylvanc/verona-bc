@@ -193,7 +193,7 @@ namespace vbci
         }
 
         if (!no_dst)
-          dst->replace_unsafe(prev);
+          *dst = ValueWithRC(prev);
         return;
       }
 
@@ -222,7 +222,7 @@ namespace vbci
       }
 
       if constexpr (!no_dst)
-        dst->replace_unsafe(prev);
+        *dst = ValueWithRC(prev);
     }
 
     std::string to_string()

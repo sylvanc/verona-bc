@@ -271,7 +271,7 @@ namespace vbci
             next.clear_unsafe();
           }
 
-          dst->replace_unsafe(prev);
+          *dst = ValueWithRC(prev);
           return;
         }
 
@@ -312,7 +312,7 @@ namespace vbci
       // We have overwritten the previous value, so the classic RC invariant is
       // reestablished for prev.
       if constexpr (!no_dst)
-        dst->replace_unsafe(prev);
+        *dst = ValueWithRC(prev);
     }
 
     void field_drop(Value& prev)

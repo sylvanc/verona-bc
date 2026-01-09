@@ -164,7 +164,7 @@ namespace vbci
 
       // Pass a read-only reference to the object.
       if (fin)
-        Thread::run_sync(fin, Value(this, true));
+        Thread::run_sync(fin, ValueWithoutRC(this, true));
 
       for (size_t i = 0; i < f.size(); i++)
       {

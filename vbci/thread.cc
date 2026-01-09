@@ -382,7 +382,7 @@ namespace vbci
           r->clear_cown_owner();
       }
 
-      locals.at(args++).replace_unsafe(closure);
+      locals.at(args++) = ValueWithRC(closure);
     }
 
     // Populate cown arguments.
@@ -401,7 +401,7 @@ namespace vbci
       // this.
       // Perhaps needs a dynamic borrowed register reference?
       cown->inc();
-      locals.at(args++).replace_unsafe(Value(cown, slots[i].is_read_only()));
+      locals.at(args++) = ValueWithRC(cown, slots[i].is_read_only());
     }
 
     auto ret = thread_run(behavior);
@@ -414,7 +414,7 @@ namespace vbci
     {
       // If we fail to store into the result cown, we need to store the error
       // instead.  It is always valid to store the error.
-      result->exchange<true, true>(nullptr, error_value);
+      result->exchange<true, true>(nullptr, ValueWithRC(error_value));
     }
 
 #ifndef NDEBUG
@@ -793,7 +793,7 @@ namespace vbci
       {
         case Op::Global:
         {
-          process([](Register& dst, Global g) INLINE { dst = g.global; });
+          process([](Register& dst, Global g) INLINE { dst = ValueWithoutRC(g.global); });
           break;
         }
 
@@ -804,110 +804,110 @@ namespace vbci
                       switch (t)
                       {
                         case ValueType::None:
-                          dst = Value::none();
+                          dst = ValueWithRC(Value::none());
                           break;
 
                         case ValueType::Bool:
                         {
                           auto value = self.leb<bool>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::I8:
                         {
                           auto value = self.leb<int8_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::I16:
                         {
                           auto value = self.leb<int16_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::I32:
                         {
                           auto value = self.leb<int32_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::I64:
                         {
                           auto value = self.leb<int64_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::U8:
                         {
                           auto value = self.leb<uint8_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::U16:
                         {
                           auto value = self.leb<uint16_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::U32:
                         {
                           auto value = self.leb<uint32_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::U64:
                         {
                           auto value = self.leb<uint64_t>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::ILong:
                         {
                           auto value = self.leb<int64_t>();
-                          dst = Value::from_ffi(t, value);
+                          dst = ValueWithRC(Value::from_ffi(t, value));
                           break;
                         }
                         case ValueType::ISize:
                         {
                           auto value = self.leb<int64_t>();
-                          dst = Value::from_ffi(t, value);
+                          dst = ValueWithRC(Value::from_ffi(t, value));
                           break;
                         }
 
                         case ValueType::ULong:
                         {
                           auto value = self.leb<uint64_t>();
-                          dst = Value::from_ffi(t, value);
+                          dst = ValueWithRC(Value::from_ffi(t, value));
                           break;
                         }
 
                         case ValueType::USize:
                         {
                           auto value = self.leb<uint64_t>();
-                          dst = Value::from_ffi(t, value);
+                          dst = ValueWithRC(Value::from_ffi(t, value));
                           break;
                         }
 
                         case ValueType::F32:
                         {
                           auto value = self.leb<float>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
                         case ValueType::F64:
                         {
                           auto value = self.leb<double>();
-                          dst = Value(value);
+                          dst = ValueWithRC(value);
                           break;
                         }
 
@@ -923,7 +923,7 @@ namespace vbci
           process(
             [](Program& program, Register& dst, Constant<size_t> string_id)
               INLINE {
-                dst.replace_unsafe(Value(program.get_string(string_id)));
+                dst = ValueWithRC(program.get_string(string_id));
               });
           break;
         }
@@ -931,7 +931,7 @@ namespace vbci
         case Op::Convert:
         {
           process([](Register& dst, Constant<ValueType> t, const Register& src)
-                    INLINE { dst = src->convert(t); });
+                    INLINE { dst = ValueWithRC(src->convert(t)); });
           break;
         }
 
@@ -941,13 +941,12 @@ namespace vbci
                     INLINE {
                       if (cls.singleton)
                       {
-                        dst = Value(cls.singleton);
+                        dst = ValueWithRC(cls.singleton);
                         return;
                       }
 
                       self.check_args(cls.fields);
-                      dst.replace_unsafe(
-                        Value(&frame.region.object(cls)->init(frame, cls)));
+                      dst = ValueWithRC(&frame.region.object(cls)->init(frame, cls));
                     });
           break;
         }
@@ -962,7 +961,7 @@ namespace vbci
                     Stack& stack) INLINE {
             if (cls.singleton)
             {
-              dst = Value(cls.singleton);
+              dst = ValueWithRC(cls.singleton);
               return;
             }
 
@@ -971,7 +970,7 @@ namespace vbci
             auto obj =
               &Object::create(mem, cls, frame.frame_id)->init(frame, cls);
             frame.push_finalizer(obj);
-            dst.replace_unsafe(Value(obj));
+            dst = ValueWithRC(obj);
           });
           break;
         }
@@ -988,12 +987,12 @@ namespace vbci
 
             if (cls.singleton)
             {
-              dst = Value(cls.singleton);
+              dst = ValueWithRC(cls.singleton);
               return;
             }
 
             self.check_args(cls.fields);
-            dst.replace_unsafe(Value(&region->object(cls)->init(frame, cls)));
+            dst = ValueWithRC(&region->object(cls)->init(frame, cls));
           });
           break;
         }
@@ -1013,7 +1012,7 @@ namespace vbci
 
             self.check_args(cls.fields);
             auto region = Region::create(region_type);
-            dst.replace_unsafe(Value(&region->object(cls)->init(frame, cls)));
+            dst = ValueWithRC(&region->object(cls)->init(frame, cls));
           });
           break;
         }
@@ -1025,8 +1024,7 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id,
                     Frame& frame) INLINE {
-            dst.replace_unsafe(
-              Value(frame.region.array(type_id, size->get_size())));
+            dst = ValueWithRC(frame.region.array(type_id, size->get_size()));
           });
           break;
         }
@@ -1038,7 +1036,7 @@ namespace vbci
                     Constant<size_t> type_id,
                     Constant<size_t> size,
                     Frame& frame) INLINE {
-            dst.replace_unsafe(Value(frame.region.array(type_id, size)));
+            dst = ValueWithRC(frame.region.array(type_id, size));
           });
           break;
         }
@@ -1051,8 +1049,7 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id,
                     Frame& frame) INLINE {
-            dst.replace_unsafe(
-              Value(stack.array(frame.frame_id, type_id, size->get_size())));
+            dst = ValueWithRC(stack.array(frame.frame_id, type_id, size->get_size()));
           });
           break;
         }
@@ -1065,8 +1062,7 @@ namespace vbci
                     Constant<size_t> size,
                     Stack& stack,
                     Frame& frame) INLINE {
-            dst.replace_unsafe(
-              Value(stack.array(frame.frame_id, type_id, size)));
+            dst = ValueWithRC(stack.array(frame.frame_id, type_id, size));
           });
           break;
         }
@@ -1079,8 +1075,7 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id) INLINE {
             auto region = region_loc->region();
-            dst.replace_unsafe(
-              Value(region->array(type_id, size->get_size())));
+            dst = ValueWithRC(region->array(type_id, size->get_size()));
           });
           break;
         }
@@ -1093,7 +1088,7 @@ namespace vbci
                     Constant<size_t> type_id,
                     Constant<size_t> size) INLINE {
             auto region = region_loc->region();
-            dst.replace_unsafe(Value(region->array(type_id, size)));
+            dst = ValueWithRC(region->array(type_id, size));
           });
           break;
         }
@@ -1106,8 +1101,7 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id) INLINE {
             auto region = Region::create(region_type);
-            dst.replace_unsafe(
-              Value(region->array(type_id, size->get_size())));
+            dst = ValueWithRC(region->array(type_id, size->get_size()));
           });
           break;
         }
@@ -1120,7 +1114,7 @@ namespace vbci
                     Constant<size_t> type_id,
                     Constant<size_t> size) INLINE {
             auto region = Region::create(region_type);
-            dst.replace_unsafe(Value(region->array(type_id, size)));
+            dst = ValueWithRC(region->array(type_id, size));
           });
           break;
         }
@@ -1148,7 +1142,7 @@ namespace vbci
         case Op::RegisterRef:
         {
           process([](Register& dst, Register& src, Frame& frame)
-                    INLINE { dst = Value(src, frame.frame_id); });
+                    INLINE { dst = ValueWithRC(src, frame.frame_id); });
           break;
         }
 
@@ -1218,7 +1212,7 @@ namespace vbci
         case Op::LookupStatic:
         {
           process([](Register& dst, Function* func)
-                    INLINE { dst = Value(func); });
+                    INLINE { dst = ValueWithRC(func); });
           break;
         }
 
@@ -1232,7 +1226,7 @@ namespace vbci
                 if (!f)
                   Value::error(Error::MethodNotFound);
 
-                dst = Value(f);
+                dst = ValueWithRC(f);
               });
           break;
         }
@@ -1241,7 +1235,7 @@ namespace vbci
         {
           process(
             [](Register& dst, Constant<size_t> symbol_id, Program& program)
-              INLINE { dst = Value(program.symbol(symbol_id).raw_pointer()); });
+              INLINE { dst = ValueWithRC(program.symbol(symbol_id).raw_pointer()); });
           break;
         }
 
@@ -1366,7 +1360,8 @@ namespace vbci
               !ret.is_error() && !program.subtype(ret.type_id(), symbol.ret()))
               Value::error(Error::BadType);
 
-            dst = std::move(ret);
+            // TODO: Is the FFI guaranteed to return a value that has an RC?
+            dst = ValueWithRC(ret);
             frame.drop_args(num_args);
           });
           break;
@@ -1405,7 +1400,7 @@ namespace vbci
                     const Register& src,
                     Constant<size_t> type_id,
                     Program& program) INLINE {
-            dst = Value(program.subtype(src->type_id(), type_id));
+            dst = ValueWithRC(program.subtype(src->type_id(), type_id));
           });
           break;
         }
@@ -1473,7 +1468,7 @@ namespace vbci
 #define do_binop(opname) \
   { \
     process([](Register& dst, const Register& lhs, const Register& rhs) \
-              INLINE { dst = lhs->op_##opname(rhs.borrow()); }); \
+              INLINE { dst = ValueWithoutRC(lhs->op_##opname(rhs.borrow())); }); \
     break; \
   }
         case Op::Add:
@@ -1522,7 +1517,7 @@ namespace vbci
 #define do_unop(opname) \
   { \
     process([](Register& dst, const Register& src) \
-              INLINE { dst = src->op_##opname(); }); \
+              INLINE { dst = ValueWithoutRC(src->op_##opname()); }); \
     break; \
   }
         case Op::Neg:
@@ -1584,14 +1579,14 @@ namespace vbci
             process([](Register& dst, Register& src)
                       INLINE {
                         // This feels insanely dangerous, and needs review.
-                        dst = const_cast<Value&>(src.borrow()).op_ptr(); 
+                        dst = ValueWithRC(const_cast<Value&>(src.borrow()).op_ptr());
                       });
             break;
           }
 
 #define do_const(opname) \
   { \
-    process([](Register& dst) INLINE { dst = Value::opname(); }); \
+    process([](Register& dst) INLINE { dst = ValueWithoutRC(Value::opname()); }); \
     break; \
   }
         case Op::Const_E:
@@ -1610,7 +1605,8 @@ namespace vbci
     catch (Value& v)
     {
       Register ret;
-      ret = std::move(v);
+      // TODO: does the throw guarantee an RC?
+      ret = ValueWithRC(std::move(v));
       popframe(std::move(ret), Condition::Throw);
       invariant();
     }
@@ -1692,7 +1688,7 @@ namespace vbci
     if (retloc == frame->frame_id)
     {
       // The return value can't be stack allocated in this frame.
-      ret = Value(Error::BadStackEscape);
+      ret = ValueWithRC(Error::BadStackEscape);
       condition = Condition::Throw;
     }
     else if (
@@ -1709,7 +1705,7 @@ namespace vbci
 
         if (!drag_allocation<false>(prev_loc, ret->get_header()))
         {
-          ret = Value(Error::BadStackEscape);
+          ret = ValueWithRC(Error::BadStackEscape);
           condition = Condition::Throw;
         }
       }
@@ -1721,7 +1717,7 @@ namespace vbci
         // not count this as a move.
         if (!drag_allocation<false>(Location(r), ret->get_header()))
         {
-          ret = Value(Error::BadStackEscape);
+          ret = ValueWithRC(Error::BadStackEscape);
           condition = Condition::Throw;
           r->free_region();
         }
@@ -1735,7 +1731,7 @@ namespace vbci
           !ret->is_error() &&
           !program->subtype(ret->type_id(), frame->func->return_type))
         {
-          ret = Value(Error::BadType);
+          ret = ValueWithRC(Error::BadType);
           condition = Condition::Throw;
         }
         break;
@@ -1987,7 +1983,7 @@ namespace vbci
 
     // Cowns initially have an RC, so we can create a value from it without an
     // incref.
-    result.replace_unsafe(Value(result_cown));
+    result = ValueWithRC(result_cown);
 
     // Slot 0 is the result cown.
     auto b = verona::rt::BehaviourCore::make(

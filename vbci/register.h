@@ -9,6 +9,22 @@
 
 namespace vbci
 {
+  struct ValueWithRC : Value
+  {
+  public:
+    using Value::Value;
+
+    ValueWithRC(const Value& v) : Value(v) {}
+  };
+
+  struct ValueWithoutRC : Value
+  {
+  public:
+    using Value::Value;
+
+    ValueWithoutRC(const Value& v) : Value(v) {}
+  };
+
   struct Register : private Value
   {
   private:
@@ -23,15 +39,21 @@ namespace vbci
   public:
     Register() = default;
 
-    Register(const Value& v) : Value(v)
-    {
-      inc<true>();
-    }
-
     Register(Register&& v)
     {
       set_raw_unsafe(v);
       v.clear_unsafe();
+    };
+
+    Register(ValueWithoutRC v)
+    {
+      set_raw_unsafe(v);
+      v.inc<true>();
+    };
+
+    Register(ValueWithRC v)
+    {
+      set_raw_unsafe(v);
     };
 
     ~Register()
@@ -65,11 +87,17 @@ namespace vbci
       old.dec<true>();
     }
 
-    void replace_unsafe(Value new_value)
+    void operator=(ValueWithRC v)
     {
-      Value old = *this;
-      set_raw_unsafe(new_value);
-      old.dec<true>();
+      replace_unsafe([&]() { return v; });
+    }
+
+    void operator=(ValueWithoutRC v)
+    {
+      replace_unsafe([&]() {
+        v.inc<true>();
+        return v;
+      });
     }
 
     void clear_unsafe()
@@ -85,14 +113,6 @@ namespace vbci
       replace_unsafe([&]() -> Value {
         Value v = r;
         r.clear_unsafe();
-        return v;
-      });
-    }
-
-    void operator=(const Value& v)
-    {
-      replace_unsafe([&]() {
-        v.inc<true>();
         return v;
       });
     }
@@ -185,9 +205,7 @@ namespace vbci
       else
         src.template inc<true>();
 
-      replace_unsafe([&]() {
-        return Value(arr, index, readonly);
-      });
+      replace_unsafe([&]() { return Value(arr, index, readonly); });
     }
   };
 } // namespace vbci
