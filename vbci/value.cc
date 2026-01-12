@@ -64,47 +64,12 @@ namespace vbci
       Value::error(Error::MethodNotFound);
   }
 
-  Value Value::copy_value() const
-  {
-    Value v;
-    std::memcpy(static_cast<void*>(&v), this, sizeof(Value));
-    v.inc<false>();
-    return v;
-  }
-
-  Register Value::copy_reg() const
-  {
-    Value v;
-    std::memcpy(static_cast<void*>(&v), this, sizeof(Value));
-    // Performed the required increment for moving into a register
-    v.inc<true>();
-    return Register(std::move(v));
-  }
-
-  Value::Value(Value&& that) noexcept
-  {
-    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
-    that.tag = ValueType::Invalid;
-  }
-
-  Value& Value::operator=(Value&& that) noexcept
-  {
-    if (this == &that)
-      return *this;
-
-    // This is not a register, Register overrides this behaviour.
-    dec<false>();
-    std::memcpy(static_cast<void*>(this), &that, sizeof(Value));
-    that.tag = ValueType::Invalid;
-    return *this;
-  }
-
-  Value Value::none()
+  ValueImmortal Value::none()
   {
     return Value(ValueType::None);
   }
 
-  Value Value::null()
+  ValueImmortal Value::null()
   {
     return Value(static_cast<void*>(nullptr));
   }
@@ -114,16 +79,18 @@ namespace vbci
     return tag;
   }
 
-  Value Value::from_ffi(ValueType t, uint64_t v)
+  ValueImmortal Value::from_ffi(ValueType t, uint64_t v)
   {
-    Value value(t);
+    ValueImmortal value(t);
     value.u64 = v;
     return value;
   }
 
-  Register Value::from_addr(ValueType t, void* v)
+  ValueBorrow Value::from_addr(ValueType t, void* v)
   {
-    Register value(t);
+    // Surrounding code is responsible for ensuring correct rc and stack rc
+    // management.
+    ValueBorrow value{t};
 
     switch (t)
     {
@@ -222,7 +189,6 @@ namespace vbci
     return value;
   }
 
-  template<bool is_move>
   void Value::to_addr(ValueType t, void* v) const
   {
     switch (t)
@@ -310,19 +276,7 @@ namespace vbci
         std::memcpy(v, this, sizeof(Value));
         break;
     }
-
-    if constexpr (is_move)
-    {
-      // Clear tag as this value has been invalidated by the move.
-      // The const annotation was only required for the copy version,
-      // so the const_cast is safe here.
-      const_cast<Value*>(this)->tag = ValueType::Invalid;
-    }
   }
-
-  // Create the two specialisations of to_addr.
-  template void Value::to_addr<true>(ValueType t, void* v) const;
-  template void Value::to_addr<false>(ValueType t, void* v) const;
 
   uint32_t Value::type_id() const
   {
@@ -338,7 +292,7 @@ namespace vbci
         return cown->get_type_id();
 
       case ValueType::RegisterRef:
-        return Program::get().ref(reg->type_id());
+        return Program::get().ref((*reg)->type_id());
 
       case ValueType::FieldRef:
         return Program::get().ref(obj->field_type_id(idx));
@@ -384,6 +338,16 @@ namespace vbci
       default:
         return false;
     }
+  }
+
+  bool Value::is_object() const
+  {
+    return tag == ValueType::Object;
+  }
+
+  bool Value::is_array() const
+  {
+    return tag == ValueType::Array;
   }
 
   bool Value::is_function() const
@@ -465,6 +429,27 @@ namespace vbci
     }
   }
 
+  Object* Value::get_object() const
+  {
+    if (tag != ValueType::Object)
+      Value::error(Error::BadConversion);
+
+    return obj;
+  }
+
+  Array* Value::get_array() const
+  {
+    if (tag != ValueType::Array)
+      Value::error(Error::BadConversion);
+
+    return arr;
+  }
+
+  ValueType Value::get_value_type() const
+  {
+    return tag;
+  }
+
   Function* Value::function() const
   {
     if (tag != ValueType::Function)
@@ -481,7 +466,7 @@ namespace vbci
     return usize;
   }
 
-  void* Value::to_ffi()
+  const void* Value::to_ffi() const
   {
     switch (tag)
     {
@@ -622,11 +607,12 @@ namespace vbci
     }
   }
 
-  Value Value::op_read() const
+  ValueBorrow Value::op_read() const
   {
     if (tag == ValueType::Cown)
     {
-      Value r = (*this).copy_value();
+      Value r = *this;
+      // Note that the context will perform incref (do_unop) in the interpreter.  TODO:Borrow?
       r.readonly = true;
       return r;
     }
@@ -634,7 +620,7 @@ namespace vbci
     Value::error(Error::BadOperand);
   }
 
-  template<bool is_register>
+  template<bool is_local_reference>
   void Value::inc() const
   {
     switch (tag)
@@ -642,13 +628,13 @@ namespace vbci
       case ValueType::Object:
       case ValueType::FieldRef:
         if (!readonly)
-          obj->template inc<is_register>();
+          obj->inc<is_local_reference>();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->inc<is_register>();
+          arr->inc<is_local_reference>();
         break;
 
       case ValueType::Cown:
@@ -663,7 +649,26 @@ namespace vbci
     }
   }
 
-  template<bool is_register>
+  template void Value::inc<true>() const;
+  template void Value::inc<false>() const;
+
+  void Value::stack_inc() const
+  {
+    if (location().is_region())
+    {
+      location().to_region()->stack_inc();
+    }
+  }
+
+  void Value::stack_dec() const
+  {
+    if (location().is_region())
+    {
+      location().to_region()->stack_dec();
+    }
+  }
+
+  template<bool is_local_reference>
   void Value::dec() const
   {
     switch (tag)
@@ -671,13 +676,13 @@ namespace vbci
       case ValueType::Object:
       case ValueType::FieldRef:
         if (!readonly)
-          obj->dec<is_register>();
+          obj->dec<is_local_reference>();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->dec<is_register>();
+          arr->dec<is_local_reference>();
         break;
 
       case ValueType::Cown:
@@ -691,6 +696,9 @@ namespace vbci
         break;
     }
   }
+
+  template void Value::dec<true>() const;
+  template void Value::dec<false>() const;
 
   Location Value::location() const
   {
@@ -765,81 +773,15 @@ namespace vbci
     }
   }
 
-  void Value::drop_reg()
+  ValueBorrow Value::load_reference() const
   {
-    dec<true>();
-    tag = ValueType::Invalid;
-  }
-
-  void Value::field_drop()
-  {
-    dec<false>();
-    tag = ValueType::Invalid;
-  }
-
-  Register Value::ref(bool move, size_t field)
-  {
-    switch (tag)
-    {
-      case ValueType::Object:
-      {
-        auto f = obj->field(field);
-
-        if (move)
-          tag = ValueType::Invalid;
-        else
-          // Moving into a register requires an increment
-          // on stack rc, as well as the object.
-          inc<true>();
-
-        return Register(Value(obj, f, readonly));
-      }
-
-      case ValueType::Cown:
-      {
-        if (move)
-          tag = ValueType::Invalid;
-        else
-          // Cowns are always unregioned, so can skip the stack rc checks.
-          inc<false>();
-
-        // Cowns don't need a stack rc, so can be freely lifted to
-        // registers.
-        return Register(Value(cown, false));
-      }
-
-      default:
-        Value::error(Error::BadRefTarget);
-    }
-  }
-
-  Register Value::arrayref(bool move, size_t i) const
-  {
-    if (tag != ValueType::Array)
-      Value::error(Error::BadRefTarget);
-
-    if (i >= arr->get_size())
-      Value::error(Error::BadArrayIndex);
-
-    if (move)
-      // Const can be ignored here as only required when move is false.
-      const_cast<Value*>(this)->tag = ValueType::Invalid;
-    else
-      // Moving into a register requires an increment
-      // on stack rc, as well as the object.
-      inc<true>();
-
-    return Register(Value(arr, i, readonly));
-  }
-
-  Register Value::load() const
-  {
-    Value v;
+    ValueBorrow v;
 
     switch (tag)
     {
       case ValueType::RegisterRef:
-        return (*reg).copy_reg();
+        v = *reg;  // TODO Not sure about this structure.  context has to deal with RCs
+        break;
 
       case ValueType::FieldRef:
         v = obj->load(idx);
@@ -851,40 +793,36 @@ namespace vbci
 
       case ValueType::CownRef:
       {
-        Register r{cown->load()};
-        r.readonly = readonly;
-        return r;
+        v = cown->load();
+        break;
       }
       default:
         Value::error(Error::BadLoadTarget);
     }
-
-    v.inc<true>();
     v.readonly = readonly;
-    return Register(std::move(v));
+    return v;
   }
 
   template<bool is_move>
-  Register Value::store(Reg<is_move> v) const
+  void Value::exchange(Register& dst, Reg<is_move> v) const
   {
     if (readonly)
       Value::error(Error::BadStoreTarget);
 
     // Currently only cowns provide read-only access.  That means it
     // is never valid to store a read-only reference any where.
-    if (v.readonly)
+    if (v->readonly)
       Value::error(Error::BadStore);
 
     switch (tag)
     {
       case ValueType::RegisterRef:
       {
-        auto vloc = v.location();
+        auto vloc = v->location();
 
         auto ref_loc = Location::from_raw(idx);
 
-        if (vloc.is_stack() &&
-            (vloc.stack_index() > ref_loc.stack_index()))
+        if (vloc.is_stack() && (vloc.stack_index() > ref_loc.stack_index()))
           Value::error(Error::BadStoreTarget);
 
         // Should also check for frame local?
@@ -897,24 +835,31 @@ namespace vbci
             Value::error(Error::BadStoreTarget);
         }
 
-        Register prev = std::move(*reg);
+        dst = std::move(*reg);
 
         if constexpr (is_move)
+        {
           *reg = std::move(v);
+        }
         else
-          *reg = v.copy_reg();
+        {
+          *reg = v;
+        }
 
-        return prev;
+        return;
       }
 
       case ValueType::FieldRef:
-        return obj->store<is_move>(idx, std::forward<Reg<is_move>>(v));
+        obj->exchange<is_move>(&dst, idx, std::forward<Reg<is_move>>(v));
+        return;
 
       case ValueType::ArrayRef:
-        return arr->store<is_move>(idx, std::forward<Reg<is_move>>(v));
+        arr->exchange<is_move>(dst, idx, std::forward<Reg<is_move>>(v));
+        return;
 
       case ValueType::CownRef:
-        return cown->store<is_move>(std::forward<Reg<is_move>>(v));
+        cown->exchange<is_move>(&dst, std::forward<Reg<is_move>>(v));
+        return;
 
       default:
         Value::error(Error::BadStoreTarget);
@@ -922,8 +867,8 @@ namespace vbci
   }
 
   // Create instances of templated store
-  template Register Value::store<true>(Reg<true> v) const;
-  template Register Value::store<false>(Reg<false> v) const;
+  template void Value::exchange<true>(Register& old, Reg<true> v) const;
+  template void Value::exchange<false>(Register& old, Reg<false> v) const;
 
   Function* Value::method(size_t w) const
   {
@@ -936,7 +881,7 @@ namespace vbci
       Value::error(Error::BadConversion);
 
     if (tag == to)
-      return copy_value();
+      return *this;
 
     if (tag < ValueType::F32)
       return Value(to, get<uint64_t>());
@@ -1009,7 +954,7 @@ namespace vbci
         return cown->to_string();
 
       case ValueType::RegisterRef:
-        return std::format("ref {}", reg->to_string());
+        return std::format("ref {}", (*reg)->to_string());
 
       case ValueType::FieldRef:
         return std::format(

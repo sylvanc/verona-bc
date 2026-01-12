@@ -79,7 +79,7 @@ namespace vbci
           return true;
         }
 
-        return drag_allocation(cloc, next.get_header());
+        return drag_allocation<is_move>(cloc, next.get_header());
       }
 
       // TODO still needed
@@ -163,9 +163,6 @@ namespace vbci
     template<bool to_register = true>
     bool remove_region_reference(Location ploc) const
     {
-      if (!ploc.is_region())
-        return true;
-
       if (loc.is_frame_local() || loc.is_stack())
       {
         // This is being removed from an object/array that is frame local, and
@@ -174,6 +171,9 @@ namespace vbci
           return ploc.to_region()->stack_dec();
         return true;
       }
+
+      if (!ploc.is_region())
+        return true;
 
       auto pr = ploc.to_region();
 
@@ -222,16 +222,18 @@ namespace vbci
       pr->stack_dec();
     }
 
-    template<bool is_move, bool no_previous = false>
-    Register store(void* addr, ValueType t, Reg<is_move> next) const
+    template<bool is_move, bool no_dst = false>
+    void exchange(Register* dst, void* addr, ValueType t, Reg<is_move> next) const
     {
+      assert(no_dst == (dst == nullptr));
+      
       if (loc.is_immutable())
         Value::error(Error::BadStoreTarget);
 
-      auto nloc = next.location();
+      auto nloc = next->location();
 
-      Register prev;
-      if constexpr (!no_previous)
+      Value prev;
+      if constexpr (!no_dst)
       {
         // Load the previous value.
         prev = Value::from_addr(t, addr);
@@ -247,16 +249,30 @@ namespace vbci
         if (ploc == nloc)
         {
           // Now safe to perform the write.
-          next.template to_addr<is_move>(t, addr);
+          next->to_addr(t, addr);
           // We have overwritten the previous value, so the classic RC invariant
           // is reestablished.
 
           if constexpr (!is_move)
           {
-            if (ploc.is_region())
-              ploc.to_region()->stack_inc();
+            // We need another RC for the value stored in the reference.
+            // We also need a stack RC if it is a region as prev is going into a
+            // register and that has the same region.
+            // Hence we need:
+            //   prev.stack_inc();
+            //   next.inc<false>();
+            // as prev and next are the same location we can optimise this to:
+            next->template inc<true>();
           }
-          return prev;
+          else
+          {
+            // We have consumed the register, so clear.
+            // We have taken ownership into the written location.
+            next.clear_unsafe();
+          }
+
+          *dst = ValueTransfer(prev);
+          return;
         }
 
         remove_region_reference(ploc);
@@ -266,10 +282,10 @@ namespace vbci
         // it removing a classic RC it was never entitled to.
       }
 
-      if (!add_region_reference<is_move>(next))
+      if (!add_region_reference<is_move>(next.borrow()))
       {
         // Failed to add references, need to restore prev's RCs.
-        if constexpr (!no_previous)
+        if constexpr (!no_dst)
         {
           auto ploc = prev.location();
           restore_reference(ploc);
@@ -281,13 +297,22 @@ namespace vbci
       if constexpr (!is_move)
       {
         // TODO should add_region_reference have already done this?
-        next.template inc<false>();
+        next->template inc<false>();
       }
       // Now safe to perform the write.
-      next.template to_addr<is_move>(t, addr);
+      next->to_addr(t, addr);
+
+      if constexpr (is_move)
+      {
+      // We have consumed the register, so clear.
+        // We have taken ownership into the written location.
+        next.clear_unsafe();
+      }
+
       // We have overwritten the previous value, so the classic RC invariant is
       // reestablished for prev.
-      return prev;
+      if constexpr (!no_dst)
+        *dst = ValueTransfer(prev);
     }
 
     void field_drop(Value& prev)
@@ -326,7 +351,7 @@ namespace vbci
     }
 
     // Returns true if the object needs deallocating.
-    template<bool is_register>
+    template<bool needs_stack_rc>
     bool dec_no_dealloc()
     {
       // Returns false if the allocation should be freed.
@@ -345,7 +370,7 @@ namespace vbci
       if (r->enable_rc())
         ret = --rc == 0;
 
-      if (!is_register)
+      if (!needs_stack_rc)
         return ret;
 
       return r->stack_dec() && ret;
@@ -367,10 +392,10 @@ namespace vbci
       return rc;
     }
 
-    template<bool is_register = false>
+    template<bool needs_stack_rc>
     void dec()
     {
-      if (dec_no_dealloc<is_register>())
+      if (dec_no_dealloc<needs_stack_rc>())
         // Queue object/array for deallocation
         collect(this);
     }
@@ -390,10 +415,9 @@ namespace vbci
 
     void move_region(Location to_loc, Region* to)
     {
-      if (loc.is_region_or_frame_local())
-        loc.to_region()->remove(this);
-
       assert(to_loc.is_region_or_frame_local());
+
+      loc.to_region()->remove(this);
       loc = to_loc;
       to->insert(this);
     }
@@ -409,7 +433,8 @@ namespace vbci
         // Drag a frame-local allocation to a region.
         auto nr = Region::create(RegionType::RegionRC);
 
-        if (!drag_allocation(Location(nr), this))
+        // TODO: review is this a move or copy for the template parameter?
+        if (!drag_allocation<false>(Location(nr), this))
           return false;
 
         return (nr->sendable());
@@ -427,7 +452,7 @@ namespace vbci
       return true;
     }
 
-    template<bool reg = false>
+    template<bool needs_stack_rc>
     void inc()
     {
       if (loc.no_rc())
@@ -441,8 +466,9 @@ namespace vbci
 
       auto r = loc.to_region();
 
-      // If this RC inc comes from a register, increment the region stack RC.
-      if (reg)
+      // If this RC inc comes from a register or frame local object,
+      // increment the region stack RC.
+      if (needs_stack_rc)
         r->stack_inc();
 
       if (r->enable_rc())
@@ -451,7 +477,7 @@ namespace vbci
 
     void stack_inc()
     {
-      if (loc.is_region_or_frame_local())
+      if (loc.is_region())
       {
         auto r = loc.to_region();
         r->stack_inc();
@@ -460,7 +486,7 @@ namespace vbci
 
     void stack_dec()
     {
-      if (loc.is_region_or_frame_local())
+      if (loc.is_region())
       {
         auto r = loc.to_region();
         r->stack_dec();

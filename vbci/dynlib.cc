@@ -82,7 +82,7 @@ namespace vbci
     param_ffi_types.push_back(ffit);
   }
 
-  Value Symbol::call(std::vector<void*>& args)
+  Value Symbol::call(std::vector<const void*>& args)
   {
     if (!func)
       Value::error(Error::UnknownFFI);
@@ -111,12 +111,16 @@ namespace vbci
 
     if (return_value_type == ValueType::Invalid)
     {
-      ffi_call(&cif, func, &ret, args.data());
+      // Expect the ffi call to not modify the args in place.
+      // Hence, the const_cast.
+      ffi_call(&cif, func, &ret, const_cast<void**>(args.data()));
     }
     else
     {
       ffi_arg r = 0;
-      ffi_call(&cif, func, &r, args.data());
+      // Expect the ffi call to not modify the args in place.
+      // Hence, the const_cast.
+      ffi_call(&cif, func, &r, const_cast<void**>(args.data()));
       ret = Value::from_ffi(return_value_type, r);
     }
 

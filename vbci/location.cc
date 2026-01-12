@@ -16,6 +16,7 @@ namespace vbci
     return reinterpret_cast<Region*>(value);
   }
 
+  template <bool is_move>
   bool drag_allocation(Location dest_loc, Header* h)
   {
     assert(dest_loc.is_region_or_frame_local());
@@ -29,6 +30,9 @@ namespace vbci
     std::unordered_map<Header*, RC> rc_map;
     std::unordered_set<Region*> regions;
     wl.push_back(h);
+
+    // Track any borrows to dest_loc, that have now been made internal.
+    size_t stack_rc_decs = 0;
 
     while (!wl.empty())
     {
@@ -64,7 +68,7 @@ namespace vbci
             continue;
         }
 
-        // Initial internal RC count is 1.
+        // This is the first internal edge, give it an internal RC count of 1.
         rc_map[next_h] = 1;
 
         if (program.is_array(next_h->get_type_id()))
@@ -72,13 +76,19 @@ namespace vbci
         else
           static_cast<Object*>(next_h)->trace(wl);
       }
-      else
+
+      // Only need to track regions we visit if the dest_loc is not frame-local
+      if (loc.is_region() && !frame_local)
       {
         auto hr = loc.to_region();
 
         // If hr is r, we do nothing.
+        // TODO: Should this do a stack_dec.  We are making a borrow internal?
         if (hr == r)
+        {
+          stack_rc_decs++;
           continue;
+        }
 
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
@@ -113,10 +123,18 @@ namespace vbci
     // Move objects and arrays to the new region.
     for (auto& [hh, rc] : rc_map)
     {
+      LOG(Trace) << "Dragging header @" << hh << " to region @" << r << " with internal rc " << rc;
       // Reduce internal RC map by 1 for the initial entry edge.
       if (hh == h)
-        rc--;
-
+      {
+        if constexpr (!is_move)
+        {
+          LOG(Trace) << "Copying header @" << hh << " to region @" << r;
+          rc--;
+        }
+        else
+          LOG(Trace) << "Moving header @" << hh << " to region @" << r;
+      }
       // (hh->rc - rc) = stack rc. This works because frame-local regions are
       // always reference counted.
       assert(hh->get_rc() >= rc);
@@ -124,7 +142,14 @@ namespace vbci
       hh->move_region(dest_loc, r);
     }
 
+    if (!frame_local && (stack_rc_decs > 0))
+      for (size_t i = 0; i < stack_rc_decs; i++)
+        r->stack_dec();
+
     return true;
     ;
   }
+
+  template bool drag_allocation<false>(Location dest_loc, Header* h);
+  template bool drag_allocation<true>(Location dest_loc, Header* h);
 }

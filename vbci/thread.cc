@@ -8,6 +8,12 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <source_location>
+
+#ifndef NDEBUG
+#  include <algorithm>
+#  include <unordered_map>
+#endif
 
 #define INLINE SNMALLOC_FAST_PATH_LAMBDA
 
@@ -32,7 +38,7 @@ namespace vbci
 
     void operator=(const Register& v)
     {
-      reg = v.copy_reg();
+      reg = v;
     }
   };
 
@@ -178,6 +184,10 @@ namespace vbci
 #endif
         call_function_and_continue<F, Args...>(
           fun, std::forward<Args>(args)...);
+#ifndef NDEBUG
+        logging::Log log(logging::detail::LogLevel::Trace);
+        self.print_stack(log, true);
+#endif
       }
       else
       {
@@ -259,7 +269,9 @@ namespace vbci
     }
   };
 
-  Register Thread::run_async(uint32_t type_id, Function* func)
+  // Returns a cown containing the result of the behaviour.
+  // The Value returns an rc to the cown.
+  ValueTransfer Thread::run_async(uint32_t type_id, Function* func)
   {
     auto result = Cown::create(type_id);
 
@@ -275,7 +287,7 @@ namespace vbci
 
     // Safe to convert to use Register this only contains a cown pointer, so
     // there is no requirement for a stack_rc.
-    return Register(Value(result, false));
+    return ValueTransfer(result);
   }
 
   std::pair<Function*, PC> Thread::debug_info()
@@ -370,7 +382,7 @@ namespace vbci
           r->clear_cown_owner();
       }
 
-      locals.at(args++) = std::move(closure);
+      locals.at(args++) = ValueTransfer(closure);
     }
 
     // Populate cown arguments.
@@ -389,21 +401,29 @@ namespace vbci
       // this.
       // Perhaps needs a dynamic borrowed register reference?
       cown->inc();
-      locals.at(args++) = Value(cown, slots[i].is_read_only());
+      locals.at(args++) = ValueTransfer(cown, slots[i].is_read_only());
     }
 
     auto ret = thread_run(behavior);
     try
     {
       // Store the function return value in the result cown.
-      result->store<true>(std::move(ret));
+      result->exchange<true, true>(nullptr, std::move(ret));
     }
     catch (Value& error_value)
     {
       // If we fail to store into the result cown, we need to store the error
       // instead.  It is always valid to store the error.
-      result->store<true>(Register(std::move(error_value)));
+      result->exchange<true, true>(nullptr, ValueImmortal(error_value));
     }
+
+#ifndef NDEBUG
+    {
+      logging::Log log(logging::detail::LogLevel::Trace);
+      log << "Behavior complete. Final stack:" << std::endl;
+      print_stack(log);
+    }
+#endif
 
     verona::rt::BehaviourCore::finished(work);
   }
@@ -413,10 +433,129 @@ namespace vbci
     auto depth = frames.size();
     pushframe(func, 0, CallType::Catch);
 
+    invariant();
+
     while (depth != frames.size())
       step();
 
+    LOG(Trace) << "thread_run completed! Result: " << locals.at(0);
     return std::move(locals.at(0));
+  }
+
+  void Thread::print_stack(logging::Log& log, bool top_frame_only)
+  {
+    log << "Stack trace:" << std::endl;
+    for (ssize_t i = frames.size() - 1; i >= 0; i--)
+    {
+      auto& frame = frames[i];
+      log << "  at " << program->di_function(frame.func) << " (pc=" << frame.pc
+          << ")";
+
+      // print add the locals for this frame
+      for (size_t j = 0; j < frame.func->registers; j++)
+      {
+        if (frame.local(j)->is_invalid())
+          continue;
+        log << std::endl << "    local[" << j << "] = " << frame.local(j);
+      }
+      if (top_frame_only)
+        break;
+      if (i != 0)
+        log << std::endl;
+    }
+
+    if (args == 0)
+      return;
+
+    log << std::endl << "  Args stack:";
+    for (size_t i = 0; i < args; i++)
+    {
+      log << std::endl << "    arg[" << i << "] = " << frame->arg(i);
+    }
+  }
+
+#ifndef NDEBUG
+  void Thread::check_stack_rc_invariant(std::source_location loc)
+  {
+    std::unordered_map<Region*, size_t> calc_stack_rcs;
+
+    auto visit_region = [&](Region* region) {
+      // Walk parent chain for every region we have not already seen.
+      // This accounts for the edge triggered stack RC from children to parents.
+      while (calc_stack_rcs.find(region) == calc_stack_rcs.end() &&
+             region->has_parent())
+      {
+        calc_stack_rcs[region] = 1;
+        region = region->get_parent();
+      }
+      calc_stack_rcs[region] += 1;
+    };
+
+    auto visit_value = [&](ValueBorrow val) {
+      // Readonly values do not contribute to stack rcs.
+      if (val.is_readonly())
+        return;
+
+      auto loc = val.location();
+
+      if (!loc.is_region())
+        return;
+
+      auto region = loc.to_region();
+
+      visit_region(region);
+    };
+
+    // For each register in the local frame, if it is a region reference, then
+    for (auto& reg : locals)
+    {
+      visit_value(reg);
+    }
+
+    for (auto& frame : frames)
+    {
+      const auto& frame_local_region = frame.get_frame_local_region();
+      std::vector<Header*> nodes;
+      frame_local_region.trace(nodes);
+      for (auto header : nodes)
+      {
+        if (header->region()->has_frame_local_owner())
+          continue;
+        if (header->region()->has_cown_owner())
+          continue;
+        visit_region(header->region());
+      }
+    }
+
+    // Now compare calculated stack RCs with actual stack RCs.
+    for (const auto& [region, calc_stack_rc] : calc_stack_rcs)
+    {
+      auto actual_stack_rc = region->get_stack_rc();
+      // This check is currently allowing leaks, we should refine to
+      // exact equality.
+
+      if (calc_stack_rc > actual_stack_rc)
+      {
+        logging::Error log;
+        log << "Stack RC invariant violated at " << loc.file_name() << ":"
+            << loc.line() << ":" << loc.column() << " for Region " << region
+            << " calculated stack RC " << calc_stack_rc << " actual stack RC "
+            << actual_stack_rc << std::endl;
+
+        print_stack(log);
+      }
+      assert(calc_stack_rc <= actual_stack_rc && "Stack RC invariant violated");
+    }
+  }
+#endif
+
+  void Thread::invariant(std::source_location loc)
+  {
+#ifndef NDEBUG
+    check_stack_rc_invariant(loc);
+#else
+    snmalloc::UNUSED(loc);
+#endif
   }
 
   std::ostream& operator<<(std::ostream& os, Op op)
@@ -639,7 +778,13 @@ namespace vbci
     assert(frame);
     current_pc = frame->pc;
     auto op = leb<Op>();
-    auto process = [this](auto f) INLINE { Operands::process(*this, f); };
+    auto process =
+      [this](auto f, std::source_location loc = std::source_location::current())
+        INLINE {
+          Operands::process(*this, f);
+          // Check the invariant after running this instruction.
+          invariant(loc);
+        };
 
     trace_instruction("OP:", op);
     try
@@ -648,8 +793,7 @@ namespace vbci
       {
         case Op::Global:
         {
-          process([](Register& dst, Global g)
-                    INLINE { dst = g.global.copy_reg(); });
+          process([](Register& dst, Global g) INLINE { dst = ValueBorrow(g.global); });
           break;
         }
 
@@ -660,69 +804,69 @@ namespace vbci
                       switch (t)
                       {
                         case ValueType::None:
-                          dst = Value::none();
+                          dst = ValueImmortal(Value::none());
                           break;
 
                         case ValueType::Bool:
                         {
                           auto value = self.leb<bool>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::I8:
                         {
                           auto value = self.leb<int8_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::I16:
                         {
                           auto value = self.leb<int16_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::I32:
                         {
                           auto value = self.leb<int32_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::I64:
                         {
                           auto value = self.leb<int64_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::U8:
                         {
                           auto value = self.leb<uint8_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::U16:
                         {
                           auto value = self.leb<uint16_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::U32:
                         {
                           auto value = self.leb<uint32_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::U64:
                         {
                           auto value = self.leb<uint64_t>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
@@ -756,14 +900,14 @@ namespace vbci
                         case ValueType::F32:
                         {
                           auto value = self.leb<float>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
                         case ValueType::F64:
                         {
                           auto value = self.leb<double>();
-                          dst = Value(value);
+                          dst = ValueImmortal(value);
                           break;
                         }
 
@@ -778,14 +922,16 @@ namespace vbci
         {
           process(
             [](Program& program, Register& dst, Constant<size_t> string_id)
-              INLINE { dst = Value(program.get_string(string_id)); });
+              INLINE {
+                dst = ValueTransfer(program.get_string(string_id));
+              });
           break;
         }
 
         case Op::Convert:
         {
           process([](Register& dst, Constant<ValueType> t, const Register& src)
-                    INLINE { dst = src.convert(t); });
+                    INLINE { dst = ValueImmortal(src->convert(t)); });
           break;
         }
 
@@ -795,12 +941,12 @@ namespace vbci
                     INLINE {
                       if (cls.singleton)
                       {
-                        dst = Value(cls.singleton);
+                        dst = ValueImmortal(cls.singleton);
                         return;
                       }
 
                       self.check_args(cls.fields);
-                      dst = Value(&frame.region.object(cls)->init(frame, cls));
+                      dst = ValueTransfer(&frame.region.object(cls)->init(frame, cls));
                     });
           break;
         }
@@ -815,7 +961,7 @@ namespace vbci
                     Stack& stack) INLINE {
             if (cls.singleton)
             {
-              dst = Value(cls.singleton);
+              dst = ValueImmortal(cls.singleton);
               return;
             }
 
@@ -824,7 +970,7 @@ namespace vbci
             auto obj =
               &Object::create(mem, cls, frame.frame_id)->init(frame, cls);
             frame.push_finalizer(obj);
-            dst = Value(obj);
+            dst = ValueTransfer(obj);
           });
           break;
         }
@@ -837,16 +983,16 @@ namespace vbci
                     Class& cls,
                     Thread& self,
                     Frame& frame) INLINE {
-            auto region = region_loc.region();
+            auto region = region_loc->region();
 
             if (cls.singleton)
             {
-              dst = Value(cls.singleton);
+              dst = ValueImmortal(cls.singleton);
               return;
             }
 
             self.check_args(cls.fields);
-            dst = Value(&region->object(cls)->init(frame, cls));
+            dst = ValueTransfer(&region->object(cls)->init(frame, cls));
           });
           break;
         }
@@ -866,7 +1012,7 @@ namespace vbci
 
             self.check_args(cls.fields);
             auto region = Region::create(region_type);
-            dst = Value(&region->object(cls)->init(frame, cls));
+            dst = ValueTransfer(&region->object(cls)->init(frame, cls));
           });
           break;
         }
@@ -878,7 +1024,7 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id,
                     Frame& frame) INLINE {
-            dst = Value(frame.region.array(type_id, size.get_size()));
+            dst = ValueTransfer(frame.region.array(type_id, size->get_size()));
           });
           break;
         }
@@ -889,8 +1035,9 @@ namespace vbci
                     Register& dst,
                     Constant<size_t> type_id,
                     Constant<size_t> size,
-                    Frame& frame)
-                    INLINE { dst = Value(frame.region.array(type_id, size)); });
+                    Frame& frame) INLINE {
+            dst = ValueTransfer(frame.region.array(type_id, size));
+          });
           break;
         }
 
@@ -902,7 +1049,7 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id,
                     Frame& frame) INLINE {
-            dst = Value(stack.array(frame.frame_id, type_id, size.get_size()));
+            dst = ValueTransfer(stack.array(frame.frame_id, type_id, size->get_size()));
           });
           break;
         }
@@ -915,7 +1062,7 @@ namespace vbci
                     Constant<size_t> size,
                     Stack& stack,
                     Frame& frame) INLINE {
-            dst = Value(stack.array(frame.frame_id, type_id, size));
+            dst = ValueTransfer(stack.array(frame.frame_id, type_id, size));
           });
           break;
         }
@@ -927,8 +1074,8 @@ namespace vbci
                     const Register& region_loc,
                     const Register& size,
                     Constant<size_t> type_id) INLINE {
-            auto region = region_loc.region();
-            dst = Value(region->array(type_id, size.get_size()));
+            auto region = region_loc->region();
+            dst = ValueTransfer(region->array(type_id, size->get_size()));
           });
           break;
         }
@@ -940,8 +1087,8 @@ namespace vbci
                     const Register& region_loc,
                     Constant<size_t> type_id,
                     Constant<size_t> size) INLINE {
-            auto region = region_loc.region();
-            dst = Value(region->array(type_id, size));
+            auto region = region_loc->region();
+            dst = ValueTransfer(region->array(type_id, size));
           });
           break;
         }
@@ -954,7 +1101,7 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id) INLINE {
             auto region = Region::create(region_type);
-            dst = Value(region->array(type_id, size.get_size()));
+            dst = ValueTransfer(region->array(type_id, size->get_size()));
           });
           break;
         }
@@ -967,7 +1114,7 @@ namespace vbci
                     Constant<size_t> type_id,
                     Constant<size_t> size) INLINE {
             auto region = Region::create(region_type);
-            dst = Value(region->array(type_id, size));
+            dst = ValueTransfer(region->array(type_id, size));
           });
           break;
         }
@@ -975,7 +1122,7 @@ namespace vbci
         case Op::Copy:
         {
           process([](Register& dst, const Register& src)
-                    INLINE { dst = src.copy_reg(); });
+                    INLINE { dst = src; });
           break;
         }
 
@@ -995,77 +1142,77 @@ namespace vbci
         case Op::RegisterRef:
         {
           process([](Register& dst, Register& src, Frame& frame)
-                    INLINE { dst = Value(src, frame.frame_id); });
+                    INLINE { dst = ValueImmortal(src, frame.frame_id); }); // TODO: Not immortal?  ValueStack?
           break;
         }
 
         case Op::FieldRefMove:
         {
           process([](Register& dst, Register src, Constant<size_t> field_id)
-                    INLINE { dst = src.ref(true, field_id); });
+                    INLINE { dst.from_field_ref<true>(std::move(src), field_id); });
           break;
         }
 
         case Op::FieldRefCopy:
         {
           process([](Register& dst, Register& src, Constant<size_t> field_id)
-                    INLINE { dst = src.ref(false, field_id); });
+                    INLINE { dst.from_field_ref<false>(src, field_id); });
           break;
         }
 
         case Op::ArrayRefMove:
         {
           process([](Register& dst, Register src, const Register& idx)
-                    INLINE { dst = src.arrayref(true, idx.get_size()); });
+                    INLINE { dst.from_array_ref<true>(std::move(src), idx->get_size()); });
           break;
         }
 
         case Op::ArrayRefCopy:
         {
           process([](Register& dst, const Register& src, const Register& idx)
-                    INLINE { dst = src.arrayref(false, idx.get_size()); });
+                    INLINE { dst.from_array_ref<false>(src, idx->get_size()); });
           break;
         }
 
         case Op::ArrayRefMoveConst:
         {
           process([](Register& dst, Register src, Constant<size_t> idx)
-                    INLINE { dst = src.arrayref(true, idx); });
+                    INLINE { dst.from_array_ref<true>(std::move(src), idx); });
           break;
         }
 
         case Op::ArrayRefCopyConst:
         {
           process([](Register& dst, const Register& src, Constant<size_t> idx)
-                    INLINE { dst = src.arrayref(false, idx); });
+                    INLINE { dst.from_array_ref<false>(src, idx); });
           break;
         }
 
         case Op::Load:
         {
           process([](Register& dst, const Register& src)
-                    INLINE { dst = src.load(); });
+                    INLINE { dst.from_load(src); });
           break;
         }
 
         case Op::StoreMove:
         {
           process([](Register& dst, const Register& ref, Register src)
-                    INLINE { dst = ref.store<true>(std::move(src)); });
+                    INLINE { dst.from_exchange<true>(ref, std::move(src)); });
           break;
         }
 
         case Op::StoreCopy:
         {
           process([](Register& dst, const Register& ref, const Register& src)
-                    INLINE { dst = ref.store<false>(src); });
+                    INLINE { dst.from_exchange<false>(ref, src); });
           break;
         }
 
         case Op::LookupStatic:
         {
           process([](Register& dst, Function* func)
-                    INLINE { dst = Value(func); });
+                    INLINE { dst = ValueImmortal(func); });
           break;
         }
 
@@ -1074,12 +1221,12 @@ namespace vbci
           process(
             [](Register& dst, const Register& src, Constant<size_t> method_id)
               INLINE {
-                auto f = src.method(method_id);
+                auto f = src->method(method_id);
 
                 if (!f)
                   Value::error(Error::MethodNotFound);
 
-                dst = Value(f);
+                dst = ValueImmortal(f);
               });
           break;
         }
@@ -1088,7 +1235,7 @@ namespace vbci
         {
           process(
             [](Register& dst, Constant<size_t> symbol_id, Program& program)
-              INLINE { dst = Value(program.symbol(symbol_id).raw_pointer()); });
+              INLINE { dst = ValueImmortal(program.symbol(symbol_id).raw_pointer()); });
           break;
         }
 
@@ -1117,7 +1264,7 @@ namespace vbci
           process(
             [](Constant<size_t> dst_id, const Register& func, Thread& self)
               INLINE {
-                self.pushframe(func.function(), dst_id, CallType::Call);
+                self.pushframe(func->function(), dst_id, CallType::Call);
               });
           break;
         }
@@ -1135,7 +1282,7 @@ namespace vbci
           process(
             [](Constant<size_t> dst_id, const Register& func, Thread& self)
               INLINE {
-                self.pushframe(func.function(), dst_id, CallType::Subcall);
+                self.pushframe(func->function(), dst_id, CallType::Subcall);
               });
           break;
         }
@@ -1152,7 +1299,7 @@ namespace vbci
           process(
             [](Constant<size_t> dst_id, const Register& func, Thread& self)
               INLINE {
-                self.pushframe(func.function(), dst_id, CallType::Catch);
+                self.pushframe(func->function(), dst_id, CallType::Catch);
               });
           break;
         }
@@ -1193,17 +1340,17 @@ namespace vbci
                 if (paramvals.at(i) == ValueType::Invalid)
                   ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
                 else
-                  ffi_arg_addrs.at(i) = arg.to_ffi();
+                  ffi_arg_addrs.at(i) = arg->to_ffi();
               }
               else
               {
-                auto rep = program.layout_type_id(arg.type_id());
+                auto rep = program.layout_type_id(arg->type_id());
                 symbol.varparam(rep.second);
 
                 if (rep.first == ValueType::Invalid)
                   ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
                 else
-                  ffi_arg_addrs.at(i) = arg.to_ffi();
+                  ffi_arg_addrs.at(i) = arg->to_ffi();
               }
             }
 
@@ -1213,7 +1360,8 @@ namespace vbci
               !ret.is_error() && !program.subtype(ret.type_id(), symbol.ret()))
               Value::error(Error::BadType);
 
-            dst = std::move(ret);
+            // TODO: Is the FFI guaranteed to return a value that has an RC?
+            dst = ValueTransfer(ret);
             frame.drop_args(num_args);
           });
           break;
@@ -1240,7 +1388,7 @@ namespace vbci
                     Constant<size_t> type_id,
                     const Register& func,
                     Thread& self) INLINE {
-            self.queue_behavior(dst, type_id, func.function());
+            self.queue_behavior(dst, type_id, func->function());
           });
           break;
         }
@@ -1252,7 +1400,7 @@ namespace vbci
                     const Register& src,
                     Constant<size_t> type_id,
                     Program& program) INLINE {
-            dst = Value(program.subtype(src.type_id(), type_id));
+            dst = ValueImmortal(program.subtype(src->type_id(), type_id));
           });
           break;
         }
@@ -1267,7 +1415,7 @@ namespace vbci
         case Op::TailcallDynamic:
         {
           process([](const Register& func, Thread& self)
-                    INLINE { self.tailcall(func.function()); });
+                    INLINE { self.tailcall(func->function()); });
           break;
         }
 
@@ -1302,7 +1450,7 @@ namespace vbci
                     Constant<size_t> on_true,
                     Constant<size_t> on_false,
                     Thread& self) INLINE {
-            if (cond.get_bool())
+            if (cond->get_bool())
               self.branch(on_true);
             else
               self.branch(on_false);
@@ -1320,7 +1468,7 @@ namespace vbci
 #define do_binop(opname) \
   { \
     process([](Register& dst, const Register& lhs, const Register& rhs) \
-              INLINE { dst = lhs.op_##opname(rhs); }); \
+              INLINE { dst = ValueImmortal(lhs->op_##opname(rhs.borrow())); }); \
     break; \
   }
         case Op::Add:
@@ -1369,7 +1517,7 @@ namespace vbci
 #define do_unop(opname) \
   { \
     process([](Register& dst, const Register& src) \
-              INLINE { dst = src.op_##opname(); }); \
+              INLINE { dst = ValueImmortal(src->op_##opname()); }); \
     break; \
   }
         case Op::Neg:
@@ -1423,19 +1571,26 @@ namespace vbci
         case Op::Len:
           do_unop(len);
         case Op::Read:
-          do_unop(read);
+        {
+          process([](Register& dst, const Register& src)
+                    INLINE { dst = src->op_read(); });
+          break;
+        }
 
         case Op::Ptr:
           // TODO unsure about this one, does it really make sense?
           {
             process([](Register& dst, Register& src)
-                      INLINE { dst = src.op_ptr(); });
+                      INLINE {
+                        // This feels insanely dangerous, and needs review.
+                        dst = ValueImmortal(src.borrow().op_ptr());
+                      });
             break;
           }
 
 #define do_const(opname) \
   { \
-    process([](Register& dst) INLINE { dst = Value::opname(); }); \
+    process([](Register& dst) INLINE { dst = ValueImmortal(Value::opname()); }); \
     break; \
   }
         case Op::Const_E:
@@ -1453,7 +1608,11 @@ namespace vbci
     }
     catch (Value& v)
     {
-      popframe(Register(std::move(v)), Condition::Throw);
+      Register ret;
+      // TODO: does the throw guarantee an RC?
+      ret = ValueTransfer(std::move(v));
+      popframe(std::move(ret), Condition::Throw);
+      invariant();
     }
   }
 
@@ -1528,12 +1687,12 @@ namespace vbci
     frame->drop_args(args);
 
     // Check for stack escapes.
-    auto retloc = ret.location();
+    auto retloc = ret->location();
 
     if (retloc == frame->frame_id)
     {
       // The return value can't be stack allocated in this frame.
-      ret = Value(Error::BadStackEscape);
+      ret = ValueImmortal(Error::BadStackEscape);
       condition = Condition::Throw;
     }
     else if (
@@ -1545,11 +1704,12 @@ namespace vbci
         // Drag the frame-local allocation to the previous frame.
         auto& prev_frame = frames.at(frames.size() - 2);
 
-        auto prev_loc = Location::frame_local(prev_frame.frame_id.stack_index());
+        auto prev_loc =
+          Location::frame_local(prev_frame.frame_id.stack_index());
 
-        if (!drag_allocation(prev_loc, ret.get_header()))
+        if (!drag_allocation<false>(prev_loc, ret->get_header()))
         {
-          ret = Value(Error::BadStackEscape);
+          ret = ValueImmortal(Error::BadStackEscape);
           condition = Condition::Throw;
         }
       }
@@ -1557,10 +1717,11 @@ namespace vbci
       {
         // Drag the frame-local allocation to a fresh region.
         auto r = Region::create(RegionType::RegionRC);
-
-        if (!drag_allocation(Location(r), ret.get_header()))
+        // This is a fresh region, so we need the stack rc from the entry, so do
+        // not count this as a move.
+        if (!drag_allocation<false>(Location(r), ret->get_header()))
         {
-          ret = Value(Error::BadStackEscape);
+          ret = ValueImmortal(Error::BadStackEscape);
           condition = Condition::Throw;
           r->free_region();
         }
@@ -1571,10 +1732,10 @@ namespace vbci
     {
       case Condition::Return:
         if (
-          !ret.is_error() &&
-          !program->subtype(ret.type_id(), frame->func->return_type))
+          !ret->is_error() &&
+          !program->subtype(ret->type_id(), frame->func->return_type))
         {
-          ret = Value(Error::BadType);
+          ret = ValueImmortal(Error::BadType);
           condition = Condition::Throw;
         }
         break;
@@ -1657,7 +1818,7 @@ namespace vbci
     {
       auto& arg = frame->arg(i);
 
-      if (arg.location() == frame->frame_id)
+      if (arg->location() == frame->frame_id)
         stack_escape = true;
 
       frame->local(i) = std::move(arg);
@@ -1675,6 +1836,7 @@ namespace vbci
 
   void Thread::teardown(bool tailcall)
   {
+    LOG(Trace) << "Tearing down frame " << program->di_function(frame->func);
     // Drop all frame registers.
     frame->drop();
 
@@ -1711,7 +1873,7 @@ namespace vbci
 
     for (size_t i = 0; i < types.size(); i++)
     {
-      if (!program->subtype(arg(i).type_id(), types.at(i)))
+      if (!program->subtype(arg(i)->type_id(), types.at(i)))
       {
         drop_args();
         Value::error(Error::BadType);
@@ -1731,7 +1893,7 @@ namespace vbci
 
     for (size_t i = 0; i < args; i++)
     {
-      if (!program->subtype(frame->arg(i).type_id(), fields.at(i).type_id))
+      if (!program->subtype(frame->arg(i)->type_id(), fields.at(i).type_id))
       {
         frame->drop_args(args);
         Value::error(Error::BadType);
@@ -1760,7 +1922,7 @@ namespace vbci
     else
     {
       for (size_t i = 0; i < args; i++)
-        locals.at(i).drop_reg();
+        locals.at(i).clear();
     }
 
     args = 0;
@@ -1781,16 +1943,20 @@ namespace vbci
     {
       auto& closure = frame->arg(0);
 
-      if (!closure.is_cown())
+      if (!closure->is_cown())
       {
         // The first argument is the closure data.
         is_closure = true;
 
-        if (!program->subtype(closure.type_id(), params.at(0)))
+        if (!program->subtype(closure->type_id(), params.at(0)))
           Value::error(Error::BadArgs);
 
-        if (!closure.is_sendable())
+        if (!closure->is_sendable())
+        {
+          LOG(Error) << "Closure argument is not sendable: " << closure.borrow()
+                     << " in region " << closure->get_header()->region();
           Value::error(Error::BadArgs);
+        }
 
         num_cowns--;
         first_cown++;
@@ -1800,7 +1966,7 @@ namespace vbci
     // Check that all other args are cowns of the right type.
     for (size_t i = first_cown; i < args; i++)
     {
-      auto cown = frame->arg(i).get_cown();
+      auto cown = frame->arg(i)->get_cown();
       auto ref_type = program->ref(cown->content_type_id());
 
       if (!program->subtype(ref_type, params.at(i)))
@@ -1812,10 +1978,16 @@ namespace vbci
     // Create the result cown.
     auto result_cown = Cown::create(type_id);
 
+    LOG(Trace) << "Created result cown " << result_cown;
+
+    // TODO Should move subtype check before creating the cown. Otherwise, we should be cleaning
+    // up the allocation.
     if (!program->subtype(func->return_type, result_cown->content_type_id()))
       Value::error(Error::BadType);
 
-    result = Value(result_cown);
+    // Cowns initially have an RC, so we can create a value from it without an
+    // incref.
+    result = ValueTransfer(result_cown);
 
     // Slot 0 is the result cown.
     auto b = verona::rt::BehaviourCore::make(
@@ -1827,35 +1999,48 @@ namespace vbci
     {
       // The first cown argument position depends on whether this is a
       // closure or not.
-      auto arg = std::move(frame->arg(first_cown + i));
+      Value v = frame->arg(first_cown + i).extract();
+      auto cown = v.get_cown();
+      auto readonly = v.is_readonly();
 
       // Offset the slot by 1 to account for the result cown.
       auto& slot = slots[i + 1];
-      new (&slot) verona::rt::Slot(arg.get_cown());
-      // TODO optimise as this is all move.  Can set is_move on slot,
-      // if we correctly invalidate the arg while scheduling.
+      new (&slot) verona::rt::Slot(cown);
 
-      if (arg.is_readonly())
+      slot.set_move();
+
+      if (readonly)
         slot.set_read_only();
     }
 
     new (&b->get_body<Value>()[0]) Value(func);
-    auto cvalue = new (&b->get_body<Value>()[1]) Value();
+    new (&b->get_body<Value>()[1]) Value();
 
     if (is_closure)
     {
       auto& closure = frame->arg(0);
 
-      if (closure.is_header())
+      if (closure->is_header())
       {
-        auto r = closure.get_header()->region();
+        auto r = closure->get_header()->region();
 
         // Set the region parent, as it's captured by the behavior.
-        if (r && !r->has_owner())
-          r->set_cown_owner();
+        if (r)
+        {
+          if (!r->has_owner())
+          {
+            LOG(Trace) << "Setting closure (" << closure.borrow()
+                       << ") region owner: " << r << " to cown owner.";
+            r->set_cown_owner();
+          }
+          else
+          {
+            LOG(Trace) << "Closure (" << closure.borrow() << ") region already has owner: " << r;
+          }
+        }
       }
 
-      *cvalue = std::move(closure);
+      b->get_body<Value>()[1] = closure.extract();
     }
 
     verona::rt::BehaviourCore::schedule_many(&b, 1);

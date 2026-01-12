@@ -58,8 +58,10 @@ namespace vbci
       // If we transition from 0 to 1, we need to increment the parent RC.
       if (stack_rc == 0)
       {
-        if (has_parent())
+        if (has_parent()) {
+          LOG(Trace) << "Region @" << this << " incrementing parent region stack_rc due to stack_rc transitioning from 0 to 1";
           get_parent()->stack_inc();
+        }
       }
 
       LOG(Trace) << "Region @" << this << " stack_rc incremented from "
@@ -72,6 +74,8 @@ namespace vbci
     {
       if (has_frame_local_owner())
         return true;
+
+      assert(stack_rc > 0);
 
       LOG(Trace) << "Region @" << this << " stack_rc decremented from "
                 << stack_rc << " to " << (stack_rc - 1);
@@ -86,7 +90,10 @@ namespace vbci
 
         // If we transition from 1 to 0, we need to decrement the parent RC.
         if (has_parent())
+        {
+          LOG(Trace) << "Region @" << this << " decrementing parent region stack_rc due to stack_rc reaching 0";
           return get_parent()->stack_dec();
+        }
       }
 
       return true;
@@ -127,15 +134,25 @@ namespace vbci
       return (parent & ~parent_tag_mask) != 0;
     }
 
+#ifndef NDEBUG
+    RC get_stack_rc() const
+    {
+      return stack_rc;
+    }
+#endif
+
     void set_parent(Region* r)
     {
+      LOG(Trace) << "Region @" << this << " setting parent region to @" << r;
       assert(!has_owner());
       auto raw = reinterpret_cast<uintptr_t>(r);
       assert((raw & parent_tag_mask) == 0);
       parent = raw;
 
-      if (stack_rc > 0)
+      if (stack_rc > 0) {
+        LOG(Trace) << "Region @" << this << " incrementing parent region stack_rc due to existing stack_rc";
         r->stack_inc();
+      }
     }
 
     void set_cown_owner()
