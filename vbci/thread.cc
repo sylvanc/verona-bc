@@ -451,7 +451,7 @@ namespace vbci
       log << "  at " << program->di_function(frame.func) << " (pc=" << frame.pc
           << ")";
 
-      // print add the locals for this frame
+      // print out the locals for this frame
       for (size_t j = 0; j < frame.func->registers; j++)
       {
         if (frame.local(j)->is_invalid())
@@ -533,6 +533,8 @@ namespace vbci
       auto actual_stack_rc = region->get_stack_rc();
       // This check is currently allowing leaks, we should refine to
       // exact equality.
+      // TODO: Once stack RC accounting is precise and known leaks are fixed,
+      //       tighten this invariant to require calc_stack_rc == actual_stack_rc.
 
       if (calc_stack_rc > actual_stack_rc)
       {

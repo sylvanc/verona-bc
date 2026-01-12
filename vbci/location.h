@@ -20,6 +20,10 @@ namespace vbci
   private:
     uintptr_t value;
 
+    // Location objects are intentionally only constructible via the public
+    // static factory methods (and internal helpers). The default constructor
+    // is deleted and the raw uintptr_t constructor is kept private to enforce
+    // invariants on the encoded location value.
     Location() = delete;
     constexpr Location(uintptr_t v) : value(v) {}
 

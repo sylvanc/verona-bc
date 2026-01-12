@@ -186,7 +186,7 @@ namespace vbci
         {
           next->template inc<false>();
           content = next.borrow();
-          ;
+
 
           if (!no_dst)
             prev.stack_inc();
@@ -203,7 +203,7 @@ namespace vbci
         LOG(Trace) << "Removing region: " << pr << " from cown " << this;
         // Previous value will land in a register, so increment stack RC.
         pr->stack_inc();
-        // Need to clear parent before drag, incase the drag will
+        // Need to clear parent before drag, in case the drag will
         // reparent this region.
         pr->clear_cown_owner();
       }

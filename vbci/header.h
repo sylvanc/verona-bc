@@ -148,7 +148,7 @@ namespace vbci
      * This causes the stack RC to be decremented if needed, and the
      * region parent to be cleared, and possibly freed.
      *
-     * The underlying value will also be decrefed in the !to_register case.
+     * The underlying value will also be decremented in the !to_register case.
      *
      * Returns false if the region has been freed.
      * 
@@ -305,7 +305,7 @@ namespace vbci
       if constexpr (is_move)
       {
       // We have consumed the register, so clear.
-        // We have taken ownership into the written location.
+      // We have taken ownership into the written location.
         next.clear_unsafe();
       }
 

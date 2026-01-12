@@ -612,7 +612,9 @@ namespace vbci
     if (tag == ValueType::Cown)
     {
       Value r = *this;
-      // Note that the context will perform incref (do_unop) in the interpreter.  TODO:Borrow?
+      // Note that the context will perform incref (do_unop) in the interpreter,
+      // so op_read itself does not modify the reference count. This implements
+      // a borrow of the underlying cown without taking ownership here.
       r.readonly = true;
       return r;
     }

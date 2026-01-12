@@ -88,7 +88,7 @@ namespace vbci
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
 
-      Header::exchange<false>(&dst, addr, value_type, v);
+      Header::exchange<is_move>(&dst, addr, value_type, v);
     }
 
     /**

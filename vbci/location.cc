@@ -147,7 +147,7 @@ namespace vbci
         r->stack_dec();
 
     return true;
-    ;
+
   }
 
   template bool drag_allocation<false>(Location dest_loc, Header* h);
