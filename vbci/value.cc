@@ -594,6 +594,7 @@ namespace vbci
         return Value(&isize);
       case ValueType::USize:
         return Value(&usize);
+      // TODO Review the uses of the following four cases.
       case ValueType::Ptr:
         return Value(&ptr);
       case ValueType::Object:

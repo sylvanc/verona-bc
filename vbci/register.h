@@ -9,28 +9,33 @@
 
 namespace vbci
 {
+  /// A wrapper that indicates the value is being transferred and the caller is responsible for
+  /// managing any reference counts held by the value.
   struct ValueTransfer : Value
   {
-  public:
     using Value::Value;
 
     ValueTransfer(const Value& v) : Value(v) {}
   };
 
+  /// A wrapper that indicates the value is being borrowed and the caller
+  /// retains ownership of any reference counts held by the value.
   struct ValueBorrow : Value
   {
-  public:
     using Value::Value;
 
     ValueBorrow(const Value& v) : Value(v) {}
   };
 
+  /// A wrapper that indicates the value is immortal and does not require
+  /// reference counting.
   struct ValueImmortal : Value
   {
-  public:
     using Value::Value;
 
-    ValueImmortal(const Value& v) : Value(v) {}
+    ValueImmortal(const Value& v) : Value(v) {
+      assert(v.location() == Location::immortal());
+    }
   };
 
   struct Register : private Value
@@ -80,6 +85,8 @@ namespace vbci
       return static_cast<const Value*>(this);
     }
 
+    /// Extract the value from the register.  The caller is responsible for
+    /// managing any references held by the value.
     ValueTransfer extract()
     {
       ValueTransfer v = *this;
@@ -124,6 +131,11 @@ namespace vbci
       replace_unsafe([&]() { return v; });
     }
 
+    /// Clear the register without releasing any references held by the underlying value.
+    /// Use with caution. The caller is responsible for ensuring that any references
+    /// held by the value are released appropriately.  This is intended for use
+    /// in scenarios where the reference counts are being transferred elsewhere,
+    /// such as moving into a register, field or cown.
     void clear_unsafe()
     {
       set_raw_unsafe(Value());
@@ -149,6 +161,7 @@ namespace vbci
       });
     }
 
+    /// Clear the register, releasing any references held.
     void clear()
     {
       replace_unsafe([&]() { return Value(); });
@@ -157,7 +170,7 @@ namespace vbci
     void from_load(const Register& src)
     {
       replace_unsafe([&]() {
-        Value v = src.load_reference();
+        ValueBorrow v = src.load_reference();
         v.inc<true>();
         return v;
       });
