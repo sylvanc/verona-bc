@@ -1977,15 +1977,13 @@ namespace vbci
 
     args = 0;
 
+    if (!program->subtype(func->return_type, program->uncown(type_id)))
+      Value::error(Error::BadType);
+
     // Create the result cown.
     auto result_cown = Cown::create(type_id);
 
     LOG(Trace) << "Created result cown " << result_cown;
-
-    // TODO Should move subtype check before creating the cown. Otherwise, we should be cleaning
-    // up the allocation.
-    if (!program->subtype(func->return_type, result_cown->content_type_id()))
-      Value::error(Error::BadType);
 
     // Cowns initially have an RC, so we can create a value from it without an
     // incref.

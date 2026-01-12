@@ -623,7 +623,7 @@ namespace vbci
     Value::error(Error::BadOperand);
   }
 
-  template<bool is_local_reference>
+  template<bool needs_stack_rc>
   void Value::inc() const
   {
     switch (tag)
@@ -631,13 +631,13 @@ namespace vbci
       case ValueType::Object:
       case ValueType::FieldRef:
         if (!readonly)
-          obj->inc<is_local_reference>();
+          obj->inc<needs_stack_rc>();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->inc<is_local_reference>();
+          arr->inc<needs_stack_rc>();
         break;
 
       case ValueType::Cown:
@@ -671,7 +671,7 @@ namespace vbci
     }
   }
 
-  template<bool is_local_reference>
+  template<bool needs_stack_rc>
   void Value::dec() const
   {
     switch (tag)
@@ -679,13 +679,13 @@ namespace vbci
       case ValueType::Object:
       case ValueType::FieldRef:
         if (!readonly)
-          obj->dec<is_local_reference>();
+          obj->dec<needs_stack_rc>();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
         if (!readonly)
-          arr->dec<is_local_reference>();
+          arr->dec<needs_stack_rc>();
         break;
 
       case ValueType::Cown:
