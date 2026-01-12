@@ -1,0 +1,14 @@
+
+class @BoolObject
+    @f : bool
+
+func @behavior0 () : @BoolObject
+    $true = const bool true
+    $ret_val = new @BoolObject($true)
+    ret $ret_val
+    
+func @main() : i32 
+    $cown1 = when @behavior0() : @BoolObject
+    
+    $ret_val = const i32 42 
+    ret $ret_val
