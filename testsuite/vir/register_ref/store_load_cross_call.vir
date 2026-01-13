@@ -1,0 +1,23 @@
+// Passing a register reference to a callee that overwrites it.
+
+func @write_ref($r: ref i32, $value: i32): i32
+  $prev = store $r $value
+  ret $prev
+
+func @main(): i32
+  $x = const i32 1
+  $r = ref $x
+  $new = const i32 7
+  $prev = call @write_ref($r, $new)
+  $expected_prev = const i32 1
+  $ok_prev = eq $prev $expected_prev
+  $loaded = load $r
+  $ok_new = eq $loaded $new
+  $both = and $ok_prev $ok_new
+  cond $both ^ok ^fail
+^ok
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret
