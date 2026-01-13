@@ -785,7 +785,7 @@ namespace vbci
           return reinterpret_cast<size_t>(cown);
 
         case ValueType::RegisterRef:
-          return reinterpret_cast<size_t>(u64);
+          return u64;
 
         case ValueType::FieldRef:
           return reinterpret_cast<size_t>(obj) + idx + 1;
