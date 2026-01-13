@@ -42,6 +42,7 @@ namespace vbci
     static bool is_frame_local_region(Region* region);
     static size_t frame_local_index(Region* region);
     static Location region_location(Region* region);
+    static Register& get_register(uint64_t id);
 
     template<typename... Ts>
     static void run_sync(Function* func, Ts&&... argv)

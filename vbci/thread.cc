@@ -1143,8 +1143,8 @@ namespace vbci
 
         case Op::RegisterRef:
         {
-          process([](Register& dst, Register& src, Frame& frame)
-                    INLINE { dst = ValueStaticLifetime(src, frame.frame_id); });
+          process([](Register& dst, Constant<size_t> idx, Frame& frame)
+                    INLINE { dst = ValueStaticLifetime(frame.base + idx, frame.frame_id); });
           break;
         }
 
@@ -2044,5 +2044,11 @@ namespace vbci
     }
 
     verona::rt::BehaviourCore::schedule_many(&b, 1);
+  }
+
+  Register& Thread::get_register(uint64_t idx)
+  {
+    auto& thread = Thread::get();
+    return thread.locals.at(idx);
   }
 }
