@@ -1,0 +1,77 @@
+vbcc
+validids
+(top
+  {}
+  (func
+    (functionid 10:@stack_rec)
+    (params
+      (param
+        (localid 2:$n)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 10:^stack_rec)
+        (body
+          (const
+            (localid 4:$one)
+            (i32)
+            (int 1:1))
+          (eq
+            (localid 5:$cond)
+            (localid 2:$n)
+            (localid 4:$one)))
+        (cond
+          (localid 5:$cond)
+          (labelid 5:^base)
+          (labelid 8:^recurse)))
+      (label
+        (labelid 8:^recurse)
+        (body
+          (sub
+            (localid 3:$n1)
+            (localid 2:$n)
+            (localid 4:$one))
+          (call
+            (localid 3:$v1)
+            (functionid 10:@stack_rec)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$n1)))))
+        (ret
+          (localid 3:$v1)))
+      (label
+        (labelid 5:^base)
+        (body)
+        (ret
+          (localid 2:$n)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 6:$count)
+            (i32)
+            (int 4:1000))
+          (registerref
+            (localid 4:$ref)
+            (localid 6:$count))
+          (call
+            (localid 7:$result)
+            (functionid 10:@stack_rec)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$count))))
+          (load
+            (localid 4:$old)
+            (localid 4:$ref)))
+        (ret
+          (localid 6:$count))))))

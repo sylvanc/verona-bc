@@ -1,0 +1,24 @@
+// This example creates a reference to a register, then calls a function that
+// recurses to a high depth, and finally reads the register reference to verify
+// that the value is still correct.
+
+func @stack_rec($n: i32): i32
+  $one = const i32 1
+  $cond = eq $n $one
+  cond $cond ^base ^recurse
+^recurse
+  $n1 = sub $n $one
+  $v1 = call @stack_rec($n1)
+  ret $v1
+^base
+  ret $n
+
+func @main(): i32
+  $count = const i32 1000
+  $ref = ref $count
+  $result = call @stack_rec($count)
+  // Verify that we can still access register reference after deep recursion
+  // This exposes a bug where the stack was moved, and the register reference
+  // pointed to the unmoved stack location.
+  $old = load $ref
+  ret $count
