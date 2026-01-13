@@ -28,13 +28,13 @@ namespace vbci
     dst(dst),
     calltype(calltype)
   {
-    // The frame-local region always carries a stack RC.
-    region.stack_inc();
-    region.set_frame_id(frame_id);
+    region.set_frame_local_owner();
   }
 
   Register& Frame::local(size_t idx)
   {
+    assert(idx < func->registers && "Local index out of bounds");
+
     auto i = base + idx;
 
     while (i >= locals.size())
@@ -79,17 +79,25 @@ namespace vbci
   {
     for (size_t i = 0; i < func->registers; i++)
     {
-      LOG(Trace) << "Dropping frame local " << i;
-      LOG(Trace) << "  contents (" << locals[base + i] << ")";
-      locals[base + i].drop_reg();
+      if (locals[base + i]->is_invalid())
+        continue;
+      LOG(Trace) << "Dropping frame local " << i << "  contents ("
+                 << locals[base + i] << ")";
+      locals[base + i].clear();
+      assert(locals[base + i]->is_invalid());
     }
   }
 
   void Frame::drop_args(size_t& args)
   {
     for (size_t i = 0; i < args; i++)
-      locals[base + func->registers + i].drop_reg();
+      locals[base + func->registers + i].clear();
 
     args = 0;
+  }
+
+  RegionRC& Frame::get_frame_local_region()
+  {
+    return region;
   }
 }

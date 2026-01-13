@@ -18,17 +18,14 @@ struct Callback
   Function* cb_read_udp;
 
   Callback()
-  : arg(Register(Value::none())),
+  : arg(ValueImmortal(Value::none())),
     cb_0(nullptr),
     cb_1(nullptr),
     cb_read(nullptr),
     cb_read_udp(nullptr)
   {}
 
-  ~Callback()
-  {
-    arg.drop_reg();
-  }
+  ~Callback() {}
 };
 
 VBCI_FFI bool platform_is_mac()
@@ -142,7 +139,7 @@ VBCI_FFI bool async_set_arg(uv_handle_t* handle, Value& val)
     return false;
 
   Callback* cb = static_cast<Callback*>(uv_handle_get_data(handle));
-  cb->arg = std::move(val);
+  cb->arg = ValueTransfer(val);
   return true;
 }
 
@@ -171,13 +168,13 @@ VBCI_FFI bool async_set_cb1(uv_handle_t* handle, Value& f)
 VBCI_FFI void async_cb0(uv_handle_t* handle)
 {
   auto cb = reinterpret_cast<Callback*>(uv_handle_get_data(handle));
-  Thread::run_sync(cb->cb_0, cb->arg.copy_reg());
+  Thread::run_sync(cb->cb_0, cb->arg);
 }
 
 VBCI_FFI void async_cb1(uv_handle_t* handle, int status)
 {
   auto cb = reinterpret_cast<Callback*>(uv_handle_get_data(handle));
-  Thread::run_sync(cb->cb_0, cb->arg.copy_reg(), Value(status));
+  Thread::run_sync(cb->cb_0, cb->arg, ValueImmortal(status));
 }
 
 VBCI_FFI bool async_read_start(uv_stream_t* handle, Value& f)
@@ -226,7 +223,8 @@ namespace vbci
 #if !defined(PLATFORM_IS_WINDOWS)
     // Ignore SIGPIPE.
     uv_signal_init(uv_default_loop(), &sigpipe_h);
-    uv_signal_start(&sigpipe_h, [](uv_signal_t*, int) {}, SIGPIPE);
+    uv_signal_start(
+      &sigpipe_h, [](uv_signal_t*, int) {}, SIGPIPE);
     uv_unref(reinterpret_cast<uv_handle_t*>(&sigpipe_h));
 #endif
 
@@ -292,7 +290,7 @@ namespace vbci
 
     auto arr = Array::create(
       new uint8_t[Array::size_of(suggested_size, ffi_type_uint8.size)],
-      loc::Immutable,
+      Location::immutable(),
       Program::get().get_typeid_arg(),
       ValueType::U8,
       suggested_size,
@@ -312,12 +310,12 @@ namespace vbci
       if (buf->base)
         (reinterpret_cast<Array*>(buf->base) - 1)->dec<false>();
 
-      Thread::run_sync(cb->cb_1, cb->arg.copy_reg(), Value(ValueType::I32, nread));
+      Thread::run_sync(cb->cb_1, cb->arg, ValueImmortal(ValueType::I32, nread));
       return;
     }
 
     auto array = reinterpret_cast<Array*>(buf->base) - 1;
     array->set_size(nread);
-    Thread::run_sync(cb->cb_read, cb->arg.copy_reg(), Value(array));
+    Thread::run_sync(cb->cb_read, cb->arg, ValueTransfer(array));
   }
 }

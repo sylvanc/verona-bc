@@ -26,7 +26,7 @@ namespace vbci
     Object& init(Frame& frame, Class& cls)
     {
       for (size_t i = 0; i < cls.fields.size(); i++)
-        store<true, true>(i, std::move(frame.arg(i)));
+        exchange<true, true>(nullptr, i, std::move(frame.arg(i)));
 
       return *this;
     }
@@ -61,7 +61,7 @@ namespace vbci
       return reinterpret_cast<void*>(this + 1);
     }
 
-    Value load(size_t idx)
+    ValueBorrow load(size_t idx)
     {
       auto& f = cls().fields.at(idx);
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
@@ -69,16 +69,16 @@ namespace vbci
     }
 
     template <bool is_move, bool no_previous = false>
-    Register store(size_t idx, Reg<is_move> v)
+    void exchange(Register* dst, size_t idx, Reg<is_move> v)
     {
       auto& f = cls().fields.at(idx);
 
-      if (!Program::get().subtype(v.type_id(), f.type_id))
+      if (!Program::get().subtype(v->type_id(), f.type_id))
         Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
 
-      return Header::store<is_move, no_previous>(addr, f.value_type, std::forward<Reg<is_move>>(v));
+      Header::exchange<is_move, no_previous>(dst, addr, f.value_type, std::forward<Reg<is_move>>(v));
     }
 
     /**
@@ -93,7 +93,7 @@ namespace vbci
       // freed.
       finalize();
 
-      if (loc::is_immutable(location()))
+      if (location().is_immutable())
         delete this;
       else
         region()->rfree(this);
@@ -132,7 +132,7 @@ namespace vbci
 
     void immortalize()
     {
-      if (location() == loc::Immortal)
+      if (location() == Location::immortal())
         return;
 
       mark_immortal();
@@ -164,7 +164,7 @@ namespace vbci
 
       // Pass a read-only reference to the object.
       if (fin)
-        Thread::run_sync(fin, Value(this, true));
+        Thread::run_sync(fin, ValueTransfer(this, true));
 
       for (size_t i = 0; i < f.size(); i++)
       {

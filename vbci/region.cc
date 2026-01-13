@@ -2,7 +2,10 @@
 
 #include "region_arena.h"
 #include "region_rc.h"
+#include "thread.h"
 #include "value.h"
+
+#include <cstdlib>
 #include <iostream>
 
 namespace vbci

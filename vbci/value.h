@@ -1,8 +1,9 @@
 #pragma once
 
 #include "ident.h"
-#include "platform.h"
 #include "logging.h"
+#include "platform.h"
+
 #include <cmath>
 #include <cstring>
 #include <functional>
@@ -14,6 +15,9 @@
 namespace vbci
 {
   struct Register;
+  struct ValueBorrow;
+  struct ValueImmortal;
+  struct ValueTransfer;
 
   template<bool is_move>
   using Reg = std::conditional_t<is_move, Register, const Register&>;
@@ -61,9 +65,9 @@ namespace vbci
 
     uint64_t idx : 56;
     ValueType tag : 7;
-    uint8_t readonly : 1;
+    uint8_t readonly : 1 = 0;
 
-    Value(ValueType t) : tag(t) {}
+    Value(ValueType t) : tag(t), readonly(0) {}
 #ifdef PLATFORM_IS_MACOSX
     Value(long ilong);
     Value(unsigned long ulong);
@@ -87,23 +91,12 @@ namespace vbci
     explicit Value(Object* obj, bool ro);
     explicit Value(Array* arr);
     explicit Value(Cown* cown);
-    explicit Value(Register& reg, size_t frame);
+    explicit Value(Register& reg, Location frame);
     explicit Value(Object* obj, size_t f, bool ro);
     explicit Value(Array* arr, size_t idx, bool ro);
     explicit Value(Cown* cown, bool ro);
     explicit Value(Error error);
     explicit Value(Function* func);
-
-    // Disable copy semantics, we don't want these implicit
-    Value(const Value& that) = delete;
-    Value& operator=(const Value& that) = delete;
-
-    Value copy_value() const;
-    Register copy_reg() const;
-
-    // Allow move semantics, no body does a move by accident in C++
-    Value(Value&& that) noexcept;
-    Value& operator=(Value&& that) noexcept;
 
     template<typename T>
     explicit Value(ValueType t, T v) : tag(t)
@@ -120,23 +113,16 @@ namespace vbci
       return bits;
     }
 
-    static Value none();
-    static Value null();
-    static Value from_ffi(ValueType t, uint64_t v);
-    void* to_ffi();
-    static Register from_addr(ValueType t, void* v);
+    static ValueImmortal none();
+    static ValueImmortal null();
+    static ValueImmortal from_ffi(ValueType t, uint64_t v);
+    const void* to_ffi() const;
+    static ValueBorrow from_addr(ValueType t, void* v);
 
     [[noreturn]] static void error(
       Error error,
-      const std::source_location& location = std::source_location::current())
-    {
-      LOG(Trace) << "Error raised by " << location.file_name() << '('
-                 << location.line() << ':' << location.column() << ") `"
-                 << location.function_name() << "`: " << errormsg(error);
-      throw Value(error);
-    }
+      const std::source_location& location = std::source_location::current());
 
-    template<bool is_move>
     void to_addr(ValueType t, void* v) const;
 
     ValueType type() const;
@@ -145,6 +131,8 @@ namespace vbci
     bool is_invalid() const;
     bool is_readonly() const;
     bool is_header() const;
+    bool is_object() const;
+    bool is_array() const;
     bool is_function() const;
     bool is_sendable() const;
     bool is_cown() const;
@@ -153,6 +141,8 @@ namespace vbci
     int32_t get_i32() const;
     Cown* get_cown() const;
     Header* get_header() const;
+    Object* get_object() const;
+    Array* get_array() const;
     Function* function() const;
     size_t get_size() const;
 
@@ -160,19 +150,16 @@ namespace vbci
     Region* region() const;
     void immortalize();
 
-    void drop_reg();
-    void field_drop();
-    Register ref(bool move, size_t field);
-    Register arrayref(bool move, size_t i) const;
-    Register load() const;
-
     template<bool is_move>
-    Register store(Reg<is_move> r) const;
+    void exchange(Register& dst, Reg<is_move> v) const;
+    ValueBorrow load_reference() const;
 
     Function* method(size_t w) const;
     Value convert(ValueType to) const;
 
     std::string to_string() const;
+
+    ValueType get_value_type() const;
 
 #define make_unop(name, func) \
   struct name \
@@ -539,7 +526,7 @@ namespace vbci
     Value op_bits() const;
     Value op_len() const;
     Value op_ptr();
-    Value op_read() const;
+    ValueBorrow op_read() const;
 
     static Value e()
     {
@@ -561,11 +548,14 @@ namespace vbci
       return Value(std::numeric_limits<double>::quiet_NaN());
     }
 
-    template<bool is_move>
+    template<bool needs_stack_rc>
     void inc() const;
 
-    template<bool is_move>
+    template<bool needs_stack_rc>
     void dec() const;
+
+    void stack_inc() const;
+    void stack_dec() const;
 
   private:
     struct nounop
@@ -953,6 +943,11 @@ namespace vbci
 
   inline std::ostream& operator<<(std::ostream& os, const Value& v)
   {
-    return os << v.to_string();
+    os << v.to_string();
+    if (v.is_readonly())
+    {
+      os << " Read-only ";
+    }
+    return os;
   }
 }

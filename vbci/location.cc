@@ -3,21 +3,36 @@
 #include "array.h"
 #include "header.h"
 #include "object.h"
+#include "thread.h"
 
 namespace vbci
 {
-  bool drag_allocation(Region* r, Header* h)
+  Region* Location::to_region() const
   {
-    auto& program = Program::get();
-    Location frame = loc::None;
+    if (is_frame_local())
+      return Thread::frame_local_region(frame_local_index());
 
-    if (r->is_frame_local())
-      frame = r->get_parent();
+    assert(is_region());
+    return reinterpret_cast<Region*>(value);
+  }
+
+  template <bool is_move>
+  bool drag_allocation(Location dest_loc, Header* h)
+  {
+    assert(dest_loc.is_region_or_frame_local());
+
+    auto r = dest_loc.to_region();
+    bool frame_local = dest_loc.is_frame_local();
+
+    auto& program = Program::get();
 
     std::vector<Header*> wl;
     std::unordered_map<Header*, RC> rc_map;
     std::unordered_set<Region*> regions;
     wl.push_back(h);
+
+    // Track any borrows to dest_loc, that have now been made internal.
+    size_t stack_rc_decs = 0;
 
     while (!wl.empty())
     {
@@ -34,23 +49,26 @@ namespace vbci
 
       auto loc = next_h->location();
 
-      if (loc::is_immutable(loc))
+      if (loc.is_immutable())
         continue;
 
       // No region, even a frame-local one, can point to the stack.
-      if (loc::is_stack(loc))
+      if (loc.is_stack())
         return false;
 
-      auto hr = loc::to_region(loc);
-
-      if (hr->is_frame_local())
+      if (loc.is_frame_local())
       {
         // Younger frames can point to older frames.
         // Older frames and non-frame-local regions drag the object.
-        if (frame >= hr->get_parent())
-          continue;
+        if (frame_local)
+        {
+          assert(dest_loc.is_frame_local());
 
-        // Initial internal RC count is 1.
+          if (dest_loc.frame_local_index() >= loc.frame_local_index())
+            continue;
+        }
+
+        // This is the first internal edge, give it an internal RC count of 1.
         rc_map[next_h] = 1;
 
         if (program.is_array(next_h->get_type_id()))
@@ -58,15 +76,23 @@ namespace vbci
         else
           static_cast<Object*>(next_h)->trace(wl);
       }
-      else
+
+      // Only need to track regions we visit if the dest_loc is not frame-local
+      if (loc.is_region() && !frame_local)
       {
-        // If hr is r, we do nothing.
+        auto hr = loc.to_region();
+
+        // If hr is r, then we just need to perform a stack dec as we are making a
+        // borrow internal.
         if (hr == r)
+        {
+          stack_rc_decs++;
           continue;
+        }
 
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
-        if ((frame == loc::None) && hr->has_parent())
+        if (!frame_local && hr->has_owner())
           return false;
 
         // If hr is already an ancestor of r, we can't drag the allocation, or
@@ -77,13 +103,13 @@ namespace vbci
         // If r is not frame-local, it can't have multiple entry points to this
         // region.
         auto [it, ok] = regions.insert(hr);
-        if ((frame == loc::None) && !ok)
+        if (!frame_local && !ok)
           return false;
       }
     }
 
     // Assign parent to regions if r is not frame-local.
-    if (frame == loc::None)
+    if (!frame_local)
     {
       for (auto& hr : regions)
       {
@@ -97,18 +123,33 @@ namespace vbci
     // Move objects and arrays to the new region.
     for (auto& [hh, rc] : rc_map)
     {
+      LOG(Trace) << "Dragging header @" << hh << " to region @" << r << " with internal rc " << rc;
       // Reduce internal RC map by 1 for the initial entry edge.
       if (hh == h)
-        rc--;
-
+      {
+        if constexpr (!is_move)
+        {
+          LOG(Trace) << "Copying header @" << hh << " to region @" << r;
+          rc--;
+        }
+        else
+          LOG(Trace) << "Moving header @" << hh << " to region @" << r;
+      }
       // (hh->rc - rc) = stack rc. This works because frame-local regions are
       // always reference counted.
       assert(hh->get_rc() >= rc);
       r->stack_inc(hh->get_rc() - rc);
-      hh->move_region(r);
+      hh->move_region(dest_loc, r);
     }
 
+    if (!frame_local && (stack_rc_decs > 0))
+      for (size_t i = 0; i < stack_rc_decs; i++)
+        r->stack_dec();
+
     return true;
-    ;
+
   }
+
+  template bool drag_allocation<false>(Location dest_loc, Header* h);
+  template bool drag_allocation<true>(Location dest_loc, Header* h);
 }
