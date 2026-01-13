@@ -122,7 +122,7 @@ namespace vbci
       Error error,
       const std::source_location& location = std::source_location::current())
     {
-      LOG(Trace) << "Error raised by " << location.file_name() << '('
+      LOG(Error) << "Error raised by " << location.file_name() << '('
                  << location.line() << ':' << location.column() << ") `"
                  << location.function_name() << "`: " << errormsg(error);
       throw Value(error);
