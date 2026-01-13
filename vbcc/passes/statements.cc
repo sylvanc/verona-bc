@@ -464,7 +464,8 @@ namespace vbcc
                             << (FieldId ^ _(GlobalId));
           },
 
-        Dst * T(Ref) * T(LocalId)[Lhs] * T(LocalId)[Rhs] >>
+        // The --T(Equals) is to avoid ambiguity with the register reference case.
+        Dst * T(Ref) * T(LocalId)[Lhs] * T(LocalId)[Rhs] * --T(Equals) >>
           [](Match& _) {
             return ArrayRef << _(LocalId) << (Arg << ArgCopy << _(Lhs))
                             << _(Rhs);
@@ -480,8 +481,8 @@ namespace vbcc
                                  << _(Rhs);
           },
 
-        Dst * T(Ref) * T(LocalId)[LocalId] >>
-          [](Match& _) { return RegisterRef << _(LocalId); },
+        Dst * T(Ref) * T(LocalId)[Rhs] >>
+          [](Match& _) { return RegisterRef <<  _(LocalId) << _(Rhs); },
 
         Dst * T(Load) * T(LocalId)[Rhs] >>
           [](Match& _) { return Load << _(LocalId) << _(Rhs); },
