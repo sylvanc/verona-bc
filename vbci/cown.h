@@ -150,7 +150,7 @@ namespace vbci
       else
       {
         next->template inc<false>();
-        content = next.borrow(); /// TODO add a copy?
+        content = next.borrow();
       }
 
       return true;

@@ -82,8 +82,8 @@ namespace vbci
       {
         auto hr = loc.to_region();
 
-        // If hr is r, we do nothing.
-        // TODO: Should this do a stack_dec.  We are making a borrow internal?
+        // If hr is r, then we just need to perform a stack dec as we are making a
+        // borrow internal.
         if (hr == r)
         {
           stack_rc_decs++;

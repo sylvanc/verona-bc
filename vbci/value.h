@@ -1,8 +1,9 @@
 #pragma once
 
 #include "ident.h"
-#include "platform.h"
 #include "logging.h"
+#include "platform.h"
+
 #include <cmath>
 #include <cstring>
 #include <functional>
@@ -64,9 +65,9 @@ namespace vbci
 
     uint64_t idx : 56;
     ValueType tag : 7;
-    uint8_t readonly : 1;
+    uint8_t readonly : 1 = 0;
 
-    Value(ValueType t) : tag(t) {}
+    Value(ValueType t) : tag(t), readonly(0) {}
 #ifdef PLATFORM_IS_MACOSX
     Value(long ilong);
     Value(unsigned long ulong);
@@ -120,13 +121,7 @@ namespace vbci
 
     [[noreturn]] static void error(
       Error error,
-      const std::source_location& location = std::source_location::current())
-    {
-      LOG(Error) << "Error raised by " << location.file_name() << '('
-                 << location.line() << ':' << location.column() << ") `"
-                 << location.function_name() << "`: " << errormsg(error);
-      throw Value(error);
-    }
+      const std::source_location& location = std::source_location::current());
 
     void to_addr(ValueType t, void* v) const;
 
@@ -948,6 +943,11 @@ namespace vbci
 
   inline std::ostream& operator<<(std::ostream& os, const Value& v)
   {
-    return os << v.to_string();
+    os << v.to_string();
+    if (v.is_readonly())
+    {
+      os << " Read-only ";
+    }
+    return os;
   }
 }

@@ -1144,7 +1144,7 @@ namespace vbci
         case Op::RegisterRef:
         {
           process([](Register& dst, Register& src, Frame& frame)
-                    INLINE { dst = ValueImmortal(src, frame.frame_id); }); // TODO: Not immortal?  ValueStack?
+                    INLINE { dst = ValueStaticLifetime(src, frame.frame_id); });
           break;
         }
 

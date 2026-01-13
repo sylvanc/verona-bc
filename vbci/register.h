@@ -9,8 +9,8 @@
 
 namespace vbci
 {
-  /// A wrapper that indicates the value is being transferred and the caller is responsible for
-  /// managing any reference counts held by the value.
+  /// A wrapper that indicates the value is being transferred and the caller is
+  /// responsible for managing any reference counts held by the value.
   struct ValueTransfer : Value
   {
     using Value::Value;
@@ -33,8 +33,19 @@ namespace vbci
   {
     using Value::Value;
 
-    ValueImmortal(const Value& v) : Value(v) {
+    ValueImmortal(const Value& v) : Value(v)
+    {
       assert(v.location() == Location::immortal());
+    }
+  };
+
+  struct ValueStaticLifetime : Value
+  {
+    using Value::Value;
+
+    ValueStaticLifetime(const Value& v) : Value(v)
+    {
+      assert(v.location().is_stack() || v.location().is_frame_local());
     }
   };
 
@@ -67,6 +78,12 @@ namespace vbci
     Register(ValueImmortal v)
     {
       assert(v.location() == Location::immortal());
+      set_raw_unsafe(v);
+    };
+
+    Register(ValueStaticLifetime v)
+    {
+      assert(v.location().is_stack() || v.location().is_frame_local());
       set_raw_unsafe(v);
     };
 
@@ -131,11 +148,17 @@ namespace vbci
       replace_unsafe([&]() { return v; });
     }
 
-    /// Clear the register without releasing any references held by the underlying value.
-    /// Use with caution. The caller is responsible for ensuring that any references
-    /// held by the value are released appropriately.  This is intended for use
-    /// in scenarios where the reference counts are being transferred elsewhere,
-    /// such as moving into a register, field or cown.
+    void operator=(ValueStaticLifetime v)
+    {
+      replace_unsafe([&]() { return v; });
+    }
+
+    /// Clear the register without releasing any references held by the
+    /// underlying value. Use with caution. The caller is responsible for
+    /// ensuring that any references held by the value are released
+    /// appropriately.  This is intended for use in scenarios where the
+    /// reference counts are being transferred elsewhere, such as moving into a
+    /// register, field or cown.
     void clear_unsafe()
     {
       set_raw_unsafe(Value());

@@ -783,7 +783,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::RegisterRef:
-        v = *reg;  // TODO Not sure about this structure.  context has to deal with RCs
+        v = reg->borrow();
         break;
 
       case ValueType::FieldRef:
@@ -809,9 +809,9 @@ namespace vbci
   template<bool is_move>
   void Value::exchange(Register& dst, Reg<is_move> v) const
   {
-    if (readonly)
+    if (readonly) {
       Value::error(Error::BadStoreTarget);
-
+    }
     // Currently only cowns provide read-only access.  That means it
     // is never valid to store a read-only reference any where.
     if (v->readonly)
@@ -992,5 +992,13 @@ namespace vbci
         assert(false);
         return "unknown";
     }
+  }
+
+  void Value::error(Error error, const std::source_location& location)
+  {
+    LOG(Trace) << "Error raised by " << location.file_name() << '('
+               << location.line() << ':' << location.column() << ") `"
+               << location.function_name() << "`: " << errormsg(error);
+    throw Value(error);
   }
 }
