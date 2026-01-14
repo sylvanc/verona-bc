@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <vector>
 
 namespace vbci
@@ -23,7 +24,7 @@ namespace vbci
   private:
     static constexpr size_t ChunkSize = 1024;
     using Chunk = std::array<uint8_t, ChunkSize>;
-    std::vector<Chunk> chunks;
+    std::vector<std::unique_ptr<Chunk>> chunks;
     Idx top;
 
   public:

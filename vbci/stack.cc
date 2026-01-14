@@ -36,7 +36,7 @@
       if (remaining >= sizeof(StackMarker))
       {
         auto* marker = reinterpret_cast<StackMarker*>(
-          chunks.at(top.chunk).data() + top.offset);
+          chunks.at(top.chunk)->data() + top.offset);
         new (marker) StackMarker();
       }
 
@@ -46,12 +46,12 @@
 
     if (top.chunk >= chunks.size())
     {
-      chunks.emplace_back();
+      chunks.emplace_back(std::make_unique<Chunk>());
       top.chunk = chunks.size() - 1;
       top.offset = 0;
     }
 
-    auto ret = &chunks.at(top.chunk).at(top.offset);
+    auto ret = &chunks.at(top.chunk)->at(top.offset);
     top.offset += size;
     return ret;
   }
@@ -83,7 +83,7 @@
       if (offset >= limit)
         continue;
 
-      auto& chunk = chunks.at(c);
+      auto& chunk = *chunks.at(c);
 
       while (offset < limit)
       {
