@@ -55,7 +55,6 @@ namespace vbci
       float f32;
       double f64;
       void* ptr;
-      Register* reg;
       Object* obj;
       Array* arr;
       Cown* cown;
@@ -91,7 +90,7 @@ namespace vbci
     explicit Value(Object* obj, bool ro);
     explicit Value(Array* arr);
     explicit Value(Cown* cown);
-    explicit Value(Register& reg, Location frame);
+    explicit Value(uint64_t idx, Location frame);
     explicit Value(Object* obj, size_t f, bool ro);
     explicit Value(Array* arr, size_t idx, bool ro);
     explicit Value(Cown* cown, bool ro);
@@ -145,6 +144,7 @@ namespace vbci
     Array* get_array() const;
     Function* function() const;
     size_t get_size() const;
+    Register& get_register() const;
 
     Location location() const;
     Region* region() const;
@@ -309,7 +309,7 @@ namespace vbci
           return Value(cown == v.cown);
 
         case ValueType::RegisterRef:
-          return Value(reg == v.reg);
+          return Value(u64 == v.u64);
 
         case ValueType::FieldRef:
           return Value((obj == v.obj) && (idx == v.idx));
@@ -785,7 +785,7 @@ namespace vbci
           return reinterpret_cast<size_t>(cown);
 
         case ValueType::RegisterRef:
-          return reinterpret_cast<size_t>(reg);
+          return u64;
 
         case ValueType::FieldRef:
           return reinterpret_cast<size_t>(obj) + idx + 1;

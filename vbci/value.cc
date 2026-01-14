@@ -34,8 +34,8 @@ namespace vbci
   Value::Value(Array* arr) : arr(arr), tag(ValueType::Array), readonly(0) {}
   Value::Value(Cown* cown) : cown(cown), tag(ValueType::Cown) {}
 
-  Value::Value(Register& val, Location frame)
-  : reg(&val), idx(frame.raw()), tag(ValueType::RegisterRef), readonly(0)
+  Value::Value(uint64_t val, Location frame)
+  : u64(val), idx(frame.raw()), tag(ValueType::RegisterRef), readonly(0)
   {}
 
   Value::Value(Object* obj, size_t f, bool ro)
@@ -292,7 +292,7 @@ namespace vbci
         return cown->get_type_id();
 
       case ValueType::RegisterRef:
-        return Program::get().ref((*reg)->type_id());
+        return Program::get().ref((Thread::get_register(u64)).borrow().type_id());
 
       case ValueType::FieldRef:
         return Program::get().ref(obj->field_type_id(idx));
@@ -443,6 +443,14 @@ namespace vbci
       Value::error(Error::BadConversion);
 
     return arr;
+  }
+
+  Register& Value::get_register() const
+  {
+    if (tag != ValueType::RegisterRef)
+      Value::error(Error::BadConversion);
+
+    return Thread::get_register(u64);
   }
 
   ValueType Value::get_value_type() const
@@ -783,7 +791,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::RegisterRef:
-        v = reg->borrow();
+        v = Thread::get_register(u64).borrow();
         break;
 
       case ValueType::FieldRef:
@@ -838,15 +846,16 @@ namespace vbci
             Value::error(Error::BadStoreTarget);
         }
 
-        dst = std::move(*reg);
+        Register& reg = Thread::get_register(u64);
+        dst = std::move(reg);
 
         if constexpr (is_move)
         {
-          *reg = std::move(v);
+          reg = std::move(v);
         }
         else
         {
-          *reg = v;
+          reg = v;
         }
 
         return;
@@ -957,7 +966,7 @@ namespace vbci
         return cown->to_string();
 
       case ValueType::RegisterRef:
-        return std::format("ref {}", (*reg)->to_string());
+        return std::format("ref {}", Thread::get_register(u64).borrow().to_string());
 
       case ValueType::FieldRef:
         return std::format(
