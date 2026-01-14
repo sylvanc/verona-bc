@@ -36,7 +36,7 @@ namespace vbci
       return cls().fields.at(idx).type_id;
     }
 
-    Class& cls()
+    Class& cls() const
     {
       return Program::get().cls(get_type_id());
     }

@@ -382,7 +382,7 @@ namespace vbci
     }
 
   public:
-    uint32_t get_type_id()
+    uint32_t get_type_id() const
     {
       return type_id;
     }
