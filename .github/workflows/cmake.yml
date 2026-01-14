@@ -21,7 +21,7 @@ jobs:
         # standard
         variant: [ "Standard" ]
 
-        platform: [ "ubuntu-latest" ]
+        platform: [ "ubuntu-latest", "mac-latest", "mac-14-large" ]
 #        platform: [ "ubuntu-latest", "windows-latest", "mac-latest" ]
 
 
@@ -34,7 +34,7 @@ jobs:
 
           - variant: "Clang"
             platform: "ubuntu-latest"
-            build-type: "Release"
+            build-type: [ "Release", "Debug" ]
             cmake-flags: "-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
             dependencies: "sudo apt install ninja-build lldb"
 
@@ -49,9 +49,9 @@ jobs:
           #   # Exclude perf tests in Debug on Windows as they take too long.
           #   ctest-flags: "-E perf"
           
-          # - platform: "mac-latest"
-          #   cmake-flags: ""
-          #   dependencies: ""
+          - platform: "mac-latest"
+            cmake-flags: ""
+            dependencies: ""
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{matrix.platform}}
