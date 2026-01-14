@@ -185,6 +185,30 @@ namespace vbci
       }
     }
 
+    // Drop all reference-holding fields without invoking a finalizer.
+    void destruct()
+    {
+      auto& f = cls().fields;
+
+      for (size_t i = 0; i < f.size(); i++)
+      {
+        switch (f.at(i).value_type)
+        {
+          case ValueType::Object:
+          case ValueType::Array:
+          case ValueType::Invalid:
+          {
+            auto prev = load(i);
+            field_drop(prev);
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
+    }
+
     std::string to_string()
     {
       return std::format(

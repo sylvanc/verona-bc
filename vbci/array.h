@@ -181,6 +181,30 @@ namespace vbci
       }
     }
 
+    // Drop all reference-holding elements without additional finalization.
+    void destruct()
+    {
+      switch (value_type)
+      {
+        case ValueType::Object:
+        case ValueType::Array:
+        case ValueType::Invalid:
+        {
+          for (size_t i = 0; i < size; i++)
+          {
+            void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * i);
+            auto prev = Value::from_addr(value_type, addr);
+
+            field_drop(prev);
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    }
+
     std::string to_string()
     {
       return std::format("array[{}]: {}", size, static_cast<void*>(this));

@@ -1862,6 +1862,15 @@ namespace vbci
     for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
       finalize.at(i)->finalize();
 
+    // Drop references held by stack allocations in the current frame.
+    stack.visit_headers(
+      frame->save, stack.top, [&](Header* h) {
+        if (Program::get().is_array(h->get_type_id()))
+          static_cast<Array*>(h)->destruct();
+        else
+          static_cast<Object*>(h)->destruct();
+      });
+
     // Finalize the frame-local region. A tailcall preserves the region.
     if (!tailcall)
     {
