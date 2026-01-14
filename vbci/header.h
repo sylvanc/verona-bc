@@ -7,10 +7,16 @@
 #include "register.h"
 #include "value.h"
 
+#include <limits>
+
 namespace vbci
 {
   struct Header
   {
+  public:
+    static constexpr uint32_t StackSentinelTypeId =
+      std::numeric_limits<uint32_t>::max();
+
   private:
     Location loc;
 
@@ -382,7 +388,7 @@ namespace vbci
     }
 
   public:
-    uint32_t get_type_id()
+    uint32_t get_type_id() const
     {
       return type_id;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "frame.h"
+#include "header.h"
 #include "logging.h"
 #include "platform.h"
 #include "program.h"
@@ -11,6 +12,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <verona.h>
+#include <functional>
 
 namespace vbci
 {

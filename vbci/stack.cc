@@ -1,8 +1,10 @@
 #include "stack.h"
 
 #include "array.h"
-
-namespace vbci
+#include "header.h"
+#include "object.h"
+#include "program.h"
+ namespace vbci
 {
   Stack::Idx Stack::save()
   {
@@ -16,24 +18,46 @@ namespace vbci
 
   void* Stack::alloc(size_t size)
   {
-    if (size > ChunkSize)
+    auto aligned_size = align_up(size);
+
+    // All stack allocations are rounded up to 8-byte alignment so headers and
+    // payloads remain naturally aligned for i64 and pointer fields.
+
+    if (aligned_size > ChunkSize)
       return nullptr;
 
-    if ((top.offset + size) > ChunkSize)
+    if ((top.offset + aligned_size) > ChunkSize)
     {
+      struct StackMarker : Header
+      {
+        StackMarker() : Header(Location::stack(), StackSentinelTypeId) {}
+      };
+
+      // When this allocation would overflow the current chunk, drop a marker
+      // so walkers know they should stop in this chunk; if no room remains for
+      // the marker, just leave the tail unused.
+      auto remaining = ChunkSize - top.offset;
+
+      if (remaining >= sizeof(StackMarker))
+      {
+        auto* marker = reinterpret_cast<StackMarker*>(
+          chunks.at(top.chunk)->data() + top.offset);
+        new (marker) StackMarker();
+      }
+
       top.chunk++;
       top.offset = 0;
     }
 
     if (top.chunk >= chunks.size())
     {
-      chunks.emplace_back();
+      chunks.emplace_back(std::make_unique<Chunk>());
       top.chunk = chunks.size() - 1;
       top.offset = 0;
     }
 
-    auto ret = &chunks.at(top.chunk).at(top.offset);
-    top.offset += size;
+    auto ret = &chunks.at(top.chunk)->at(top.offset);
+    top.offset += aligned_size;
     return ret;
   }
 
@@ -46,4 +70,13 @@ namespace vbci
     return Array::create(
       mem, frame_id, type_id, rep.first, size, rep.second->size);
   }
+
+  size_t Stack::size_bytes(Header* h)
+  {
+    auto& program = Program::get();
+    if (program.is_array(h->get_type_id()))
+      return static_cast<Array*>(h)->allocation_size_bytes();
+    return static_cast<Object*>(h)->allocation_size_bytes();
+  }
+
 }

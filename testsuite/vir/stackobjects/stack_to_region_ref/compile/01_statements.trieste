@@ -1,0 +1,84 @@
+vbcc
+statements
+(top
+  {}
+  (class
+    (classid 8:@Payload)
+    (fields
+      (field
+        (fieldid 2:@v)
+        (i64)))
+    (methods))
+  (class
+    (classid 7:@Holder)
+    (fields
+      (field
+        (fieldid 2:@p)
+        (classid 8:@Payload)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels))
+  (labelid 5:^main)
+  (const
+    (localid 4:$val)
+    (i64)
+    (int 2:77))
+  (region
+    (localid 8:$payload)
+    (rc)
+    (classid 8:@Payload)
+    (args
+      (arg
+        (argcopy)
+        (localid 4:$val))))
+  (stack
+    (localid 7:$holder)
+    (classid 7:@Holder)
+    (args
+      (arg
+        (argcopy)
+        (localid 8:$payload))))
+  (fieldref
+    (localid 5:$href)
+    (arg
+      (argcopy)
+      (localid 7:$holder))
+    (fieldid 2:@p))
+  (load
+    (localid 9:$p_loaded)
+    (localid 5:$href))
+  (fieldref
+    (localid 5:$vref)
+    (arg
+      (argcopy)
+      (localid 9:$p_loaded))
+    (fieldid 2:@v))
+  (load
+    (localid 4:$out)
+    (localid 5:$vref))
+  (eq
+    (localid 3:$ok)
+    (localid 4:$out)
+    (localid 4:$val))
+  (cond
+    (localid 3:$ok)
+    (labelid 5:^pass)
+    (labelid 5:^fail))
+  (labelid 5:^pass)
+  (const
+    (localid 4:$ret)
+    (i32)
+    (int 1:0))
+  (ret
+    (localid 4:$ret))
+  (labelid 5:^fail)
+  (const
+    (localid 4:$ret)
+    (i32)
+    (int 2:-1))
+  (ret
+    (localid 4:$ret)))

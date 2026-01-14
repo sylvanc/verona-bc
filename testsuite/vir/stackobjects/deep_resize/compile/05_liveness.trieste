@@ -1,0 +1,139 @@
+vbcc
+liveness
+(top
+  {}
+  (func
+    (functionid 12:@alloc_depth)
+    (params
+      (param
+        (localid 2:$n)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 12:^alloc_depth)
+        (body
+          (const
+            (localid 5:$zero)
+            (i32)
+            (int 1:0))
+          (eq
+            (localid 5:$done)
+            (localid 2:$n)
+            (localid 5:$zero)))
+        (cond
+          (localid 5:$done)
+          (labelid 5:^base)
+          (labelid 8:^recurse)))
+      (label
+        (labelid 8:^recurse)
+        (body
+          (const
+            (localid 4:$len)
+            (usize)
+            (int 2:32))
+          (stackarray
+            (localid 4:$arr)
+            (array
+              (i64))
+            (localid 4:$len))
+          (const
+            (localid 4:$idx)
+            (usize)
+            (int 1:0))
+          (arrayref
+            (localid 4:$ref)
+            (arg
+              (argmove)
+              (localid 4:$arr))
+            (localid 4:$idx))
+          (const
+            (localid 4:$val)
+            (i64)
+            (int 2:42))
+          (const
+            (localid 7:$zero64)
+            (i64)
+            (int 1:0))
+          (store
+            (localid 5:$prev)
+            (localid 4:$ref)
+            (arg
+              (argcopy)
+              (localid 4:$val)))
+          (load
+            (localid 5:$read)
+            (localid 4:$ref))
+          (eq
+            (localid 8:$prev_ok)
+            (localid 5:$prev)
+            (localid 7:$zero64))
+          (eq
+            (localid 8:$read_ok)
+            (localid 5:$read)
+            (localid 4:$val))
+          (and
+            (localid 8:$ok_here)
+            (localid 8:$prev_ok)
+            (localid 8:$read_ok)))
+        (cond
+          (localid 8:$ok_here)
+          (labelid 5:^cont)
+          (labelid 5:^fail)))
+      (label
+        (labelid 5:^cont)
+        (body
+          (const
+            (localid 4:$one)
+            (i32)
+            (int 1:1))
+          (sub
+            (localid 3:$n1)
+            (localid 2:$n)
+            (localid 4:$one))
+          (call
+            (localid 2:$r)
+            (functionid 12:@alloc_depth)
+            (args
+              (arg
+                (argmove)
+                (localid 3:$n1)))))
+        (ret
+          (localid 2:$r)))
+      (label
+        (labelid 5:^fail)
+        (body
+          (const
+            (localid 4:$ret)
+            (i32)
+            (int 2:-1)))
+        (ret
+          (localid 4:$ret)))
+      (label
+        (labelid 5:^base)
+        (body)
+        (ret
+          (localid 5:$zero)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 6:$depth)
+            (i32)
+            (int 2:20))
+          (call
+            (localid 2:$r)
+            (functionid 12:@alloc_depth)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$depth)))))
+        (ret
+          (localid 2:$r))))))
