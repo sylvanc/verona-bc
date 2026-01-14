@@ -18,10 +18,15 @@
 
   void* Stack::alloc(size_t size)
   {
-    if (size > ChunkSize)
+    auto aligned_size = align_up(size);
+
+    // All stack allocations are rounded up to 8-byte alignment so headers and
+    // payloads remain naturally aligned for i64 and pointer fields.
+
+    if (aligned_size > ChunkSize)
       return nullptr;
 
-    if ((top.offset + size) > ChunkSize)
+    if ((top.offset + aligned_size) > ChunkSize)
     {
       struct StackMarker : Header
       {
@@ -52,7 +57,7 @@
     }
 
     auto ret = &chunks.at(top.chunk)->at(top.offset);
-    top.offset += size;
+    top.offset += aligned_size;
     return ret;
   }
 
@@ -103,7 +108,9 @@
           break;
 
         fn(h);
-        offset += size_bytes(h);
+        // Walker steps match the allocator's 8-byte alignment so we skip any
+        // padding inserted at allocation time.
+        offset += align_up(size_bytes(h));
       }
     }
   }
