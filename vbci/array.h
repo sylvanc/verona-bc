@@ -185,5 +185,10 @@ namespace vbci
     {
       return std::format("array[{}]: {}", size, static_cast<void*>(this));
     }
+
+    size_t allocation_size_bytes() const
+    {
+      return Array::size_of(size, stride);
+    }
   };
 }

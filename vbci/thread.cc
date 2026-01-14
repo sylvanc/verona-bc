@@ -560,6 +560,22 @@ namespace vbci
 #endif
   }
 
+  void Thread::for_each_stack_header_current_frame(
+    const std::function<void(Header*)>& fn)
+  {
+    auto& t = get();
+
+    if (t.frame == nullptr)
+      return;
+
+    auto& f = *t.frame;
+    Stack::Idx start = f.save;
+    Stack::Idx end = t.stack.top;
+
+    // Walk only the current frame's stack allocations.
+    t.stack.visit_headers(start, end, fn);
+  }
+
   std::ostream& operator<<(std::ostream& os, Op op)
   {
     switch (op)

@@ -190,5 +190,10 @@ namespace vbci
       return std::format(
         "{}: {}", Program::get().di_class(cls()), static_cast<void*>(this));
     }
+
+    size_t allocation_size_bytes() const
+    {
+      return cls().size;
+    }
   };
 }

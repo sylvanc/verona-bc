@@ -1,6 +1,7 @@
 #pragma once
 
 #include "frame.h"
+#include "header.h"
 #include "logging.h"
 #include "platform.h"
 #include "program.h"
@@ -11,6 +12,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <verona.h>
+#include <functional>
 
 namespace vbci
 {
@@ -43,6 +45,10 @@ namespace vbci
     static size_t frame_local_index(Region* region);
     static Location region_location(Region* region);
     static Register& get_register(uint64_t id);
+
+    // Visit stack-allocated headers reachable in the current frame only.
+    static void for_each_stack_header_current_frame(
+      const std::function<void(Header*)>& fn);
 
     template<typename... Ts>
     static void run_sync(Function* func, Ts&&... argv)
