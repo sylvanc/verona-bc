@@ -1,0 +1,41 @@
+// Fill (or almost fill) a single stack chunk with a stack array and verify the
+// endpoints are writable/readable. With 1024-byte chunks and i64 stride 8,
+// len=124 leaves 1024 - (124*8 + header) bytes. This exercises the walker’s
+// ability to stop on the sentinel/tail and ensures no overrun in a near-full
+// chunk.
+
+func @main(): i32
+  $len = const usize 124             // choose length to nearly fill one chunk
+  $arr = stack [i64] $len            // allocate stack array
+
+  $zero_idx = const usize 0          // first element
+  $last_idx = const usize 123        // last element
+
+  $v0 = const i64 111                // value for first slot
+  $v1 = const i64 222                // value for last slot
+  $zero64 = const i64 0              // expected previous contents
+
+  $r0 = ref $arr $zero_idx           // ref to first element
+  $r1 = ref $arr $last_idx           // ref to last element
+
+  $prev0 = store $r0 $v0             // write first, capture previous
+  $prev1 = store $r1 $v1             // write last, capture previous
+
+  $l0 = load $r0                     // read back first
+  $l1 = load $r1                     // read back last
+
+  $prev_ok0 = eq $prev0 $zero64      // first previous should be zero
+  $prev_ok1 = eq $prev1 $zero64      // last previous should be zero
+  $vals_ok0 = eq $l0 $v0             // first read matches write
+  $vals_ok1 = eq $l1 $v1             // last read matches write
+
+  $prev_ok = and $prev_ok0 $prev_ok1 // both previous checks pass
+  $vals_ok = and $vals_ok0 $vals_ok1 // both value checks pass
+  $ok = and $prev_ok $vals_ok        // all conditions met
+  cond $ok ^pass ^fail
+^pass
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret

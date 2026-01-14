@@ -1,0 +1,29 @@
+// Stack object holding a reference to a region-allocated object. Ensures
+// stack->region references remain valid and readable after construction.
+
+class @Payload
+  @v: i64
+
+class @Holder
+  @p: @Payload
+
+func @main(): i32
+  $val = const i64 77                   // value to embed in payload
+  $payload = region rc @Payload($val)   // region RC allocation (non-frame-local)
+
+  $holder = stack @Holder($payload)     // stack object referencing payload
+
+  $href = ref $holder @p                // ref to payload field on stack
+  $p_loaded = load $href                // get payload from holder
+
+  $vref = ref $p_loaded @v              // ref to payload field
+  $out = load $vref                     // read payload value
+
+  $ok = eq $out $val                    // verify value matches
+  cond $ok ^pass ^fail
+^pass
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret

@@ -1,0 +1,55 @@
+// Force an unaligned object placement by first allocating a small byte array
+// whose total size is not a multiple of 8, then placing an object immediately
+// after. This exercises stack placement when alignment would otherwise be
+// naturally 8-byte for i64 fields.
+
+class @Pair
+  @x: i64
+  @y: i64
+
+func @main(): i32
+  $len = const usize 3                   // 3 bytes to skew alignment
+  $bytes = stack [i8] $len               // small byte array on stack
+
+  $bx0 = const usize 0
+  $bx1 = const usize 1
+  $bv0 = const i8 5
+  $bv1 = const i8 6
+  $r0 = ref $bytes $bx0                  // ref into byte array
+  $r1 = ref $bytes $bx1                  // another ref
+  $zero8 = const i8 0
+
+  $p0 = store $r0 $bv0                   // write first byte
+  $p1 = store $r1 $bv1                   // write second byte
+  $load0 = load $r0                      // read back
+  $load1 = load $r1
+
+  $v0 = const i64 111111
+  $v1 = const i64 222222
+  $pair = stack @Pair($v0, $v1)          // object should land unaligned
+
+  $rx = ref $pair @x                     // ref to first field
+  $ry = ref $pair @y                     // ref to second field
+  $ox = load $rx                         // read back x
+  $oy = load $ry                         // read back y
+
+  $prev_ok0 = eq $p0 $zero8              // byte 0 previous zero
+  $prev_ok1 = eq $p1 $zero8              // byte 1 previous zero
+  $bytes_ok0 = eq $load0 $bv0            // byte 0 stored correctly
+  $bytes_ok1 = eq $load1 $bv1            // byte 1 stored correctly
+  $pair_ok0 = eq $ox $v0                 // field x stored correctly
+  $pair_ok1 = eq $oy $v1                 // field y stored correctly
+
+  $prev_ok = and $prev_ok0 $prev_ok1
+  $bytes_ok = and $bytes_ok0 $bytes_ok1
+  $pair_ok = and $pair_ok0 $pair_ok1
+
+  $all0 = and $prev_ok $bytes_ok
+  $all1 = and $all0 $pair_ok
+  cond $all1 ^pass ^fail
+^pass
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret
