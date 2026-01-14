@@ -46,10 +46,6 @@ namespace vbci
     static Location region_location(Region* region);
     static Register& get_register(uint64_t id);
 
-    // Visit stack-allocated headers reachable in the current frame only.
-    static void for_each_stack_header_current_frame(
-      const std::function<void(Header*)>& fn);
-
     template<typename... Ts>
     static void run_sync(Function* func, Ts&&... argv)
     {

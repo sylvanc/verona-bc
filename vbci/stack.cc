@@ -71,47 +71,12 @@
       mem, frame_id, type_id, rep.first, size, rep.second->size);
   }
 
-  void Stack::visit_headers(
-    Idx start, Idx end, const std::function<void(Header*)>& fn)
+  size_t Stack::size_bytes(Header* h)
   {
-    auto size_bytes = [&](Header* h) -> size_t {
-      if (Program::get().is_array(h->get_type_id()))
-        return static_cast<Array*>(h)->allocation_size_bytes();
-      return static_cast<Object*>(h)->allocation_size_bytes();
-    };
-
-    for (size_t c = start.chunk; c <= end.chunk && c < chunks.size(); c++)
-    {
-      auto offset = (c == start.chunk) ? start.offset : 0;
-      auto limit = (c == end.chunk) ? end.offset : ChunkSize;
-
-      if (offset >= limit)
-        continue;
-
-      auto& chunk = *chunks.at(c);
-
-      while (offset < limit)
-      {
-        auto remaining = limit - offset;
-
-        // Not enough space for even a header; nothing more to read here.
-        if (remaining < sizeof(Header))
-          break;
-
-        auto* h = reinterpret_cast<Header*>(chunk.data() + offset);
-
-        assert(h != nullptr);
-        assert(h->location().is_stack());
-
-        // Sentinel marks end of live allocations in this chunk.
-        if (h->get_type_id() == Header::StackSentinelTypeId)
-          break;
-
-        fn(h);
-        // Walker steps match the allocator's 8-byte alignment so we skip any
-        // padding inserted at allocation time.
-        offset += align_up(size_bytes(h));
-      }
-    }
+    auto& program = Program::get();
+    if (program.is_array(h->get_type_id()))
+      return static_cast<Array*>(h)->allocation_size_bytes();
+    return static_cast<Object*>(h)->allocation_size_bytes();
   }
+
 }
