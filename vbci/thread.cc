@@ -527,14 +527,36 @@ namespace vbci
       }
     }
 
+    stack.visit_headers({}, stack.top, [&](Header* h) {
+      std::vector<Header*> refs;
+      if (program->is_array(h->get_type_id()))
+      {
+        auto arr = static_cast<Array*>(h);
+        arr->trace(refs);
+      }
+      else
+      {
+        auto obj = static_cast<Object*>(h);
+        obj->trace(refs);
+      }
+
+      for (auto val : refs)
+      {
+        if (val == nullptr)
+          continue;
+        if (val->location().is_region())
+          visit_region(val->location().to_region());
+      }
+    });
+
     // Now compare calculated stack RCs with actual stack RCs.
     for (const auto& [region, calc_stack_rc] : calc_stack_rcs)
     {
       auto actual_stack_rc = region->get_stack_rc();
-      // This check is currently allowing leaks, we should refine to
-      // exact equality.
-      // TODO: Once stack RC accounting is precise and known leaks are fixed,
-      //       tighten this invariant to require calc_stack_rc == actual_stack_rc.
+      // Due to multi-threading it is not possible to guarantee a strict equality
+      // between calculated and actual stack RCs. We would have to pause all other
+      // threads to do that, which is not feasible. Instead we check that the
+      // actual stack RC is at least the calculated stack RC.
 
       if (calc_stack_rc > actual_stack_rc)
       {
