@@ -628,7 +628,7 @@ namespace vc
       auto& path = t->front();
 
       if (
-        (path->size() != 2) || (path->front()->location().view() != "builtin"))
+        (path->size() != 2) || (path->front()->location().view() != "_builtin"))
         continue;
 
       auto cls = path->back()->location().view();
@@ -672,7 +672,7 @@ namespace vc
     // Set the literal type.
     auto& path = t->front();
     assert(
-      (path->size() == 2) && (path->front()->location().view() == "builtin"));
+      (path->size() == 2) && (path->front()->location().view() == "_builtin"));
     auto cls = path->back()->location().view();
 
     if (cls == "i8")

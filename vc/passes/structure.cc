@@ -91,7 +91,7 @@ namespace vc
           [](Match& _) {
             return (ClassDef ^ _(Directory))
               << None << (Ident ^ _(Directory)) << TypeParams << Where
-              << (ClassBody << (Group << Use << (Ident ^ "builtin"))
+              << (ClassBody << (Group << Use << (Ident ^ "_builtin"))
                             << *_[Directory]);
           },
 

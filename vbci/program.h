@@ -16,6 +16,7 @@ namespace vbci
 {
   struct SourceFile
   {
+    size_t di_pos;
     std::string contents;
     std::vector<size_t> lines;
 
@@ -50,9 +51,8 @@ namespace vbci
     Array* argv = nullptr;
 
     PC di = PC(-1);
-    size_t di_compilation_path = 0;
     std::vector<std::string> di_strings;
-    std::unordered_map<std::string, SourceFile> source_files;
+    std::unordered_map<size_t, SourceFile> source_files;
 
   public:
     static Program& get();
@@ -139,6 +139,6 @@ namespace vbci
     std::string str(size_t& pc);
     void string_table(size_t& pc, std::vector<std::string>& table);
 
-    SourceFile* get_source_file(const std::string& path);
+    SourceFile* get_source_file(size_t di_file);
   };
 }

@@ -80,6 +80,14 @@ namespace vbcc
     return b;
   }
 
+  std::vector<uint8_t>&
+  operator<<(std::vector<uint8_t>& b, const std::string_view& str)
+  {
+    b << uleb(str.size());
+    b.insert(b.end(), str.begin(), str.end());
+    return b;
+  }
+
   uleb<size_t> rgn(Node node)
   {
     auto region = node / Region;
@@ -330,12 +338,14 @@ namespace vbcc
     method_ids.insert({ST::di().string("@apply"), ApplyMethodId});
   }
 
-  void Bytecode::set_path(const std::filesystem::path& path)
+  void Bytecode::add_path(const std::filesystem::path& path)
   {
-    compilation_path = std::filesystem::canonical(path);
+    auto full = std::filesystem::canonical(path);
 
-    if (!std::filesystem::is_directory(compilation_path))
-      compilation_path = compilation_path.parent_path();
+    if (!std::filesystem::is_directory(full))
+      full = full.parent_path();
+
+    source_paths.push_back(full);
   }
 
   std::optional<size_t> Bytecode::get_typealias_id(Node id)
@@ -532,28 +542,21 @@ namespace vbcc
     libraries.push_back(lib);
   }
 
-  void
-  Bytecode::gen(std::filesystem::path output, bool strip, bool reproducible)
+  void Bytecode::gen(std::filesystem::path output, bool strip)
   {
     wf::push_back(wfIR);
 
     if (output.empty())
-      output = compilation_path.stem().replace_extension(".vbc");
+      output = "out.vbc";
 
     std::vector<uint8_t> hdr;
     std::vector<uint8_t> di_strs;
     std::vector<uint8_t> di;
     std::vector<uint8_t> code;
+    std::map<ST::Index, trieste::Source> di_source;
 
     hdr << uleb(MagicNumber);
     hdr << uleb(CurrentVersion);
-
-    // Add the compilation path to the string table.
-    auto comp_path = ST::di().string(
-      reproducible ? "/reproducible" : compilation_path.string());
-
-    // The compilation path.
-    di << uleb(comp_path);
 
     // Exec string table.
     hdr << uleb(ST::exec().size());
@@ -724,6 +727,9 @@ namespace vbcc
       size_t di_last_pc = code.size();
       bool explicit_di = false;
 
+      // Keep track of all included source files.
+      auto di_source_curr = di_source.end();
+
       auto adv_di = [&]() {
         auto di_cur_pc = code.size();
 
@@ -734,22 +740,45 @@ namespace vbcc
         }
       };
 
-      auto stmt_di = [&](Node stmt) {
-        // Use the source and offset in the AST.
-        if (!stmt->location().source)
+      auto stmt_di = [&](Node& stmt) {
+        // Record nothing for empty or synthetic source locations.
+        if (
+          !stmt->location().source || stmt->location().source->origin().empty())
           return;
 
-        auto file =
-          ST::di().file(compilation_path, stmt->location().source->origin());
-        auto pos = stmt->location().pos;
-
-        if (file != di_file)
+        // Use the source and offset in the AST.
+        if (
+          (di_source_curr == di_source.end()) ||
+          (di_source_curr->second != stmt->location().source))
         {
+          // Pick a non-relative path.
+          std::filesystem::path rel_path;
+
+          for (auto& path : source_paths)
+          {
+            rel_path = std::filesystem::relative(
+              stmt->location().source->origin(), path);
+
+            if (!rel_path.empty() && (rel_path.c_str()[0] != '.'))
+              break;
+          }
+
+          if (rel_path.empty() || (rel_path.c_str()[0] == '.'))
+            rel_path = stmt->location().source->origin();
+
+          di_source_curr =
+            di_source
+              .emplace(
+                ST::di().string(rel_path.string()), stmt->location().source)
+              .first;
+
           adv_di();
-          di << d(DIOp::File, file);
-          di_file = file;
+          di << d(DIOp::File, di_source_curr->first);
+          di_file = di_source_curr->first;
           di_offset = 0;
         }
+
+        auto pos = stmt->location().pos;
 
         if (pos != di_offset)
         {
@@ -766,12 +795,12 @@ namespace vbcc
         // Save the pc for this label.
         hdr << uleb(code.size());
 
-        for (auto stmt : *(label / Body))
+        for (Node stmt : *(label / Body))
         {
           if (stmt == Source)
           {
             adv_di();
-            di_file = ST::di().file(compilation_path, stmt / String);
+            di_file = ST::di().string(stmt / String);
             di_offset = 0;
             explicit_di = true;
             di << d(DIOp::File, di_file);
@@ -1272,7 +1301,7 @@ namespace vbcc
           }
         }
 
-        auto term = label / Return;
+        Node term = label / Return;
 
         if (explicit_di)
           adv_di();
@@ -1336,6 +1365,16 @@ namespace vbcc
 
       for (size_t i = 0; i < ST::di().size(); i++)
         di_strs << ST::di().at(i);
+
+      // Debug info source files.
+      // TODO: compressed source code.
+      di_strs << uleb(di_source.size());
+
+      for (auto& [id, source] : di_source)
+      {
+        di_strs << uleb(id);
+        di_strs << source->view();
+      }
     }
 
     std::ofstream f(output, std::ios::binary | std::ios::out);

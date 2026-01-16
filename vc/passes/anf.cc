@@ -25,7 +25,7 @@ namespace vc
   Node type_nomatch()
   {
     return Type
-      << (TypeName << (TypeElement << (Ident ^ "builtin") << TypeArgs)
+      << (TypeName << (TypeElement << (Ident ^ "_builtin") << TypeArgs)
                    << (TypeElement << (Ident ^ "nomatch") << TypeArgs));
   }
 
@@ -33,7 +33,7 @@ namespace vc
   {
     assert(localid == LocalId);
     return Call << (LocalId ^ localid) << Rhs
-                << (QName << (QElement << (Ident ^ "builtin") << TypeArgs)
+                << (QName << (QElement << (Ident ^ "_builtin") << TypeArgs)
                           << (QElement << (Ident ^ "nomatch") << TypeArgs)
                           << (QElement << (Ident ^ "create") << TypeArgs))
                 << Args;

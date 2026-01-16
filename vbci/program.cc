@@ -1,9 +1,9 @@
 #include "program.h"
 
 #include "array.h"
+#include "cown.h"
 #include "ffi/ffi.h"
 #include "thread.h"
-#include "cown.h"
 
 #include <dlfcn.h>
 #include <format>
@@ -146,7 +146,8 @@ namespace vbci
     start_loop();
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
-    ValueTransfer ret = Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
+    ValueTransfer ret =
+      Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
     sched.run();
     stop_loop();
 
@@ -440,7 +441,7 @@ namespace vbci
       }
       else
       {
-        return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
+        break;
       }
     }
 
@@ -449,7 +450,7 @@ namespace vbci
         " --> function {}:{}", static_cast<void*>(func), di_offset);
 
     auto filename = di_strings.at(di_file);
-    auto source = get_source_file(filename);
+    auto source = get_source_file(di_file);
 
     if (!source)
       return std::format(" --> {}:{}", filename, di_offset);
@@ -571,7 +572,6 @@ namespace vbci
     argv = nullptr;
 
     di = PC(-1);
-    di_compilation_path = 0;
     di_strings.clear();
     source_files.clear();
 
@@ -757,8 +757,16 @@ namespace vbci
     if (debug_info_size > 0)
     {
       string_table(pc, di_strings);
+      auto num_sources = uleb(pc);
+
+      for (size_t i = 0; i < num_sources; i++)
+      {
+        auto di_file = uleb(pc);
+        source_files[di_file].di_pos = pc;
+        pc += uleb(pc);
+      }
+
       di = pc;
-      di_compilation_path = uleb(pc);
       pc = di + debug_info_size;
     }
 
@@ -912,32 +920,25 @@ namespace vbci
       table.push_back(str(pc));
   }
 
-  SourceFile* Program::get_source_file(const std::string& path)
+  SourceFile* Program::get_source_file(size_t di_file)
   {
-    auto find = source_files.find(path);
-    if (find != source_files.end())
-      return &find->second;
-
-    auto filename =
-      std::filesystem::path(di_strings.at(di_compilation_path)) / path;
-    std::ifstream f(filename, std::ios::binary | std::ios::in | std::ios::ate);
-
-    if (!f)
+    auto find = source_files.find(di_file);
+    if (find == source_files.end())
       return nullptr;
 
-    auto size = f.tellg();
-    f.seekg(0, std::ios::beg);
+    auto& source = find->second;
 
-    auto& source = source_files[path];
-    source.contents.resize(static_cast<std::size_t>(size));
-    f.read(&source.contents.at(0), size);
-
-    auto pos = source.contents.find('\n');
-
-    while (pos != std::string::npos)
+    if (source.contents.empty())
     {
-      source.lines.push_back(pos);
-      pos = source.contents.find('\n', pos + 1);
+      // TODO: decompress
+      source.contents = str(source.di_pos);
+      auto pos = source.contents.find('\n');
+
+      while (pos != std::string::npos)
+      {
+        source.lines.push_back(pos);
+        pos = source.contents.find('\n', pos + 1);
+      }
     }
 
     return &source;
