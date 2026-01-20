@@ -2,6 +2,8 @@
 
 #include "lang.h"
 
+#include <zstd.h>
+
 namespace vbcc
 {
   using namespace vbci;
@@ -550,7 +552,6 @@ namespace vbcc
       output = "out.vbc";
 
     std::vector<uint8_t> hdr;
-    std::vector<uint8_t> di_strs;
     std::vector<uint8_t> di;
     std::vector<uint8_t> code;
     std::map<ST::Index, trieste::Source> di_source;
@@ -1350,15 +1351,15 @@ namespace vbcc
     for (auto& type : types)
       hdr.insert(hdr.end(), type.begin(), type.end());
 
-    // Length of the debug info section.
-    if (strip)
+    // Code size.
+    hdr << uleb(code.size());
+    std::ofstream f(output, std::ios::binary | std::ios::out);
+    f.write(reinterpret_cast<const char*>(hdr.data()), hdr.size());
+    f.write(reinterpret_cast<const char*>(code.data()), code.size());
+
+    if (!strip)
     {
-      hdr << uleb(0);
-    }
-    else
-    {
-      // Debug info size.
-      hdr << uleb(di.size());
+      std::vector<uint8_t> di_strs;
 
       // Debug info string table.
       di_strs << uleb(ST::di().size());
@@ -1367,7 +1368,6 @@ namespace vbcc
         di_strs << ST::di().at(i);
 
       // Debug info source files.
-      // TODO: compressed source code.
       di_strs << uleb(di_source.size());
 
       for (auto& [id, source] : di_source)
@@ -1375,18 +1375,26 @@ namespace vbcc
         di_strs << uleb(id);
         di_strs << source->view();
       }
+
+      // Debug info ops.
+      di_strs.insert(di_strs.end(), di.begin(), di.end());
+
+      // Compress debug info.
+      auto cap = ZSTD_compressBound(di_strs.size());
+      di.resize(cap);
+      auto compressed_size =
+        ZSTD_compress(di.data(), cap, di_strs.data(), di_strs.size(), 12);
+
+      if (!ZSTD_isError(compressed_size))
+      {
+        f.write(reinterpret_cast<const char*>(di.data()), compressed_size);
+      }
+      else
+      {
+        logging::Error() << "Error compressing debug info for: " << output
+                         << std::endl;
+      }
     }
-
-    std::ofstream f(output, std::ios::binary | std::ios::out);
-    f.write(reinterpret_cast<const char*>(hdr.data()), hdr.size());
-
-    if (!strip)
-    {
-      f.write(reinterpret_cast<const char*>(di_strs.data()), di_strs.size());
-      f.write(reinterpret_cast<const char*>(di.data()), di.size());
-    }
-
-    f.write(reinterpret_cast<const char*>(code.data()), code.size());
 
     if (!f)
       logging::Error() << "Error writing to: " << output << std::endl;

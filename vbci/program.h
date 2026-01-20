@@ -51,6 +51,7 @@ namespace vbci
     Array* argv = nullptr;
 
     PC di = PC(-1);
+    std::vector<uint8_t> di_content;
     std::vector<std::string> di_strings;
     std::unordered_map<size_t, SourceFile> source_files;
 
@@ -84,13 +85,23 @@ namespace vbci
 
     SNMALLOC_FAST_PATH uint64_t uleb(size_t& pc)
     {
+      return uleb(pc, content);
+    }
+
+    SNMALLOC_FAST_PATH uint64_t di_uleb(size_t& pc)
+    {
+      return uleb(pc, di_content);
+    }
+
+    SNMALLOC_FAST_PATH uint64_t uleb(size_t& pc, std::vector<uint8_t>& from)
+    {
       constexpr uint64_t max_shift = (sizeof(uint64_t) * 8) - 1;
       uint64_t value = 0;
 
       for (uint64_t shift = 0; shift <= max_shift; shift += 7)
       {
-        value |= (uint64_t(content.at(pc)) & 0x7F) << shift;
-        if (SNMALLOC_LIKELY((content.at(pc++) & 0x80) == 0)) [[likely]]
+        value |= (uint64_t(from.at(pc)) & 0x7F) << shift;
+        if (SNMALLOC_LIKELY((from.at(pc++) & 0x80) == 0)) [[likely]]
           break;
       }
 
@@ -136,9 +147,11 @@ namespace vbci
     bool fixup_methods(Class& cls);
     void parse_complex_type(ComplexType& t, uint32_t type_id, PC& pc);
 
-    std::string str(size_t& pc);
-    void string_table(size_t& pc, std::vector<std::string>& table);
+    std::string str(size_t& pc, std::vector<uint8_t>& from);
+    void string_table(
+      size_t& pc, std::vector<uint8_t>& from, std::vector<std::string>& table);
 
+    bool di_decompress();
     SourceFile* get_source_file(size_t di_file);
   };
 }

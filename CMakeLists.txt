@@ -64,6 +64,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable_ExcludeFromAll(libgit2)
 
+FetchContent_Declare(
+  zstd
+  GIT_REPOSITORY https://github.com/facebook/zstd
+  GIT_TAG        ae9f20ca2716f2605822ca375995b7d876389b64
+)
+
+FetchContent_MakeAvailable_ExcludeFromAll(zstd)
+
 # Use snmalloc clangformat target
 clangformat_targets()
 

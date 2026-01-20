@@ -58,6 +58,7 @@ target_link_libraries(vbci
   ffi::ffi
   CLI11::CLI11
   vbc::include
+  libzstd_static
 )
 
 install(TARGETS vbci RUNTIME DESTINATION vbci)

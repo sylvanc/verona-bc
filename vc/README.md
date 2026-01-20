@@ -15,6 +15,7 @@ Type inference.
 
 Source files.
 - Compress with `zstd`.
+- Could compress the entire binary?
 
 Check use before definition in `let x = ... x ...`.
 
