@@ -356,7 +356,7 @@ namespace vc
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
 
-  Parse parser(std::shared_ptr<Bytecode> state);
+  Parse parser();
   PassDef structure(const Parse& parse);
   PassDef sugar();
   PassDef ident();

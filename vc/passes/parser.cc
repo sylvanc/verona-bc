@@ -29,7 +29,7 @@ namespace vc
 
   const std::initializer_list<Token> terminators = {List};
 
-  Parse parser(std::shared_ptr<Bytecode> state)
+  Parse parser()
   {
     struct ParseState
     {
@@ -62,11 +62,8 @@ namespace vc
       return RE2::FullMatch(path.filename().string(), ps->re_dir);
     });
 
-    p.postparse([=](auto& pp, auto& path, auto ast) {
-      if (state)
-        state->set_path(path);
-
-      auto builtin = pp.executable().parent_path() / "builtin";
+    p.postparse([](auto& pp, auto& path, auto ast) {
+      auto builtin = pp.executable().parent_path() / "_builtin";
 
       if (path != builtin)
         ast << pp.sub_parse(builtin);

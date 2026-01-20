@@ -110,7 +110,7 @@ namespace vbcc
       WhenDyn,
       Typetest);
 
-  Parse parser(std::shared_ptr<Bytecode> state);
+  Parse parser();
   PassDef statements();
   PassDef labels();
   PassDef assignids(std::shared_ptr<Bytecode> state);

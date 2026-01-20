@@ -9,7 +9,7 @@ namespace vc
     top = t;
 
     // Get builtin.
-    builtin = top->lookdown(Location("builtin")).front();
+    builtin = top->lookdown(Location("_builtin")).front();
 
     // Assume the main module is the first one.
     auto main_module = top->front();

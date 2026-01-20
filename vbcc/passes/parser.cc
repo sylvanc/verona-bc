@@ -17,15 +17,10 @@ namespace vbcc
     ;
   // clang-format on
 
-  Parse parser(std::shared_ptr<Bytecode> state)
+  Parse parser()
   {
     Parse p(depth::subdirectories, wfParser);
     p.prefile([](auto&, auto& path) { return path.extension() == ".vir"; });
-
-    p.postparse([state](auto&, auto& path, auto) {
-      state->set_path(path);
-      return 0;
-    });
 
     p("start",
       {

@@ -13,10 +13,9 @@ Type inference.
   - Dynamic call.
 - Determine `when` type from the `when / Rhs` function type.
 
-Compilation path.
-- Local builds have none. Set this as a `vbci` flag.
-- Release builds encode a git repo and ref?
-- Or, PDB style debug info with source files embedded (VDB). Compress with `zstd`? `zlib` is in `libgit2`.
+Source files.
+- Compress with `zstd`.
+- Could compress the entire binary?
 
 Check use before definition in `let x = ... x ...`.
 

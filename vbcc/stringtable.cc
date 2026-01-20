@@ -40,17 +40,6 @@ namespace vbcc
     return string(node->location().view());
   }
 
-  ST::Index ST::file(const std::filesystem::path& path, std::string_view str)
-  {
-    auto r = std::filesystem::relative(str, path).string();
-    return string(r);
-  }
-
-  ST::Index ST::file(const std::filesystem::path& path, Node node)
-  {
-    return file(path, node->location().view());
-  }
-
   size_t ST::size()
   {
     return store.size();
