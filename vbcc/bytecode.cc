@@ -108,52 +108,8 @@ namespace vbcc
   template<typename T>
   T lit(Node node)
   {
-    auto view = node->location().view();
-    auto first = view.data();
-    auto last = first + view.size();
     T t = 0;
-
-    if (node == Bin)
-      std::from_chars(first + 2, last, t, 2);
-    else if (node == Oct)
-      std::from_chars(first + 2, last, t, 8);
-    else if (node == Hex)
-      std::from_chars(first + 2, last, t, 16);
-    else if (node == Int)
-      std::from_chars(first, last, t, 10);
-
-    return t;
-  }
-
-  template<>
-  float lit<float>(Node node)
-  {
-    auto view = node->location().view();
-    auto first = view.data();
-    auto last = first + view.size();
-    float t = 0;
-
-    if (node == Float)
-      std::from_chars(first, last, t);
-    else if (node == HexFloat)
-      std::from_chars(first + 2, last, t);
-
-    return t;
-  }
-
-  template<>
-  double lit<double>(Node node)
-  {
-    auto view = node->location().view();
-    auto first = view.data();
-    auto last = first + view.size();
-    double t = 0;
-
-    if (node == Float)
-      std::from_chars(first, last, t);
-    else if (node == HexFloat)
-      std::from_chars(first + 2, last, t);
-
+    from_chars_sep(node, t);
     return t;
   }
 

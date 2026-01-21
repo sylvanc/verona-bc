@@ -35,22 +35,10 @@ namespace vbcc
   // clang-format on
 
   template<typename T>
-  Node check_int(Node value)
+  Node check_lit(Node value)
   {
-    auto view = value->location().view();
-    auto first = view.data();
-    auto last = first + view.size();
-    std::from_chars_result r{nullptr, std::errc()};
-    T t;
-
-    if (value == Bin)
-      r = std::from_chars(first + 2, last, t, 2);
-    else if (value == Oct)
-      r = std::from_chars(first + 2, last, t, 8);
-    else if (value == Hex)
-      r = std::from_chars(first + 2, last, t, 16);
-    else if (value == Int)
-      r = std::from_chars(first, last, t, 10);
+    T t = 0;
+    auto r = from_chars_sep(value, t);
 
     if (r.ec == std::errc())
       return {};
@@ -61,51 +49,28 @@ namespace vbcc
     return err(value, "Invalid integer literal.");
   }
 
-  template<typename T>
-  Node check_float(Node value)
-  {
-    auto view = value->location().view();
-    auto first = view.data();
-    auto last = first + view.size();
-    std::from_chars_result r{nullptr, std::errc()};
-    T t;
-
-    if (value == Float)
-      r = std::from_chars(first, last, t);
-    else if (value == HexFloat)
-      r = std::from_chars(first + 2, last, t);
-
-    if (r.ec == std::errc())
-      return {};
-
-    if (r.ec == std::errc::result_out_of_range)
-      return err(value, "Floating point literal out of range.");
-
-    return err(value, "Invalid floating point literal.");
-  }
-
   Node check_literal(Node ty, Node value)
   {
     if (ty == I8)
-      return check_int<int8_t>(value);
+      return check_lit<int8_t>(value);
     if (ty == I16)
-      return check_int<int16_t>(value);
+      return check_lit<int16_t>(value);
     if (ty == I32)
-      return check_int<int32_t>(value);
+      return check_lit<int32_t>(value);
     if (ty->in({I64, ILong, ISize}))
-      return check_int<int64_t>(value);
+      return check_lit<int64_t>(value);
     if (ty == U8)
-      return check_int<uint8_t>(value);
+      return check_lit<uint8_t>(value);
     if (ty == U16)
-      return check_int<uint16_t>(value);
+      return check_lit<uint16_t>(value);
     if (ty == U32)
-      return check_int<uint32_t>(value);
+      return check_lit<uint32_t>(value);
     if (ty->in({U64, ULong, USize}))
-      return check_int<uint64_t>(value);
+      return check_lit<uint64_t>(value);
     if (ty == F32)
-      return check_float<float>(value);
+      return check_lit<float>(value);
     if (ty == F64)
-      return check_float<double>(value);
+      return check_lit<double>(value);
 
     return {};
   }
@@ -464,7 +429,8 @@ namespace vbcc
                             << (FieldId ^ _(GlobalId));
           },
 
-        // The --T(Equals) is to avoid ambiguity with the register reference case.
+        // The --T(Equals) is to avoid ambiguity with the register reference
+        // case.
         Dst * T(Ref) * T(LocalId)[Lhs] * T(LocalId)[Rhs] * --T(Equals) >>
           [](Match& _) {
             return ArrayRef << _(LocalId) << (Arg << ArgCopy << _(Lhs))
@@ -482,7 +448,7 @@ namespace vbcc
           },
 
         Dst * T(Ref) * T(LocalId)[Rhs] >>
-          [](Match& _) { return RegisterRef <<  _(LocalId) << _(Rhs); },
+          [](Match& _) { return RegisterRef << _(LocalId) << _(Rhs); },
 
         Dst * T(Load) * T(LocalId)[Rhs] >>
           [](Match& _) { return Load << _(LocalId) << _(Rhs); },

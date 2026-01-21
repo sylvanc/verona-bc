@@ -174,20 +174,21 @@ namespace vbcc
           [](auto& m) { m.add(HexFloat); },
 
         // Float.
-        "[-]?[[:digit:]]+\\.[[:digit:]]+(?:e[+-]?[[:digit:]]+)?\\b" >>
+        "[-]?[[:digit:]][_[:digit:]]*\\.[_[:digit:]]+(?:e[+-]?[_[:digit:]]+)?"
+        "\\b" >>
           [](auto& m) { m.add(Float); },
 
         // Bin.
-        "0b[01]+\\b" >> [](auto& m) { m.add(Bin); },
+        "0b[_01]+\\b" >> [](auto& m) { m.add(Bin); },
 
         // Oct.
-        "0o[01234567]+\\b" >> [](auto& m) { m.add(Oct); },
+        "0o[_01234567]+\\b" >> [](auto& m) { m.add(Oct); },
 
         // Hex.
-        "0x[[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
+        "0x[_[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
 
         // Int.
-        "[-]?[[:digit:]]+\\b" >> [](auto& m) { m.add(Int); },
+        "[-]?[[:digit:]][_[:digit:]]*\\b" >> [](auto& m) { m.add(Int); },
 
         // Escaped string.
         "\"((?:\\\"|[^\"])*?)\"" >> [](auto& m) { m.add(String, 1); },

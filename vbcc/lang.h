@@ -123,4 +123,68 @@ namespace vbcc
   Node errloc(Node node);
   ValueType val(Node ptype);
   std::string unescape(const std::string_view& in);
+
+  template<typename T, char Sep = '_'>
+  std::from_chars_result from_chars_sep(Node& node, T& t)
+  {
+    auto sv = node->location().view();
+
+    // Fast path if no underscores.
+    if (sv.find(Sep) == std::string_view::npos)
+    {
+      auto first = sv.data();
+      auto last = first + sv.size();
+
+      if constexpr (std::is_integral_v<T>)
+      {
+        if (node == Bin)
+          return std::from_chars(first + 2, last, t, 2);
+        if (node == Oct)
+          return std::from_chars(first + 2, last, t, 8);
+        if (node == Hex)
+          return std::from_chars(first + 2, last, t, 16);
+        if (node == Int)
+          return std::from_chars(first, last, t, 10);
+      }
+      else if constexpr (std::is_floating_point_v<T>)
+      {
+        if (node->in({Float, HexFloat}))
+          return std::from_chars(first, last, t);
+      }
+
+      return {first, std::errc::invalid_argument};
+    }
+
+    // Copy, stripping underscores.
+    std::string stripped;
+    stripped.reserve(sv.size());
+
+    for (char c : sv)
+    {
+      if (c != '_')
+        stripped.push_back(c);
+    }
+
+    auto first = stripped.data();
+    auto last = first + stripped.size();
+
+    if constexpr (std::is_integral_v<T>)
+    {
+      if (node == Bin)
+        return std::from_chars(first + 2, last, t, 2);
+      if (node == Oct)
+        return std::from_chars(first + 2, last, t, 8);
+      if (node == Hex)
+        return std::from_chars(first + 2, last, t, 16);
+      if (node == Int)
+        return std::from_chars(first, last, t, 10);
+    }
+    else if constexpr (std::is_floating_point_v<T>)
+    {
+      if (node->in({Float, HexFloat}))
+        return std::from_chars(first, last, t);
+    }
+
+    return {first, std::errc::invalid_argument};
+  }
 }
