@@ -13,10 +13,6 @@ Type inference.
   - Dynamic call.
 - Determine `when` type from the `when / Rhs` function type.
 
-Source files.
-- Compress with `zstd`.
-- Could compress the entire binary?
-
 Check use before definition in `let x = ... x ...`.
 
 Type aliases.
@@ -53,8 +49,6 @@ Expressions:
 
 Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
-- Literals.
-  - Grouping characters in numbers: `1_000_000`.
 - Region creation.
 
 Structure:
