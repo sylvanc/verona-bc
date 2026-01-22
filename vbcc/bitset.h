@@ -21,6 +21,7 @@ namespace vbcc
 
     operator bool() const;
     bool empty() const;
+    bool unsized() const;
 
     void resize(size_t size);
     bool test(size_t i) const;

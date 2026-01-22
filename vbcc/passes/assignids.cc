@@ -85,7 +85,7 @@ namespace vbcc
           if (type_id)
           {
             state->error = true;
-            return err(_(Type) / TypeId, "class shadows type alias name");
+            return err(_(Class) / ClassId, "class shadows type alias name");
           }
 
           if (!state->add_class(_(Class)))
@@ -181,7 +181,7 @@ namespace vbcc
         // Define all destination registers.
         Def[Body] >> [state](Match& _) -> Node {
           auto dst = _(Body) / LocalId;
-          state->get_func(dst->parent(Func) / FunctionId).add_register(dst);
+          state->get_func(dst->parent(Func) / FunctionId)->get().add_register(dst);
           return NoChange;
         },
       }};
@@ -195,6 +195,10 @@ namespace vbcc
 
       for (auto& func_state : state->functions)
       {
+        if (func_state.register_names.size() == 0) {
+          top << err(func_state.func, "function has no registers");
+          break;
+        }
         for (auto& label : func_state.labels)
           label.resize(func_state.register_names.size());
       }

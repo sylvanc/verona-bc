@@ -15,8 +15,14 @@ namespace vbcc
       Bitset vars;
 
       auto def = [&](Node& id) {
-        auto r = *func->get_register_id(id);
-        std::tuple<bool, std::string> def_ret = label->def(r, id, vars.test(r));
+        auto r = func->get_register_id(id);
+        if (!r)
+        {
+          state->error = true;
+          id->parent()->replace(id, err(clone(id), "def of unknown register"));
+          return;
+        }
+        std::tuple<bool, std::string> def_ret = label->def(*r, id, vars.test(*r));
 
         if (!std::get<0>(def_ret))
         {
@@ -26,7 +32,14 @@ namespace vbcc
       };
 
       auto use = [&](Node& id) {
-        if (!label->use(*func->get_register_id(id), id))
+        auto r = func->get_register_id(id);
+        if (!r)
+        {
+          state->error = true;
+          id->parent()->replace(id, err(clone(id), "use of unknown register"));
+          return;
+        }
+        if (!label->use(*r, id))
         {
           state->error = true;
           id->parent()->replace(id, err(clone(id), "use of dead register"));
@@ -34,7 +47,14 @@ namespace vbcc
       };
 
       auto kill = [&](Node& id) {
-        if (!label->kill(*func->get_register_id(id)))
+        auto r = func->get_register_id(id);
+        if (!r)
+        {
+          state->error = true;
+          id->parent()->replace(id, err(clone(id), "kill of unknown register"));
+          return;
+        }
+        if (!label->kill(*r))
         {
           state->error = true;
           id->parent()->replace(id, err(clone(id), "use of dead register"));
@@ -45,16 +65,48 @@ namespace vbcc
         [&](auto node) {
           if (node == Func)
           {
-            func = &state->get_func(node / FunctionId);
+            auto func_opt = state->get_func(node / FunctionId);
+            if (!func_opt)
+              return false;
+
+            func = &func_opt->get();
+
+            if (func->register_names.empty())
+              return false;
+
             label = nullptr;
             vars.resize(func->register_names.size());
 
             for (auto var : *(node / Vars))
-              vars.set(*func->get_register_id(var));
+            {
+              auto r = func->get_register_id(var);
+              if (!r)
+              {
+                state->error = true;
+                (node / Vars)->replace(var, err(clone(var), "use of unknown register"));
+                return false;
+              }
+              vars.set(*r);
+            }
           }
           else if (node == Label)
           {
-            label = &func->get_label(node / LabelId);
+            auto label_opt = func->get_label(node / LabelId);
+            if (!label_opt)
+            {
+              state->error = true;
+              node->replace(
+                node / LabelId, err(clone(node / LabelId), "liveness of unknown label"));
+              return false;
+            }
+            label = &label_opt->get();
+            if (label->defd.unsized())
+            {
+              state->error = true;
+              node->replace(
+                node / LabelId, err(clone(node / LabelId), "label was never resized"));
+              return false;
+            }
           }
           else if (node == Move)
           {
@@ -127,7 +179,11 @@ namespace vbcc
           }
           else if (node == Jump)
           {
-            auto& func_state = state->get_func(node->parent(Func) / FunctionId);
+            auto func_opt = state->get_func(node->parent(Func) / FunctionId);
+            if (!func_opt)
+              return false;
+
+            auto& func_state = func_opt->get();
             auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
             auto succ = *func_state.get_label_id(node / LabelId);
             func_state.labels.at(pred).succ.push_back(succ);
@@ -136,7 +192,12 @@ namespace vbcc
           else if (node == Cond)
           {
             use(node / LocalId);
-            auto& func_state = state->get_func(node->parent(Func) / FunctionId);
+
+            auto func_opt = state->get_func(node->parent(Func) / FunctionId);
+            if (!func_opt)
+              return false;
+
+            auto& func_state = func_opt->get();
             auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
             auto lhs = *func_state.get_label_id(node / Lhs);
             auto rhs = *func_state.get_label_id(node / Rhs);
@@ -168,12 +229,34 @@ namespace vbcc
       top->traverse([&](auto node) {
         if (node == Func)
         {
+          if ((node / Labels)->empty())
+            return false;
+
           auto target = (node / Labels)->front() / LabelId;
-          auto& func_state = state->get_func(node / FunctionId);
+          auto func_opt = state->get_func(node / FunctionId);
+          if (!func_opt)
+          {
+            state->error = true;
+            node->replace(
+              node / FunctionId, err(clone(node / FunctionId), "liveness of unknown function"));
+            return false;
+          }
+
+          auto& func_state = func_opt->get();
           auto vars = Bitset(func_state.register_names.size());
 
           for (auto var : *(node / Vars))
-            vars.set(*func_state.get_register_id(var));
+          {
+            auto r = func_state.get_register_id(var);
+            if (!r)
+            {
+              state->error = true;
+              (node / Vars)->replace(
+                var, err(clone(var), "set of unknown register"));
+              return false;
+            }
+            vars.set(*r);
+          }
 
           // Backward data-flow.
           std::queue<size_t> wl;
@@ -270,7 +353,21 @@ namespace vbcc
           }
 
           // Check that everything is defined.
-          auto& label = func_state.get_label(target);
+          auto label_opt = func_state.get_label(target);
+
+          if (!label_opt)
+          {
+            state->error = true;
+            node << err(
+              clone(target), "function entry label does not exist");
+            return false;
+          }
+
+          auto& label = label_opt->get();
+
+          if (label.defd.unsized())
+            return false; // Probably currently fuzzing
+
           auto params = Bitset(func_state.register_names.size());
 
           for (auto param : *(node / Params))

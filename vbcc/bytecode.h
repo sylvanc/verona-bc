@@ -50,7 +50,7 @@ namespace vbcc
     FuncState(Node func) : func(func) {}
 
     std::optional<size_t> get_label_id(Node id);
-    LabelState& get_label(Node id);
+    std::optional<std::reference_wrapper<LabelState>> get_label(Node id);
     bool add_label(Node id);
 
     std::optional<size_t> get_register_id(Node id);
@@ -100,7 +100,7 @@ namespace vbcc
     void add_method(Node method);
 
     std::optional<size_t> get_func_id(Node id);
-    FuncState& get_func(Node id);
+    std::optional<std::reference_wrapper<FuncState>> get_func(Node id);
     FuncState& add_func(Node func);
 
     std::optional<size_t> get_symbol_id(Node id);

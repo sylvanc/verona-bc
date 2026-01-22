@@ -235,10 +235,12 @@ namespace vbcc
     return find->second;
   }
 
-  LabelState& FuncState::get_label(Node id)
+  std::optional<std::reference_wrapper<LabelState>> FuncState::get_label(Node id)
   {
     auto index = ST::noemit().string(id->location().view());
     auto find = label_idxs.find(index);
+    if (find == label_idxs.end())
+      return {};
     return labels.at(find->second);
   }
 
@@ -418,10 +420,12 @@ namespace vbcc
     return func_id;
   }
 
-  FuncState& Bytecode::get_func(Node id)
+  std::optional<std::reference_wrapper<FuncState>> Bytecode::get_func(Node id)
   {
     auto name = ST::di().string(id);
     auto find = func_ids.find(name);
+    if (find == func_ids.end())
+      return {};
     return functions.at(find->second);
   }
 

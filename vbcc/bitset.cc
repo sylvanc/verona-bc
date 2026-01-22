@@ -34,6 +34,11 @@ namespace vbcc
     return true;
   }
 
+  bool Bitset::unsized() const
+  {
+    return bits.empty();
+  }
+
   void Bitset::resize(size_t size)
   {
     bits.resize(idx(size - 1) + 1);

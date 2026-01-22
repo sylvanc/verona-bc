@@ -17,6 +17,13 @@ namespace vbcc
           auto primitive = _(Primitive);
           auto type = _(Type);
           auto type_id = state->typ(type);
+
+          if (type_id < state->classes.size() + NumPrimitiveClasses)
+          {
+            state->error = true;
+            return err(type, "invalid primitive type id");
+          }
+
           auto idx = type_id - (state->classes.size() + NumPrimitiveClasses);
 
           if (state->complex_primitives.size() <= idx)
@@ -150,9 +157,9 @@ namespace vbcc
 
         T(Call, Subcall, Try)[Call] >> [state](Match& _) -> Node {
           auto call = _(Call);
-          auto& func_state = state->get_func(call / FunctionId);
+          auto func_state = state->get_func(call / FunctionId);
 
-          if ((call / Args)->size() != func_state.params)
+          if ((call / Args)->size() != func_state->get().params)
           {
             state->error = true;
             return err(call / Args, "wrong number of arguments");
@@ -206,9 +213,15 @@ namespace vbcc
         // Check that all labels in a function are defined.
         T(LabelId)[LabelId] >> [state](Match& _) -> Node {
           auto label = _(LabelId);
-          auto& func_state = state->get_func(label->parent(Func) / FunctionId);
 
-          if (!func_state.get_label_id(label))
+          auto func_state = state->get_func(label->parent(Func) / FunctionId);
+          if (!func_state)
+          {
+            state->error = true;
+            return err(label, "parent function is undefined");
+          }
+
+          if (!func_state->get().get_label_id(label))
           {
             state->error = true;
             return err(label, "undefined label");
@@ -220,9 +233,15 @@ namespace vbcc
         // Check that all registers in a function are defined.
         T(LocalId)[LocalId] >> [state](Match& _) -> Node {
           auto id = _(LocalId);
-          auto& func_state = state->get_func(id->parent(Func) / FunctionId);
 
-          if (!func_state.get_register_id(id))
+          auto func_state = state->get_func(id->parent(Func) / FunctionId);
+          if (!func_state)
+          {
+            state->error = true;
+            return err(id, "parent function is undefined");
+          }
+
+          if (!func_state->get().get_register_id(id))
           {
             state->error = true;
             return err(id, "undefined register");
