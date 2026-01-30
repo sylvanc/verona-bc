@@ -188,8 +188,8 @@ namespace vc
             subst.begin(),
             subst.end(),
             [&](auto& lhs, auto& rhs) {
-              return subtype(lhs.second, rhs.second) &&
-                subtype(rhs.second, lhs.second);
+              return Subtype(lhs.second, rhs.second) &&
+                Subtype(rhs.second, lhs.second);
             }))
       {
         break;
@@ -259,7 +259,8 @@ namespace vc
       for (size_t j = 0; j < count; j++)
       {
         if (
-          !subtype(v_ta->at(j), ta->at(j)) || !subtype(ta->at(j), v_ta->at(j)))
+          !Subtype(v_ta->at(j), ta->at(j)) ||
+          !Subtype(ta->at(j), v_ta->at(j)))
         {
           found = false;
           break;

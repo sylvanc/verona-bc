@@ -63,10 +63,10 @@ namespace vc
         body->replace(n);
     }
 
-    // Can't shape functions without implementations.
+    // Can't instantiate shape functions.
     if ((def == Function) && ((def->parent(ClassDef) / Shape) == Shape))
     {
-      instance << err(instance, "Can't call a function prototype");
+      instance << err(instance, "Can't call a shape function");
       status = Fail;
     }
 
