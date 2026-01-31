@@ -1,6 +1,6 @@
 # High-Level Language Experiment
 
-## Current Work
+## To Do
 
 Type inference.
 - Create a `TypeVar` for integer and float literals?
@@ -17,8 +17,6 @@ Check use before definition in `let x = ... x ...`.
 
 Type aliases.
 - Test type aliases, make sure cycles are rejected.
-
-## To Do
 
 Calls.
 - Try (rename to `catch`?), sub-call.
@@ -54,16 +52,18 @@ Syntax:
 Structure:
 - Auto create, member conflict.
 - Can auto-RHS conflict with default arguments? Seems yes.
-- Compile time evaluation.
 
 Builtin:
 - String. Just so that string literals have a type that isn't `array[u8]`.
 
 Packages:
-- Arguments, environment.
+- CLI.
+  - Needs a map, so do an RB tree or hash map.
+    - A map needs structural types.
+  - Needs arguments, environment variables.
+  - Needs console I/O to print usage and errors.
 - `stdin`, `stdout`, `stderr`.
 - File system.
-- CLI.
 - Network.
 - Hash map, hash set, ordered map, ordered set, list, deque, vector, span.
 - Persistent collections.
@@ -91,3 +91,4 @@ Types:
 
 Optimization:
 - Optimize dynamic calls as static when there's a known type for the receiver.
+- Compile time evaluation.

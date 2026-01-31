@@ -12,7 +12,6 @@ add_executable(vc
   pathreification.cc
   reification.cc
   reifications.cc
-  subtype.cc
 )
 
 if(MSVC)
