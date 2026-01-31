@@ -259,8 +259,7 @@ namespace vc
       for (size_t j = 0; j < count; j++)
       {
         if (
-          !Subtype(v_ta->at(j), ta->at(j)) ||
-          !Subtype(ta->at(j), v_ta->at(j)))
+          !Subtype(v_ta->at(j), ta->at(j)) || !Subtype(ta->at(j), v_ta->at(j)))
         {
           found = false;
           break;
