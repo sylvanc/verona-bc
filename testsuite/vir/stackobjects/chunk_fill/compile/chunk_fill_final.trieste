@@ -1,0 +1,122 @@
+vbcc
+liveness
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 4:$len)
+            (usize)
+            (int 3:124))
+          (stackarray
+            (localid 4:$arr)
+            (array
+              (i64))
+            (localid 4:$len))
+          (const
+            (localid 9:$zero_idx)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:$last_idx)
+            (usize)
+            (int 3:123))
+          (const
+            (localid 3:$v0)
+            (i64)
+            (int 3:111))
+          (const
+            (localid 3:$v1)
+            (i64)
+            (int 3:222))
+          (const
+            (localid 7:$zero64)
+            (i64)
+            (int 1:0))
+          (arrayref
+            (localid 3:$r0)
+            (arg
+              (argcopy)
+              (localid 4:$arr))
+            (localid 9:$zero_idx))
+          (arrayref
+            (localid 3:$r1)
+            (arg
+              (argmove)
+              (localid 4:$arr))
+            (localid 9:$last_idx))
+          (store
+            (localid 6:$prev0)
+            (localid 3:$r0)
+            (arg
+              (argcopy)
+              (localid 3:$v0)))
+          (store
+            (localid 6:$prev1)
+            (localid 3:$r1)
+            (arg
+              (argcopy)
+              (localid 3:$v1)))
+          (load
+            (localid 3:$l0)
+            (localid 3:$r0))
+          (load
+            (localid 3:$l1)
+            (localid 3:$r1))
+          (eq
+            (localid 9:$prev_ok0)
+            (localid 6:$prev0)
+            (localid 7:$zero64))
+          (eq
+            (localid 9:$prev_ok1)
+            (localid 6:$prev1)
+            (localid 7:$zero64))
+          (eq
+            (localid 9:$vals_ok0)
+            (localid 3:$l0)
+            (localid 3:$v0))
+          (eq
+            (localid 9:$vals_ok1)
+            (localid 3:$l1)
+            (localid 3:$v1))
+          (and
+            (localid 8:$prev_ok)
+            (localid 9:$prev_ok0)
+            (localid 9:$prev_ok1))
+          (and
+            (localid 8:$vals_ok)
+            (localid 9:$vals_ok0)
+            (localid 9:$vals_ok1))
+          (and
+            (localid 3:$ok)
+            (localid 8:$prev_ok)
+            (localid 8:$vals_ok)))
+        (cond
+          (localid 3:$ok)
+          (labelid 5:^pass)
+          (labelid 5:^fail)))
+      (label
+        (labelid 5:^pass)
+        (body
+          (const
+            (localid 4:$ret)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 4:$ret)))
+      (label
+        (labelid 5:^fail)
+        (body
+          (const
+            (localid 4:$ret)
+            (i32)
+            (int 2:-1)))
+        (ret
+          (localid 4:$ret))))))

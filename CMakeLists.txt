@@ -54,8 +54,8 @@ FetchContent_MakeAvailable_ExcludeFromAll(libuv)
 
 # This isn't detecting correctly on WSL2.
 set(GIT_USE_STAT_MTIM 1)
+set(BUILD_TESTS OFF CACHE INTERNAL "Disable libgit2 tests")
 
-set (BUILD_TESTS OFF CACHE INTERNAL "Disable libgit2 tests")
 FetchContent_Declare(
   libgit2
   GIT_REPOSITORY https://github.com/libgit2/libgit2
@@ -63,6 +63,14 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(libgit2)
+
+FetchContent_Declare(
+  zstd
+  GIT_REPOSITORY https://github.com/facebook/zstd
+  GIT_TAG        ae9f20ca2716f2605822ca375995b7d876389b64
+)
+
+FetchContent_MakeAvailable_ExcludeFromAll(zstd)
 
 # Use snmalloc clangformat target
 clangformat_targets()

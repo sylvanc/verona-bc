@@ -1,5 +1,6 @@
 #pragma once
 
+#define TRIESTE_EXPOSE_LOG_MACRO
 #include <trieste/trieste.h>
 #include <vbcc.h>
 #include <vbcc/lang.h>
@@ -45,7 +46,6 @@ namespace vc
   inline const auto TypeArgs = TokenDef("typeargs");
   inline const auto Where = TokenDef("where");
   inline const auto ClassBody = TokenDef("classbody");
-  inline const auto RawString = TokenDef("rawstring", flag::print);
 
   inline const auto Isect = TokenDef("isect");
   inline const auto TupleType = TokenDef("tupletype");
@@ -125,7 +125,7 @@ namespace vc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
-    Tanh | Asinh | Acosh | Atanh | Len | Read;
+    Tanh | Asinh | Acosh | Atanh | Len | MakePtr | Read;
 
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -357,7 +357,7 @@ namespace vc
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
 
-  Parse parser(std::shared_ptr<Bytecode> state);
+  Parse parser();
   PassDef structure(const Parse& parse);
   PassDef sugar();
   PassDef ident();

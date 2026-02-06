@@ -1,0 +1,75 @@
+vbcc
+assignids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 5:$init)
+            (i32)
+            (int 1:5))
+          (registerref
+            (localid 2:$r)
+            (localid 5:$init))
+          (const
+            (localid 4:$val)
+            (i32)
+            (int 1:9))
+          (store
+            (localid 5:$prev)
+            (localid 2:$r)
+            (arg
+              (argcopy)
+              (localid 4:$val)))
+          (const
+            (localid 4:$old)
+            (i32)
+            (int 1:5))
+          (eq
+            (localid 8:$ok_prev)
+            (localid 5:$prev)
+            (localid 4:$old))
+          (load
+            (localid 4:$cur)
+            (localid 2:$r))
+          (const
+            (localid 4:$new)
+            (i32)
+            (int 1:9))
+          (eq
+            (localid 7:$ok_new)
+            (localid 4:$cur)
+            (localid 4:$new))
+          (and
+            (localid 5:$both)
+            (localid 8:$ok_prev)
+            (localid 7:$ok_new)))
+        (cond
+          (localid 5:$both)
+          (labelid 3:^ok)
+          (labelid 5:^fail)))
+      (label
+        (labelid 3:^ok)
+        (body
+          (const
+            (localid 4:$ret)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 4:$ret)))
+      (label
+        (labelid 5:^fail)
+        (body
+          (const
+            (localid 4:$ret)
+            (i32)
+            (int 2:-1)))
+        (ret
+          (localid 4:$ret))))))

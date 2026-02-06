@@ -1,24 +1,22 @@
 # High-Level Language Experiment
 
-## Current Work
+## To Do
 
-Compilation path.
-- Local builds have none. Set this as a `vbci` flag.
-- Release builds encode a git repo and ref?
-- Or, PDB style debug info with source files embedded (VDB). Compress with `zstd`?
+Type inference.
+- Create a `TypeVar` for integer and float literals?
+  - Upper bounds is the union of literal types.
+
+- References, load, store.
+- Lookup, dynamic call.
+- Determine type arguments from context:
+  - Call.
+  - Dynamic call.
+- Determine `when` type from the `when / Rhs` function type.
 
 Check use before definition in `let x = ... x ...`.
 
-Reification.
-- Don't fail on method instantiation failure.
-  - Mark as "delete on error".
-  - On completion of `run`, check if it contains errors.
+Type aliases.
 - Test type aliases, make sure cycles are rejected.
-
-Types.
-- Determine `when` type from the `when / Rhs` function type.
-
-## To Do
 
 Calls.
 - Try (rename to `catch`?), sub-call.
@@ -45,27 +43,27 @@ Tuples:
 
 Expressions:
 - Partial application, `_`.
+- Short-circuiting.
 
 Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
-- Literals.
-  - Grouping characters in numbers: `1_000_000`.
-  - Unescape strings. Currently happens in `validids`.
 - Region creation.
 
 Structure:
 - Auto create, member conflict.
 - Can auto-RHS conflict with default arguments? Seems yes.
-- Compile time evaluation.
 
 Builtin:
 - String. Just so that string literals have a type that isn't `array[u8]`.
 
 Packages:
-- Arguments, environment.
+- CLI.
+  - Needs a map, so do an RB tree or hash map.
+    - A map needs structural types.
+  - Needs arguments, environment variables.
+  - Needs console I/O to print usage and errors.
 - `stdin`, `stdout`, `stderr`.
 - File system.
-- CLI.
 - Network.
 - Hash map, hash set, ordered map, ordered set, list, deque, vector, span.
 - Persistent collections.
@@ -93,3 +91,4 @@ Types:
 
 Optimization:
 - Optimize dynamic calls as static when there's a known type for the receiver.
+- Compile time evaluation.

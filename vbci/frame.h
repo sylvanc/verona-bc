@@ -43,5 +43,6 @@ namespace vbci
     void push_finalizer(Object* obj);
     void drop();
     void drop_args(size_t& args);
+    RegionRC& get_frame_local_region();
   };
 }

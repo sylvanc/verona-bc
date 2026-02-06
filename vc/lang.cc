@@ -1,17 +1,11 @@
 #include "lang.h"
 
-#include <vbcc/from_chars.h>
-
 namespace vc
 {
   size_t parse_int(Node node)
   {
-    auto view = node->location().view();
-    auto first = view.data();
-    auto last = first + view.size();
-
-    size_t i{0};
-    std::from_chars(first, last, i, 10);
+    size_t i = 0;
+    from_chars_sep(node, i);
     return i;
   }
 

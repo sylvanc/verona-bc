@@ -74,21 +74,21 @@ namespace vbci
       return reinterpret_cast<void*>(this + 1);
     }
 
-    Value load(size_t idx)
+    ValueBorrow load(size_t idx)
     {
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
       return Value::from_addr(value_type, addr);
     }
 
     template<bool is_move>
-    Register store(size_t idx, Reg<is_move> v)
+    void exchange(Register& dst, size_t idx, Reg<is_move> v)
     {
-      if (!Program::get().subtype(v.type_id(), content_type_id()))
+      if (!Program::get().subtype(v->type_id(), content_type_id()))
         Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
 
-      return Header::store<is_move>(addr, value_type, std::forward<Reg<is_move>>(v));
+      Header::exchange<is_move>(&dst, addr, value_type, std::forward<Reg<is_move>>(v));
     }
 
     /**
@@ -100,7 +100,7 @@ namespace vbci
     {
       finalize();
 
-      if (loc::is_immutable(location()))
+      if (location().is_immutable())
         delete[] reinterpret_cast<uint8_t*>(this);
       else
         region()->rfree(this);
@@ -137,7 +137,7 @@ namespace vbci
 
     void immortalize()
     {
-      if (location() == loc::Immortal)
+      if (location() == Location::immortal())
         return;
 
       mark_immortal();
@@ -181,9 +181,38 @@ namespace vbci
       }
     }
 
+    // Drop all reference-holding elements without additional finalization.
+    void destruct()
+    {
+      switch (value_type)
+      {
+        case ValueType::Object:
+        case ValueType::Array:
+        case ValueType::Invalid:
+        {
+          for (size_t i = 0; i < size; i++)
+          {
+            void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * i);
+            auto prev = Value::from_addr(value_type, addr);
+
+            field_drop(prev);
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    }
+
     std::string to_string()
     {
       return std::format("array[{}]: {}", size, static_cast<void*>(this));
+    }
+
+    size_t allocation_size_bytes() const
+    {
+      return Array::size_of(size, stride);
     }
   };
 }

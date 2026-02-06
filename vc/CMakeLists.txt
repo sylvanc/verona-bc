@@ -12,7 +12,6 @@ add_executable(vc
   pathreification.cc
   reification.cc
   reifications.cc
-  subtype.cc
 )
 
 if(MSVC)
@@ -32,6 +31,6 @@ target_link_libraries(vc
 )
 
 # Copy the stdlib to the install directory
-install(DIRECTORY builtin DESTINATION vc)
+install(DIRECTORY _builtin DESTINATION vc)
 
 install(TARGETS vc RUNTIME DESTINATION vc)

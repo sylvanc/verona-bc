@@ -1,0 +1,25 @@
+// Multiple stores against one register reference returning prior values.
+
+func @main(): i32
+  $x = const i32 2
+  $r = ref $x
+  $val1 = const i32 4
+  $old1 = store $r $val1
+  $exp1 = const i32 2
+  $ok1 = eq $old1 $exp1
+  $val2 = const i32 6
+  $old2 = store $r $val2
+  $exp2 = const i32 4
+  $ok2 = eq $old2 $exp2
+  $final = load $r
+  $exp_final = const i32 6
+  $ok3 = eq $final $exp_final
+  $tmp = and $ok1 $ok2
+  $all = and $tmp $ok3
+  cond $all ^ok ^fail
+^ok
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret

@@ -1,12 +1,14 @@
 #include "program.h"
 
 #include "array.h"
+#include "cown.h"
 #include "ffi/ffi.h"
 #include "thread.h"
 
 #include <dlfcn.h>
 #include <format>
 #include <verona.h>
+#include <zstd.h>
 
 namespace vbci
 {
@@ -119,7 +121,7 @@ namespace vbci
     auto str_size = str.size() + 1;
     auto arr = Array::create(
       new uint8_t[Array::size_of(str_size, ffi_type_uint8.size)],
-      loc::Immutable,
+      Location::immutable(),
       typeid_arg,
       ValueType::U8,
       str_size,
@@ -145,11 +147,13 @@ namespace vbci
     start_loop();
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
-    auto ret = Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
+    ValueTransfer ret =
+      Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
     sched.run();
     stop_loop();
 
-    auto ret_val = ret.load();
+    auto ret_val = ret.get_cown()->load();
+    ret.dec<false>();
     int exit_code;
 
     if (ret_val.is_error())
@@ -401,7 +405,7 @@ namespace vbci
 
   std::string Program::debug_info(Function* func, PC pc)
   {
-    if (di == PC(-1))
+    if (!di_decompress())
       return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
 
     constexpr auto no_value = size_t(-1);
@@ -411,14 +415,14 @@ namespace vbci
     auto di_pc = di + func->debug_info;
 
     // Read past the function name and the register names.
-    uleb(di_pc);
+    di_uleb(di_pc);
 
     for (size_t i = 0; i < func->registers; i++)
-      uleb(di_pc);
+      di_uleb(di_pc);
 
     while (cur_pc <= pc)
     {
-      auto u = uleb(di_pc);
+      auto u = di_uleb(di_pc);
       auto op = u & 0x03;
       u >>= 2;
 
@@ -438,7 +442,7 @@ namespace vbci
       }
       else
       {
-        return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
+        break;
       }
     }
 
@@ -446,8 +450,8 @@ namespace vbci
       return std::format(
         " --> function {}:{}", static_cast<void*>(func), di_offset);
 
-    auto filename = di_strings.at(di_file);
-    auto source = get_source_file(filename);
+    auto& filename = di_strings.at(di_file);
+    auto source = get_source_file(di_file);
 
     if (!source)
       return std::format(" --> {}:{}", filename, di_offset);
@@ -473,34 +477,34 @@ namespace vbci
 
   std::string Program::di_function(Function* func)
   {
-    if (di == PC(-1))
+    if (!di_decompress())
       return std::format("function {}", static_cast<void*>(func));
 
     auto pc = di + func->debug_info;
-    return di_strings.at(uleb(pc));
+    return di_strings.at(di_uleb(pc));
   }
 
   std::string Program::di_class(Class& cls)
   {
-    if (di == PC(-1))
+    if (!di_decompress())
       return std::format("class {}", cls.type_id);
 
     auto pc = di + cls.debug_info;
-    return di_strings.at(uleb(pc));
+    return di_strings.at(di_uleb(pc));
   }
 
   std::string Program::di_field(Class& cls, size_t idx)
   {
-    if (di == PC(-1))
+    if (!di_decompress())
       return std::to_string(idx);
 
     auto pc = di + cls.debug_info;
-    uleb(pc);
+    di_uleb(pc);
 
     while (idx > 0)
-      uleb(pc);
+      di_uleb(pc);
 
-    return di_strings.at(uleb(pc));
+    return di_strings.at(di_uleb(pc));
   }
 
   void Program::setup_value_type()
@@ -523,7 +527,7 @@ namespace vbci
 
     argv = Array::create(
       new uint8_t[Array::size_of(args.size(), argv_rep.second->size)],
-      loc::Stack,
+      Location::stack(),
       typeid_argv,
       argv_rep.first,
       args.size(),
@@ -535,7 +539,7 @@ namespace vbci
       auto str_size = str.size() + 1;
       auto arg = Array::create(
         new uint8_t[Array::size_of(str_size, arg_rep.second->size)],
-        loc::Stack,
+        Location::stack(),
         typeid_arg,
         arg_rep.first,
         str_size,
@@ -545,8 +549,11 @@ namespace vbci
       std::memcpy(p, str.c_str(), str_size);
       arg->set_size(str_size - 1);
 
-      // TODO should this be a register, or should we have an unregister store?
-      argv->template store<true>(i, Register(Value(arg)));
+      // TODO Register use here is pointless, and we should optimise.
+      // Create a exchange that doesn't use reference counting.
+      Register dst; // There is no old value, add an array with no dst.
+      Register val = ValueTransfer(arg);
+      argv->template exchange<true>(dst, i, std::move(val));
     }
 
     argv->immortalize();
@@ -566,7 +573,6 @@ namespace vbci
     argv = nullptr;
 
     di = PC(-1);
-    di_compilation_path = 0;
     di_strings.clear();
     source_files.clear();
 
@@ -605,7 +611,7 @@ namespace vbci
     }
 
     // String table.
-    string_table(pc, strings);
+    string_table(pc, content, strings);
     auto num_classes = uleb(pc);
     auto num_complex_primitives = uleb(pc);
     classes.resize(NumPrimitiveClasses + num_classes + num_complex_primitives);
@@ -746,24 +752,23 @@ namespace vbci
         return false;
     }
 
-    // Debug info.
-    auto debug_info_size = uleb(pc);
-
-    if (debug_info_size > 0)
-    {
-      string_table(pc, di_strings);
-      di = pc;
-      di_compilation_path = uleb(pc);
-      pc = di + debug_info_size;
-    }
-
     // Function label locations are relative to the code section. Make them
     // absolute.
+    auto code_size = uleb(pc);
+
     for (auto& func : functions)
     {
       for (auto& label : func.labels)
         label += pc;
     }
+
+    // Debug info.
+    pc += code_size;
+
+    if (pc < content.size())
+      di = pc;
+    else
+      di = PC(-1);
 
     return true;
   }
@@ -889,50 +894,80 @@ namespace vbci
     }
   }
 
-  std::string Program::str(size_t& pc)
+  std::string Program::str(size_t& pc, std::vector<uint8_t>& from)
   {
-    auto size = uleb(pc);
-    auto str = std::string(content.begin() + pc, content.begin() + pc + size);
+    auto size = uleb(pc, from);
+    auto str = std::string(from.begin() + pc, from.begin() + pc + size);
     pc += size;
     return str;
   }
 
-  void Program::string_table(size_t& pc, std::vector<std::string>& table)
+  void Program::string_table(
+    size_t& pc, std::vector<uint8_t>& from, std::vector<std::string>& table)
   {
-    auto count = uleb(pc);
+    auto count = uleb(pc, from);
     table.clear();
     table.reserve(count);
 
     for (size_t i = 0; i < count; i++)
-      table.push_back(str(pc));
+      table.push_back(str(pc, from));
   }
 
-  SourceFile* Program::get_source_file(const std::string& path)
+  bool Program::di_decompress()
   {
-    auto find = source_files.find(path);
-    if (find != source_files.end())
-      return &find->second;
+    if (di_content.size() > 0)
+      return true;
 
-    auto filename =
-      std::filesystem::path(di_strings.at(di_compilation_path)) / path;
-    std::ifstream f(filename, std::ios::binary | std::ios::in | std::ios::ate);
+    if (di == PC(-1))
+      return false;
 
-    if (!f)
+    auto cap = ZSTD_getFrameContentSize(&content.at(di), content.size() - di);
+
+    if ((cap == ZSTD_CONTENTSIZE_ERROR) || (cap == ZSTD_CONTENTSIZE_UNKNOWN))
+      return false;
+
+    di_content.resize(cap);
+    auto decompressed_size = ZSTD_decompress(
+      di_content.data(), cap, &content.at(di), content.size() - di);
+
+    if (ZSTD_isError(decompressed_size))
+      return false;
+
+    di_content.resize(decompressed_size);
+
+    PC pc = 0;
+    string_table(pc, di_content, di_strings);
+    auto num_sources = di_uleb(pc);
+
+    for (size_t i = 0; i < num_sources; i++)
+    {
+      auto di_file = di_uleb(pc);
+      source_files[di_file].di_pos = pc;
+      pc += di_uleb(pc);
+    }
+
+    di = pc;
+    return true;
+  }
+
+  SourceFile* Program::get_source_file(size_t di_file)
+  {
+    auto find = source_files.find(di_file);
+    if (find == source_files.end())
       return nullptr;
 
-    auto size = f.tellg();
-    f.seekg(0, std::ios::beg);
+    auto& source = find->second;
 
-    auto& source = source_files[path];
-    source.contents.resize(static_cast<std::size_t>(size));
-    f.read(&source.contents.at(0), size);
-
-    auto pos = source.contents.find('\n');
-
-    while (pos != std::string::npos)
+    if (source.contents.empty())
     {
-      source.lines.push_back(pos);
-      pos = source.contents.find('\n', pos + 1);
+      source.contents = str(source.di_pos, di_content);
+      auto pos = source.contents.find('\n');
+
+      while (pos != std::string::npos)
+      {
+        source.lines.push_back(pos);
+        pos = source.contents.find('\n', pos + 1);
+      }
     }
 
     return &source;

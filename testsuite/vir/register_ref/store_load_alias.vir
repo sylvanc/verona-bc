@@ -1,0 +1,22 @@
+// Two register references aliasing the same source register.
+
+func @main(): i32
+  $x = const i32 3
+  $a = ref $x
+  $b = ref $x
+  $val1 = const i32 8
+  $prev1 = store $a $val1
+  $read1 = load $b
+  $ok1 = eq $read1 $val1
+  $val2 = const i32 12
+  $prev2 = store $b $val2
+  $read2 = load $a
+  $ok2 = eq $read2 $val2
+  $both = and $ok1 $ok2
+  cond $both ^ok ^fail
+^ok
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret

@@ -1,0 +1,20 @@
+// Basic store/load from a single register reference.
+
+func @main(): i32
+  $init = const i32 5
+  $r = ref $init
+  $val = const i32 9
+  $prev = store $r $val
+  $old = const i32 5
+  $ok_prev = eq $prev $old
+  $cur = load $r
+  $new = const i32 9
+  $ok_new = eq $cur $new
+  $both = and $ok_prev $ok_new
+  cond $both ^ok ^fail
+^ok
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret

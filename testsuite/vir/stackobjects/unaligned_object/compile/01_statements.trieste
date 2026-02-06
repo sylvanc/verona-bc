@@ -1,0 +1,178 @@
+vbcc
+statements
+(top
+  {}
+  (class
+    (classid 5:@Pair)
+    (fields
+      (field
+        (fieldid 2:@x)
+        (i64))
+      (field
+        (fieldid 2:@y)
+        (i64)))
+    (methods))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels))
+  (labelid 5:^main)
+  (const
+    (localid 4:$len)
+    (usize)
+    (int 1:3))
+  (stackarray
+    (localid 6:$bytes)
+    (array
+      (i8))
+    (localid 4:$len))
+  (const
+    (localid 4:$bx0)
+    (usize)
+    (int 1:0))
+  (const
+    (localid 4:$bx1)
+    (usize)
+    (int 1:1))
+  (const
+    (localid 4:$bv0)
+    (i8)
+    (int 1:5))
+  (const
+    (localid 4:$bv1)
+    (i8)
+    (int 1:6))
+  (arrayref
+    (localid 3:$r0)
+    (arg
+      (argcopy)
+      (localid 6:$bytes))
+    (localid 4:$bx0))
+  (arrayref
+    (localid 3:$r1)
+    (arg
+      (argcopy)
+      (localid 6:$bytes))
+    (localid 4:$bx1))
+  (const
+    (localid 6:$zero8)
+    (i8)
+    (int 1:0))
+  (store
+    (localid 3:$p0)
+    (localid 3:$r0)
+    (arg
+      (argcopy)
+      (localid 4:$bv0)))
+  (store
+    (localid 3:$p1)
+    (localid 3:$r1)
+    (arg
+      (argcopy)
+      (localid 4:$bv1)))
+  (load
+    (localid 6:$load0)
+    (localid 3:$r0))
+  (load
+    (localid 6:$load1)
+    (localid 3:$r1))
+  (const
+    (localid 3:$v0)
+    (i64)
+    (int 6:111111))
+  (const
+    (localid 3:$v1)
+    (i64)
+    (int 6:222222))
+  (stack
+    (localid 5:$pair)
+    (classid 5:@Pair)
+    (args
+      (arg
+        (argcopy)
+        (localid 3:$v0))
+      (arg
+        (argcopy)
+        (localid 3:$v1))))
+  (fieldref
+    (localid 3:$rx)
+    (arg
+      (argcopy)
+      (localid 5:$pair))
+    (fieldid 2:@x))
+  (fieldref
+    (localid 3:$ry)
+    (arg
+      (argcopy)
+      (localid 5:$pair))
+    (fieldid 2:@y))
+  (load
+    (localid 3:$ox)
+    (localid 3:$rx))
+  (load
+    (localid 3:$oy)
+    (localid 3:$ry))
+  (eq
+    (localid 9:$prev_ok0)
+    (localid 3:$p0)
+    (localid 6:$zero8))
+  (eq
+    (localid 9:$prev_ok1)
+    (localid 3:$p1)
+    (localid 6:$zero8))
+  (eq
+    (localid 10:$bytes_ok0)
+    (localid 6:$load0)
+    (localid 4:$bv0))
+  (eq
+    (localid 10:$bytes_ok1)
+    (localid 6:$load1)
+    (localid 4:$bv1))
+  (eq
+    (localid 9:$pair_ok0)
+    (localid 3:$ox)
+    (localid 3:$v0))
+  (eq
+    (localid 9:$pair_ok1)
+    (localid 3:$oy)
+    (localid 3:$v1))
+  (and
+    (localid 8:$prev_ok)
+    (localid 9:$prev_ok0)
+    (localid 9:$prev_ok1))
+  (and
+    (localid 9:$bytes_ok)
+    (localid 10:$bytes_ok0)
+    (localid 10:$bytes_ok1))
+  (and
+    (localid 8:$pair_ok)
+    (localid 9:$pair_ok0)
+    (localid 9:$pair_ok1))
+  (and
+    (localid 5:$all0)
+    (localid 8:$prev_ok)
+    (localid 9:$bytes_ok))
+  (and
+    (localid 5:$all1)
+    (localid 5:$all0)
+    (localid 8:$pair_ok))
+  (cond
+    (localid 5:$all1)
+    (labelid 5:^pass)
+    (labelid 5:^fail))
+  (labelid 5:^pass)
+  (const
+    (localid 4:$ret)
+    (i32)
+    (int 1:0))
+  (ret
+    (localid 4:$ret))
+  (labelid 5:^fail)
+  (const
+    (localid 4:$ret)
+    (i32)
+    (int 2:-1))
+  (ret
+    (localid 4:$ret)))

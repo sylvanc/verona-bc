@@ -7,7 +7,7 @@ namespace vc
   {
     auto name = classid->location().view();
 
-    if (name.starts_with("builtin."))
+    if (name.starts_with("_builtin."))
     {
       if (name.ends_with("any[0]"))
         return Dyn;

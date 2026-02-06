@@ -1,0 +1,55 @@
+// Leave only a few bytes in the current chunk (array len=123 => 984 bytes of
+// data plus header) so the next stack allocation falls into a fresh chunk. We
+// then allocate a stack object in that next chunk and verify both the nearly
+// full preceding array and the new object remain intact across the rollover.
+
+class @Pair
+  @x: i64
+  @y: i64
+
+func @main(): i32
+  $len = const usize 123               // leave only a small tail in chunk
+  $arr = stack [i64] $len              // allocate array in current chunk
+
+  $idx0 = const usize 0                // first element
+  $idx_last = const usize 122          // last element of array
+
+  $vx = const i64 7                    // value for first slot
+  $vy = const i64 9                    // value for last slot
+  $zero64 = const i64 0                // expected previous contents
+
+  $r0 = ref $arr $idx0                 // ref to first element
+  $rlast = ref $arr $idx_last          // ref to last element
+
+  $prev0 = store $r0 $vx               // write first, capture previous
+  $prev1 = store $rlast $vy            // write last, capture previous
+
+  $read0 = load $r0                    // read back first element
+  $read1 = load $rlast                 // read back last element
+
+  $obj = stack @Pair($vx, $vy)         // force next allocation into new chunk
+  $rx = ref $obj @x                    // ref to first field
+  $ry = ref $obj @y                    // ref to second field
+  $ox = load $rx                       // read first field
+  $oy = load $ry                       // read second field
+
+  $prev_ok0 = eq $prev0 $zero64        // previous of first was zero
+  $prev_ok1 = eq $prev1 $zero64        // previous of last was zero
+  $arr_ok0 = eq $read0 $vx             // first read matches write
+  $arr_ok1 = eq $read1 $vy             // last read matches write
+  $obj_ok0 = eq $ox $vx                // object field x matches
+  $obj_ok1 = eq $oy $vy                // object field y matches
+
+  $prev_ok = and $prev_ok0 $prev_ok1   // both prev checks pass
+  $arr_ok = and $arr_ok0 $arr_ok1      // array reads are correct
+  $obj_ok = and $obj_ok0 $obj_ok1      // object reads are correct
+
+  $both_ok = and $prev_ok $arr_ok      // array-related checks
+  $all_ok = and $both_ok $obj_ok       // include object checks
+  cond $all_ok ^pass ^fail
+^pass
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 -1
+  ret $ret

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pathreification.h"
 #include "bounds.h"
+#include "pathreification.h"
 
 namespace vc
 {
@@ -41,6 +41,7 @@ namespace vc
     // Bounds for type inference.
     BoundsMap bounds;
     UnionFind uf;
+    Nodes literals;
 
     Reification(Reifications* rs, Node def, size_t i, Subst& subst);
 
@@ -49,17 +50,22 @@ namespace vc
     void want_method(Node cls, Node method_id);
 
     void reify_typename(Node node);
-    void reify_call(Node node);
-    void reify_ffi(Node node);
     void reify_new(Node node);
     void reify_newarray(Node node);
-    void reify_primitive(Node node);
-    void reify_bool(Node node);
-    void reify_f64(Node node);
+    void reify_string(Node node);
+    Node reify_builtin(const std::string& name);
+    void reify_convert(Node node);
+    void reify_const(Node node);
+    void reify_call(Node node);
+    void reify_ffi(Node node);
     void reify_lookup(Node node);
     void reify_ref(Node node);
     void reify_when(Node node);
 
     void reify_lookups();
+
+    void concrete_types(Nodes& types, Node type);
+    Nodes literal_types(Nodes& types, bool int_lit);
+    void pick_literal_type(Node node);
   };
 }

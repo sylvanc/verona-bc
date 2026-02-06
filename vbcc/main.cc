@@ -16,14 +16,13 @@ int main(int argc, char** argv)
      assignids(state),
      validids(state),
      liveness(state)},
-    parser(state)};
-
+    parser()};
 
   struct Options : public trieste::Options
   {
+    std::filesystem::path path;
     std::filesystem::path bytecode_file;
     bool strip = false;
-    bool reproducible = false;
     bool build = false;
 
     void configure(CLI::App& cli) override
@@ -32,11 +31,13 @@ int main(int argc, char** argv)
         "-b,--bytecode", bytecode_file, "Output bytecode to this file.");
       cli.add_flag(
         "-s,--strip", strip, "Strip debug information from the bytecode.");
-      cli.add_flag(
-        "-r,--reproducible", reproducible, "Make the build reproducible.");
-      cli.callback([this, &cli]()
-      {
+
+      cli.callback([this, &cli]() {
         build = cli.parsed();
+        path = cli.get_option("path")->as<std::filesystem::path>();
+
+        if (!path.empty() && bytecode_file.empty())
+          bytecode_file = path.stem().replace_extension(".vbc");
       });
     }
   };
@@ -52,7 +53,10 @@ int main(int argc, char** argv)
     return -1;
 
   if (opts.build)
-    state->gen(opts.bytecode_file, opts.strip, opts.reproducible);
+  {
+    state->add_path(opts.path);
+    state->gen(opts.bytecode_file, opts.strip);
+  }
 
   return 0;
 }

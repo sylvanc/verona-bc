@@ -1,0 +1,38 @@
+// Recursively allocate stack arrays to force multiple chunk allocations and
+// vector growth. Each frame writes/reads within its own array so we validate
+// that references remain stable even after many pushes grow the chunk vector.
+
+func @alloc_depth($n: i32): i32
+  $zero = const i32 0                   // base-case literal
+  $done = eq $n $zero                   // stop when n == 0
+  cond $done ^base ^recurse
+^recurse
+  $len = const usize 32                // small array per frame
+  $arr = stack [i64] $len              // stack alloc to grow chunk vector
+  $idx = const usize 0                 // first element
+  $ref = ref $arr $idx                 // ref into this frame's array
+  $val = const i64 42                  // value to store
+  $zero64 = const i64 0                // expected previous contents
+
+  $prev = store $ref $val              // write into array
+  $read = load $ref                    // read it back
+
+  $prev_ok = eq $prev $zero64          // previous value was zero
+  $read_ok = eq $read $val             // read matches write
+  $ok_here = and $prev_ok $read_ok     // ensure this frame passes
+  cond $ok_here ^cont ^fail
+^cont
+  $one = const i32 1                   // decrement step
+  $n1 = sub $n $one
+  $r = call @alloc_depth($n1)          // recurse, forcing more chunks
+  ret $r
+^fail
+  $ret = const i32 -1                  // indicate failure
+  ret $ret
+^base
+  ret $zero                            // success when n == 0
+
+func @main(): i32
+  $depth = const i32 20
+  $r = call @alloc_depth($depth)
+  ret $r

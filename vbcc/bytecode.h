@@ -59,7 +59,7 @@ namespace vbcc
 
   struct Bytecode
   {
-    std::filesystem::path compilation_path;
+    std::vector<std::filesystem::path> source_paths;
     bool error = false;
     Node top;
 
@@ -84,7 +84,7 @@ namespace vbcc
 
     Bytecode();
 
-    void set_path(const std::filesystem::path& path);
+    void add_path(const std::filesystem::path& path);
 
     std::optional<size_t> get_typealias_id(Node id);
     Node get_typealias(Node id);
@@ -109,7 +109,7 @@ namespace vbcc
     std::optional<size_t> get_library_id(Node id);
     void add_library(Node lib);
 
-    void gen(std::filesystem::path output, bool strip, bool reproducible);
+    void gen(std::filesystem::path output, bool strip);
     size_t typ(Node type);
   };
 }

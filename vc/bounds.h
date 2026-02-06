@@ -4,14 +4,12 @@
 
 namespace vc
 {
-  inline const auto ret_loc = Location("$return");
-
   struct UnionFind
   {
     std::map<Location, Location> parent;
     std::map<Location, size_t> rank;
 
-    Location find(Location loc)
+    Location find(const Location& loc)
     {
       if (parent.find(loc) == parent.end())
       {
@@ -26,20 +24,14 @@ namespace vc
       return parent[loc];
     }
 
-    void unite(Node& a, Node& b)
+    void unite(const Node& a, const Node& b)
     {
       assert(a->in({Ident, LocalId, TypeVar}));
       assert(b->in({Ident, LocalId, TypeVar}));
       unite(a->location(), b->location());
     }
 
-    void unite_ret(Node& a)
-    {
-      assert(a->in({Ident, LocalId, TypeVar}));
-      unite(a->location(), ret_loc);
-    }
-
-    void unite(Location a, Location b)
+    void unite(const Location& a, const Location& b)
     {
       Location root_a = find(a);
       Location root_b = find(b);
@@ -62,9 +54,29 @@ namespace vc
       }
     }
 
-    bool connected(Location a, Location b)
+    bool connected(const Location& a, const Location& b)
     {
       return find(a) == find(b);
+    }
+
+    std::vector<Location> group(const Node& node)
+    {
+      assert(node->in({Ident, LocalId, TypeVar}));
+      return group(node->location());
+    }
+
+    std::vector<Location> group(const Location& a)
+    {
+      Location root = find(a);
+      std::vector<Location> v;
+
+      for (auto& kv : parent)
+      {
+        if (find(kv.first) == root)
+          v.push_back(kv.first);
+      }
+
+      return v;
     }
 
     void merge(const UnionFind& that)
@@ -76,29 +88,29 @@ namespace vc
 
   struct Bounds
   {
-    Nodes lower;
-    Nodes upper;
+    NodeSet lower;
+    NodeSet upper;
 
-    void assign(Node type)
+    void assign(const Node& type)
     {
       if (type == Type)
-        type = type->front();
-
-      lower.push_back(type);
+        assign(type->front());
+      else
+        lower.insert(type);
     }
 
-    void use(Node type)
+    void use(const Node& type)
     {
       if (type == Type)
-        type = type->front();
-
-      upper.push_back(type);
+        use(type->front());
+      else
+        upper.insert(type);
     }
 
-    void merge(const Bounds& that)
+    void merge(Bounds& that)
     {
-      lower.insert(lower.end(), that.lower.begin(), that.lower.end());
-      upper.insert(upper.end(), that.upper.begin(), that.upper.end());
+      lower.merge(that.lower);
+      upper.merge(that.upper);
     }
   };
 
@@ -106,18 +118,18 @@ namespace vc
   {
     std::map<Location, Bounds> map;
 
-    Bounds& operator[](Node& node)
+    Bounds& operator[](const Location& loc)
+    {
+      return map[loc];
+    }
+
+    Bounds& operator[](const Node& node)
     {
       assert(node->in({Ident, LocalId, TypeVar}));
       return map[node->location()];
     }
 
-    Bounds& ret()
-    {
-      return map[ret_loc];
-    }
-
-    void merge(const BoundsMap& that)
+    void merge(BoundsMap& that)
     {
       for (auto& kv : that.map)
         map[kv.first].merge(kv.second);

@@ -29,7 +29,7 @@ namespace vc
 
   const std::initializer_list<Token> terminators = {List};
 
-  Parse parser(std::shared_ptr<Bytecode> state)
+  Parse parser()
   {
     struct ParseState
     {
@@ -62,11 +62,8 @@ namespace vc
       return RE2::FullMatch(path.filename().string(), ps->re_dir);
     });
 
-    p.postparse([=](auto& pp, auto& path, auto ast) {
-      if (state)
-        state->set_path(path);
-
-      auto builtin = pp.executable().parent_path() / "builtin";
+    p.postparse([](auto& pp, auto& path, auto ast) {
+      auto builtin = pp.executable().parent_path() / "_builtin";
 
       if (path != builtin)
         ast << pp.sub_parse(builtin);
@@ -117,24 +114,24 @@ namespace vc
         "false\\b" >> [](auto& m) { m.add(False); },
 
         // Hex float.
-        "0x[[:xdigit:]]+\\.[[:xdigit:]]+(?:p[+-][[:digit:]]+)?\\b" >>
+        "0x[_[:xdigit:]]+\\.[_[:xdigit:]]+(?:p[+-][_[:digit:]]+)?\\b" >>
           [](auto& m) { m.add(HexFloat); },
 
         // Float.
-        "[[:digit:]]+\\.[[:digit:]]+(?:e[+-]?[[:digit:]]+)?\\b" >>
+        "[[:digit:]][_[:digit:]]*\\.[[:digit:]]+(?:e[+-]?[[:digit:]]+)?\\b" >>
           [](auto& m) { m.add(Float); },
 
         // Bin.
-        "0b[01]+\\b" >> [](auto& m) { m.add(Bin); },
+        "0b[_01]+\\b" >> [](auto& m) { m.add(Bin); },
 
         // Oct.
-        "0o[01234567]+\\b" >> [](auto& m) { m.add(Oct); },
+        "0o[_01234567]+\\b" >> [](auto& m) { m.add(Oct); },
 
         // Hex.
-        "0x[[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
+        "0x[_[:xdigit:]]+\\b" >> [](auto& m) { m.add(Hex); },
 
         // Int.
-        "[[:digit:]]+\\b" >> [](auto& m) { m.add(Int); },
+        "[[:digit:]][_[:digit:]]*\\b" >> [](auto& m) { m.add(Int); },
 
         // Escaped string.
         "\"((?:\\\"|[^\"])*?)\"" >> [](auto& m) { m.add(String, 1); },

@@ -9,7 +9,7 @@ int main(int argc, char** argv)
   using namespace vc;
 
   auto state = std::make_shared<Bytecode>();
-  auto parse = vc::parser(state);
+  auto parse = vc::parser();
   auto struc = vc::structure(parse);
 
   Reader reader{
@@ -30,9 +30,9 @@ int main(int argc, char** argv)
 
   struct Options : public trieste::Options
   {
+    std::filesystem::path path;
     std::filesystem::path bytecode_file;
     bool strip = false;
-    bool reproducible = false;
 
     void configure(CLI::App& cli) override
     {
@@ -40,8 +40,13 @@ int main(int argc, char** argv)
         "-b,--bytecode", bytecode_file, "Output bytecode to this file.");
       cli.add_flag(
         "-s,--strip", strip, "Strip debug information from the bytecode.");
-      cli.add_flag(
-        "-r,--reproducible", reproducible, "Make the build reproducible.");
+
+      cli.callback([this, &cli]() {
+        path = cli.get_option("path")->as<std::filesystem::path>();
+
+        if (!path.empty() && bytecode_file.empty())
+          bytecode_file = path.stem().replace_extension(".vbc");
+      });
     }
   };
 
@@ -49,6 +54,7 @@ int main(int argc, char** argv)
   Driver d(reader, &opts);
 
   git_libgit2_init();
+  state->add_path(argv[0]);
   auto r = d.run(argc, argv);
   git_libgit2_shutdown();
 
@@ -58,6 +64,9 @@ int main(int argc, char** argv)
   if (state->error)
     return -1;
 
-  state->gen(opts.bytecode_file, opts.strip, opts.reproducible);
+  if (!opts.path.empty())
+    state->add_path(opts.path);
+
+  state->gen(opts.bytecode_file, opts.strip);
   return 0;
 }

@@ -1,15 +1,18 @@
 #pragma once
 
 #include "frame.h"
+#include "header.h"
 #include "logging.h"
 #include "platform.h"
 #include "program.h"
 #include "stack.h"
 #include "register.h"
 
+#include <source_location>
 #include <type_traits>
 #include <unordered_set>
 #include <verona.h>
+#include <functional>
 
 namespace vbci
 {
@@ -29,17 +32,22 @@ namespace vbci
     PC current_pc;
     size_t args;
 
-    std::vector<void*> ffi_arg_addrs;
+    std::vector<const void*> ffi_arg_addrs;
     std::vector<Register*> ffi_arg_vals;
 #ifndef NDEBUG
     logging::Trace instruction_log;
 #endif
 
   public:
-    static Register run_async(uint32_t type_id, Function* func);
+    static ValueTransfer run_async(uint32_t type_id, Function* func);
+    static Region* frame_local_region(size_t index);
+    static bool is_frame_local_region(Region* region);
+    static size_t frame_local_index(Region* region);
+    static Location region_location(Region* region);
+    static Register& get_register(uint64_t id);
 
     template<typename... Ts>
-    static void run_sync(Function* func, Ts... argv)
+    static void run_sync(Function* func, Ts&&... argv)
     {
       get().thread_run_sync(func, std::forward<Ts>(argv)...);
     }
@@ -66,14 +74,14 @@ namespace vbci
     static void run_behavior(verona::rt::Work* work);
 
     template<typename... Ts>
-    void thread_run_sync(Function* func, Ts... argv)
+    void thread_run_sync(Function* func, Ts&&... argv)
     {
       assert(args == 0);
       ((arg(args++) = std::forward<Ts>(argv)), ...);
       auto ret = thread_run(func);
 
-      if (ret.is_error())
-        LOG(Error) << ret.to_string();
+      if (ret->is_error())
+        LOG(Error) << ret->to_string();
     }
 
     void thread_run_behavior(verona::rt::Work* work);
@@ -89,6 +97,13 @@ namespace vbci
     Register& arg(size_t idx);
     void drop_args();
     void queue_behavior(Register& result, uint32_t type_id, Function* func);
+
+
+    void print_stack(logging::Log& log, bool top_frame_only = false);
+  #ifndef NDEBUG
+    void check_stack_rc_invariant(std::source_location);
+  #endif
+    void invariant(std::source_location loc = std::source_location::current());
 
     template<typename... Args>
     SNMALLOC_FAST_PATH void trace_instruction(Args&&... args)

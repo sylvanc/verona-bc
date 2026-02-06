@@ -91,7 +91,7 @@ namespace vc
           [](Match& _) {
             return (ClassDef ^ _(Directory))
               << None << (Ident ^ _(Directory)) << TypeParams << Where
-              << (ClassBody << (Group << Use << (Ident ^ "builtin"))
+              << (ClassBody << (Group << Use << (Ident ^ "_builtin"))
                             << *_[Directory]);
           },
 
@@ -491,6 +491,8 @@ namespace vc
             return Unop << Atanh << seq_to_args(_(ExprSeq));
           else if (id == "len")
             return Unop << Len << seq_to_args(_(ExprSeq));
+          else if (id == "ptr")
+            return Unop << MakePtr << seq_to_args(_(ExprSeq));
           else if (id == "read")
             return Unop << Read << seq_to_args(_(ExprSeq));
           else if (id == "none")
