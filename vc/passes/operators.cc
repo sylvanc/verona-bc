@@ -40,20 +40,6 @@ namespace vc
             return CallDyn << (Expr << _(Lhs)) << (_(Op) / Ident)
                            << (_(Op) / TypeArgs) << (Args << (Expr << _(Rhs)));
           },
-
-        // Infix qname.
-        In(Expr) * LhsPat[Expr] * (T(Infix) << T(QName)[QName]) *
-            T(ExprSeq)[ExprSeq] >>
-          [](Match& _) {
-            return Call << _(QName)
-                        << (Args << (Expr << _(Expr)) << *_(ExprSeq));
-          },
-
-        In(Expr) * LhsPat[Lhs] * (T(Infix) << T(QName)[QName]) * LhsPat[Rhs] >>
-          [](Match& _) {
-            return Call << _(QName)
-                        << (Args << (Expr << _(Lhs)) << (Expr << _(Rhs)));
-          },
       }};
 
     p.post([](auto top) {

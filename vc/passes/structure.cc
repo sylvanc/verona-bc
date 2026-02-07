@@ -7,11 +7,11 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, TypeVar};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,    True,     False,     Bin,     Oct,   Int,
-    Hex,     Float,    HexFloat, String,   RawString, Tuple,   Let,   Var,
-    New,     Lambda,   QName,    If,       While,     For,     When,  Equals,
-    Else,    Try,      Op,       Infix,    Dot,       Convert, Binop, Unop,
-    Nulop,   FFI,      NewArray, ArrayRef, FieldRef,  Load};
+    ExprSeq, DontCare, True,     False,     Bin,     Oct,   Int,   Hex,
+    Float,   HexFloat, String,   RawString, Tuple,   Let,   Var,   New,
+    Lambda,  Dot,      Ref,      FuncName,  Op,      If,    While, For,
+    When,    Equals,   Else,     Try,       Convert, Binop, Unop,  Nulop,
+    FFI,     NewArray, ArrayRef, FieldRef,  Load};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -21,12 +21,100 @@ namespace vc
     ~(T(Equals) * Any++[Body]);
   const auto ElseLhsPat = (T(Else) << (T(Expr) * T(Block))) /
     (!T(Equals, Else) * (!T(Equals, Else))++);
+  const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
   const auto NamedType =
     T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
 
   const auto SomeType = T(
     TypeName, Union, Isect, TupleType, FuncType, NoArgType, SubType, WhereNot);
+
+  struct Builtin
+  {
+    size_t typeargs;
+    size_t args;
+    Node ast;
+  };
+
+  const std::map<std::string_view, Builtin> builtins = {
+    {"convi8", {0, 1, Convert << I8}},
+    {"convi16", {0, 1, Convert << I16}},
+    {"convi32", {0, 1, Convert << I32}},
+    {"convi64", {0, 1, Convert << I64}},
+    {"convu8", {0, 1, Convert << U8}},
+    {"convu16", {0, 1, Convert << U16}},
+    {"convu32", {0, 1, Convert << U32}},
+    {"convu64", {0, 1, Convert << U64}},
+    {"convilong", {0, 1, Convert << I64}},
+    {"convulong", {0, 1, Convert << U64}},
+    {"convisize", {0, 1, Convert << I64}},
+    {"convusize", {0, 1, Convert << U64}},
+    {"convf32", {0, 1, Convert << F32}},
+    {"convf64", {0, 1, Convert << F64}},
+    {"add", {0, 2, Binop << Add}},
+    {"sub", {0, 2, Binop << Sub}},
+    {"mul", {0, 2, Binop << Mul}},
+    {"div", {0, 2, Binop << Div}},
+    {"mod", {0, 2, Binop << Mod}},
+    {"pow", {0, 2, Binop << Pow}},
+    {"and", {0, 2, Binop << And}},
+    {"or", {0, 2, Binop << Or}},
+    {"xor", {0, 2, Binop << Xor}},
+    {"shl", {0, 2, Binop << Shl}},
+    {"shr", {0, 2, Binop << Shr}},
+    {"eq", {0, 2, Binop << Eq}},
+    {"ne", {0, 2, Binop << Ne}},
+    {"lt", {0, 2, Binop << Lt}},
+    {"le", {0, 2, Binop << Le}},
+    {"gt", {0, 2, Binop << Gt}},
+    {"ge", {0, 2, Binop << Ge}},
+    {"min", {0, 2, Binop << Min}},
+    {"max", {0, 2, Binop << Max}},
+    {"logbase", {0, 2, Binop << LogBase}},
+    {"atan2", {0, 2, Binop << Atan2}},
+    {"neg", {0, 1, Unop << Neg}},
+    {"not", {0, 1, Unop << Not}},
+    {"abs", {0, 1, Unop << Abs}},
+    {"ceil", {0, 1, Unop << Ceil}},
+    {"floor", {0, 1, Unop << Floor}},
+    {"exp", {0, 1, Unop << Exp}},
+    {"log", {0, 1, Unop << Log}},
+    {"sqrt", {0, 1, Unop << Sqrt}},
+    {"cbrt", {0, 1, Unop << Cbrt}},
+    {"isinf", {0, 1, Unop << IsInf}},
+    {"isnan", {0, 1, Unop << IsNaN}},
+    {"sin", {0, 1, Unop << Sin}},
+    {"cos", {0, 1, Unop << Cos}},
+    {"tan", {0, 1, Unop << Tan}},
+    {"asin", {0, 1, Unop << Asin}},
+    {"acos", {0, 1, Unop << Acos}},
+    {"atan", {0, 1, Unop << Atan}},
+    {"sinh", {0, 1, Unop << Sinh}},
+    {"cosh", {0, 1, Unop << Cosh}},
+    {"tanh", {0, 1, Unop << Tanh}},
+    {"asinh", {0, 1, Unop << Asinh}},
+    {"acosh", {0, 1, Unop << Acosh}},
+    {"atanh", {0, 1, Unop << Atanh}},
+    {"acos", {0, 1, Unop << Acos}},
+    {"asin", {0, 1, Unop << Asin}},
+    {"atan", {0, 1, Unop << Atan}},
+    {"sinh", {0, 1, Unop << Sinh}},
+    {"cosh", {0, 1, Unop << Cosh}},
+    {"tanh", {0, 1, Unop << Tanh}},
+    {"asinh", {0, 1, Unop << Asinh}},
+    {"acosh", {0, 1, Unop << Acosh}},
+    {"atanh", {0, 1, Unop << Atanh}},
+    {"len", {0, 1, Unop << Len}},
+    {"ptr", {0, 1, Unop << MakePtr}},
+    {"read", {0, 1, Unop << Read}},
+    {"none", {0, 0, Nulop << None}},
+    {"e", {0, 0, Nulop << Const_E}},
+    {"pi", {0, 0, Nulop << Const_Pi}},
+    {"inf", {0, 0, Nulop << Const_Inf}},
+    {"nan", {0, 0, Nulop << Const_NaN}},
+    {"arrayref", {0, 2, ArrayRef}},
+    {"newarray", {1, 1, NewArray}},
+  };
 
   Node make_typename(NodeRange r)
   {
@@ -368,174 +456,48 @@ namespace vc
           return b << e;
         },
 
+        // TODO: temporarily ignoring : in Expr
+        In(Expr) * T(Colon) >> [](Match& _) -> Node { return {}; },
+
         // FFI and builtins.
-        In(Expr) * T(TripleColon) * T(Ident)[Ident] * T(ExprSeq)[ExprSeq] >>
+        In(Expr) * T(TripleColon) * T(FuncName)[FuncName] *
+            T(ExprSeq)[ExprSeq] >>
           [](Match& _) -> Node {
-          auto id = _(Ident)->location().view();
+          auto funcname = _(FuncName);
 
-          if (id == "convi8")
-            return Convert << I8 << seq_to_args(_(ExprSeq));
-          else if (id == "convi16")
-            return Convert << I16 << seq_to_args(_(ExprSeq));
-          else if (id == "convi32")
-            return Convert << I32 << seq_to_args(_(ExprSeq));
-          else if (id == "convi64")
-            return Convert << I64 << seq_to_args(_(ExprSeq));
-          else if (id == "convu8")
-            return Convert << U8 << seq_to_args(_(ExprSeq));
-          else if (id == "convu16")
-            return Convert << U16 << seq_to_args(_(ExprSeq));
-          else if (id == "convu32")
-            return Convert << U32 << seq_to_args(_(ExprSeq));
-          else if (id == "convu64")
-            return Convert << U64 << seq_to_args(_(ExprSeq));
-          else if (id == "convilong")
-            return Convert << ILong << seq_to_args(_(ExprSeq));
-          else if (id == "convulong")
-            return Convert << ULong << seq_to_args(_(ExprSeq));
-          else if (id == "convisize")
-            return Convert << ISize << seq_to_args(_(ExprSeq));
-          else if (id == "convusize")
-            return Convert << USize << seq_to_args(_(ExprSeq));
-          else if (id == "convf32")
-            return Convert << F32 << seq_to_args(_(ExprSeq));
-          else if (id == "convf64")
-            return Convert << F64 << seq_to_args(_(ExprSeq));
-          else if (id == "add")
-            return Binop << Add << seq_to_args(_(ExprSeq));
-          else if (id == "sub")
-            return Binop << Sub << seq_to_args(_(ExprSeq));
-          else if (id == "mul")
-            return Binop << Mul << seq_to_args(_(ExprSeq));
-          else if (id == "div")
-            return Binop << Div << seq_to_args(_(ExprSeq));
-          else if (id == "mod")
-            return Binop << Mod << seq_to_args(_(ExprSeq));
-          else if (id == "pow")
-            return Binop << Pow << seq_to_args(_(ExprSeq));
-          else if (id == "and")
-            return Binop << And << seq_to_args(_(ExprSeq));
-          else if (id == "or")
-            return Binop << Or << seq_to_args(_(ExprSeq));
-          else if (id == "xor")
-            return Binop << Xor << seq_to_args(_(ExprSeq));
-          else if (id == "shl")
-            return Binop << Shl << seq_to_args(_(ExprSeq));
-          else if (id == "shr")
-            return Binop << Shr << seq_to_args(_(ExprSeq));
-          else if (id == "eq")
-            return Binop << Eq << seq_to_args(_(ExprSeq));
-          else if (id == "ne")
-            return Binop << Ne << seq_to_args(_(ExprSeq));
-          else if (id == "lt")
-            return Binop << Lt << seq_to_args(_(ExprSeq));
-          else if (id == "le")
-            return Binop << Le << seq_to_args(_(ExprSeq));
-          else if (id == "gt")
-            return Binop << Gt << seq_to_args(_(ExprSeq));
-          else if (id == "ge")
-            return Binop << Ge << seq_to_args(_(ExprSeq));
-          else if (id == "min")
-            return Binop << Min << seq_to_args(_(ExprSeq));
-          else if (id == "max")
-            return Binop << Max << seq_to_args(_(ExprSeq));
-          else if (id == "logbase")
-            return Binop << LogBase << seq_to_args(_(ExprSeq));
-          else if (id == "atan2")
-            return Binop << Atan2 << seq_to_args(_(ExprSeq));
-          else if (id == "neg")
-            return Unop << Neg << seq_to_args(_(ExprSeq));
-          else if (id == "not")
-            return Unop << Not << seq_to_args(_(ExprSeq));
-          else if (id == "abs")
-            return Unop << Abs << seq_to_args(_(ExprSeq));
-          else if (id == "ceil")
-            return Unop << Ceil << seq_to_args(_(ExprSeq));
-          else if (id == "floor")
-            return Unop << Floor << seq_to_args(_(ExprSeq));
-          else if (id == "exp")
-            return Unop << Exp << seq_to_args(_(ExprSeq));
-          else if (id == "log")
-            return Unop << Log << seq_to_args(_(ExprSeq));
-          else if (id == "sqrt")
-            return Unop << Sqrt << seq_to_args(_(ExprSeq));
-          else if (id == "cbrt")
-            return Unop << Cbrt << seq_to_args(_(ExprSeq));
-          else if (id == "isinf")
-            return Unop << IsInf << seq_to_args(_(ExprSeq));
-          else if (id == "isnan")
-            return Unop << IsNaN << seq_to_args(_(ExprSeq));
-          else if (id == "sin")
-            return Unop << Sin << seq_to_args(_(ExprSeq));
-          else if (id == "cos")
-            return Unop << Cos << seq_to_args(_(ExprSeq));
-          else if (id == "tan")
-            return Unop << Tan << seq_to_args(_(ExprSeq));
-          else if (id == "asin")
-            return Unop << Asin << seq_to_args(_(ExprSeq));
-          else if (id == "acos")
-            return Unop << Acos << seq_to_args(_(ExprSeq));
-          else if (id == "atan")
-            return Unop << Atan << seq_to_args(_(ExprSeq));
-          else if (id == "sinh")
-            return Unop << Sinh << seq_to_args(_(ExprSeq));
-          else if (id == "cosh")
-            return Unop << Cosh << seq_to_args(_(ExprSeq));
-          else if (id == "tanh")
-            return Unop << Tanh << seq_to_args(_(ExprSeq));
-          else if (id == "asinh")
-            return Unop << Asinh << seq_to_args(_(ExprSeq));
-          else if (id == "acosh")
-            return Unop << Acosh << seq_to_args(_(ExprSeq));
-          else if (id == "atanh")
-            return Unop << Atanh << seq_to_args(_(ExprSeq));
-          else if (id == "len")
-            return Unop << Len << seq_to_args(_(ExprSeq));
-          else if (id == "ptr")
-            return Unop << MakePtr << seq_to_args(_(ExprSeq));
-          else if (id == "read")
-            return Unop << Read << seq_to_args(_(ExprSeq));
-          else if (id == "none")
-            return Nulop << None << seq_to_args(_(ExprSeq));
-          else if (id == "e")
-            return Nulop << Const_E << seq_to_args(_(ExprSeq));
-          else if (id == "pi")
-            return Nulop << Const_Pi << seq_to_args(_(ExprSeq));
-          else if (id == "inf")
-            return Nulop << Const_Inf << seq_to_args(_(ExprSeq));
-          else if (id == "nan")
-            return Nulop << Const_NaN << seq_to_args(_(ExprSeq));
-          else if (id == "arrayref")
-            return ArrayRef << seq_to_args(_(ExprSeq));
+          if (funcname->size() != 1)
+            return err(funcname, "Builtins aren't namespaced");
 
-          // Emit an ffi call.
-          return FFI << (SymbolId ^ _(Ident)) << seq_to_args(_(ExprSeq));
-        },
+          auto func = funcname->front();
+          auto id = (func / Ident)->location().view();
+          auto ta = func / TypeArgs;
+          auto args = seq_to_args(_(ExprSeq));
+          size_t ta_count = ta->size();
+          size_t arg_count = args->size();
 
-        In(Expr) * T(TripleColon) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) -> Node {
-          auto qname = _(QName);
+          auto find = builtins.find(id);
+          if (find == builtins.end())
+          {
+            // FFI calls can't have type arguments.
+            if (ta_count != 0)
+              return err(funcname, "FFI calls can't have type arguments");
 
-          if (qname->size() != 1)
-            return err(qname, "Unknown builtin");
+            // Emit an ffi call.
+            return FFI << (SymbolId ^ (func / Ident)) << args;
+          }
 
-          auto elem = qname->front();
-          auto id = (elem / Ident)->location().view();
+          if (find->second.typeargs != ta_count)
+            return err(funcname, "Wrong number of type arguments");
 
-          if (id != "newarray")
-            return err(qname, "Unknown builtin");
+          if (find->second.args != arg_count)
+            return err(funcname, "Wrong number of arguments");
 
-          auto ta = elem / TypeArgs;
+          auto r = clone(find->second.ast);
 
-          if (ta->size() != 1)
-            return err(qname, "Expected a single type argument");
+          for (auto& t : *ta)
+            r << (Type << *t);
 
-          auto seq = _(ExprSeq);
-
-          if (seq->size() != 1)
-            return err(seq, "Expected a single argument");
-
-          return NewArray << (Type << *ta->front()) << seq_to_args(seq);
+          return r << args;
         },
 
         // Expressions.
@@ -593,37 +555,6 @@ namespace vc
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
-        // Qualified name.
-        In(Expr) *
-            (T(Ident) * ~TypeArgsPat * T(DoubleColon) * T(Ident, SymbolId) *
-             ~TypeArgsPat *
-             (T(DoubleColon) * T(Ident, SymbolId) * ~TypeArgsPat)++)[QName] >>
-          [](Match& _) {
-            Node qn = QName;
-            Node qe;
-
-            for (auto& n : _[QName])
-            {
-              if (n->in({Ident, SymbolId}))
-                qe = QElement << n << TypeArgs;
-              else if (n == Bracket)
-                (qe / TypeArgs) << *n;
-              else if (n == DoubleColon)
-                qn << qe;
-            }
-
-            qn << qe;
-            return qn;
-          },
-
-        // Unprefixed qualified name.
-        // An identifier with type arguments is a qualified name.
-        In(Expr) * T(Ident)[Ident] * TypeArgsPat[TypeArgs] >>
-          [](Match& _) {
-            return QName
-              << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs]));
-          },
-
         // Dot.
         In(Expr) * (T(Dot) << End) * T(Ident, SymbolId)[Ident] *
             ~TypeArgsPat[TypeArgs] >>
@@ -631,21 +562,36 @@ namespace vc
             return Dot << _(Ident) << (TypeArgs << *_[TypeArgs]);
           },
 
+        // Ref.
+        In(Expr) * T(Ident, "ref") >> [](Match& _) -> Node { return Ref; },
+
+        // Function Name.
+        In(Expr) *
+            (T(Ident) * ~TypeArgsPat *
+             (T(DoubleColon) * T(Ident, SymbolId) *
+              ~TypeArgsPat)++)[FuncName] >>
+          [](Match& _) {
+            Node name = FuncName;
+            Node elem;
+
+            for (auto& n : _[FuncName])
+            {
+              if (n->in({Ident, SymbolId}))
+                elem = FuncElement << n << TypeArgs;
+              else if (n == Bracket)
+                (elem / TypeArgs) << *n;
+              else if (n == DoubleColon)
+                name << elem;
+            }
+
+            name << elem;
+            return name;
+          },
+
         // Operator.
         In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsPat[TypeArgs] >>
           [](Match& _) {
             return Op << _(SymbolId) << (TypeArgs << *_[TypeArgs]);
-          },
-
-        // Infix.
-        In(Expr) * T(QName)[QName] * T(Colon) >>
-          [](Match& _) { return Infix << _(QName); },
-
-        In(Expr) * T(Ident)[Ident] * ~T(TypeArgs)[TypeArgs] * T(Colon) >>
-          [](Match& _) {
-            return Infix
-              << (QName
-                  << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs])));
           },
 
         // If.

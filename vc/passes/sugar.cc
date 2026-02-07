@@ -9,9 +9,10 @@ namespace vc
   {
     auto cls = ident->parent(ClassDef);
     auto cls_tps = cls / TypeParams;
-    return Call << (QName << (QElement << clone(cls / Ident)
-                                       << make_typeargs(cls_tps))
-                          << (QElement << clone(ident) << make_typeargs(tps)))
+    return Call << (FuncName
+                    << (FuncElement << clone(cls / Ident)
+                                    << make_typeargs(cls_tps))
+                    << (FuncElement << clone(ident) << make_typeargs(tps)))
                 << args;
   }
 
@@ -36,14 +37,9 @@ namespace vc
               {
                 ok = false;
               }
-              else if (node == Ident)
+              else if (node == LocalId)
               {
-                auto defs = node->lookup();
-
-                if (std::any_of(defs.begin(), defs.end(), [&](auto& d) {
-                      return d->in({ParamDef, Let, Var}) &&
-                        node->lookup(lambda).empty();
-                    }))
+                if (node->lookup(lambda).empty())
                   freevars.emplace(node->location());
               }
 
@@ -83,7 +79,7 @@ namespace vc
               classbody << (FieldDef << (Ident ^ freevar) << typevar);
               create_params
                 << (ParamDef << (Ident ^ freevar) << clone(typevar) << Body);
-              create_args << (Expr << (Ident ^ freevar));
+              create_args << (Expr << (LocalId ^ freevar));
 
               apply_body
                 << (Expr
@@ -93,11 +89,12 @@ namespace vc
                         << (Expr
                             << (Load
                                 << (Expr
-                                    << (FieldRef << (Expr << (Ident ^ "self"))
+                                    << (FieldRef << (Expr << (LocalId ^ "self"))
                                                  << (FieldId ^ freevar)))))));
 
               new_args
-                << (NewArg << (Ident ^ freevar) << (Expr << (Ident ^ freevar)));
+                << (NewArg << (Ident ^ freevar)
+                           << (Expr << (LocalId ^ freevar)));
             }
 
             apply_body << *_(Body);
@@ -115,8 +112,8 @@ namespace vc
                                             << TypeParams << apply_params
                                             << _(Type) << Where
                                             << apply_body))))
-              << (Call << (QName
-                           << (QElement << (Ident ^ id) << clone(typeargs)))
+              << (Call << (FuncName
+                           << (FuncElement << (Ident ^ id) << clone(typeargs)))
                        << create_args);
           },
 
@@ -149,7 +146,7 @@ namespace vc
 
           // Call the original function with the default final argument.
           for (auto& param : *params_0)
-            args << (Expr << clone(param / Ident));
+            args << (Expr << (LocalId ^ (param / Ident)));
 
           args << (Expr << (ExprSeq << *body));
 
@@ -184,7 +181,7 @@ namespace vc
           Node args = Args;
 
           for (auto& param : *_(Params))
-            args << (Expr << (Ident ^ (param / Ident)));
+            args << (Expr << (LocalId ^ (param / Ident)));
 
           // Create the RHS function.
           auto rhs =
@@ -193,7 +190,7 @@ namespace vc
                      << (Body
                          << (Expr
                              << (Load
-                                 << (Expr << (Ident ^ "ref")
+                                 << (Expr << (LocalId ^ "ref")
                                           << call_func(
                                                ident, _(TypeParams), args)))));
 

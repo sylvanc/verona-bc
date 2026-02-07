@@ -2,7 +2,7 @@
 
 namespace vc
 {
-  const auto MLArg = (LhsPat / T(DontCare, QName)) * T(Dot)++;
+  const auto MLArg = (LhsPat / T(DontCare, FuncName)) * T(Dot)++;
 
   PassDef application()
   {
@@ -12,15 +12,15 @@ namespace vc
       dir::topdown,
       {
         // C-style static call.
-        In(Expr) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) { return Call << _(QName) << seq_to_args(_(ExprSeq)); },
+        In(Expr) * T(FuncName)[FuncName] * T(ExprSeq)[ExprSeq] >>
+          [](Match& _) { return Call << _(FuncName) << seq_to_args(_(ExprSeq)); },
 
         // C-style dynamic call on a 0-arg static call.
-        In(Expr) * T(QName)[QName] *
+        In(Expr) * T(FuncName)[FuncName] *
             (T(Dot) << (T(Ident, SymbolId)[Ident] * T(TypeArgs)[TypeArgs])) *
             T(ExprSeq)[ExprSeq] >>
           [](Match& _) {
-            return CallDyn << (Expr << (Call << _(QName) << Args)) << _(Ident)
+            return CallDyn << (Expr << (Call << _(FuncName) << Args)) << _(Ident)
                            << _(TypeArgs) << seq_to_args(_(ExprSeq));
           },
 
@@ -42,7 +42,7 @@ namespace vc
 
         // ML-style arguments. Turn them into a C-style ExprSeq.
         // No need for multiple dots on the LHS, as those will get handled.
-        In(Expr) * ((LhsPat / T(QName)) * ~T(Dot))[Lhs] *
+        In(Expr) * ((LhsPat / T(FuncName)) * ~T(Dot))[Lhs] *
             (MLArg * MLArg++)[Rhs] >>
           [](Match& _) { return Seq << _[Lhs] << (Rhs << _[Rhs]); },
 
@@ -57,7 +57,7 @@ namespace vc
 
         // 0-arg calls. This only happens if it's not followed by an ExprSeq or
         // at least one MLArg.
-        In(Expr) * ((T(QName) * ~T(Dot)) / (LhsPat * T(Dot)))[Expr] *
+        In(Expr) * ((T(FuncName) * ~T(Dot)) / (LhsPat * T(Dot)))[Expr] *
             --T(Rhs, ExprSeq) >>
           [](Match& _) { return Seq << _[Expr] << ExprSeq; },
       }};

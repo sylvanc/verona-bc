@@ -39,6 +39,7 @@ namespace vc
   inline const auto TypeElement = TokenDef("typeelement");
   inline const auto TypeNameReified = TokenDef("typenamereified");
   inline const auto TypePath = TokenDef("typepath");
+  inline const auto TypeParent = TokenDef("typeparent");
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam =
     TokenDef("typeparam", flag::lookup | flag::shadowing);
@@ -64,10 +65,9 @@ namespace vc
   inline const auto TupleLHS = TokenDef("tuplelhs");
   inline const auto Lambda = TokenDef("lambda", flag::symtab);
   inline const auto Block = TokenDef("block", flag::symtab);
-  inline const auto QName = TokenDef("qname");
-  inline const auto QElement = TokenDef("qelement");
+  inline const auto FuncName = TokenDef("funcname");
+  inline const auto FuncElement = TokenDef("funcelement");
   inline const auto Op = TokenDef("op");
-  inline const auto Infix = TokenDef("infix");
   inline const auto Binop = TokenDef("binop");
   inline const auto Unop = TokenDef("unop");
   inline const auto Nulop = TokenDef("nulop");
@@ -82,8 +82,6 @@ namespace vc
   inline const auto For = TokenDef("for");
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
-
-  inline const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
   const auto LhsPat =
     T(True,
@@ -129,10 +127,10 @@ namespace vc
 
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
-  inline const auto wfExprStructure = ExprSeq | DontCare | Ident | wfLiteral |
-    String | RawString | Tuple | Let | Var | New | Lambda | QName | Op | Infix |
-    Dot | If | Else | While | For | When | Equals | Hash | Try | Convert |
-    Binop | Unop | Nulop | FFI | NewArray | ArrayRef | FieldRef | Load;
+  inline const auto wfExprStructure = ExprSeq | DontCare | wfLiteral | String |
+    RawString | Tuple | Let | Var | New | Lambda | Ref | FuncName | Op | Dot |
+    If | Else | While | For | When | Equals | Hash | Try | Convert | Binop |
+    Unop | Nulop | FFI | NewArray | ArrayRef | FieldRef | Load;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -181,10 +179,9 @@ namespace vc
     | (Tuple <<= Expr++[2])
     | (Lambda <<= Params * Type * Body)
     | (Block <<= Params * Type * Body)
-    | (QName <<= QElement++[1])
-    | (QElement <<= wfFuncId * TypeArgs)
+    | (FuncName <<= FuncElement++[1])
+    | (FuncElement <<= wfFuncId * TypeArgs)
     | (Op <<= wfFuncId * TypeArgs)
-    | (Infix <<= QName)
     | (Dot <<= wfFuncId * TypeArgs)
     | (Args <<= Expr++)
     | (If <<= Expr * Block)
@@ -219,21 +216,24 @@ namespace vc
   inline const auto wfPassSugar =
       wfPassStructure
     | (ParamDef <<= Ident * Type)[Ident]
-    | (Call <<= QName * Args)
+    | (Call <<= FuncName * Args)
     | (Expr <<= wfExprSugar++)
     ;
   // clang-format on
 
-  inline const auto wfExprIdent = (wfExprSugar | Ref | LocalId) - Ident;
+  inline const auto wfExprIdent = wfExprSugar | LocalId;
 
   // clang-format off
   inline const auto wfPassIdent =
       wfPassSugar
+    | (TypeName <<= (TypeParent | TypeElement)++[1])
+    | (FuncName <<= (TypeParent | FuncElement)++[1])
     | (Expr <<= wfExprIdent++)
     ;
   // clang-format on
 
-  inline const auto wfExprApplication = (wfExprIdent | CallDyn) - QName - Dot;
+  inline const auto wfExprApplication =
+    (wfExprIdent | CallDyn) - FuncName - Dot;
 
   // clang-format off
   inline const auto wfPassApplication =
@@ -243,7 +243,7 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprOperators = wfExprApplication - Op - Infix;
+  inline const auto wfExprOperators = wfExprApplication - Op;
 
   // clang-format off
   inline const auto wfPassOperators =
@@ -284,7 +284,7 @@ namespace vc
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
     | (Lookup <<= wfDst * wfSrc * wfFuncLhs * wfFuncId * TypeArgs * Int)
-    | (Call <<= wfDst * wfFuncLhs * QName * Args)
+    | (Call <<= wfDst * wfFuncLhs * FuncName * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
@@ -359,8 +359,8 @@ namespace vc
 
   Parse parser();
   PassDef structure(const Parse& parse);
-  PassDef sugar();
   PassDef ident();
+  PassDef sugar();
   PassDef application();
   PassDef operators();
   PassDef anf();

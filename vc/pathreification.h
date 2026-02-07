@@ -20,10 +20,10 @@ namespace vc
     // Allows scheduling new reifications, and looking up reified names.
     Reifications* rs;
 
-    // The TypeName or QName being reified.
+    // The TypeName or FuncName being reified.
     Node path;
 
-    // For a QName, the LHS/RHS and arity.
+    // For a FuncName, the LHS/RHS and arity.
     Node ref;
     size_t args;
 

@@ -18,7 +18,7 @@ namespace vc
 
   ReifyResult PathReification::run()
   {
-    assert(path->in({TypeName, QName}));
+    assert(path->in({TypeName, FuncName}));
 
     // All type arguments have already been resolved, as they are
     // deeper in the tree.
@@ -138,12 +138,12 @@ namespace vc
         return r;
     }
 
-    if (path == QName)
+    if (path == FuncName)
     {
       if (curr_def == ClassDef)
       {
-        // If this is a QName and we have a class, do create sugar.
-        auto create = QElement << (Ident ^ "create") << TypeArgs;
+        // If this is a FuncName and we have a class, do create sugar.
+        auto create = FuncElement << (Ident ^ "create") << TypeArgs;
         auto r = do_element(create, true);
 
         if (r != Ok)
@@ -198,7 +198,7 @@ namespace vc
     {
       if (def == Function)
       {
-        if ((path == QName) && last)
+        if ((path == FuncName) && last)
         {
           if (((def / Lhs) == ref->type()) && ((def / Params)->size() == args))
           {

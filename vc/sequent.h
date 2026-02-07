@@ -34,13 +34,12 @@ namespace trieste
    *
    * Contradiction axioms can optionally be registered separately from proof
    * axioms. These are used when checking for contradictions in the LHS
-   * (uninhabitable types). Contradiction axioms may be weaker than proof
+   * (uninhabited assumptions). Contradiction axioms may be weaker than proof
    * axioms, allowing types to be considered compatible for contradiction
    * detection even when they cannot prove each other. If no contradiction axiom
    * is specified for a token type, the proof axiom is used as a fallback. A
-   * contradiction axiom returns true if the left side contradicts the right
-   * side. A contradiction must exist in both directions to be considered a true
-   * contradictions (i.e., both A contradicts B and B contradicts A).
+   * contradiction axiom must be symmetric: if A contradicts B, then B must
+   * contradict A.
    *
    * @note The reduction algorithm detects contradictions in the LHS
    * (uninhabitable types) to prove any conclusion (ex falso quodlibet).
@@ -231,7 +230,7 @@ namespace trieste
           // Check for contradictions.
           for (auto& t : state.lhs_atomic)
           {
-            if (contradiction(l, t) && contradiction(t, l))
+            if (contradiction(t, l))
               return true;
           }
 
@@ -271,19 +270,23 @@ namespace trieste
 
     bool contradiction(Node& l, Node& r) const
     {
-      // Use contradiction axiom if specified, otherwise fall back to proof
-      // axiom. Contradiction axioms may be weaker than proof axioms.
+      // Use a contradiction axiom if one is specified, otherwise fall back to
+      // proof axiom.
       auto c_find = contradiction_axioms.find(r->type());
-
       if (c_find != contradiction_axioms.end())
         return c_find->second(l, r);
 
-      auto a_find = axioms.find(r->type());
+      // By default, if L does not prove R and R does not prove L, then they
+      // contradict.
+      auto r_find = axioms.find(r->type());
+      if ((r_find != axioms.end()) && (r_find->second(l, r)))
+        return false;
 
-      if (a_find != axioms.end())
-        return !a_find->second(l, r);
+      auto l_find = axioms.find(l->type());
+      if ((l_find != axioms.end()) && (l_find->second(r, l)))
+        return true;
 
-      return false;
+      return true;
     }
   };
 

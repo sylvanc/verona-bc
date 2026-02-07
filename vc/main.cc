@@ -16,8 +16,8 @@ int main(int argc, char** argv)
     "vc",
     {
       struc,
-      sugar(),
       ident(),
+      sugar(),
       application(),
       operators(),
       anf(),

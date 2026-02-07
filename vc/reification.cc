@@ -424,16 +424,16 @@ namespace vc
 
   void Reification::reify_call(Node node)
   {
-    if ((node / QName) != QName)
+    if ((node / FuncName) != FuncName)
       return;
 
     Node args = node / Args;
-    PathReification p(rs, subst, node / QName, node / Lhs, args);
+    PathReification p(rs, subst, node / FuncName, node / Lhs, args);
     auto r = p.run();
 
     if (r == Ok)
     {
-      node / QName = clone(p.result / Ident);
+      node / FuncName = clone(p.result / Ident);
       auto params = p.result / Params;
       assert(params->size() == args->size());
 

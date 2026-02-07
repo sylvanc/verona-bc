@@ -33,9 +33,9 @@ namespace vc
   {
     assert(localid == LocalId);
     return Call << (LocalId ^ localid) << Rhs
-                << (QName << (QElement << (Ident ^ "_builtin") << TypeArgs)
-                          << (QElement << (Ident ^ "nomatch") << TypeArgs)
-                          << (QElement << (Ident ^ "create") << TypeArgs))
+                << (FuncName << (FuncElement << (Ident ^ "_builtin") << TypeArgs)
+                          << (FuncElement << (Ident ^ "nomatch") << TypeArgs)
+                          << (FuncElement << (Ident ^ "create") << TypeArgs))
                 << Args;
   }
 
@@ -46,7 +46,7 @@ namespace vc
     return Typetest << (LocalId ^ dst) << (LocalId ^ src) << type_nomatch();
   }
 
-  const auto CallPat = T(Call)[Call] << (T(QName)[QName] * T(Args)[Args]);
+  const auto CallPat = T(Call)[Call] << (T(FuncName)[FuncName] * T(Args)[Args]);
 
   const auto CallDynPat = T(CallDyn)[CallDyn]
     << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
@@ -60,7 +60,7 @@ namespace vc
     auto res = lvalue ? (Ref << (LocalId ^ id)) : (LocalId ^ id);
     return Seq << (Lift << Body
                         << (Call << (LocalId ^ id) << (ref ? Lhs : Rhs)
-                                 << _(QName) << (Args << *_[Args])))
+                                 << _(FuncName) << (Args << *_[Args])))
                << res;
   }
 
@@ -245,7 +245,7 @@ namespace vc
           },
 
         // Invalid l-values.
-        In(Lhs) * T(QName, If, Else, While, For, When)[Lhs] >>
+        In(Lhs) * T(FuncName, If, Else, While, For, When)[Lhs] >>
           [](Match& _) { return err(_(Lhs), "Can't assign to this"); },
 
         // If expression.

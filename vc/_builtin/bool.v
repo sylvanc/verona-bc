@@ -64,4 +64,9 @@ bool
   {
     :::not(self)
   }
+
+  bool(self: bool): bool
+  {
+    self
+  }
 }

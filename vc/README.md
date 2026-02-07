@@ -44,6 +44,25 @@ Tuples:
 Expressions:
 - Partial application, `_`.
 - Short-circuiting.
+```rs
+shape to_bool
+{
+  bool(self: Self): bool;
+}
+
+bool
+{
+  &(self: bool, other: to_bool): bool
+  {
+    if self { other.bool } else { false }
+  }
+
+  |(self: bool, other: to_bool): bool
+  {
+    if self { true } else { other.bool }
+  }
+}
+```
 
 Syntax:
 - Braces and else: it doesn't work if there's a comment in between.
