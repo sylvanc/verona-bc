@@ -52,7 +52,7 @@ namespace vc
     {
       ta
         << (Type
-            << (TypeName << (TypeElement << clone(tp / Ident) << TypeArgs)));
+            << (TypeName << (NameElement << clone(tp / Ident) << TypeArgs)));
     }
 
     return ta;
@@ -64,6 +64,6 @@ namespace vc
     auto tps = cls / TypeParams;
     return Type
       << (TypeName
-          << (TypeElement << clone(cls / Ident) << make_typeargs(tps)));
+          << (NameElement << clone(cls / Ident) << make_typeargs(tps)));
   }
 }

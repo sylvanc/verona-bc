@@ -10,9 +10,9 @@ namespace vc
     auto cls = ident->parent(ClassDef);
     auto cls_tps = cls / TypeParams;
     return Call << (FuncName
-                    << (FuncElement << clone(cls / Ident)
+                    << (NameElement << clone(cls / Ident)
                                     << make_typeargs(cls_tps))
-                    << (FuncElement << clone(ident) << make_typeargs(tps)))
+                    << (NameElement << clone(ident) << make_typeargs(tps)))
                 << args;
   }
 
@@ -58,11 +58,11 @@ namespace vc
             for (auto& tp : *typeparams)
             {
               typeargs
-                << (TypeName << (TypeElement << (Ident ^ tp) << TypeArgs));
+                << (TypeName << (NameElement << (Ident ^ tp) << TypeArgs));
             }
 
             auto type = Type
-              << (TypeName << (TypeElement << (Ident ^ id) << typeargs));
+              << (TypeName << (NameElement << (Ident ^ id) << typeargs));
 
             Node classbody = ClassBody;
             Node create_params = Params;
@@ -113,7 +113,7 @@ namespace vc
                                             << _(Type) << Where
                                             << apply_body))))
               << (Call << (FuncName
-                           << (FuncElement << (Ident ^ id) << clone(typeargs)))
+                           << (NameElement << (Ident ^ id) << clone(typeargs)))
                        << create_args);
           },
 

@@ -25,17 +25,17 @@ namespace vc
   Node type_nomatch()
   {
     return Type
-      << (TypeName << (TypeElement << (Ident ^ "_builtin") << TypeArgs)
-                   << (TypeElement << (Ident ^ "nomatch") << TypeArgs));
+      << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                   << (NameElement << (Ident ^ "nomatch") << TypeArgs));
   }
 
   Node make_nomatch(Node localid)
   {
     assert(localid == LocalId);
     return Call << (LocalId ^ localid) << Rhs
-                << (FuncName << (FuncElement << (Ident ^ "_builtin") << TypeArgs)
-                          << (FuncElement << (Ident ^ "nomatch") << TypeArgs)
-                          << (FuncElement << (Ident ^ "create") << TypeArgs))
+                << (FuncName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                          << (NameElement << (Ident ^ "nomatch") << TypeArgs)
+                          << (NameElement << (Ident ^ "create") << TypeArgs))
                 << Args;
   }
 
@@ -151,7 +151,7 @@ namespace vc
                            << (LocalId ^ id)
                            << (Type
                                << (TypeName
-                                   << (TypeElement << (Ident ^ "any")
+                                   << (NameElement << (Ident ^ "any")
                                                    << (TypeArgs))))
                            << (Int ^ std::to_string(tuple->size()))));
 

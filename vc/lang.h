@@ -36,7 +36,7 @@ namespace vc
     TokenDef("paramdef", flag::lookup | flag::shadowing);
 
   inline const auto TypeName = TokenDef("typename");
-  inline const auto TypeElement = TokenDef("typeelement");
+  inline const auto NameElement = TokenDef("nameelement");
   inline const auto TypeNameReified = TokenDef("typenamereified");
   inline const auto TypePath = TokenDef("typepath");
   inline const auto TypeParent = TokenDef("typeparent");
@@ -66,7 +66,6 @@ namespace vc
   inline const auto Lambda = TokenDef("lambda", flag::symtab);
   inline const auto Block = TokenDef("block", flag::symtab);
   inline const auto FuncName = TokenDef("funcname");
-  inline const auto FuncElement = TokenDef("funcelement");
   inline const auto Op = TokenDef("op");
   inline const auto Binop = TokenDef("binop");
   inline const auto Unop = TokenDef("unop");
@@ -154,8 +153,8 @@ namespace vc
     | (FieldDef <<= Ident * Type)
     | (Function <<=
         wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Body)[Ident]
-    | (TypeName <<= TypeElement++[1])
-    | (TypeElement <<= Ident * TypeArgs)
+    | (TypeName <<= NameElement++[1])
+    | (NameElement <<= wfFuncId * TypeArgs)
     | (TypeParams <<= (TypeParam | ValueParam)++)
     | (TypeParam <<= Ident * Type)[Ident]
     | (ValueParam <<= Ident * Type * Body)[Ident]
@@ -179,8 +178,7 @@ namespace vc
     | (Tuple <<= Expr++[2])
     | (Lambda <<= Params * Type * Body)
     | (Block <<= Params * Type * Body)
-    | (FuncName <<= FuncElement++[1])
-    | (FuncElement <<= wfFuncId * TypeArgs)
+    | (FuncName <<= NameElement++[1])
     | (Op <<= wfFuncId * TypeArgs)
     | (Dot <<= wfFuncId * TypeArgs)
     | (Args <<= Expr++)
@@ -210,25 +208,25 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprSugar = (wfExprStructure | Call) - Lambda;
-
-  // clang-format off
-  inline const auto wfPassSugar =
-      wfPassStructure
-    | (ParamDef <<= Ident * Type)[Ident]
-    | (Call <<= FuncName * Args)
-    | (Expr <<= wfExprSugar++)
-    ;
-  // clang-format on
-
-  inline const auto wfExprIdent = wfExprSugar | LocalId;
+  inline const auto wfExprIdent = wfExprStructure | LocalId;
 
   // clang-format off
   inline const auto wfPassIdent =
-      wfPassSugar
-    | (TypeName <<= (TypeParent | TypeElement)++[1])
-    | (FuncName <<= (TypeParent | FuncElement)++[1])
+      wfPassStructure
+    | (TypeName <<= (TypeParent | NameElement)++[1])
+    | (FuncName <<= (TypeParent | NameElement)++[1])
     | (Expr <<= wfExprIdent++)
+    ;
+  // clang-format on
+
+  inline const auto wfExprSugar = (wfExprIdent | Call) - Lambda;
+
+  // clang-format off
+  inline const auto wfPassSugar =
+      wfPassIdent
+    | (ParamDef <<= Ident * Type)[Ident]
+    | (Call <<= FuncName * Args)
+    | (Expr <<= wfExprSugar++)
     ;
   // clang-format on
 

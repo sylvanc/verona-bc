@@ -124,7 +124,7 @@ namespace vc
     for (auto& n : r)
     {
       if (n == Ident)
-        te = TypeElement << n << TypeArgs;
+        te = NameElement << n << TypeArgs;
       else if (n == Bracket)
         (te / TypeArgs) << *n;
       else if (n == DoubleColon)
@@ -211,7 +211,7 @@ namespace vc
                                             << Body))
                            << (Type
                                << (TypeName
-                                   << (TypeElement
+                                   << (NameElement
                                        << (Ident ^ "ref")
                                        << (TypeArgs << clone(type)))))
                            << Where
@@ -379,7 +379,7 @@ namespace vc
 
         // Types.
         // Type name.
-        In(Type, Where)++ * --In(TypeElement) * NamedType[Type] >>
+        In(Type, Where)++ * --In(NameElement) * NamedType[Type] >>
           [](Match& _) { return make_typename(_[Type]); },
 
         // Union type.
@@ -577,7 +577,7 @@ namespace vc
             for (auto& n : _[FuncName])
             {
               if (n->in({Ident, SymbolId}))
-                elem = FuncElement << n << TypeArgs;
+                elem = NameElement << n << TypeArgs;
               else if (n == Bracket)
                 (elem / TypeArgs) << *n;
               else if (n == DoubleColon)
@@ -793,7 +793,7 @@ namespace vc
           deps.push_back((Directory ^ dep.hash) << *p_ast);
 
           // Rewrite the Use.
-          auto tn = TypeName << (TypeElement << (Ident ^ dep.hash) << TypeArgs);
+          auto tn = TypeName << (NameElement << (Ident ^ dep.hash) << TypeArgs);
 
           if (id)
             id = TypeAlias << id << TypeParams << Where << (Type << tn);

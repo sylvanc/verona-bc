@@ -92,7 +92,7 @@ namespace vc
         for (auto& def : defs)
         {
           // Check if this is a parameter or a local variable.
-          if (def->in({ParamDef, Let, Var}))
+          if (def->in({ParamDef, Let, Var}) && (n == FuncName))
           {
             if (!def->precedes(n))
             {
@@ -172,12 +172,23 @@ namespace vc
         curr_scope = curr_scope->parent({Top, ClassDef, TypeAlias, Function});
       }
 
-      // If it isn't found, treat it as a method if it's 1-element.
-      // Otherwise, it's an error.
-      if ((n->size() == 1) && (n->parent() != Use))
+      if ((n->size() == 1) && (n == FuncName))
+      {
+        // If it isn't found, treat it as a method if it's 1-element.
         state.result = Dot << name << ta;
+      }
+      else if (
+        (n->size() == 1) && (n == TypeName) && ta->empty() &&
+        (name->location().view() == "Self"))
+      {
+        // Accept `Self` for now as a hack.
+        state.result << clone(elem);
+      }
       else
+      {
+        // Otherwise, it's an error.
         state.result = err(name, "Identifier not found");
+      }
 
       return Done;
     }
@@ -258,7 +269,14 @@ namespace vc
           // If there are multiple create functions, it doesn't matter which
           // one we use.
           found = defs.front();
-          state.result << (FuncElement << (Ident ^ "create") << TypeArgs);
+          state.result << (NameElement << (Ident ^ "create") << TypeArgs);
+        }
+
+        if (found == TypeParam)
+        {
+          // Create sugar.
+          state.result << (NameElement << (Ident ^ "create") << TypeArgs);
+          return Done;
         }
 
         if (found != Function)
@@ -433,11 +451,17 @@ namespace vc
       {
         if (state.kind == WorkerStatus::Resolved)
         {
-          // Remove all Use nodes.
           if ((n->parent() == Use) && (state.result != Error))
+          {
+            // Remove all Use nodes.
             n->parent()->parent()->replace(n->parent());
-          else
+          }
+          else if (!n->parent(NameElement))
+          {
+            // Don't bother with type arguments to type and function names, as
+            // they're already in the containing TypeName/FuncName.
             n->parent()->replace(n, state.result);
+          }
         }
         else
         {

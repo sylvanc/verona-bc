@@ -143,7 +143,7 @@ namespace vc
       if (curr_def == ClassDef)
       {
         // If this is a FuncName and we have a class, do create sugar.
-        auto create = FuncElement << (Ident ^ "create") << TypeArgs;
+        auto create = NameElement << (Ident ^ "create") << TypeArgs;
         auto r = do_element(create, true);
 
         if (r != Ok)

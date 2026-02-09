@@ -33,6 +33,7 @@ int main(int argc, char** argv)
     std::filesystem::path path;
     std::filesystem::path bytecode_file;
     bool strip = false;
+    bool run_gen = false;
 
     void configure(CLI::App& cli) override
     {
@@ -46,6 +47,16 @@ int main(int argc, char** argv)
 
         if (!path.empty() && bytecode_file.empty())
           bytecode_file = path.stem().replace_extension(".vbc");
+
+        auto build = cli.get_subcommand_no_throw("build");
+
+        if (build)
+        {
+          auto pass = build->get_option_no_throw("pass");
+
+          if (!pass || (pass->as<std::string>() == "liveness"))
+            run_gen = true;
+        }
       });
     }
   };
@@ -60,6 +71,9 @@ int main(int argc, char** argv)
 
   if (r != 0)
     return r;
+
+  if (!opts.run_gen)
+    return 0;
 
   if (state->error)
     return -1;
