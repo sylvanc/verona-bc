@@ -1,8 +1,8 @@
 add_executable(vc
   passes/anf.cc
   passes/application.cc
+  passes/dot.cc
   passes/ident.cc
-  passes/operators.cc
   passes/parser.cc
   passes/reify.cc
   passes/sugar.cc

@@ -7,11 +7,10 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, TypeVar};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, True,     False,     Bin,     Oct,   Int,   Hex,
-    Float,   HexFloat, String,   RawString, Tuple,   Let,   Var,   New,
-    Lambda,  Dot,      Ref,      FuncName,  Op,      If,    While, For,
-    When,    Equals,   Else,     Try,       Convert, Binop, Unop,  Nulop,
-    FFI,     NewArray, ArrayRef, FieldRef,  Load};
+    ExprSeq, DontCare, True,   False,       Bin,     Oct,   Int, Hex,
+    Float,   HexFloat, String, RawString,   Tuple,   Let,   Var, New,
+    Lambda,  Dot,      Ref,    FuncName,    If,      While, For, When,
+    Equals,  Else,     Try,    TripleColon, FieldRef};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -28,93 +27,6 @@ namespace vc
 
   const auto SomeType = T(
     TypeName, Union, Isect, TupleType, FuncType, NoArgType, SubType, WhereNot);
-
-  struct Builtin
-  {
-    size_t typeargs;
-    size_t args;
-    Node ast;
-  };
-
-  const std::map<std::string_view, Builtin> builtins = {
-    {"convi8", {0, 1, Convert << I8}},
-    {"convi16", {0, 1, Convert << I16}},
-    {"convi32", {0, 1, Convert << I32}},
-    {"convi64", {0, 1, Convert << I64}},
-    {"convu8", {0, 1, Convert << U8}},
-    {"convu16", {0, 1, Convert << U16}},
-    {"convu32", {0, 1, Convert << U32}},
-    {"convu64", {0, 1, Convert << U64}},
-    {"convilong", {0, 1, Convert << I64}},
-    {"convulong", {0, 1, Convert << U64}},
-    {"convisize", {0, 1, Convert << I64}},
-    {"convusize", {0, 1, Convert << U64}},
-    {"convf32", {0, 1, Convert << F32}},
-    {"convf64", {0, 1, Convert << F64}},
-    {"add", {0, 2, Binop << Add}},
-    {"sub", {0, 2, Binop << Sub}},
-    {"mul", {0, 2, Binop << Mul}},
-    {"div", {0, 2, Binop << Div}},
-    {"mod", {0, 2, Binop << Mod}},
-    {"pow", {0, 2, Binop << Pow}},
-    {"and", {0, 2, Binop << And}},
-    {"or", {0, 2, Binop << Or}},
-    {"xor", {0, 2, Binop << Xor}},
-    {"shl", {0, 2, Binop << Shl}},
-    {"shr", {0, 2, Binop << Shr}},
-    {"eq", {0, 2, Binop << Eq}},
-    {"ne", {0, 2, Binop << Ne}},
-    {"lt", {0, 2, Binop << Lt}},
-    {"le", {0, 2, Binop << Le}},
-    {"gt", {0, 2, Binop << Gt}},
-    {"ge", {0, 2, Binop << Ge}},
-    {"min", {0, 2, Binop << Min}},
-    {"max", {0, 2, Binop << Max}},
-    {"logbase", {0, 2, Binop << LogBase}},
-    {"atan2", {0, 2, Binop << Atan2}},
-    {"neg", {0, 1, Unop << Neg}},
-    {"not", {0, 1, Unop << Not}},
-    {"abs", {0, 1, Unop << Abs}},
-    {"ceil", {0, 1, Unop << Ceil}},
-    {"floor", {0, 1, Unop << Floor}},
-    {"exp", {0, 1, Unop << Exp}},
-    {"log", {0, 1, Unop << Log}},
-    {"sqrt", {0, 1, Unop << Sqrt}},
-    {"cbrt", {0, 1, Unop << Cbrt}},
-    {"isinf", {0, 1, Unop << IsInf}},
-    {"isnan", {0, 1, Unop << IsNaN}},
-    {"sin", {0, 1, Unop << Sin}},
-    {"cos", {0, 1, Unop << Cos}},
-    {"tan", {0, 1, Unop << Tan}},
-    {"asin", {0, 1, Unop << Asin}},
-    {"acos", {0, 1, Unop << Acos}},
-    {"atan", {0, 1, Unop << Atan}},
-    {"sinh", {0, 1, Unop << Sinh}},
-    {"cosh", {0, 1, Unop << Cosh}},
-    {"tanh", {0, 1, Unop << Tanh}},
-    {"asinh", {0, 1, Unop << Asinh}},
-    {"acosh", {0, 1, Unop << Acosh}},
-    {"atanh", {0, 1, Unop << Atanh}},
-    {"acos", {0, 1, Unop << Acos}},
-    {"asin", {0, 1, Unop << Asin}},
-    {"atan", {0, 1, Unop << Atan}},
-    {"sinh", {0, 1, Unop << Sinh}},
-    {"cosh", {0, 1, Unop << Cosh}},
-    {"tanh", {0, 1, Unop << Tanh}},
-    {"asinh", {0, 1, Unop << Asinh}},
-    {"acosh", {0, 1, Unop << Acosh}},
-    {"atanh", {0, 1, Unop << Atanh}},
-    {"len", {0, 1, Unop << Len}},
-    {"ptr", {0, 1, Unop << MakePtr}},
-    {"read", {0, 1, Unop << Read}},
-    {"none", {0, 0, Nulop << None}},
-    {"e", {0, 0, Nulop << Const_E}},
-    {"pi", {0, 0, Nulop << Const_Pi}},
-    {"inf", {0, 0, Nulop << Const_Inf}},
-    {"nan", {0, 0, Nulop << Const_NaN}},
-    {"arrayref", {0, 2, ArrayRef}},
-    {"newarray", {1, 1, NewArray}},
-  };
 
   Node make_typename(NodeRange r)
   {
@@ -456,50 +368,6 @@ namespace vc
           return b << e;
         },
 
-        // TODO: temporarily ignoring : in Expr
-        In(Expr) * T(Colon) >> [](Match& _) -> Node { return {}; },
-
-        // FFI and builtins.
-        In(Expr) * T(TripleColon) * T(FuncName)[FuncName] *
-            T(ExprSeq)[ExprSeq] >>
-          [](Match& _) -> Node {
-          auto funcname = _(FuncName);
-
-          if (funcname->size() != 1)
-            return err(funcname, "Builtins aren't namespaced");
-
-          auto func = funcname->front();
-          auto id = (func / Ident)->location().view();
-          auto ta = func / TypeArgs;
-          auto args = seq_to_args(_(ExprSeq));
-          size_t ta_count = ta->size();
-          size_t arg_count = args->size();
-
-          auto find = builtins.find(id);
-          if (find == builtins.end())
-          {
-            // FFI calls can't have type arguments.
-            if (ta_count != 0)
-              return err(funcname, "FFI calls can't have type arguments");
-
-            // Emit an ffi call.
-            return FFI << (SymbolId ^ (func / Ident)) << args;
-          }
-
-          if (find->second.typeargs != ta_count)
-            return err(funcname, "Wrong number of type arguments");
-
-          if (find->second.args != arg_count)
-            return err(funcname, "Wrong number of arguments");
-
-          auto r = clone(find->second.ast);
-
-          for (auto& t : *ta)
-            r << (Type << *t);
-
-          return r << args;
-        },
-
         // Expressions.
         // Let.
         In(Expr) * (T(Let) << End) * T(Ident)[Ident] *
@@ -565,9 +433,9 @@ namespace vc
         // Ref.
         In(Expr) * T(Ident, "ref") >> [](Match& _) -> Node { return Ref; },
 
-        // Function Name.
+        // Function name.
         In(Expr) *
-            (T(Ident) * ~TypeArgsPat *
+            (T(Ident, SymbolId) * ~TypeArgsPat *
              (T(DoubleColon) * T(Ident, SymbolId) *
               ~TypeArgsPat)++)[FuncName] >>
           [](Match& _) {
@@ -586,12 +454,6 @@ namespace vc
 
             name << elem;
             return name;
-          },
-
-        // Operator.
-        In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsPat[TypeArgs] >>
-          [](Match& _) {
-            return Op << _(SymbolId) << (TypeArgs << *_[TypeArgs]);
           },
 
         // If.
@@ -685,7 +547,7 @@ namespace vc
         In(Expr) * (T(When) << End) * T(ExprSeq)[ExprSeq] * T(Lambda)[Lambda] >>
           [](Match& _) {
             auto lambda = _(Lambda);
-            return When << seq_to_args(_(ExprSeq)) << clone(lambda / Type)
+            return When << _(ExprSeq) << clone(lambda / Type)
                         << (Expr << lambda);
           },
 

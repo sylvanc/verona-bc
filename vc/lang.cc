@@ -9,36 +9,6 @@ namespace vc
     return i;
   }
 
-  Node seq_to_args(Node seq)
-  {
-    assert(seq == ExprSeq);
-
-    // Empty parentheses.
-    if (seq->empty())
-      return Args;
-
-    if (seq->size() == 1)
-    {
-      auto expr = seq->front();
-
-      // Turn a comma-delimited list into separate Args.
-      if (expr == List)
-        return Args << *expr;
-
-      if (expr->size() == 1)
-      {
-        auto e = expr->front();
-
-        // Turn a tuple into separate Args.
-        if (e == Tuple)
-          return Args << *e;
-      }
-    }
-
-    // Treat this as a single argument.
-    return Args << (Expr << seq);
-  }
-
   Node make_type(Match& _, NodeRange r)
   {
     return Type << (r || (TypeVar ^ _.fresh(l_typevar)));

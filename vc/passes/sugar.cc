@@ -23,6 +23,13 @@ namespace vc
       wfPassSugar,
       dir::topdown,
       {
+        // Rewrite `when` arguments.
+        In(Expr) * T(When)
+            << (T(ExprSeq)[ExprSeq] * T(Type)[Type] * T(Expr)[Expr]) >>
+          [](Match& _) {
+            return When << (Args << *_(ExprSeq)) << _(Type) << _(Expr);
+          },
+
         // Turn lambdas into anonymous classes.
         In(Expr) * T(Lambda)[Lambda]
             << (T(Params)[Params] * T(Type)[Type] * T(Body)[Body]) >>

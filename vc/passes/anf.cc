@@ -33,9 +33,10 @@ namespace vc
   {
     assert(localid == LocalId);
     return Call << (LocalId ^ localid) << Rhs
-                << (FuncName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                          << (NameElement << (Ident ^ "nomatch") << TypeArgs)
-                          << (NameElement << (Ident ^ "create") << TypeArgs))
+                << (FuncName
+                    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                    << (NameElement << (Ident ^ "nomatch") << TypeArgs)
+                    << (NameElement << (Ident ^ "create") << TypeArgs))
                 << Args;
   }
 
@@ -528,25 +529,26 @@ namespace vc
 
         // Binop.
         In(Expr, Lhs) * T(Binop)
-            << (Any[Op] *
+            << (Any[MethodId] *
                 (T(Args)
                  << ((T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])) *
                      (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift
-                           << Body
-                           << (_(Op) << (LocalId ^ id) << _(Lhs) << _(Rhs)))
+            return Seq << (Lift << Body
+                                << (_(MethodId)
+                                    << (LocalId ^ id) << _(Lhs) << _(Rhs)))
                        << (LocalId ^ id);
           },
 
         // Unop.
         In(Expr, Lhs) * T(Unop)
-            << (Any[Op] *
+            << (Any[MethodId] *
                 (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (_(Op) << (LocalId ^ id) << _(Lhs)))
+            return Seq << (Lift << Body
+                                << (_(MethodId) << (LocalId ^ id) << _(Lhs)))
                        << (LocalId ^ id);
           },
 
@@ -559,10 +561,10 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        In(Expr, Lhs) * T(Nulop) << ((!T(None))[Op] * T(Args)) >>
+        In(Expr, Lhs) * T(Nulop) << ((!T(None))[MethodId] * T(Args)) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body << (_(Op) << (LocalId ^ id)))
+            return Seq << (Lift << Body << (_(MethodId) << (LocalId ^ id)))
                        << (LocalId ^ id);
           },
 

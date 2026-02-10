@@ -2,6 +2,9 @@
 
 ## To Do
 
+Name resolution.
+- Trieste returns `use` entries all at the end, rather than interspersed with definitions. This means "overrides" aren't working the way they should.
+
 Type inference.
 - Create a `TypeVar` for integer and float literals?
   - Upper bounds is the union of literal types.

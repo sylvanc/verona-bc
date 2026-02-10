@@ -66,7 +66,7 @@ namespace vc
   inline const auto Lambda = TokenDef("lambda", flag::symtab);
   inline const auto Block = TokenDef("block", flag::symtab);
   inline const auto FuncName = TokenDef("funcname");
-  inline const auto Op = TokenDef("op");
+  inline const auto MethodName = TokenDef("methodname");
   inline const auto Binop = TokenDef("binop");
   inline const auto Unop = TokenDef("unop");
   inline const auto Nulop = TokenDef("nulop");
@@ -82,7 +82,7 @@ namespace vc
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
 
-  const auto LhsPat =
+  const auto ValuePat =
     T(True,
       False,
       Bin,
@@ -100,15 +100,20 @@ namespace vc
       FFI,
       NewArray,
       ArrayRef,
-      LocalId,
-      ExprSeq,
+      FieldRef,
+      Load,
       New,
       If,
+      Else,
       While,
       For,
       When,
+      Equals,
+      LocalId,
       Call,
-      CallDyn);
+      CallDyn,
+      Tuple,
+      ExprSeq);
 
   inline const auto wfType =
     TypeName | Union | Isect | TupleType | FuncType | TypeVar;
@@ -127,9 +132,8 @@ namespace vc
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfExprStructure = ExprSeq | DontCare | wfLiteral | String |
-    RawString | Tuple | Let | Var | New | Lambda | Ref | FuncName | Op | Dot |
-    If | Else | While | For | When | Equals | Hash | Try | Convert | Binop |
-    Unop | Nulop | FFI | NewArray | ArrayRef | FieldRef | Load;
+    RawString | Tuple | Let | Var | New | Lambda | Ref | FuncName | Dot | If |
+    Else | While | For | When | Equals | Hash | Try | FieldRef;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -179,14 +183,12 @@ namespace vc
     | (Lambda <<= Params * Type * Body)
     | (Block <<= Params * Type * Body)
     | (FuncName <<= NameElement++[1])
-    | (Op <<= wfFuncId * TypeArgs)
     | (Dot <<= wfFuncId * TypeArgs)
-    | (Args <<= Expr++)
     | (If <<= Expr * Block)
     | (Else <<= Expr * Block)
     | (While <<= Expr * Block)
     | (For <<= Expr * Block)
-    | (When <<= Args * Type * Expr)
+    | (When <<= ExprSeq * Type * Expr)
     | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
@@ -198,57 +200,62 @@ namespace vc
     | (Return <<= Expr)
     | (Raise <<= Expr)
     | (Throw <<= Expr)
-    | (Convert <<= (Type >>= wfPrimitiveType) * Args)
-    | (Binop <<= (Op >>= wfBinop) * Args)
-    | (Unop <<= (Op >>= wfUnop) * Args)
-    | (Nulop <<= (Op >>= wfNulop) * Args)
-    | (FFI <<= SymbolId * Args)
-    | (ArrayRef <<= Args)
-    | (NewArray <<= Type * Args)
     ;
   // clang-format on
 
-  inline const auto wfExprIdent = wfExprStructure | LocalId;
+  inline const auto wfExprIdent = wfExprStructure | LocalId | MethodName;
 
   // clang-format off
   inline const auto wfPassIdent =
       wfPassStructure
     | (TypeName <<= (TypeParent | NameElement)++[1])
     | (FuncName <<= (TypeParent | NameElement)++[1])
+    | (MethodName <<= wfFuncId * TypeArgs)
     | (Expr <<= wfExprIdent++)
     ;
   // clang-format on
 
-  inline const auto wfExprSugar = (wfExprIdent | Call) - Lambda;
+  inline const auto wfExprSugar = (wfExprIdent | Load | Call) - Lambda;
 
   // clang-format off
   inline const auto wfPassSugar =
       wfPassIdent
+    | (When <<= Args * Type * Expr)
     | (ParamDef <<= Ident * Type)[Ident]
     | (Call <<= FuncName * Args)
+    | (Args <<= Expr++)
     | (Expr <<= wfExprSugar++)
     ;
   // clang-format on
 
-  inline const auto wfExprApplication =
-    (wfExprIdent | CallDyn) - FuncName - Dot;
+  inline const auto wfExprDot = (wfExprSugar | CallDyn) - Dot;
 
   // clang-format off
-  inline const auto wfPassApplication =
-      wfPassIdent
+  inline const auto wfPassDot =
+      wfPassSugar
     | (CallDyn <<= Expr * wfFuncId * TypeArgs * Args)
-    | (Expr <<= wfExprApplication++)
+    | (Expr <<= wfExprDot)
     ;
   // clang-format on
 
-  inline const auto wfExprOperators = wfExprApplication - Op;
+  inline const auto wfExprApplication =
+    (wfExprDot | Convert | Binop | Unop | Nulop | FFI | NewArray | ArrayRef |
+     Ref | Hash) -
+    FuncName - MethodName;
 
   // clang-format off
-  inline const auto wfPassOperators =
-      wfPassApplication
-    | (Expr <<= wfExprOperators)
+  inline const auto wfPassApplication =
+      wfPassDot
+    | (Expr <<= wfExprApplication++)
+    | (Convert <<= (Type >>= wfPrimitiveType) * Args)
+    | (Binop <<= (MethodId >>= wfBinop) * Args)
+    | (Unop <<= (MethodId >>= wfUnop) * Args)
+    | (Nulop <<= (MethodId >>= wfNulop) * Args)
+    | (FFI <<= SymbolId * Args)
+    | (NewArray <<= Type * Args)
+    | (ArrayRef <<= Args)
     | (Ref <<= Expr)
-    | (Try <<= Expr)
+    | (Hash <<= Expr)
     ;
   // clang-format on
 
@@ -259,7 +266,7 @@ namespace vc
 
   // clang-format off
   inline const auto wfPassANF =
-      wfPassOperators
+      wfPassApplication
     | (Function <<=
         wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Labels)
         [Ident]
@@ -350,7 +357,6 @@ namespace vc
   inline const auto l_typevar = Location("typevar");
 
   size_t parse_int(Node node);
-  Node seq_to_args(Node seq);
   Node make_type(Match& _, NodeRange r = {});
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);
@@ -359,8 +365,8 @@ namespace vc
   PassDef structure(const Parse& parse);
   PassDef ident();
   PassDef sugar();
+  PassDef dot();
   PassDef application();
-  PassDef operators();
   PassDef anf();
   PassDef reify();
 }

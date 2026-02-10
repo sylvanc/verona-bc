@@ -175,7 +175,7 @@ namespace vc
       if ((n->size() == 1) && (n == FuncName))
       {
         // If it isn't found, treat it as a method if it's 1-element.
-        state.result = Dot << name << ta;
+        state.result = MethodName << name << ta;
       }
       else if (
         (n->size() == 1) && (n == TypeName) && ta->empty() &&
