@@ -456,6 +456,10 @@ namespace vc
             return name;
           },
 
+        // Builtin or FFI.
+        In(Expr) * T(TripleColon) * T(FuncName)[FuncName] >>
+          [](Match& _) { return TripleColon << *_(FuncName); },
+
         // If.
         In(Expr) * (T(If) << End) * (!T(Lambda))++[Expr] * T(Lambda)[Lambda] >>
           [](Match& _) {
@@ -544,18 +548,11 @@ namespace vc
           },
 
         // When.
-        In(Expr) * (T(When) << End) * T(ExprSeq)[ExprSeq] * T(Lambda)[Lambda] >>
-          [](Match& _) {
-            auto lambda = _(Lambda);
-            return When << _(ExprSeq) << clone(lambda / Type)
-                        << (Expr << lambda);
-          },
-
-        In(Expr) * (T(When) << End) * (!T(Lambda))++[When] *
+        In(Expr) * (T(When) << End) * (!T(Lambda))++[Expr] *
             T(Lambda)[Lambda] >>
           [](Match& _) {
             auto lambda = _(Lambda);
-            return When << (Args << (Expr << _[When])) << clone(lambda / Type)
+            return When << (Expr << _[Expr]) << clone(lambda / Type)
                         << (Expr << lambda);
           },
 
@@ -574,7 +571,7 @@ namespace vc
           },
 
         // Groups are expressions.
-        In(Body, Expr, ExprSeq, Tuple, Args) * T(Group)[Group] >>
+        In(Body, Expr, ExprSeq, Tuple) * T(Group)[Group] >>
           [](Match& _) { return Expr << *_[Group]; },
 
         // Parens are expression sequences.
@@ -582,11 +579,15 @@ namespace vc
           [](Match& _) { return ExprSeq << *_[Paren]; },
 
         // Lists are tuples.
-        In(Body, ExprSeq, Tuple, Args) * T(List)[List] >>
+        In(Body, ExprSeq, Tuple) * T(List)[List] >>
           [](Match& _) -> Node { return Expr << (Tuple << *_[List]); },
 
         In(Expr) * T(List)[List] >>
           [](Match& _) -> Node { return Tuple << *_[List]; },
+
+        // An ExprSeq containing an Expr that contains a Tuple is a Tuple.
+        In(Expr) * T(ExprSeq) << ((T(Expr) << (T(Tuple)[Tuple] * End)) * End) >>
+          [](Match& _) { return _(Tuple); },
 
         // Remove empty expressions.
         T(Expr) << End >> [](Match&) -> Node { return {}; },
@@ -790,45 +791,6 @@ namespace vc
           {
             node->parent()->replace(
               node, err(node, "Expected a left and right side"));
-            ok = false;
-          }
-        }
-        else if (node == Binop)
-        {
-          if ((node / Args)->size() != 2)
-          {
-            node->replace(
-              node->front(), err(node->front(), "Expected two arguments"));
-            ok = false;
-          }
-        }
-        else if (node == Unop)
-        {
-          if ((node / Args)->size() != 1)
-          {
-            node->replace(
-              node->front(), err(node->front(), "Expected one argument"));
-            ok = false;
-          }
-        }
-        else if (node == Nulop)
-        {
-          if ((node / Args)->size() != 0)
-          {
-            node->replace(
-              node->front(), err(node->front(), "Expected no arguments"));
-            ok = false;
-          }
-        }
-        else if (node == When)
-        {
-          auto lambda = (node / Expr)->front();
-
-          if ((node / Args)->size() != (lambda / Params)->size())
-          {
-            node->replace(
-              node->front(),
-              err(node->front(), "When argument count must match lambda"));
             ok = false;
           }
         }

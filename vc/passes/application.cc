@@ -97,18 +97,16 @@ namespace vc
       dir::topdown,
       {
         // FFI and builtins.
-        In(Expr) * T(TripleColon) * T(FuncName)[FuncName] *
-            T(ExprSeq)[ExprSeq] >>
+        In(Expr) * T(TripleColon)[TripleColon] * T(Tuple, ExprSeq)[Args] >>
           [](Match& _) -> Node {
-          auto funcname = _(FuncName);
+          auto name = _(TripleColon);
 
-          if (funcname->size() != 1)
-            return err(funcname, "Builtins aren't namespaced");
+          if (name->size() != 1)
+            return err(name, "Builtins and FFIs aren't namespaced");
 
-          auto func = funcname->front();
-          auto id = (func / Ident)->location().view();
-          auto ta = func / TypeArgs;
-          auto args = Args << *_(ExprSeq);
+          auto id = (name->front() / Ident)->location().view();
+          auto ta = name->front() / TypeArgs;
+          auto args = Args << *_(Args);
           size_t ta_count = ta->size();
           size_t arg_count = args->size();
 
@@ -117,17 +115,17 @@ namespace vc
           {
             // FFI calls can't have type arguments.
             if (ta_count != 0)
-              return err(funcname, "FFI calls can't have type arguments");
+              return err(name, "FFI calls can't have type arguments");
 
             // Emit an ffi call.
-            return FFI << (SymbolId ^ (func / Ident)) << args;
+            return FFI << (SymbolId ^ (name->front() / Ident)) << args;
           }
 
           if (find->second.typeargs != ta_count)
-            return err(funcname, "Wrong number of type arguments");
+            return err(name, "Wrong number of type arguments");
 
           if (find->second.args != arg_count)
-            return err(funcname, "Wrong number of arguments");
+            return err(name, "Wrong number of arguments");
 
           auto r = clone(find->second.ast);
 
@@ -145,12 +143,11 @@ namespace vc
         In(Expr) * (T(Hash) << End) * ValuePat[Expr] >>
           [](Match& _) { return Hash << (Expr << _(Expr)); },
 
-        // Infix function with RHS ExprSeq.
-        In(Expr) * ValuePat[Lhs] * T(FuncName)[FuncName] *
-            T(ExprSeq)[ExprSeq] >>
+        // Infix function with RHS tuple.
+        In(Expr) * ValuePat[Lhs] * T(FuncName)[FuncName] * T(Tuple)[Tuple] >>
           [](Match& _) {
             return Call << _(FuncName)
-                        << (Args << (Expr << _(Lhs)) << *_(ExprSeq));
+                        << (Args << (Expr << _(Lhs)) << *_(Tuple));
           },
 
         // Infix function with RHS value.
@@ -160,9 +157,9 @@ namespace vc
                         << (Args << (Expr << _(Lhs)) << (Expr << _(Rhs)));
           },
 
-        // Prefix function with RHS ExprSeq.
-        In(Expr) * T(FuncName)[FuncName] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) { return Call << _(FuncName) << (Args << *_(ExprSeq)); },
+        // Prefix function with RHS tuple.
+        In(Expr) * T(FuncName)[FuncName] * T(Tuple)[Tuple] >>
+          [](Match& _) { return Call << _(FuncName) << (Args << *_(Tuple)); },
 
         // Prefix function with RHS value.
         In(Expr) * T(FuncName)[FuncName] * ValuePat[Rhs] >>
@@ -174,13 +171,12 @@ namespace vc
         In(Expr) * T(FuncName)[FuncName] >>
           [](Match& _) { return Call << _(FuncName) << Args; },
 
-        // Infix method with RHS ExprSeq.
+        // Infix method with RHS tuple.
         In(Expr) * ValuePat[Lhs] * T(MethodName)[MethodName] *
-            T(ExprSeq)[ExprSeq] >>
+            T(Tuple)[Tuple] >>
           [](Match& _) {
             return CallDyn << (Expr << _(Lhs)) << (_(MethodName) / Ident)
-                           << (_(MethodName) / TypeArgs)
-                           << (Args << *_(ExprSeq));
+                           << (_(MethodName) / TypeArgs) << (Args << *_(Tuple));
           },
 
         // Infix method with RHS value.
@@ -191,26 +187,26 @@ namespace vc
                            << (Args << (Expr << _(Rhs)));
           },
 
-        // Prefix method with RHS ExprSeq.
+        // Prefix method with RHS tuple.
         In(Expr) * T(MethodName)[MethodName] *
-            (T(ExprSeq) << (T(Expr)[Lhs] * (T(Expr)++)[Rhs])) >>
+            (T(Tuple) << (T(Expr)[Lhs] * (T(Expr)++)[Rhs])) >>
           [](Match& _) {
             return CallDyn << (_(Lhs)) << (_(MethodName) / Ident)
                            << (_(MethodName) / TypeArgs) << (Args << _[Rhs]);
           },
 
         // Prefix method with RHS value.
-        In(Expr) * T(MethodName)[MethodName] * T(Expr)[Lhs] >>
+        In(Expr) * T(MethodName)[MethodName] * ValuePat[Rhs] >>
           [](Match& _) {
-            return CallDyn << (Expr << _(Lhs)) << (_(MethodName) / Ident)
+            return CallDyn << (Expr << _(Rhs)) << (_(MethodName) / Ident)
                            << (_(MethodName) / TypeArgs) << Args;
           },
 
-        // Application with RHS ExprSeq.
-        In(Expr) * ValuePat[Lhs] * T(ExprSeq)[ExprSeq] >>
+        // Application with RHS tuple.
+        In(Expr) * ValuePat[Lhs] * T(Tuple)[Tuple] >>
           [](Match& _) {
             return CallDyn << (Expr << _(Lhs)) << (Ident ^ "apply") << TypeArgs
-                           << (Args << *_(ExprSeq));
+                           << (Args << *_(Tuple));
           },
 
         // Application with RHS value.
@@ -254,6 +250,33 @@ namespace vc
           node->parent()->replace(
             node, err(node, "Expected at least one argument to this method"));
           ok = false;
+        }
+        else if (node == Binop)
+        {
+          if ((node / Args)->size() != 2)
+          {
+            node->replace(
+              node->front(), err(node->front(), "Expected two arguments"));
+            ok = false;
+          }
+        }
+        else if (node == Unop)
+        {
+          if ((node / Args)->size() != 1)
+          {
+            node->replace(
+              node->front(), err(node->front(), "Expected one argument"));
+            ok = false;
+          }
+        }
+        else if (node == Nulop)
+        {
+          if ((node / Args)->size() != 0)
+          {
+            node->replace(
+              node->front(), err(node->front(), "Expected no arguments"));
+            ok = false;
+          }
         }
 
         return ok;

@@ -25,9 +25,27 @@ namespace vc
       {
         // Rewrite `when` arguments.
         In(Expr) * T(When)
-            << (T(ExprSeq)[ExprSeq] * T(Type)[Type] * T(Expr)[Expr]) >>
+            << ((T(Expr)[Args] << (T(Tuple)[Tuple] * End)) * T(Type)[Type] *
+                (T(Expr)[Expr] << T(Lambda)[Lambda])) >>
           [](Match& _) {
-            return When << (Args << *_(ExprSeq)) << _(Type) << _(Expr);
+            if (_(Tuple)->size() != (_(Lambda) / Params)->size())
+            {
+              return err(_(Tuple), "When argument count must match lambda")
+                << errmsg("Lambda is here:") << errloc(_(Lambda));
+            }
+
+            return When << (Args << *_(Tuple)) << _(Type) << _(Expr);
+          },
+
+        In(Expr) * T(When) << (T(Expr)[Expr] * T(Type)[Type] * T(Expr)[Expr]) >>
+          [](Match& _) {
+            if ((_(Lambda) / Params)->size() != 1)
+            {
+              return err(_(Expr), "When argument count must match lambda")
+                << errmsg("Lambda is here:") << errloc(_(Lambda));
+            }
+
+            return When << (Args << _(Expr)) << _(Type) << _(Expr);
           },
 
         // Turn lambdas into anonymous classes.

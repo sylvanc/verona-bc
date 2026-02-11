@@ -10,16 +10,16 @@ namespace vc
       dir::topdown,
       {
         // Dot with arguments.
-        In(Expr) * ValuePat[Lhs] * T(Dot)[Dot] * T(ExprSeq)[ExprSeq] >>
+        In(Expr) * ValuePat[Lhs] * T(Dot)[Dot] * T(Tuple)[Tuple] >>
           [](Match& _) {
-            return CallDyn << (Expr << _(Expr)) << (_(Dot) / Ident)
-                           << (_(Dot) / TypeArgs) << (Args << *_(ExprSeq));
+            return CallDyn << (Expr << _(Lhs)) << (_(Dot) / Ident)
+                           << (_(Dot) / TypeArgs) << (Args << *_(Tuple));
           },
 
         // Dot without arguments.
         In(Expr) * ValuePat[Lhs] * T(Dot)[Dot] >>
           [](Match& _) {
-            return CallDyn << (Expr << _(Expr)) << (_(Dot) / Ident)
+            return CallDyn << (Expr << _(Lhs)) << (_(Dot) / Ident)
                            << (_(Dot) / TypeArgs) << Args;
           },
       }};

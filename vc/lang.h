@@ -131,9 +131,10 @@ namespace vc
 
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
-  inline const auto wfExprStructure = ExprSeq | DontCare | wfLiteral | String |
-    RawString | Tuple | Let | Var | New | Lambda | Ref | FuncName | Dot | If |
-    Else | While | For | When | Equals | Hash | Try | FieldRef;
+  inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
+    wfLiteral | String | RawString | Tuple | Let | Var | New | Lambda | Ref |
+    FuncName | Dot | If | Else | While | For | When | Equals | Hash | Try |
+    FieldRef;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -183,12 +184,13 @@ namespace vc
     | (Lambda <<= Params * Type * Body)
     | (Block <<= Params * Type * Body)
     | (FuncName <<= NameElement++[1])
+    | (TripleColon <<= NameElement++[1])
     | (Dot <<= wfFuncId * TypeArgs)
     | (If <<= Expr * Block)
     | (Else <<= Expr * Block)
     | (While <<= Expr * Block)
     | (For <<= Expr * Block)
-    | (When <<= ExprSeq * Type * Expr)
+    | (When <<= Expr * Type * Expr)
     | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
@@ -234,19 +236,19 @@ namespace vc
   inline const auto wfPassDot =
       wfPassSugar
     | (CallDyn <<= Expr * wfFuncId * TypeArgs * Args)
-    | (Expr <<= wfExprDot)
+    | (Expr <<= wfExprDot++)
     ;
   // clang-format on
 
   inline const auto wfExprApplication =
     (wfExprDot | Convert | Binop | Unop | Nulop | FFI | NewArray | ArrayRef |
      Ref | Hash) -
-    FuncName - MethodName;
+    FuncName - MethodName - TripleColon;
 
   // clang-format off
   inline const auto wfPassApplication =
       wfPassDot
-    | (Expr <<= wfExprApplication++)
+    | (Expr <<= wfExprApplication)
     | (Convert <<= (Type >>= wfPrimitiveType) * Args)
     | (Binop <<= (MethodId >>= wfBinop) * Args)
     | (Unop <<= (MethodId >>= wfUnop) * Args)
