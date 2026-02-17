@@ -7,6 +7,7 @@ namespace vc
     << (NameElement << (Ident ^ "_builtin") << TypeArgs)
     << (NameElement << (Ident ^ "string") << TypeArgs);
 
+  // TODO: array, ref, cown
   const std::map<std::string_view, Node> primitive_types = {
     {"none", None},
     {"bool", Bool},
@@ -42,14 +43,13 @@ namespace vc
       assert((main_module / TypeParams)->empty());
 
       auto id = top->fresh();
-      auto main_name = (main_module / Ident)->location();
       auto main_call = Call
         << (LocalId ^ id) << Rhs
-        << (FuncName
-            << (NameElement << (Ident ^ main_name) << TypeArgs)
-            << (NameElement << (Ident ^ "main") << TypeArgs))
+        << (FuncName << (NameElement << clone(main_module / Ident) << TypeArgs)
+                     << (NameElement << (Ident ^ "main") << TypeArgs))
         << Args;
-      main_call = reify_call(main_call, {}, top);
+
+      reify_call(main_call, {});
 
       // Iteratively reify any classes, type aliases, or functions that we
       // scheduled for reification.
@@ -68,12 +68,20 @@ namespace vc
           assert(false);
       }
 
+      // Remove existing contents.
+      top->erase(top->begin(), top->end());
+
       // Add an entry point for main.
       top
         << (Func << (FunctionId ^ "@main") << Params << I32 << Vars
                  << (Labels
                      << (Label << (LabelId ^ "start") << (Body << main_call)
                                << (Return << (LocalId ^ id)))));
+
+      // Add reified classes, type aliases, and functions.
+      for (auto& [_, reifications] : map)
+        for (auto& r : reifications)
+          top << r.reification;
     }
 
   private:
@@ -89,8 +97,47 @@ namespace vc
 
     Node top;
     Node builtin;
-    NodeMap<std::vector<Reification>> map;
+    NodeMap<std::deque<Reification>> map;
     std::vector<Reification*> worklist;
+
+    // Resolve a TypeArg through the current substitution map. If the TypeArg
+    // is a Type wrapping a TypeName that resolves to a TypeParam in the subst,
+    // return the substituted value. Otherwise, return the original TypeArg.
+    Node resolve_typearg(const Node& arg, const NodeMap<Node>& subst)
+    {
+      auto inner = arg;
+
+      // Unwrap Type node.
+      if (inner == Type)
+        inner = inner->front();
+
+      if (inner != TypeName)
+        return arg;
+
+      // Navigate the FQ name to see if the last element is a TypeParam.
+      Node def = top;
+
+      for (auto& elem : *inner)
+      {
+        auto defs = def->look((elem / Ident)->location());
+
+        if (defs.empty())
+          return arg;
+
+        def = defs.front();
+      }
+
+      if (def != TypeParam)
+        return arg;
+
+      // It's a TypeParam. Look it up in the subst map.
+      auto find = subst.find(def);
+
+      if (find != subst.end())
+        return find->second;
+
+      return arg;
+    }
 
     void reify_class(Reification& r)
     {
@@ -125,7 +172,7 @@ namespace vc
 
         fields
           << (Field << (FieldId ^ (f / Ident))
-                    << reify_type(f / Type, r.subst, r.def));
+                    << reify_type(f / Type, r.subst));
       }
 
       // Store the reified class.
@@ -135,21 +182,20 @@ namespace vc
     void reify_typealias(Reification& r)
     {
       // Store the reified type alias.
-      r.reification = TypeAlias << r.id
-                                << reify_type(r.def / Type, r.subst, r.def);
+      r.reification = TypeAlias << r.id << reify_type(r.def / Type, r.subst);
     }
 
     bool reify_function(Reification& r)
     {
       // Reify the function signature.
-      auto r_type = reify_type(r.def / Type, r.subst, r.def);
+      auto r_type = reify_type(r.def / Type, r.subst);
       Node params = Params;
 
       for (auto& p : *(r.def / Params))
       {
         params
           << (Param << (LocalId ^ (p / Ident))
-                    << reify_type(p / Type, r.subst, r.def));
+                    << reify_type(p / Type, r.subst));
       }
 
       // Reify the function body.
@@ -159,6 +205,7 @@ namespace vc
       for (auto& l : *labels)
       {
         Node body = l / Body;
+        Nodes remove;
 
         // No work required: Copy, Move, math ops on existing values.
 
@@ -177,11 +224,11 @@ namespace vc
           }
           else if (n == ConstStr)
           {
-            reify_typename(string_type, {}, top);
+            reify_typename(string_type, {});
           }
           else if (n == Typetest)
           {
-            n / Type = reify_type(n / Type, r.subst, r.def);
+            n / Type = reify_type(n / Type, r.subst);
             reify_primitive(Bool);
           }
           else if (n->in({Eq, Ne, Lt, Le, Gt, Ge}))
@@ -206,21 +253,27 @@ namespace vc
           }
           else if (n == Var)
           {
-            vars << (Var << (LocalId ^ (n / Ident)));
+            vars << (LocalId ^ (n / Ident));
+            remove.push_back(n);
           }
           else if (n == New)
           {
-            // TODO: need to get the reified type of this.
-            // use it to turn field map into sequential args.
-            n / Type = reify_type(n / Type, r.subst, r.def);
+            reify_new(n, r.subst);
+          }
+          else if (n == Lookup)
+          {
+            reify_lookup(n, r.subst);
           }
           else if (n == Call)
           {
-            n->parent()->replace(n, reify_call(n, r.subst, r.def));
+            reify_call(n, r.subst);
           }
 
           return false;
         });
+
+        for (auto& n : remove)
+          n->parent()->replace(n);
       }
 
       r.reification = Func << r.id << params << r_type << vars << labels;
@@ -229,11 +282,14 @@ namespace vc
 
     // Turn a type into an IR type. The IR doesn't have intersection types,
     // structural types, or tuple types.
-    Node
-    reify_type(const Node& type, const NodeMap<Node>& subst, const Node& scope)
+    Node reify_type(const Node& type, const NodeMap<Node>& subst)
     {
       if (type == Type)
-        return reify_type(type->front(), subst, scope);
+        return reify_type(type->front(), subst);
+
+      // Use Dyn until we resolve type variables.
+      if (type == TypeVar)
+        return Dyn;
 
       // Use Dyn until we turn function types into shapes.
       if (type == FuncType)
@@ -249,7 +305,7 @@ namespace vc
 
         for (auto& t : *type)
         {
-          auto rt = reify_type(t, subst, scope);
+          auto rt = reify_type(t, subst);
 
           // A union that contains a dynamic type is just dynamic. A union that
           // contains a union is flattened.
@@ -270,7 +326,7 @@ namespace vc
 
         for (auto& t : *type)
         {
-          auto rt = reify_type(t, subst, scope);
+          auto rt = reify_type(t, subst);
 
           // Encapsulate rt in a union.
           if (rt != Union)
@@ -311,19 +367,17 @@ namespace vc
       }
 
       if (type == TypeName)
-        return reify_typename(type, subst, scope);
+        return reify_typename(type, subst);
 
       assert(false);
       return {};
     }
 
     // Get the reification and return the ClassId or TypeId.
-    Node reify_typename(
-      const Node& tn, const NodeMap<Node>& subst, const Node& scope)
+    Node reify_typename(const Node& tn, const NodeMap<Node>& subst)
     {
-      return get_reification(tn, subst, scope, [](auto& def) {
-        return def->in({ClassDef, TypeAlias});
-      });
+      return get_reification(
+        tn, subst, [](auto& def) { return def->in({ClassDef, TypeAlias}); });
     }
 
     // Reify a primitive from a wfPrimitiveType.
@@ -349,104 +403,297 @@ namespace vc
           return;
 
         // Store this reification.
-        r_vec.push_back({def, {}, type, Primitive << type << Methods});
+        r_vec.push_back({def, {}, type, Primitive << clone(type) << Methods});
         return;
       }
     }
 
-    Node
-    reify_call(const Node& call, const NodeMap<Node>& subst, const Node& scope)
+    void reify_call(Node& call, const NodeMap<Node>& subst)
     {
       auto hand = (call / Lhs)->type();
       auto arity = (call / Args)->size();
 
-      auto funcid =
-        get_reification(call / FuncName, subst, scope, [&](auto& def) {
-          return (def == Function) && ((def / Params)->size() == arity) &&
-            ((def / Lhs) == hand);
-        });
+      auto funcid = get_reification(call / FuncName, subst, [&](auto& def) {
+        return (def == Function) && ((def / Params)->size() == arity) &&
+          ((def / Lhs) == hand);
+      });
 
-      return Call << (call / LocalId) << funcid << (call / Args);
+      auto dst = call / LocalId;
+      auto args = call / Args;
+      call->erase(call->begin(), call->end());
+      call << dst << funcid << args;
     }
 
-    // Given a TypeName or FuncName, a substitution map, and a scope, find or
-    // create a reification and return the ClassId, TypeId, or FunctionId. The
-    // accept function is used to filter definitions, such as looking for a
+    void reify_new(Node& n, const NodeMap<Node>& subst)
+    {
+      auto dst = n / LocalId;
+      auto type_node = n / Type;
+      auto newargs = n / NewArgs;
+
+      // Navigate the TypeName to find the ClassDef for field ordering.
+      Node def = top;
+      auto tn = (type_node == Type) ? type_node->front() : type_node;
+
+      if (tn == TypeName)
+      {
+        for (auto& elem : *tn)
+        {
+          auto defs = def->look((elem / Ident)->location());
+
+          if (!defs.empty())
+            def = defs.front();
+        }
+      }
+
+      // Reify the type to get a ClassId.
+      auto classid = reify_type(type_node, subst);
+
+      // Convert NewArgs to Args, ordered by field position in the class.
+      Node args = Args;
+
+      if (def == ClassDef)
+      {
+        for (auto& f : *(def / ClassBody))
+        {
+          if (f != FieldDef)
+            continue;
+
+          auto field_name = (f / Ident)->location().view();
+
+          for (auto& na : *newargs)
+          {
+            if ((na / Ident)->location().view() == field_name)
+            {
+              args << (Arg << ArgCopy << clone(na->at(1)));
+              break;
+            }
+          }
+        }
+      }
+
+      // Fallback: if we couldn't match fields, just use NewArgs order.
+      if (args->empty())
+      {
+        for (auto& na : *newargs)
+          args << (Arg << ArgCopy << clone(na->at(1)));
+      }
+
+      n->erase(n->begin(), n->end());
+      n << dst << classid << args;
+    }
+
+    void reify_lookup(Node& n, const NodeMap<Node>& /* subst */)
+    {
+      // ANF: Lookup << dst << src << hand << ident << typeargs << arity
+      // IR:  Lookup << dst << src << MethodId
+      auto dst = n->at(0);
+      auto src = n->at(1);
+      auto hand = n->at(2);
+      auto ident = n->at(3);
+      // auto typeargs = n->at(4); // TODO: handle type args in method ID
+      auto arity = n->at(5);
+
+      // Build method ID: "name.arity[.ref]"
+      auto name = std::string(ident->location().view());
+      auto method_id = std::format(
+        "{}.{}{}", name, arity->location().view(), hand == Lhs ? ".ref" : "");
+
+      auto mid = MethodId ^ method_id;
+
+      n->erase(n->begin(), n->end());
+      n << dst << src << mid;
+
+      // TODO: Register Method entries on class definitions mapping this
+      // MethodId to the appropriate FunctionId.
+    }
+
+    // Given a TypeName or FuncName and a substitution map, find or create a
+    // reification and return the ClassId, TypeId, or FunctionId. The accept
+    // function is used to filter the final definition, such as looking for a
     // function with a specific arity and handedness.
     template<typename F>
-    Node get_reification(
-      const Node& name, const NodeMap<Node>& subst, const Node& scope, F accept)
+    Node get_reification(const Node& name, const NodeMap<Node>& subst, F accept)
     {
       assert(name->in({TypeName, FuncName}));
-      auto def = top;
+      Node def = top;
 
-      // Navigate the fully qualified name from Top.
-      // TODO: proper name expansion with substitution.
-      // TODO: good error messages.
-      for (auto& n : *name)
+      // Navigate the fully qualified name from Top, collecting TypeParam
+      // substitutions from TypeArgs along the way.
+      // r.subst only contains entries for TypeParams encountered during
+      // navigation (the def's own params), not the caller's context.
+      // resolve_subst combines both for resolving TypeArg references.
+      Reification r{top, {}, {}, {}};
+      NodeMap<Node> resolve_subst = subst;
+
+      for (auto it = name->begin(); it != name->end(); ++it)
       {
-        auto defs = def->look((n / Ident)->location());
+        auto& elem = *it;
+        assert(elem == NameElement);
+        auto ident = elem / Ident;
+        auto ta = elem / TypeArgs;
+        bool is_last = (it + 1 == name->end());
+
+        auto defs = def->look(ident->location());
 
         if (defs.empty())
-          return {false, nullptr};
-
-        if (n == name->back())
         {
+          if (def == Top)
+            return err(elem, "No top-level definition found");
+
+          return err(elem, "Identifier not found")
+            << errmsg("Resolving here:") << errloc(def / Ident);
+        }
+
+        if (is_last)
+        {
+          // If the definition is a TypeParam, look it up in the substitution
+          // map and reify the substituted type directly.
+          for (auto& d : defs)
+          {
+            if (d == TypeParam)
+            {
+              auto find = resolve_subst.find(d);
+
+              if (find != resolve_subst.end())
+                return reify_type(find->second, resolve_subst);
+
+              return err(elem, "TypeParam has no substitution");
+            }
+          }
+
+          // Use the accept filter to find the right def.
+          bool found = false;
+
           for (auto& d : defs)
           {
             if (accept(d))
             {
               def = d;
+              found = true;
               break;
             }
+          }
+
+          if (!found)
+          {
+            return err(elem, "No matching definition found")
+              << errmsg("Resolving here:") << errloc(defs.front() / Ident);
           }
         }
         else
         {
+          // Intermediate elements must resolve to a scope (ClassDef).
           def = defs.front();
 
-          if (!def->in({ClassDef, Function, TypeAlias}))
-            return {false, nullptr};
+          if (def == TypeParam)
+          {
+            // Look up the TypeParam in the substitution map and resolve
+            // through the substituted type to find the ClassDef.
+            auto find = resolve_subst.find(def);
+
+            if (find == resolve_subst.end())
+              return err(elem, "TypeParam has no substitution");
+
+            auto sub = find->second;
+
+            // Unwrap Type node.
+            if (sub == Type)
+              sub = sub->front();
+
+            if (sub != TypeName)
+            {
+              return err(
+                elem, "TypeParam substitution must be a type name here");
+            }
+
+            // Navigate from the substituted TypeName to find the ClassDef.
+            def = top;
+
+            for (auto& se : *sub)
+            {
+              auto si = se / Ident;
+              auto sta = se / TypeArgs;
+              auto sdefs = def->look(si->location());
+
+              if (sdefs.empty())
+                return err(se, "Definition not found in TypeParam resolution");
+
+              def = sdefs.front();
+
+              if (!sta->empty())
+              {
+                auto stps = def / TypeParams;
+
+                for (size_t i = 0; i < stps->size(); i++)
+                {
+                  r.subst[stps->at(i)] = sta->at(i);
+                  resolve_subst[stps->at(i)] = sta->at(i);
+                }
+              }
+            }
+
+            if (def != ClassDef)
+            {
+              return err(
+                elem,
+                "TypeParam substitution must resolve to a class for "
+                "intermediate navigation");
+            }
+          }
+          else if (def != ClassDef)
+          {
+            return err(elem, "Intermediate name must be a class")
+              << errmsg("Resolving here:") << errloc(def / Ident);
+          }
         }
 
-        size_t count = (def / TypeParams)->size();
-        size_t ta_count = (n / TypeArgs)->size();
+        // Build substitution from TypeArgs when provided.
+        auto tps = def / TypeParams;
 
-        if (ta_count == count)
+        if (!ta->empty())
         {
-          for (size_t i = 0; i < count; i++)
-            subst[(def / TypeParams)->at(i)] = (n / TypeArgs)->at(i);
-        }
-        else
-        {
-          // FQ prefix elements may have empty TypeArgs even if the scope
-          // has TypeParams. Only build substitution when args are provided.
-          assert(ta_count == 0);
+          if (ta->size() != tps->size())
+          {
+            return err(
+                     elem,
+                     std::format(
+                       "Expected {} type arguments, got {}",
+                       tps->size(),
+                       ta->size()))
+              << errmsg("Resolving here:") << errloc(def / Ident);
+          }
+
+          for (size_t i = 0; i < tps->size(); i++)
+          {
+            // Substitute any TypeParam references in the TypeArg using the
+            // full resolution context, to avoid self-referential cycles.
+            auto arg = ta->at(i);
+            auto resolved = resolve_typearg(arg, resolve_subst);
+            r.subst[tps->at(i)] = resolved;
+            resolve_subst[tps->at(i)] = resolved;
+          }
         }
       }
 
-      // TODO: from here on is already good
+      // Shapes are treated as dynamic types. No reification needed.
+      if ((def == ClassDef) && ((def / Shape) == Shape))
+        return Dyn;
 
+      // Check for an existing reification with the same def and subst.
       auto& r_vec = map[def];
 
       for (auto& existing : r_vec)
       {
         assert(existing.def == def);
-        assert(
-          std::equal(
-            existing.subst.begin(),
-            existing.subst.end(),
-            subst.begin(),
-            subst.end(),
-            [](auto& lhs, auto& rhs) { return lhs.first == rhs.first; }));
 
         if (std::equal(
               existing.subst.begin(),
               existing.subst.end(),
-              subst.begin(),
-              subst.end(),
+              r.subst.begin(),
+              r.subst.end(),
               [&](auto& lhs, auto& rhs) {
-                return Subtype(lhs.second, rhs.second) &&
+                return (lhs.first == rhs.first) &&
+                  Subtype(lhs.second, rhs.second) &&
                   Subtype(rhs.second, lhs.second);
               }))
         {
@@ -456,22 +703,32 @@ namespace vc
       }
 
       // Store this reification.
-      r_vec.push_back({def, subst, make_id(def, r_vec.size()), {}});
+      r.def = def;
+      r.id = make_id(def, r_vec.size());
+      r_vec.push_back(std::move(r));
 
       // Schedule this for reification.
-      auto& r = r_vec.back();
-      worklist.push_back(&r);
-      return clone(r.id);
+      worklist.push_back(&r_vec.back());
+      return clone(r_vec.back().id);
     }
 
     Node make_id(const Node& def, size_t index)
     {
+      // Check for a primitive type.
+      if (def->parent(ClassDef) == builtin)
+      {
+        auto find = primitive_types.find((def / Ident)->location().view());
+
+        if (find != primitive_types.end())
+          return find->second;
+      }
+
       // Identifiers take the form `a::b::c::3`.
       assert(def->in({ClassDef, TypeAlias, Function}));
       auto id = std::string((def / Ident)->location().view());
       auto parent = def->parent({Top, ClassDef, TypeAlias, Function});
 
-      while (parent)
+      while (parent && parent != Top)
       {
         id = std::format("{}::{}", (parent / Ident)->location().view(), id);
         parent = parent->parent({Top, ClassDef, TypeAlias, Function});
@@ -503,8 +760,6 @@ namespace vc
 
   PassDef reify()
   {
-    auto rs = std::make_shared<Reifications>();
-
     PassDef p{
       "reify",
       wfIR,

@@ -8,12 +8,23 @@ namespace vc
   Node call_func(Node ident, Node tps, Node args)
   {
     auto cls = ident->parent(ClassDef);
-    auto cls_tps = cls / TypeParams;
-    return Call << (FuncName
-                    << (NameElement << clone(cls / Ident)
-                                    << make_typeargs(cls_tps))
-                    << (NameElement << clone(ident) << make_typeargs(tps)))
-                << args;
+    auto func = ident->parent(Function);
+    auto cls_path = scope_path(cls);
+    auto cls_ta = fq_typeargs(cls_path, cls / TypeParams);
+    auto func_ta = fq_typeargs(scope_path(func), tps);
+
+    Node fn = FuncName;
+
+    for (auto& s : cls_path)
+    {
+      if (s == cls)
+        fn << (NameElement << clone(cls / Ident) << cls_ta);
+      else
+        fn << (NameElement << clone(s / Ident) << TypeArgs);
+    }
+
+    fn << (NameElement << clone(ident) << func_ta);
+    return Call << fn << args;
   }
 
   PassDef sugar()

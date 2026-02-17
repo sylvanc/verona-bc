@@ -4,7 +4,7 @@ add_executable(vc
   passes/dot.cc
   passes/ident.cc
   passes/parser.cc
-  # passes/reify.cc
+  passes/reify.cc
   passes/sugar.cc
   passes/structure.cc
   lang.cc

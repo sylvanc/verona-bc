@@ -169,7 +169,7 @@ namespace vc
           },
 
         // Zero-argument function.
-        In(Expr) * T(FuncName)[FuncName] >>
+        In(Expr) * T(FuncName)[FuncName] * End >>
           [](Match& _) { return Call << _(FuncName) << Args; },
 
         // Infix method with RHS tuple.

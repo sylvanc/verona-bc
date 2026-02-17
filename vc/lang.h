@@ -363,7 +363,10 @@ namespace vc
 
   Node make_type(Match& _, NodeRange r = {});
   Node make_typeargs(Node typeparams);
-  Node make_selftype(Node node);
+  Nodes scope_path(Node node);
+  Node fq_typeparam(const Nodes& path, Node tp);
+  Node fq_typeargs(const Nodes& path, Node tps);
+  Node make_selftype(Node node, bool fq = false);
 
   Parse parser();
   PassDef structure(const Parse& parse);

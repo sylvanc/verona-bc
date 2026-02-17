@@ -100,21 +100,9 @@ namespace vc
     // Each scope gets a NameElement with its Ident and empty TypeArgs.
     void build_fq_prefix(Node& result, const Node& target_scope)
     {
-      if (target_scope == Top)
-        return;
-
-      Nodes path;
-      auto s = target_scope;
-
-      while (s && s != Top)
+      for (auto& s : scope_path(target_scope))
       {
-        path.push_back(s);
-        s = s->parent({Top, ClassDef, TypeAlias, Function});
-      }
-
-      for (auto it = path.rbegin(); it != path.rend(); ++it)
-      {
-        auto scope_ident = (*it) / Ident;
+        auto scope_ident = s / Ident;
         result
           << (NameElement << (Ident ^ scope_ident->location()) << TypeArgs);
       }
@@ -365,7 +353,7 @@ namespace vc
           return Done;
         }
 
-        state.result = concat(state.result, def);
+        state.result = substitute(state.result, def);
         found = find_def(state.result);
       }
 
@@ -411,7 +399,7 @@ namespace vc
 
     // Substitute TypeParams in `name` (the alias body, fully qualified) using
     // type arguments from `prefix` (the path that led to the alias).
-    Node concat(const Node& prefix, const Node& name)
+    Node substitute(const Node& prefix, const Node& name)
     {
       assert(prefix->in({FuncName, TypeName}));
       assert(name->in({FuncName, TypeName}));
@@ -421,24 +409,22 @@ namespace vc
 
       rhs->traverse([&](Node& node) {
         if ((node != rhs) && node->in({FuncName, TypeName}))
-          node->parent()->replace(node, concat(prefix, node));
+          node->parent()->replace(node, substitute(prefix, node));
         return true;
       });
 
       // Build a map from definition node to the prefix NameElement that
       // references it. This lets us look up type args for substitution.
       NodeMap<Node> scope_to_prefix_elem;
-      {
-        auto def = top;
+      auto def = top;
 
-        for (auto& elem : *prefix)
-        {
-          assert(elem == NameElement);
-          auto defs = def->look((elem / Ident)->location());
-          assert(!defs.empty());
-          def = defs.front();
-          scope_to_prefix_elem[def] = elem;
-        }
+      for (auto& elem : *prefix)
+      {
+        assert(elem == NameElement);
+        auto defs = def->look((elem / Ident)->location());
+        assert(!defs.empty());
+        def = defs.front();
+        scope_to_prefix_elem[def] = elem;
       }
 
       // Walk through rhs, substituting TypeParams and carrying type args
@@ -457,7 +443,7 @@ namespace vc
         assert(elem == NameElement);
         auto defs = curr->look((elem / Ident)->location());
         assert(!defs.empty());
-        auto def = defs.front();
+        def = defs.front();
 
         if (def == TypeParam)
         {

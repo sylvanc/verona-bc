@@ -104,7 +104,7 @@ namespace vc
             auto args = _(NewArgs);
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
-                                << (New << (LocalId ^ id) << make_selftype(args)
+                                << (New << (LocalId ^ id) << make_selftype(args, true)
                                         << args))
                        << (LocalId ^ id);
           },

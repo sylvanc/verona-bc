@@ -21,12 +21,59 @@ namespace vc
     return ta;
   }
 
-  Node make_selftype(Node node)
+  Nodes scope_path(Node node)
+  {
+    Nodes path;
+    auto s = node;
+
+    while (s && (s != Top))
+    {
+      path.push_back(s);
+      s = s->parent({Top, ClassDef, TypeAlias, Function});
+    }
+
+    std::reverse(path.begin(), path.end());
+    return path;
+  }
+
+  Node fq_typeparam(const Nodes& path, Node tp)
+  {
+    Node tn = TypeName;
+
+    for (auto& s : path)
+      tn << (NameElement << clone(s / Ident) << TypeArgs);
+
+    tn << (NameElement << clone(tp / Ident) << TypeArgs);
+    return tn;
+  }
+
+  Node fq_typeargs(const Nodes& path, Node tps)
+  {
+    Node ta = TypeArgs;
+
+    for (auto& tp : *tps)
+      ta << (Type << fq_typeparam(path, tp));
+
+    return ta;
+  }
+
+  Node make_selftype(Node node, bool fq)
   {
     auto cls = node->parent(ClassDef);
     auto tps = cls / TypeParams;
-    return Type
-      << (TypeName
-          << (NameElement << clone(cls / Ident) << make_typeargs(tps)));
+    auto path = scope_path(cls);
+    auto ta = fq ? fq_typeargs(path, tps) : make_typeargs(tps);
+
+    Node tn = TypeName;
+
+    for (auto& s : path)
+    {
+      if (s == cls)
+        tn << (NameElement << clone(cls / Ident) << ta);
+      else
+        tn << (NameElement << clone(s / Ident) << TypeArgs);
+    }
+
+    return Type << tn;
   }
 }
