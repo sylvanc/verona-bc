@@ -77,6 +77,7 @@ namespace vc
     {"asinh", {0, 1, Unop << Asinh}},
     {"acosh", {0, 1, Unop << Acosh}},
     {"atanh", {0, 1, Unop << Atanh}},
+    {"bits", {0, 1, Unop << Bits}},
     {"len", {0, 1, Unop << Len}},
     {"ptr", {0, 1, Unop << MakePtr}},
     {"read", {0, 1, Unop << Read}},

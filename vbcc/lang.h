@@ -125,7 +125,7 @@ namespace vbcc
   std::string unescape(const std::string_view& in);
 
   template<typename T, char Sep = '_'>
-  std::from_chars_result from_chars_sep(Node& node, T& t)
+  std::from_chars_result from_chars_sep(const Node& node, T& t)
   {
     auto sv = node->location().view();
 
@@ -186,5 +186,13 @@ namespace vbcc
     }
 
     return {first, std::errc::invalid_argument};
+  }
+
+  template<typename T, char Sep = '_'>
+  T from_chars_sep_v(const Node& node)
+  {
+    T t = 0;
+    from_chars_sep<T, Sep>(node, t);
+    return t;
   }
 }

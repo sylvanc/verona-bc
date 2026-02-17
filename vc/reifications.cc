@@ -74,7 +74,7 @@ namespace vc
         auto name = (wl_def / Ident)->location();
         auto ta = wl_def / TypeArgs;
         auto ta_count = ta->size();
-        auto arg_count = parse_int(wl_def / Int);
+        auto arg_count = from_chars_sep_v<size_t>(wl_def / Int);
         auto method_id = wl_def->back();
 
         std::for_each(map.begin(), map.end(), [&](auto& kv) {
@@ -222,7 +222,7 @@ namespace vc
       def = defs.front();
     }
 
-    return map.at(def).at(parse_int(tn->back()));
+    return map.at(def).at(from_chars_sep_v<size_t>(tn->back()));
   }
 
   std::pair<Node, Subst> Reifications::get_def_subst(Node type)
@@ -240,7 +240,8 @@ namespace vc
   {
     assert(lookup == Lookup);
     auto& l = (lookup / Lhs) == Lhs ? lhs_lookups : rhs_lookups;
-    auto& v = l[(lookup / Ident)->location()][parse_int(lookup / Int)];
+    auto& v =
+      l[(lookup / Ident)->location()][from_chars_sep_v<size_t>(lookup / Int)];
     Node ta = lookup / TypeArgs;
     auto count = ta->size();
     size_t i = 0;

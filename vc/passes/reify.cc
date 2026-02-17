@@ -1,52 +1,547 @@
 #include "../lang.h"
-#include "../reifications.h"
+#include "../subtype.h"
 
 namespace vc
 {
-  Node classid_to_primitive(Node classid)
-  {
-    auto name = classid->location().view();
+  const auto string_type = TypeName
+    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+    << (NameElement << (Ident ^ "string") << TypeArgs);
 
-    if (name.starts_with("_builtin."))
+  const std::map<std::string_view, Node> primitive_types = {
+    {"none", None},
+    {"bool", Bool},
+    {"i8", I8},
+    {"i16", I16},
+    {"i32", I32},
+    {"i64", I64},
+    {"u8", U8},
+    {"u16", U16},
+    {"u32", U32},
+    {"u64", U64},
+    {"ilong", ILong},
+    {"ulong", ULong},
+    {"isize", ISize},
+    {"usize", USize},
+    {"f32", F32},
+    {"f64", F64},
+    {"ptr", Ptr},
+  };
+
+  struct Reifier
+  {
+    Reifier() {}
+
+    void run(Node& top_)
     {
-      if (name.ends_with("any[0]"))
-        return Dyn;
-      else if (name.ends_with("none[0]"))
-        return None;
-      else if (name.ends_with("bool[0]"))
-        return Bool;
-      else if (name.ends_with("i8[0]"))
-        return I8;
-      else if (name.ends_with("i16[0]"))
-        return I16;
-      else if (name.ends_with("i32[0]"))
-        return I32;
-      else if (name.ends_with("i64[0]"))
-        return I64;
-      else if (name.ends_with("u8[0]"))
-        return U8;
-      else if (name.ends_with("u16[0]"))
-        return U16;
-      else if (name.ends_with("u32[0]"))
-        return U32;
-      else if (name.ends_with("u64[0]"))
-        return U64;
-      else if (name.ends_with("ilong[0]"))
-        return ILong;
-      else if (name.ends_with("ulong[0]"))
-        return ULong;
-      else if (name.ends_with("isize[0]"))
-        return ISize;
-      else if (name.ends_with("usize[0]"))
-        return USize;
-      else if (name.ends_with("f32[0]"))
-        return F32;
-      else if (name.ends_with("f64[0]"))
-        return F64;
+      top = top_;
+      builtin = top->look(Location("_builtin")).front();
+
+      // Create a call to main and reify it.
+      auto main_module = top->front();
+      assert(main_module == ClassDef);
+      assert((main_module / TypeParams)->empty());
+
+      auto id = top->fresh();
+      auto main_call = Call
+        << (LocalId ^ id) << Rhs
+        << (FuncName << (NameElement << (Ident ^ "main") << TypeArgs)) << Args;
+      main_call = reify_call(main_call, {}, main_module);
+
+      // Iteratively reify any classes, type aliases, or functions that we
+      // scheduled for reification.
+      while (!worklist.empty())
+      {
+        auto r = worklist.back();
+        worklist.pop_back();
+
+        if (r->def == ClassDef)
+          reify_class(*r);
+        else if (r->def == TypeAlias)
+          reify_typealias(*r);
+        else if (r->def == Function)
+          reify_function(*r);
+        else
+          assert(false);
+      }
+
+      // Add an entry point for main.
+      top
+        << (Func << (FunctionId ^ "@main") << Params << I32 << Vars
+                 << (Labels
+                     << (Label << (LabelId ^ "start") << (Body << main_call)
+                               << (Return << (LocalId ^ id)))));
     }
 
-    return NoChange;
-  }
+  private:
+    // Each ClassDef (including primitives), TypeAlias, or Function that we
+    // reify gets a Reification struct.
+    struct Reification
+    {
+      Node def;
+      NodeMap<Node> subst;
+      Node id;
+      Node reification;
+    };
+
+    Node top;
+    Node builtin;
+    NodeMap<std::vector<Reification>> map;
+    std::vector<Reification*> worklist;
+
+    void reify_class(Reification& r)
+    {
+      // Treat a shape as a dynamic type. We could build a set of all concrete
+      // types that implement the shape.
+      if ((r.def / Shape) == Shape)
+      {
+        r.id = Dyn;
+        return;
+      }
+
+      // Check if this is a primitive type.
+      if (r.def->parent(ClassDef) == builtin)
+      {
+        auto find = primitive_types.find((r.def / Ident)->location().view());
+
+        if (find != primitive_types.end())
+        {
+          r.id = find->second;
+          r.reification = Primitive << r.id << Methods;
+          return;
+        }
+      }
+
+      // Iterate through the fields in the class.
+      Node fields = Fields;
+
+      for (auto& f : *(r.def / ClassBody))
+      {
+        if (f != FieldDef)
+          continue;
+
+        fields
+          << (Field << (FieldId ^ (f / Ident))
+                    << reify_type(f / Type, r.subst, r.def));
+      }
+
+      // Store the reified class.
+      r.reification = Class << r.id << fields << Methods;
+    }
+
+    void reify_typealias(Reification& r)
+    {
+      // Store the reified type alias.
+      r.reification = TypeAlias << r.id
+                                << reify_type(r.def / Type, r.subst, r.def);
+    }
+
+    bool reify_function(Reification& r)
+    {
+      // Reify the function signature.
+      auto r_type = reify_type(r.def / Type, r.subst, r.def);
+      Node params = Params;
+
+      for (auto& p : *(r.def / Params))
+      {
+        params
+          << (Param << (LocalId ^ (p / Ident))
+                    << reify_type(p / Type, r.subst, r.def));
+      }
+
+      // Reify the function body.
+      Node vars = Vars;
+      Node labels = clone(r.def / Labels);
+
+      for (auto& l : *labels)
+      {
+        Node body = l / Body;
+
+        // No work required: Copy, Move, math ops on existing values.
+
+        // TODO:
+        // RegisterRef | FieldRef | ArrayRef | ArrayRefConst | NewArray |
+        // NewArrayConst | Load | Store | Lookup | CallDyn |
+        // When | FFI
+
+        body->traverse([&](Node& n) {
+          if (n == body)
+            return true;
+
+          if (n->in({Const, Convert}))
+          {
+            reify_primitive(n / Type);
+          }
+          else if (n == ConstStr)
+          {
+            reify_typename(string_type, {}, top);
+          }
+          else if (n == Typetest)
+          {
+            n / Type = reify_type(n / Type, r.subst, r.def);
+            reify_primitive(Bool);
+          }
+          else if (n->in({Eq, Ne, Lt, Le, Gt, Ge}))
+          {
+            reify_primitive(Bool);
+          }
+          else if (n->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
+          {
+            reify_primitive(F64);
+          }
+          else if (n == Bits)
+          {
+            reify_primitive(U64);
+          }
+          else if (n == Len)
+          {
+            reify_primitive(USize);
+          }
+          else if (n == MakePtr)
+          {
+            reify_primitive(Ptr);
+          }
+          else if (n == Var)
+          {
+            vars << (Var << (LocalId ^ (n / Ident)));
+          }
+          else if (n == New)
+          {
+            // TODO: need to get the reified type of this.
+            // use it to turn field map into sequential args.
+            n / Type = reify_type(n / Type, r.subst, r.def);
+          }
+          else if (n == Call)
+          {
+            n->parent()->replace(n, reify_call(n, r.subst, r.def));
+          }
+
+          return false;
+        });
+      }
+
+      r.reification = Func << r.id << params << r_type << vars << labels;
+      return true;
+    }
+
+    // Turn a type into an IR type. The IR doesn't have intersection types,
+    // structural types, or tuple types.
+    Node
+    reify_type(const Node& type, const NodeMap<Node>& subst, const Node& scope)
+    {
+      if (type == Type)
+        return reify_type(type->front(), subst, scope);
+
+      // Use Dyn until we turn function types into shapes.
+      if (type == FuncType)
+        return Dyn;
+
+      // Use [Dyn] for now.
+      if (type == TupleType)
+        return Array << Dyn;
+
+      if (type == Union)
+      {
+        Node r = Union;
+
+        for (auto& t : *type)
+        {
+          auto rt = reify_type(t, subst, scope);
+
+          // A union that contains a dynamic type is just dynamic. A union that
+          // contains a union is flattened.
+          if (rt == Dyn)
+            return Dyn;
+          else if (rt == Union)
+            r << *rt;
+          else
+            r << rt;
+        }
+
+        return r;
+      }
+
+      if (type == Isect)
+      {
+        Node r = Dyn;
+
+        for (auto& t : *type)
+        {
+          auto rt = reify_type(t, subst, scope);
+
+          // Encapsulate rt in a union.
+          if (rt != Union)
+            rt = Union << rt;
+
+          if (r == Dyn)
+          {
+            // A dynamic result means all types, so the intersection is rt.
+            r = rt;
+          }
+          else
+          {
+            // Intersect the existing union with this one.
+            Node nr = Union;
+
+            for (auto& existing : *r)
+            {
+              // Keep this existing type if it also exists in rt. Dynamic types
+              // in the intersection are ignored.
+              bool found = std::any_of(rt->begin(), rt->end(), [&](auto& c) {
+                return (c != Dyn) && existing->equals(c);
+              });
+
+              // Keep only unique types.
+              if (found && std::none_of(nr->begin(), nr->end(), [&](auto& u) {
+                    return u->equals(existing);
+                  }))
+              {
+                nr << existing;
+              }
+            }
+
+            r = nr;
+          }
+        }
+
+        return r;
+      }
+
+      if (type == TypeName)
+        return reify_typename(type, subst, scope);
+
+      assert(false);
+      return {};
+    }
+
+    // Get the reification and return the ClassId or TypeId.
+    Node reify_typename(
+      const Node& tn, const NodeMap<Node>& subst, const Node& scope)
+    {
+      return get_reification(tn, subst, scope, [](auto& def) {
+        return def->in({ClassDef, TypeAlias});
+      });
+    }
+
+    // Reify a primitive from a wfPrimitiveType.
+    void reify_primitive(const Node& type)
+    {
+      for (auto& [k, v] : primitive_types)
+      {
+        // Look for this primitive type.
+        if (type != v)
+          continue;
+
+        // Look up the class definition by name.
+        auto defs = builtin->look(Location(std::string(k)));
+        assert(defs.size() == 1);
+        auto def = defs.front();
+        assert(def == ClassDef);
+        assert((def / TypeParams)->size() == 0);
+
+        auto& r_vec = map[def];
+
+        // If this primitive type has already been reified, we're done.
+        if (!r_vec.empty())
+          return;
+
+        // Store this reification.
+        r_vec.push_back({def, {}, type, Primitive << type << Methods});
+        return;
+      }
+    }
+
+    Node
+    reify_call(const Node& call, const NodeMap<Node>& subst, const Node& scope)
+    {
+      auto hand = (call / Lhs)->type();
+      auto arity = (call / Args)->size();
+
+      auto funcid =
+        get_reification(call / FuncName, subst, scope, [&](auto& def) {
+          return (def == Function) && ((def / Params)->size() == arity) &&
+            ((def / Lhs) == hand);
+        });
+
+      return Call << (call / LocalId) << funcid << (call / Args);
+    }
+
+    // Given a TypeName or FuncName, a substitution map, and a scope, find or
+    // create a reification and return the ClassId, TypeId, or FunctionId. The
+    // accept function is used to filter definitions, such as looking for a
+    // function with a specific arity and handedness.
+    template<typename F>
+    Node get_reification(
+      const Node& name, const NodeMap<Node>& subst, const Node& scope, F accept)
+    {
+      assert(name->in({TypeName, FuncName}));
+      auto def = scope;
+
+      for (auto& elem : *name)
+      {
+        if (elem == TypeParent)
+        {
+          if (def == Top)
+            return err(name, "No parent scope for type name");
+
+          def = def->parent({Top, ClassDef, TypeAlias, Function});
+        }
+        else
+        {
+          assert(elem == NameElement);
+          auto defs = def->look((elem / Ident)->location());
+          bool found = false;
+
+          for (auto& d : defs)
+          {
+            // TODO: don't call accept at every level, only at the end
+            // in between, always look for ClassDef or TypeParam
+            if (accept(d))
+            {
+              found = true;
+              def = d;
+              break;
+            }
+          }
+
+          if (!found)
+          {
+            auto e = err(elem, "No definition for name element");
+
+            if (def == Top)
+              return e << errmsg("Resolving at the top level.");
+            else
+              return e << errmsg("Resolving here:") << errloc(def / Ident);
+          }
+
+          if (def == TypeParam)
+          {
+            auto find = subst.find(def);
+
+            if (find == subst.end())
+              return err(elem, "No substitution for type parameter");
+
+            // TODO: find->second is the type argument
+            // it can be an algebraic type
+            assert(find->second == Type);
+
+            if (find->second->front() == TypeName)
+            {
+              // TODO: need to find the def and subst
+            }
+          }
+        }
+      }
+
+      // TODO: proper name expansion with substitution.
+      // TODO: good error messages.
+      for (auto& n : *name)
+      {
+        auto defs = def->look((n / Ident)->location());
+
+        if (defs.empty())
+          return {false, nullptr};
+
+        if (n == name->back())
+        {
+          for (auto& d : defs)
+          {
+            if (accept(d))
+            {
+              def = d;
+              break;
+            }
+          }
+        }
+        else
+        {
+          def = defs.front();
+
+          if (def != ClassDef)
+            return {false, nullptr};
+        }
+
+        size_t count = (def / TypeParams)->size();
+        assert((n / TypeArgs)->size() == count);
+
+        for (size_t i = 0; i < count; i++)
+          subst[(def / TypeParams)->at(i)] = (n / TypeArgs)->at(i);
+      }
+
+      // TODO: from here on is already good
+
+      auto& r_vec = map[def];
+
+      for (auto& existing : r_vec)
+      {
+        assert(existing.def == def);
+        assert(
+          std::equal(
+            existing.subst.begin(),
+            existing.subst.end(),
+            subst.begin(),
+            subst.end(),
+            [](auto& lhs, auto& rhs) { return lhs.first == rhs.first; }));
+
+        if (std::equal(
+              existing.subst.begin(),
+              existing.subst.end(),
+              subst.begin(),
+              subst.end(),
+              [&](auto& lhs, auto& rhs) {
+                return Subtype(lhs.second, rhs.second) &&
+                  Subtype(rhs.second, lhs.second);
+              }))
+        {
+          // This reification already exists.
+          return clone(existing.id);
+        }
+      }
+
+      // Store this reification.
+      r_vec.push_back({def, subst, make_id(def, r_vec.size()), {}});
+
+      // Schedule this for reification.
+      auto& r = r_vec.back();
+      worklist.push_back(&r);
+      return clone(r.id);
+    }
+
+    Node make_id(const Node& def, size_t index)
+    {
+      // Identifiers take the form `a::b::c::3`.
+      assert(def->in({ClassDef, TypeAlias, Function}));
+      auto id = std::string((def / Ident)->location().view());
+      auto parent = def->parent({Top, ClassDef, TypeAlias, Function});
+
+      while (parent)
+      {
+        id = std::format("{}::{}", (parent / Ident)->location().view(), id);
+        parent = parent->parent({Top, ClassDef, TypeAlias, Function});
+      }
+
+      if (def == Function)
+      {
+        // A function adds arity and handedness.
+        id = std::format(
+          "{}.{}{}",
+          id,
+          (def / Params)->size(),
+          (def / Lhs) == Lhs ? ".ref" : "");
+      }
+
+      id = std::format("{}::{}", id, index);
+
+      if (def == ClassDef)
+        return ClassId ^ id;
+      else if (def == TypeAlias)
+        return TypeId ^ id;
+      else if (def == Function)
+        return FunctionId ^ id;
+
+      assert(false);
+      return {};
+    }
+  };
 
   PassDef reify()
   {
@@ -57,249 +552,66 @@ namespace vc
       wfIR,
       dir::bottomup,
       {
-        // Turn ClassId into a primitive type, if needed.
-        T(ClassId)[ClassId] >>
-          [](Match& _) { return classid_to_primitive(_(ClassId)); },
+        // // Lift library definitions.
+        // In(ClassBody) * T(Lib)[Lib] >>
+        //   [](Match& _) { return Lift << Top << _(Lib); },
 
-        // Turn FuncType into Dyn.
-        T(FuncType) >> [](Match&) -> Node { return Dyn; },
+        // // Use a MethodId in Lookup.
+        // T(Lookup)
+        //     << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Lhs, Rhs) *
+        //         T(Ident, SymbolId) * T(TypeArgs) * T(Int) *
+        //         T(MethodId)[MethodId]) >>
+        //   [](Match& _) { return Lookup << _(Lhs) << _(Rhs) << _(MethodId); },
 
-        // Turn TupleType into Array Dyn.
-        T(TupleType)[TupleType] >> [](Match&) { return Array << Dyn; },
+        // // Pass [T] instead of T to NewArray and NewArrayConst.
+        // T(NewArray)
+        //     << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(LocalId)[Rhs]) >>
+        //   [](Match& _) {
+        //     return NewArray << _(Lhs) << (Array << _(Type)) << _(Rhs);
+        //   },
 
-        // Turn TypeNameReified into a ClassId or primitive type.
-        T(TypeNameReified)[TypeNameReified] >> [=](Match& _) -> Node {
-          auto tn = _(TypeNameReified);
-          auto& r = rs->get_reification(tn);
+        // T(NewArrayConst)
+        //     << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(Int)[Rhs]) >>
+        //   [](Match& _) {
+        //     return NewArrayConst << _(Lhs) << (Array << _(Type)) << _(Rhs);
+        //   },
 
-          // If it's an unreified type, remove it.
-          // TODO: probably wrong
-          if (!r.instance)
-            return Dyn;
+        // // Use WhenDyn instead of When, and pass cown T instead of T.
+        // T(When)
+        //     << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Args)[Args] *
+        //         Any[Type]) >>
+        //   [](Match& _) {
+        //     return WhenDyn << _(Lhs) << _(Rhs) << _(Args) << (Cown <<
+        //     _(Type));
+        //   },
 
-          assert(r.instance == ClassDef);
-          auto id = r.instance / Ident;
+        // // Elide unused copies.
+        // T(Copy) << (T(LocalId)[Lhs] * T(LocalId)) >> [](Match& _) -> Node {
+        //   auto lhs = _(Lhs);
+        //   auto f = lhs->parent(Labels);
+        //   auto found = false;
 
-          // If this has already been turned into a primitive, use it. If the
-          // target is a primitive type, this may not have happened yet.
-          if (id != ClassId)
-            return clone(id);
+        //   f->traverse([&](Node& node) {
+        //     if (
+        //       (node == LocalId) && (node != lhs) &&
+        //       (node->location() == lhs->location()))
+        //     {
+        //       found = true;
+        //       return false;
+        //     }
 
-          // Check for a complex primitive: Array, Ref, or Cown.
-          if (r.def->parent(ClassDef) == rs->builtin)
-          {
-            auto name = (r.def / Ident)->location().view();
+        //     return true;
+        //   });
 
-            if (name == "array")
-              return Array << clone(r.subst.begin()->second);
-            else if (name == "ref")
-              return Ref << clone(r.subst.begin()->second);
-            else if (name == "cown")
-              return Cown << clone(r.subst.begin()->second);
-          }
+        //   if (!found)
+        //     return {};
 
-          // Check for a primitive, and either return that or the ClassId.
-          auto prim = classid_to_primitive(id);
-
-          if (prim != NoChange)
-            return prim;
-
-          return clone(id);
-        },
-
-        // An intersection type is Dyn.
-        T(Isect) >> [](Match&) -> Node { return Dyn; },
-
-        // A union type that contains Dyn is Dyn.
-        T(Union)[Union] >> [](Match& _) -> Node {
-          if (_(Union)->contains(Dyn))
-            return Dyn;
-
-          return NoChange;
-        },
-
-        // A type variable is Dyn.
-        T(TypeVar) >> [](Match&) -> Node { return Dyn; },
-
-        // Strip the wrapping Type node.
-        T(Type) << Any[Type] >> [](Match& _) -> Node { return _(Type); },
-
-        // Turn a ParamDef into a Param.
-        T(ParamDef) << (T(Ident)[Ident] * Any[Type]) >>
-          [](Match& _) { return Param << (LocalId ^ _(Ident)) << _(Type); },
-
-        // Lift library definitions.
-        In(ClassBody) * T(Lib)[Lib] >>
-          [](Match& _) { return Lift << Top << _(Lib); },
-
-        // Lift reified functions.
-        T(Function)[Function] << (T(Lhs, Rhs) * T(FunctionId)) >>
-          [](Match& _) {
-            auto f = _(Function);
-            return Lift << Top
-                        << (Func << (f / Ident) << (f / Params) << (f / Type)
-                                 << Vars << (f / Labels));
-          },
-
-        // Lift reified classes.
-        T(ClassDef)[ClassDef] << (T(Shape, None) * !T(Ident)) >>
-          [](Match& _) -> Node {
-          auto c = _(ClassDef);
-          bool primitive = (c / Ident) != ClassId;
-
-          Node f;
-          Node m = Methods;
-          auto cls = (primitive ? Primitive : Class) << (c / Ident);
-
-          if (!primitive)
-          {
-            // Primitives don't have fields.
-            f = Fields;
-            cls << f;
-          }
-          else if ((c / Ident) == Dyn)
-          {
-            // Don't emit an implementation for `any`.
-            return {};
-          }
-
-          cls << m;
-
-          for (auto& n : *(c / ClassBody))
-          {
-            if (n == FieldDef)
-            {
-              if (primitive)
-              {
-                n->parent() << err(n, "Primitive types can't have fields.");
-                return NoChange;
-              }
-
-              f << (Field << (FieldId ^ (n / Ident)) << (n / Type));
-            }
-            else if (n == Method)
-            {
-              m << n;
-            }
-          }
-
-          return Lift << Top << cls;
-        },
-
-        // Strip handedness from function calls.
-        T(Call)
-            << (T(LocalId)[Lhs] * T(Lhs, Rhs) * T(FunctionId)[FunctionId] *
-                T(Args)[Args]) >>
-          [](Match& _) -> Node {
-          return Call << _(Lhs) << _(FunctionId) << _(Args);
-        },
-
-        // Use a MethodId in Lookup.
-        T(Lookup)
-            << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Lhs, Rhs) *
-                T(Ident, SymbolId) * T(TypeArgs) * T(Int) *
-                T(MethodId)[MethodId]) >>
-          [](Match& _) { return Lookup << _(Lhs) << _(Rhs) << _(MethodId); },
-
-        // Pass [T] instead of T to NewArray and NewArrayConst.
-        T(NewArray)
-            << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(LocalId)[Rhs]) >>
-          [](Match& _) {
-            return NewArray << _(Lhs) << (Array << _(Type)) << _(Rhs);
-          },
-
-        T(NewArrayConst)
-            << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(Int)[Rhs]) >>
-          [](Match& _) {
-            return NewArrayConst << _(Lhs) << (Array << _(Type)) << _(Rhs);
-          },
-
-        // Use WhenDyn instead of When, and pass cown T instead of T.
-        T(When)
-            << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Args)[Args] *
-                Any[Type]) >>
-          [](Match& _) {
-            return WhenDyn << _(Lhs) << _(Rhs) << _(Args) << (Cown << _(Type));
-          },
-
-        // Elide unused copies.
-        T(Copy) << (T(LocalId)[Lhs] * T(LocalId)) >> [](Match& _) -> Node {
-          auto lhs = _(Lhs);
-          auto f = lhs->parent(Labels);
-          auto found = false;
-
-          f->traverse([&](Node& node) {
-            if (
-              (node == LocalId) && (node != lhs) &&
-              (node->location() == lhs->location()))
-            {
-              found = true;
-              return false;
-            }
-
-            return true;
-          });
-
-          if (!found)
-            return {};
-
-          return NoChange;
-        },
+        //   return NoChange;
+        // },
       }};
 
     p.pre([=](auto top) {
-      top->traverse([&](auto node) {
-        if (node == Symbol)
-        {
-          rs->schedule(node, {}, true);
-          return false;
-        }
-
-        return true;
-      });
-
-      rs->start(top);
-      rs->run();
-      return 0;
-    });
-
-    // Delete remaining ClassDef. Do this late, otherwise lifting doesn't work.
-    p.post([=](auto top) {
-      Nodes to_remove;
-
-      top->traverse([&](auto node) {
-        bool ok = true;
-
-        if (node == Error)
-        {
-          ok = false;
-        }
-        else if (node->get_contains_error())
-        {
-          // Do nothing.
-        }
-        else if (node == Var)
-        {
-          auto f = node->parent(Func);
-
-          if (f)
-            (f / Vars) << (LocalId ^ (node / Ident));
-
-          to_remove.push_back(node);
-          ok = false;
-        }
-        else if (node->in({Use, TypeAlias, ClassDef, Function}))
-        {
-          to_remove.push_back(node);
-          ok = false;
-        }
-
-        return ok;
-      });
-
-      for (auto& node : to_remove)
-        node->parent()->replace(node);
-
+      Reifier().run(top);
       return 0;
     });
 

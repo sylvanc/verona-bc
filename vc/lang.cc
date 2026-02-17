@@ -2,13 +2,6 @@
 
 namespace vc
 {
-  size_t parse_int(Node node)
-  {
-    size_t i = 0;
-    from_chars_sep(node, i);
-    return i;
-  }
-
   Node make_type(Match& _, NodeRange r)
   {
     return Type << (r || (TypeVar ^ _.fresh(l_typevar)));

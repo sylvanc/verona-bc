@@ -21,10 +21,10 @@ int main(int argc, char** argv)
       dot(),
       application(),
       anf(),
-      reify(),
-      vbcc::assignids(state),
-      vbcc::validids(state),
-      vbcc::liveness(state),
+      // reify(),
+      // vbcc::assignids(state),
+      // vbcc::validids(state),
+      // vbcc::liveness(state),
     },
     parse};
 

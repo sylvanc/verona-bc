@@ -56,13 +56,36 @@ namespace vc
 
     bool run()
     {
-      return steps() != Delay;
+      if (steps() == Delay)
+        return false;
+
+      // This gets run on resolution, no matter which step returned Done.
+      if (n->type() == state.result->type())
+      {
+        // Replace the contents. Don't replace `n`, as this is how NodeWorker
+        // tracks progress.
+        n->erase(n->begin(), n->end());
+        n << *state.result;
+        state.result = n;
+      }
+      else
+      {
+        // We've changed node type, replace `n`. This handles Error as well.
+        n->parent()->replace(n, state.result);
+      }
+
+      return true;
     }
 
   private:
     StepResult steps()
     {
       STEP(block_on_children(n));
+
+      // Don't try to resolve if any children had an error.
+      if (n->get_contains_error())
+        return Done;
+
       STEP(resolve_first());
 
       for (auto it = n->begin() + 1; it != n->end(); ++it)
@@ -105,10 +128,6 @@ namespace vc
                 "Identifier refers to a local but is used as a "
                 "qualified name");
             }
-            else if (n->parent() == Use)
-            {
-              state.result = err(name, "Local identifiers can't be imported");
-            }
             else if (!ta->empty())
             {
               // An identifier with type arguments is a method call of apply
@@ -129,7 +148,7 @@ namespace vc
           if (def->in({ClassDef, TypeAlias, TypeParam}))
           {
             found = def;
-            state.result << clone(elem);
+            state.result << elem;
             return Continue;
           }
 
@@ -138,6 +157,10 @@ namespace vc
             (def == Use) &&
             (def->parent({Top, ClassDef, TypeAlias, Function}) == curr_scope))
           {
+            // Don't follow our own Use (self-referential include).
+            if (n->parent() == def)
+              continue;
+
             // Ignore `use` that don't syntactically precede the definition.
             if (!def->precedes(name))
               continue;
@@ -146,7 +169,7 @@ namespace vc
             STEP(block_on_children(def));
 
             // Ignore this if the use failed to resolve.
-            auto& use_name = worker.state(def / TypeName).result;
+            auto use_name = def / TypeName;
             if (use_name == Error)
               continue;
 
@@ -155,14 +178,15 @@ namespace vc
             assert(use_def == ClassDef);
 
             // This will be one ClassDef or TypeAlias, or zero or more
-            // Functions.
+            // Functions. Use lookdown instead of look, so that we don't get
+            // TypeParam or FieldDef results.
             auto defs = use_def->lookdown(name->location());
             if (defs.empty())
               continue;
 
             // Update state.result to include the use name.
             state.result = concat(state.result, use_name, scope);
-            state.result << clone(elem);
+            state.result << elem;
             found = defs.front();
             return Continue;
           }
@@ -182,7 +206,7 @@ namespace vc
         (name->location().view() == "Self"))
       {
         // Accept `Self` for now as a hack.
-        state.result << clone(elem);
+        state.result << elem;
       }
       else
       {
@@ -206,6 +230,8 @@ namespace vc
       }
 
       // This will be one ClassDef or TypeAlias, or zero or more Functions.
+      // Use lookdown instead of look, so that we don't get TypeParam or
+      // FieldDef results.
       auto defs = found->lookdown(name->location());
 
       if (defs.empty())
@@ -217,7 +243,7 @@ namespace vc
 
       // If we have multiple functions, it doesn't matter which one we use.
       found = defs.front();
-      state.result << clone(elem);
+      state.result << elem;
       return Continue;
     }
 
@@ -269,6 +295,14 @@ namespace vc
           // If there are multiple create functions, it doesn't matter which
           // one we use.
           found = defs.front();
+
+          if (found != Function)
+          {
+            state.result = err(name, "Class 'create' must be a function")
+              << errmsg("Resolving here:") << errloc(found / Ident);
+            return Done;
+          }
+
           state.result << (NameElement << (Ident ^ "create") << TypeArgs);
         }
 
@@ -276,7 +310,7 @@ namespace vc
         {
           // Create sugar.
           state.result << (NameElement << (Ident ^ "create") << TypeArgs);
-          return Done;
+          return Continue;
         }
 
         if (found != Function)
@@ -286,7 +320,7 @@ namespace vc
         }
       }
 
-      return Done;
+      return Continue;
     }
 
     StepResult resolve_alias()
@@ -304,8 +338,7 @@ namespace vc
           return Done;
         }
 
-        auto& s = worker.state(def);
-        state.result = concat(state.result, s.result, scope);
+        state.result = concat(state.result, def, scope);
         found = find_def(state.result, scope);
       }
 
@@ -378,6 +411,14 @@ namespace vc
 
       for (auto& elem : *rhs)
       {
+        if (!lhs->in({FuncName, TypeName}))
+        {
+          // This can only happen if we expanded a type parameter reference to
+          // something that isn't a TypeName, and then we look down.
+          return err(elem, "Can't look down through this type")
+            << errmsg("Resolving here:") << errloc(lhs);
+        }
+
         if (elem == TypeParent)
         {
           if (lhs->empty() || (lhs->back() == TypeParent))
@@ -396,22 +437,34 @@ namespace vc
 
           if (def == TypeParam)
           {
-            auto tps = curr_scope / TypeParams;
-            size_t index = 0;
-
-            for (auto& tp : *tps)
+            // If lhs ends with TypeParent, there are no type arguments
+            // to substitute — the type parameter is from an enclosing
+            // scope reached via parent navigation, not via an explicit
+            // name with type arguments.
+            if (lhs->empty() || lhs->back() == TypeParent)
             {
-              if (tp == def)
-                break;
-
-              index++;
+              lhs << elem;
             }
+            else
+            {
+              auto tps = curr_scope / TypeParams;
+              size_t index = 0;
 
-            auto tas = lhs->back() / TypeArgs;
-            assert(index < tas->size());
-            auto ta = tas->at(index);
-            lhs = clone(ta);
-            curr_scope = scope;
+              for (auto& tp : *tps)
+              {
+                if (tp == def)
+                  break;
+
+                index++;
+              }
+
+              auto tas = lhs->back() / TypeArgs;
+              assert(index < tas->size());
+              auto ta = tas->at(index);
+              assert(ta == Type);
+              lhs = clone(ta->front());
+              curr_scope = scope;
+            }
           }
           else
           {
@@ -444,26 +497,12 @@ namespace vc
         },
       }};
 
-    p.post([=](Node) {
+    p.post([=](Node top) {
       nw->run();
 
       for (auto& [n, state] : nw->states())
       {
-        if (state.kind == WorkerStatus::Resolved)
-        {
-          if ((n->parent() == Use) && (state.result != Error))
-          {
-            // Remove all Use nodes.
-            n->parent()->parent()->replace(n->parent());
-          }
-          else if (!n->parent(NameElement))
-          {
-            // Don't bother with type arguments to type and function names, as
-            // they're already in the containing TypeName/FuncName.
-            n->parent()->replace(n, state.result);
-          }
-        }
-        else
+        if (state.kind != WorkerStatus::Resolved)
         {
           auto e =
             err(n, "Could not resolve identifier due to circular dependencies");
@@ -474,6 +513,18 @@ namespace vc
           n->parent()->replace(n, e);
         }
       }
+
+      // Collect Use nodes to remove, then remove them after traversal.
+      // Removing during traversal would invalidate the traverse iterator.
+      Nodes uses;
+      top->traverse([&](Node& node) {
+        if ((node == Use) && !node->get_contains_error())
+          uses.push_back(node);
+        return true;
+      });
+
+      for (auto& use : uses)
+        use->parent()->replace(use);
 
       return 0;
     });

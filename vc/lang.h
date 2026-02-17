@@ -120,14 +120,14 @@ namespace vc
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
   inline const auto wfBody =
-    Use | TypeAlias | Break | Continue | Return | Raise | Throw | Expr;
+    Use | Break | Continue | Return | Raise | Throw | Expr;
 
   inline const auto wfBinop = Add | Sub | Mul | Div | Mod | Pow | And | Or |
     Xor | Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
-    Tanh | Asinh | Acosh | Atanh | Len | MakePtr | Read;
+    Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
 
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
@@ -206,10 +206,13 @@ namespace vc
   // clang-format on
 
   inline const auto wfExprIdent = wfExprStructure | LocalId | MethodName;
+  inline const auto wfBodyIdent = wfBody - Use;
 
   // clang-format off
   inline const auto wfPassIdent =
       wfPassStructure
+    | (ClassBody <<= (ClassDef | TypeAlias | Lib | FieldDef | Function)++)
+    | (Body <<= wfBodyIdent++)
     | (TypeName <<= (TypeParent | NameElement)++[1])
     | (FuncName <<= (TypeParent | NameElement)++[1])
     | (MethodName <<= wfFuncId * TypeArgs)
@@ -261,10 +264,10 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfBodyANF = Use | TypeAlias | Const | ConstStr | Convert |
-    Copy | Move | RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New |
-    NewArray | NewArrayConst | Load | Store | Lookup | Call | CallDyn |
-    Typetest | Var | When | wfBinop | wfUnop | wfNulop | FFI;
+  inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
+    RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | NewArray |
+    NewArrayConst | Load | Store | Lookup | Call | CallDyn | Typetest | Var |
+    When | wfBinop | wfUnop | wfNulop | FFI;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -350,6 +353,7 @@ namespace vc
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)
     | (Const_NaN <<= wfDst)
+    | (Bits <<= wfDst * wfSrc)
     | (Len <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)
     | (FFI <<= wfDst * SymbolId * Args)
@@ -358,7 +362,6 @@ namespace vc
 
   inline const auto l_typevar = Location("typevar");
 
-  size_t parse_int(Node node);
   Node make_type(Match& _, NodeRange r = {});
   Node make_typeargs(Node typeparams);
   Node make_selftype(Node node);

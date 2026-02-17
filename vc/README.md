@@ -2,8 +2,13 @@
 
 ## To Do
 
-Name resolution.
-- Trieste returns `use` entries all at the end, rather than interspersed with definitions. This means "overrides" aren't working the way they should.
+Reification.
+- Can type parameters be encoded as type aliases in the reified type?
+- Type names in FFI symbols must not contain type parameter references.
+  - Find symbols from FFI calls rather than reifying all of them.
+- Make function reification iterative instead of recursive.
+  - Too much stack usage.
+  - Can do the signature right away, to get the return type.
 
 Type inference.
 - Create a `TypeVar` for integer and float literals?
@@ -50,19 +55,24 @@ Expressions:
 ```rs
 shape to_bool
 {
-  bool(self: Self): bool;
+  apply(self: Self): bool;
 }
 
 bool
 {
+  apply(self: bool): bool
+  {
+    return self;
+  }
+
   &(self: bool, other: to_bool): bool
   {
-    if self { other.bool } else { false }
+    if self { other() } else { false }
   }
 
   |(self: bool, other: to_bool): bool
   {
-    if self { true } else { other.bool }
+    if self { true } else { other() }
   }
 }
 ```
@@ -101,6 +111,8 @@ Security:
 
 RHS functions for `ValueParam`? Or treat them like `ParamDef`?
 - Treat them as much as possible as a `TypeParam`.
+- Could encode them as types, since they have to be statically compiled. So uses of them "just" call create on the type.
+- Would need an "equivalence" relation at compile time for invariant sub-typing.
 
 Types:
 - Structural types.

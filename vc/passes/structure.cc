@@ -658,12 +658,24 @@ namespace vc
           // Rewrite the Use.
           auto tn = TypeName << (NameElement << (Ident ^ dep.hash) << TypeArgs);
 
-          if (id)
+          if (id && (node->parent() != ClassBody))
+            id =
+              err(node, "Dependency aliases can only be declared in classes");
+          else if (id)
             id = TypeAlias << id << TypeParams << Where << (Type << tn);
           else
             id = Use << tn;
 
           node->parent()->replace(node, id);
+        }
+        else if (node == TypeAlias)
+        {
+          if (node->parent() != ClassBody)
+          {
+            node->parent()->replace(
+              node, err(node, "Type aliases can only be declared in classes"));
+            ok = false;
+          }
         }
         else if (node == Expr)
         {
