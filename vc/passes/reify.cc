@@ -212,11 +212,11 @@ namespace vc
         Node body = l / Body;
         Nodes remove;
 
-        // No work required: Copy, Move, math ops on existing values.
+        // No work required: Copy, Move, CallDyn, math ops on existing values.
 
         // TODO:
-        // RegisterRef | FieldRef | ArrayRef | ArrayRefConst | NewArray |
-        // NewArrayConst | Load | Store | Lookup | CallDyn |
+        // RegisterRef | FieldRef | ArrayRef | ArrayRefConst |
+        // Load | Store | Lookup |
         // When
 
         body->traverse([&](Node& n) {
@@ -272,6 +272,10 @@ namespace vc
           else if (n == Call)
           {
             reify_call(n, r.subst);
+          }
+          else if (n->in({NewArray, NewArrayConst}))
+          {
+            n / Type = Array << reify_type(n / Type, r.subst);
           }
           else if (n == FFI)
           {
@@ -884,19 +888,6 @@ namespace vc
         //         T(Ident, SymbolId) * T(TypeArgs) * T(Int) *
         //         T(MethodId)[MethodId]) >>
         //   [](Match& _) { return Lookup << _(Lhs) << _(Rhs) << _(MethodId); },
-
-        // // Pass [T] instead of T to NewArray and NewArrayConst.
-        // T(NewArray)
-        //     << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(LocalId)[Rhs]) >>
-        //   [](Match& _) {
-        //     return NewArray << _(Lhs) << (Array << _(Type)) << _(Rhs);
-        //   },
-
-        // T(NewArrayConst)
-        //     << (T(LocalId)[Lhs] * (!T(Array))[Type] * T(Int)[Rhs]) >>
-        //   [](Match& _) {
-        //     return NewArrayConst << _(Lhs) << (Array << _(Type)) << _(Rhs);
-        //   },
 
         // // Use WhenDyn instead of When, and pass cown T instead of T.
         // T(When)
