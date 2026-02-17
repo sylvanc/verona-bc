@@ -304,6 +304,10 @@ namespace vc
           {
             reify_ffi(n, r);
           }
+          else if (n == When)
+          {
+            n->parent()->replace(n, reify_when(n, r));
+          }
 
           return false;
         });
@@ -647,6 +651,12 @@ namespace vc
       }
     }
 
+    Node reify_when(Node& n, Reification& r)
+    {
+      return WhenDyn << (n / LocalId) << (n / Rhs) << (n / Args)
+                     << (Cown << reify_type(n / Type, r.subst));
+    }
+
     // Given a TypeName or FuncName and a substitution map, find or create a
     // reification and return the ClassId, TypeId, or FunctionId. The accept
     // function is used to filter the final definition, such as looking for a
@@ -911,15 +921,6 @@ namespace vc
         //         T(Ident, SymbolId) * T(TypeArgs) * T(Int) *
         //         T(MethodId)[MethodId]) >>
         //   [](Match& _) { return Lookup << _(Lhs) << _(Rhs) << _(MethodId); },
-
-        // // Use WhenDyn instead of When, and pass cown T instead of T.
-        // T(When)
-        //     << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Args)[Args] *
-        //         Any[Type]) >>
-        //   [](Match& _) {
-        //     return WhenDyn << _(Lhs) << _(Rhs) << _(Args) << (Cown <<
-        //     _(Type));
-        //   },
 
         // // Elide unused copies.
         // T(Copy) << (T(LocalId)[Lhs] * T(LocalId)) >> [](Match& _) -> Node {
