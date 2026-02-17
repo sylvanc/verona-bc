@@ -82,6 +82,10 @@ namespace vc
       for (auto& [_, reifications] : map)
         for (auto& r : reifications)
           top << r.reification;
+
+      // Add reified libraries.
+      for (auto& [_, lib] : libs)
+        top << lib;
     }
 
   private:
@@ -99,6 +103,7 @@ namespace vc
     Node builtin;
     NodeMap<std::deque<Reification>> map;
     std::vector<Reification*> worklist;
+    std::map<Location, Node> libs;
 
     // Resolve a TypeArg through the current substitution map. If the TypeArg
     // is a Type wrapping a TypeName that resolves to a TypeParam in the subst,
@@ -212,7 +217,7 @@ namespace vc
         // TODO:
         // RegisterRef | FieldRef | ArrayRef | ArrayRefConst | NewArray |
         // NewArrayConst | Load | Store | Lookup | CallDyn |
-        // When | FFI
+        // When
 
         body->traverse([&](Node& n) {
           if (n == body)
@@ -267,6 +272,10 @@ namespace vc
           else if (n == Call)
           {
             reify_call(n, r.subst);
+          }
+          else if (n == FFI)
+          {
+            reify_ffi(n, r);
           }
 
           return false;
@@ -505,6 +514,110 @@ namespace vc
 
       // TODO: Register Method entries on class definitions mapping this
       // MethodId to the appropriate FunctionId.
+    }
+
+    void reify_ffi(Node& n, Reification& r)
+    {
+      auto sym_id = n / SymbolId;
+      auto sym_name = sym_id->location();
+
+      // Walk up from the function definition to find the Lib that defines
+      // this symbol.
+      auto def = r.def;
+      auto parent = def->parent(ClassDef);
+
+      while (parent)
+      {
+        for (auto& child : *(parent / ClassBody))
+        {
+          if (child != Lib)
+            continue;
+
+          for (auto& sym : *(child / Symbols))
+          {
+            if ((sym / SymbolId)->location() == sym_name)
+            {
+              // Found the matching symbol in this Lib.
+              // Get or create the reified Lib.
+              auto lib_loc = (child / String)->location();
+              auto find = libs.find(lib_loc);
+              Node reified_lib;
+
+              if (find == libs.end())
+              {
+                reified_lib = Lib << clone(child / String) << Symbols;
+                libs[lib_loc] = reified_lib;
+              }
+              else
+              {
+                reified_lib = find->second;
+              }
+
+              // Reify the types in the symbol.
+              Node ffi_params = FFIParams;
+
+              for (auto& p : *(sym / FFIParams))
+                ffi_params << reify_type(p, r.subst);
+
+              auto ret_type = reify_type(sym / Type, r.subst);
+
+              // Check if this symbol has already been added.
+              auto reified_symbols = reified_lib / Symbols;
+              bool already_added = false;
+
+              for (auto& existing : *reified_symbols)
+              {
+                if ((existing / SymbolId)->location() != sym_name)
+                  continue;
+
+                already_added = true;
+
+                // Verify the existing declaration is consistent.
+                auto lhs_a = (existing / Lhs)->location().view();
+                auto lhs_b = (sym / Lhs)->location().view();
+                auto rhs_a = (existing / Rhs)->location().view();
+                auto rhs_b = (sym / Rhs)->location().view();
+                auto existing_params = existing / FFIParams;
+                Node existing_ret = existing->back();
+
+                if (
+                  (lhs_a != lhs_b) || (rhs_a != rhs_b) ||
+                  !Subtype(existing_ret, ret_type) ||
+                  !Subtype(ret_type, existing_ret) ||
+                  !std::equal(
+                    existing_params->begin(),
+                    existing_params->end(),
+                    ffi_params->begin(),
+                    ffi_params->end(),
+                    [&](auto& ep, auto& np) {
+                      return Subtype(ep, np) && Subtype(np, ep);
+                    }))
+                {
+                  n->parent()->replace(
+                    n,
+                    err(sym_id, "Conflicting FFI declarations")
+                      << errmsg("Here:") << errloc(existing / SymbolId)
+                      << errmsg("And here:") << errloc(sym_id));
+                  return;
+                }
+                break;
+              }
+
+              if (!already_added)
+              {
+                reified_symbols
+                  << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)
+                             << clone(sym / Rhs) << clone(sym / Vararg)
+                             << ffi_params << ret_type);
+              }
+
+              return;
+            }
+          }
+        }
+
+        parent = parent->parent(ClassDef);
+      }
     }
 
     // Given a TypeName or FuncName and a substitution map, find or create a
@@ -765,10 +878,6 @@ namespace vc
       wfIR,
       dir::bottomup,
       {
-        // // Lift library definitions.
-        // In(ClassBody) * T(Lib)[Lib] >>
-        //   [](Match& _) { return Lift << Top << _(Lib); },
-
         // // Use a MethodId in Lookup.
         // T(Lookup)
         //     << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Lhs, Rhs) *

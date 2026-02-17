@@ -37,7 +37,6 @@ namespace vc
 
   inline const auto TypeName = TokenDef("typename");
   inline const auto NameElement = TokenDef("nameelement");
-  inline const auto TypeNameReified = TokenDef("typenamereified");
   inline const auto TypePath = TokenDef("typepath");
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam =

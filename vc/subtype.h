@@ -26,7 +26,7 @@ namespace vc
         },
 
       // TODO: structural subtyping
-      TypeNameReified >> AxiomEq,
+      TypeName >> AxiomEq,
       Dyn >> AxiomEq,
       None >> AxiomEq,
       Bool >> AxiomEq,
