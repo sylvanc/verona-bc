@@ -42,10 +42,14 @@ namespace vc
       assert((main_module / TypeParams)->empty());
 
       auto id = top->fresh();
+      auto main_name = (main_module / Ident)->location();
       auto main_call = Call
         << (LocalId ^ id) << Rhs
-        << (FuncName << (NameElement << (Ident ^ "main") << TypeArgs)) << Args;
-      main_call = reify_call(main_call, {}, main_module);
+        << (FuncName
+            << (NameElement << (Ident ^ main_name) << TypeArgs)
+            << (NameElement << (Ident ^ "main") << TypeArgs))
+        << Args;
+      main_call = reify_call(main_call, {}, top);
 
       // Iteratively reify any classes, type aliases, or functions that we
       // scheduled for reification.
@@ -374,64 +378,9 @@ namespace vc
       const Node& name, const NodeMap<Node>& subst, const Node& scope, F accept)
     {
       assert(name->in({TypeName, FuncName}));
-      auto def = scope;
+      auto def = top;
 
-      for (auto& elem : *name)
-      {
-        if (elem == TypeParent)
-        {
-          if (def == Top)
-            return err(name, "No parent scope for type name");
-
-          def = def->parent({Top, ClassDef, TypeAlias, Function});
-        }
-        else
-        {
-          assert(elem == NameElement);
-          auto defs = def->look((elem / Ident)->location());
-          bool found = false;
-
-          for (auto& d : defs)
-          {
-            // TODO: don't call accept at every level, only at the end
-            // in between, always look for ClassDef or TypeParam
-            if (accept(d))
-            {
-              found = true;
-              def = d;
-              break;
-            }
-          }
-
-          if (!found)
-          {
-            auto e = err(elem, "No definition for name element");
-
-            if (def == Top)
-              return e << errmsg("Resolving at the top level.");
-            else
-              return e << errmsg("Resolving here:") << errloc(def / Ident);
-          }
-
-          if (def == TypeParam)
-          {
-            auto find = subst.find(def);
-
-            if (find == subst.end())
-              return err(elem, "No substitution for type parameter");
-
-            // TODO: find->second is the type argument
-            // it can be an algebraic type
-            assert(find->second == Type);
-
-            if (find->second->front() == TypeName)
-            {
-              // TODO: need to find the def and subst
-            }
-          }
-        }
-      }
-
+      // Navigate the fully qualified name from Top.
       // TODO: proper name expansion with substitution.
       // TODO: good error messages.
       for (auto& n : *name)
@@ -456,15 +405,24 @@ namespace vc
         {
           def = defs.front();
 
-          if (def != ClassDef)
+          if (!def->in({ClassDef, Function, TypeAlias}))
             return {false, nullptr};
         }
 
         size_t count = (def / TypeParams)->size();
-        assert((n / TypeArgs)->size() == count);
+        size_t ta_count = (n / TypeArgs)->size();
 
-        for (size_t i = 0; i < count; i++)
-          subst[(def / TypeParams)->at(i)] = (n / TypeArgs)->at(i);
+        if (ta_count == count)
+        {
+          for (size_t i = 0; i < count; i++)
+            subst[(def / TypeParams)->at(i)] = (n / TypeArgs)->at(i);
+        }
+        else
+        {
+          // FQ prefix elements may have empty TypeArgs even if the scope
+          // has TypeParams. Only build substitution when args are provided.
+          assert(ta_count == 0);
+        }
       }
 
       // TODO: from here on is already good

@@ -41,17 +41,15 @@ namespace vc
     const Node& n;
     NodeWorker<Resolver>& worker;
     Resolver::State& state;
-    Node scope;
+    Node top;
     Node found;
 
   public:
     Processor(const Node& n_, NodeWorker<Resolver>& worker_)
-    : n(n_),
-      worker(worker_),
-      state(worker_.state(n_)),
-      scope(n_->parent({Top, ClassDef, TypeAlias, Function}))
+    : n(n_), worker(worker_), state(worker_.state(n_)), top(n_->parent({Top}))
     {
       assert(n->in({FuncName, TypeName}));
+      assert(top == Top);
     }
 
     bool run()
@@ -98,12 +96,36 @@ namespace vc
       return Done;
     }
 
+    // Build a fully qualified prefix from Top down to target_scope.
+    // Each scope gets a NameElement with its Ident and empty TypeArgs.
+    void build_fq_prefix(Node& result, const Node& target_scope)
+    {
+      if (target_scope == Top)
+        return;
+
+      Nodes path;
+      auto s = target_scope;
+
+      while (s && s != Top)
+      {
+        path.push_back(s);
+        s = s->parent({Top, ClassDef, TypeAlias, Function});
+      }
+
+      for (auto it = path.rbegin(); it != path.rend(); ++it)
+      {
+        auto scope_ident = (*it) / Ident;
+        result
+          << (NameElement << (Ident ^ scope_ident->location()) << TypeArgs);
+      }
+    }
+
     StepResult resolve_first()
     {
       auto elem = n->front();
       auto name = elem / Ident;
       auto ta = elem / TypeArgs;
-      auto curr_scope = scope;
+      auto curr_scope = n->parent({Top, ClassDef, TypeAlias, Function});
       state.result = (n == FuncName) ? FuncName : TypeName;
 
       while (curr_scope && !found)
@@ -148,6 +170,7 @@ namespace vc
           if (def->in({ClassDef, TypeAlias, TypeParam}))
           {
             found = def;
+            build_fq_prefix(state.result, curr_scope);
             state.result << elem;
             return Continue;
           }
@@ -174,7 +197,7 @@ namespace vc
               continue;
 
             // The imported module will always be a ClassDef.
-            auto use_def = find_def(use_name, curr_scope);
+            auto use_def = find_def(use_name);
             assert(use_def == ClassDef);
 
             // This will be one ClassDef or TypeAlias, or zero or more
@@ -184,15 +207,19 @@ namespace vc
             if (defs.empty())
               continue;
 
-            // Update state.result to include the use name.
-            state.result = concat(state.result, use_name, scope);
+            // The use_name is already fully qualified. Copy its elements
+            // to state.result, preserving the correct type (FuncName/TypeName).
+            state.result = (n == FuncName) ? FuncName : TypeName;
+
+            for (auto& child : *use_name)
+              state.result << clone(child);
+
             state.result << elem;
             found = defs.front();
             return Continue;
           }
         }
 
-        state.result << TypeParent;
         curr_scope = curr_scope->parent({Top, ClassDef, TypeAlias, Function});
       }
 
@@ -338,8 +365,8 @@ namespace vc
           return Done;
         }
 
-        state.result = concat(state.result, def, scope);
-        found = find_def(state.result, scope);
+        state.result = concat(state.result, def);
+        found = find_def(state.result);
       }
 
       return Continue;
@@ -362,118 +389,131 @@ namespace vc
       return Continue;
     }
 
-    Node find_def(const Node& name, const Node& from)
+    // Navigate a fully qualified name from Top to find the definition.
+    Node find_def(const Node& name)
     {
       if (!name->in({FuncName, TypeName}))
         return {};
 
-      Node def = from;
+      Node def = top;
 
-      for (auto elem : *name)
+      for (auto& elem : *name)
       {
-        // TODO: what if def is a TypeParam?
         assert(def != TypeParam);
-
-        if (elem == TypeParent)
-        {
-          def = def->parent({Top, ClassDef, TypeAlias, Function});
-          assert(def);
-        }
-        else
-        {
-          auto defs = def->look((elem / Ident)->location());
-          assert(!defs.empty());
-          def = defs.front();
-        }
+        assert(elem == NameElement);
+        auto defs = def->look((elem / Ident)->location());
+        assert(!defs.empty());
+        def = defs.front();
       }
 
       return def;
     }
 
-    Node concat(const Node& prefix, const Node& name, const Node& scope)
+    // Substitute TypeParams in `name` (the alias body, fully qualified) using
+    // type arguments from `prefix` (the path that led to the alias).
+    Node concat(const Node& prefix, const Node& name)
     {
-      // Both sides are already resolved.
       assert(prefix->in({FuncName, TypeName}));
       assert(name->in({FuncName, TypeName}));
 
-      // Concat the type arguments.
+      // Recursively handle nested TypeName/FuncName refs in type args.
       auto rhs = clone(name);
 
       rhs->traverse([&](Node& node) {
         if ((node != rhs) && node->in({FuncName, TypeName}))
-          node->parent()->replace(node, concat(prefix, node, scope));
+          node->parent()->replace(node, concat(prefix, node));
         return true;
       });
 
-      // Concat the name.
-      auto curr_scope = find_def(prefix, scope);
-      auto lhs = clone(prefix);
-
-      for (auto& elem : *rhs)
+      // Build a map from definition node to the prefix NameElement that
+      // references it. This lets us look up type args for substitution.
+      NodeMap<Node> scope_to_prefix_elem;
       {
-        if (!lhs->in({FuncName, TypeName}))
-        {
-          // This can only happen if we expanded a type parameter reference to
-          // something that isn't a TypeName, and then we look down.
-          return err(elem, "Can't look down through this type")
-            << errmsg("Resolving here:") << errloc(lhs);
-        }
+        auto def = top;
 
-        if (elem == TypeParent)
+        for (auto& elem : *prefix)
         {
-          if (lhs->empty() || (lhs->back() == TypeParent))
-            lhs << elem;
-          else
-            lhs->pop_back();
-
-          curr_scope = curr_scope->parent({Top, ClassDef, TypeAlias, Function});
-        }
-        else
-        {
-          assert(curr_scope);
-          auto defs = curr_scope->look((elem / Ident)->location());
+          assert(elem == NameElement);
+          auto defs = def->look((elem / Ident)->location());
           assert(!defs.empty());
-          auto def = defs.front();
-
-          if (def == TypeParam)
-          {
-            // If lhs ends with TypeParent, there are no type arguments
-            // to substitute — the type parameter is from an enclosing
-            // scope reached via parent navigation, not via an explicit
-            // name with type arguments.
-            if (lhs->empty() || lhs->back() == TypeParent)
-            {
-              lhs << elem;
-            }
-            else
-            {
-              auto tps = curr_scope / TypeParams;
-              size_t index = 0;
-
-              for (auto& tp : *tps)
-              {
-                if (tp == def)
-                  break;
-
-                index++;
-              }
-
-              auto tas = lhs->back() / TypeArgs;
-              assert(index < tas->size());
-              auto ta = tas->at(index);
-              assert(ta == Type);
-              lhs = clone(ta->front());
-              curr_scope = scope;
-            }
-          }
-          else
-          {
-            lhs << elem;
-          }
+          def = defs.front();
+          scope_to_prefix_elem[def] = elem;
         }
       }
 
-      return lhs;
+      // Walk through rhs, substituting TypeParams and carrying type args
+      // from the prefix where the scopes match.
+      Node result = prefix->type();
+      auto curr = top;
+
+      for (auto& elem : *rhs)
+      {
+        if (!result->in({FuncName, TypeName}))
+        {
+          return err(elem, "Can't look down through this type")
+            << errmsg("Resolving here:") << errloc(result);
+        }
+
+        assert(elem == NameElement);
+        auto defs = curr->look((elem / Ident)->location());
+        assert(!defs.empty());
+        auto def = defs.front();
+
+        if (def == TypeParam)
+        {
+          // Find the TypeParam's index in the owning scope's TypeParams.
+          auto tps = curr / TypeParams;
+          size_t index = 0;
+
+          for (auto& tp : *tps)
+          {
+            if (tp == def)
+              break;
+
+            index++;
+          }
+
+          // Look up the owning scope in the prefix to get type args.
+          auto it = scope_to_prefix_elem.find(curr);
+
+          if (it != scope_to_prefix_elem.end())
+          {
+            auto tas = it->second / TypeArgs;
+            assert(index < tas->size());
+            auto ta = tas->at(index);
+            assert(ta == Type);
+            result = clone(ta->front());
+
+            // After substitution, navigate from where the result leads.
+            if (result->in({FuncName, TypeName}))
+              curr = find_def(result);
+          }
+          else
+          {
+            // No type args in prefix for this scope — keep as-is.
+            result << clone(elem);
+          }
+        }
+        else
+        {
+          // Carry type args from prefix if this scope appears there.
+          auto new_elem = clone(elem);
+          auto it = scope_to_prefix_elem.find(def);
+
+          if (it != scope_to_prefix_elem.end())
+          {
+            auto prefix_ta = it->second / TypeArgs;
+
+            if (!prefix_ta->empty())
+              new_elem->replace(new_elem / TypeArgs, clone(prefix_ta));
+          }
+
+          result << new_elem;
+          curr = def;
+        }
+      }
+
+      return result;
     }
   };
 

@@ -39,7 +39,6 @@ namespace vc
   inline const auto NameElement = TokenDef("nameelement");
   inline const auto TypeNameReified = TokenDef("typenamereified");
   inline const auto TypePath = TokenDef("typepath");
-  inline const auto TypeParent = TokenDef("typeparent");
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam =
     TokenDef("typeparam", flag::lookup | flag::shadowing);
@@ -213,8 +212,8 @@ namespace vc
       wfPassStructure
     | (ClassBody <<= (ClassDef | TypeAlias | Lib | FieldDef | Function)++)
     | (Body <<= wfBodyIdent++)
-    | (TypeName <<= (TypeParent | NameElement)++[1])
-    | (FuncName <<= (TypeParent | NameElement)++[1])
+    | (TypeName <<= NameElement++[1])
+    | (FuncName <<= NameElement++[1])
     | (MethodName <<= wfFuncId * TypeArgs)
     | (Expr <<= wfExprIdent++)
     ;
