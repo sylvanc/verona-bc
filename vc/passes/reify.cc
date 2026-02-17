@@ -7,7 +7,12 @@ namespace vc
     << (NameElement << (Ident ^ "_builtin") << TypeArgs)
     << (NameElement << (Ident ^ "string") << TypeArgs);
 
-  // TODO: array, ref, cown
+  const std::map<std::string_view, Token> wrapper_types = {
+    {"array", Array},
+    {"cown", Cown},
+    {"ref", Ref},
+  };
+
   const std::map<std::string_view, Node> primitive_types = {
     {"none", None},
     {"bool", Bool},
@@ -165,6 +170,24 @@ namespace vc
           r.reification = Primitive << r.id << Methods;
           return;
         }
+
+        // array[T], cown[T], ref[T] become Primitive with id Wrapper << T.
+        auto name = (r.def / Ident)->location().view();
+        auto wrapper_find = wrapper_types.find(name);
+
+        if (wrapper_find != wrapper_types.end())
+        {
+          auto tps = r.def / TypeParams;
+          assert(tps->size() == 1);
+          auto tp_find = r.subst.find(tps->at(0));
+          Node elem_type = (tp_find != r.subst.end()) ?
+            reify_type(tp_find->second, r.subst) :
+            Dyn;
+          Node wrapped = Node(wrapper_find->second) << elem_type;
+          r.id = wrapped;
+          r.reification = Primitive << clone(wrapped) << Methods;
+          return;
+        }
       }
 
       // Iterate through the fields in the class.
@@ -212,12 +235,12 @@ namespace vc
         Node body = l / Body;
         Nodes remove;
 
-        // No work required: Copy, Move, CallDyn, math ops on existing values.
+        // No work required: Copy, Move, Load, Store, CallDyn, math ops on
+        // existing values.
 
         // TODO:
         // RegisterRef | FieldRef | ArrayRef | ArrayRefConst |
-        // Load | Store | Lookup |
-        // When
+        // Lookup | When
 
         body->traverse([&](Node& n) {
           if (n == body)
