@@ -230,12 +230,41 @@ namespace vc
       Node vars = Vars;
       Node labels = clone(r.def / Labels);
 
+      // Build the set of LocalId locations that are used as sources (non-
+      // destination) anywhere across all labels, including terminators.
+      // A Copy whose destination is absent from this set is dead and can be
+      // elided.
+      std::set<Location> used_locs;
+
+      for (auto& lbl : *labels)
+      {
+        // Scan each body statement, skipping the destination (first child).
+        for (auto& stmt : *(lbl / Body))
+        {
+          for (size_t i = 1; i < stmt->size(); ++i)
+          {
+            stmt->at(i)->traverse([&](Node& n) {
+              if (n == LocalId)
+                used_locs.insert(n->location());
+              return true;
+            });
+          }
+        }
+
+        // Scan the terminator: all LocalIds here are uses.
+        (lbl / Return)->traverse([&](Node& n) {
+          if (n == LocalId)
+            used_locs.insert(n->location());
+          return true;
+        });
+      }
+
       for (auto& l : *labels)
       {
         Node body = l / Body;
         Nodes remove;
 
-        // No work required: Copy, Move, Load, Store, CallDyn, math ops on
+        // No work required: Move, Load, Store, CallDyn, math ops on
         // existing values.
 
         // TODO:
@@ -278,6 +307,12 @@ namespace vc
           else if (n == MakePtr)
           {
             reify_primitive(Ptr);
+          }
+          else if (n == Copy)
+          {
+            // Elide the Copy if its destination is never used as a source.
+            if (used_locs.find((n / LocalId)->location()) == used_locs.end())
+              remove.push_back(n);
           }
           else if (n == Var)
           {
@@ -921,30 +956,6 @@ namespace vc
         //         T(Ident, SymbolId) * T(TypeArgs) * T(Int) *
         //         T(MethodId)[MethodId]) >>
         //   [](Match& _) { return Lookup << _(Lhs) << _(Rhs) << _(MethodId); },
-
-        // // Elide unused copies.
-        // T(Copy) << (T(LocalId)[Lhs] * T(LocalId)) >> [](Match& _) -> Node {
-        //   auto lhs = _(Lhs);
-        //   auto f = lhs->parent(Labels);
-        //   auto found = false;
-
-        //   f->traverse([&](Node& node) {
-        //     if (
-        //       (node == LocalId) && (node != lhs) &&
-        //       (node->location() == lhs->location()))
-        //     {
-        //       found = true;
-        //       return false;
-        //     }
-
-        //     return true;
-        //   });
-
-        //   if (!found)
-        //     return {};
-
-        //   return NoChange;
-        // },
       }};
 
     p.pre([=](auto top) {
