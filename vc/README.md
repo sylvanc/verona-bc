@@ -3,28 +3,18 @@
 ## To Do
 
 Reification.
+- Add a reification index to method IDs.
 - Can type parameters be encoded as type aliases in the reified type?
-- Type names in FFI symbols must not contain type parameter references.
-  - Find symbols from FFI calls rather than reifying all of them.
-- Make function reification iterative instead of recursive.
-  - Too much stack usage.
-  - Can do the signature right away, to get the return type.
+- References.
 
 Type inference.
-- Create a `TypeVar` for integer and float literals?
-  - Upper bounds is the union of literal types.
-
-- References, load, store.
-- Lookup, dynamic call.
+- Infer types of integer and float literals from context.
 - Determine type arguments from context:
   - Call.
   - Dynamic call.
 - Determine `when` type from the `when / Rhs` function type.
 
 Check use before definition in `let x = ... x ...`.
-
-Type aliases.
-- Test type aliases, make sure cycles are rejected.
 
 Calls.
 - Try (rename to `catch`?), sub-call.

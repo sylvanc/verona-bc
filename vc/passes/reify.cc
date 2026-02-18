@@ -56,22 +56,25 @@ namespace vc
 
       reify_call(main_call, {});
 
-      // Iteratively reify any classes, type aliases, or functions that we
-      // scheduled for reification.
-      while (!worklist.empty())
+      // Iteratively reify classes/aliases/functions and register methods until
+      // no new reifications are scheduled.
+      do
       {
-        auto r = worklist.back();
-        worklist.pop_back();
+        while (!worklist.empty())
+        {
+          auto r = worklist.back();
+          worklist.pop_back();
 
-        if (r->def == ClassDef)
-          reify_class(*r);
-        else if (r->def == TypeAlias)
-          reify_typealias(*r);
-        else if (r->def == Function)
-          reify_function(*r);
-        else
-          assert(false);
-      }
+          if (r->def == ClassDef)
+            reify_class(*r);
+          else if (r->def == TypeAlias)
+            reify_typealias(*r);
+          else if (r->def == Function)
+            reify_function(*r);
+          else
+            assert(false);
+        }
+      } while (register_methods());
 
       // Remove existing contents.
       top->erase(top->begin(), top->end());
@@ -104,11 +107,26 @@ namespace vc
       Node reification;
     };
 
+    // A MethodInvocation captures a Lookup site so we can register the
+    // appropriate Method entries on every class/primitive that could receive
+    // a CallDyn on this MethodId.
+    struct MethodInvocation
+    {
+      std::string method_id; // the compiled MethodId string
+      std::string name; // function name
+      size_t arity; // parameter count
+      Token hand; // Lhs (ref) or Rhs
+      Node typeargs; // cloned TypeArgs from the Lookup
+      NodeMap<Node> call_subst; // substitution context at the call site
+    };
+
     Node top;
     Node builtin;
     NodeMap<std::deque<Reification>> map;
     std::vector<Reification*> worklist;
     std::map<Location, Node> libs;
+    std::vector<MethodInvocation> method_invocations;
+    std::map<std::string, std::vector<std::vector<Node>>> method_index;
 
     // Resolve a TypeArg through the current substitution map. If the TypeArg
     // is a Type wrapping a TypeName that resolves to a TypeParam in the subst,
@@ -149,6 +167,79 @@ namespace vc
       return arg;
     }
 
+    // Check whether two substitution maps are equivalent under invariance.
+    bool subst_equal(const NodeMap<Node>& a, const NodeMap<Node>& b)
+    {
+      return std::equal(
+        a.begin(),
+        a.end(),
+        b.begin(),
+        b.end(),
+        [](auto& lhs, auto& rhs) {
+          return (lhs.first == rhs.first) &&
+            Subtype(lhs.second, rhs.second) &&
+            Subtype(rhs.second, lhs.second);
+        });
+    }
+
+    // Compare two vectors of resolved types for invariant equality.
+    bool typeargs_equal(
+      const std::vector<Node>& a, const std::vector<Node>& b)
+    {
+      if (a.size() != b.size())
+        return false;
+
+      for (size_t i = 0; i < a.size(); i++)
+      {
+        if (!Subtype(a[i], b[i]) || !Subtype(b[i], a[i]))
+          return false;
+      }
+
+      return true;
+    }
+
+    // Find or create a method reification index for the given base method id
+    // and type arguments resolved through the call-site substitution.
+    size_t find_method_index(
+      const std::string& base_id,
+      const Node& typeargs,
+      const NodeMap<Node>& call_subst)
+    {
+      std::vector<Node> resolved;
+
+      for (auto& ta : *typeargs)
+        resolved.push_back((ta == Type) ? reify_type(ta, call_subst) : Dyn);
+
+      auto& entries = method_index[base_id];
+
+      for (size_t i = 0; i < entries.size(); i++)
+      {
+        if (typeargs_equal(entries[i], resolved))
+          return i;
+      }
+
+      entries.push_back(std::move(resolved));
+      return entries.size() - 1;
+    }
+
+    // Find an existing reification of def with the given subst (invariant
+    // subtype equivalence), or create one, schedule it, and return its id.
+    Node find_or_push(const Node& def, NodeMap<Node> subst)
+    {
+      auto& r_vec = map[def];
+
+      for (auto& existing : r_vec)
+      {
+        if (subst_equal(existing.subst, subst))
+          return clone(existing.id);
+      }
+
+      Reification r{def, std::move(subst), make_id(def, r_vec.size()), {}};
+      r_vec.push_back(std::move(r));
+      worklist.push_back(&r_vec.back());
+      return clone(r_vec.back().id);
+    }
+
     void reify_class(Reification& r)
     {
       // Treat a shape as a dynamic type. We could build a set of all concrete
@@ -171,21 +262,11 @@ namespace vc
           return;
         }
 
-        // array[T], cown[T], ref[T] become Primitive with id Wrapper << T.
-        auto name = (r.def / Ident)->location().view();
-        auto wrapper_find = wrapper_types.find(name);
-
-        if (wrapper_find != wrapper_types.end())
+        // array[T], cown[T], ref[T]: r.id was pre-computed as Wrapper<<T
+        // by get_reification; just build the Primitive reification from it.
+        if (r.id->in({Array, Cown, Ref}))
         {
-          auto tps = r.def / TypeParams;
-          assert(tps->size() == 1);
-          auto tp_find = r.subst.find(tps->at(0));
-          Node elem_type = (tp_find != r.subst.end()) ?
-            reify_type(tp_find->second, r.subst) :
-            Dyn;
-          Node wrapped = Node(wrapper_find->second) << elem_type;
-          r.id = wrapped;
-          r.reification = Primitive << clone(wrapped) << Methods;
+          r.reification = Primitive << clone(r.id) << Methods;
           return;
         }
       }
@@ -268,8 +349,7 @@ namespace vc
         // existing values.
 
         // TODO:
-        // RegisterRef | FieldRef | ArrayRef | ArrayRefConst |
-        // Lookup | When
+        // RegisterRef | FieldRef | ArrayRef | ArrayRefConst
 
         body->traverse([&](Node& n) {
           if (n == body)
@@ -557,29 +637,135 @@ namespace vc
       n << dst << classid << args;
     }
 
-    void reify_lookup(Node& n, const NodeMap<Node>& /* subst */)
+    void reify_lookup(Node& n, const NodeMap<Node>& call_subst)
     {
-      // ANF: Lookup << dst << src << hand << ident << typeargs << arity
-      // IR:  Lookup << dst << src << MethodId
-      auto dst = n->at(0);
-      auto src = n->at(1);
-      auto hand = n->at(2);
-      auto ident = n->at(3);
-      // auto typeargs = n->at(4); // TODO: handle type args in method ID
-      auto arity = n->at(5);
+      auto dst = n / LocalId;
+      auto src = n / Rhs;
+      auto hand = n / Lhs;
+      auto ident = n / Ident;
+      auto typeargs = n / TypeArgs;
+      auto arity_node = n / Int;
 
-      // Build method ID: "name.arity[.ref]"
+      // Build method ID: "name::arity[::ref]::index"
       auto name = std::string(ident->location().view());
-      auto method_id = std::format(
-        "{}.{}{}", name, arity->location().view(), hand == Lhs ? ".ref" : "");
+      auto arity_str = std::string(arity_node->location().view());
+      auto base_id =
+        std::format("{}::{}{}", name, arity_str, hand == Lhs ? "::ref" : "");
 
-      auto mid = MethodId ^ method_id;
+      // Find or create a reification index for these resolved type arguments.
+      auto index = find_method_index(base_id, typeargs, call_subst);
+      auto method_id_str =
+        std::format("{}::{}", base_id, index);
+
+      // Parse arity.
+      size_t arity = 0;
+      std::from_chars(
+        arity_str.data(), arity_str.data() + arity_str.size(), arity);
+
+      // Record this method invocation for method registration.
+      method_invocations.push_back(
+        {method_id_str,
+         name,
+         arity,
+         hand->type(),
+         clone(typeargs),
+         call_subst});
+
+      auto mid = MethodId ^ method_id_str;
 
       n->erase(n->begin(), n->end());
       n << dst << src << mid;
+    }
 
-      // TODO: Register Method entries on class definitions mapping this
-      // MethodId to the appropriate FunctionId.
+    // For each collected MethodInvocation, find every reified class/primitive
+    // whose ClassDef has a matching function (name, arity, handedness, type
+    // parameter count) and register a Method entry.  Returns true if any new
+    // Method was registered (and new reifications were scheduled).
+    bool register_methods()
+    {
+      bool any_new = false;
+      auto pending = std::move(method_invocations);
+      method_invocations.clear();
+
+      for (auto& mi : pending)
+      {
+        auto mid_node = MethodId ^ mi.method_id;
+
+        for (auto& [def, reifications] : map)
+        {
+          if (def != ClassDef)
+            continue;
+
+          // Find matching functions in this ClassDef.
+          for (auto& f : *(def / ClassBody))
+          {
+            if (f != Function)
+              continue;
+
+            if ((f / Ident)->location().view() != mi.name)
+              continue;
+
+            if ((f / Lhs)->type() != mi.hand)
+              continue;
+
+            if ((f / Params)->size() != mi.arity)
+              continue;
+
+            auto func_tps = f / TypeParams;
+
+            if (func_tps->size() != mi.typeargs->size())
+              continue;
+
+            // Matches. For each reification of this class, reify the function.
+            for (auto& r : reifications)
+            {
+              // Build func_subst: class subst + method TypeParams -> resolved
+              // TypeArgs.  Resolve TypeArgs through both call-site and class
+              // substitution contexts (class subst takes priority for class
+              // TypeParams).
+              NodeMap<Node> combined = mi.call_subst;
+
+              for (auto& [k, v] : r.subst)
+                combined.insert_or_assign(k, v);
+
+              NodeMap<Node> func_subst = r.subst;
+
+              for (size_t i = 0; i < func_tps->size(); i++)
+              {
+                auto ta = mi.typeargs->at(i);
+                Node resolved = (ta == Type) ? reify_type(ta, combined) : Dyn;
+                func_subst[func_tps->at(i)] = resolved;
+              }
+
+              auto funcid = find_or_push(f, func_subst);
+
+              // Check if this Method entry already exists.
+              auto methods = r.reification / Methods;
+              bool already = false;
+
+              for (auto& existing : *methods)
+              {
+                if (
+                  ((existing / MethodId)->location().view() == mi.method_id) &&
+                  ((existing / FunctionId)->location().view() ==
+                   funcid->location().view()))
+                {
+                  already = true;
+                  break;
+                }
+              }
+
+              if (!already)
+              {
+                methods << (Method << clone(mid_node) << funcid);
+                any_new = true;
+              }
+            }
+          }
+        }
+      }
+
+      return any_new;
     }
 
     void reify_ffi(Node& n, Reification& r)
@@ -864,37 +1050,41 @@ namespace vc
       if ((def == ClassDef) && ((def / Shape) == Shape))
         return Dyn;
 
-      // Check for an existing reification with the same def and subst.
       auto& r_vec = map[def];
 
-      for (auto& existing : r_vec)
+      // For wrapper types (array[T], cown[T], ref[T]), compute the structural
+      // id directly rather than a ClassId string, and deduplicate by structural
+      // id equality rather than subst equality.
+      if (def->parent(ClassDef) == builtin)
       {
-        assert(existing.def == def);
+        auto wrapper_find =
+          wrapper_types.find((def / Ident)->location().view());
 
-        if (std::equal(
-              existing.subst.begin(),
-              existing.subst.end(),
-              r.subst.begin(),
-              r.subst.end(),
-              [&](auto& lhs, auto& rhs) {
-                return (lhs.first == rhs.first) &&
-                  Subtype(lhs.second, rhs.second) &&
-                  Subtype(rhs.second, lhs.second);
-              }))
+        if (wrapper_find != wrapper_types.end())
         {
-          // This reification already exists.
-          return clone(existing.id);
+          auto tps = def / TypeParams;
+          assert(tps->size() == 1);
+          auto tp_find = r.subst.find(tps->at(0));
+          Node elem_type = (tp_find != r.subst.end()) ?
+            reify_type(tp_find->second, r.subst) :
+            Dyn;
+          Node new_id = Node(wrapper_find->second) << elem_type;
+
+          for (auto& existing : r_vec)
+          {
+            if (existing.id->equals(new_id))
+              return clone(existing.id);
+          }
+
+          r.def = def;
+          r.id = new_id;
+          r_vec.push_back(std::move(r));
+          worklist.push_back(&r_vec.back());
+          return clone(r_vec.back().id);
         }
       }
 
-      // Store this reification.
-      r.def = def;
-      r.id = make_id(def, r_vec.size());
-      r_vec.push_back(std::move(r));
-
-      // Schedule this for reification.
-      worklist.push_back(&r_vec.back());
-      return clone(r_vec.back().id);
+      return find_or_push(def, std::move(r.subst));
     }
 
     Node make_id(const Node& def, size_t index)
@@ -923,10 +1113,10 @@ namespace vc
       {
         // A function adds arity and handedness.
         id = std::format(
-          "{}.{}{}",
+          "{}::{}{}",
           id,
           (def / Params)->size(),
-          (def / Lhs) == Lhs ? ".ref" : "");
+          (def / Lhs) == Lhs ? "::ref" : "");
       }
 
       id = std::format("{}::{}", id, index);
@@ -945,18 +1135,7 @@ namespace vc
 
   PassDef reify()
   {
-    PassDef p{
-      "reify",
-      wfIR,
-      dir::bottomup,
-      {
-        // // Use a MethodId in Lookup.
-        // T(Lookup)
-        //     << (T(LocalId)[Lhs] * T(LocalId)[Rhs] * T(Lhs, Rhs) *
-        //         T(Ident, SymbolId) * T(TypeArgs) * T(Int) *
-        //         T(MethodId)[MethodId]) >>
-        //   [](Match& _) { return Lookup << _(Lhs) << _(Rhs) << _(MethodId); },
-      }};
+    PassDef p{"reify", wfIR, dir::bottomup, {}};
 
     p.pre([=](auto top) {
       Reifier().run(top);

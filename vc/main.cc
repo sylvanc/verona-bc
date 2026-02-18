@@ -48,15 +48,10 @@ int main(int argc, char** argv)
         if (!path.empty() && bytecode_file.empty())
           bytecode_file = path.stem().replace_extension(".vbc");
 
-        auto build = cli.get_subcommand_no_throw("build");
+        auto pass = cli.get_option_no_throw("pass");
 
-        if (build)
-        {
-          auto pass = build->get_option_no_throw("pass");
-
-          if (!pass || (pass->as<std::string>() == "liveness"))
-            run_gen = true;
-        }
+        if (!pass || (pass->as<std::string>() == "liveness"))
+          run_gen = true;
       });
     }
   };

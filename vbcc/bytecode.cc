@@ -283,9 +283,8 @@ namespace vbcc
     functions.push_back(func_main);
     func_ids.insert({main_name, MainFuncId});
 
-    // Reserve method IDs.
+    // Reserve a method ID for `@final`.
     method_ids.insert({ST::di().string("@final"), FinalMethodId});
-    method_ids.insert({ST::di().string("@apply"), ApplyMethodId});
   }
 
   void Bytecode::add_path(const std::filesystem::path& path)

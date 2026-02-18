@@ -226,7 +226,7 @@ namespace vc
                      << (Body
                          << (Expr
                              << (Load
-                                 << (Expr << (LocalId ^ "ref")
+                                 << (Expr << Ref
                                           << call_func(
                                                ident, _(TypeParams), args)))));
 

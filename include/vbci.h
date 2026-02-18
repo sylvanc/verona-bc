@@ -21,7 +21,6 @@ namespace vbci
   inline const auto CurrentVersion = size_t(0);
   inline const auto MainFuncId = size_t(0);
   inline const auto FinalMethodId = size_t(0);
-  inline const auto ApplyMethodId = size_t(1);
   inline const auto DynId = uint32_t(-1);
 
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
