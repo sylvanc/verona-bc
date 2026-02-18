@@ -1,6 +1,6 @@
 # Verona Compiler (vc) Specifics
 
-- **Build / test workflow**: `ninja -j$(nproc) vc` builds the compiler. `ninja install` puts the binary at `build/dist/vc/vc` with `_builtin` directory alongside it. `ninja test` runs the full test suite. The build binary (`build/vc/vc`) does NOT have `_builtin` next to it.
+- **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite.
 - **Debugging**: Use `lldb-20` for debugging segfaults and crashes.
 - **Pass-limited testing**: `-p <passname>` stops after a specific pass (e.g., `-p ident`). `--dump_passes=<dir>` dumps intermediate ASTs.
 - **`_builtin` resolution**: The parser's postparse hook looks for `_builtin` at `executable.parent_path() / "_builtin"`. Only the installed binary has it.
@@ -15,5 +15,8 @@
   - **Key ANF→IR transformations**: `Var` → extracted to `Vars` as `LocalId`, removed from `Body`. `Lookup` 6-child → 3-child `(dst, src, MethodId)`. `New` `(dst, Type, NewArgs)` → `(dst, ClassId, Args)`. `Call` `(dst, Lhs, FuncName, Args)` → `(dst, FunctionId, Args)`.
   - **Shapes**: `shape` definitions (ClassDef with Shape child) are treated as `Dyn` during reification. `get_reification()` returns `Dyn` early, before creating a ClassId, so no class definition is emitted.
   - **Primitive types**: Map of string→token in reify.cc. `reify_primitive()` ensures each is reified exactly once. Singleton token nodes must be `clone()`d before AST insertion.
+- **Infer pass architecture**: Between ANF and reify. `dir::once` with `post()` hook. Per-function: builds a `TypeEnv` (Location → LocalTypeInfo) from Params, Const, Convert, Copy/Move, Var annotations, New, binops, comparisons, unops. At Call sites: navigates FuncName to find Function def (filter by arity + handedness), infers empty TypeArgs from actual arg types via direct TypeParam matching, then refines default-typed Const literals (U64/F64) to domain-compatible expected types. Also refines Consts assigned to explicitly-typed Vars. Uses `const_node` pointer propagation through Copy/Move for alias tracking; `refine_const()` clears all aliases after refinement to prevent conflicts.
+- **Running compiled programs**: `dist/vbci/vbci foo.vbc` executes a compiled `.vbc` file (output of `vc build`). Debug the interpreter with `lldb-20 -- dist/vbci/vbci foo.vbc`.
+- **Verona source syntax notes**: Class definitions use bare names (no `class` keyword): `myclass[T] { ... }`. Fields need semicolons: `val: T;`. `new` uses `new { field = val }` (no class name). No `let`/`var` keyword on class fields. `use` for imports.
 - **Node construction pitfall**: `auto tn = TypeName` copies the `TokenDef` (deleted copy constructor). Use `Node tn = TypeName` to create a new AST node.
 - **`UNUSED` is qualified**: Use `snmalloc::UNUSED()`, not bare `UNUSED()`.

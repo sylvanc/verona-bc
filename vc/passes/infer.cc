@@ -27,14 +27,18 @@ namespace vc
       {"ptr", Ptr},
     };
 
+    const std::initializer_list<Token> integer_types = {
+      I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize};
+
+    const std::initializer_list<Token> float_types = {F32, F64};
+
     // Build a source-level Type node wrapping a FQ TypeName for a primitive.
     // Creates fresh nodes on each call (no shared-node issues).
     Node primitive_type(const Token& tok)
     {
       return Type
-        << (TypeName
-            << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-            << (NameElement << (Ident ^ tok.str()) << TypeArgs));
+        << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                     << (NameElement << (Ident ^ tok.str()) << TypeArgs));
     }
 
     // Navigate a FQ TypeName/FuncName from Top to its definition node.
@@ -80,10 +84,10 @@ namespace vc
       return {};
     }
 
-    // Extract the primitive token from a source-level Type node that
-    // references a _builtin primitive. Returns empty Token if not a
+    // Extract the primitive token node from a source-level Type node that
+    // references a _builtin primitive. Returns empty Node if not a
     // primitive.
-    Token extract_primitive(const Node& type_node)
+    Node extract_primitive(const Node& type_node)
     {
       if (type_node != Type)
         return {};
@@ -111,21 +115,8 @@ namespace vc
       return {};
     }
 
-    // Check if tok is an integer-domain primitive type.
-    bool is_integer_type(const Token& tok)
-    {
-      return tok.in(
-        {I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize});
-    }
-
-    // Check if tok is a float-domain primitive type.
-    bool is_float_type(const Token& tok)
-    {
-      return tok.in({F32, F64});
-    }
-
-    // Return the default primitive token for a literal node.
-    Token default_literal_type(const Node& lit)
+    // Return the default primitive type for a literal node.
+    Node default_literal_type(const Node& lit)
     {
       if (lit->in({True, False}))
         return Bool;
@@ -156,8 +147,7 @@ namespace vc
 
     // Refine a Const node's type to new_prim. Updates the AST and all
     // env entries sharing the same const_node.
-    void refine_const(
-      TypeEnv& env, Node const_node, const Token& new_prim)
+    void refine_const(TypeEnv& env, Node const_node, const Token& new_prim)
     {
       assert(const_node == Const);
 
@@ -305,8 +295,7 @@ namespace vc
           else if (existing->second.is_default && !arg_info.is_default)
           {
             // Non-default type wins over default.
-            existing->second = {
-              clone(arg_info.type), false, false, {}};
+            existing->second = {clone(arg_info.type), false, false, {}};
           }
         }
 
@@ -367,7 +356,7 @@ namespace vc
         auto formal_type = param / Type;
 
         // Determine the expected primitive type for this param position.
-        Token expected_prim = {};
+        Node expected_prim;
         auto tp_def = direct_typeparam(top, formal_type);
 
         if (tp_def)
@@ -384,7 +373,7 @@ namespace vc
           expected_prim = extract_primitive(formal_type);
         }
 
-        if (!expected_prim.def)
+        if (!expected_prim)
           continue;
 
         // Check if actual arg is a refinable Const.
@@ -399,31 +388,27 @@ namespace vc
         if (!arg_info.is_default || !arg_info.const_node)
           continue;
 
-        auto current_prim = (arg_info.const_node / Type)->type();
+        Node current_prim = arg_info.const_node / Type;
 
         if (current_prim == expected_prim)
           continue;
 
         // Refine only within compatible domains.
-        bool compatible =
-          (is_integer_type(current_prim) && is_integer_type(expected_prim)) ||
-          (is_float_type(current_prim) && is_float_type(expected_prim));
+        bool compatible = (current_prim->in(integer_types) &&
+                           expected_prim->in(integer_types)) ||
+          (current_prim->in(float_types) && expected_prim->in(float_types));
 
         if (!compatible)
           continue;
 
-        refine_const(env, arg_info.const_node, expected_prim);
+        refine_const(env, arg_info.const_node, expected_prim->type());
       }
     }
   }
 
   PassDef infer()
   {
-    PassDef p{
-      "infer",
-      wfPassInfer,
-      dir::once,
-      {}};
+    PassDef p{"infer", wfPassInfer, dir::once, {}};
 
     p.post([](auto top) {
       top->traverse([&](auto node) {
@@ -458,24 +443,23 @@ namespace vc
             {
               // Phase 1: Assign default type from literal.
               auto lit = stmt->back();
-              auto tok = default_literal_type(lit);
-              Node type = tok;
+              Node type = default_literal_type(lit);
               auto dst = stmt->front();
               stmt->erase(stmt->begin(), stmt->end());
               stmt << dst << type << lit;
 
               // Record in type env.
-              bool is_default = tok.in({U64, F64});
+              bool is_default = type->in({U64, F64});
               env[dst->location()] = {
-                primitive_type(tok), is_default, false,
+                primitive_type(type->type()),
+                is_default,
+                false,
                 is_default ? stmt : Node{}};
             }
             else if (stmt == Convert)
             {
-              auto dst = stmt / LocalId;
-              auto type_tok = (stmt / Type)->type();
-              env[dst->location()] = {
-                primitive_type(type_tok), false, false, {}};
+              env[(stmt / LocalId)->location()] = {
+                primitive_type((stmt / Type)->type()), false, false, {}};
             }
             else if (stmt->in({Copy, Move}))
             {
@@ -484,8 +468,9 @@ namespace vc
               auto dst_it = env.find(dst->location());
               auto src_it = env.find(src->location());
 
-              if (dst_it != env.end() && dst_it->second.is_fixed &&
-                  src_it != env.end())
+              if (
+                dst_it != env.end() && dst_it->second.is_fixed &&
+                src_it != env.end())
               {
                 // Phase 3: dst has a fixed type (Var annotation).
                 // If src is a refinable Const, refine to match dst.
@@ -497,15 +482,16 @@ namespace vc
                   auto dst_prim = extract_primitive(dst_info.type);
                   auto src_prim = extract_primitive(src_info.type);
 
-                  if (dst_prim.def && src_prim.def && dst_prim != src_prim)
+                  if (
+                    dst_prim && src_prim &&
+                    dst_prim->type() != src_prim->type())
                   {
-                    bool compatible =
-                      (is_integer_type(src_prim) &&
-                       is_integer_type(dst_prim)) ||
-                      (is_float_type(src_prim) && is_float_type(dst_prim));
+                    bool compatible = (src_prim->in(integer_types) &&
+                                       dst_prim->in(integer_types)) ||
+                      (src_prim->in(float_types) && dst_prim->in(float_types));
 
                     if (compatible)
-                      refine_const(env, src_info.const_node, dst_prim);
+                      refine_const(env, src_info.const_node, dst_prim->type());
                   }
                 }
               }
@@ -534,6 +520,71 @@ namespace vc
             {
               auto dst = stmt / LocalId;
               env[dst->location()] = {clone(stmt / Type), false, false, {}};
+
+              // Refine Const literals used as New arguments based on
+              // field types. E.g. `new {count = 0}` where count is
+              // usize should refine the literal from u64 to usize.
+              auto new_type = stmt / Type;
+              auto inner = new_type->front();
+
+              if (inner == TypeName)
+              {
+                auto class_def = find_def(top, inner);
+
+                if (class_def && class_def == ClassDef)
+                {
+                  auto class_body = class_def / ClassBody;
+
+                  for (auto& new_arg : *(stmt / NewArgs))
+                  {
+                    assert(new_arg == NewArg);
+                    auto field_ident = new_arg / Ident;
+                    auto arg_src = new_arg / Rhs;
+                    auto it = env.find(arg_src->location());
+
+                    if (it == env.end())
+                      continue;
+
+                    auto& arg_info = it->second;
+
+                    if (!arg_info.is_default || !arg_info.const_node)
+                      continue;
+
+                    // Find the matching field in the class definition.
+                    for (auto& child : *class_body)
+                    {
+                      if (child != FieldDef)
+                        continue;
+
+                      if (
+                        (child / Ident)->location().view() !=
+                        field_ident->location().view())
+                        continue;
+
+                      auto expected_prim = extract_primitive(child / Type);
+
+                      if (!expected_prim)
+                        break;
+
+                      Node current_prim = arg_info.const_node / Type;
+
+                      if (current_prim == expected_prim)
+                        break;
+
+                      bool compatible = (current_prim->in(integer_types) &&
+                                         expected_prim->in(integer_types)) ||
+                        (current_prim->in(float_types) &&
+                         expected_prim->in(float_types));
+
+                      if (compatible)
+                        refine_const(
+                          env, arg_info.const_node, expected_prim->type());
+
+                      break;
+                    }
+                  }
+                }
+              }
             }
             else if (stmt->in(
                        {Add,
@@ -567,27 +618,9 @@ namespace vc
               auto dst = stmt / LocalId;
               env[dst->location()] = {primitive_type(Bool), false, false, {}};
             }
-            else if (stmt->in(
-                       {Neg,
-                        Abs,
-                        Ceil,
-                        Floor,
-                        Exp,
-                        Log,
-                        Sqrt,
-                        Cbrt,
-                        Sin,
-                        Cos,
-                        Tan,
-                        Asin,
-                        Acos,
-                        Atan,
-                        Sinh,
-                        Cosh,
-                        Tanh,
-                        Asinh,
-                        Acosh,
-                        Atanh}))
+            else if (stmt->in({Neg,  Abs,  Ceil, Floor, Exp,   Log,  Sqrt,
+                               Cbrt, Sin,  Cos,  Tan,   Asin,  Acos, Atan,
+                               Sinh, Cosh, Tanh, Asinh, Acosh, Atanh}))
             {
               // Unop: same type as source.
               auto dst = stmt / LocalId;
@@ -632,6 +665,40 @@ namespace vc
             }
             // All other statements (CallDyn, Lookup, FFI, When, etc.):
             // result type unknown, don't record in env.
+          }
+
+          // Refine Const literals returned from this label based on
+          // the function's declared return type.
+          auto term = lbl / Return;
+
+          if (term == Return)
+          {
+            auto ret_src = term / LocalId;
+            auto it = env.find(ret_src->location());
+
+            if (
+              it != env.end() && it->second.is_default && it->second.const_node)
+            {
+              auto func_ret_type = node / Type;
+              auto expected_prim = extract_primitive(func_ret_type);
+
+              if (expected_prim)
+              {
+                Node current_prim = it->second.const_node / Type;
+
+                if (current_prim != expected_prim)
+                {
+                  bool compatible = (current_prim->in(integer_types) &&
+                                     expected_prim->in(integer_types)) ||
+                    (current_prim->in(float_types) &&
+                     expected_prim->in(float_types));
+
+                  if (compatible)
+                    refine_const(
+                      env, it->second.const_node, expected_prim->type());
+                }
+              }
+            }
           }
         }
 

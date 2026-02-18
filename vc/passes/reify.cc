@@ -210,30 +210,47 @@ namespace vc
 
     // Find an existing reification of def with the given subst (invariant
     // subtype equivalence), or create one, schedule it, and return its id.
-    // For builtins, deduplication uses structural id equality (since make_id
-    // fully resolves wrapper element types). For non-builtins, deduplication
-    // uses substitution map equality.
+    //
+    // For primitive and wrapper builtins, dedup uses structural id equality
+    // (make_id fully resolves element types without using the index). For all
+    // other defs, dedup uses substitution map equality (the index embedded in
+    // generic ClassId strings would vary per call, breaking id comparison).
     Node find_or_push(const Node& def, NodeMap<Node> subst)
     {
       auto& r_vec = map[def];
-      bool is_builtin = def->parent(ClassDef) == builtin;
 
-      Node id;
+      if (def->parent(ClassDef) == builtin)
+      {
+        auto name = (def / Ident)->location().view();
 
-      if (is_builtin)
-        id = make_id(def, r_vec.size(), subst);
+        if (
+          primitive_types.find(name) != primitive_types.end() ||
+          wrapper_types.find(name) != wrapper_types.end())
+        {
+          // Primitives and wrappers: make_id produces index-free structural
+          // ids (bare tokens or Wrapper << elem_type), so id equality works.
+          auto id = make_id(def, r_vec.size(), subst);
 
+          for (auto& existing : r_vec)
+          {
+            if (existing.id->equals(id))
+              return clone(existing.id);
+          }
+
+          r_vec.push_back({def, std::move(subst), std::move(id), {}});
+          worklist.push_back(&r_vec.back());
+          return clone(r_vec.back().id);
+        }
+      }
+
+      // All other defs: dedup using substitution map equality.
       for (auto& existing : r_vec)
       {
-        if (
-          is_builtin ? existing.id->equals(id) :
-                       subst_equal(existing.subst, subst))
+        if (subst_equal(existing.subst, subst))
           return clone(existing.id);
       }
 
-      if (!is_builtin)
-        id = make_id(def, r_vec.size(), subst);
-
+      auto id = make_id(def, r_vec.size(), subst);
       r_vec.push_back({def, std::move(subst), std::move(id), {}});
       worklist.push_back(&r_vec.back());
       return clone(r_vec.back().id);
