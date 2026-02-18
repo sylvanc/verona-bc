@@ -276,7 +276,7 @@ namespace vc
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfBodyANF++)
-    | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
+    | (Const <<= wfDst * (Rhs >>= wfLiteral))
     | (ConstStr <<= wfDst * String)
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
     | (Copy <<= wfDst * wfSrc)
@@ -358,6 +358,13 @@ namespace vc
     ;
   // clang-format on
 
+  // clang-format off
+  inline const auto wfPassInfer =
+      wfPassANF
+    | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
+    ;
+  // clang-format on
+
   inline const auto l_typevar = Location("typevar");
 
   Node make_type(Match& _, NodeRange r = {});
@@ -374,5 +381,6 @@ namespace vc
   PassDef dot();
   PassDef application();
   PassDef anf();
+  PassDef infer();
   PassDef reify();
 }

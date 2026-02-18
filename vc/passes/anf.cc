@@ -422,7 +422,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << Bool << _(Bool)))
+                                << (Const << (LocalId ^ id) << _(Bool)))
                        << (LocalId ^ id);
           },
 
@@ -430,7 +430,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << U64 << _(Int)))
+                                << (Const << (LocalId ^ id) << _(Int)))
                        << (LocalId ^ id);
           },
 
@@ -438,7 +438,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << F64 << _(Float)))
+                                << (Const << (LocalId ^ id) << _(Float)))
                        << (LocalId ^ id);
           },
 
@@ -557,7 +557,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << None << None))
+                                << (Const << (LocalId ^ id) << None))
                        << (LocalId ^ id);
           },
 

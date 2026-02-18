@@ -21,6 +21,7 @@ int main(int argc, char** argv)
       dot(),
       application(),
       anf(),
+      infer(),
       reify(),
       vbcc::assignids(state),
       vbcc::validids(state),
