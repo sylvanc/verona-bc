@@ -85,8 +85,9 @@ namespace vc
                                << (Return << (LocalId ^ id)))));
 
       // Add reified classes, type aliases, and functions.
-      for (auto& [_, reifications] : map)
-        for (auto& r : reifications)
+      // Iterate in insertion order (not pointer order) for determinism.
+      for (auto& key : map_order)
+        for (auto& r : map[key])
           top << r.reification;
 
       // Add reified libraries.
@@ -121,6 +122,7 @@ namespace vc
     Node top;
     Node builtin;
     NodeMap<std::deque<Reification>> map;
+    std::vector<Node> map_order;
     std::vector<Reification*> worklist;
     std::map<Location, Node> libs;
     std::vector<MethodInvocation> method_invocations;
@@ -217,7 +219,12 @@ namespace vc
     // generic ClassId strings would vary per call, breaking id comparison).
     Node find_or_push(const Node& def, NodeMap<Node> subst)
     {
+      auto it = map.find(def);
+      bool is_new_key = (it == map.end());
       auto& r_vec = map[def];
+
+      if (is_new_key)
+        map_order.push_back(def);
 
       if (def->parent(ClassDef) == builtin)
       {
