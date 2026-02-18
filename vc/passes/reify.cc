@@ -56,25 +56,23 @@ namespace vc
 
       reify_call(main_call, {});
 
-      // Iteratively reify classes/aliases/functions and register methods until
-      // no new reifications are scheduled.
-      do
+      // Iteratively reify classes/aliases/functions. Method registrations
+      // happen inline: reify_class registers all existing MIs on the new
+      // class, and reify_lookup registers the new MI on all existing classes.
+      while (!worklist.empty())
       {
-        while (!worklist.empty())
-        {
-          auto r = worklist.back();
-          worklist.pop_back();
+        auto r = worklist.back();
+        worklist.pop_back();
 
-          if (r->def == ClassDef)
-            reify_class(*r);
-          else if (r->def == TypeAlias)
-            reify_typealias(*r);
-          else if (r->def == Function)
-            reify_function(*r);
-          else
-            assert(false);
-        }
-      } while (register_methods());
+        if (r->def == ClassDef)
+          reify_class(*r);
+        else if (r->def == TypeAlias)
+          reify_typealias(*r);
+        else if (r->def == Function)
+          reify_function(*r);
+        else
+          assert(false);
+      }
 
       // Remove existing contents.
       top->erase(top->begin(), top->end());
@@ -171,31 +169,19 @@ namespace vc
     bool subst_equal(const NodeMap<Node>& a, const NodeMap<Node>& b)
     {
       return std::equal(
-        a.begin(),
-        a.end(),
-        b.begin(),
-        b.end(),
-        [](auto& lhs, auto& rhs) {
-          return (lhs.first == rhs.first) &&
-            Subtype(lhs.second, rhs.second) &&
+        a.begin(), a.end(), b.begin(), b.end(), [](auto& lhs, auto& rhs) {
+          return (lhs.first == rhs.first) && Subtype(lhs.second, rhs.second) &&
             Subtype(rhs.second, lhs.second);
         });
     }
 
     // Compare two vectors of resolved types for invariant equality.
-    bool typeargs_equal(
-      const std::vector<Node>& a, const std::vector<Node>& b)
+    bool typeargs_equal(const std::vector<Node>& a, const std::vector<Node>& b)
     {
-      if (a.size() != b.size())
-        return false;
-
-      for (size_t i = 0; i < a.size(); i++)
-      {
-        if (!Subtype(a[i], b[i]) || !Subtype(b[i], a[i]))
-          return false;
-      }
-
-      return true;
+      return std::equal(
+        a.begin(), a.end(), b.begin(), b.end(), [](auto& lhs, auto& rhs) {
+          return Subtype(lhs, rhs) && Subtype(rhs, lhs);
+        });
     }
 
     // Find or create a method reification index for the given base method id
@@ -224,68 +210,71 @@ namespace vc
 
     // Find an existing reification of def with the given subst (invariant
     // subtype equivalence), or create one, schedule it, and return its id.
+    // For builtins, deduplication uses structural id equality (since make_id
+    // fully resolves wrapper element types). For non-builtins, deduplication
+    // uses substitution map equality.
     Node find_or_push(const Node& def, NodeMap<Node> subst)
     {
       auto& r_vec = map[def];
+      bool is_builtin = def->parent(ClassDef) == builtin;
+
+      Node id;
+
+      if (is_builtin)
+        id = make_id(def, r_vec.size(), subst);
 
       for (auto& existing : r_vec)
       {
-        if (subst_equal(existing.subst, subst))
+        if (
+          is_builtin ? existing.id->equals(id) :
+                       subst_equal(existing.subst, subst))
           return clone(existing.id);
       }
 
-      Reification r{def, std::move(subst), make_id(def, r_vec.size()), {}};
-      r_vec.push_back(std::move(r));
+      if (!is_builtin)
+        id = make_id(def, r_vec.size(), subst);
+
+      r_vec.push_back({def, std::move(subst), std::move(id), {}});
       worklist.push_back(&r_vec.back());
       return clone(r_vec.back().id);
     }
 
     void reify_class(Reification& r)
     {
-      // Treat a shape as a dynamic type. We could build a set of all concrete
-      // types that implement the shape.
+      // Shapes are treated as dynamic types. They never reach the worklist
+      // (get_reification returns Dyn early), but guard defensively.
       if ((r.def / Shape) == Shape)
       {
         r.id = Dyn;
         return;
       }
 
-      // Check if this is a primitive type.
-      if (r.def->parent(ClassDef) == builtin)
+      if (r.id != ClassId)
       {
-        auto find = primitive_types.find((r.def / Ident)->location().view());
+        // Primitive or wrapper type.
+        r.reification = Primitive << clone(r.id) << Methods;
+      }
+      else
+      {
+        // User-defined class.
+        Node fields = Fields;
 
-        if (find != primitive_types.end())
+        for (auto& f : *(r.def / ClassBody))
         {
-          r.id = find->second;
-          r.reification = Primitive << r.id << Methods;
-          return;
+          if (f != FieldDef)
+            continue;
+
+          fields
+            << (Field << (FieldId ^ (f / Ident))
+                      << reify_type(f / Type, r.subst));
         }
 
-        // array[T], cown[T], ref[T]: r.id was pre-computed as Wrapper<<T
-        // by get_reification; just build the Primitive reification from it.
-        if (r.id->in({Array, Cown, Ref}))
-        {
-          r.reification = Primitive << clone(r.id) << Methods;
-          return;
-        }
+        r.reification = Class << r.id << fields << Methods;
       }
 
-      // Iterate through the fields in the class.
-      Node fields = Fields;
-
-      for (auto& f : *(r.def / ClassBody))
-      {
-        if (f != FieldDef)
-          continue;
-
-        fields
-          << (Field << (FieldId ^ (f / Ident))
-                    << reify_type(f / Type, r.subst));
-      }
-
-      // Store the reified class.
-      r.reification = Class << r.id << fields << Methods;
+      // Register all existing method invocations on this new class.
+      for (auto& mi : method_invocations)
+        register_method(mi, r);
     }
 
     void reify_typealias(Reification& r)
@@ -535,30 +524,18 @@ namespace vc
         tn, subst, [](auto& def) { return def->in({ClassDef, TypeAlias}); });
     }
 
-    // Reify a primitive from a wfPrimitiveType.
+    // Ensure a primitive type is reified. Delegates to find_or_push which
+    // deduplicates and schedules via the worklist.
     void reify_primitive(const Node& type)
     {
       for (auto& [k, v] : primitive_types)
       {
-        // Look for this primitive type.
         if (type != v)
           continue;
 
-        // Look up the class definition by name.
         auto defs = builtin->look(Location(std::string(k)));
         assert(defs.size() == 1);
-        auto def = defs.front();
-        assert(def == ClassDef);
-        assert((def / TypeParams)->size() == 0);
-
-        auto& r_vec = map[def];
-
-        // If this primitive type has already been reified, we're done.
-        if (!r_vec.empty())
-          return;
-
-        // Store this reification.
-        r_vec.push_back({def, {}, type, Primitive << clone(type) << Methods});
+        find_or_push(defs.front(), {});
         return;
       }
     }
@@ -654,8 +631,7 @@ namespace vc
 
       // Find or create a reification index for these resolved type arguments.
       auto index = find_method_index(base_id, typeargs, call_subst);
-      auto method_id_str =
-        std::format("{}::{}", base_id, index);
+      auto method_id_str = std::format("{}::{}", base_id, index);
 
       // Parse arity.
       size_t arity = 0;
@@ -671,101 +647,93 @@ namespace vc
          clone(typeargs),
          call_subst});
 
+      // Register this new MI on all existing class reifications.
+      auto& mi = method_invocations.back();
+
+      for (auto& [def, reifications] : map)
+      {
+        if (def != ClassDef)
+          continue;
+
+        for (auto& r : reifications)
+        {
+          if (r.reification)
+            register_method(mi, r);
+        }
+      }
+
       auto mid = MethodId ^ method_id_str;
 
       n->erase(n->begin(), n->end());
       n << dst << src << mid;
     }
 
-    // For each collected MethodInvocation, find every reified class/primitive
-    // whose ClassDef has a matching function (name, arity, handedness, type
-    // parameter count) and register a Method entry.  Returns true if any new
-    // Method was registered (and new reifications were scheduled).
-    bool register_methods()
+    // Register a single MethodInvocation on a single class Reification.
+    // If the class has a matching function, reify it and add a Method entry.
+    void register_method(const MethodInvocation& mi, Reification& r)
     {
-      bool any_new = false;
-      auto pending = std::move(method_invocations);
-      method_invocations.clear();
+      assert(r.def == ClassDef);
 
-      for (auto& mi : pending)
+      auto mid_node = MethodId ^ mi.method_id;
+
+      for (auto& f : *(r.def / ClassBody))
       {
-        auto mid_node = MethodId ^ mi.method_id;
+        if (f != Function)
+          continue;
 
-        for (auto& [def, reifications] : map)
+        if ((f / Ident)->location().view() != mi.name)
+          continue;
+
+        if ((f / Lhs)->type() != mi.hand)
+          continue;
+
+        if ((f / Params)->size() != mi.arity)
+          continue;
+
+        auto func_tps = f / TypeParams;
+
+        if (func_tps->size() != mi.typeargs->size())
+          continue;
+
+        // Build func_subst: class subst + method TypeParams -> resolved
+        // TypeArgs.  Resolve TypeArgs through both call-site and class
+        // substitution contexts (class subst takes priority for class
+        // TypeParams).
+        NodeMap<Node> combined = mi.call_subst;
+
+        for (auto& [k, v] : r.subst)
+          combined.insert_or_assign(k, v);
+
+        NodeMap<Node> func_subst = r.subst;
+
+        for (size_t i = 0; i < func_tps->size(); i++)
         {
-          if (def != ClassDef)
-            continue;
+          auto ta = mi.typeargs->at(i);
+          Node resolved = (ta == Type) ? reify_type(ta, combined) : Dyn;
+          func_subst[func_tps->at(i)] = resolved;
+        }
 
-          // Find matching functions in this ClassDef.
-          for (auto& f : *(def / ClassBody))
+        auto funcid = find_or_push(f, func_subst);
+
+        // Check if this Method entry already exists.
+        auto methods = r.reification / Methods;
+        bool already = false;
+
+        for (auto& existing : *methods)
+        {
+          if (
+            ((existing / MethodId)->location().view() == mi.method_id) &&
+            ((existing / FunctionId)->location().view() ==
+             funcid->location().view()))
           {
-            if (f != Function)
-              continue;
-
-            if ((f / Ident)->location().view() != mi.name)
-              continue;
-
-            if ((f / Lhs)->type() != mi.hand)
-              continue;
-
-            if ((f / Params)->size() != mi.arity)
-              continue;
-
-            auto func_tps = f / TypeParams;
-
-            if (func_tps->size() != mi.typeargs->size())
-              continue;
-
-            // Matches. For each reification of this class, reify the function.
-            for (auto& r : reifications)
-            {
-              // Build func_subst: class subst + method TypeParams -> resolved
-              // TypeArgs.  Resolve TypeArgs through both call-site and class
-              // substitution contexts (class subst takes priority for class
-              // TypeParams).
-              NodeMap<Node> combined = mi.call_subst;
-
-              for (auto& [k, v] : r.subst)
-                combined.insert_or_assign(k, v);
-
-              NodeMap<Node> func_subst = r.subst;
-
-              for (size_t i = 0; i < func_tps->size(); i++)
-              {
-                auto ta = mi.typeargs->at(i);
-                Node resolved = (ta == Type) ? reify_type(ta, combined) : Dyn;
-                func_subst[func_tps->at(i)] = resolved;
-              }
-
-              auto funcid = find_or_push(f, func_subst);
-
-              // Check if this Method entry already exists.
-              auto methods = r.reification / Methods;
-              bool already = false;
-
-              for (auto& existing : *methods)
-              {
-                if (
-                  ((existing / MethodId)->location().view() == mi.method_id) &&
-                  ((existing / FunctionId)->location().view() ==
-                   funcid->location().view()))
-                {
-                  already = true;
-                  break;
-                }
-              }
-
-              if (!already)
-              {
-                methods << (Method << clone(mid_node) << funcid);
-                any_new = true;
-              }
-            }
+            already = true;
+            break;
           }
         }
-      }
 
-      return any_new;
+        if (!already)
+          methods << (Method << clone(mid_node) << funcid);
+      }
     }
 
     void reify_ffi(Node& n, Reification& r)
@@ -1050,52 +1018,31 @@ namespace vc
       if ((def == ClassDef) && ((def / Shape) == Shape))
         return Dyn;
 
-      auto& r_vec = map[def];
-
-      // For wrapper types (array[T], cown[T], ref[T]), compute the structural
-      // id directly rather than a ClassId string, and deduplicate by structural
-      // id equality rather than subst equality.
-      if (def->parent(ClassDef) == builtin)
-      {
-        auto wrapper_find =
-          wrapper_types.find((def / Ident)->location().view());
-
-        if (wrapper_find != wrapper_types.end())
-        {
-          auto tps = def / TypeParams;
-          assert(tps->size() == 1);
-          auto tp_find = r.subst.find(tps->at(0));
-          Node elem_type = (tp_find != r.subst.end()) ?
-            reify_type(tp_find->second, r.subst) :
-            Dyn;
-          Node new_id = Node(wrapper_find->second) << elem_type;
-
-          for (auto& existing : r_vec)
-          {
-            if (existing.id->equals(new_id))
-              return clone(existing.id);
-          }
-
-          r.def = def;
-          r.id = new_id;
-          r_vec.push_back(std::move(r));
-          worklist.push_back(&r_vec.back());
-          return clone(r_vec.back().id);
-        }
-      }
-
       return find_or_push(def, std::move(r.subst));
     }
 
-    Node make_id(const Node& def, size_t index)
+    Node make_id(const Node& def, size_t index, const NodeMap<Node>& subst)
     {
-      // Check for a primitive type.
       if (def->parent(ClassDef) == builtin)
       {
+        // Check for a bare primitive type.
         auto find = primitive_types.find((def / Ident)->location().view());
 
         if (find != primitive_types.end())
           return find->second;
+
+        // Check for a wrapper type (array[T], cown[T], ref[T]).
+        auto wrap_find = wrapper_types.find((def / Ident)->location().view());
+
+        if (wrap_find != wrapper_types.end())
+        {
+          auto tps = def / TypeParams;
+          assert(tps->size() == 1);
+          auto tp_find = subst.find(tps->at(0));
+          Node elem_type =
+            (tp_find != subst.end()) ? reify_type(tp_find->second, subst) : Dyn;
+          return Node(wrap_find->second) << elem_type;
+        }
       }
 
       // Identifiers take the form `a::b::c::3`.
