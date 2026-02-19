@@ -11,6 +11,7 @@ Sub-typing.
 - Better contradiction for type aliases.
 
 Type inference.
+- Handle lambdas.
 - Determine type arguments from context:
   - Call.
   - Dynamic call.

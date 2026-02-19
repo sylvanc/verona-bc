@@ -72,6 +72,245 @@ namespace vc
       return {};
     }
 
+    // Entry for a local variable in the type environment.
+    struct LocalTypeInfo
+    {
+      Node type; // Source-level Type node (e.g., Type << TypeName << ...)
+      bool is_default; // True if type came from Const default (U64/F64)
+      bool is_fixed; // True if from Param or explicit Var annotation
+      Node const_node; // If from a Const, the Const stmt (for refinement)
+    };
+
+    using TypeEnv = std::map<Location, LocalTypeInfo>;
+
+    // Extract TypeParam constraints by structurally matching a formal type
+    // against an actual type. For example, formal = wrapper[T] matched
+    // against actual = wrapper[i32] yields constraint TypeParam(T) -> i32.
+    // Handles algebraic types (Union, Isect, TupleType) element-wise.
+    void extract_constraints(
+      Node top,
+      const Node& f_inner, // wfType node from formal type
+      const Node& a_inner, // wfType node from actual type
+      NodeMap<LocalTypeInfo>& constraints,
+      bool is_default)
+    {
+      // Case 1: formal is a TypeParam reference.
+      if (f_inner == TypeName)
+      {
+        auto def = find_def(top, f_inner);
+
+        if (def && (def == TypeParam))
+        {
+          Node actual_type = Type << clone(a_inner);
+          auto existing = constraints.find(def);
+
+          if (existing == constraints.end())
+          {
+            constraints[def] = {actual_type, is_default, false, {}};
+          }
+          else if (existing->second.is_default && !is_default)
+          {
+            existing->second = {actual_type, false, false, {}};
+          }
+
+          return;
+        }
+      }
+
+      // Case 2: both TypeNames - match structurally by ident path.
+      if ((f_inner == TypeName) && (a_inner == TypeName))
+      {
+        if (f_inner->size() != a_inner->size())
+          return;
+
+        for (size_t i = 0; i < f_inner->size(); i++)
+        {
+          auto f_elem = f_inner->at(i);
+          auto a_elem = a_inner->at(i);
+
+          if (
+            (f_elem / Ident)->location().view() !=
+            (a_elem / Ident)->location().view())
+            return;
+
+          auto f_ta = f_elem / TypeArgs;
+          auto a_ta = a_elem / TypeArgs;
+
+          if (f_ta->size() != a_ta->size())
+            return;
+
+          for (size_t j = 0; j < f_ta->size(); j++)
+          {
+            // TypeArgs children are Type nodes; recurse on inner wfType.
+            extract_constraints(
+              top,
+              f_ta->at(j)->front(),
+              a_ta->at(j)->front(),
+              constraints,
+              is_default);
+          }
+        }
+
+        return;
+      }
+
+      // Case 3: Union/Isect/TupleType - element-wise matching.
+      if (
+        (f_inner->type() == a_inner->type()) &&
+        (f_inner->size() == a_inner->size()) &&
+        f_inner->in({Union, Isect, TupleType}))
+      {
+        for (size_t i = 0; i < f_inner->size(); i++)
+        {
+          // Children are wfType directly.
+          extract_constraints(
+            top,
+            f_inner->at(i),
+            a_inner->at(i),
+            constraints,
+            is_default);
+        }
+
+        return;
+      }
+    }
+
+    // Apply a TypeParam substitution to a Type node, returning a new Type
+    // with all TypeParam references resolved.
+    Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
+    {
+      if (type_node != Type)
+        return clone(type_node);
+
+      if (subst.empty())
+        return clone(type_node);
+
+      auto inner = type_node->front();
+
+      if (inner == TypeName)
+      {
+        // Check if this TypeName resolves to a TypeParam in the subst.
+        auto def = find_def(top, inner);
+
+        if (def && (def == TypeParam))
+        {
+          auto it = subst.find(def);
+
+          if (it != subst.end())
+            return clone(it->second);
+        }
+
+        // Not a TypeParam - recurse into TypeArgs of each NameElement.
+        Node new_tn = TypeName;
+
+        for (auto& elem : *inner)
+        {
+          Node new_ta = TypeArgs;
+
+          for (auto& ta_child : *(elem / TypeArgs))
+            new_ta << apply_subst(top, ta_child, subst);
+
+          new_tn << (NameElement << clone(elem / Ident) << new_ta);
+        }
+
+        return Type << new_tn;
+      }
+
+      if (inner->in({Union, Isect, TupleType}))
+      {
+        Node new_inner = inner->type();
+
+        for (auto& child : *inner)
+        {
+          // Children are wfType, wrap in Type for recursive call.
+          Node wrapped = Type << clone(child);
+          Node substituted = apply_subst(top, wrapped, subst);
+          new_inner << substituted->front();
+        }
+
+        return Type << new_inner;
+      }
+
+      // FuncType, TypeVar, etc. - return as-is.
+      return clone(type_node);
+    }
+
+    // Resolve the return type of a method on a receiver type.
+    // Given a receiver type (e.g., wrapper[i32]), a method name, hand,
+    // arity, and method-level TypeArgs, find the method definition
+    // and return the substituted return type.
+    Node resolve_method_return_type(
+      Node top,
+      const Node& receiver_type,
+      const Node& method_ident,
+      Token hand,
+      size_t arity,
+      const Node& method_typeargs)
+    {
+      if (receiver_type != Type)
+        return {};
+
+      auto inner = receiver_type->front();
+
+      if (inner != TypeName)
+        return {};
+
+      auto class_def = find_def(top, inner);
+
+      if (!class_def || (class_def != ClassDef))
+        return {};
+
+      // Build substitution from class-level TypeArgs.
+      auto class_tps = class_def / TypeParams;
+      NodeMap<Node> subst;
+
+      // Get TypeArgs from the last NameElement of the receiver TypeName.
+      auto last_elem = inner->back();
+      auto class_ta = last_elem / TypeArgs;
+
+      if (class_ta->size() == class_tps->size())
+      {
+        for (size_t i = 0; i < class_tps->size(); i++)
+          subst[class_tps->at(i)] = class_ta->at(i);
+      }
+
+      // Find the matching method in the class.
+      auto class_body = class_def / ClassBody;
+      auto method_name = method_ident->location().view();
+
+      for (auto& child : *class_body)
+      {
+        if (child != Function)
+          continue;
+
+        if ((child / Ident)->location().view() != method_name)
+          continue;
+
+        if ((child / Lhs)->type() != hand)
+          continue;
+
+        if ((child / Params)->size() != arity)
+          continue;
+
+        // Found the method. Add function-level TypeParam substitutions.
+        auto func_tps = child / TypeParams;
+
+        if (
+          !method_typeargs->empty() &&
+          method_typeargs->size() == func_tps->size())
+        {
+          for (size_t i = 0; i < func_tps->size(); i++)
+            subst[func_tps->at(i)] = method_typeargs->at(i);
+        }
+
+        // Apply substitution to the return type.
+        auto ret_type = child / Type;
+        return apply_subst(top, ret_type, subst);
+      }
+
+      return {};
+    }
+
     // Extract the primitive token node from a source-level Type node that
     // references a _builtin primitive. Returns empty Node if not a
     // primitive.
@@ -121,17 +360,6 @@ namespace vc
       assert(false && "unhandled literal type in infer");
       return {};
     }
-
-    // Entry for a local variable in the type environment.
-    struct LocalTypeInfo
-    {
-      Node type; // Source-level Type node (e.g., Type << TypeName << ...)
-      bool is_default; // True if type came from Const default (U64/F64)
-      bool is_fixed; // True if from Param or explicit Var annotation
-      Node const_node; // If from a Const, the Const stmt (for refinement)
-    };
-
-    using TypeEnv = std::map<Location, LocalTypeInfo>;
 
     // Refine a Const node's type to new_prim. Updates the AST and all
     // env entries sharing the same const_node.
@@ -261,11 +489,6 @@ namespace vc
           auto arg_node = args->at(i);
           auto formal_type = param / Type;
 
-          auto tp_def = direct_typeparam(top, formal_type);
-
-          if (!tp_def)
-            continue;
-
           auto arg_src = arg_node / Rhs;
           auto it = env.find(arg_src->location());
 
@@ -273,18 +496,15 @@ namespace vc
             continue;
 
           auto& arg_info = it->second;
-          auto existing = constraints.find(tp_def);
 
-          if (existing == constraints.end())
-          {
-            constraints[tp_def] = {
-              clone(arg_info.type), arg_info.is_default, false, {}};
-          }
-          else if (existing->second.is_default && !arg_info.is_default)
-          {
-            // Non-default type wins over default.
-            existing->second = {clone(arg_info.type), false, false, {}};
-          }
+          // Structurally match formal type against actual type to extract
+          // TypeParam constraints. Handles bare T, wrapper[T], unions, etc.
+          extract_constraints(
+            top,
+            formal_type->front(),
+            arg_info.type->front(),
+            constraints,
+            arg_info.is_default);
         }
 
         // Fill TypeArgs for scopes that need inference.
@@ -392,25 +612,10 @@ namespace vc
         refine_const(env, arg_info.const_node, expected_prim->type());
       }
 
-      // Record the call's result type in the env.
+      // Record the call's result type in the env, with all TypeParam
+      // references substituted.
       auto ret_type = func_def / Type;
-      Node result_type;
-
-      // If the return type references a TypeParam, substitute it.
-      auto tp_def = direct_typeparam(top, ret_type);
-
-      if (tp_def)
-      {
-        auto find = subst.find(tp_def);
-
-        if (find != subst.end())
-          result_type = clone(find->second);
-      }
-      else
-      {
-        // Use the return type directly (e.g., a concrete primitive).
-        result_type = clone(ret_type);
-      }
+      auto result_type = apply_subst(top, ret_type, subst);
 
       if (result_type)
       {
@@ -682,7 +887,46 @@ namespace vc
               // Phase 2+3: type arg inference and literal refinement.
               infer_call(stmt, env, top);
             }
-            // All other statements (CallDyn, Lookup, FFI, When, etc.):
+            else if (stmt == Lookup)
+            {
+              // Resolve the return type of the looked-up method based
+              // on the receiver's type. Store for CallDyn to use.
+              auto dst = stmt / LocalId;
+              auto src = stmt / Rhs;
+              auto hand = (stmt / Lhs)->type();
+              auto method_ident = stmt / Ident;
+              auto method_ta = stmt / TypeArgs;
+              auto arity = from_chars_sep_v<size_t>(stmt / Int);
+              auto src_it = env.find(src->location());
+
+              if (src_it != env.end())
+              {
+                auto ret_type = resolve_method_return_type(
+                  top,
+                  src_it->second.type,
+                  method_ident,
+                  hand,
+                  arity,
+                  method_ta);
+
+                if (ret_type)
+                  env[dst->location()] = {ret_type, false, false, {}};
+              }
+            }
+            else if (stmt == CallDyn)
+            {
+              // The CallDyn source is a Lookup result. If we resolved
+              // the method return type at the Lookup, propagate it
+              // as the CallDyn result type.
+              auto dst = stmt / LocalId;
+              auto src = stmt / Rhs;
+              auto src_it = env.find(src->location());
+
+              if (src_it != env.end())
+                env[dst->location()] = {
+                  clone(src_it->second.type), false, false, {}};
+            }
+            // All other statements (FFI, When, etc.):
             // result type unknown, don't record in env.
           }
 

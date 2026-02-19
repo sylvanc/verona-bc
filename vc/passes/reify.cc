@@ -117,6 +117,7 @@ namespace vc
       Token hand; // Lhs (ref) or Rhs
       Node typeargs; // cloned TypeArgs from the Lookup
       NodeMap<Node> call_subst; // substitution context at the call site
+      Nodes receivers; // reified type ids of possible receivers; empty = all
     };
 
     Node top;
@@ -127,6 +128,51 @@ namespace vc
     std::map<Location, Node> libs;
     std::vector<MethodInvocation> method_invocations;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
+
+    // Per-function local type map: LocalId location -> reified type.
+    // Populated during reify_function, used by reify_lookup.
+    std::map<Location, Node> local_types;
+
+    // Extract individual type ids from a reified type. For Union, extracts
+    // each member. For Dyn, returns empty (meaning all classes). For
+    // ClassId/primitive, returns just that type.
+    Nodes extract_receivers(const Node& reified_type)
+    {
+      if (!reified_type || (reified_type == Dyn))
+        return {};
+
+      if (reified_type == Union)
+      {
+        Nodes result;
+
+        for (auto& child : *reified_type)
+        {
+          if (child == Dyn)
+            return {}; // union containing Dyn = all
+
+          result.push_back(clone(child));
+        }
+
+        return result;
+      }
+
+      return {clone(reified_type)};
+    }
+
+    // Check if a MethodInvocation targets a specific class reification.
+    bool mi_targets(const MethodInvocation& mi, Node class_id)
+    {
+      if (mi.receivers.empty())
+        return true; // all classes
+
+      for (auto r : mi.receivers)
+      {
+        if (class_id->equals(r))
+          return true;
+      }
+
+      return false;
+    }
 
     // Resolve a TypeArg through the current substitution map. If the TypeArg
     // is a Type wrapping a TypeName that resolves to a TypeParam in the subst,
@@ -296,9 +342,12 @@ namespace vc
         r.reification = Class << r.id << fields << Methods;
       }
 
-      // Register all existing method invocations on this new class.
+      // Register existing method invocations that target this class.
       for (auto& mi : method_invocations)
-        register_method(mi, r);
+      {
+        if (mi_targets(mi, r.id))
+          register_method(mi, r);
+      }
     }
 
     void reify_typealias(Reification& r)
@@ -309,15 +358,18 @@ namespace vc
 
     bool reify_function(Reification& r)
     {
+      // Clear per-function local type tracking.
+      local_types.clear();
+
       // Reify the function signature.
       auto r_type = reify_type(r.def / Type, r.subst);
       Node params = Params;
 
       for (auto& p : *(r.def / Params))
       {
-        params
-          << (Param << (LocalId ^ (p / Ident))
-                    << reify_type(p / Type, r.subst));
+        auto p_type = reify_type(p / Type, r.subst);
+        local_types[(p / Ident)->location()] = p_type;
+        params << (Param << (LocalId ^ (p / Ident)) << p_type);
       }
 
       // Reify the function body.
@@ -371,40 +423,58 @@ namespace vc
           if (n->in({Const, Convert}))
           {
             reify_primitive(n / Type);
+            // Track type: Const/Convert produce the primitive type token.
+            local_types[(n / LocalId)->location()] = clone(n / Type);
           }
           else if (n == ConstStr)
           {
             reify_typename(string_type, {});
+            local_types[(n / LocalId)->location()] = Array << clone(U8);
           }
           else if (n == Typetest)
           {
             n / Type = reify_type(n / Type, r.subst);
             reify_primitive(Bool);
+            local_types[(n / LocalId)->location()] = clone(Bool);
           }
           else if (n->in({Eq, Ne, Lt, Le, Gt, Ge}))
           {
             reify_primitive(Bool);
+            local_types[(n / LocalId)->location()] = clone(Bool);
           }
           else if (n->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
           {
             reify_primitive(F64);
+            local_types[(n / LocalId)->location()] = clone(F64);
           }
           else if (n == Bits)
           {
             reify_primitive(U64);
+            local_types[(n / LocalId)->location()] = clone(U64);
           }
           else if (n == Len)
           {
             reify_primitive(USize);
+            local_types[(n / LocalId)->location()] = clone(USize);
           }
           else if (n == MakePtr)
           {
             reify_primitive(Ptr);
+            local_types[(n / LocalId)->location()] = clone(Ptr);
           }
-          else if (n == Copy)
+          else if (n->in({Copy, Move}))
           {
-            // Elide the Copy if its destination is never used as a source.
-            if (used_locs.find((n / LocalId)->location()) == used_locs.end())
+            // Propagate type from source to destination.
+            auto src_it = local_types.find((n / Rhs)->location());
+
+            if (src_it != local_types.end())
+              local_types[(n / LocalId)->location()] =
+                clone(src_it->second);
+
+            // Elide dead Copies.
+            if (
+              (n == Copy) &&
+              used_locs.find((n / LocalId)->location()) == used_locs.end())
               remove.push_back(n);
           }
           else if (n == Var)
@@ -414,7 +484,11 @@ namespace vc
           }
           else if (n == New)
           {
+            // Save the type before reify_new transforms the node.
+            auto new_type = reify_type(n / Type, r.subst);
             reify_new(n, r.subst);
+            // After reify_new, dst is first child.
+            local_types[(n / LocalId)->location()] = new_type;
           }
           else if (n == Lookup)
           {
@@ -649,18 +723,20 @@ namespace vc
 
       // Build method ID: "name::arity[::ref]::index"
       auto name = std::string(ident->location().view());
-      auto arity_str = std::string(arity_node->location().view());
+      auto arity = from_chars_sep_v<size_t>(arity_node);
       auto base_id =
-        std::format("{}::{}{}", name, arity_str, hand == Lhs ? "::ref" : "");
+        std::format("{}::{}{}", name, arity, hand == Lhs ? "::ref" : "");
 
       // Find or create a reification index for these resolved type arguments.
       auto index = find_method_index(base_id, typeargs, call_subst);
       auto method_id_str = std::format("{}::{}", base_id, index);
 
-      // Parse arity.
-      size_t arity = 0;
-      std::from_chars(
-        arity_str.data(), arity_str.data() + arity_str.size(), arity);
+      // Determine receiver types from the source local's tracked type.
+      Nodes receivers;
+      auto src_it = local_types.find(src->location());
+
+      if (src_it != local_types.end())
+        receivers = extract_receivers(src_it->second);
 
       // Record this method invocation for method registration.
       method_invocations.push_back(
@@ -669,9 +745,10 @@ namespace vc
          arity,
          hand->type(),
          clone(typeargs),
-         call_subst});
+         call_subst,
+         std::move(receivers)});
 
-      // Register this new MI on all existing class reifications.
+      // Register this new MI on existing class reifications that match.
       auto& mi = method_invocations.back();
 
       for (auto& [def, reifications] : map)
@@ -681,7 +758,7 @@ namespace vc
 
         for (auto& r : reifications)
         {
-          if (r.reification)
+          if (r.reification && mi_targets(mi, r.id))
             register_method(mi, r);
         }
       }
@@ -1002,9 +1079,9 @@ namespace vc
                 "intermediate navigation");
             }
           }
-          else if (def != ClassDef)
+          else if (!def->in({ClassDef, Function}))
           {
-            return err(elem, "Intermediate name must be a class")
+            return err(elem, "Intermediate name must be a class or function")
               << errmsg("Resolving here:") << errloc(def / Ident);
           }
         }
