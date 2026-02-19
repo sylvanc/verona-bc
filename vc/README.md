@@ -2,13 +2,14 @@
 
 ## To Do
 
+Syntax.
+- Can we call local functions, without a prefix?
+
 Reification.
-- Add a reification index to method IDs.
 - Can type parameters be encoded as type aliases in the reified type?
 - References.
 
 Type inference.
-- Infer types of integer and float literals from context.
 - Determine type arguments from context:
   - Call.
   - Dynamic call.

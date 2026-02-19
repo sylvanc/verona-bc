@@ -403,6 +403,32 @@ namespace vc
 
         refine_const(env, arg_info.const_node, expected_prim->type());
       }
+
+      // Record the call's result type in the env.
+      auto ret_type = func_def / Type;
+      Node result_type;
+
+      // If the return type references a TypeParam, substitute it.
+      auto tp_def = direct_typeparam(top, ret_type);
+
+      if (tp_def)
+      {
+        auto find = subst.find(tp_def);
+
+        if (find != subst.end())
+          result_type = clone(find->second);
+      }
+      else
+      {
+        // Use the return type directly (e.g., a concrete primitive).
+        result_type = clone(ret_type);
+      }
+
+      if (result_type)
+      {
+        auto dst = call / LocalId;
+        env[dst->location()] = {result_type, false, false, {}};
+      }
     }
   }
 
