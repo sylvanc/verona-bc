@@ -210,7 +210,10 @@ namespace vc
       if (find != subst.end())
         return find->second;
 
-      return arg;
+      // TypeParam not in subst — return Dyn to prevent self-referential
+      // substitution cycles (where a TypeParam maps to a reference to
+      // itself, causing infinite recursion in reify_type).
+      return Type << Dyn;
     }
 
     // Check whether two substitution maps are equivalent under invariance.
@@ -529,6 +532,11 @@ namespace vc
       if (type == Type)
         return reify_type(type->front(), subst);
 
+      // Already-reified IR type (e.g., from Dyn fallback for missing
+      // TypeArgs). Return as-is.
+      if (type == Dyn)
+        return Dyn;
+
       // Use Dyn until we resolve type variables.
       if (type == TypeVar)
         return Dyn;
@@ -647,6 +655,19 @@ namespace vc
         return (def == Function) && ((def / Params)->size() == arity) &&
           ((def / Lhs) == hand);
       });
+
+      if (!funcid || (funcid == Dyn))
+      {
+        // Can't resolve function — type arguments may need to be explicit.
+        auto funcname = call / FuncName;
+        call->parent()->replace(
+          call,
+          err(
+            funcname,
+            "Cannot resolve function — type arguments may need to be "
+            "specified explicitly"));
+        return;
+      }
 
       auto dst = call / LocalId;
       auto args = call / Args;
@@ -1039,6 +1060,12 @@ namespace vc
             if (sub == Type)
               sub = sub->front();
 
+            if (sub == Dyn)
+              return err(
+                elem,
+                "Cannot resolve type — type arguments may need to be "
+                "specified explicitly");
+
             if (sub != TypeName)
             {
               return err(
@@ -1112,6 +1139,7 @@ namespace vc
             resolve_subst[tps->at(i)] = resolved;
           }
         }
+
       }
 
       // Shapes are treated as dynamic types. No reification needed.

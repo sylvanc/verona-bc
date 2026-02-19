@@ -46,10 +46,9 @@ namespace vc
     Node string_type()
     {
       return Type
-        << (TypeName
-            << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-            << (NameElement << (Ident ^ "array")
-                            << (TypeArgs << primitive_type(U8))));
+        << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                     << (NameElement << (Ident ^ "array")
+                                     << (TypeArgs << primitive_type(U8))));
     }
 
     // Check if a Type node directly references a single TypeParam.
@@ -82,6 +81,10 @@ namespace vc
     };
 
     using TypeEnv = std::map<Location, LocalTypeInfo>;
+
+    // Forward declaration for use in extract_constraints.
+    Node
+    apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst);
 
     // Extract TypeParam constraints by structurally matching a formal type
     // against an actual type. For example, formal = wrapper[T] matched
@@ -117,37 +120,148 @@ namespace vc
         }
       }
 
-      // Case 2: both TypeNames - match structurally by ident path.
+      // Case 2: both TypeNames - match structurally by ident path,
+      // or via shape method return types if the formal is a shape.
       if ((f_inner == TypeName) && (a_inner == TypeName))
       {
-        if (f_inner->size() != a_inner->size())
-          return;
+        // Phase 1: Check if the FQ paths match structurally.
+        bool structural_match = (f_inner->size() == a_inner->size());
 
-        for (size_t i = 0; i < f_inner->size(); i++)
+        if (structural_match)
         {
-          auto f_elem = f_inner->at(i);
-          auto a_elem = a_inner->at(i);
-
-          if (
-            (f_elem / Ident)->location().view() !=
-            (a_elem / Ident)->location().view())
-            return;
-
-          auto f_ta = f_elem / TypeArgs;
-          auto a_ta = a_elem / TypeArgs;
-
-          if (f_ta->size() != a_ta->size())
-            return;
-
-          for (size_t j = 0; j < f_ta->size(); j++)
+          for (size_t i = 0; i < f_inner->size(); i++)
           {
-            // TypeArgs children are Type nodes; recurse on inner wfType.
-            extract_constraints(
-              top,
-              f_ta->at(j)->front(),
-              a_ta->at(j)->front(),
-              constraints,
-              is_default);
+            auto f_elem = f_inner->at(i);
+            auto a_elem = a_inner->at(i);
+
+            if (
+              (f_elem / Ident)->location().view() !=
+              (a_elem / Ident)->location().view())
+            {
+              structural_match = false;
+              break;
+            }
+
+            if ((f_elem / TypeArgs)->size() != (a_elem / TypeArgs)->size())
+            {
+              structural_match = false;
+              break;
+            }
+          }
+        }
+
+        if (structural_match)
+        {
+          // Paths match: extract constraints from TypeArgs at each element.
+          for (size_t i = 0; i < f_inner->size(); i++)
+          {
+            auto f_ta = f_inner->at(i) / TypeArgs;
+            auto a_ta = a_inner->at(i) / TypeArgs;
+
+            for (size_t j = 0; j < f_ta->size(); j++)
+            {
+              extract_constraints(
+                top,
+                f_ta->at(j)->front(),
+                a_ta->at(j)->front(),
+                constraints,
+                is_default);
+            }
+          }
+
+          return;
+        }
+
+        // Phase 2: Shape-aware matching.
+        // When the formal resolves to a shape and the actual to a class,
+        // extract constraints by matching shape method return types against
+        // actual class method return types. E.g., formal = iterator[T] vs
+        // actual = range[i32]: iterator::next returns T, range::next
+        // returns i32, so T -> i32.
+        auto f_def = find_def(top, f_inner);
+        auto a_def = find_def(top, a_inner);
+
+        if (
+          f_def && a_def && (f_def == ClassDef) && ((f_def / Shape) == Shape) &&
+          (a_def == ClassDef))
+        {
+          // Map shape TypeParams -> formal TypeArgs (which reference the
+          // caller's TypeParams, e.g., iterator.A -> chain.A).
+          auto shape_tps = f_def / TypeParams;
+          auto f_last_ta = f_inner->back() / TypeArgs;
+
+          if (shape_tps->size() == f_last_ta->size())
+          {
+            NodeMap<Node> shape_to_formal;
+
+            for (size_t i = 0; i < shape_tps->size(); i++)
+              shape_to_formal[shape_tps->at(i)] = f_last_ta->at(i);
+
+            // Map actual class TypeParams -> actual TypeArgs (concrete
+            // types, e.g., range.A -> i32).
+            auto actual_tps = a_def / TypeParams;
+            auto a_last_ta = a_inner->back() / TypeArgs;
+
+            if (actual_tps->size() == a_last_ta->size())
+            {
+              NodeMap<Node> actual_subst;
+
+              for (size_t i = 0; i < actual_tps->size(); i++)
+                actual_subst[actual_tps->at(i)] = a_last_ta->at(i);
+
+              // For each shape method, find matching actual method and
+              // extract constraints from the return types.
+              auto shape_body = f_def / ClassBody;
+              auto actual_body = a_def / ClassBody;
+
+              for (auto& shape_func : *shape_body)
+              {
+                if (shape_func != Function)
+                  continue;
+
+                auto shape_ret = shape_func / Type;
+                auto method_name = (shape_func / Ident)->location().view();
+                auto hand = (shape_func / Lhs)->type();
+                auto arity = (shape_func / Params)->size();
+
+                for (auto& actual_func : *actual_body)
+                {
+                  if (actual_func != Function)
+                    continue;
+
+                  if ((actual_func / Ident)->location().view() != method_name)
+                    continue;
+
+                  if ((actual_func / Lhs)->type() != hand)
+                    continue;
+
+                  if ((actual_func / Params)->size() != arity)
+                    continue;
+
+                  // Substitute shape TypeParams with the formal TypeArgs
+                  // (caller's TypeParam refs). E.g., iterator.A becomes
+                  // chain.A in the substituted return type.
+                  auto formal_ret =
+                    apply_subst(top, shape_ret, shape_to_formal);
+
+                  // Substitute actual TypeParams with concrete TypeArgs.
+                  // E.g., range.A becomes i32.
+                  auto actual_ret =
+                    apply_subst(top, actual_func / Type, actual_subst);
+
+                  // Recursively extract constraints between the
+                  // transformed return types.
+                  extract_constraints(
+                    top,
+                    formal_ret->front(),
+                    actual_ret->front(),
+                    constraints,
+                    is_default);
+
+                  break;
+                }
+              }
+            }
           }
         }
 
@@ -164,11 +278,7 @@ namespace vc
         {
           // Children are wfType directly.
           extract_constraints(
-            top,
-            f_inner->at(i),
-            a_inner->at(i),
-            constraints,
-            is_default);
+            top, f_inner->at(i), a_inner->at(i), constraints, is_default);
         }
 
         return;
@@ -177,7 +287,8 @@ namespace vc
 
     // Apply a TypeParam substitution to a Type node, returning a new Type
     // with all TypeParam references resolved.
-    Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
+    Node
+    apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
     {
       if (type_node != Type)
         return clone(type_node);

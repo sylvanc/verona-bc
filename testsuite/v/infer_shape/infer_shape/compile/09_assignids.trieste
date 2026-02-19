@@ -1,0 +1,187 @@
+vc
+assignids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 5:$2002)
+            (functionid 23:infer_shape::main::0::0)
+            (args)))
+        (ret
+          (localid 5:$2002)))))
+  (func
+    (functionid 23:infer_shape::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 10:local$1434)
+            (i32)
+            (int 2:42))
+          (call
+            (localid 10:local$1400)
+            (functionid 30:infer_shape::box::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1434))))
+          (copy
+            (localid 1:b)
+            (localid 10:local$1400))
+          (call
+            (localid 10:local$1401)
+            (functionid 26:infer_shape::extract::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b)))))
+        (ret
+          (localid 10:local$1401)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 30:infer_shape::box::create::1::0)
+    (params
+      (param
+        (localid 3:val)
+        (i32)))
+    (classid 19:infer_shape::box::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 10:local$1399)
+            (classid 19:infer_shape::box::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:val)))))
+        (ret
+          (localid 10:local$1399)))))
+  (func
+    (functionid 26:infer_shape::extract::1::0)
+    (params
+      (param
+        (localid 1:g)
+        (dyn)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 10:local$1432)
+            (localid 1:g)
+            (methodid 9:get::1::0))
+          (calldyn
+            (localid 10:local$1433)
+            (localid 10:local$1432)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:g)))))
+        (ret
+          (localid 10:local$1433)))))
+  (class
+    (classid 19:infer_shape::box::0)
+    (fields
+      (field
+        (fieldid 3:val)
+        (i32)))
+    (methods
+      (method
+        (methodid 9:get::1::0)
+        (functionid 27:infer_shape::box::get::1::0))
+      (method
+        (methodid 9:val::1::0)
+        (functionid 27:infer_shape::box::val::1::0))))
+  (func
+    (functionid 27:infer_shape::box::get::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:infer_shape::box::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 10:local$1430)
+            (localid 4:self)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 10:local$1431)
+            (localid 10:local$1430)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self)))))
+        (ret
+          (localid 10:local$1431)))))
+  (func
+    (functionid 27:infer_shape::box::val::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:infer_shape::box::0)))
+    (dyn)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 10:local$1398)
+            (functionid 32:infer_shape::box::val::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 10:local$1972)
+            (localid 10:local$1398)))
+        (ret
+          (localid 10:local$1972)))))
+  (func
+    (functionid 32:infer_shape::box::val::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:infer_shape::box::0)))
+    (ref
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 10:local$1429)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val)))
+        (ret
+          (localid 10:local$1429)))))
+  (primitive
+    (ref
+      (i32))
+    (methods)))
