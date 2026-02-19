@@ -14,6 +14,11 @@ Type inference.
   - Call.
   - Dynamic call.
 - Determine `when` type from the `when / Rhs` function type.
+- Deeper TypeParam matching — direct_typeparam() only handles f(x: T), not f(x: array[T]) or f(x: wrapper[T]). Structural type matching could infer T from nested types.
+- ConstStr tracking — ConstStr always produces a string but isn't recorded in the env. Minor gap.
+- Conflicting refinement diagnostics — when a literal is used in two contexts expecting different types, the first refinement wins silently. Could emit a warning or error.
+- Return-type-based TypeArg inference — let x: i32 = f[T]()T could constrain T from x's expected type. Currently only arg types drive inference.
+- Generic function TypeParams — the reify pass doesn't support function-level TypeParams at all (separate from infer, but limits what inference can exercise).
 
 Check use before definition in `let x = ... x ...`.
 

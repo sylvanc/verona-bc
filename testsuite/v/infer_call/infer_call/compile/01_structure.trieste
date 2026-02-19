@@ -6,8 +6,8 @@ structure
     infer_call = classdef}
   (classdef
     {
+      add = function
       main = function
-      math = classdef
       include }
     (none)
     (ident 10:infer_call)
@@ -19,58 +19,50 @@ structure
           (nameelement
             (ident 8:_builtin)
             (typeargs))))
-      (classdef
+      (function
         {
-          add = function}
-        (none)
-        (ident 4:math)
+          a = paramdef
+          b = paramdef}
+        (rhs)
+        (ident 3:add)
         (typeparams)
-        (where)
-        (classbody
-          (function
-            {
-              a = paramdef
-              b = paramdef}
-            (rhs)
-            (ident 3:add)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 1:a)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 3:i32)
-                      (typeargs))))
-                (body))
-              (paramdef
-                (ident 1:b)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 3:i32)
-                      (typeargs))))
-                (body)))
+        (params
+          (paramdef
+            (ident 1:a)
             (type
               (typename
                 (nameelement
                   (ident 3:i32)
                   (typeargs))))
-            (where)
-            (body
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 1:a)
-                    (typeargs)))
-                (funcname
-                  (nameelement
-                    (symbolid 1:+)
-                    (typeargs)))
-                (funcname
-                  (nameelement
-                    (ident 1:b)
-                    (typeargs))))))))
+            (body))
+          (paramdef
+            (ident 1:b)
+            (type
+              (typename
+                (nameelement
+                  (ident 3:i32)
+                  (typeargs))))
+            (body)))
+        (type
+          (typename
+            (nameelement
+              (ident 3:i32)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (funcname
+              (nameelement
+                (ident 1:a)
+                (typeargs)))
+            (funcname
+              (nameelement
+                (symbolid 1:+)
+                (typeargs)))
+            (funcname
+              (nameelement
+                (ident 1:b)
+                (typeargs))))))
       (function
         {}
         (rhs)
@@ -86,9 +78,6 @@ structure
         (body
           (expr
             (funcname
-              (nameelement
-                (ident 4:math)
-                (typeargs))
               (nameelement
                 (ident 3:add)
                 (typeargs)))

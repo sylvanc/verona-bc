@@ -6,49 +6,23 @@ application
     infer_call = classdef}
   (classdef
     {
-      main = function
-      math = classdef}
+      add = function
+      main = function}
     (none)
     (ident 10:infer_call)
     (typeparams)
     (where)
     (classbody
-      (classdef
+      (function
         {
-          add = function}
-        (none)
-        (ident 4:math)
+          a = paramdef
+          b = paramdef}
+        (rhs)
+        (ident 3:add)
         (typeparams)
-        (where)
-        (classbody
-          (function
-            {
-              a = paramdef
-              b = paramdef}
-            (rhs)
-            (ident 3:add)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 1:a)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 3:i32)
-                      (typeargs)))))
-              (paramdef
-                (ident 1:b)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 3:i32)
-                      (typeargs))))))
+        (params
+          (paramdef
+            (ident 1:a)
             (type
               (typename
                 (nameelement
@@ -56,18 +30,36 @@ application
                   (typeargs))
                 (nameelement
                   (ident 3:i32)
-                  (typeargs))))
-            (where)
-            (body
+                  (typeargs)))))
+          (paramdef
+            (ident 1:b)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i32)
+                  (typeargs))))))
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))
+            (nameelement
+              (ident 3:i32)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (calldyn
               (expr
-                (calldyn
-                  (expr
-                    (localid 1:a))
-                  (symbolid 1:+)
-                  (typeargs)
-                  (args
-                    (expr
-                      (localid 1:b)))))))))
+                (localid 1:a))
+              (symbolid 1:+)
+              (typeargs)
+              (args
+                (expr
+                  (localid 1:b)))))))
       (function
         {}
         (rhs)
@@ -89,9 +81,6 @@ application
               (funcname
                 (nameelement
                   (ident 10:infer_call)
-                  (typeargs))
-                (nameelement
-                  (ident 4:math)
                   (typeargs))
                 (nameelement
                   (ident 3:add)
@@ -2699,7 +2688,7 @@ application
                       (ident 3:f32)
                       (typeargs))
                     (nameelement
-                      (ident 6:create)
+                      (ident 3:f32)
                       (typeargs)))
                   (args
                     (expr
@@ -2732,7 +2721,7 @@ application
                       (ident 3:f32)
                       (typeargs))
                     (nameelement
-                      (ident 6:create)
+                      (ident 3:f32)
                       (typeargs)))
                   (args
                     (expr
@@ -2765,7 +2754,7 @@ application
                       (ident 3:f32)
                       (typeargs))
                     (nameelement
-                      (ident 6:create)
+                      (ident 3:f32)
                       (typeargs)))
                   (args
                     (expr
@@ -2798,7 +2787,7 @@ application
                       (ident 3:f32)
                       (typeargs))
                     (nameelement
-                      (ident 6:create)
+                      (ident 3:f32)
                       (typeargs)))
                   (args
                     (expr
@@ -2833,12 +2822,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:f32)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -4969,12 +4966,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:f64)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -6473,12 +6478,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i16)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -7977,12 +7990,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -9481,12 +9502,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i64)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -11975,12 +12004,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:ilong)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -13571,12 +13608,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:isize)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -15231,12 +15276,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:u16)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -16701,12 +16754,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:u32)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -18167,12 +18228,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:u64)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -19637,12 +19706,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:u8)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -21107,12 +21184,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:ulong)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr
@@ -22577,12 +22662,20 @@ application
             (where)
             (body
               (expr
-                (calldyn
-                  (expr
-                    (localid 4:self))
-                  (symbolid 2:!=)
-                  (typeargs)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))
+                    (nameelement
+                      (symbolid 2:!=)
+                      (typeargs)))
                   (args
+                    (expr
+                      (localid 4:self))
                     (expr
                       (calldyn
                         (expr

@@ -1,12 +1,9 @@
-math
+add(a: i32, b: i32): i32
 {
-  add(a: i32, b: i32): i32
-  {
-    a + b
-  }
+  a + b
 }
 
 main(): i32
 {
-  math::add(1, 2)
+  add(1, 2)
 }

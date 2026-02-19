@@ -31,7 +31,7 @@ namespace vc
     flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
   inline const auto FieldDef = TokenDef("fielddef");
   inline const auto Function =
-    TokenDef("function", flag::symtab | flag::lookdown);
+    TokenDef("function", flag::symtab | flag::lookup | flag::lookdown);
   inline const auto ParamDef =
     TokenDef("paramdef", flag::lookup | flag::shadowing);
 

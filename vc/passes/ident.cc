@@ -154,8 +154,11 @@ namespace vc
             return Done;
           }
 
-          // Check if this is a class, type alias, or type parameter.
-          if (def->in({ClassDef, TypeAlias, TypeParam}))
+          // Check if this is a class, type alias, type parameter, or function.
+          // Functions are valid targets only for FuncName resolution.
+          if (
+            def->in({ClassDef, TypeAlias, TypeParam}) ||
+            ((def == Function) && (n == FuncName)))
           {
             found = def;
             build_fq_prefix(state.result, curr_scope);

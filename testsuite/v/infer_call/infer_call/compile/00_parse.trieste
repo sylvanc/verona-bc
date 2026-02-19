@@ -5,27 +5,24 @@ parse
   (directory
     (file
       (group
-        (ident 4:math)
+        (ident 3:add)
+        (paren
+          (list
+            (group
+              (ident 1:a)
+              (:)
+              (ident 3:i32))
+            (group
+              (ident 1:b)
+              (:)
+              (ident 3:i32))))
+        (:)
+        (ident 3:i32)
         (brace
           (group
-            (ident 3:add)
-            (paren
-              (list
-                (group
-                  (ident 1:a)
-                  (:)
-                  (ident 3:i32))
-                (group
-                  (ident 1:b)
-                  (:)
-                  (ident 3:i32))))
-            (:)
-            (ident 3:i32)
-            (brace
-              (group
-                (ident 1:a)
-                (symbolid 1:+)
-                (ident 1:b))))))
+            (ident 1:a)
+            (symbolid 1:+)
+            (ident 1:b))))
       (group
         (ident 4:main)
         (paren)
@@ -33,8 +30,6 @@ parse
         (ident 3:i32)
         (brace
           (group
-            (ident 4:math)
-            (doublecolon)
             (ident 3:add)
             (paren
               (list
