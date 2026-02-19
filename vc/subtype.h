@@ -6,6 +6,11 @@
 
 namespace vc
 {
+  SequentCtx build_typearg_ctx(const SequentCtx& base, const Node& name);
+  bool check_shape_subtype(const SequentCtx& ctx, const Node& l, const Node& r);
+  bool
+  shape_functions_conflict(const SequentCtx& ctx, const Node& l, const Node& r);
+
   inline const SequentCalculus Subtype{
     {Type},
     {Union, WhereOr},
@@ -36,69 +41,12 @@ namespace vc
           assert(l_def);
           assert(r_def);
 
+          // TypeParams can only prove subtype of themselves.
+          if ((l_def == TypeParam) || (r_def == TypeParam))
+            return l_def->equals(r_def);
+
           if ((l_def == TypeAlias) || (r_def == TypeAlias))
           {
-            // Build SubType implications from a TypeName reference's path.
-            // Each TypeArg on a NameElement is paired with the corresponding
-            // TypeParam of that scope, creating bidirectional SubType
-            // implications to express equality (TypeParam = TypeArg).
-            auto build_ctx =
-              [&](const SequentCtx& base, const Node& name) -> SequentCtx {
-              SequentCtx new_ctx = base;
-              Node scope = base.scope;
-
-              for (size_t i = 0; i < name->size(); i++)
-              {
-                auto elem = name->at(i);
-                auto defs = scope->look((elem / Ident)->location());
-                assert(!defs.empty());
-                scope = defs.front();
-
-                auto type_args = elem / TypeArgs;
-                if (type_args->empty())
-                  continue;
-
-                auto type_params = scope / TypeParams;
-                auto ta_it = type_args->begin();
-                auto tp_it = type_params->begin();
-
-                while (
-                  ta_it != type_args->end() &&
-                  tp_it != type_params->end())
-                {
-                  if (*tp_it == TypeParam)
-                  {
-                    // Build a FQ TypeName for this TypeParam.
-                    auto make_fq_tp = [&]() {
-                      Node fq_tp = TypeName;
-                      for (size_t j = 0; j <= i; j++)
-                      {
-                        fq_tp
-                          << (NameElement
-                              << clone(name->at(j) / Ident) << TypeArgs);
-                      }
-                      fq_tp
-                        << (NameElement
-                            << clone((*tp_it) / Ident) << TypeArgs);
-                      return fq_tp;
-                    };
-
-                    // Bidirectional implications:
-                    // TypeParam <: TypeArg and TypeArg <: TypeParam.
-                    new_ctx.implies.push_back(
-                      SubType << (Type << make_fq_tp()) << clone(*ta_it));
-                    new_ctx.implies.push_back(
-                      SubType << clone(*ta_it) << (Type << make_fq_tp()));
-                  }
-
-                  ++ta_it;
-                  ++tp_it;
-                }
-              }
-
-              return new_ctx;
-            };
-
             // Expand the alias: replace the alias reference with its body
             // and recurse. If both sides are aliases, expand left first;
             // recursion handles the right.
@@ -106,14 +54,32 @@ namespace vc
             // pass). Cyclic aliases would cause infinite recursion.
             if (l_def == TypeAlias)
             {
-              auto new_ctx = build_ctx(ctx, l);
+              auto new_ctx = build_typearg_ctx(ctx, l);
               return Subtype(new_ctx, l_def / Type, r);
             }
             else
             {
-              auto new_ctx = build_ctx(ctx, r);
+              auto new_ctx = build_typearg_ctx(ctx, r);
               return Subtype(new_ctx, l, r_def / Type);
             }
+          }
+
+          // Shape (structural) subtyping: any type is a subtype of a shape
+          // if it provides all the shape's functions with compatible
+          // signatures. Check RHS shape first; if LHS is also a shape, the
+          // same structural check applies.
+          if ((r_def / Shape) == Shape)
+          {
+            return check_shape_subtype(ctx, l, r);
+          }
+
+          if ((l_def / Shape) == Shape)
+          {
+            // A shape on the LHS can only prove subtype of a nominal type
+            // if the nominal type is also a shape — but that case was
+            // handled above (r_def would be a shape). So a shape is never
+            // a subtype of a concrete nominal type.
+            return false;
           }
 
           // Definition sites must be the same node.
@@ -173,17 +139,44 @@ namespace vc
           if (!r_def || r_def->type().in({TypeParam, TypeAlias}))
             return false;
 
-          // r is a concrete ClassDef.
           if (l != TypeName)
           {
             // l is a non-TypeName atom (primitive, tuple, etc.).
-            // Different nominal types contradict.
+            // Shapes never contradict non-TypeName atoms (the atom might
+            // satisfy the shape). Concrete ClassDefs do contradict.
+            if ((r_def == ClassDef) && ((r_def / Shape) == Shape))
+              return false;
+
             return true;
           }
 
           auto l_def = find_def(ctx.scope, l);
           if (!l_def || l_def->type().in({TypeParam, TypeAlias}))
             return false;
+
+          bool l_shape = (l_def == ClassDef) && ((l_def / Shape) == Shape);
+          bool r_shape = (r_def == ClassDef) && ((r_def / Shape) == Shape);
+
+          if (r_shape && !l_shape)
+          {
+            // Concrete type vs shape: contradicts if the concrete type
+            // does not satisfy the shape.
+            return !check_shape_subtype(ctx, l, r);
+          }
+
+          if (l_shape && !r_shape)
+          {
+            // Shape vs concrete type (symmetric call).
+            return !check_shape_subtype(ctx, r, l);
+          }
+
+          if (l_shape && r_shape)
+          {
+            // Two shapes contradict only if they have a conflicting
+            // function (same name/arity/hand but incompatible types,
+            // making it impossible for any concrete type to satisfy both).
+            return shape_functions_conflict(ctx, l, r);
+          }
 
           // Both are concrete ClassDefs. Different defs contradict.
           return l_def != r_def;

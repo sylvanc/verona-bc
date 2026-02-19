@@ -10,6 +10,7 @@ add_executable(vc
   passes/structure.cc
   lang.cc
   main.cc
+  subtype.cc
 )
 
 if(MSVC)

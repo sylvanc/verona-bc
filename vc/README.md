@@ -7,7 +7,8 @@ Reification.
 - References.
 
 Sub-typing.
-- Structural types.
+- Self types in shapes.
+- Better contradiction for type aliases.
 
 Type inference.
 - Determine type arguments from context:
