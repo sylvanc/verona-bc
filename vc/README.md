@@ -2,12 +2,12 @@
 
 ## To Do
 
-Syntax.
-- Can we call local functions, without a prefix?
-
 Reification.
 - Can type parameters be encoded as type aliases in the reified type?
 - References.
+
+Sub-typing.
+- Structural types.
 
 Type inference.
 - Determine type arguments from context:

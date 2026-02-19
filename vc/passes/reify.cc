@@ -171,9 +171,9 @@ namespace vc
     bool subst_equal(const NodeMap<Node>& a, const NodeMap<Node>& b)
     {
       return std::equal(
-        a.begin(), a.end(), b.begin(), b.end(), [](auto& lhs, auto& rhs) {
-          return (lhs.first == rhs.first) && Subtype(lhs.second, rhs.second) &&
-            Subtype(rhs.second, lhs.second);
+        a.begin(), a.end(), b.begin(), b.end(), [&](auto& lhs, auto& rhs) {
+          return (lhs.first == rhs.first) &&
+            Subtype.invariant(top, lhs.second, rhs.second);
         });
     }
 
@@ -181,8 +181,8 @@ namespace vc
     bool typeargs_equal(const std::vector<Node>& a, const std::vector<Node>& b)
     {
       return std::equal(
-        a.begin(), a.end(), b.begin(), b.end(), [](auto& lhs, auto& rhs) {
-          return Subtype(lhs, rhs) && Subtype(rhs, lhs);
+        a.begin(), a.end(), b.begin(), b.end(), [&](auto& lhs, auto& rhs) {
+          return Subtype.invariant(top, lhs, rhs);
         });
     }
 
@@ -826,15 +826,14 @@ namespace vc
 
                 if (
                   (lhs_a != lhs_b) || (rhs_a != rhs_b) ||
-                  !Subtype(existing_ret, ret_type) ||
-                  !Subtype(ret_type, existing_ret) ||
+                  !Subtype.invariant(top, existing_ret, ret_type) ||
                   !std::equal(
                     existing_params->begin(),
                     existing_params->end(),
                     ffi_params->begin(),
                     ffi_params->end(),
                     [&](auto& ep, auto& np) {
-                      return Subtype(ep, np) && Subtype(np, ep);
+                      return Subtype.invariant(top, ep, np);
                     }))
                 {
                   n->parent()->replace(

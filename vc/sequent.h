@@ -46,11 +46,23 @@ namespace trieste
    *
    * @see Axiom for the function type used to define custom proof rules
    * @see AxiomEq for a default axiom that uses structural equality
+   * @see AxiomTrue for a default axiom that considers all formulas provable
    */
-  using Axiom = std::function<bool(Node& l, Node& r)>;
-  inline const Axiom AxiomEq = [](Node& l, Node& r) { return l->equals(r); };
+  struct SequentCtx
+  {
+    Node scope;
+    Nodes implies;
+  };
 
-  class SequentCalculus
+  using Axiom = std::function<bool(const SequentCtx& ctx, Node& l, Node& r)>;
+  inline const Axiom AxiomEq = [](const SequentCtx&, Node& l, Node& r) {
+    return l->equals(r);
+  };
+  inline const Axiom AxiomTrue = [](const SequentCtx&, Node&, Node&) {
+    return true;
+  };
+
+  struct SequentCalculus
   {
   private:
     std::vector<Token> unwrap;
@@ -63,6 +75,7 @@ namespace trieste
 
     struct State
     {
+      SequentCtx ctx;
       Nodes lhs_pending;
       Nodes rhs_pending;
       Nodes lhs_atomic;
@@ -87,9 +100,11 @@ namespace trieste
         contradiction_axioms[axiom.first] = axiom.second;
     }
 
-    bool operator()(const Node& l, const Node& r) const
+    bool operator()(const SequentCtx& ctx, const Node& l, const Node& r) const
     {
       State state;
+      state.ctx.scope = ctx.scope;
+      state.lhs_pending = ctx.implies;
       state.lhs_pending.push_back(l);
       state.rhs_pending.push_back(r);
       auto res = reduce(state);
@@ -98,6 +113,22 @@ namespace trieste
                  << l << r << std::endl;
 
       return res;
+    }
+
+    bool operator()(const Node& scope, const Node& l, const Node& r) const
+    {
+      return (*this)(SequentCtx{scope, {}}, l, r);
+    }
+
+    bool invariant(const SequentCtx& ctx, const Node& l, const Node& r) const
+    {
+      return (*this)(ctx, l, r) && (*this)(ctx, r, l);
+    }
+
+    bool invariant(const Node& scope, const Node& l, const Node& r) const
+    {
+      return (*this)(SequentCtx{scope, {}}, l, r) &&
+        (*this)(SequentCtx{scope, {}}, r, l);
     }
 
   private:
@@ -116,9 +147,9 @@ namespace trieste
         }
         else if (r->type().in(or_))
         {
-          // Γ ⊢ Δ, A, B
+          // Π ⊩ Γ ⊢ Δ, A, B
           // ---
-          // Γ ⊢ Δ, A ∨ B
+          // Π ⊩ Γ ⊢ Δ, A ∨ B
 
           // RHS 'or' succeeds if any are true.
           for (auto& t : *r)
@@ -126,10 +157,10 @@ namespace trieste
         }
         else if (r->type().in(and_))
         {
-          // Γ ⊢ Δ, A
-          // Γ ⊢ Δ, B
+          // Π ⊩ Γ ⊢ Δ, A
+          // Π ⊩ Γ ⊢ Δ, B
           // ---
-          // Γ ⊢ Δ, A ∧ B
+          // Π ⊩ Γ ⊢ Δ, A ∧ B
 
           // RHS 'and' succeeds if all are true.
           for (auto& t : *r)
@@ -142,9 +173,9 @@ namespace trieste
         }
         else if (r->type().in(not_))
         {
-          // Γ, A ⊢ Δ
+          // Π ⊩ Γ, A ⊢ Δ
           // ---
-          // Γ ⊢ Δ, ¬A
+          // Π ⊩ Γ ⊢ Δ, ¬A
 
           // RHS 'not' moves to LHS.
           assert(r->size() == 1);
@@ -152,9 +183,9 @@ namespace trieste
         }
         else if (r->type().in(implies))
         {
-          // Γ ⊢ Δ, A → B
+          // Π ⊩ Γ, A ⊢ Δ, B
           // ---
-          // Γ, A ⊢ Δ, B
+          // Π ⊩ Γ ⊢ Δ, A → B
 
           // RHS 'implies' splits to LHS and RHS.
           assert(r->size() == 2);
@@ -180,9 +211,9 @@ namespace trieste
         }
         else if (l->type().in(and_))
         {
-          // Γ, A, B ⊢ Δ
+          // Π ⊩ Γ, A, B ⊢ Δ
           // ---
-          // Γ, A ∧ B ⊢ Δ
+          // Π ⊩ Γ, A ∧ B ⊢ Δ
 
           // LHS 'and' expands the conjuncts.
           for (auto& t : *l)
@@ -190,10 +221,10 @@ namespace trieste
         }
         else if (l->type().in(or_))
         {
-          // Γ, A ⊢ Δ
-          // Γ, B ⊢ Δ
+          // Π ⊩ Γ, A ⊢ Δ
+          // Π ⊩ Γ, B ⊢ Δ
           // ---
-          // Γ, A ∨ B ⊢ Δ
+          // Π ⊩ Γ, A ∨ B ⊢ Δ
 
           // LHS 'or' is a sequent split.
           for (auto& t : *l)
@@ -206,9 +237,9 @@ namespace trieste
         }
         else if (l->type().in(not_))
         {
-          // Γ ⊢ Δ, A
+          // Π ⊩ Γ ⊢ Δ, A
           // ---
-          // Γ, ¬A ⊢ Δ
+          // Π ⊩ Γ, ¬A ⊢ Δ
 
           // LHS 'not' moves to RHS.
           assert(l->size() == 1);
@@ -216,12 +247,15 @@ namespace trieste
         }
         else if (l->type().in(implies))
         {
-          // Γ ⊢ Δ, A
-          // Γ, B ⊢ Δ
+          // Π, A → B ⊩ Γ ⊢ Δ, A
+          // Π, A → B ⊩ Γ, B ⊢ Δ
           // ---
-          // Γ, A → B ⊢ Δ
+          // Π ⊩ Γ, A → B ⊢ Δ
 
-          // LHS 'implies' is a sequent split.
+          // LHS 'implies' is a sequent split. Keep the implication in the
+          // context for both branches, since it can be used as an assumption in
+          // either branch.
+          state.ctx.implies.push_back(l);
           assert(l->size() == 2);
           return split_right(state, l->front()) && split_left(state, l->back());
         }
@@ -230,7 +264,7 @@ namespace trieste
           // Check for contradictions.
           for (auto& t : state.lhs_atomic)
           {
-            if (contradiction(t, l))
+            if (contradiction(state, t, l))
               return true;
           }
 
@@ -238,7 +272,7 @@ namespace trieste
         }
       }
 
-      // Γ, A ⊢ Δ, A
+      // Π ⊩ Γ, A ⊢ Δ, A
       // If any element in LHS proves any element in RHS, succeed.
       return std::any_of(
         state.lhs_atomic.begin(), state.lhs_atomic.end(), [&](Node& l) {
@@ -247,7 +281,7 @@ namespace trieste
               auto find = axioms.find(r->type());
 
               if (find != axioms.end())
-                return find->second(l, r);
+                return find->second(state.ctx, l, r);
 
               return false;
             });
@@ -268,23 +302,35 @@ namespace trieste
       return reduce(split);
     }
 
-    bool contradiction(Node& l, Node& r) const
+    bool contradiction(const State& state, Node& l, Node& r) const
     {
-      // Use a contradiction axiom if one is specified, otherwise fall back to
-      // proof axiom.
-      auto c_find = contradiction_axioms.find(r->type());
-      if (c_find != contradiction_axioms.end())
-        return c_find->second(l, r);
+      // Check contradiction axioms for both sides. Contradiction is
+      // symmetric: if either side's axiom says "not contradictory", honor
+      // that.
+      auto cr = contradiction_axioms.find(r->type());
+      auto cl = contradiction_axioms.find(l->type());
+      bool has_axiom =
+        (cr != contradiction_axioms.end()) ||
+        (cl != contradiction_axioms.end());
+
+      if ((cr != contradiction_axioms.end()) && !cr->second(state.ctx, l, r))
+        return false;
+
+      if ((cl != contradiction_axioms.end()) && !cl->second(state.ctx, r, l))
+        return false;
+
+      if (has_axiom)
+        return true;
 
       // By default, if L does not prove R and R does not prove L, then they
       // contradict.
       auto r_find = axioms.find(r->type());
-      if ((r_find != axioms.end()) && (r_find->second(l, r)))
+      if ((r_find != axioms.end()) && (r_find->second(state.ctx, l, r)))
         return false;
 
       auto l_find = axioms.find(l->type());
-      if ((l_find != axioms.end()) && (l_find->second(r, l)))
-        return true;
+      if ((l_find != axioms.end()) && (l_find->second(state.ctx, r, l)))
+        return false;
 
       return true;
     }

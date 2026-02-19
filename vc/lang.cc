@@ -36,6 +36,25 @@ namespace vc
     return path;
   }
 
+  Node find_def(Node top, const Node& name)
+  {
+    assert(name->in({FuncName, TypeName}));
+    Node def = top;
+
+    for (auto& elem : *name)
+    {
+      assert(elem == NameElement);
+      auto defs = def->look((elem / Ident)->location());
+
+      if (defs.empty())
+        return {};
+
+      def = defs.front();
+    }
+
+    return def;
+  }
+
   Node fq_typeparam(const Nodes& path, Node tp)
   {
     Node tn = TypeName;

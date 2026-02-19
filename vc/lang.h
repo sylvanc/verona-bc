@@ -370,6 +370,7 @@ namespace vc
   Node make_type(Match& _, NodeRange r = {});
   Node make_typeargs(Node typeparams);
   Nodes scope_path(Node node);
+  Node find_def(Node top, const Node& name);
   Node fq_typeparam(const Nodes& path, Node tp);
   Node fq_typeargs(const Nodes& path, Node tps);
   Node make_selftype(Node node, bool fq = false);

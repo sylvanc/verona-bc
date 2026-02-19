@@ -52,29 +52,6 @@ namespace vc
                             << (TypeArgs << primitive_type(U8))));
     }
 
-    // Navigate a FQ TypeName/FuncName from Top to its definition node.
-    // Returns empty Node if navigation fails.
-    // Not suitable for FuncName final resolution when overloads exist —
-    // use resolve_call() for Call sites.
-    Node find_def(Node top, const Node& name)
-    {
-      assert(name->in({FuncName, TypeName}));
-      Node def = top;
-
-      for (auto& elem : *name)
-      {
-        assert(elem == NameElement);
-        auto defs = def->look((elem / Ident)->location());
-
-        if (defs.empty())
-          return {};
-
-        def = defs.front();
-      }
-
-      return def;
-    }
-
     // Check if a Type node directly references a single TypeParam.
     // Returns the TypeParam def node, or empty Node.
     Node direct_typeparam(Node top, const Node& type_node)
