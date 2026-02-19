@@ -41,6 +41,17 @@ namespace vc
                      << (NameElement << (Ident ^ tok.str()) << TypeArgs));
     }
 
+    // Build a source-level Type node for _builtin::array[_builtin::u8].
+    // Creates fresh nodes on each call.
+    Node string_type()
+    {
+      return Type
+        << (TypeName
+            << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+            << (NameElement << (Ident ^ "array")
+                            << (TypeArgs << primitive_type(U8))));
+    }
+
     // Navigate a FQ TypeName/FuncName from Top to its definition node.
     // Returns empty Node if navigation fails.
     // Not suitable for FuncName final resolution when overloads exist —
@@ -481,6 +492,11 @@ namespace vc
                 is_default,
                 false,
                 is_default ? stmt : Node{}};
+            }
+            else if (stmt == ConstStr)
+            {
+              auto dst = stmt / LocalId;
+              env[dst->location()] = {string_type(), false, false, {}};
             }
             else if (stmt == Convert)
             {
