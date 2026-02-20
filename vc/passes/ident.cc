@@ -219,13 +219,6 @@ namespace vc
         // If it isn't found, treat it as a method if it's 1-element.
         state.result = MethodName << name << ta;
       }
-      else if (
-        (n->size() == 1) && (n == TypeName) && ta->empty() &&
-        (name->location().view() == "Self"))
-      {
-        // Accept `Self` for now as a hack.
-        state.result << elem;
-      }
       else
       {
         // Otherwise, it's an error.

@@ -125,6 +125,7 @@ namespace vc
       ULong >> AxiomEq,
       F32 >> AxiomEq,
       F64 >> AxiomEq,
+      TypeSelf >> AxiomEq,
     },
     {
       TypeName >>

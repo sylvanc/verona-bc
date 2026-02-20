@@ -4,7 +4,7 @@
 // matching the shape's method return types against the class's.
 shape getter[T]
 {
-  get(self: Self): T;
+  get(self: self): T;
 }
 
 box[T]

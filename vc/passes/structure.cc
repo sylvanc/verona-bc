@@ -4,7 +4,7 @@
 namespace vc
 {
   const std::initializer_list<Token> wfTypeElement = {
-    TypeName, Union, Isect, FuncType, TupleType, TypeVar};
+    TypeName, Union, Isect, FuncType, TupleType, TypeVar, TypeSelf};
 
   const std::initializer_list<Token> wfExprElement = {
     ExprSeq, DontCare, True,   False,       Bin,     Oct,   Int, Hex,
@@ -25,8 +25,16 @@ namespace vc
   const auto NamedType =
     T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
 
-  const auto SomeType = T(
-    TypeName, Union, Isect, TupleType, FuncType, NoArgType, SubType, WhereNot);
+  const auto SomeType =
+    T(TypeName,
+      Union,
+      Isect,
+      TupleType,
+      FuncType,
+      NoArgType,
+      SubType,
+      WhereNot,
+      TypeSelf);
 
   Node make_typename(NodeRange r)
   {
@@ -290,21 +298,31 @@ namespace vc
           [](Match& _) { return Expr << _[Expr]; },
 
         // Types.
+        // Self type (only valid inside shapes).
+        In(Type, Where)++ * --In(NameElement) * T(Ident, "self")[Ident] >>
+          [](Match& _) -> Node {
+          auto cls = _(Ident)->parent({ClassDef});
+
+          if (cls && ((cls / Shape) == Shape))
+            return TypeSelf;
+
+          return err(_(Ident), "`self` type is only valid in shapes");
+        },
+
         // Type name.
         In(Type, Where)++ * --In(NameElement) * NamedType[Type] >>
           [](Match& _) { return make_typename(_[Type]); },
 
         // Union type.
-        In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "\\|") *
-            SomeType[Rhs] >>
+        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "\\|") * SomeType[Rhs] >>
           [](Match& _) { return merge_type(Union, _(Lhs), _(Rhs)); },
 
         // Intersection type.
-        In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
+        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
           [](Match& _) { return merge_type(Isect, _(Lhs), _(Rhs)); },
 
         // Tuple type.
-        In(Type, Where)++ * T(List)[List] >>
+        In(Type, Where)++* T(List)[List] >>
           [](Match& _) { return TupleType << *_[List]; },
 
         // Tuple type element.

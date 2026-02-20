@@ -2,23 +2,27 @@
 
 ## To Do
 
+Names.
+- Allow looking down a type parameter.
+- Can we look down an algebraic type (via an alias)?
+
 Reification.
 - Can type parameters be encoded as type aliases in the reified type?
 - References.
+- Encode shapes as type aliases of all implementing concrete types.
+- Post reification type checking.
 
 Sub-typing.
-- Self types in shapes.
 - Better contradiction for type aliases.
+- Intersections can fulfill shapes.
+- Check recursion on type alias.
+  - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Type inference.
 - Handle lambdas.
-- Determine type arguments from context:
-  - Call.
-  - Dynamic call.
 - Determine `when` type from the `when / Rhs` function type.
 - Conflicting refinement diagnostics — when a literal is used in two contexts expecting different types, the first refinement wins silently. Could emit a warning or error.
 - Return-type-based TypeArg inference — let x: i32 = f[T]()T could constrain T from x's expected type. Currently only arg types drive inference.
-- Generic function TypeParams — the reify pass doesn't support function-level TypeParams at all (separate from infer, but limits what inference can exercise).
 
 Check use before definition in `let x = ... x ...`.
 
@@ -51,7 +55,7 @@ Expressions:
 ```rs
 shape to_bool
 {
-  apply(self: Self): bool;
+  apply(self: self): bool;
 }
 
 bool
@@ -105,16 +109,12 @@ Security:
 - LFI sandboxing?
 - Control over FFI and built-in access?
 
-RHS functions for `ValueParam`? Or treat them like `ParamDef`?
-- Treat them as much as possible as a `TypeParam`.
-- Could encode them as types, since they have to be statically compiled. So uses of them "just" call create on the type.
-- Would need an "equivalence" relation at compile time for invariant sub-typing.
+Encode `ValueParam` as types.
+- Need an "equivalence" relation at compile time for invariant sub-typing.
+- This may require execution during compilation.
 
 Types:
-- Structural types.
-  - `self` type? Special subtype rules for `self` on the receiver?
-  - Turn function types into structural types.
-- Infer type arguments in expressions.
+- Turn function types into structural types.
 - IR types for: union, intersection, tuple, function.
   - IR tuple type could be `[dyn]` of correct size with elements that type check.
 - Can type parameters take type arguments?

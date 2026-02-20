@@ -51,6 +51,7 @@ namespace vc
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
   inline const auto TypeVar = TokenDef("typevar", flag::print);
+  inline const auto TypeSelf = TokenDef("typeself");
 
   inline const auto WhereAnd = TokenDef("whereand");
   inline const auto WhereOr = TokenDef("whereor");
@@ -114,7 +115,7 @@ namespace vc
       ExprSeq);
 
   inline const auto wfType =
-    TypeName | Union | Isect | TupleType | FuncType | TypeVar;
+    TypeName | Union | Isect | TupleType | FuncType | TypeVar | TypeSelf;
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
   inline const auto wfBody =

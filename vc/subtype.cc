@@ -154,6 +154,13 @@ namespace vc
     new_ctx.implies.push_back(
       SubType << (Type << clone(l)) << (Type << clone(r)));
 
+    // TypeSelf = l (the proposed concrete subtype). Bidirectional
+    // implications make TypeSelf invariant with the concrete type.
+    new_ctx.implies.push_back(
+      SubType << (Type << TypeSelf) << (Type << clone(l)));
+    new_ctx.implies.push_back(
+      SubType << (Type << clone(l)) << (Type << TypeSelf));
+
     // Every function on the shape must have a compatible match on l.
     for (auto& shape_func : *(r_def / ClassBody))
     {
