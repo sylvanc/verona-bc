@@ -36,6 +36,9 @@ int main(int argc, char** argv)
         build = cli.parsed();
         path = cli.get_option("path")->as<std::filesystem::path>();
 
+        if (path.has_filename() && path.filename().empty())
+          path = path.parent_path();
+
         if (!path.empty() && bytecode_file.empty())
           bytecode_file = path.stem().replace_extension(".vbc");
       });
