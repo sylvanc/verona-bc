@@ -265,6 +265,7 @@ ident
       none = classdef
       ptr = classdef
       ref = classdef
+      to_bool = classdef
       u16 = classdef
       u32 = classdef
       u64 = classdef
@@ -477,6 +478,47 @@ ident
                     (localid 5:index))))))))
       (classdef
         {
+          apply = function}
+        (shape)
+        (ident 7:to_bool)
+        (typeparams)
+        (where)
+        (classbody
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typeself))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 4:none)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs))))))))
+      (classdef
+        {
           ! = function
           != = function
           & = function
@@ -486,6 +528,7 @@ ident
           > = function
           >= = function
           ^ = function
+          apply = function
           bool = function
           create = function
           max = function
@@ -528,6 +571,36 @@ ident
                 (localid 4:some))))
           (function
             {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:bool)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 4:self))))
+          (function
+            {
               other = paramdef
               self = paramdef}
             (rhs)
@@ -553,7 +626,7 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))
                 (body)))
             (type
@@ -567,15 +640,28 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 3:and)
-                    (typeargs)))
-                (tuple
+                (else
                   (expr
-                    (localid 4:self))
-                  (expr
-                    (localid 5:other))))))
+                    (if
+                      (expr
+                        (localid 4:self))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$40))
+                        (body
+                          (expr
+                            (localid 5:other)
+                            (tuple))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$41))
+                    (body
+                      (expr
+                        (false))))))))
           (function
             {
               other = paramdef
@@ -603,7 +689,7 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))
                 (body)))
             (type
@@ -617,15 +703,28 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 2:or)
-                    (typeargs)))
-                (tuple
+                (else
                   (expr
-                    (localid 4:self))
-                  (expr
-                    (localid 5:other))))))
+                    (if
+                      (expr
+                        (localid 4:self))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$44))
+                        (body
+                          (expr
+                            (true))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$45))
+                    (body
+                      (expr
+                        (localid 5:other)
+                        (tuple))))))))
           (function
             {
               other = paramdef
@@ -1153,7 +1252,7 @@ ident
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$58))))
+              (typevar 10:typevar$66))))
         (where)
         (classbody
           (function
@@ -2966,7 +3065,7 @@ ident
                   (nameelement
                     (ident 1:e)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -2998,7 +3097,7 @@ ident
                   (nameelement
                     (ident 2:pi)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -3030,7 +3129,7 @@ ident
                   (nameelement
                     (ident 3:inf)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -3062,7 +3161,7 @@ ident
                   (nameelement
                     (ident 3:nan)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {
               self = paramdef}
@@ -5314,7 +5413,7 @@ ident
                   (nameelement
                     (ident 1:e)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -5336,7 +5435,7 @@ ident
                   (nameelement
                     (ident 2:pi)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -5358,7 +5457,7 @@ ident
                   (nameelement
                     (ident 3:inf)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -5380,7 +5479,7 @@ ident
                   (nameelement
                     (ident 3:nan)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {
               self = paramdef}
@@ -15308,7 +15407,7 @@ ident
                   (nameelement
                     (ident 4:none)
                     (typeargs)))
-                (exprseq))))))
+                (tuple))))))
       (classdef
         {}
         (none)
@@ -15326,7 +15425,7 @@ ident
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$846))))
+              (typevar 11:typevar$854))))
         (where)
         (classbody
           (function

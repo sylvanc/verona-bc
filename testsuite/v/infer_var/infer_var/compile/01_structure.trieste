@@ -69,6 +69,7 @@ structure
       none = classdef
       ptr = classdef
       ref = classdef
+      to_bool = classdef
       u16 = classdef
       u32 = classdef
       u64 = classdef
@@ -248,6 +249,38 @@ structure
                         (typeargs))))))))))
       (classdef
         {
+          apply = function}
+        (shape)
+        (ident 7:to_bool)
+        (typeparams)
+        (where)
+        (classbody
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typeself))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:none)
+                    (typeargs))))))))
+      (classdef
+        {
           ! = function
           != = function
           & = function
@@ -257,6 +290,7 @@ structure
           > = function
           >= = function
           ^ = function
+          apply = function
           bool = function
           create = function
           max = function
@@ -296,6 +330,33 @@ structure
                     (typeargs))))))
           (function
             {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 4:bool)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:self)
+                    (typeargs))))))
+          (function
+            {
               other = paramdef
               self = paramdef}
             (rhs)
@@ -315,7 +376,7 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))
                 (body)))
             (type
@@ -326,21 +387,34 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 3:and)
-                    (typeargs)))
-                (tuple
+                (else
                   (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:self)
-                        (typeargs))))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 5:other)
-                        (typeargs))))))))
+                    (if
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 4:self)
+                            (typeargs))))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$33))
+                        (body
+                          (expr
+                            (funcname
+                              (nameelement
+                                (ident 5:other)
+                                (typeargs)))
+                            (tuple))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$34))
+                    (body
+                      (expr
+                        (false))))))))
           (function
             {
               other = paramdef
@@ -362,7 +436,7 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))
                 (body)))
             (type
@@ -373,21 +447,34 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 2:or)
-                    (typeargs)))
-                (tuple
+                (else
                   (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:self)
-                        (typeargs))))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 5:other)
-                        (typeargs))))))))
+                    (if
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 4:self)
+                            (typeargs))))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$37))
+                        (body
+                          (expr
+                            (true))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$38))
+                    (body
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 5:other)
+                            (typeargs)))
+                        (tuple))))))))
           (function
             {
               other = paramdef
@@ -882,7 +969,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$51))))
+              (typevar 10:typevar$59))))
         (where)
         (classbody
           (function
@@ -2545,7 +2632,7 @@ structure
                   (nameelement
                     (ident 1:e)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -2568,7 +2655,7 @@ structure
                   (nameelement
                     (ident 2:pi)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -2591,7 +2678,7 @@ structure
                   (nameelement
                     (ident 3:inf)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -2614,7 +2701,7 @@ structure
                   (nameelement
                     (ident 3:nan)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {
               self = paramdef}
@@ -4695,7 +4782,7 @@ structure
                   (nameelement
                     (ident 1:e)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -4714,7 +4801,7 @@ structure
                   (nameelement
                     (ident 2:pi)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -4733,7 +4820,7 @@ structure
                   (nameelement
                     (ident 3:inf)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -4752,7 +4839,7 @@ structure
                   (nameelement
                     (ident 3:nan)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {
               self = paramdef}
@@ -13966,7 +14053,7 @@ structure
                   (nameelement
                     (ident 4:none)
                     (typeargs)))
-                (exprseq))))))
+                (tuple))))))
       (classdef
         {}
         (none)
@@ -13984,7 +14071,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$839))))
+              (typevar 11:typevar$847))))
         (where)
         (classbody
           (function

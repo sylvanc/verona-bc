@@ -636,7 +636,7 @@ namespace vc
     {
       for (auto& [k, v] : primitive_types)
       {
-        if (type != v)
+        if (type->type() != v->type())
           continue;
 
         auto defs = builtin->look(Location(std::string(k)));

@@ -607,6 +607,9 @@ namespace vc
         In(Expr) * T(ExprSeq) << ((T(Expr) << (T(Tuple)[Tuple] * End)) * End) >>
           [](Match& _) { return _(Tuple); },
 
+        // An empty ExprSeq is an empty Tuple.
+        In(Expr) * T(ExprSeq) << End >> [](Match&) -> Node { return Tuple; },
+
         // Remove empty expressions.
         T(Expr) << End >> [](Match&) -> Node { return {}; },
       }};

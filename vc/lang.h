@@ -179,7 +179,7 @@ namespace vc
     | (ExprSeq <<= Expr++)
     | (FieldRef <<= Expr * FieldId)
     | (Load <<= Expr)
-    | (Tuple <<= Expr++[2])
+    | (Tuple <<= Expr++)
     | (Lambda <<= Params * Type * Body)
     | (Block <<= Params * Type * Body)
     | (FuncName <<= NameElement++[1])

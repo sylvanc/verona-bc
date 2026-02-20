@@ -8,7 +8,7 @@ use
 main(): i32
 {
   let r = range[i32](0, 5) chain range(5, 10) take 9;
-  var sum = 0;
+  var sum = 0.i32;
   // let f = x -> {sum = sum + x};
 
   for r v ->

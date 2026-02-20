@@ -124,6 +124,19 @@ parse
                       (ident 5:index))))))))))
     (file
       (group
+        (shape)
+        (ident 7:to_bool)
+        (brace
+          (group
+            (ident 5:apply)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 4:self)))
+            (:)
+            (ident 4:bool))))
+      (group
         (ident 4:bool)
         (brace
           (group
@@ -139,6 +152,18 @@ parse
               (group
                 (ident 4:some))))
           (group
+            (ident 5:apply)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 4:bool)))
+            (:)
+            (ident 4:bool)
+            (brace
+              (group
+                (ident 4:self))))
+          (group
             (symbolid 1:&)
             (paren
               (list
@@ -149,19 +174,21 @@ parse
                 (group
                   (ident 5:other)
                   (:)
-                  (ident 4:bool))))
+                  (ident 7:to_bool))))
             (:)
             (ident 4:bool)
             (brace
               (group
-                (triplecolon)
-                (ident 3:and)
-                (paren
-                  (list
-                    (group
-                      (ident 4:self))
-                    (group
-                      (ident 5:other)))))))
+                (if)
+                (ident 4:self)
+                (brace
+                  (group
+                    (ident 5:other)
+                    (paren)))
+                (else)
+                (brace
+                  (group
+                    (false))))))
           (group
             (symbolid 1:|)
             (paren
@@ -173,19 +200,21 @@ parse
                 (group
                   (ident 5:other)
                   (:)
-                  (ident 4:bool))))
+                  (ident 7:to_bool))))
             (:)
             (ident 4:bool)
             (brace
               (group
-                (triplecolon)
-                (ident 2:or)
-                (paren
-                  (list
-                    (group
-                      (ident 4:self))
-                    (group
-                      (ident 5:other)))))))
+                (if)
+                (ident 4:self)
+                (brace
+                  (group
+                    (true)))
+                (else)
+                (brace
+                  (group
+                    (ident 5:other)
+                    (paren))))))
           (group
             (symbolid 1:^)
             (paren

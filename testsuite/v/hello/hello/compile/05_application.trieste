@@ -50,6 +50,7 @@ application
       none = classdef
       ptr = classdef
       ref = classdef
+      to_bool = classdef
       u16 = classdef
       u32 = classdef
       u64 = classdef
@@ -290,7 +291,7 @@ application
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1381))
+              (typevar 12:typevar$1389))
             (where)
             (body
               (expr
@@ -327,6 +328,48 @@ application
                               (localid 5:index)))))))))))))
       (classdef
         {
+          apply = function}
+        (shape)
+        (ident 7:to_bool)
+        (typeparams)
+        (where)
+        (classbody
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typeself))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args)))))))
+      (classdef
+        {
           ! = function
           != = function
           & = function
@@ -336,6 +379,7 @@ application
           > = function
           >= = function
           ^ = function
+          apply = function
           bool = function
           create = function
           max = function
@@ -377,6 +421,35 @@ application
                 (localid 4:some))))
           (function
             {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:bool)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 4:self))))
+          (function
+            {
               other = paramdef
               self = paramdef}
             (rhs)
@@ -401,7 +474,7 @@ application
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))))
             (type
               (typename
@@ -414,13 +487,32 @@ application
             (where)
             (body
               (expr
-                (binop
-                  (and)
-                  (args
-                    (expr
-                      (localid 4:self))
-                    (expr
-                      (localid 5:other)))))))
+                (else
+                  (expr
+                    (if
+                      (expr
+                        (localid 4:self))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$32))
+                        (body
+                          (expr
+                            (calldyn
+                              (expr
+                                (localid 5:other))
+                              (ident 5:apply)
+                              (typeargs)
+                              (args)))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$33))
+                    (body
+                      (expr
+                        (false))))))))
           (function
             {
               other = paramdef
@@ -447,7 +539,7 @@ application
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))))
             (type
               (typename
@@ -460,13 +552,32 @@ application
             (where)
             (body
               (expr
-                (binop
-                  (or)
-                  (args
-                    (expr
-                      (localid 4:self))
-                    (expr
-                      (localid 5:other)))))))
+                (else
+                  (expr
+                    (if
+                      (expr
+                        (localid 4:self))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$36))
+                        (body
+                          (expr
+                            (true))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$37))
+                    (body
+                      (expr
+                        (calldyn
+                          (expr
+                            (localid 5:other))
+                          (ident 5:apply)
+                          (typeargs)
+                          (args)))))))))
           (function
             {
               other = paramdef
@@ -954,7 +1065,7 @@ application
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$50))))
+              (typevar 10:typevar$58))))
         (where)
         (classbody
           (function
@@ -14101,7 +14212,7 @@ application
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$838))))
+              (typevar 11:typevar$846))))
         (where)
         (classbody
           (function
@@ -14184,7 +14295,7 @@ application
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1382))
+              (typevar 12:typevar$1390))
             (where)
             (body
               (expr

@@ -66,6 +66,7 @@ dot
       none = classdef
       ptr = classdef
       ref = classdef
+      to_bool = classdef
       u16 = classdef
       u32 = classdef
       u64 = classdef
@@ -314,7 +315,7 @@ dot
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1382))
+              (typevar 12:typevar$1390))
             (where)
             (body
               (expr
@@ -350,6 +351,46 @@ dot
                           (localid 5:index)))))))))))
       (classdef
         {
+          apply = function}
+        (shape)
+        (ident 7:to_bool)
+        (typeparams)
+        (where)
+        (classbody
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typeself))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 4:none)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs))))))))
+      (classdef
+        {
           ! = function
           != = function
           & = function
@@ -359,6 +400,7 @@ dot
           > = function
           >= = function
           ^ = function
+          apply = function
           bool = function
           create = function
           max = function
@@ -400,6 +442,35 @@ dot
                 (localid 4:some))))
           (function
             {
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:bool)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 4:self))))
+          (function
+            {
               other = paramdef
               self = paramdef}
             (rhs)
@@ -424,7 +495,7 @@ dot
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))))
             (type
               (typename
@@ -437,15 +508,28 @@ dot
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 3:and)
-                    (typeargs)))
-                (tuple
+                (else
                   (expr
-                    (localid 4:self))
-                  (expr
-                    (localid 5:other))))))
+                    (if
+                      (expr
+                        (localid 4:self))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$33))
+                        (body
+                          (expr
+                            (localid 5:other)
+                            (tuple))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$34))
+                    (body
+                      (expr
+                        (false))))))))
           (function
             {
               other = paramdef
@@ -472,7 +556,7 @@ dot
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 4:bool)
+                      (ident 7:to_bool)
                       (typeargs))))))
             (type
               (typename
@@ -485,15 +569,28 @@ dot
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 2:or)
-                    (typeargs)))
-                (tuple
+                (else
                   (expr
-                    (localid 4:self))
-                  (expr
-                    (localid 5:other))))))
+                    (if
+                      (expr
+                        (localid 4:self))
+                      (block
+                        {}
+                        (params)
+                        (type
+                          (typevar 10:typevar$37))
+                        (body
+                          (expr
+                            (true))))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$38))
+                    (body
+                      (expr
+                        (localid 5:other)
+                        (tuple))))))))
           (function
             {
               other = paramdef
@@ -1001,7 +1098,7 @@ dot
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$51))))
+              (typevar 10:typevar$59))))
         (where)
         (classbody
           (function
@@ -2758,7 +2855,7 @@ dot
                   (nameelement
                     (ident 1:e)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -2790,7 +2887,7 @@ dot
                   (nameelement
                     (ident 2:pi)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -2822,7 +2919,7 @@ dot
                   (nameelement
                     (ident 3:inf)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -2854,7 +2951,7 @@ dot
                   (nameelement
                     (ident 3:nan)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {
               self = paramdef}
@@ -5038,7 +5135,7 @@ dot
                   (nameelement
                     (ident 1:e)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -5060,7 +5157,7 @@ dot
                   (nameelement
                     (ident 2:pi)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -5082,7 +5179,7 @@ dot
                   (nameelement
                     (ident 3:inf)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {}
             (rhs)
@@ -5104,7 +5201,7 @@ dot
                   (nameelement
                     (ident 3:nan)
                     (typeargs)))
-                (exprseq))))
+                (tuple))))
           (function
             {
               self = paramdef}
@@ -14710,7 +14807,7 @@ dot
                   (nameelement
                     (ident 4:none)
                     (typeargs)))
-                (exprseq))))))
+                (tuple))))))
       (classdef
         {}
         (none)
@@ -14730,7 +14827,7 @@ dot
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$839))))
+              (typevar 11:typevar$847))))
         (where)
         (classbody
           (function
@@ -14813,7 +14910,7 @@ dot
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1383))
+              (typevar 12:typevar$1391))
             (where)
             (body
               (expr
