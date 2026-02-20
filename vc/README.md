@@ -18,7 +18,7 @@ Sub-typing.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Type inference.
-- Can we remove the `0.i32` in `reify` and infer it?
+- Does backwards refinement work for things that aren't primitives?
 - Handle lambdas.
 - Determine `when` type from the `when / Rhs` function type.
 

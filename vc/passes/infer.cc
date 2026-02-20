@@ -454,6 +454,43 @@ namespace vc
       return {};
     }
 
+    // Like extract_primitive but also handles union and intersection
+    // types by scanning all components for primitives. Returns empty
+    // if ambiguous (components with different primitive types found).
+    Node extract_callable_primitive(const Node& type_node)
+    {
+      auto prim = extract_primitive(type_node);
+
+      if (prim)
+        return prim;
+
+      if (type_node != Type)
+        return {};
+
+      auto inner = type_node->front();
+
+      if (!inner->in({Union, Isect}))
+        return {};
+
+      Node candidate;
+
+      for (auto& component : *inner)
+      {
+        Node wrapped = Type << clone(component);
+        auto p = extract_primitive(wrapped);
+
+        if (!p)
+          continue;
+
+        if (candidate && candidate->type() != p->type())
+          return {}; // Different primitive types — ambiguous.
+
+        candidate = p;
+      }
+
+      return candidate;
+    }
+
     // Return the default primitive type for a literal node.
     Node default_literal_type(const Node& lit)
     {
@@ -1040,6 +1077,7 @@ namespace vc
           return node == Top || node == ClassDef || node == ClassBody;
 
         TypeEnv env;
+        std::map<Location, Node> lookup_stmts;
 
         // Initialize type env from function parameters.
         auto params = node / Params;
@@ -1319,14 +1357,112 @@ namespace vc
                 if (ret_type)
                   env[dst->location()] = {ret_type, false, false, {}, {}};
               }
+
+              lookup_stmts[dst->location()] = stmt;
             }
             else if (stmt == CallDyn)
             {
-              // The CallDyn source is a Lookup result. If we resolved
-              // the method return type at the Lookup, propagate it
-              // as the CallDyn result type.
               auto dst = stmt / LocalId;
               auto src = stmt / Rhs;
+              auto args = stmt / Args;
+
+              // Refine default-typed args using non-default args.
+              // E.g., sum + v where sum is u64 (default) and v is i32
+              // should refine sum to i32.
+              Node target_prim;
+
+              for (auto& arg_node : *args)
+              {
+                auto arg_src = arg_node / Rhs;
+                auto it = env.find(arg_src->location());
+
+                if (it == env.end())
+                  continue;
+
+                if (it->second.is_default)
+                  continue;
+
+                auto prim = extract_callable_primitive(it->second.type);
+
+                if (prim)
+                {
+                  target_prim = prim;
+                  break;
+                }
+              }
+
+              if (target_prim)
+              {
+                bool refined = false;
+
+                for (auto& arg_node : *args)
+                {
+                  auto arg_src = arg_node / Rhs;
+                  auto it = env.find(arg_src->location());
+
+                  if (it == env.end())
+                    continue;
+
+                  auto& arg_info = it->second;
+
+                  if (!arg_info.is_default || !arg_info.const_node)
+                    continue;
+
+                  Node current_prim = arg_info.const_node / Type;
+
+                  if (current_prim->type() == target_prim->type())
+                    continue;
+
+                  bool compatible =
+                    (current_prim->in(integer_types) &&
+                     target_prim->in(integer_types)) ||
+                    (current_prim->in(float_types) &&
+                     target_prim->in(float_types));
+
+                  if (compatible)
+                  {
+                    refine_const(
+                      env, arg_info.const_node, target_prim->type());
+                    refined = true;
+                  }
+                }
+
+                // Re-resolve the Lookup with the updated receiver type.
+                if (refined)
+                {
+                  auto lookup_it = lookup_stmts.find(src->location());
+
+                  if (lookup_it != lookup_stmts.end())
+                  {
+                    auto lookup_node = lookup_it->second;
+                    auto lookup_src = lookup_node / Rhs;
+                    auto lookup_dst = lookup_node / LocalId;
+                    auto hand = (lookup_node / Lhs)->type();
+                    auto method_ident = lookup_node / Ident;
+                    auto method_ta = lookup_node / TypeArgs;
+                    auto arity =
+                      from_chars_sep_v<size_t>(lookup_node / Int);
+                    auto recv_it = env.find(lookup_src->location());
+
+                    if (recv_it != env.end())
+                    {
+                      auto ret_type = resolve_method_return_type(
+                        top,
+                        recv_it->second.type,
+                        method_ident,
+                        hand,
+                        arity,
+                        method_ta);
+
+                      if (ret_type)
+                        env[lookup_dst->location()] = {
+                          ret_type, false, false, {}, {}};
+                    }
+                  }
+                }
+              }
+
+              // Propagate the Lookup result type to CallDyn result.
               auto src_it = env.find(src->location());
 
               if (src_it != env.end())
