@@ -7,7 +7,6 @@ Names.
 - Can we look down an algebraic type (via an alias)?
 
 Reification.
-- Can type parameters be encoded as type aliases in the reified type?
 - References.
 - Encode shapes as type aliases of all implementing concrete types.
 - Post reification type checking.
@@ -19,10 +18,9 @@ Sub-typing.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Type inference.
+- Can we remove the `0.i32` in `reify` and infer it?
 - Handle lambdas.
 - Determine `when` type from the `when / Rhs` function type.
-- Conflicting refinement diagnostics — when a literal is used in two contexts expecting different types, the first refinement wins silently. Could emit a warning or error.
-- Return-type-based TypeArg inference — let x: i32 = f[T]()T could constrain T from x's expected type. Currently only arg types drive inference.
 
 Check use before definition in `let x = ... x ...`.
 

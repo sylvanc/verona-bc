@@ -78,6 +78,7 @@ namespace vc
       bool is_default; // True if type came from Const default (U64/F64)
       bool is_fixed; // True if from Param or explicit Var annotation
       Node const_node; // If from a Const, the Const stmt (for refinement)
+      Node call_node; // If from a default-inferred Call, the Call stmt
     };
 
     using TypeEnv = std::map<Location, LocalTypeInfo>;
@@ -109,11 +110,11 @@ namespace vc
 
           if (existing == constraints.end())
           {
-            constraints[def] = {actual_type, is_default, false, {}};
+            constraints[def] = {actual_type, is_default, false, {}, {}};
           }
           else if (existing->second.is_default && !is_default)
           {
-            existing->second = {actual_type, false, false, {}};
+            existing->second = {actual_type, false, false, {}, {}};
           }
 
           return;
@@ -504,16 +505,17 @@ namespace vc
       Node def; // ClassDef/Function definition node
     };
 
-    // Try to infer TypeArgs and refine Const types at a Call site.
-    void infer_call(Node call, TypeEnv& env, Node top)
+    // Navigate a Call node's FuncName from top, collecting scope
+    // definitions along the path. Returns the target Function def on
+    // success, or an empty Node on failure.
+    Node navigate_call(
+      Node call, Node top, std::vector<ScopeInfo>& scopes)
     {
       assert(call == Call);
       auto funcname = call / FuncName;
       auto args = call / Args;
       auto hand = (call / Lhs)->type();
 
-      // Navigate the FuncName from Top, collecting scope info.
-      std::vector<ScopeInfo> scopes;
       Node def = top;
 
       for (auto it = funcname->begin(); it != funcname->end(); ++it)
@@ -523,13 +525,13 @@ namespace vc
         auto defs = def->look((elem / Ident)->location());
 
         if (defs.empty())
-          return;
+          return {};
 
         bool is_last = (it + 1 == funcname->end());
 
         if (is_last)
         {
-          // Filter for the correct Function overload.
+          // Filter for the correct Function overload by hand and arity.
           bool found = false;
 
           for (auto& d : defs)
@@ -549,28 +551,254 @@ namespace vc
           }
 
           if (!found)
-            return;
+            return {};
         }
         else
         {
           def = defs.front();
 
           if (def == TypeParam)
-            return;
+            return {};
         }
 
         scopes.push_back({elem, def});
       }
 
       if (scopes.empty())
-        return;
+        return {};
 
       auto func_def = scopes.back().def;
       assert(func_def == Function);
+      return func_def;
+    }
+
+    // Backward-refine a prior Call whose TypeArgs were inferred entirely
+    // from default-typed literals. Given an expected type from an outer
+    // call context, re-extract TypeParam constraints and update the prior
+    // call's TypeArgs, refine its Const literals, and update the env.
+    void backward_refine_call(
+      Node prior_call, const Node& expected_type, TypeEnv& env, Node top)
+    {
+      std::vector<ScopeInfo> scopes;
+      auto func_def = navigate_call(prior_call, top, scopes);
+
+      if (!func_def)
+        return;
+
+      auto args = prior_call / Args;
       auto params = func_def / Params;
 
-      if (params->size() != args->size())
+      // Get the unsubstituted return type of the prior call's function.
+      auto ret_type = func_def / Type;
+      auto ret_inner = ret_type->front();
+      auto expected_inner = expected_type->front();
+
+      // Extract TypeParam constraints by matching the function's return
+      // type (with free TypeParams) against the expected type (concrete).
+      NodeMap<LocalTypeInfo> constraints;
+      extract_constraints(top, ret_inner, expected_inner, constraints, false);
+
+      // If structural matching didn't find constraints (e.g., return type
+      // is a class and expected type is a shape), try reverse shape
+      // matching: match class method return types against shape method
+      // return types to extract class TypeParam constraints.
+      if (
+        constraints.empty() && (ret_inner == TypeName) &&
+        (expected_inner == TypeName))
+      {
+        auto ret_def = find_def(top, ret_inner);
+        auto exp_def = find_def(top, expected_inner);
+
+        if (
+          ret_def && exp_def && (ret_def == ClassDef) &&
+          ((ret_def / Shape) != Shape) && (exp_def == ClassDef) &&
+          ((exp_def / Shape) == Shape))
+        {
+          // Build substitution: shape TypeParams -> concrete TypeArgs
+          // from the expected type.
+          auto shape_tps = exp_def / TypeParams;
+          auto exp_last_ta = expected_inner->back() / TypeArgs;
+
+          if (shape_tps->size() == exp_last_ta->size())
+          {
+            NodeMap<Node> shape_to_concrete;
+
+            for (size_t i = 0; i < shape_tps->size(); i++)
+              shape_to_concrete[shape_tps->at(i)] = exp_last_ta->at(i);
+
+            auto shape_body = exp_def / ClassBody;
+            auto class_body = ret_def / ClassBody;
+
+            for (auto& shape_func : *shape_body)
+            {
+              if (shape_func != Function)
+                continue;
+
+              auto method_name =
+                (shape_func / Ident)->location().view();
+              auto mhand = (shape_func / Lhs)->type();
+              auto arity = (shape_func / Params)->size();
+
+              for (auto& class_func : *class_body)
+              {
+                if (class_func != Function)
+                  continue;
+
+                if (
+                  (class_func / Ident)->location().view() !=
+                  method_name)
+                  continue;
+
+                if ((class_func / Lhs)->type() != mhand)
+                  continue;
+
+                if ((class_func / Params)->size() != arity)
+                  continue;
+
+                // Class method return has free TypeParams.
+                auto class_ret = class_func / Type;
+
+                // Shape method return substituted with concrete values.
+                auto concrete_ret =
+                  apply_subst(top, shape_func / Type, shape_to_concrete);
+
+                extract_constraints(
+                  top,
+                  class_ret->front(),
+                  concrete_ret->front(),
+                  constraints,
+                  false);
+
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (constraints.empty())
         return;
+
+      LOG(Trace) << "backward_refine_call: refining TypeArgs for "
+                 << Node(prior_call / FuncName) << std::endl;
+
+      // Update TypeArgs in the prior call's FuncName.
+      for (auto& scope : scopes)
+      {
+        auto ta = scope.name_elem / TypeArgs;
+        auto tps = scope.def / TypeParams;
+
+        if (tps->empty())
+          continue;
+
+        bool all_constrained = true;
+        Node new_ta = TypeArgs;
+
+        for (auto& tp : *tps)
+        {
+          auto find = constraints.find(tp);
+
+          if (find == constraints.end())
+          {
+            all_constrained = false;
+            break;
+          }
+
+          new_ta << clone(find->second.type);
+        }
+
+        if (all_constrained)
+          scope.name_elem->replace(ta, new_ta);
+      }
+
+      // Rebuild substitution map from updated TypeArgs.
+      NodeMap<Node> subst;
+
+      for (auto& scope : scopes)
+      {
+        auto ta = scope.name_elem / TypeArgs;
+        auto tps = scope.def / TypeParams;
+
+        if (!ta->empty() && ta->size() == tps->size())
+        {
+          for (size_t i = 0; i < tps->size(); i++)
+            subst[tps->at(i)] = ta->at(i);
+        }
+      }
+
+      // Refine Const literals in the prior call's args.
+      for (size_t i = 0; i < params->size(); i++)
+      {
+        auto param = params->at(i);
+        auto arg_node = args->at(i);
+        auto formal_type = param / Type;
+
+        Node expected_prim;
+        auto tp_def = direct_typeparam(top, formal_type);
+
+        if (tp_def)
+        {
+          auto find = subst.find(tp_def);
+
+          if (find != subst.end())
+            expected_prim = extract_primitive(find->second);
+        }
+        else
+        {
+          expected_prim = extract_primitive(formal_type);
+        }
+
+        if (!expected_prim)
+          continue;
+
+        auto arg_src = arg_node / Rhs;
+        auto it = env.find(arg_src->location());
+
+        if (it == env.end())
+          continue;
+
+        auto& arg_info = it->second;
+
+        if (!arg_info.is_default || !arg_info.const_node)
+          continue;
+
+        Node current_prim = arg_info.const_node / Type;
+
+        if (current_prim->type() == expected_prim->type())
+          continue;
+
+        bool compatible = (current_prim->in(integer_types) &&
+                           expected_prim->in(integer_types)) ||
+          (current_prim->in(float_types) && expected_prim->in(float_types));
+
+        if (!compatible)
+          continue;
+
+        refine_const(env, arg_info.const_node, expected_prim->type());
+      }
+
+      // Recompute the prior call's result type and update env.
+      auto result_type = apply_subst(top, ret_type, subst);
+
+      if (result_type)
+      {
+        auto dst = prior_call / LocalId;
+        env[dst->location()] = {result_type, false, false, {}, {}};
+      }
+    }
+
+    // Try to infer TypeArgs and refine Const types at a Call site.
+    void infer_call(Node call, TypeEnv& env, Node top)
+    {
+      std::vector<ScopeInfo> scopes;
+      auto func_def = navigate_call(call, top, scopes);
+
+      if (!func_def)
+        return;
+
+      auto funcname = call / FuncName;
+      auto args = call / Args;
+      auto params = func_def / Params;
 
       // Check if any scope needs TypeArg inference.
       bool needs_inference = false;
@@ -590,6 +818,7 @@ namespace vc
       // Phase 2: Collect TypeParam constraints from arg types.
       // Non-default types take priority over defaults on conflict.
       // Key: TypeParam def node, Value: {type, is_default}.
+      bool all_default_inference = false;
       NodeMap<LocalTypeInfo> constraints;
 
       if (needs_inference)
@@ -616,6 +845,18 @@ namespace vc
             arg_info.type->front(),
             constraints,
             arg_info.is_default);
+        }
+
+        // Check if all constraints were from default-typed args.
+        all_default_inference = !constraints.empty();
+
+        for (auto& [tp, info] : constraints)
+        {
+          if (!info.is_default)
+          {
+            all_default_inference = false;
+            break;
+          }
         }
 
         // Fill TypeArgs for scopes that need inference.
@@ -709,7 +950,7 @@ namespace vc
 
         Node current_prim = arg_info.const_node / Type;
 
-        if (current_prim == expected_prim)
+        if (current_prim->type() == expected_prim->type())
           continue;
 
         // Refine only within compatible domains.
@@ -731,7 +972,60 @@ namespace vc
       if (result_type)
       {
         auto dst = call / LocalId;
-        env[dst->location()] = {result_type, false, false, {}};
+        env[dst->location()] = {
+          result_type,
+          all_default_inference,
+          false,
+          {},
+          all_default_inference ? call : Node{}};
+      }
+
+      // Phase 4: Backward refinement of default-inferred call args.
+      // When a prior call's TypeArgs were inferred entirely from
+      // default-typed literals, and this call provides a non-default
+      // expected type, refine the prior call to match.
+      for (size_t i = 0; i < params->size(); i++)
+      {
+        auto param = params->at(i);
+        auto arg_node = args->at(i);
+        auto formal_type = param / Type;
+
+        auto arg_src = arg_node / Rhs;
+        auto arg_it = env.find(arg_src->location());
+
+        if (arg_it == env.end())
+          continue;
+
+        auto& arg_info = arg_it->second;
+
+        if (!arg_info.is_default || !arg_info.call_node)
+          continue;
+
+        // Save call_node before backward_refine_call potentially
+        // invalidates the arg_info reference by updating env.
+        auto prior_call_node = arg_info.call_node;
+
+        // Compute the expected type for this arg from formal + subst.
+        auto expected = apply_subst(top, formal_type, subst);
+
+        if (!expected)
+          continue;
+
+        backward_refine_call(prior_call_node, expected, env, top);
+
+        // Update the arg's env entry to reflect the refined type.
+        auto prior_dst = prior_call_node / LocalId;
+        auto updated_it = env.find(prior_dst->location());
+
+        if (updated_it != env.end())
+        {
+          env[arg_src->location()] = {
+            clone(updated_it->second.type),
+            updated_it->second.is_default,
+            false,
+            updated_it->second.const_node,
+            updated_it->second.call_node};
+        }
       }
     }
   }
@@ -755,7 +1049,7 @@ namespace vc
           assert(pd == ParamDef);
           auto ident = pd / Ident;
           auto type = pd / Type;
-          env[ident->location()] = {clone(type), false, true, {}};
+          env[ident->location()] = {clone(type), false, true, {}, {}};
         }
 
         // Single forward pass over all labels:
@@ -784,17 +1078,17 @@ namespace vc
                 primitive_type(type->type()),
                 is_default,
                 false,
-                is_default ? stmt : Node{}};
+                is_default ? stmt : Node{}, {}};
             }
             else if (stmt == ConstStr)
             {
               auto dst = stmt / LocalId;
-              env[dst->location()] = {string_type(), false, false, {}};
+              env[dst->location()] = {string_type(), false, false, {}, {}};
             }
             else if (stmt == Convert)
             {
               env[(stmt / LocalId)->location()] = {
-                primitive_type((stmt / Type)->type()), false, false, {}};
+                primitive_type((stmt / Type)->type()), false, false, {}, {}};
             }
             else if (stmt->in({Copy, Move}))
             {
@@ -834,12 +1128,14 @@ namespace vc
                 (dst_it == env.end() || !dst_it->second.is_fixed) &&
                 src_it != env.end())
               {
-                // Propagate source type. Carry const_node for refinement.
+                // Propagate source type. Carry const_node and call_node
+                // for refinement.
                 env[dst->location()] = {
                   clone(src_it->second.type),
                   src_it->second.is_default,
                   false,
-                  src_it->second.const_node};
+                  src_it->second.const_node,
+                  src_it->second.call_node};
               }
             }
             else if (stmt == Var)
@@ -849,12 +1145,12 @@ namespace vc
 
               // Only record if explicitly annotated (not TypeVar).
               if (type->front() != TypeVar)
-                env[ident->location()] = {clone(type), false, true, {}};
+                env[ident->location()] = {clone(type), false, true, {}, {}};
             }
             else if (stmt == New)
             {
               auto dst = stmt / LocalId;
-              env[dst->location()] = {clone(stmt / Type), false, false, {}};
+              env[dst->location()] = {clone(stmt / Type), false, false, {}, {}};
 
               // Refine Const literals used as New arguments based on
               // field types. E.g. `new {count = 0}` where count is
@@ -903,7 +1199,7 @@ namespace vc
 
                       Node current_prim = arg_info.const_node / Type;
 
-                      if (current_prim == expected_prim)
+                      if (current_prim->type() == expected_prim->type())
                         break;
 
                       bool compatible = (current_prim->in(integer_types) &&
@@ -945,13 +1241,13 @@ namespace vc
 
               if (it != env.end())
                 env[dst->location()] = {
-                  clone(it->second.type), false, false, {}};
+                  clone(it->second.type), false, false, {}, {}};
             }
             else if (stmt->in({Eq, Ne, Lt, Le, Gt, Ge}))
             {
               // Comparison result is Bool.
               auto dst = stmt / LocalId;
-              env[dst->location()] = {primitive_type(Bool), false, false, {}};
+              env[dst->location()] = {primitive_type(Bool), false, false, {}, {}};
             }
             else if (stmt->in({Neg,  Abs,  Ceil, Floor, Exp,   Log,  Sqrt,
                                Cbrt, Sin,  Cos,  Tan,   Asin,  Acos, Atan,
@@ -964,34 +1260,34 @@ namespace vc
 
               if (it != env.end())
                 env[dst->location()] = {
-                  clone(it->second.type), false, false, {}};
+                  clone(it->second.type), false, false, {}, {}};
             }
             else if (stmt->in({IsInf, IsNaN, Not}))
             {
               // Bool-producing unops.
               auto dst = stmt / LocalId;
-              env[dst->location()] = {primitive_type(Bool), false, false, {}};
+              env[dst->location()] = {primitive_type(Bool), false, false, {}, {}};
             }
             else if (stmt == Bits)
             {
               auto dst = stmt / LocalId;
-              env[dst->location()] = {primitive_type(U64), false, false, {}};
+              env[dst->location()] = {primitive_type(U64), false, false, {}, {}};
             }
             else if (stmt == Len)
             {
               auto dst = stmt / LocalId;
-              env[dst->location()] = {primitive_type(USize), false, false, {}};
+              env[dst->location()] = {primitive_type(USize), false, false, {}, {}};
             }
             else if (stmt->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
             {
               // Float constants: F64.
               auto dst = stmt / LocalId;
-              env[dst->location()] = {primitive_type(F64), false, false, {}};
+              env[dst->location()] = {primitive_type(F64), false, false, {}, {}};
             }
             else if (stmt == Typetest)
             {
               auto dst = stmt / LocalId;
-              env[dst->location()] = {primitive_type(Bool), false, false, {}};
+              env[dst->location()] = {primitive_type(Bool), false, false, {}, {}};
             }
             else if (stmt == Call)
             {
@@ -1021,7 +1317,7 @@ namespace vc
                   method_ta);
 
                 if (ret_type)
-                  env[dst->location()] = {ret_type, false, false, {}};
+                  env[dst->location()] = {ret_type, false, false, {}, {}};
               }
             }
             else if (stmt == CallDyn)
@@ -1035,7 +1331,7 @@ namespace vc
 
               if (src_it != env.end())
                 env[dst->location()] = {
-                  clone(src_it->second.type), false, false, {}};
+                  clone(src_it->second.type), false, false, {}, {}};
             }
             // All other statements (FFI, When, etc.):
             // result type unknown, don't record in env.
@@ -1060,7 +1356,7 @@ namespace vc
               {
                 Node current_prim = it->second.const_node / Type;
 
-                if (current_prim != expected_prim)
+                if (current_prim->type() != expected_prim->type())
                 {
                   bool compatible = (current_prim->in(integer_types) &&
                                      expected_prim->in(integer_types)) ||
