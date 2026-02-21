@@ -1,4 +1,5 @@
 #include "../lang.h"
+#include "../subtype.h"
 
 namespace vc
 {
@@ -49,6 +50,42 @@ namespace vc
         << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
                      << (NameElement << (Ident ^ "array")
                                      << (TypeArgs << primitive_type(U8))));
+    }
+
+    // Build a source-level Type node for _builtin::ref[inner].
+    // Creates fresh nodes on each call.
+    Node ref_type(const Node& inner_type)
+    {
+      return Type
+        << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                     << (NameElement << (Ident ^ "ref")
+                                     << (TypeArgs << clone(inner_type))));
+    }
+
+    // If type_node is _builtin::ref[T], return T as a cloned Type node.
+    // Returns empty Node otherwise.
+    Node extract_ref_inner(const Node& type_node)
+    {
+      if (type_node != Type)
+        return {};
+
+      auto inner = type_node->front();
+
+      if (inner != TypeName || inner->size() != 2)
+        return {};
+
+      auto first = (inner->front() / Ident)->location().view();
+      auto second = (inner->back() / Ident)->location().view();
+
+      if (first != "_builtin" || second != "ref")
+        return {};
+
+      auto ta = inner->back() / TypeArgs;
+
+      if (ta->size() != 1)
+        return {};
+
+      return clone(ta->front());
     }
 
     // Check if a Type node directly references a single TypeParam.
@@ -1109,6 +1146,7 @@ namespace vc
 
         TypeEnv env;
         std::map<Location, Node> lookup_stmts;
+        std::vector<std::pair<Location, Location>> typevar_aliases;
 
         // Initialize type env from function parameters.
         auto params = node / Params;
@@ -1206,6 +1244,99 @@ namespace vc
                   false,
                   src_it->second.const_node,
                   src_it->second.call_node};
+
+                // Track alias for TypeVar back-propagation.
+                if (src_it->second.type->front() == TypeVar)
+                  typevar_aliases.push_back(
+                    {dst->location(), src->location()});
+              }
+            }
+            else if (stmt == RegisterRef)
+            {
+              auto dst = stmt / LocalId;
+              auto src = stmt / Rhs;
+              auto src_it = env.find(src->location());
+
+              if (src_it != env.end())
+                env[dst->location()] = {
+                  ref_type(src_it->second.type), false, false, {}, {}};
+            }
+            else if (stmt == FieldRef)
+            {
+              auto dst = stmt / LocalId;
+              auto arg = stmt / Arg;
+              auto field_id = stmt / FieldId;
+              auto arg_src = arg / Rhs;
+              auto obj_it = env.find(arg_src->location());
+
+              if (obj_it != env.end())
+              {
+                auto& obj_type = obj_it->second.type;
+                auto inner = obj_type->front();
+
+                if (inner == TypeName)
+                {
+                  auto class_def = find_def(top, inner);
+
+                  if (class_def && class_def == ClassDef)
+                  {
+                    // Build substitution from class TypeArgs.
+                    auto class_tps = class_def / TypeParams;
+                    auto last_ta = inner->back() / TypeArgs;
+                    NodeMap<Node> field_subst;
+
+                    if (class_tps->size() == last_ta->size())
+                    {
+                      for (size_t i = 0; i < class_tps->size(); i++)
+                        field_subst[class_tps->at(i)] = last_ta->at(i);
+                    }
+
+                    auto field_name = field_id->location().view();
+
+                    for (auto& child : *(class_def / ClassBody))
+                    {
+                      if (child != FieldDef)
+                        continue;
+
+                      if (
+                        (child / Ident)->location().view() != field_name)
+                        continue;
+
+                      auto ft = apply_subst(top, child / Type, field_subst);
+                      env[dst->location()] = {
+                        ref_type(ft), false, false, {}, {}};
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+            else if (stmt == Load)
+            {
+              auto dst = stmt / LocalId;
+              auto src = stmt / Rhs;
+              auto src_it = env.find(src->location());
+
+              if (src_it != env.end())
+              {
+                auto inner = extract_ref_inner(src_it->second.type);
+
+                if (inner)
+                  env[dst->location()] = {inner, false, false, {}, {}};
+              }
+            }
+            else if (stmt == Store)
+            {
+              auto dst = stmt / LocalId;
+              auto src = stmt / Rhs;
+              auto src_it = env.find(src->location());
+
+              if (src_it != env.end())
+              {
+                auto inner = extract_ref_inner(src_it->second.type);
+
+                if (inner)
+                  env[dst->location()] = {inner, false, false, {}, {}};
               }
             }
             else if (stmt == Var)
@@ -1540,6 +1671,43 @@ namespace vc
           }
         }
 
+        // Back-propagate TypeVar resolutions through Copy/Move aliases.
+        // If a TypeVar local was copied and the copy got resolved
+        // (e.g., via infer_call), propagate back to the original.
+        // Iterate to fixpoint for chains (y=x, z=y, z resolved).
+        {
+          bool changed = true;
+
+          while (changed)
+          {
+            changed = false;
+
+            for (auto& [dst_loc, src_loc] : typevar_aliases)
+            {
+              auto dst_it = env.find(dst_loc);
+              auto src_it = env.find(src_loc);
+
+              if (dst_it == env.end() || src_it == env.end())
+                continue;
+
+              bool dst_tv = dst_it->second.type->front() == TypeVar;
+              bool src_tv = src_it->second.type->front() == TypeVar;
+
+              if (!dst_tv && src_tv)
+              {
+                src_it->second.type = clone(dst_it->second.type);
+                src_it->second.is_fixed = true;
+                changed = true;
+              }
+              else if (dst_tv && !src_tv)
+              {
+                dst_it->second.type = clone(src_it->second.type);
+                changed = true;
+              }
+            }
+          }
+        }
+
         // Update TypeVar param types from inferred env types.
         // Lambda apply methods start with TypeVar param types; after
         // processing the body, the env may have concrete types inferred
@@ -1564,10 +1732,14 @@ namespace vc
         }
 
         // Update TypeVar return type from the return local's env type.
+        // Collect all return types and build a union if needed.
         auto func_ret_type = node / Type;
 
         if (func_ret_type->front() == TypeVar)
         {
+          SequentCtx ctx{top, {}};
+          Nodes ret_types;
+
           for (auto& lbl : *labels)
           {
             auto term = lbl / Return;
@@ -1584,8 +1756,34 @@ namespace vc
             if (it->second.type->front() == TypeVar)
               continue;
 
-            node->replace(func_ret_type, clone(it->second.type));
-            break;
+            // Check if new type is a subtype of any accumulated type.
+            bool already_covered = false;
+
+            for (auto& existing : ret_types)
+            {
+              if (Subtype(ctx, it->second.type, existing))
+              {
+                already_covered = true;
+                break;
+              }
+            }
+
+            if (!already_covered)
+              ret_types.push_back(clone(it->second.type));
+          }
+
+          if (ret_types.size() == 1)
+          {
+            node->replace(func_ret_type, ret_types.front());
+          }
+          else if (ret_types.size() > 1)
+          {
+            Node union_node = Union;
+
+            for (auto& rt : ret_types)
+              union_node << clone(rt->front());
+
+            node->replace(func_ret_type, Type << union_node);
           }
         }
 

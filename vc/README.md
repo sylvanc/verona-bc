@@ -19,7 +19,6 @@ Sub-typing.
 
 Type inference.
 - Does backwards refinement work for things that aren't primitives?
-- Infer lambda return as union of all possible return types.
 - Determine `when` type from the `when / Rhs` function type.
 
 Check use before definition in `let x = ... x ...`.
