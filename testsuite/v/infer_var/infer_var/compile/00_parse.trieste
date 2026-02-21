@@ -18,6 +18,8 @@ parse
             (=)
             (int 1:0))
           (group
+            (semi))
+          (group
             (ident 1:x))))))
   (directory
     (file
@@ -117,7 +119,9 @@ parse
                 (:)
                 (ident 4:self)))
             (:)
-            (ident 4:bool))))
+            (ident 4:bool))
+          (group
+            (semi))))
       (group
         (ident 4:bool)
         (brace
@@ -166,7 +170,8 @@ parse
                 (brace
                   (group
                     (ident 5:other)
-                    (paren)))
+                    (paren))))
+              (group
                 (else)
                 (brace
                   (group
@@ -191,7 +196,8 @@ parse
                 (ident 4:self)
                 (brace
                   (group
-                    (true)))
+                    (true))))
+              (group
                 (else)
                 (brace
                   (group

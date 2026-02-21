@@ -72,6 +72,7 @@ namespace vc
   inline const auto NewArgs = TokenDef("newargs");
   inline const auto NewArg = TokenDef("newarg");
 
+  inline const auto Semi = TokenDef("semi");
   inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
   inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
   inline const auto If = TokenDef("if");

@@ -12,6 +12,8 @@ parse
             (:)
             (ident 5:usize))
           (group
+            (semi))
+          (group
             (ident 6:create)
             (paren)
             (:)
@@ -35,6 +37,8 @@ parse
             (ident 1:c)
             (=)
             (ident 7:counter))
+          (group
+            (semi))
           (group
             (int 1:0))))))
   (directory
@@ -135,7 +139,9 @@ parse
                 (:)
                 (ident 4:self)))
             (:)
-            (ident 4:bool))))
+            (ident 4:bool))
+          (group
+            (semi))))
       (group
         (ident 4:bool)
         (brace
@@ -184,7 +190,8 @@ parse
                 (brace
                   (group
                     (ident 5:other)
-                    (paren)))
+                    (paren))))
+              (group
                 (else)
                 (brace
                   (group
@@ -209,7 +216,8 @@ parse
                 (ident 4:self)
                 (brace
                   (group
-                    (true)))
+                    (true))))
+              (group
                 (else)
                 (brace
                   (group

@@ -588,6 +588,18 @@ namespace vc
             return Equals << (Expr << _[Lhs]) << (Expr << _[Rhs]);
           },
 
+        // An else group is merged into the preceding group, but only
+        // when the preceding group contains a brace (no semicolon).
+        // The brace doesn't have to be at the end: after a prior merge,
+        // `} else if {} else` produces a group with two braces, and the
+        // second else must still merge into it.
+        (T(Group) << ((!T(Brace))++ * T(Brace)))[Lhs] *
+            (T(Group) << (T(Else) * Any++[Rhs])) >>
+          [](Match& _) { return Group << *_[Lhs] << Else << _[Rhs]; },
+
+        // Remove semicolon marker groups.
+        T(Group) << (T(Semi) * End) >> [](Match&) -> Node { return {}; },
+
         // Groups are expressions.
         In(Body, Expr, ExprSeq, Tuple) * T(Group)[Group] >>
           [](Match& _) { return Expr << *_[Group]; },

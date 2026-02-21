@@ -12,7 +12,7 @@ namespace vc
     Colon | Vararg | Dot |
     // Keywords.
     Use | Where | Let | Var | Try | If | Else | While | For | Break | Continue |
-    When | Return | Raise | Throw | New | Shape;
+    When | Return | Raise | Throw | New | Shape | Semi;
 
   // clang-format off
   const auto wfParser =
@@ -77,7 +77,12 @@ namespace vc
         "[[:space:]]+" >> [](auto&) {},
 
         // Expression terminator.
-        ";" >> [](auto& m) { m.term(terminators); },
+        ";" >>
+          [](auto& m) {
+            m.term(terminators);
+            m.add(Semi);
+            m.term();
+          },
 
         // Grouping.
         "\\(" >> [](auto& m) { m.push(Paren); },
@@ -93,14 +98,6 @@ namespace vc
             m.pop(Bracket);
           },
         "\\{" >> [](auto& m) { m.push(Brace); },
-        "\\}[[:space:]]*else\\b" >>
-          [](auto& m) {
-            // TODO: what if there's a comment in between } and `else`?
-            // Braces don't terminate a group if followed by `else`.
-            m.term(terminators);
-            m.pop(Brace);
-            m.add(Else);
-          },
         "\\}" >>
           [](auto& m) {
             // Braces terminate a group, but not a list.

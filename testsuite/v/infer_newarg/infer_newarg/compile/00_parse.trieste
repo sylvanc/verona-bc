@@ -12,6 +12,8 @@ parse
             (:)
             (ident 3:i32))
           (group
+            (semi))
+          (group
             (ident 6:create)
             (paren
               (group
@@ -42,6 +44,8 @@ parse
             (paren
               (group
                 (int 1:1))))
+          (group
+            (semi))
           (group
             (ident 1:c)
             (dot)
@@ -144,7 +148,9 @@ parse
                 (:)
                 (ident 4:self)))
             (:)
-            (ident 4:bool))))
+            (ident 4:bool))
+          (group
+            (semi))))
       (group
         (ident 4:bool)
         (brace
@@ -193,7 +199,8 @@ parse
                 (brace
                   (group
                     (ident 5:other)
-                    (paren)))
+                    (paren))))
+              (group
                 (else)
                 (brace
                   (group
@@ -218,7 +225,8 @@ parse
                 (ident 4:self)
                 (brace
                   (group
-                    (true)))
+                    (true))))
+              (group
                 (else)
                 (brace
                   (group
