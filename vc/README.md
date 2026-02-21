@@ -7,7 +7,6 @@ Names.
 - Can we look down an algebraic type (via an alias)?
 
 Reification.
-- References.
 - Encode shapes as type aliases of all implementing concrete types.
 - Post reification type checking.
 

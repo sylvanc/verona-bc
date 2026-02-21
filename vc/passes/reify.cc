@@ -413,11 +413,8 @@ namespace vc
         Node body = l / Body;
         Nodes remove;
 
-        // No work required: Move, Load, Store, CallDyn, math ops on
-        // existing values.
-
-        // TODO:
-        // RegisterRef | FieldRef | ArrayRef | ArrayRefConst
+        // No structural changes required: CallDyn, math ops on existing
+        // values.
 
         body->traverse([&](Node& n) {
           if (n == body)
@@ -480,6 +477,70 @@ namespace vc
               used_locs.find((n / LocalId)->location()) == used_locs.end())
               remove.push_back(n);
           }
+          else if (n == RegisterRef)
+          {
+            // RegisterRef: dst = &src. Result type is Ref << type(src).
+            auto src_it = local_types.find((n / Rhs)->location());
+
+            if (src_it != local_types.end())
+            {
+              ensure_ref_reified(src_it->second);
+              local_types[(n / LocalId)->location()] =
+                Node(Ref) << clone(src_it->second);
+            }
+          }
+          else if (n == FieldRef)
+          {
+            // FieldRef: dst = &(arg.field). Result type is
+            // Ref << reified field type.
+            auto obj_loc = (n / Arg / Rhs)->location();
+            auto obj_it = local_types.find(obj_loc);
+
+            if (obj_it != local_types.end() && (obj_it->second == ClassId))
+            {
+              auto ft = find_field_type(obj_it->second, n / FieldId);
+
+              if (ft)
+              {
+                ensure_ref_reified(ft);
+                local_types[(n / LocalId)->location()] =
+                  Node(Ref) << ft;
+              }
+            }
+          }
+          else if (n->in({ArrayRef, ArrayRefConst}))
+          {
+            // ArrayRef/ArrayRefConst: dst = &(arr[i]). Result type is
+            // Ref << element type.
+            auto arr_loc = (n / Arg / Rhs)->location();
+            auto arr_it = local_types.find(arr_loc);
+
+            if (arr_it != local_types.end() && (arr_it->second == Array))
+            {
+              auto elem = clone(arr_it->second->front());
+              ensure_ref_reified(elem);
+              local_types[(n / LocalId)->location()] =
+                Node(Ref) << elem;
+            }
+          }
+          else if (n == Load)
+          {
+            // Load: dst = *src. Unwrap Ref to get inner type.
+            auto src_it = local_types.find((n / Rhs)->location());
+
+            if (src_it != local_types.end() && (src_it->second == Ref))
+              local_types[(n / LocalId)->location()] =
+                clone(src_it->second->front());
+          }
+          else if (n == Store)
+          {
+            // Store: dst = old *src, *src = arg. Result is old value type.
+            auto src_it = local_types.find((n / Rhs)->location());
+
+            if (src_it != local_types.end() && (src_it->second == Ref))
+              local_types[(n / LocalId)->location()] =
+                clone(src_it->second->front());
+          }
           else if (n == Var)
           {
             vars << (LocalId ^ (n / Ident));
@@ -503,7 +564,9 @@ namespace vc
           }
           else if (n->in({NewArray, NewArrayConst}))
           {
-            n / Type = Array << reify_type(n / Type, r.subst);
+            auto arr_type = Array << reify_type(n / Type, r.subst);
+            local_types[(n / LocalId)->location()] = clone(arr_type);
+            n / Type = arr_type;
           }
           else if (n == FFI)
           {
@@ -644,6 +707,68 @@ namespace vc
         find_or_push(defs.front(), {});
         return;
       }
+    }
+
+    // Look up a field's reified type from a ClassId.  Finds the Reification
+    // matching `classid`, locates the FieldDef by name, and reifies the field
+    // type using the class's substitution map.
+    Node find_field_type(Node classid, const Node& field_id)
+    {
+      auto field_name = field_id->location().view();
+
+      for (auto& [key, r_vec] : map)
+      {
+        for (auto& r : r_vec)
+        {
+          if (!r.id->equals(classid) || (r.def != ClassDef))
+            continue;
+
+          for (auto& f : *(r.def / ClassBody))
+          {
+            if (f != FieldDef)
+              continue;
+
+            if ((f / Ident)->location().view() != field_name)
+              continue;
+
+            return reify_type(f / Type, r.subst);
+          }
+
+          return {};
+        }
+      }
+
+      return {};
+    }
+
+    // Ensure that a Ref wrapper primitive with the given inner IR type is
+    // reified.  Checks for an existing entry by structural id equality and
+    // creates one via the worklist if absent.
+    void ensure_ref_reified(const Node& inner_ir_type)
+    {
+      if (!inner_ir_type || (inner_ir_type == Dyn))
+        return;
+
+      auto ref_defs = builtin->look(Location("ref"));
+      assert(!ref_defs.empty());
+      auto ref_def = ref_defs.front();
+      Node expected_id = Node(Ref) << clone(inner_ir_type);
+
+      auto it = map.find(ref_def);
+      bool is_new_key = (it == map.end());
+      auto& r_vec = map[ref_def];
+
+      if (is_new_key)
+        map_order.push_back(ref_def);
+
+      for (auto& existing : r_vec)
+      {
+        if (existing.id->equals(expected_id))
+          return;
+      }
+
+      r_vec.push_back({ref_def, {}, std::move(expected_id), {}});
+      worklist.push_back(&r_vec.back());
     }
 
     void reify_call(Node& call, const NodeMap<Node>& subst)
