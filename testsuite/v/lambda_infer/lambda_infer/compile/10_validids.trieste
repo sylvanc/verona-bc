@@ -1,0 +1,247 @@
+vc
+validids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 5:$2035)
+            (functionid 24:lambda_infer::main::0::0)
+            (args)))
+        (ret
+          (localid 5:$2035)))))
+  (func
+    (functionid 24:lambda_infer::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 10:local$1451)
+            (i32)
+            (int 2:42))
+          (call
+            (localid 10:local$1412)
+            (functionid 34:lambda_infer::apply_and_wrap::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1451))))
+          (copy
+            (localid 1:w)
+            (localid 10:local$1412))
+          (lookup
+            (localid 10:local$1452)
+            (localid 1:w)
+            (methodid 9:get::1::0))
+          (calldyn
+            (localid 10:local$1453)
+            (localid 10:local$1452)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:w)))))
+        (ret
+          (localid 10:local$1453)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 34:lambda_infer::apply_and_wrap::1::0)
+    (params
+      (param
+        (localid 3:val)
+        (i32)))
+    (classid 24:lambda_infer::wrapper::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 10:local$1411)
+            (functionid 39:lambda_infer::lambda$1403::create::0::0)
+            (args))
+          (copy
+            (localid 1:f)
+            (localid 10:local$1411))
+          (lookup
+            (localid 10:local$1449)
+            (localid 1:f)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1450)
+            (localid 10:local$1449)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:f))
+              (arg
+                (argcopy)
+                (localid 3:val)))))
+        (ret
+          (localid 10:local$1450)))))
+  (class
+    (classid 24:lambda_infer::wrapper::0)
+    (fields
+      (field
+        (fieldid 3:val)
+        (i32)))
+    (methods
+      (method
+        (methodid 9:get::1::0)
+        (functionid 32:lambda_infer::wrapper::get::1::0))
+      (method
+        (methodid 9:val::1::0)
+        (functionid 32:lambda_infer::wrapper::val::1::0))))
+  (func
+    (functionid 39:lambda_infer::lambda$1403::create::0::0)
+    (params)
+    (classid 28:lambda_infer::lambda$1403::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 10:local$1409)
+            (classid 28:lambda_infer::lambda$1403::0)
+            (args)))
+        (ret
+          (localid 10:local$1409)))))
+  (class
+    (classid 28:lambda_infer::lambda$1403::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 38:lambda_infer::lambda$1403::apply::2::0))))
+  (func
+    (functionid 38:lambda_infer::lambda$1403::apply::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 28:lambda_infer::lambda$1403::0))
+      (param
+        (localid 1:x)
+        (i32)))
+    (classid 24:lambda_infer::wrapper::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 10:local$1410)
+            (functionid 35:lambda_infer::wrapper::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:x)))))
+        (ret
+          (localid 10:local$1410)))))
+  (func
+    (functionid 35:lambda_infer::wrapper::create::1::0)
+    (params
+      (param
+        (localid 3:val)
+        (i32)))
+    (classid 24:lambda_infer::wrapper::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 10:local$1408)
+            (classid 24:lambda_infer::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:val)))))
+        (ret
+          (localid 10:local$1408)))))
+  (func
+    (functionid 32:lambda_infer::wrapper::get::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 24:lambda_infer::wrapper::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 10:local$1447)
+            (localid 4:self)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 10:local$1448)
+            (localid 10:local$1447)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self)))))
+        (ret
+          (localid 10:local$1448)))))
+  (func
+    (functionid 32:lambda_infer::wrapper::val::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 24:lambda_infer::wrapper::0)))
+    (dyn)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 10:local$1407)
+            (functionid 37:lambda_infer::wrapper::val::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 10:local$1737)
+            (localid 10:local$1407)))
+        (ret
+          (localid 10:local$1737)))))
+  (func
+    (functionid 37:lambda_infer::wrapper::val::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 24:lambda_infer::wrapper::0)))
+    (ref
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 10:local$1446)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val)))
+        (ret
+          (localid 10:local$1446)))))
+  (primitive
+    (ref
+      (i32))
+    (methods)))

@@ -1001,6 +1001,37 @@ namespace vc
         refine_const(env, arg_info.const_node, expected_prim->type());
       }
 
+      // Infer TypeVar arg types from formal parameter types.
+      // When an arg has TypeVar type (e.g., an untyped lambda param),
+      // compute the expected type from the callee's formal param type
+      // after substitution and update the caller's env.
+      for (size_t i = 0; i < params->size(); i++)
+      {
+        auto param = params->at(i);
+        auto arg_node = args->at(i);
+        auto formal_type = param / Type;
+
+        auto arg_src = arg_node / Rhs;
+        auto it = env.find(arg_src->location());
+
+        if (it == env.end())
+          continue;
+
+        auto& arg_info = it->second;
+
+        if (arg_info.type->front() != TypeVar)
+          continue;
+
+        auto expected = apply_subst(top, formal_type, subst);
+
+        if (!expected || expected->front() == TypeVar)
+          continue;
+
+        assert(expected == Type);
+        arg_info.type = expected;
+        arg_info.is_fixed = true;
+      }
+
       // Record the call's result type in the env, with all TypeParam
       // references substituted.
       auto ret_type = func_def / Type;
@@ -1087,7 +1118,8 @@ namespace vc
           assert(pd == ParamDef);
           auto ident = pd / Ident;
           auto type = pd / Type;
-          env[ident->location()] = {clone(type), false, true, {}, {}};
+          bool is_fixed = type->front() != TypeVar;
+          env[ident->location()] = {clone(type), false, is_fixed, {}, {}};
         }
 
         // Single forward pass over all labels:
@@ -1505,6 +1537,55 @@ namespace vc
                 }
               }
             }
+          }
+        }
+
+        // Update TypeVar param types from inferred env types.
+        // Lambda apply methods start with TypeVar param types; after
+        // processing the body, the env may have concrete types inferred
+        // from call sites within the body.
+        for (auto& pd : *params)
+        {
+          auto type = pd / Type;
+
+          if (type->front() != TypeVar)
+            continue;
+
+          auto ident = pd / Ident;
+          auto it = env.find(ident->location());
+
+          if (it == env.end())
+            continue;
+
+          if (it->second.type->front() == TypeVar)
+            continue;
+
+          pd->replace(type, clone(it->second.type));
+        }
+
+        // Update TypeVar return type from the return local's env type.
+        auto func_ret_type = node / Type;
+
+        if (func_ret_type->front() == TypeVar)
+        {
+          for (auto& lbl : *labels)
+          {
+            auto term = lbl / Return;
+
+            if (term != Return)
+              continue;
+
+            auto ret_src = term / LocalId;
+            auto it = env.find(ret_src->location());
+
+            if (it == env.end())
+              continue;
+
+            if (it->second.type->front() == TypeVar)
+              continue;
+
+            node->replace(func_ret_type, clone(it->second.type));
+            break;
           }
         }
 
