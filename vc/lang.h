@@ -230,25 +230,16 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprDot = (wfExprSugar | CallDyn) - Dot;
+  inline const auto wfExprDot =
+    (wfExprSugar | CallDyn | Convert | Binop | Unop | Nulop | FFI | NewArray |
+     ArrayRef) -
+    Dot - TripleColon;
 
   // clang-format off
   inline const auto wfPassDot =
       wfPassSugar
     | (CallDyn <<= Expr * wfFuncId * TypeArgs * Args)
     | (Expr <<= wfExprDot++)
-    ;
-  // clang-format on
-
-  inline const auto wfExprApplication =
-    (wfExprDot | Convert | Binop | Unop | Nulop | FFI | NewArray | ArrayRef |
-     Ref | Hash) -
-    FuncName - MethodName - TripleColon;
-
-  // clang-format off
-  inline const auto wfPassApplication =
-      wfPassDot
-    | (Expr <<= wfExprApplication)
     | (Convert <<= (Type >>= wfPrimitiveType) * Args)
     | (Binop <<= (MethodId >>= wfBinop) * Args)
     | (Unop <<= (MethodId >>= wfUnop) * Args)
@@ -256,6 +247,16 @@ namespace vc
     | (FFI <<= SymbolId * Args)
     | (NewArray <<= Type * Args)
     | (ArrayRef <<= Args)
+    ;
+  // clang-format on
+
+  inline const auto wfExprApplication =
+    (wfExprDot | Ref | Hash) - FuncName - MethodName;
+
+  // clang-format off
+  inline const auto wfPassApplication =
+      wfPassDot
+    | (Expr <<= wfExprApplication)
     | (Ref <<= Expr)
     | (Hash <<= Expr)
     ;
