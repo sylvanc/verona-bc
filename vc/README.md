@@ -30,7 +30,6 @@ Calls.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
-- Type parameters can be "free" in a lambda.
 
 Patterns for lambdas.
 - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
@@ -38,9 +37,6 @@ Patterns for lambdas.
 - A pattern can be any object that implements `==`.
   - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
 - `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
-
-Assign:
-- Rename shadowed variables in `if`, `while`.
 
 Tuples:
 - Destructing when the tuple is too short throws an error. Should it?
@@ -51,7 +47,6 @@ Expressions:
 - Partial application, `_`.
 
 Syntax:
-- `x + y(z)` parses as `(x + y)(z)`, but it should parse as `x + (y(z))`.
 - Region creation.
 
 Structure:
