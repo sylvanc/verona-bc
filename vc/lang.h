@@ -106,7 +106,6 @@ namespace vc
       If,
       Else,
       While,
-      For,
       When,
       Equals,
       LocalId,
@@ -133,8 +132,7 @@ namespace vc
 
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
     wfLiteral | String | RawString | Tuple | Let | Var | New | Lambda | Ref |
-    FuncName | Dot | If | Else | While | For | When | Equals | Hash | Try |
-    FieldRef;
+    FuncName | Dot | If | Else | While | When | Equals | Hash | Try | FieldRef;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -189,7 +187,6 @@ namespace vc
     | (If <<= Expr * Block)
     | (Else <<= Expr * Block)
     | (While <<= Expr * Block)
-    | (For <<= Expr * Block)
     | (When <<= Expr * Type * Expr)
     | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     | (Let <<= Ident * Type)[Ident]

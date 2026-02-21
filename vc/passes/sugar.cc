@@ -84,6 +84,14 @@ namespace vc
 
             auto id = _.fresh(l_lambda);
 
+            // Build FQ scope prefix for the enclosing class. The Lift
+            // will place the lambda ClassDef into this class's ClassBody,
+            // so all FQ references to the lambda class need this prefix.
+            auto enclosing_cls = lambda->parent(ClassDef);
+            auto cls_path = scope_path(enclosing_cls);
+            auto cls_ta =
+              fq_typeargs(cls_path, enclosing_cls / TypeParams);
+
             // TODO: find "free" type parameters.
             // Populate TypeParams for the lambda class.
             Node typeparams = TypeParams;
@@ -97,8 +105,21 @@ namespace vc
                 << (TypeName << (NameElement << (Ident ^ tp) << TypeArgs));
             }
 
-            auto type = Type
-              << (TypeName << (NameElement << (Ident ^ id) << typeargs));
+            // Build a FQ TypeName for the lambda class.
+            Node fq_tn = TypeName;
+
+            for (auto& s : cls_path)
+            {
+              if (s == enclosing_cls)
+                fq_tn << (NameElement << clone(enclosing_cls / Ident)
+                                      << clone(cls_ta));
+              else
+                fq_tn << (NameElement << clone(s / Ident) << TypeArgs);
+            }
+
+            fq_tn << (NameElement << (Ident ^ id) << clone(typeargs));
+
+            auto type = Type << clone(fq_tn);
 
             Node classbody = ClassBody;
             Node create_params = Params;
@@ -148,8 +169,9 @@ namespace vc
                                             << TypeParams << apply_params
                                             << _(Type) << Where
                                             << apply_body))))
-              << (Call << (FuncName
-                           << (NameElement << (Ident ^ id) << clone(typeargs)))
+              << (Call << (FuncName << *clone(fq_tn)
+                                   << (NameElement << (Ident ^ "create")
+                                                   << TypeArgs))
                        << create_args);
           },
 

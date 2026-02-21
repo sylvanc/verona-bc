@@ -174,7 +174,10 @@ namespace vbci
         // This is being removed from an object/array that is frame local, and
         // will not land in register we need to remove its stack rc.
         if constexpr (!to_register)
-          return ploc.to_region()->stack_dec();
+        {
+          if (ploc.is_region())
+            return ploc.to_region()->stack_dec();
+        }
         return true;
       }
 

@@ -19,7 +19,7 @@ Sub-typing.
 
 Type inference.
 - Does backwards refinement work for things that aren't primitives?
-- Handle lambdas.
+- Infer lambda parameter and return types.
 - Determine `when` type from the `when / Rhs` function type.
 
 Check use before definition in `let x = ... x ...`.
@@ -51,7 +51,7 @@ Expressions:
 - Partial application, `_`.
 
 Syntax:
-- Braces and else: it doesn't work if there's a comment in between.
+- `x + y(z)` parses as `(x + y)(z)`, but it should parse as `x + (y(z))`.
 - Region creation.
 
 Structure:

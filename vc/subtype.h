@@ -1,6 +1,5 @@
 #pragma once
 
-#include "bounds.h"
 #include "lang.h"
 #include "sequent.h"
 

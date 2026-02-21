@@ -104,8 +104,8 @@ namespace vc
             auto args = _(NewArgs);
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
-                                << (New << (LocalId ^ id) << make_selftype(args, true)
-                                        << args))
+                                << (New << (LocalId ^ id)
+                                        << make_selftype(args, true) << args))
                        << (LocalId ^ id);
           },
 
@@ -127,10 +127,7 @@ namespace vc
         In(Expr) * (T(ArrayRef)[ArrayRef] << T(Args)[Args]) >>
           [](Match& _) {
             auto args = _(Args);
-
-            if (args->size() != 2)
-              return err(_(ArrayRef), "arrayref requires two arguments");
-
+            assert(args->size() == 2);
             auto id = _.fresh(l_local);
             return Seq << (Lift
                            << Body
@@ -246,7 +243,7 @@ namespace vc
           },
 
         // Invalid l-values.
-        In(Lhs) * T(FuncName, If, Else, While, For, When)[Lhs] >>
+        In(Lhs) * T(FuncName, If, Else, While, When)[Lhs] >>
           [](Match& _) { return err(_(Lhs), "Can't assign to this"); },
 
         // If expression.
@@ -296,7 +293,7 @@ namespace vc
             auto join = _.fresh(l_join);
 
             _(Body)->traverse([&](Node& node) {
-              if (node->in({While, For, Error}))
+              if (node->in({While, Error}))
                 return false;
               else if (node == Break)
                 node << (LocalId ^ _(LocalId)) << (LabelId ^ join);
@@ -421,16 +418,14 @@ namespace vc
         In(Expr) * T(True, False)[Bool] >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << _(Bool)))
+            return Seq << (Lift << Body << (Const << (LocalId ^ id) << _(Bool)))
                        << (LocalId ^ id);
           },
 
         In(Expr) * T(Bin, Oct, Int, Hex)[Int] >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << _(Int)))
+            return Seq << (Lift << Body << (Const << (LocalId ^ id) << _(Int)))
                        << (LocalId ^ id);
           },
 
@@ -556,8 +551,7 @@ namespace vc
         In(Expr, Lhs) * T(Nulop) << (T(None) * T(Args)) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (Const << (LocalId ^ id) << None))
+            return Seq << (Lift << Body << (Const << (LocalId ^ id) << None))
                        << (LocalId ^ id);
           },
 
@@ -606,10 +600,7 @@ namespace vc
         // Decompose expression sequences.
         T(ExprSeq)[ExprSeq] >> [](Match& _) -> Node {
           auto p = _(ExprSeq);
-
-          if (p->empty())
-            return err(p, "Unexpected empty parentheses");
-
+          assert(!p->empty());
           Node seq = Seq;
 
           for (size_t i = 0; i < p->size() - 1; ++i)

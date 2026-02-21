@@ -2,6 +2,10 @@
 
 #include <trieste/nodeworker.h>
 
+#include <map>
+#include <set>
+#include <string>
+
 #define STEP(x) \
   switch (x) \
   { \
@@ -504,6 +508,113 @@ namespace vc
     return Processor(n, worker).run();
   }
 
+  // Alpha-rename shadowed local variables within a function so that each
+  // variable binding gets a unique name. After the ident pass, references
+  // are LocalId nodes and definitions are Let/Var nodes with Ident children.
+  // If multiple Let/Var/ParamDef bindings share the same name within a
+  // function, later bindings and their references are renamed to unique names.
+  void alpha_rename(Node func)
+  {
+    // Collect all variable definitions (Let, Var, ParamDef) within this
+    // function, in bottom-up order. Stop at nested Lambda boundaries.
+    struct DefInfo
+    {
+      Node def;
+      Node scope;
+      std::string name;
+    };
+
+    Nodes scopes_bottomup;
+    func->traverse([&](Node& node) {
+      // Stop at nested Lambdas, but not if the node is func itself
+      // (func may be a Lambda being processed).
+      if ((node != func) && (node == Lambda))
+        return false;
+      if (node->in({Block, Function, Lambda}))
+        scopes_bottomup.push_back(node);
+      return true;
+    });
+
+    // Reverse so innermost scopes come first.
+    std::reverse(scopes_bottomup.begin(), scopes_bottomup.end());
+
+    // Group definitions by name across all scopes in this function.
+    std::map<std::string, std::vector<DefInfo>> defs_by_name;
+
+    for (auto& scope : scopes_bottomup)
+    {
+      for (auto& child : *scope)
+      {
+        if (child == Params)
+        {
+          for (auto& param : *child)
+          {
+            if (param == ParamDef)
+            {
+              auto name = std::string((param / Ident)->location().view());
+              defs_by_name[name].push_back({param, scope, name});
+            }
+          }
+        }
+        else if (scope->in({Block, Function, Lambda}) && (child == Body))
+        {
+          child->traverse([&](Node& node) {
+            // Don't descend into nested Blocks or Lambdas — their defs
+            // are collected when we process their own scope entry.
+            if (node->in({Lambda, Block}))
+              return false;
+            if (node->in({Let, Var}))
+            {
+              auto name = std::string((node / Ident)->location().view());
+              defs_by_name[name].push_back({node, scope, name});
+              return false;
+            }
+            return true;
+          });
+        }
+      }
+    }
+
+    // For names with multiple definitions, rename all but the outermost.
+    // Process innermost first (they appear first in scopes_bottomup).
+    size_t rename_counter = 0;
+
+    for (auto& [name, defs] : defs_by_name)
+    {
+      if (defs.size() <= 1)
+        continue;
+
+      // The outermost definition (last collected since we went bottom-up)
+      // keeps its original name. Rename the rest.
+      for (size_t i = 0; i < defs.size() - 1; i++)
+      {
+        auto& info = defs[i];
+        auto new_name = name + "$" + std::to_string(rename_counter++);
+
+        // Rename the definition's Ident child.
+        auto ident = info.def / Ident;
+        info.def->replace(ident, Ident ^ new_name);
+
+        // Rename all LocalId nodes in the definition's scope that match
+        // the original name. Since we process bottom-up, inner scopes
+        // have already been renamed and won't match.
+        auto& scope = info.scope;
+        scope->traverse([&](Node& node) {
+          // Stop at nested Lambdas, but not the scope itself.
+          if ((node != scope) && (node == Lambda))
+            return false;
+          if ((node == LocalId) &&
+              (node->location().view() == name))
+          {
+            auto replacement = LocalId ^ new_name;
+            node->parent()->replace(node, replacement);
+          }
+          return true;
+        });
+      }
+    }
+  }
+
   PassDef ident()
   {
     auto nw = std::make_shared<NodeWorker<Resolver>>(Resolver{});
@@ -547,6 +658,14 @@ namespace vc
 
       for (auto& use : uses)
         use->parent()->replace(use);
+
+      // Alpha-rename shadowed local variables so each binding within a
+      // function has a unique name.
+      top->traverse([](Node& node) {
+        if (node->in({Function, Lambda}))
+          alpha_rename(node);
+        return true;
+      });
 
       return 0;
     });

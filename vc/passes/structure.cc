@@ -7,10 +7,10 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, TypeVar, TypeSelf};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, True,   False,       Bin,     Oct,   Int, Hex,
-    Float,   HexFloat, String, RawString,   Tuple,   Let,   Var, New,
-    Lambda,  Dot,      Ref,    FuncName,    If,      While, For, When,
-    Equals,  Else,     Try,    TripleColon, FieldRef};
+    ExprSeq, DontCare, True,     False,  Bin,       Oct,         Int,
+    Hex,     Float,    HexFloat, String, RawString, Tuple,       Let,
+    Var,     New,      Lambda,   Dot,    Ref,       FuncName,    If,
+    While,   When,     Equals,   Else,   Try,       TripleColon, FieldRef};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -517,7 +517,7 @@ namespace vc
           },
 
         // For.
-        In(Expr) * (T(For) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
+        In(Expr) * T(For) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
           [](Match& _) {
             auto params = _(Lambda) / Params;
             auto type = _(Lambda) / Type;
