@@ -20,6 +20,9 @@
   - **Var assignments**: refines Consts assigned to explicitly-typed Vars via Copy/Move.
   - **New arguments**: looks up the ClassDef via `find_def()`, matches NewArg idents to FieldDef idents, refines based on field types.
   - **Return values**: when a label's terminator is `Return`, refines the returned local against the function's declared return type.
+  - **FFI return types**: Navigate up via `node->parent(ClassDef)`, scan `ClassBody` for `Lib` nodes, match `SymbolId` in `Symbols`, and use the `Symbol / Type` child as the return type. Walk up through nested ClassDefs if the first doesn't contain the lib.
+  - **Read semantics**: `Read` gives a read-only reference to a cown. For type inference, the result type is the same as the argument type (same as arithmetic unops).
+  - **Statement coverage**: Tracks types for Const, ConstStr, Convert, Copy, Move, RegisterRef, FieldRef, ArrayRef, ArrayRefConst, New, NewArray, NewArrayConst, Load, Store, Lookup, Call, CallDyn, Typetest, Var, binops, unops (including Read), nulops, and FFI. `When` is intentionally untracked (deferred until cowns are working).
   - Uses `const_node` pointer propagation through Copy/Move for alias tracking; `refine_const()` clears all aliases after refinement to prevent conflicts.
 - **Running compiled programs**: `dist/vbci/vbci foo.vbc` executes a compiled `.vbc` file (output of `vc build`). Debug the interpreter with `lldb-20 -- dist/vbci/vbci foo.vbc`.
 - **Verona source syntax notes**: Class definitions use bare names (no `class` keyword): `myclass[T] { ... }`. Fields need semicolons: `val: T;`. `new` uses `new { field = val }` (no class name). No `let`/`var` keyword on class fields. `use` for imports.
