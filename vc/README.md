@@ -71,7 +71,7 @@ Software engineering:
 Security:
 - Integrate package management with signed and transparent statements and policies?
 - LFI sandboxing?
-- Control over FFI and built-in access?
+- Control over FFI?
 
 Encode `ValueParam` as types.
 - Need an "equivalence" relation at compile time for invariant sub-typing.

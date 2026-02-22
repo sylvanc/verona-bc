@@ -1430,7 +1430,8 @@ namespace vc
             }
             else if (stmt->in({Neg,  Abs,  Ceil, Floor, Exp,   Log,  Sqrt,
                                Cbrt, Sin,  Cos,  Tan,   Asin,  Acos, Atan,
-                               Sinh, Cosh, Tanh, Asinh, Acosh, Atanh}))
+                               Sinh, Cosh, Tanh, Asinh, Acosh, Atanh,
+                               Read}))
             {
               // Unop: same type as source.
               auto dst = stmt / LocalId;
@@ -1591,7 +1592,45 @@ namespace vc
                 env[dst->location()] = LocalTypeInfo::computed(
                   clone(src_it->second.type));
             }
-            // All other statements (FFI, When, etc.):
+            else if (stmt == FFI)
+            {
+              // Look up the Symbol definition to get its return type.
+              auto dst = stmt / LocalId;
+              auto sym_id = stmt / SymbolId;
+              auto sym_name = sym_id->location();
+              auto cls = node->parent(ClassDef);
+              bool found = false;
+
+              while (cls && !found)
+              {
+                for (auto& child : *(cls / ClassBody))
+                {
+                  if (child != Lib)
+                    continue;
+
+                  for (auto& sym : *(child / Symbols))
+                  {
+                    if ((sym / SymbolId)->location() == sym_name)
+                    {
+                      auto ret_type = sym / Type;
+
+                      if (!ret_type->empty())
+                        env[dst->location()] =
+                          LocalTypeInfo::computed(clone(ret_type));
+
+                      found = true;
+                      break;
+                    }
+                  }
+
+                  if (found)
+                    break;
+                }
+
+                cls = cls->parent(ClassDef);
+              }
+            }
+            // All other statements (When, etc.):
             // result type unknown, don't record in env.
           }
 
