@@ -604,10 +604,6 @@ namespace vc
       if (type == TypeVar)
         return Dyn;
 
-      // Use Dyn until we turn function types into shapes.
-      if (type == FuncType)
-        return Dyn;
-
       // Use [Dyn] for now.
       if (type == TupleType)
         return Array << Dyn;

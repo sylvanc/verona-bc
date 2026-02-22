@@ -18,6 +18,7 @@ int main(int argc, char** argv)
       struc,
       ident(),
       sugar(),
+      functype(),
       dot(),
       application(),
       anf(),

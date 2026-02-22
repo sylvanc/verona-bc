@@ -2,12 +2,17 @@
 
 ## To Do
 
+Structure:
+- Auto create, member conflict.
+- Can auto-RHS conflict with default arguments? Seems yes.
+
 Names.
 - Allow looking down a type parameter.
 - Can we look down an algebraic type (via an alias)?
 
 Reification.
 - Encode shapes as type aliases of all implementing concrete types.
+  - If shapes have the same set, compact them?
 - Post reification type checking.
 
 Sub-typing.
@@ -16,9 +21,10 @@ Sub-typing.
 - Check recursion on type alias.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
-Type inference.
-- Does backwards refinement work for things that aren't primitives?
+Types:
 - Determine `when` type from the `when / Rhs` function type.
+- IR type for tuple. Could be `[dyn]` of correct size with elements that type check.
+- Can type parameters take type arguments?
 
 Check use before definition in `let x = ... x ...`.
 
@@ -46,10 +52,6 @@ Expressions:
 
 Syntax:
 - Region creation.
-
-Structure:
-- Auto create, member conflict.
-- Can auto-RHS conflict with default arguments? Seems yes.
 
 Builtin:
 - String. Just so that string literals have a type that isn't `array[u8]`.
@@ -79,12 +81,7 @@ Encode `ValueParam` as types.
 - Need an "equivalence" relation at compile time for invariant sub-typing.
 - This may require execution during compilation.
 
-Types:
-- Turn function types into structural types.
-- IR types for: union, intersection, tuple, function.
-  - IR tuple type could be `[dyn]` of correct size with elements that type check.
-- Can type parameters take type arguments?
-
 Optimization:
 - Optimize dynamic calls as static when there's a known type for the receiver.
+- Treat parameter types that are shapes as implicit type parameters.
 - Compile time evaluation.

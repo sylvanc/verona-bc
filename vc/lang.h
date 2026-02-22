@@ -230,6 +230,18 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto wfTypeNoFunc = wfType - FuncType - NoArgType;
+
+  // clang-format off
+  inline const auto wfPassFuncType =
+      wfPassSugar
+    | (Type <<= wfTypeNoFunc)
+    | (Union <<= wfTypeNoFunc++[2])
+    | (Isect <<= wfTypeNoFunc++[2])
+    | (TupleType <<= wfTypeNoFunc++[2])
+    ;
+  // clang-format on
+
   inline const auto wfExprDot =
     (wfExprSugar | CallDyn | Convert | Binop | Unop | Nulop | FFI | NewArray |
      ArrayRef) -
@@ -237,7 +249,7 @@ namespace vc
 
   // clang-format off
   inline const auto wfPassDot =
-      wfPassSugar
+      wfPassFuncType
     | (CallDyn <<= Expr * wfFuncId * TypeArgs * Args)
     | (Expr <<= wfExprDot++)
     | (Convert <<= (Type >>= wfPrimitiveType) * Args)
@@ -379,6 +391,7 @@ namespace vc
   PassDef structure(const Parse& parse);
   PassDef ident();
   PassDef sugar();
+  PassDef functype();
   PassDef dot();
   PassDef application();
   PassDef anf();

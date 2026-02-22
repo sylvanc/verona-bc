@@ -410,19 +410,6 @@ namespace vc
         return Type << new_inner;
       }
 
-      if (inner == FuncType)
-      {
-        auto lhs = inner / Lhs;
-        auto rhs = inner / Rhs;
-
-        // Lhs can be wfType or NoArgType.
-        Node new_lhs = (lhs == NoArgType)
-          ? clone(lhs)
-          : apply_subst(top, Type << clone(lhs), subst)->front();
-        Node new_rhs = apply_subst(top, Type << clone(rhs), subst)->front();
-        return Type << (FuncType << new_lhs << new_rhs);
-      }
-
       // TypeVar, TypeSelf, etc. - return as-is.
       return clone(type_node);
     }
