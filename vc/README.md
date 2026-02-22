@@ -18,7 +18,6 @@ Sub-typing.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Types:
-- Determine `when` type from the `when / Rhs` function type.
 - IR type for tuple. Could be `[dyn]` of correct size with elements that type check.
 - Can type parameters take type arguments?
 

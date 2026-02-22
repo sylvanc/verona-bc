@@ -49,16 +49,16 @@ namespace vc
           },
 
         In(Expr) * T(When)
-            << (T(Expr)[Expr] * T(Type)[Type] *
+            << (T(Expr)[Lhs] * T(Type)[Type] *
                 (T(Expr)[Expr] << T(Lambda)[Lambda])) >>
           [](Match& _) {
             if ((_(Lambda) / Params)->size() != 1)
             {
-              return err(_(Expr), "When argument count must match lambda")
+              return err(_(Lhs), "When argument count must match lambda")
                 << errmsg("Lambda is here:") << errloc(_(Lambda));
             }
 
-            return When << (Args << _(Expr)) << _(Type) << _(Expr);
+            return When << (Args << _(Lhs)) << _(Type) << _(Expr);
           },
 
         // Turn lambdas into anonymous classes.

@@ -62,9 +62,20 @@ namespace vc
                                      << (TypeArgs << clone(inner_type))));
     }
 
-    // If type_node is _builtin::ref[T], return T as a cloned Type node.
-    // Returns empty Node otherwise.
-    Node extract_ref_inner(const Node& type_node)
+    // Build a source-level Type node for _builtin::cown[inner].
+    // Creates fresh nodes on each call.
+    Node cown_type(const Node& inner_type)
+    {
+      return Type
+        << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                     << (NameElement << (Ident ^ "cown")
+                                     << (TypeArgs << clone(inner_type))));
+    }
+
+    // If type_node is _builtin::X[T] for the given wrapper name,
+    // return T as a cloned Type node. Returns empty Node otherwise.
+    Node extract_wrapper_inner(
+      const Node& type_node, std::string_view wrapper)
     {
       if (type_node != Type)
         return {};
@@ -77,7 +88,7 @@ namespace vc
       auto first = (inner->front() / Ident)->location().view();
       auto second = (inner->back() / Ident)->location().view();
 
-      if (first != "_builtin" || second != "ref")
+      if (first != "_builtin" || second != wrapper)
         return {};
 
       auto ta = inner->back() / TypeArgs;
@@ -86,6 +97,20 @@ namespace vc
         return {};
 
       return clone(ta->front());
+    }
+
+    // If type_node is _builtin::ref[T], return T as a cloned Type node.
+    // Returns empty Node otherwise.
+    Node extract_ref_inner(const Node& type_node)
+    {
+      return extract_wrapper_inner(type_node, "ref");
+    }
+
+    // If type_node is _builtin::cown[T], return T as a cloned Type node.
+    // Returns empty Node otherwise.
+    Node extract_cown_inner(const Node& type_node)
+    {
+      return extract_wrapper_inner(type_node, "cown");
     }
 
     // Check if a Type node directly references a single TypeParam.
@@ -1630,7 +1655,112 @@ namespace vc
                 cls = cls->parent(ClassDef);
               }
             }
-            // All other statements (When, etc.):
+            else if (stmt == When)
+            {
+              // The When result is cown[T] where T is the return type
+              // of the lambda's apply function. The Rhs local holds
+              // the Lookup result for apply, whose type is already
+              // resolved.
+              auto dst = stmt / LocalId;
+              auto src = stmt / Rhs;
+              auto src_it = env.find(src->location());
+
+              if (src_it != env.end())
+              {
+                auto apply_ret = src_it->second.type;
+
+                // Update the When's Type child so the reify pass can
+                // wrap it in Cown correctly.
+                auto old_type = stmt / Type;
+                stmt->replace(old_type, clone(apply_ret));
+
+                env[dst->location()] =
+                  LocalTypeInfo::computed(cown_type(apply_ret));
+              }
+
+              // Infer ref[T] for unannotated when-lambda params.
+              // Each cown arg in When::Args (after the lambda instance)
+              // corresponds to a non-self param in the apply function.
+              // If the param has a TypeVar type, replace it with ref[T]
+              // where T is the cown's inner type.
+              auto lookup_it = lookup_stmts.find(src->location());
+
+              if (lookup_it != lookup_stmts.end())
+              {
+                auto lookup_node = lookup_it->second;
+                auto recv_local = lookup_node / Rhs;
+                auto recv_it = env.find(recv_local->location());
+
+                if (recv_it != env.end())
+                {
+                  auto recv_type = recv_it->second.type;
+                  auto recv_inner = recv_type->front();
+
+                  if (recv_inner == TypeName)
+                  {
+                    auto class_def = find_def(top, recv_inner);
+
+                    if (class_def && class_def == ClassDef)
+                    {
+                      // Find the apply function.
+                      Node apply_func;
+
+                      for (auto& child : *(class_def / ClassBody))
+                      {
+                        if (
+                          child == Function &&
+                          (child / Ident)->location().view() == "apply")
+                        {
+                          apply_func = child;
+                          break;
+                        }
+                      }
+
+                      if (apply_func)
+                      {
+                        auto params = apply_func / Params;
+                        auto args = stmt / Args;
+
+                        // Args: [lambda_instance, cown1, cown2, ...]
+                        // Params: [self, param1, param2, ...]
+                        // Match cown args (from index 1) to params
+                        // (from index 1).
+                        for (size_t i = 1;
+                             i < args->size() && i < params->size();
+                             ++i)
+                        {
+                          auto param = params->at(i);
+                          auto param_type = param / Type;
+
+                          // Only infer if param has no user annotation
+                          // (TypeVar).
+                          if (param_type->front() != TypeVar)
+                            continue;
+
+                          auto arg_local =
+                            args->at(i) / Rhs;
+                          auto arg_it =
+                            env.find(arg_local->location());
+
+                          if (arg_it == env.end())
+                            continue;
+
+                          auto cown_inner =
+                            extract_cown_inner(arg_it->second.type);
+
+                          if (!cown_inner)
+                            continue;
+
+                          auto new_type = ref_type(cown_inner);
+                          param->replace(param_type, new_type);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            // All other statements:
             // result type unknown, don't record in env.
           }
 
