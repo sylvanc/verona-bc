@@ -2,14 +2,14 @@
 
 ## To Do
 
+Reification.
+- Post reification type checking.
+- Encode shapes as type aliases of all implementing concrete types.
+  - If shapes have the same set, compact them?
+
 Names.
 - Allow looking down a type parameter.
 - Can we look down an algebraic type (via an alias)?
-
-Reification.
-- Encode shapes as type aliases of all implementing concrete types.
-  - If shapes have the same set, compact them?
-- Post reification type checking.
 
 Sub-typing.
 - Better contradiction for type aliases.
@@ -20,8 +20,6 @@ Sub-typing.
 Types:
 - IR type for tuple. Could be `[dyn]` of correct size with elements that type check.
 - Can type parameters take type arguments?
-
-Check use before definition in `let x = ... x ...`.
 
 Calls.
 - Try (rename to `catch`?), sub-call.
