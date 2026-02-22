@@ -6,6 +6,7 @@ functype
     infer_callresult = classdef}
   (classdef
     {
+      create = function
       main = function
       maker = classdef
       wrapper = classdef}
@@ -208,6 +209,7 @@ functype
                         (localid 3:val))))))))))
       (classdef
         {
+          create = function
           value = function}
         (none)
         (ident 5:maker)
@@ -242,7 +244,26 @@ functype
             (where)
             (body
               (expr
-                (localid 1:a))))))
+                (localid 1:a))))
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 16:infer_callresult)
+                  (typeargs))
+                (nameelement
+                  (ident 5:maker)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (function
         {
           w = let
@@ -304,13 +325,30 @@ functype
                   (expr
                     (localid 1:x))))))
           (expr
-            (int 1:0))))))
+            (int 1:0))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 16:infer_callresult)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs)))))))
   (classdef
     {
       any = classdef
       array = classdef
       bool = classdef
       cown = classdef
+      create = function
       f32 = classdef
       f64 = classdef
       i16 = classdef
@@ -15054,18 +15092,39 @@ functype
                     (typeargs)))
                 (tuple))))))
       (classdef
-        {}
+        {
+          create = function}
         (none)
         (ident 3:ptr)
         (typeparams)
         (where)
-        (classbody))
+        (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ptr)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           * =
             function
             function
-          T = typeparam}
+          T = typeparam
+          create = function}
         (none)
         (ident 3:ref)
         (typeparams
@@ -15186,7 +15245,37 @@ functype
                           (typeargs)))
                       (args
                         (expr
-                          (localid 4:self)))))))))))
+                          (localid 4:self)))))))))
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ref)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           ! = function
@@ -24420,4 +24509,20 @@ functype
                     (typeargs)))
                 (exprseq
                   (expr
-                    (localid 4:self)))))))))))
+                    (localid 4:self))))))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs))))))))

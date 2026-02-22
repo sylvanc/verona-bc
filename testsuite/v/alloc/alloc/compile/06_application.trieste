@@ -7,6 +7,7 @@ application
   (classdef
     {
       cell = classdef
+      create = function
       main = function}
     (none)
     (ident 5:alloc)
@@ -365,13 +366,30 @@ application
                       (localid 1:b))
                     (ident 1:f)
                     (typeargs)
-                    (args))))))))))
+                    (args))))))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 5:alloc)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs)))))))
   (classdef
     {
       any = classdef
       array = classdef
       bool = classdef
       cown = classdef
+      create = function
       f32 = classdef
       f64 = classdef
       i16 = classdef
@@ -14858,18 +14876,39 @@ application
                   (none)
                   (args)))))))
       (classdef
-        {}
+        {
+          create = function}
         (none)
         (ident 3:ptr)
         (typeparams)
         (where)
-        (classbody))
+        (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ptr)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           * =
             function
             function
-          T = typeparam}
+          T = typeparam
+          create = function}
         (none)
         (ident 3:ref)
         (typeparams
@@ -14991,7 +15030,37 @@ application
                               (typeargs)))
                           (args
                             (expr
-                              (localid 4:self)))))))))))))
+                              (localid 4:self)))))))))))
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ref)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           ! = function
@@ -24045,4 +24114,20 @@ application
                     (expr
                       (exprseq
                         (expr
-                          (localid 4:self))))))))))))))
+                          (localid 4:self)))))))))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs))))))))

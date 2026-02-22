@@ -839,6 +839,59 @@ namespace vc
             ok = false;
           }
         }
+        else if (
+          (node == ClassDef) && ((node / Shape) != Shape) &&
+          !node->get_contains_error())
+        {
+          // Auto-create: generate a default `create` function for non-shape
+          // classes that don't already have one. The create takes parameters
+          // matching the class fields and calls `new` with them.
+          auto cls_body = node / ClassBody;
+          bool has_create = false;
+
+          for (auto& child : *cls_body)
+          {
+            if (
+              (child == Function) && ((child / Lhs) == Rhs) &&
+              (child / Ident)->location().view() == "create")
+            {
+              has_create = true;
+              break;
+            }
+          }
+
+          if (!has_create)
+          {
+            Node params = Params;
+            Node new_args = NewArgs;
+
+            for (auto& child : *cls_body)
+            {
+              if (child != FieldDef)
+                continue;
+
+              auto field_ident = child / Ident;
+              auto field_type = child / Type;
+
+              params
+                << (ParamDef << clone(field_ident) << clone(field_type)
+                             << Body);
+              new_args
+                << (NewArg << clone(field_ident)
+                           << (Expr
+                               << (FuncName
+                                   << (NameElement << clone(field_ident)
+                                                   << TypeArgs))));
+            }
+
+            auto type = make_selftype(node / Ident);
+
+            cls_body
+              << (Function << Rhs << (Ident ^ "create") << TypeParams
+                           << params << type << Where
+                           << (Body << (Expr << (New << new_args))));
+          }
+        }
         else if (node == ClassBody)
         {
           // Check for conflicting functions: same name, handedness, and

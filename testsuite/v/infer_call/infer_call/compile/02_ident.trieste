@@ -7,6 +7,7 @@ ident
   (classdef
     {
       add = function
+      create = function
       main = function}
     (none)
     (ident 10:infer_call)
@@ -87,13 +88,30 @@ ident
               (expr
                 (int 1:1))
               (expr
-                (int 1:2))))))))
+                (int 1:2))))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 10:infer_call)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs)))))))
   (classdef
     {
       any = classdef
       array = classdef
       bool = classdef
       cown = classdef
+      create = function
       f32 = classdef
       f64 = classdef
       i16 = classdef
@@ -15252,16 +15270,37 @@ ident
                     (typeargs)))
                 (tuple))))))
       (classdef
-        {}
+        {
+          create = function}
         (none)
         (ident 3:ptr)
         (typeparams)
         (where)
-        (classbody))
+        (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ptr)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           * = function
-          T = typeparam}
+          T = typeparam
+          create = function}
         (none)
         (ident 3:ref)
         (typeparams
@@ -15322,7 +15361,37 @@ ident
             (where)
             (body
               (expr
-                (localid 4:self))))))
+                (localid 4:self))))
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ref)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           ! = function
@@ -24880,4 +24949,20 @@ ident
                     (typeargs)))
                 (exprseq
                   (expr
-                    (localid 4:self)))))))))))
+                    (localid 4:self))))))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs))))))))

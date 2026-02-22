@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2029)
+            (localid 5:$2033)
             (functionid 23:infer_shape::main::0::0)
             (args)))
         (ret
-          (localid 5:$2029)))))
+          (localid 5:$2033)))))
   (func
     (functionid 23:infer_shape::main::0::0)
     (params)
@@ -27,7 +27,7 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1448)
+            (localid 10:local$1452)
             (i32)
             (int 2:42))
           (call
@@ -36,7 +36,7 @@ reify
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1448))))
+                (localid 10:local$1452))))
           (copy
             (localid 1:b)
             (localid 10:local$1408))
@@ -86,18 +86,18 @@ reify
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1446)
+            (localid 10:local$1450)
             (localid 1:g)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1447)
-            (localid 10:local$1446)
+            (localid 10:local$1451)
+            (localid 10:local$1450)
             (args
               (arg
                 (argcopy)
                 (localid 1:g)))))
         (ret
-          (localid 10:local$1447)))))
+          (localid 10:local$1451)))))
   (class
     (classid 19:infer_shape::box::0)
     (fields
@@ -124,18 +124,18 @@ reify
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1444)
+            (localid 10:local$1448)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1445)
-            (localid 10:local$1444)
+            (localid 10:local$1449)
+            (localid 10:local$1448)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1445)))))
+          (localid 10:local$1449)))))
   (func
     (functionid 27:infer_shape::box::val::1::0)
     (params
@@ -156,10 +156,10 @@ reify
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1732)
+            (localid 10:local$1736)
             (localid 10:local$1406)))
         (ret
-          (localid 10:local$1732)))))
+          (localid 10:local$1736)))))
   (func
     (functionid 32:infer_shape::box::val::1::ref::0)
     (params
@@ -174,13 +174,13 @@ reify
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1443)
+            (localid 10:local$1447)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1443)))))
+          (localid 10:local$1447)))))
   (primitive
     (ref
       (i32))

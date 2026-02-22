@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2027)
+            (localid 5:$2031)
             (functionid 25:infer_calldyn::main::0::0)
             (args)))
         (ret
-          (localid 5:$2027)))))
+          (localid 5:$2031)))))
   (func
     (functionid 25:infer_calldyn::main::0::0)
     (params)
@@ -27,7 +27,7 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1443)
+            (localid 10:local$1447)
             (i32)
             (int 1:1))
           (call
@@ -36,24 +36,24 @@ reify
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1443))))
+                (localid 10:local$1447))))
           (copy
             (localid 1:w)
             (localid 10:local$1405))
           (lookup
-            (localid 10:local$1444)
+            (localid 10:local$1448)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1445)
-            (localid 10:local$1444)
+            (localid 10:local$1449)
+            (localid 10:local$1448)
             (args
               (arg
                 (argcopy)
                 (localid 1:w))))
           (copy
             (localid 1:v)
-            (localid 10:local$1445))
+            (localid 10:local$1449))
           (call
             (localid 10:local$1406)
             (functionid 29:infer_calldyn::identity::1::0)
@@ -127,18 +127,18 @@ reify
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1441)
+            (localid 10:local$1445)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1442)
-            (localid 10:local$1441)
+            (localid 10:local$1446)
+            (localid 10:local$1445)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1442)))))
+          (localid 10:local$1446)))))
   (func
     (functionid 33:infer_calldyn::wrapper::val::1::0)
     (params
@@ -159,10 +159,10 @@ reify
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1729)
+            (localid 10:local$1733)
             (localid 10:local$1403)))
         (ret
-          (localid 10:local$1729)))))
+          (localid 10:local$1733)))))
   (func
     (functionid 38:infer_calldyn::wrapper::val::1::ref::0)
     (params
@@ -177,13 +177,13 @@ reify
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1440)
+            (localid 10:local$1444)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1440)))))
+          (localid 10:local$1444)))))
   (primitive
     (ref
       (i32))

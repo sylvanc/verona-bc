@@ -7,6 +7,7 @@ structure
   (classdef
     {
       apply_and_wrap = function
+      create = function
       main = function
       wrapper = classdef
       include }
@@ -278,13 +279,30 @@ structure
                 (typeargs)))
             (dot
               (ident 3:get)
-              (typeargs)))))))
+              (typeargs)))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 12:lambda_infer)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs)))))))
   (classdef
     {
       any = classdef
       array = classdef
       bool = classdef
       cown = classdef
+      create = function
       f32 = classdef
       f64 = classdef
       i16 = classdef
@@ -14285,16 +14303,37 @@ structure
                     (typeargs)))
                 (tuple))))))
       (classdef
-        {}
+        {
+          create = function}
         (none)
         (ident 3:ptr)
         (typeparams)
         (where)
-        (classbody))
+        (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ptr)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           * = function
-          T = typeparam}
+          T = typeparam
+          create = function}
         (none)
         (ident 3:ref)
         (typeparams
@@ -14340,7 +14379,31 @@ structure
                 (funcname
                   (nameelement
                     (ident 4:self)
-                    (typeargs))))))))
+                    (typeargs))))))
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {
           ! = function
@@ -23214,4 +23277,20 @@ structure
                     (funcname
                       (nameelement
                         (ident 4:self)
-                        (typeargs)))))))))))))
+                        (typeargs))))))))))
+      (function
+        {}
+        (rhs)
+        (ident 6:create)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (new
+              (newargs))))))))
