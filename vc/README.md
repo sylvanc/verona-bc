@@ -2,9 +2,6 @@
 
 ## To Do
 
-Structure:
-- Auto create.
-
 Names.
 - Allow looking down a type parameter.
 - Can we look down an algebraic type (via an alias)?

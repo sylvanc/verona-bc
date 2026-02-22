@@ -102,6 +102,22 @@ namespace vc
       return FFI << (SymbolId ^ (name->front() / Ident)) << args;
     }
 
+    // Builtin operators can only be used in the _builtin package.
+    auto pkg = name->parent(ClassDef);
+
+    while (pkg)
+    {
+      auto next = pkg->parent(ClassDef);
+
+      if (!next)
+        break;
+
+      pkg = next;
+    }
+
+    if (!pkg || ((pkg / Ident)->location().view() != "_builtin"))
+      return err(name, "Builtin operators can only appear in `_builtin`");
+
     if (find->second.typeargs != ta_count)
       return err(name, "Wrong number of type arguments");
 
