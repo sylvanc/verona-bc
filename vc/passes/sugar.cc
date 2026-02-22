@@ -364,7 +364,11 @@ namespace vc
             << (T(Lhs) * T(Ident, SymbolId)[Ident] * T(TypeParams)[TypeParams] *
                 T(Params)[Params] * T(Type)[Type] * T(Where)[Where]) >>
           [](Match& _) -> Node {
-          // Check if an RHS function with the same name and arity exists.
+          // Check if an RHS function with the same name exists that covers
+          // this arity. An RHS function with default arguments will expand
+          // to cover arities from its minimum arity (without defaults) to
+          // its full arity. Don't generate an auto-RHS if a default argument
+          // expansion will cover this arity.
           auto ident = _(Ident);
           auto arity = _(Params)->size();
           auto cls = _(Function)->parent(ClassBody);
@@ -373,8 +377,22 @@ namespace vc
           {
             if (
               (def == Function) && ((def / Lhs) == Rhs) &&
-              (def / Ident)->equals(ident) && ((def / Params)->size() == arity))
-              return NoChange;
+              (def / Ident)->equals(ident))
+            {
+              auto rhs_params = def / Params;
+              auto rhs_arity = rhs_params->size();
+
+              // Compute minimum arity by excluding trailing default args.
+              auto rhs_min_arity = rhs_arity;
+
+              while (
+                (rhs_min_arity > 0) &&
+                !(rhs_params->at(rhs_min_arity - 1) / Body)->empty())
+                rhs_min_arity--;
+
+              if ((arity >= rhs_min_arity) && (arity <= rhs_arity))
+                return NoChange;
+            }
           }
 
           // Forward the arguments.

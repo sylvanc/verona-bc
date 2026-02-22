@@ -3,8 +3,7 @@
 ## To Do
 
 Structure:
-- Auto create, member conflict.
-- Can auto-RHS conflict with default arguments? Seems yes.
+- Auto create.
 
 Names.
 - Allow looking down a type parameter.

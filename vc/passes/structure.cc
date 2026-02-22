@@ -839,6 +839,52 @@ namespace vc
             ok = false;
           }
         }
+        else if (node == ClassBody)
+        {
+          // Check for conflicting functions: same name, handedness, and
+          // parameter count.
+          struct FuncSig
+          {
+            Token hand;
+            std::string name;
+            size_t arity;
+          };
+
+          std::vector<std::pair<FuncSig, Node>> seen;
+
+          for (auto& child : *node)
+          {
+            if (child != Function)
+              continue;
+
+            FuncSig sig{
+              (child / Lhs)->type(),
+              std::string((child / Ident)->location().view()),
+              (child / Params)->size()};
+
+            bool conflict = false;
+
+            for (auto& [prev_sig, prev_node] : seen)
+            {
+              if (
+                (prev_sig.hand == sig.hand) && (prev_sig.name == sig.name) &&
+                (prev_sig.arity == sig.arity))
+              {
+                node->replace(
+                  child,
+                  err(child, "Conflicting function definition")
+                    << errmsg("Previous definition was here:")
+                    << errloc(prev_node));
+                conflict = true;
+                ok = false;
+                break;
+              }
+            }
+
+            if (!conflict)
+              seen.push_back({sig, child});
+          }
+        }
 
         return ok;
       });
