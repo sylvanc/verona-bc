@@ -116,6 +116,7 @@ namespace vbcc
   PassDef assignids(std::shared_ptr<Bytecode> state);
   PassDef validids(std::shared_ptr<Bytecode> state);
   PassDef liveness(std::shared_ptr<Bytecode> state);
+  PassDef typecheck(std::shared_ptr<Bytecode> state);
 
   Node err(const std::string& msg);
   Node err(Node node, const std::string& msg);

@@ -27,6 +27,7 @@ int main(int argc, char** argv)
       vbcc::assignids(state),
       vbcc::validids(state),
       vbcc::liveness(state),
+      vbcc::typecheck(state),
     },
     parse};
 
@@ -55,7 +56,7 @@ int main(int argc, char** argv)
 
         auto pass = cli.get_option_no_throw("pass");
 
-        if (!pass || (pass->as<std::string>() == "liveness"))
+        if (!pass || (pass->as<std::string>() == "typecheck"))
           run_gen = true;
       });
     }

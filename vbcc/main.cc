@@ -15,7 +15,8 @@ int main(int argc, char** argv)
      labels(),
      assignids(state),
      validids(state),
-     liveness(state)},
+     liveness(state),
+     typecheck(state)},
     parser()};
 
   struct Options : public trieste::Options
