@@ -74,6 +74,45 @@ namespace vc
           assert(false);
       }
 
+      // Resolve shapes: each shape becomes a Type node mapping its TypeId
+      // to a Union of all reified concrete classes that satisfy it.
+      {
+        SequentCtx ctx{top, {}, {}};
+
+        for (auto& key : map_order)
+        {
+          for (auto& r : map[key])
+          {
+            if (r.def != ClassDef || (r.def / Shape) != Shape)
+              continue;
+
+            assert(r.resolved_name);
+            Node union_node = Union;
+
+            for (auto& ckey : map_order)
+            {
+              for (auto& cr : map[ckey])
+              {
+                if (cr.def != ClassDef || (cr.def / Shape) == Shape)
+                  continue;
+                if (!cr.resolved_name)
+                  continue;
+
+                if (check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
+                  union_node << clone(cr.id);
+              }
+            }
+
+            if (union_node->empty())
+              r.reification = Type << clone(r.id) << Dyn;
+            else if (union_node->size() == 1)
+              r.reification = Type << clone(r.id) << union_node->front();
+            else
+              r.reification = Type << clone(r.id) << union_node;
+          }
+        }
+      }
+
       // Remove existing contents.
       top->erase(top->begin(), top->end());
 
@@ -104,6 +143,7 @@ namespace vc
       NodeMap<Node> subst;
       Node id;
       Node reification;
+      Node resolved_name; // Resolved TypeName for shape checking
     };
 
     // A MethodInvocation captures a Lookup site so we can register the
@@ -266,7 +306,8 @@ namespace vc
     // (make_id fully resolves element types without using the index). For all
     // other defs, dedup uses substitution map equality (the index embedded in
     // generic ClassId strings would vary per call, breaking id comparison).
-    Node find_or_push(const Node& def, NodeMap<Node> subst)
+    Node find_or_push(
+      const Node& def, NodeMap<Node> subst, Node resolved_name = {})
     {
       auto it = map.find(def);
       bool is_new_key = (it == map.end());
@@ -293,7 +334,12 @@ namespace vc
               return clone(existing.id);
           }
 
-          r_vec.push_back({def, std::move(subst), std::move(id), {}});
+          r_vec.push_back(
+            {def,
+             std::move(subst),
+             std::move(id),
+             {},
+             std::move(resolved_name)});
           worklist.push_back(&r_vec.back());
           return clone(r_vec.back().id);
         }
@@ -307,20 +353,22 @@ namespace vc
       }
 
       auto id = make_id(def, r_vec.size(), subst);
-      r_vec.push_back({def, std::move(subst), std::move(id), {}});
+      r_vec.push_back(
+        {def,
+         std::move(subst),
+         std::move(id),
+         {},
+         std::move(resolved_name)});
       worklist.push_back(&r_vec.back());
       return clone(r_vec.back().id);
     }
 
     void reify_class(Reification& r)
     {
-      // Shapes are treated as dynamic types. They never reach the worklist
-      // (get_reification returns Dyn early), but guard defensively.
+      // Shape reification is handled post-worklist: build a Type node
+      // mapping the shape's TypeId to a Union of matching concrete classes.
       if ((r.def / Shape) == Shape)
-      {
-        r.id = Dyn;
         return;
-      }
 
       if (r.id != ClassId)
       {
@@ -700,7 +748,13 @@ namespace vc
 
         auto defs = builtin->look(Location(std::string(k)));
         assert(defs.size() == 1);
-        find_or_push(defs.front(), {});
+
+        // Build a TypeName for shape checking.
+        Node prim_name = TypeName
+          << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+          << (NameElement << (Ident ^ std::string(k)) << TypeArgs);
+
+        find_or_push(defs.front(), {}, prim_name);
         return;
       }
     }
@@ -763,7 +817,7 @@ namespace vc
           return;
       }
 
-      r_vec.push_back({ref_def, {}, std::move(expected_id), {}});
+      r_vec.push_back({ref_def, {}, std::move(expected_id), {}, {}});
       worklist.push_back(&r_vec.back());
     }
 
@@ -1103,7 +1157,7 @@ namespace vc
       // r.subst only contains entries for TypeParams encountered during
       // navigation (the def's own params), not the caller's context.
       // resolve_subst combines both for resolving TypeArg references.
-      Reification r{top, {}, {}, {}};
+      Reification r{top, {}, {}, {}, {}};
       NodeMap<Node> resolve_subst = subst;
 
       for (auto it = name->begin(); it != name->end(); ++it)
@@ -1263,11 +1317,38 @@ namespace vc
 
       }
 
-      // Shapes are treated as dynamic types. No reification needed.
-      if ((def == ClassDef) && ((def / Shape) == Shape))
-        return Dyn;
+      // Build a resolved TypeName with all TypeParam refs substituted.
+      // This is stored on the Reification for use in shape checking.
+      Node resolved_name;
+      resolved_name = name->type();
 
-      return find_or_push(def, std::move(r.subst));
+      for (auto& elem : *name)
+      {
+        Node new_ta = TypeArgs;
+
+        for (auto& a : *(elem / TypeArgs))
+          new_ta << clone(resolve_typearg(a, resolve_subst));
+
+        resolved_name
+          << (NameElement << clone(elem / Ident) << new_ta);
+      }
+
+      // Shapes produce Dyn in function bodies (preserving method dispatch
+      // behavior), but we record a map entry so the post-worklist phase
+      // can build a Type << TypeId << Union of matching concrete classes.
+      if ((def == ClassDef) && ((def / Shape) == Shape))
+      {
+        // _builtin::any is the universal shape — remains pure Dyn.
+        if (
+          (def->parent(ClassDef) == builtin) &&
+          ((def / Ident)->location().view() == "any"))
+          return Dyn;
+
+        find_or_push(def, std::move(r.subst), resolved_name);
+        return Dyn;
+      }
+
+      return find_or_push(def, std::move(r.subst), resolved_name);
     }
 
     Node make_id(const Node& def, size_t index, const NodeMap<Node>& subst)
@@ -1318,7 +1399,11 @@ namespace vc
       id = std::format("{}::{}", id, index);
 
       if (def == ClassDef)
+      {
+        if ((def / Shape) == Shape)
+          return TypeId ^ id;
         return ClassId ^ id;
+      }
       else if (def == TypeAlias)
         return TypeId ^ id;
       else if (def == Function)

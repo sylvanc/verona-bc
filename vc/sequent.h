@@ -52,6 +52,19 @@ namespace trieste
   {
     Node scope;
     Nodes implies;
+
+    // Coinductive assumptions that are visible to axiom callbacks but are
+    // NOT decomposed by the proof engine. Use this to store assumptions
+    // such as "l <: r" that would cause infinite decomposition if placed
+    // in `implies`. Axiom callbacks can inspect `assumptions` to detect
+    // that a subtype relationship has already been assumed by a caller,
+    // breaking cycles in recursive type definitions (e.g., a shape whose
+    // method returns the shape type itself).
+    //
+    // Unlike `implies`, entries here are simply copied into child proof
+    // states — they are never split into antecedent/consequent by the
+    // sequent calculus reduction.
+    Nodes assumptions;
   };
 
   using Axiom = std::function<bool(const SequentCtx& ctx, Node& l, Node& r)>;
@@ -104,6 +117,7 @@ namespace trieste
     {
       State state;
       state.ctx.scope = ctx.scope;
+      state.ctx.assumptions = ctx.assumptions;
       state.lhs_pending = ctx.implies;
       state.lhs_pending.push_back(l);
       state.rhs_pending.push_back(r);
@@ -117,7 +131,7 @@ namespace trieste
 
     bool operator()(const Node& scope, const Node& l, const Node& r) const
     {
-      return (*this)(SequentCtx{scope, {}}, l, r);
+      return (*this)(SequentCtx{scope, {}, {}}, l, r);
     }
 
     bool invariant(const SequentCtx& ctx, const Node& l, const Node& r) const
@@ -127,8 +141,8 @@ namespace trieste
 
     bool invariant(const Node& scope, const Node& l, const Node& r) const
     {
-      return (*this)(SequentCtx{scope, {}}, l, r) &&
-        (*this)(SequentCtx{scope, {}}, r, l);
+      return (*this)(SequentCtx{scope, {}, {}}, l, r) &&
+        (*this)(SequentCtx{scope, {}, {}}, r, l);
     }
 
   private:
@@ -255,8 +269,14 @@ namespace trieste
           // LHS 'implies' is a sequent split. Keep the implication in the
           // context for both branches, since it can be used as an assumption in
           // either branch.
-          state.ctx.implies.push_back(l);
           assert(l->size() == 2);
+
+          if (!std::any_of(
+                state.ctx.implies.begin(),
+                state.ctx.implies.end(),
+                [&](Node& i) { return i->equals(l); }))
+            state.ctx.implies.push_back(l);
+
           return split_right(state, l->front()) && split_left(state, l->back());
         }
         else
@@ -309,8 +329,7 @@ namespace trieste
       // that.
       auto cr = contradiction_axioms.find(r->type());
       auto cl = contradiction_axioms.find(l->type());
-      bool has_axiom =
-        (cr != contradiction_axioms.end()) ||
+      bool has_axiom = (cr != contradiction_axioms.end()) ||
         (cl != contradiction_axioms.end());
 
       if ((cr != contradiction_axioms.end()) && !cr->second(state.ctx, l, r))

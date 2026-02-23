@@ -2,6 +2,33 @@
 
 namespace vc
 {
+  // Filter out implications that mention TypeSelf. TypeSelf bindings are
+  // local to each shape check and must not leak into recursive calls.
+  Nodes filter_typeself(const Nodes& implies)
+  {
+    Nodes result;
+
+    for (auto& imp : implies)
+    {
+      bool has_typeself = false;
+
+      imp->traverse([&](const Node& n) {
+        if (n == TypeSelf)
+        {
+          has_typeself = true;
+          return false;
+        }
+
+        return true;
+      });
+
+      if (!has_typeself)
+        result.push_back(imp);
+    }
+
+    return result;
+  }
+
   // Build SubType implications from a TypeName reference's path.
   // Each TypeArg on a NameElement is paired with the corresponding
   // TypeParam of that scope, creating bidirectional SubType
@@ -140,19 +167,46 @@ namespace vc
   // concrete param), return type covariant (concrete ret <: shape ret).
   bool check_shape_subtype(const SequentCtx& ctx, const Node& l, const Node& r)
   {
+    // Coinductive check: if l <: r is already assumed in the
+    // assumptions (not implies), return true. This handles recursive
+    // shape types where a shape function returns the same shape type.
+    // Assumptions are visible to axiom callbacks but are never
+    // decomposed by the sequent calculus, preventing infinite
+    // re-decomposition of the coinductive hypothesis.
+    for (auto& imp : ctx.assumptions)
+    {
+      if (imp != SubType || imp->size() != 2)
+        continue;
+
+      auto imp_l = imp->front();
+      auto imp_r = imp->back();
+      auto l_copy = l;
+      auto r_copy = r;
+
+      if (
+        imp_l == Type && imp_r == Type && imp_l->size() == 1 &&
+        imp_r->size() == 1 && imp_l->front()->equals(l_copy) &&
+        imp_r->front()->equals(r_copy))
+        return true;
+    }
+
     auto l_def = find_def(ctx.scope, l);
     auto r_def = find_def(ctx.scope, r);
-    assert(l_def && r_def);
+    if (!l_def || !r_def)
+      return false;
     assert((r_def == ClassDef) && ((r_def / Shape) == Shape));
 
-    // Build TypeArg↔TypeParam implications for both sides.
-    auto new_ctx = build_typearg_ctx(ctx, l);
-    new_ctx = build_typearg_ctx(new_ctx, r);
+    // Filter out TypeSelf implications from the caller's context.
+    // TypeSelf bindings are local to each shape check — leaking them
+    // into recursive calls creates false type equalities between
+    // unrelated types. Other implications (e.g., TypeParam bindings)
+    // are preserved.
+    SequentCtx filtered_ctx{
+      ctx.scope, filter_typeself(ctx.implies), ctx.assumptions};
 
-    // Add A <: S as an assumption to prevent infinite recursion when
-    // checking function parameter types that reference the shape itself.
-    new_ctx.implies.push_back(
-      SubType << (Type << clone(l)) << (Type << clone(r)));
+    // Build TypeArg↔TypeParam implications for both sides.
+    auto new_ctx = build_typearg_ctx(filtered_ctx, l);
+    new_ctx = build_typearg_ctx(new_ctx, r);
 
     // TypeSelf = l (the proposed concrete subtype). Bidirectional
     // implications make TypeSelf invariant with the concrete type.
@@ -160,6 +214,13 @@ namespace vc
       SubType << (Type << TypeSelf) << (Type << clone(l)));
     new_ctx.implies.push_back(
       SubType << (Type << clone(l)) << (Type << TypeSelf));
+
+    // Coinductive assumption: l <: r. Stored in `assumptions` (not
+    // `implies`) so the sequent calculus never decomposes it. The
+    // check_shape_subtype coinductive check above inspects assumptions
+    // directly to break recursive cycles.
+    new_ctx.assumptions.push_back(
+      SubType << (Type << clone(l)) << (Type << clone(r)));
 
     // Every function on the shape must have a compatible match on l.
     for (auto& shape_func : *(r_def / ClassBody))
@@ -212,8 +273,13 @@ namespace vc
     assert((l_def / Shape) == Shape);
     assert((r_def / Shape) == Shape);
 
+    // Filter out TypeSelf implications — shape conflict checks are
+    // abstract and a leaked TypeSelf binding would give wrong results.
+    SequentCtx filtered_ctx{
+      ctx.scope, filter_typeself(ctx.implies), ctx.assumptions};
+
     // Build TypeArg↔TypeParam implications for both sides.
-    auto new_ctx = build_typearg_ctx(ctx, l);
+    auto new_ctx = build_typearg_ctx(filtered_ctx, l);
     new_ctx = build_typearg_ctx(new_ctx, r);
 
     for (auto& l_func : *(l_def / ClassBody))

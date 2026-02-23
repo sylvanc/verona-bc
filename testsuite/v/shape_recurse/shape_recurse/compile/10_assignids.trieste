@@ -12,13 +12,13 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2033)
-            (functionid 23:infer_shape::main::0::0)
+            (localid 5:$2035)
+            (functionid 25:shape_recurse::main::0::0)
             (args)))
         (ret
-          (localid 5:$2033)))))
+          (localid 5:$2035)))))
   (func
-    (functionid 23:infer_shape::main::0::0)
+    (functionid 25:shape_recurse::main::0::0)
     (params)
     (i32)
     (vars)
@@ -27,57 +27,57 @@ assignids
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1452)
+            (localid 10:local$1454)
             (i32)
             (int 2:42))
           (call
-            (localid 10:local$1408)
-            (functionid 30:infer_shape::box::create::1::0)
+            (localid 10:local$1410)
+            (functionid 32:shape_recurse::box::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1452))))
+                (localid 10:local$1454))))
           (copy
             (localid 1:b)
-            (localid 10:local$1408))
+            (localid 10:local$1410))
           (call
-            (localid 10:local$1409)
-            (functionid 26:infer_shape::extract::1::0)
+            (localid 10:local$1411)
+            (functionid 27:shape_recurse::invoke::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:b)))))
         (ret
-          (localid 10:local$1409)))))
+          (localid 10:local$1411)))))
   (primitive
     (i32)
     (methods))
   (func
-    (functionid 30:infer_shape::box::create::1::0)
+    (functionid 32:shape_recurse::box::create::1::0)
     (params
       (param
-        (localid 3:val)
+        (localid 1:x)
         (i32)))
-    (classid 19:infer_shape::box::0)
+    (classid 21:shape_recurse::box::0)
     (vars)
     (labels
       (label
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1407)
-            (classid 19:infer_shape::box::0)
+            (localid 10:local$1409)
+            (classid 21:shape_recurse::box::0)
             (args
               (arg
                 (argcopy)
-                (localid 3:val)))))
+                (localid 1:x)))))
         (ret
-          (localid 10:local$1407)))))
+          (localid 10:local$1409)))))
   (func
-    (functionid 26:infer_shape::extract::1::0)
+    (functionid 27:shape_recurse::invoke::1::0)
     (params
       (param
-        (localid 1:g)
+        (localid 1:r)
         (dyn)))
     (i32)
     (vars)
@@ -86,40 +86,40 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1450)
-            (localid 1:g)
-            (methodid 9:get::1::0))
+            (localid 10:local$1452)
+            (localid 1:r)
+            (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1451)
-            (localid 10:local$1450)
+            (localid 10:local$1453)
+            (localid 10:local$1452)
             (args
               (arg
                 (argcopy)
-                (localid 1:g)))))
+                (localid 1:r)))))
         (ret
-          (localid 10:local$1451)))))
+          (localid 10:local$1453)))))
   (type
-    (typeid 22:infer_shape::getter::0)
-    (classid 19:infer_shape::box::0))
+    (typeid 26:shape_recurse::returner::0)
+    (classid 21:shape_recurse::box::0))
   (class
-    (classid 19:infer_shape::box::0)
+    (classid 21:shape_recurse::box::0)
     (fields
       (field
-        (fieldid 3:val)
+        (fieldid 1:v)
         (i32)))
     (methods
       (method
-        (methodid 9:get::1::0)
-        (functionid 27:infer_shape::box::get::1::0))
-      (method
         (methodid 9:val::1::0)
-        (functionid 27:infer_shape::box::val::1::0))))
+        (functionid 29:shape_recurse::box::val::1::0))
+      (method
+        (methodid 7:v::1::0)
+        (functionid 27:shape_recurse::box::v::1::0))))
   (func
-    (functionid 27:infer_shape::box::get::1::0)
+    (functionid 29:shape_recurse::box::val::1::0)
     (params
       (param
         (localid 4:self)
-        (classid 19:infer_shape::box::0)))
+        (classid 21:shape_recurse::box::0)))
     (i32)
     (vars)
     (labels
@@ -127,24 +127,24 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1448)
+            (localid 10:local$1450)
             (localid 4:self)
-            (methodid 9:val::1::0))
+            (methodid 7:v::1::0))
           (calldyn
-            (localid 10:local$1449)
-            (localid 10:local$1448)
+            (localid 10:local$1451)
+            (localid 10:local$1450)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1449)))))
+          (localid 10:local$1451)))))
   (func
-    (functionid 27:infer_shape::box::val::1::0)
+    (functionid 27:shape_recurse::box::v::1::0)
     (params
       (param
         (localid 4:self)
-        (classid 19:infer_shape::box::0)))
+        (classid 21:shape_recurse::box::0)))
     (i32)
     (vars)
     (labels
@@ -152,23 +152,23 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1406)
-            (functionid 32:infer_shape::box::val::1::ref::0)
+            (localid 10:local$1408)
+            (functionid 32:shape_recurse::box::v::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1736)
-            (localid 10:local$1406)))
+            (localid 10:local$1738)
+            (localid 10:local$1408)))
         (ret
-          (localid 10:local$1736)))))
+          (localid 10:local$1738)))))
   (func
-    (functionid 32:infer_shape::box::val::1::ref::0)
+    (functionid 32:shape_recurse::box::v::1::ref::0)
     (params
       (param
         (localid 4:self)
-        (classid 19:infer_shape::box::0)))
+        (classid 21:shape_recurse::box::0)))
     (ref
       (i32))
     (vars)
@@ -177,13 +177,13 @@ assignids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1447)
+            (localid 10:local$1449)
             (arg
               (argcopy)
               (localid 4:self))
-            (fieldid 3:val)))
+            (fieldid 1:v)))
         (ret
-          (localid 10:local$1447)))))
+          (localid 10:local$1449)))))
   (primitive
     (ref
       (i32))

@@ -2,63 +2,60 @@
 
 namespace vc
 {
-  namespace
+  // Synthetic location for generated functype shape names.
+  inline const auto l_functype = Location("fn");
+
+  // Given a FuncType node and the Top node, collect all TypeName children
+  // that resolve to TypeParam definitions. Returns a list of
+  // (TypeParam def node, TypeName node) pairs, deduplicated by def identity.
+  struct FreeTP
   {
-    // Synthetic location for generated functype shape names.
-    inline const auto l_functype = Location("fn");
+    Node def; // The TypeParam definition node.
+    Node name; // The FQ TypeName referencing it.
+  };
 
-    // Given a FuncType node and the Top node, collect all TypeName children
-    // that resolve to TypeParam definitions. Returns a list of
-    // (TypeParam def node, TypeName node) pairs, deduplicated by def identity.
-    struct FreeTP
+  std::vector<FreeTP> collect_free_typeparams(Node ft, Node top)
+  {
+    std::vector<FreeTP> result;
+    std::set<Node> seen;
+
+    ft->traverse([&](auto node) {
+      if (node == TypeName)
+      {
+        auto def = find_def(top, node);
+
+        if (def && (def == TypeParam) && seen.insert(def).second)
+          result.push_back({def, node});
+      }
+
+      return true;
+    });
+
+    return result;
+  }
+
+  // Extract the parameter types from a FuncType's Lhs.
+  // NoArgType -> empty list.
+  // TupleType -> list of children.
+  // Single wfType -> list of one.
+  Nodes functype_params(Node ft)
+  {
+    auto lhs = ft / Lhs;
+
+    if (lhs == NoArgType)
+      return {};
+
+    if (lhs == TupleType)
     {
-      Node def;  // The TypeParam definition node.
-      Node name; // The FQ TypeName referencing it.
-    };
+      Nodes result;
 
-    std::vector<FreeTP> collect_free_typeparams(Node ft, Node top)
-    {
-      std::vector<FreeTP> result;
-      std::set<Node> seen;
-
-      ft->traverse([&](auto node) {
-        if (node == TypeName)
-        {
-          auto def = find_def(top, node);
-
-          if (def && (def == TypeParam) && seen.insert(def).second)
-            result.push_back({def, node});
-        }
-
-        return true;
-      });
+      for (auto& child : *lhs)
+        result.push_back(child);
 
       return result;
     }
 
-    // Extract the parameter types from a FuncType's Lhs.
-    // NoArgType -> empty list.
-    // TupleType -> list of children.
-    // Single wfType -> list of one.
-    Nodes functype_params(Node ft)
-    {
-      auto lhs = ft / Lhs;
-
-      if (lhs == NoArgType)
-        return {};
-
-      if (lhs == TupleType)
-      {
-        Nodes result;
-
-        for (auto& child : *lhs)
-          result.push_back(child);
-
-        return result;
-      }
-
-      return {lhs};
-    }
+    return {lhs};
   }
 
   PassDef functype()
@@ -68,8 +65,7 @@ namespace vc
       wfPassFuncType,
       dir::bottomup,
       {
-        T(FuncType)[FuncType] >>
-        [](Match& _) -> Node {
+        T(FuncType)[FuncType] >> [](Match& _) -> Node {
           auto ft = _(FuncType);
           auto top = ft->parent({Top});
           auto enclosing_cls = ft->parent(ClassDef);
@@ -90,8 +86,7 @@ namespace vc
 
           for (auto& ftp : free_tps)
           {
-            auto tp_name =
-              std::string((ftp.def / Ident)->location().view());
+            auto tp_name = std::string((ftp.def / Ident)->location().view());
             typeparams << (TypeParam << (Ident ^ tp_name) << (Type << TypeVar));
           }
 
@@ -121,8 +116,9 @@ namespace vc
             tp_subst[key] = new_tn;
           }
 
-          // Substitute TypeParam references in a type subtree (clone + rewrite).
-          // Collect matching nodes first, then mutate after traversal.
+          // Substitute TypeParam references in a type subtree (clone +
+          // rewrite). Collect matching nodes first, then mutate after
+          // traversal.
           auto subst_type = [&](Node type_node) -> Node {
             auto result = clone(type_node);
             Nodes to_replace;
@@ -158,8 +154,7 @@ namespace vc
           // Build the apply method params: (self, ...functype_args)
           auto param_types = functype_params(ft);
           Node apply_params = Params;
-          apply_params
-            << (ParamDef << (Ident ^ "self") << (Type << TypeSelf));
+          apply_params << (ParamDef << (Ident ^ "self") << (Type << TypeSelf));
 
           for (size_t i = 0; i < param_types.size(); i++)
           {
@@ -174,8 +169,7 @@ namespace vc
 
           // Shape function bodies need a placeholder: _builtin::none::create.
           // The ident pass has already run, so we use FQ names.
-          Node shape_body =
-            Body
+          Node shape_body = Body
             << (Expr
                 << (FuncName
                     << (NameElement << (Ident ^ "_builtin") << TypeArgs)
@@ -187,8 +181,8 @@ namespace vc
             ClassDef << Shape << (Ident ^ id) << typeparams << Where
                      << (ClassBody
                          << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                                     << apply_params << ret_type << Where
-                                     << shape_body));
+                                      << apply_params << ret_type << Where
+                                      << shape_body));
 
           // Build TypeArgs for the replacement TypeName (external use):
           // FQ refs to the original type params (not the shape's own).
@@ -214,7 +208,7 @@ namespace vc
 
           return Seq << (Lift << ClassBody << shape_def) << fq_tn_outer;
         },
-    }};
+      }};
 
     return p;
   }

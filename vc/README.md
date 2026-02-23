@@ -4,8 +4,7 @@
 
 Reification.
 - Post reification type checking.
-- Encode shapes as type aliases of all implementing concrete types.
-  - If shapes have the same set, compact them?
+- If shapes have the same union type, compact them?
 
 Names.
 - Allow looking down a type parameter.
@@ -20,6 +19,7 @@ Sub-typing.
 Types:
 - IR type for tuple. Could be `[dyn]` of correct size with elements that type check.
 - Can type parameters take type arguments?
+- Type annotations on local variables.
 
 Calls.
 - Try (rename to `catch`?), sub-call.
