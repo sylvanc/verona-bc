@@ -2,8 +2,11 @@
 
 ## To Do
 
+Post reification type checking.
+- Do we handle nested unions?
+- Clean up error messages.
+
 Reification.
-- Post reification type checking.
 - If shapes have the same union type, compact them?
 
 Names.

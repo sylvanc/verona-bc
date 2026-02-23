@@ -282,9 +282,9 @@ typecheck
           (makeptr
             (localid 5:$text)
             (localid 10:$plaintext))
-          (len
-            (localid 4:$len)
-            (localid 10:$plaintext))
+          (error
+            (errormsg 46:len: operand type 'union' is not an array type)
+            (len))
           (ffi
             (localid 2:$1)
             (symbolid 6:@write)

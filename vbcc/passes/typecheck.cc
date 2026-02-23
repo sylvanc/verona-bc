@@ -29,52 +29,134 @@ namespace vbcc
   //   BadArrayIndex, BadStore (regions), BadStoreTarget (immutability),
   //   BadStackEscape, BadAllocTarget, sendability checks.
 
-  // Returns true for types that can't be statically analyzed: Dyn, Union,
-  // TypeId. These are conservatively allowed in all checks.
-  static bool is_opaque(const Node& t)
-  {
-    return t == Dyn || t == Union || t == TypeId;
-  }
-
   // Type category helpers. These mirror the interpreter's type families.
+  // For Union types, ALL members must satisfy the predicate.
+  // Dyn is conservatively allowed in all checks.
   static bool is_primitive(const Node& t)
   {
     return t->type().in(
-      {None, Bool, I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize,
-       USize, F32, F64, Ptr});
+      {None,
+       Bool,
+       I8,
+       I16,
+       I32,
+       I64,
+       U8,
+       U16,
+       U32,
+       U64,
+       ILong,
+       ULong,
+       ISize,
+       USize,
+       F32,
+       F64,
+       Ptr});
   }
 
   static bool is_numeric(const Node& t)
   {
-    return is_opaque(t) ||
-      t->type().in(
-        {Bool, I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize,
-         USize, F32, F64});
+    if (t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!is_numeric(child))
+          return false;
+      return t->size() > 0;
+    }
+    return t->type().in(
+      {Bool,
+       I8,
+       I16,
+       I32,
+       I64,
+       U8,
+       U16,
+       U32,
+       U64,
+       ILong,
+       ULong,
+       ISize,
+       USize,
+       F32,
+       F64});
   }
 
   static bool is_float(const Node& t)
   {
-    return is_opaque(t) || t->type().in({F32, F64});
+    if (t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!is_float(child))
+          return false;
+      return t->size() > 0;
+    }
+    return t->type().in({F32, F64});
   }
 
   static bool is_object_type(const Node& t)
   {
-    return is_opaque(t) || t == ClassId;
+    if (t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!is_object_type(child))
+          return false;
+      return t->size() > 0;
+    }
+    return t == ClassId;
   }
 
   static bool is_array_type(const Node& t)
   {
-    return is_opaque(t) || t == Array;
+    if (t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!is_array_type(child))
+          return false;
+      return t->size() > 0;
+    }
+    return t == Array;
   }
 
   static bool is_cown_type(const Node& t)
   {
-    return is_opaque(t) || t == Cown;
+    if (t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!is_cown_type(child))
+          return false;
+      return t->size() > 0;
+    }
+    return t == Cown;
   }
 
   static bool is_ref_type(const Node& t)
   {
-    return is_opaque(t) || t == Ref;
+    if (t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!is_ref_type(child))
+          return false;
+      return t->size() > 0;
+    }
+    return t == Ref;
+  }
+
+  // Returns true if the type's concrete form cannot be determined statically.
+  static bool is_concrete(const Node& t)
+  {
+    return t != Dyn && t != Union;
   }
 
   // Check if sub is a subtype of super in the IR type system.
@@ -98,7 +180,8 @@ namespace vbcc
     if (sub == Dyn)
       return true;
 
-    // TypeId: we don't resolve type aliases statically, treat as compatible.
+    // TypeId should be resolved before calling ir_subtype.
+    // If one still appears, conservatively allow it.
     if (sub == TypeId || super == TypeId)
       return true;
 
@@ -154,8 +237,8 @@ namespace vbcc
 
   // Get the type of a register from the type environment.
   // Returns null Node if the register type is unknown.
-  static Node get_type(
-    const std::unordered_map<std::string, Node>& env, const Node& id)
+  static Node
+  get_type(const std::unordered_map<std::string, Node>& env, const Node& id)
   {
     auto key = std::string(id->location().view());
     auto it = env.find(key);
@@ -217,12 +300,69 @@ namespace vbcc
         errors.push_back({node, msg});
       };
 
+      // Resolve TypeId to its definition (typically a Union).
+      // Type entries in the IR are: Type <<= TypeId * (Type >>= wfType).
+      // Recursively resolves through Union, Array, Cown, and Ref.
+      std::function<Node(const Node&)> resolve_type =
+        [&](const Node& t) -> Node {
+        if (!t)
+          return t;
+        if (t == TypeId)
+        {
+          for (auto& child : *top)
+          {
+            if (child == Type && (child / TypeId)->location() == t->location())
+              return resolve_type(child / Type);
+          }
+          return t; // Unresolved TypeId - leave as-is
+        }
+        if (t == Union)
+        {
+          // Two-pass: first check if resolution changes anything,
+          // then build a new node only if needed (to avoid moving children
+          // from the original AST node via <<).
+          std::vector<Node> resolved_children;
+          bool changed = false;
+          for (auto& child : *t)
+          {
+            auto resolved = resolve_type(child);
+            if (resolved.get() != child.get())
+              changed = true;
+            resolved_children.push_back(resolved);
+          }
+          if (!changed)
+            return t;
+          auto result = Node(Union);
+          for (auto& rc : resolved_children)
+            result << clone(rc);
+          return result;
+        }
+        if (t->type().in({Array, Cown, Ref}))
+        {
+          Node inner = t / Type;
+          auto resolved = resolve_type(inner);
+          if (resolved.get() != inner.get())
+          {
+            auto result = Node(t->type());
+            result << clone(resolved);
+            return result;
+          }
+        }
+        return t;
+      };
+
+      // Wrapper around get_type that resolves TypeId.
+      auto typed = [&](const Node& id) -> Node {
+        return resolve_type(get_type(env, id));
+      };
+
       // Look up a function definition by FunctionId.
       auto find_func = [&](const Node& func_id) -> Node {
         for (auto& child : *top)
         {
-          if (child == Func && (child / FunctionId)->location() ==
-            func_id->location())
+          if (
+            child == Func &&
+            (child / FunctionId)->location() == func_id->location())
             return child;
         }
         return {};
@@ -232,7 +372,8 @@ namespace vbcc
       auto find_class = [&](const Node& class_id) -> Node {
         for (auto& child : *top)
         {
-          if (child == Class &&
+          if (
+            child == Class &&
             (child / ClassId)->location() == class_id->location())
             return child;
         }
@@ -250,8 +391,8 @@ namespace vbcc
       };
 
       // Check if a class/primitive has a given method.
-      auto has_method = [&](const Node& type_node,
-                            const Node& method_id) -> bool {
+      auto has_method =
+        [&](const Node& type_node, const Node& method_id) -> bool {
         Node cls;
 
         if (type_node == ClassId)
@@ -287,8 +428,8 @@ namespace vbcc
       };
 
       // Check if ALL members of a union have a method.
-      auto union_has_method = [&](const Node& type_node,
-                                  const Node& method_id) -> bool {
+      auto union_has_method =
+        [&](const Node& type_node, const Node& method_id) -> bool {
         if (type_node == Union)
         {
           for (auto& child : *type_node)
@@ -302,8 +443,8 @@ namespace vbcc
       };
 
       // Get the field type for a class.
-      auto get_field_type = [&](const Node& class_id,
-                                const Node& field_id) -> Node {
+      auto get_field_type =
+        [&](const Node& class_id, const Node& field_id) -> Node {
         auto cls = find_class(class_id);
         if (!cls)
           return {};
@@ -337,9 +478,9 @@ namespace vbcc
           cur_func = node;
           env.clear();
 
-          // Initialize parameter types.
+          // Initialize parameter types (resolve TypeId).
           for (auto& param : *(node / Params))
-            set_type(env, param / LocalId, param / Type);
+            set_type(env, param / LocalId, resolve_type(param / Type));
 
           // Variables start as Dyn (no type annotation in IR).
           for (auto& var : *(node / Vars))
@@ -362,12 +503,13 @@ namespace vbcc
         }
         else if (node == Convert)
         {
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
           auto dst_type_node = node / Type;
 
           // Both src and target must be primitive types.
-          if (src_type && !is_numeric(src_type) &&
-            src_type != Ptr && src_type != None)
+          if (
+            src_type && !is_numeric(src_type) && src_type != Ptr &&
+            src_type != None)
           {
             type_err(
               node,
@@ -381,7 +523,7 @@ namespace vbcc
         }
         else if (node->in({Copy, Move}))
         {
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
           if (src_type)
             set_type(env, node / LocalId, src_type);
           else
@@ -402,8 +544,8 @@ namespace vbcc
 
             while (f_it != fields->end() && a_it != args->end())
             {
-              auto field_type = (*f_it) / Type;
-              auto arg_type = get_type(env, (*a_it) / Rhs);
+              auto field_type = resolve_type((*f_it) / Type);
+              auto arg_type = typed((*a_it) / Rhs);
 
               if (arg_type && !ir_subtype(arg_type, field_type))
               {
@@ -447,7 +589,7 @@ namespace vbcc
         }
         else if (node == RegisterRef)
         {
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
           if (src_type)
             set_type(env, node / LocalId, Node(Ref) << clone(src_type));
           else
@@ -455,7 +597,7 @@ namespace vbcc
         }
         else if (node == FieldRef)
         {
-          auto src_type = get_type(env, node / Arg / Rhs);
+          auto src_type = typed(node / Arg / Rhs);
 
           if (src_type && !is_object_type(src_type) && !is_cown_type(src_type))
           {
@@ -470,7 +612,8 @@ namespace vbcc
           // dst gets Ref of the field's type.
           if (src_type && src_type == ClassId)
           {
-            auto field_type = get_field_type(src_type, node / FieldId);
+            auto field_type =
+              resolve_type(get_field_type(src_type, node / FieldId));
             if (field_type)
               set_type(env, node / LocalId, Node(Ref) << clone(field_type));
             else
@@ -483,7 +626,7 @@ namespace vbcc
         }
         else if (node->in({ArrayRef, ArrayRefConst}))
         {
-          auto src_type = get_type(env, node / Arg / Rhs);
+          auto src_type = typed(node / Arg / Rhs);
 
           if (src_type && !is_array_type(src_type))
           {
@@ -497,14 +640,13 @@ namespace vbcc
 
           // dst gets Ref of the array's element type.
           if (src_type && src_type == Array && src_type->size() > 0)
-            set_type(
-              env, node / LocalId, Node(Ref) << clone(src_type / Type));
+            set_type(env, node / LocalId, Node(Ref) << clone(src_type / Type));
           else
             set_type(env, node / LocalId, Node(Ref) << Dyn);
         }
         else if (node == Load)
         {
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_ref_type(src_type))
           {
@@ -524,8 +666,8 @@ namespace vbcc
         }
         else if (node == Store)
         {
-          auto ref_type = get_type(env, node / Rhs);
-          auto val_type = get_type(env, node / Arg / Rhs);
+          auto ref_type = typed(node / Rhs);
+          auto val_type = typed(node / Arg / Rhs);
 
           // The ref's content type determines what can be stored.
           if (ref_type && ref_type == Ref && ref_type->size() > 0 && val_type)
@@ -552,11 +694,12 @@ namespace vbcc
         }
         else if (node == Lookup)
         {
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
           auto method_id = node / MethodId;
 
           // Check that the source type has this method.
-          if (src_type && !is_opaque(src_type))
+          // Skip only for Dyn; union_has_method handles Union recursion.
+          if (src_type && src_type != Dyn)
           {
             if (!union_has_method(src_type, method_id))
             {
@@ -593,8 +736,8 @@ namespace vbcc
 
             while (p_it != params->end() && a_it != args->end())
             {
-              auto param_type = (*p_it) / Type;
-              auto arg_type = get_type(env, (*a_it) / Rhs);
+              auto param_type = resolve_type((*p_it) / Type);
+              auto arg_type = typed((*a_it) / Rhs);
 
               if (arg_type && !ir_subtype(arg_type, param_type))
               {
@@ -613,7 +756,7 @@ namespace vbcc
             }
 
             // dst gets the function's return type.
-            set_type(env, node / LocalId, clone(target_func / Type));
+            set_type(env, node / LocalId, resolve_type(target_func / Type));
           }
           else
           {
@@ -649,14 +792,13 @@ namespace vbcc
         {
           // Drop removes a register - nothing to check.
         }
-        else if (
-          node->type().in(
-            {Add, Sub, Mul, Div, Mod, And, Or, Xor, Shl, Shr, Min, Max}))
+        else if (node->type().in(
+                   {Add, Sub, Mul, Div, Mod, And, Or, Xor, Shl, Shr, Min, Max}))
         {
           // Arithmetic/bitwise binops: both operands must be the same numeric
           // type. dst gets that type.
-          auto lhs_type = get_type(env, node / Lhs);
-          auto rhs_type = get_type(env, node / Rhs);
+          auto lhs_type = typed(node / Lhs);
+          auto rhs_type = typed(node / Rhs);
 
           if (lhs_type && !is_numeric(lhs_type))
           {
@@ -681,9 +823,8 @@ namespace vbcc
           }
 
           if (
-            lhs_type && rhs_type && !is_opaque(lhs_type) &&
-            !is_opaque(rhs_type) &&
-            lhs_type->type() != rhs_type->type())
+            lhs_type && rhs_type && is_concrete(lhs_type) &&
+            is_concrete(rhs_type) && lhs_type->type() != rhs_type->type())
           {
             type_err(
               node,
@@ -695,9 +836,9 @@ namespace vbcc
             return true;
           }
 
-          if (lhs_type && !is_opaque(lhs_type) && is_numeric(lhs_type))
+          if (lhs_type && is_concrete(lhs_type) && is_numeric(lhs_type))
             set_type(env, node / LocalId, clone(lhs_type));
-          else if (rhs_type && !is_opaque(rhs_type) && is_numeric(rhs_type))
+          else if (rhs_type && is_concrete(rhs_type) && is_numeric(rhs_type))
             set_type(env, node / LocalId, clone(rhs_type));
           else
             set_type(env, node / LocalId, Node(Dyn));
@@ -705,8 +846,8 @@ namespace vbcc
         else if (node->type().in({Pow, LogBase, Atan2}))
         {
           // Float-only binops.
-          auto lhs_type = get_type(env, node / Lhs);
-          auto rhs_type = get_type(env, node / Rhs);
+          auto lhs_type = typed(node / Lhs);
+          auto rhs_type = typed(node / Rhs);
 
           if (lhs_type && !is_float(lhs_type))
           {
@@ -731,9 +872,8 @@ namespace vbcc
           }
 
           if (
-            lhs_type && rhs_type && !is_opaque(lhs_type) &&
-            !is_opaque(rhs_type) &&
-            lhs_type->type() != rhs_type->type())
+            lhs_type && rhs_type && is_concrete(lhs_type) &&
+            is_concrete(rhs_type) && lhs_type->type() != rhs_type->type())
           {
             type_err(
               node,
@@ -745,9 +885,9 @@ namespace vbcc
             return true;
           }
 
-          if (lhs_type && !is_opaque(lhs_type) && is_float(lhs_type))
+          if (lhs_type && is_concrete(lhs_type) && is_float(lhs_type))
             set_type(env, node / LocalId, clone(lhs_type));
-          else if (rhs_type && !is_opaque(rhs_type) && is_float(rhs_type))
+          else if (rhs_type && is_concrete(rhs_type) && is_float(rhs_type))
             set_type(env, node / LocalId, clone(rhs_type));
           else
             set_type(env, node / LocalId, Node(Dyn));
@@ -755,8 +895,8 @@ namespace vbcc
         else if (node->type().in({Eq, Ne, Lt, Le, Gt, Ge}))
         {
           // Comparison binops: both operands same numeric type. dst is Bool.
-          auto lhs_type = get_type(env, node / Lhs);
-          auto rhs_type = get_type(env, node / Rhs);
+          auto lhs_type = typed(node / Lhs);
+          auto rhs_type = typed(node / Rhs);
 
           if (lhs_type && !is_numeric(lhs_type))
           {
@@ -781,9 +921,8 @@ namespace vbcc
           }
 
           if (
-            lhs_type && rhs_type && !is_opaque(lhs_type) &&
-            !is_opaque(rhs_type) &&
-            lhs_type->type() != rhs_type->type())
+            lhs_type && rhs_type && is_concrete(lhs_type) &&
+            is_concrete(rhs_type) && lhs_type->type() != rhs_type->type())
           {
             type_err(
               node,
@@ -800,7 +939,7 @@ namespace vbcc
         else if (node->type().in({Neg, Abs}))
         {
           // Signed numeric unops.
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_numeric(src_type))
           {
@@ -813,7 +952,7 @@ namespace vbcc
             return true;
           }
 
-          if (src_type && !is_opaque(src_type) && is_numeric(src_type))
+          if (src_type && is_concrete(src_type) && is_numeric(src_type))
             set_type(env, node / LocalId, clone(src_type));
           else
             set_type(env, node / LocalId, Node(Dyn));
@@ -821,7 +960,7 @@ namespace vbcc
         else if (node == Not)
         {
           // Bitwise not / boolean not.
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_numeric(src_type))
           {
@@ -832,17 +971,33 @@ namespace vbcc
             return true;
           }
 
-          if (src_type && !is_opaque(src_type) && is_numeric(src_type))
+          if (src_type && is_concrete(src_type) && is_numeric(src_type))
             set_type(env, node / LocalId, clone(src_type));
           else
             set_type(env, node / LocalId, Node(Dyn));
         }
         else if (node->type().in(
-                   {Ceil, Floor, Exp, Log, Sqrt, Cbrt, Sin, Cos, Tan, Asin,
-                    Acos, Atan, Sinh, Cosh, Tanh, Asinh, Acosh, Atanh}))
+                   {Ceil,
+                    Floor,
+                    Exp,
+                    Log,
+                    Sqrt,
+                    Cbrt,
+                    Sin,
+                    Cos,
+                    Tan,
+                    Asin,
+                    Acos,
+                    Atan,
+                    Sinh,
+                    Cosh,
+                    Tanh,
+                    Asinh,
+                    Acosh,
+                    Atanh}))
         {
           // Float-only unops.
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_float(src_type))
           {
@@ -855,7 +1010,7 @@ namespace vbcc
             return true;
           }
 
-          if (src_type && !is_opaque(src_type) && is_float(src_type))
+          if (src_type && is_concrete(src_type) && is_float(src_type))
             set_type(env, node / LocalId, clone(src_type));
           else
             set_type(env, node / LocalId, Node(Dyn));
@@ -863,7 +1018,7 @@ namespace vbcc
         else if (node->type().in({IsInf, IsNaN}))
         {
           // Float predicate unops: operand must be float, result is Bool.
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_float(src_type))
           {
@@ -881,15 +1036,14 @@ namespace vbcc
         else if (node == Bits)
         {
           // Bits: numeric -> U64.
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_numeric(src_type))
           {
             type_err(
               node,
               std::format(
-                "bits: operand type '{}' is not numeric",
-                type_name(src_type)));
+                "bits: operand type '{}' is not numeric", type_name(src_type)));
             return true;
           }
 
@@ -898,7 +1052,7 @@ namespace vbcc
         else if (node == Len)
         {
           // Len: array -> USize.
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_array_type(src_type))
           {
@@ -920,7 +1074,7 @@ namespace vbcc
         else if (node == Read)
         {
           // Read: cown -> result (same type, but read-only).
-          auto src_type = get_type(env, node / Rhs);
+          auto src_type = typed(node / Rhs);
 
           if (src_type && !is_cown_type(src_type))
           {
@@ -952,8 +1106,8 @@ namespace vbcc
           // Check return type.
           if (cur_func)
           {
-            auto ret_type = get_type(env, node / LocalId);
-            auto func_ret = cur_func / Type;
+            auto ret_type = typed(node / LocalId);
+            auto func_ret = resolve_type(cur_func / Type);
 
             if (ret_type && !ir_subtype(ret_type, func_ret))
             {
@@ -970,15 +1124,14 @@ namespace vbcc
         }
         else if (node == Cond)
         {
-          auto cond_type = get_type(env, node / LocalId);
+          auto cond_type = typed(node / LocalId);
 
-          if (cond_type && !is_opaque(cond_type) && cond_type != Bool)
+          if (cond_type && cond_type != Dyn && cond_type != Bool)
           {
             type_err(
               node,
               std::format(
-                "cond: condition type '{}' is not bool",
-                type_name(cond_type)));
+                "cond: condition type '{}' is not bool", type_name(cond_type)));
             return true;
           }
         }
