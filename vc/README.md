@@ -3,8 +3,9 @@
 ## To Do
 
 Post reification type checking.
-- Do we handle nested unions?
 - Clean up error messages.
+- Sources of `Dyn`: tuples, `any`, no annotation. Anything else?
+- Change `typetest` to return a value of the correct type.
 
 Reification.
 - If shapes have the same union type, compact them?
@@ -53,6 +54,7 @@ Builtin:
 - String. Just so that string literals have a type that isn't `array[u8]`.
 
 Packages:
+- Remove `vbci` dependency on `uv` and `openssl`, load those from packages.
 - CLI.
   - Needs a map, so do an RB tree or hash map.
     - A map needs structural types.

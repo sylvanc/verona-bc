@@ -153,10 +153,38 @@ namespace vbcc
     return t == Ref;
   }
 
-  // Returns true if the type's concrete form cannot be determined statically.
-  static bool is_concrete(const Node& t)
+  // Find the first non-Dyn concrete leaf type in a (possibly Union) type.
+  // Returns null if t is Dyn, empty Union, or null.
+  static Node first_concrete_leaf(const Node& t)
   {
-    return t != Dyn && t != Union;
+    if (!t || t == Dyn)
+      return {};
+    if (t == Union)
+    {
+      for (auto& child : *t)
+      {
+        auto r = first_concrete_leaf(child);
+        if (r)
+          return r;
+      }
+      return {};
+    }
+    return t;
+  }
+
+  // Check that all non-Dyn leaves in t have the given token type.
+  static bool all_leaves_are(const Node& t, const Token& expected)
+  {
+    if (!t || t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!all_leaves_are(child, expected))
+          return false;
+      return true;
+    }
+    return t->type() == expected;
   }
 
   // Check if sub is a subtype of super in the IR type system.
@@ -318,22 +346,35 @@ namespace vbcc
         }
         if (t == Union)
         {
-          // Two-pass: first check if resolution changes anything,
-          // then build a new node only if needed (to avoid moving children
-          // from the original AST node via <<).
-          std::vector<Node> resolved_children;
+          // Resolve children, flatten nested unions, and normalize.
+          std::vector<Node> flat_children;
           bool changed = false;
           for (auto& child : *t)
           {
             auto resolved = resolve_type(child);
             if (resolved.get() != child.get())
               changed = true;
-            resolved_children.push_back(resolved);
+            // Flatten: if resolved child is a Union, splice its children.
+            if (resolved == Union)
+            {
+              changed = true;
+              for (auto& grandchild : *resolved)
+                flat_children.push_back(grandchild);
+            }
+            else
+            {
+              flat_children.push_back(resolved);
+            }
           }
+          // Normalize: empty -> Dyn, single -> unwrap, otherwise Union.
+          if (flat_children.empty())
+            return Node(Dyn);
+          if (flat_children.size() == 1)
+            return clone(flat_children[0]);
           if (!changed)
             return t;
           auto result = Node(Union);
-          for (auto& rc : resolved_children)
+          for (auto& rc : flat_children)
             result << clone(rc);
           return result;
         }
@@ -617,11 +658,40 @@ namespace vbcc
             if (field_type)
               set_type(env, node / LocalId, Node(Ref) << clone(field_type));
             else
-              set_type(env, node / LocalId, Node(Ref) << Dyn);
+              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+          }
+          else if (src_type && src_type == Union)
+          {
+            // Union of ClassIds: build union of Ref(field_type).
+            Node union_type = Union;
+            bool all_ok = true;
+            for (auto& member : *src_type)
+            {
+              if (member != ClassId)
+              {
+                all_ok = false;
+                break;
+              }
+              auto ft =
+                resolve_type(get_field_type(member, node / FieldId));
+              if (ft)
+                union_type << (Node(Ref) << clone(ft));
+              else
+              {
+                all_ok = false;
+                break;
+              }
+            }
+            if (all_ok && union_type->size() == 1)
+              set_type(env, node / LocalId, clone(union_type->front()));
+            else if (all_ok && union_type->size() > 1)
+              set_type(env, node / LocalId, union_type);
+            else
+              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
           }
           else
           {
-            set_type(env, node / LocalId, Node(Ref) << Dyn);
+            set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
           }
         }
         else if (node->in({ArrayRef, ArrayRefConst}))
@@ -641,8 +711,29 @@ namespace vbcc
           // dst gets Ref of the array's element type.
           if (src_type && src_type == Array && src_type->size() > 0)
             set_type(env, node / LocalId, Node(Ref) << clone(src_type / Type));
+          else if (src_type && src_type == Union)
+          {
+            // Union of Arrays: build union of Ref(element_type).
+            Node union_type = Union;
+            bool all_ok = true;
+            for (auto& member : *src_type)
+            {
+              if (member != Array || member->size() == 0)
+              {
+                all_ok = false;
+                break;
+              }
+              union_type << (Node(Ref) << clone(member / Type));
+            }
+            if (all_ok && union_type->size() == 1)
+              set_type(env, node / LocalId, clone(union_type->front()));
+            else if (all_ok && union_type->size() > 1)
+              set_type(env, node / LocalId, union_type);
+            else
+              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+          }
           else
-            set_type(env, node / LocalId, Node(Ref) << Dyn);
+            set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
         }
         else if (node == Load)
         {
@@ -661,6 +752,27 @@ namespace vbcc
           // dst gets the ref's content type.
           if (src_type && src_type == Ref && src_type->size() > 0)
             set_type(env, node / LocalId, clone(src_type / Type));
+          else if (src_type && src_type == Union)
+          {
+            // Union of Refs: build union of content types.
+            Node union_type = Union;
+            bool all_ok = true;
+            for (auto& member : *src_type)
+            {
+              if (member != Ref || member->size() == 0)
+              {
+                all_ok = false;
+                break;
+              }
+              union_type << clone(member / Type);
+            }
+            if (all_ok && union_type->size() == 1)
+              set_type(env, node / LocalId, clone(union_type->front()));
+            else if (all_ok && union_type->size() > 1)
+              set_type(env, node / LocalId, union_type);
+            else
+              set_type(env, node / LocalId, Node(Dyn));
+          }
           else
             set_type(env, node / LocalId, Node(Dyn));
         }
@@ -685,10 +797,53 @@ namespace vbcc
               return true;
             }
           }
+          else if (
+            ref_type && ref_type == Union && val_type)
+          {
+            // Union of Refs: val must be subtype of ALL content types.
+            for (auto& member : *ref_type)
+            {
+              if (member != Ref || member->size() == 0)
+                continue;
+              auto content_type = member / Type;
+              if (!ir_subtype(val_type, content_type))
+              {
+                type_err(
+                  node,
+                  std::format(
+                    "store: value type '{}' is not a subtype of reference "
+                    "content type '{}'",
+                    type_name(val_type),
+                    type_name(content_type)));
+                return true;
+              }
+            }
+          }
 
           // dst gets the old value (same type as content).
           if (ref_type && ref_type == Ref && ref_type->size() > 0)
             set_type(env, node / LocalId, clone(ref_type / Type));
+          else if (ref_type && ref_type == Union)
+          {
+            // Union of Refs: result is union of content types.
+            Node union_type = Union;
+            bool all_ok = true;
+            for (auto& member : *ref_type)
+            {
+              if (member != Ref || member->size() == 0)
+              {
+                all_ok = false;
+                break;
+              }
+              union_type << clone(member / Type);
+            }
+            if (all_ok && union_type->size() == 1)
+              set_type(env, node / LocalId, clone(union_type->front()));
+            else if (all_ok && union_type->size() > 1)
+              set_type(env, node / LocalId, union_type);
+            else
+              set_type(env, node / LocalId, Node(Dyn));
+          }
           else
             set_type(env, node / LocalId, Node(Dyn));
         }
@@ -822,26 +977,37 @@ namespace vbcc
             return true;
           }
 
-          if (
-            lhs_type && rhs_type && is_concrete(lhs_type) &&
-            is_concrete(rhs_type) && lhs_type->type() != rhs_type->type())
+          // Check all concrete types across both operands match.
+          if (lhs_type && rhs_type)
           {
-            type_err(
-              node,
-              std::format(
-                "{}: mismatched operand types '{}' and '{}'",
-                std::string(node->type().str()),
-                type_name(lhs_type),
-                type_name(rhs_type)));
-            return true;
+            auto first = first_concrete_leaf(lhs_type);
+            if (!first)
+              first = first_concrete_leaf(rhs_type);
+            if (
+              first &&
+              !(all_leaves_are(lhs_type, first->type()) &&
+                all_leaves_are(rhs_type, first->type())))
+            {
+              type_err(
+                node,
+                std::format(
+                  "{}: mismatched operand types '{}' and '{}'",
+                  std::string(node->type().str()),
+                  type_name(lhs_type),
+                  type_name(rhs_type)));
+              return true;
+            }
           }
 
-          if (lhs_type && is_concrete(lhs_type) && is_numeric(lhs_type))
-            set_type(env, node / LocalId, clone(lhs_type));
-          else if (rhs_type && is_concrete(rhs_type) && is_numeric(rhs_type))
-            set_type(env, node / LocalId, clone(rhs_type));
-          else
-            set_type(env, node / LocalId, Node(Dyn));
+          {
+            auto first = first_concrete_leaf(lhs_type);
+            if (!first)
+              first = first_concrete_leaf(rhs_type);
+            if (first)
+              set_type(env, node / LocalId, clone(first));
+            else
+              set_type(env, node / LocalId, Node(Dyn));
+          }
         }
         else if (node->type().in({Pow, LogBase, Atan2}))
         {
@@ -871,26 +1037,37 @@ namespace vbcc
             return true;
           }
 
-          if (
-            lhs_type && rhs_type && is_concrete(lhs_type) &&
-            is_concrete(rhs_type) && lhs_type->type() != rhs_type->type())
+          // Check all concrete types across both operands match.
+          if (lhs_type && rhs_type)
           {
-            type_err(
-              node,
-              std::format(
-                "{}: mismatched operand types '{}' and '{}'",
-                std::string(node->type().str()),
-                type_name(lhs_type),
-                type_name(rhs_type)));
-            return true;
+            auto first = first_concrete_leaf(lhs_type);
+            if (!first)
+              first = first_concrete_leaf(rhs_type);
+            if (
+              first &&
+              !(all_leaves_are(lhs_type, first->type()) &&
+                all_leaves_are(rhs_type, first->type())))
+            {
+              type_err(
+                node,
+                std::format(
+                  "{}: mismatched operand types '{}' and '{}'",
+                  std::string(node->type().str()),
+                  type_name(lhs_type),
+                  type_name(rhs_type)));
+              return true;
+            }
           }
 
-          if (lhs_type && is_concrete(lhs_type) && is_float(lhs_type))
-            set_type(env, node / LocalId, clone(lhs_type));
-          else if (rhs_type && is_concrete(rhs_type) && is_float(rhs_type))
-            set_type(env, node / LocalId, clone(rhs_type));
-          else
-            set_type(env, node / LocalId, Node(Dyn));
+          {
+            auto first = first_concrete_leaf(lhs_type);
+            if (!first)
+              first = first_concrete_leaf(rhs_type);
+            if (first)
+              set_type(env, node / LocalId, clone(first));
+            else
+              set_type(env, node / LocalId, Node(Dyn));
+          }
         }
         else if (node->type().in({Eq, Ne, Lt, Le, Gt, Ge}))
         {
@@ -920,18 +1097,26 @@ namespace vbcc
             return true;
           }
 
-          if (
-            lhs_type && rhs_type && is_concrete(lhs_type) &&
-            is_concrete(rhs_type) && lhs_type->type() != rhs_type->type())
+          // Check all concrete types across both operands match.
+          if (lhs_type && rhs_type)
           {
-            type_err(
-              node,
-              std::format(
-                "{}: mismatched operand types '{}' and '{}'",
-                std::string(node->type().str()),
-                type_name(lhs_type),
-                type_name(rhs_type)));
-            return true;
+            auto first = first_concrete_leaf(lhs_type);
+            if (!first)
+              first = first_concrete_leaf(rhs_type);
+            if (
+              first &&
+              !(all_leaves_are(lhs_type, first->type()) &&
+                all_leaves_are(rhs_type, first->type())))
+            {
+              type_err(
+                node,
+                std::format(
+                  "{}: mismatched operand types '{}' and '{}'",
+                  std::string(node->type().str()),
+                  type_name(lhs_type),
+                  type_name(rhs_type)));
+              return true;
+            }
           }
 
           set_type(env, node / LocalId, Node(Bool));
@@ -952,10 +1137,13 @@ namespace vbcc
             return true;
           }
 
-          if (src_type && is_concrete(src_type) && is_numeric(src_type))
-            set_type(env, node / LocalId, clone(src_type));
-          else
-            set_type(env, node / LocalId, Node(Dyn));
+          {
+            auto first = first_concrete_leaf(src_type);
+            if (first && all_leaves_are(src_type, first->type()))
+              set_type(env, node / LocalId, clone(first));
+            else
+              set_type(env, node / LocalId, Node(Dyn));
+          }
         }
         else if (node == Not)
         {
@@ -971,10 +1159,13 @@ namespace vbcc
             return true;
           }
 
-          if (src_type && is_concrete(src_type) && is_numeric(src_type))
-            set_type(env, node / LocalId, clone(src_type));
-          else
-            set_type(env, node / LocalId, Node(Dyn));
+          {
+            auto first = first_concrete_leaf(src_type);
+            if (first && all_leaves_are(src_type, first->type()))
+              set_type(env, node / LocalId, clone(first));
+            else
+              set_type(env, node / LocalId, Node(Dyn));
+          }
         }
         else if (node->type().in(
                    {Ceil,
@@ -1010,10 +1201,13 @@ namespace vbcc
             return true;
           }
 
-          if (src_type && is_concrete(src_type) && is_float(src_type))
-            set_type(env, node / LocalId, clone(src_type));
-          else
-            set_type(env, node / LocalId, Node(Dyn));
+          {
+            auto first = first_concrete_leaf(src_type);
+            if (first && all_leaves_are(src_type, first->type()))
+              set_type(env, node / LocalId, clone(first));
+            else
+              set_type(env, node / LocalId, Node(Dyn));
+          }
         }
         else if (node->type().in({IsInf, IsNaN}))
         {
