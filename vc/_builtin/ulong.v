@@ -100,7 +100,7 @@ ulong
     :::neg(self)
   }
 
-  !(self: ulong): bool
+  !(self: ulong): ulong
   {
     :::not(self)
   }

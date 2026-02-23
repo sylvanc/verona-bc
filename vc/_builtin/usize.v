@@ -100,7 +100,7 @@ usize
     :::neg(self)
   }
 
-  !(self: usize): bool
+  !(self: usize): usize
   {
     :::not(self)
   }

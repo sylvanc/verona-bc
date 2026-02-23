@@ -100,7 +100,7 @@ u16
     :::neg(self)
   }
 
-  !(self: u16): bool
+  !(self: u16): u16
   {
     :::not(self)
   }

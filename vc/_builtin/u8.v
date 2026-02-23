@@ -100,7 +100,7 @@ u8
     :::neg(self)
   }
 
-  !(self: u8): bool
+  !(self: u8): u8
   {
     :::not(self)
   }

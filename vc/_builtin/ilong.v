@@ -100,7 +100,7 @@ ilong
     :::neg(self)
   }
 
-  !(self: ilong): bool
+  !(self: ilong): ilong
   {
     :::not(self)
   }

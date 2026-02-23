@@ -343,6 +343,14 @@ namespace vbcc
       std::unordered_map<std::string, Node> env;
       Node cur_func;
 
+      // Track lookup results: dst register -> (src_type, MethodId).
+      struct LookupInfo
+      {
+        Node src_type;
+        Node method_id;
+      };
+      std::unordered_map<std::string, LookupInfo> lookup_info;
+
       // Collect errors during traversal, apply after.
       // We cannot call replace() during traverse() because it invalidates
       // the parent's child iterators.
@@ -543,6 +551,7 @@ namespace vbcc
         {
           cur_func = node;
           env.clear();
+          lookup_info.clear();
 
           // Initialize parameter types (resolve TypeId).
           for (auto& param : *(node / Params))
@@ -891,6 +900,11 @@ namespace vbcc
             }
           }
 
+          // Track lookup result for CallDyn resolution.
+          auto dst_name =
+            std::string(node->front()->location().view());
+          lookup_info[dst_name] = {src_type, method_id};
+
           // Lookup produces a function pointer (opaque).
           set_type(env, node / LocalId, Node(Dyn));
         }
@@ -943,8 +957,109 @@ namespace vbcc
         }
         else if (node->in({CallDyn, SubcallDyn, TryDyn}))
         {
-          // Dynamic call - can't check statically.
-          set_type(env, node / LocalId, Node(Dyn));
+          // Try to resolve the dynamic call through lookup info.
+          auto fn_ptr_name =
+            std::string((node / Rhs)->location().view());
+          auto it = lookup_info.find(fn_ptr_name);
+
+          if (it != lookup_info.end())
+          {
+            auto& info = it->second;
+            // Resolve method to function: find the class/primitive,
+            // look up the MethodId -> FunctionId mapping.
+            Node target_func;
+            auto resolve_one = [&](const Node& t) -> Node {
+              Node cls;
+              if (t == ClassId)
+                cls = find_class(t);
+              else if (is_primitive(t))
+                cls = find_primitive(t);
+              else if (t->type().in({Array, Cown, Ref}))
+              {
+                for (auto& child : *top)
+                {
+                  if (
+                    child == Primitive &&
+                    (child / Type)->type() == t->type())
+                  {
+                    cls = child;
+                    break;
+                  }
+                }
+              }
+              if (!cls)
+                return {};
+              for (auto& method : *(cls / Methods))
+              {
+                if (
+                  (method / MethodId)->location() ==
+                  info.method_id->location())
+                  return find_func(method / FunctionId);
+              }
+              return {};
+            };
+
+            // For unions, all members must resolve to the same function.
+            if (info.src_type && info.src_type == Union)
+            {
+              for (auto& member : *info.src_type)
+              {
+                auto f = resolve_one(member);
+                if (f)
+                {
+                  target_func = f;
+                  break;
+                }
+              }
+            }
+            else if (info.src_type)
+            {
+              target_func = resolve_one(info.src_type);
+            }
+
+            if (target_func)
+            {
+              // Check arg types vs param types.
+              auto params = target_func / Params;
+              auto args = node / Args;
+              auto p_it = params->begin();
+              auto a_it = args->begin();
+
+              while (p_it != params->end() && a_it != args->end())
+              {
+                auto param_type = resolve_type((*p_it) / Type);
+                auto arg_type = typed((*a_it) / Rhs);
+
+                if (arg_type && !ir_subtype(arg_type, param_type))
+                {
+                  type_err(
+                    *a_it,
+                    std::format(
+                      "call: argument type '{}' is not a subtype of "
+                      "parameter type '{}'",
+                      type_name(arg_type),
+                      type_name(param_type)));
+                  return true;
+                }
+
+                ++p_it;
+                ++a_it;
+              }
+
+              // dst gets the function's return type.
+              set_type(
+                env, node / LocalId, resolve_type(target_func / Type));
+            }
+            else
+            {
+              set_type(env, node / LocalId, Node(Dyn));
+            }
+          }
+          else
+          {
+            // No lookup info - truly dynamic.
+            set_type(env, node / LocalId, Node(Dyn));
+          }
         }
         else if (node == FFI)
         {

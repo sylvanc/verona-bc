@@ -100,7 +100,7 @@ i32
     :::neg(self)
   }
 
-  !(self: i32): bool
+  !(self: i32): i32
   {
     :::not(self)
   }
