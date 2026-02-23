@@ -286,6 +286,7 @@ namespace vbcc
   }
 
   // Get a human-readable type name for error messages.
+  // Recursively formats compound types (Union, Array, Cown, Ref).
   static std::string type_name(const Node& t)
   {
     if (!t)
@@ -299,13 +300,37 @@ namespace vbcc
     if (t == Dyn)
       return "dyn";
     if (t == Array)
-      return "array";
+    {
+      if (t->size() > 0)
+        return std::format("Array({})", type_name(t / Type));
+      return "Array";
+    }
     if (t == Cown)
-      return "cown";
+    {
+      if (t->size() > 0)
+        return std::format("Cown({})", type_name(t / Type));
+      return "Cown";
+    }
     if (t == Ref)
-      return "ref";
+    {
+      if (t->size() > 0)
+        return std::format("Ref({})", type_name(t / Type));
+      return "Ref";
+    }
     if (t == Union)
-      return "union";
+    {
+      std::string result = "Union(";
+      bool first = true;
+      for (auto& child : *t)
+      {
+        if (!first)
+          result += ", ";
+        result += type_name(child);
+        first = false;
+      }
+      result += ")";
+      return result;
+    }
     return std::string(t->type().str());
   }
 
@@ -640,12 +665,12 @@ namespace vbcc
         {
           auto src_type = typed(node / Arg / Rhs);
 
-          if (src_type && !is_object_type(src_type) && !is_cown_type(src_type))
+          if (src_type && !is_object_type(src_type))
           {
             type_err(
               node,
               std::format(
-                "fieldref: source type '{}' is not an object or cown type",
+                "fieldref: source type '{}' is not an object type",
                 type_name(src_type)));
             return true;
           }
@@ -672,8 +697,7 @@ namespace vbcc
                 all_ok = false;
                 break;
               }
-              auto ft =
-                resolve_type(get_field_type(member, node / FieldId));
+              auto ft = resolve_type(get_field_type(member, node / FieldId));
               if (ft)
                 union_type << (Node(Ref) << clone(ft));
               else
@@ -797,8 +821,7 @@ namespace vbcc
               return true;
             }
           }
-          else if (
-            ref_type && ref_type == Union && val_type)
+          else if (ref_type && ref_type == Union && val_type)
           {
             // Union of Refs: val must be subtype of ALL content types.
             for (auto& member : *ref_type)
