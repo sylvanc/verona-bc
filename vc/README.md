@@ -22,7 +22,7 @@ Sub-typing.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Types:
-- Can we get rid of `TypeVar`? Or does it just not need an id?
+- Can we get rid of `TypeVar`? Or does it just not need an ID?
   - Use `any` at function boundaries if not annotated?
 - IR type for tuple. Could be `[dyn]` of correct size with elements that type check.
 - Can type parameters take type arguments?

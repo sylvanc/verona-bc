@@ -818,9 +818,9 @@ namespace vc
     {
       auto field_name = field_id->location().view();
 
-      for (auto& [key, r_vec] : map)
+      for (auto& key : map_order)
       {
-        for (auto& r : r_vec)
+        for (auto& r : map[key])
         {
           if (!r.id->equals(classid) || (r.def != ClassDef))
             continue;
@@ -997,14 +997,19 @@ namespace vc
          std::move(receivers)});
 
       // Register this new MI on existing class reifications that match.
+      // Iterate via map_order (insertion order) rather than map (pointer order)
+      // to ensure deterministic function reification ordering across runs.
+      // Use index-based loop because register_method -> find_or_push can
+      // push_back to map_order, invalidating range-for iterators.
       auto& mi = method_invocations.back();
+      auto map_order_size = map_order.size();
 
-      for (auto& [def, reifications] : map)
+      for (size_t i = 0; i < map_order_size; i++)
       {
-        if (def != ClassDef)
+        if (map_order[i] != ClassDef)
           continue;
 
-        for (auto& r : reifications)
+        for (auto& r : map[map_order[i]])
         {
           if (r.reification && mi_targets(mi, r.id))
             register_method(mi, r);
