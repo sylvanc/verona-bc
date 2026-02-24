@@ -142,8 +142,10 @@ namespace vc
                            << (LocalId ^ id)
                            << (Type
                                << (TypeName
+                                   << (NameElement << (Ident ^ "_builtin")
+                                                   << TypeArgs)
                                    << (NameElement << (Ident ^ "any")
-                                                   << (TypeArgs))))
+                                                   << TypeArgs)))
                            << (Int ^ std::to_string(tuple->size()))));
 
             // Copy the elements into the array.
@@ -209,7 +211,7 @@ namespace vc
 
         // Destructuring assignment.
         T(Equals)
-            << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId)++)) *
+            << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId, Let)++)) *
                 T(LocalId)[Rhs]) >>
           [](Match& _) {
             // If the RHS is too short, this will throw an error.
@@ -229,7 +231,19 @@ namespace vc
                                << (Int ^ std::to_string(idx++))))
                   << (Lift << Body
                            << (Load << (LocalId ^ val) << (LocalId ^ ref)));
-              tuple << (Equals << l << (LocalId ^ val));
+
+              if (l->type() == Let)
+              {
+                // Let is single-assignment: just copy the value, no swap.
+                auto name = (l / Ident)->location();
+                seq << (Lift << Body
+                             << (Copy << (LocalId ^ name) << (LocalId ^ val)));
+                tuple << (LocalId ^ val);
+              }
+              else
+              {
+                tuple << (Equals << l << (LocalId ^ val));
+              }
             }
 
             return seq << (Expr << tuple);
@@ -578,6 +592,12 @@ namespace vc
         // Compact TupleLHS.
         T(Lhs) << (T(TupleLHS)[TupleLHS] * End) >>
           [](Match& _) { return _(TupleLHS); },
+
+        // Compact LHS Let inside TupleLHS. This must fire before the Let
+        // rule converts Let to LocalId, so that Let survives into the
+        // destructuring rule where it receives special handling (no swap).
+        In(TupleLHS) * T(Lhs) << (T(Let)[Let] * End) >>
+          [](Match& _) { return _(Let); },
 
         // Combine non-terminal LocalId with an incomplete copy.
         // This is for `if` and `else`.
