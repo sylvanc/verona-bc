@@ -5,7 +5,7 @@ shape to_bool
 
 bool
 {
-  create(some: bool): bool
+  create(some: bool = false): bool
   {
     some
   }

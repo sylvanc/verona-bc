@@ -1,8 +1,8 @@
 ilong
 {
-  create(some: u64): ilong
+  create(some: ilong = 0): ilong
   {
-    :::convilong(some)
+    some
   }
 
   +(self: ilong, other: ilong): ilong

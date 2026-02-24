@@ -1,8 +1,8 @@
 i8
 {
-  create(some: u64): i8
+  create(some: i8 = 0): i8
   {
-    :::convi8(some)
+    some
   }
 
   +(self: i8, other: i8): i8

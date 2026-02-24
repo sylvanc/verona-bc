@@ -1,8 +1,8 @@
 usize
 {
-  create(some: u64): usize
+  create(some: usize = 0): usize
   {
-    :::convusize(some)
+    some
   }
 
   +(self: usize, other: usize): usize

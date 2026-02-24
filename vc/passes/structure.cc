@@ -8,9 +8,10 @@ namespace vc
 
   const std::initializer_list<Token> wfExprElement = {
     ExprSeq, DontCare, True,     False,  Bin,       Oct,         Int,
-    Hex,     Float,    HexFloat, String, RawString, Tuple,       Let,
-    Var,     New,      Lambda,   Dot,    Ref,       FuncName,    If,
-    While,   When,     Equals,   Else,   Try,       TripleColon, FieldRef};
+    Hex,     Float,    HexFloat, String, RawString, Tuple,       ArrayLit,
+    Let,     Var,      New,      Lambda, Dot,       Ref,         FuncName,
+    If,      While,    When,     Equals, Else,      Try,         TripleColon,
+    FieldRef};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -495,6 +496,10 @@ namespace vc
         In(Expr) * T(TripleColon) * T(FuncName)[FuncName] >>
           [](Match& _) { return TripleColon << *_(FuncName); },
 
+        // Array literal: ::(expr, ...)
+        In(Expr) * T(DoubleColon) * T(Paren)[Paren] >>
+          [](Match& _) { return ArrayLit << (Expr << _(Paren)); },
+
         // If.
         In(Expr) * (T(If) << End) * (!T(Lambda))++[Expr] * T(Lambda)[Lambda] >>
           [](Match& _) {
@@ -640,6 +645,14 @@ namespace vc
 
         // An empty ExprSeq is an empty Tuple.
         In(Expr) * T(ExprSeq) << End >> [](Match&) -> Node { return Tuple; },
+
+        // Flatten ArrayLit: absorb Tuple children (2+ elements).
+        T(ArrayLit) << ((T(Expr) << (T(Tuple)[Tuple] * End)) * End) >>
+          [](Match& _) { return ArrayLit << *_[Tuple]; },
+
+        // Flatten ArrayLit: absorb ExprSeq children (0-1 elements).
+        T(ArrayLit) << ((T(Expr) << (T(ExprSeq)[ExprSeq] * End)) * End) >>
+          [](Match& _) { return ArrayLit << *_[ExprSeq]; },
 
         // Remove empty expressions.
         T(Expr) << End >> [](Match&) -> Node { return {}; },

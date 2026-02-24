@@ -295,6 +295,7 @@ structure
           T = typeparam
           apply = function
           create = function
+          fill = function
           size = function
           values = function}
         (none)
@@ -308,18 +309,23 @@ structure
         (classbody
           (function
             {
-              size = paramdef}
+              some = paramdef}
             (rhs)
             (ident 6:create)
             (typeparams)
             (params
               (paramdef
-                (ident 4:size)
+                (ident 4:some)
                 (type
                   (typename
                     (nameelement
-                      (ident 5:usize)
-                      (typeargs))))
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))
                 (body)))
             (type
               (typename
@@ -334,21 +340,146 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 8:newarray)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 1:T)
-                            (typeargs)))))))
-                (exprseq
+                    (ident 4:some)
+                    (typeargs))))))
+          (function
+            {
+              a = let
+              from = paramdef
+              i = var
+              size = paramdef}
+            (rhs)
+            (ident 4:fill)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:size)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))
+                (body))
+              (paramdef
+                (ident 4:from)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs))))
+                (body
                   (expr
                     (funcname
                       (nameelement
+                        (ident 1:T)
+                        (typeargs)))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:a)
+                      (type
+                        (typevar 10:typevar$15))))
+                  (expr
+                    (triplecolon
+                      (nameelement
+                        (ident 8:newarray)
+                        (typeargs
+                          (type
+                            (typename
+                              (nameelement
+                                (ident 1:T)
+                                (typeargs)))))))
+                    (exprseq
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 4:size)
+                            (typeargs))))))))
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar 10:typevar$16))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 1:i)
+                        (typeargs)))
+                    (funcname
+                      (nameelement
+                        (symbolid 1:<)
+                        (typeargs)))
+                    (funcname
+                      (nameelement
                         (ident 4:size)
-                        (typeargs))))))))
+                        (typeargs))))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$17))
+                    (body
+                      (expr
+                        (=
+                          (expr
+                            (funcname
+                              (nameelement
+                                (ident 1:a)
+                                (typeargs)))
+                            (exprseq
+                              (expr
+                                (funcname
+                                  (nameelement
+                                    (ident 1:i)
+                                    (typeargs))))))
+                          (expr
+                            (funcname
+                              (nameelement
+                                (ident 4:from)
+                                (typeargs))))))
+                      (expr
+                        (=
+                          (expr
+                            (funcname
+                              (nameelement
+                                (ident 1:i)
+                                (typeargs))))
+                          (expr
+                            (funcname
+                              (nameelement
+                                (ident 1:i)
+                                (typeargs)))
+                            (funcname
+                              (nameelement
+                                (symbolid 1:+)
+                                (typeargs)))
+                            (int 1:1))))))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:a)
+                    (typeargs))))))
           (function
             {
               self = paramdef}
@@ -506,7 +637,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$16))))
+              (typevar 10:typevar$22))))
         (where)
         (classbody
           (fielddef
@@ -729,7 +860,7 @@ structure
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$24))
+                          (typevar 10:typevar$30))
                         (body
                           (expr
                             (=
@@ -737,7 +868,7 @@ structure
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$26))))
+                                    (typevar 10:typevar$32))))
                               (expr
                                 (funcname
                                   (nameelement
@@ -752,7 +883,7 @@ structure
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$27))))
+                                    (typevar 10:typevar$33))))
                               (expr
                                 (funcname
                                   (nameelement
@@ -799,7 +930,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$25))
+                      (typevar 10:typevar$31))
                     (body
                       (expr
                         (funcname
@@ -827,7 +958,7 @@ structure
                               (typeargs))))))))
                 (body)))
             (type
-              (typevar 10:typevar$21))
+              (typevar 10:typevar$27))
             (where)
             (body
               (expr
@@ -910,7 +1041,9 @@ structure
                     (nameelement
                       (ident 4:bool)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (false)))))
             (type
               (typename
                 (nameelement
@@ -994,7 +1127,7 @@ structure
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$50))
+                          (typevar 10:typevar$56))
                         (body
                           (expr
                             (funcname
@@ -1006,7 +1139,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$51))
+                      (typevar 10:typevar$57))
                     (body
                       (expr
                         (false))))))))
@@ -1054,7 +1187,7 @@ structure
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$54))
+                          (typevar 10:typevar$60))
                         (body
                           (expr
                             (true))))))
@@ -1062,7 +1195,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$55))
+                      (typevar 10:typevar$61))
                     (body
                       (expr
                         (funcname
@@ -1564,7 +1697,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$76))))
+              (typevar 10:typevar$82))))
         (where)
         (classbody
           (function
@@ -1706,9 +1839,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:f64)
+                      (ident 3:f32)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -1717,16 +1852,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 7:convf32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -3868,7 +3997,9 @@ structure
                     (nameelement
                       (ident 3:f64)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -5983,9 +6114,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i16)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -5994,16 +6127,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 7:convi16)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -7497,9 +7624,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i32)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -7508,16 +7637,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 7:convi32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -9011,9 +9134,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i64)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -9022,16 +9147,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 7:convi64)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -10510,9 +10629,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 2:i8)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -10521,16 +10642,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 6:convi8)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -11533,9 +11648,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:ilong)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -11544,16 +11661,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 9:convilong)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -13141,9 +13252,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:isize)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -13152,16 +13265,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 9:convisize)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -14687,7 +14794,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$864))))
+              (typevar 11:typevar$870))))
         (where)
         (classbody
           (function
@@ -14807,9 +14914,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:u16)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -14818,16 +14927,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 7:convu16)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -16287,9 +16390,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:u32)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -16298,16 +16403,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 7:convu32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -17769,7 +17868,9 @@ structure
                     (nameelement
                       (ident 3:u64)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -19241,9 +19342,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 2:u8)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -19252,16 +19355,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 6:convu8)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -20721,9 +20818,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:ulong)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -20732,16 +20831,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 9:convulong)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef
@@ -22201,9 +22294,11 @@ structure
                 (type
                   (typename
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:usize)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -22212,16 +22307,10 @@ structure
             (where)
             (body
               (expr
-                (triplecolon
+                (funcname
                   (nameelement
-                    (ident 9:convusize)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:some)
-                        (typeargs))))))))
+                    (ident 4:some)
+                    (typeargs))))))
           (function
             {
               other = paramdef

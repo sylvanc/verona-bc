@@ -1,6 +1,6 @@
 u64
 {
-  create(some: u64): u64
+  create(some: u64 = 0): u64
   {
     some
   }

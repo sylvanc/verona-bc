@@ -4,6 +4,7 @@ namespace vc
 {
   // Sythetic locations.
   inline const auto l_local = Location("local");
+  inline const auto l_arraylit = Location("array");
   inline const auto l_cond = Location("cond");
   inline const auto l_body = Location("body");
   inline const auto l_join = Location("join");
@@ -151,6 +152,44 @@ namespace vc
             // Copy the elements into the array.
             size_t idx = 0;
             for (auto& elem : *tuple)
+            {
+              auto ref = _.fresh(l_local);
+              auto prev = _.fresh(l_local);
+              seq << (Lift << Body
+                           << (ArrayRefConst
+                               << (LocalId ^ ref)
+                               << (Arg << ArgCopy << (LocalId ^ id))
+                               << (Int ^ std::to_string(idx++))))
+                  << (Lift << Body
+                           << (Store << (LocalId ^ prev) << (LocalId ^ ref)
+                                     << (Arg << ArgCopy << elem)));
+            }
+
+            return seq << (LocalId ^ id);
+          },
+
+        // Array literal creation.
+        In(Expr) * T(ArrayLit)[ArrayLit] << (T(LocalId)++ * End) >>
+          [](Match& _) {
+            // Allocate an array[any] of the right size.
+            // Uses l_arraylit prefix so infer can distinguish from tuples.
+            auto arr = _(ArrayLit);
+            auto id = _.fresh(l_arraylit);
+            auto seq = Seq
+              << (Lift << Body
+                       << (NewArrayConst
+                           << (LocalId ^ id)
+                           << (Type
+                               << (TypeName
+                                   << (NameElement << (Ident ^ "_builtin")
+                                                   << TypeArgs)
+                                   << (NameElement << (Ident ^ "any")
+                                                   << TypeArgs)))
+                           << (Int ^ std::to_string(arr->size()))));
+
+            // Copy the elements into the array.
+            size_t idx = 0;
+            for (auto& elem : *arr)
             {
               auto ref = _.fresh(l_local);
               auto prev = _.fresh(l_local);

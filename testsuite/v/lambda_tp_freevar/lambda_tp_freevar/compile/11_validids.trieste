@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2107)
+            (localid 5:$2150)
             (functionid 29:lambda_tp_freevar::main::0::0)
             (args)))
         (ret
-          (localid 5:$2107)))))
+          (localid 5:$2150)))))
   (func
     (functionid 29:lambda_tp_freevar::main::0::0)
     (params)
@@ -27,39 +27,39 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1483)
+            (localid 10:local$1508)
             (i32)
             (int 2:10))
           (const
-            (localid 10:local$1484)
+            (localid 10:local$1509)
             (i32)
             (int 2:42))
           (call
-            (localid 10:local$1431)
+            (localid 10:local$1437)
             (functionid 42:lambda_tp_freevar::apply_with_offset::2::0)
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1483))
+                (localid 10:local$1508))
               (arg
                 (argcopy)
-                (localid 10:local$1484))))
+                (localid 10:local$1509))))
           (copy
             (localid 1:w)
-            (localid 10:local$1431))
+            (localid 10:local$1437))
           (lookup
-            (localid 10:local$1485)
+            (localid 10:local$1510)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1486)
-            (localid 10:local$1485)
+            (localid 10:local$1511)
+            (localid 10:local$1510)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 10:local$1486)))))
+          (localid 10:local$1511)))))
   (primitive
     (i32)
     (methods))
@@ -79,22 +79,22 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1430)
-            (functionid 44:lambda_tp_freevar::lambda$1419::create::1::0)
+            (localid 10:local$1436)
+            (functionid 44:lambda_tp_freevar::lambda$1425::create::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 6:offset))))
           (copy
             (localid 1:f)
-            (localid 10:local$1430))
+            (localid 10:local$1436))
           (lookup
-            (localid 10:local$1481)
+            (localid 10:local$1506)
             (localid 1:f)
             (methodid 11:apply::2::0))
           (calldyn
-            (localid 10:local$1482)
-            (localid 10:local$1481)
+            (localid 10:local$1507)
+            (localid 10:local$1506)
             (args
               (arg
                 (argcopy)
@@ -103,7 +103,7 @@ validids
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1482)))))
+          (localid 10:local$1507)))))
   (class
     (classid 29:lambda_tp_freevar::wrapper::0)
     (fields
@@ -118,28 +118,28 @@ validids
         (methodid 11:value::1::0)
         (functionid 39:lambda_tp_freevar::wrapper::value::1::0))))
   (func
-    (functionid 44:lambda_tp_freevar::lambda$1419::create::1::0)
+    (functionid 44:lambda_tp_freevar::lambda$1425::create::1::0)
     (params
       (param
         (localid 6:offset)
         (dyn)))
-    (classid 33:lambda_tp_freevar::lambda$1419::0)
+    (classid 33:lambda_tp_freevar::lambda$1425::0)
     (vars)
     (labels
       (label
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1428)
-            (classid 33:lambda_tp_freevar::lambda$1419::0)
+            (localid 10:local$1434)
+            (classid 33:lambda_tp_freevar::lambda$1425::0)
             (args
               (arg
                 (argcopy)
                 (localid 6:offset)))))
         (ret
-          (localid 10:local$1428)))))
+          (localid 10:local$1434)))))
   (class
-    (classid 33:lambda_tp_freevar::lambda$1419::0)
+    (classid 33:lambda_tp_freevar::lambda$1425::0)
     (fields
       (field
         (fieldid 6:offset)
@@ -147,13 +147,13 @@ validids
     (methods
       (method
         (methodid 11:apply::2::0)
-        (functionid 43:lambda_tp_freevar::lambda$1419::apply::2::0))))
+        (functionid 43:lambda_tp_freevar::lambda$1425::apply::2::0))))
   (func
-    (functionid 43:lambda_tp_freevar::lambda$1419::apply::2::0)
+    (functionid 43:lambda_tp_freevar::lambda$1425::apply::2::0)
     (params
       (param
         (localid 4:self)
-        (classid 33:lambda_tp_freevar::lambda$1419::0))
+        (classid 33:lambda_tp_freevar::lambda$1425::0))
       (param
         (localid 1:x)
         (i32)))
@@ -164,26 +164,26 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1480)
+            (localid 10:local$1505)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 6:offset))
           (load
-            (localid 10:local$2058)
-            (localid 10:local$1480))
+            (localid 10:local$2098)
+            (localid 10:local$1505))
           (copy
             (localid 6:offset)
-            (localid 10:local$2058))
+            (localid 10:local$2098))
           (call
-            (localid 10:local$1429)
+            (localid 10:local$1435)
             (functionid 40:lambda_tp_freevar::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 6:offset)))))
         (ret
-          (localid 10:local$1429)))))
+          (localid 10:local$1435)))))
   (func
     (functionid 40:lambda_tp_freevar::wrapper::create::1::0)
     (params
@@ -197,14 +197,14 @@ validids
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1427)
+            (localid 10:local$1433)
             (classid 29:lambda_tp_freevar::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:v)))))
         (ret
-          (localid 10:local$1427)))))
+          (localid 10:local$1433)))))
   (func
     (functionid 37:lambda_tp_freevar::wrapper::get::1::0)
     (params
@@ -218,18 +218,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1478)
+            (localid 10:local$1503)
             (localid 4:self)
             (methodid 11:value::1::0))
           (calldyn
-            (localid 10:local$1479)
-            (localid 10:local$1478)
+            (localid 10:local$1504)
+            (localid 10:local$1503)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1479)))))
+          (localid 10:local$1504)))))
   (func
     (functionid 39:lambda_tp_freevar::wrapper::value::1::0)
     (params
@@ -243,17 +243,17 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1426)
+            (localid 10:local$1432)
             (functionid 44:lambda_tp_freevar::wrapper::value::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1778)
-            (localid 10:local$1426)))
+            (localid 10:local$1823)
+            (localid 10:local$1432)))
         (ret
-          (localid 10:local$1778)))))
+          (localid 10:local$1823)))))
   (func
     (functionid 44:lambda_tp_freevar::wrapper::value::1::ref::0)
     (params
@@ -268,13 +268,13 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1477)
+            (localid 10:local$1502)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 5:value)))
         (ret
-          (localid 10:local$1477)))))
+          (localid 10:local$1502)))))
   (primitive
     (ref
       (i32))

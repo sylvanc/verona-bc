@@ -1,8 +1,8 @@
 i32
 {
-  create(some: u64): i32
+  create(some: i32 = 0): i32
   {
-    :::convi32(some)
+    some
   }
 
   +(self: i32, other: i32): i32

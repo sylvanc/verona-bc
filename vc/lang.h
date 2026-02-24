@@ -61,6 +61,7 @@ namespace vc
   inline const auto ExprSeq = TokenDef("exprseq");
   inline const auto Tuple = TokenDef("tuple");
   inline const auto TupleLHS = TokenDef("tuplelhs");
+  inline const auto ArrayLit = TokenDef("arraylit");
   inline const auto Lambda = TokenDef("lambda", flag::symtab);
   inline const auto Block = TokenDef("block", flag::symtab);
   inline const auto FuncName = TokenDef("funcname");
@@ -111,6 +112,7 @@ namespace vc
       Call,
       CallDyn,
       Tuple,
+      ArrayLit,
       ExprSeq);
 
   inline const auto wfType =
@@ -130,8 +132,9 @@ namespace vc
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
-    wfLiteral | String | RawString | Tuple | Let | Var | New | Lambda | Ref |
-    FuncName | Dot | If | Else | While | When | Equals | Hash | Try | FieldRef;
+    wfLiteral | String | RawString | Tuple | ArrayLit | Let | Var | New |
+    Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals | Hash |
+    Try | FieldRef;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -178,6 +181,7 @@ namespace vc
     | (FieldRef <<= Expr * FieldId)
     | (Load <<= Expr)
     | (Tuple <<= Expr++)
+    | (ArrayLit <<= Expr++)
     | (Lambda <<= Params * Type * Body)
     | (Block <<= Params * Type * Body)
     | (FuncName <<= NameElement++[1])

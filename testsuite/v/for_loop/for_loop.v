@@ -1,6 +1,6 @@
 main(): i32
 {
-  var arr = array[i32](10);
+  let arr = array[i32]::fill(10);
   var index = 0;
 
   while index < arr.size

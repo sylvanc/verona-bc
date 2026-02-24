@@ -1,8 +1,8 @@
 ulong
 {
-  create(some: u64): ulong
+  create(some: ulong = 0): ulong
   {
-    :::convulong(some)
+    some
   }
 
   +(self: ulong, other: ulong): ulong

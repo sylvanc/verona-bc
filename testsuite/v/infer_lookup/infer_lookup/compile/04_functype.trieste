@@ -128,7 +128,7 @@ functype
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1415))
+              (typevar 12:typevar$1421))
             (where)
             (body
               (expr
@@ -428,6 +428,9 @@ functype
             function
             function
           create = function
+          fill =
+            function
+            function
           size = function
           values = function}
         (none)
@@ -441,9 +444,60 @@ functype
         (classbody
           (function
             {
-              size = paramdef}
+              some = paramdef}
             (rhs)
             (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:some)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (localid 4:some))))
+          (function
+            {
+              size = paramdef}
+            (rhs)
+            (ident 4:fill)
             (typeparams)
             (params
               (paramdef
@@ -478,24 +532,171 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 8:newarray)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 5:array)
-                            (typeargs))
-                          (nameelement
-                            (ident 1:T)
-                            (typeargs)))))))
-                (exprseq
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (localid 4:size))
+                    (expr
+                      (exprseq
+                        (expr
+                          (funcname
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))
+                            (nameelement
+                              (ident 6:create)
+                              (typeargs)))))))))))
+          (function
+            {
+              a = let
+              from = paramdef
+              i = var
+              size = paramdef}
+            (rhs)
+            (ident 4:fill)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:size)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs)))))
+              (paramdef
+                (ident 4:from)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs))
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (=
                   (expr
-                    (localid 4:size))))))
+                    (let
+                      (ident 1:a)
+                      (type
+                        (typevar 10:typevar$23))))
+                  (expr
+                    (triplecolon
+                      (nameelement
+                        (ident 8:newarray)
+                        (typeargs
+                          (type
+                            (typename
+                              (nameelement
+                                (ident 8:_builtin)
+                                (typeargs))
+                              (nameelement
+                                (ident 5:array)
+                                (typeargs))
+                              (nameelement
+                                (ident 1:T)
+                                (typeargs)))))))
+                    (exprseq
+                      (expr
+                        (localid 4:size))))))
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar 10:typevar$24))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:i)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 4:size))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$25))
+                    (body
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:a)
+                            (exprseq
+                              (expr
+                                (localid 1:i))))
+                          (expr
+                            (localid 4:from))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (localid 1:a))))
           (function
             {
               self = paramdef}
@@ -652,7 +853,7 @@ functype
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1416))
+              (typevar 12:typevar$1422))
             (where)
             (body
               (expr
@@ -778,7 +979,7 @@ functype
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$24))))
+              (typevar 10:typevar$30))))
         (where)
         (classbody
           (fielddef
@@ -871,7 +1072,7 @@ functype
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1417))
+              (typevar 12:typevar$1423))
             (where)
             (body
               (expr
@@ -1015,7 +1216,7 @@ functype
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1418))
+              (typevar 12:typevar$1424))
             (where)
             (body
               (expr
@@ -1181,7 +1382,7 @@ functype
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$32))
+                          (typevar 10:typevar$38))
                         (body
                           (expr
                             (=
@@ -1189,7 +1390,7 @@ functype
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$34))))
+                                    (typevar 10:typevar$40))))
                               (expr
                                 (localid 4:self)
                                 (dot
@@ -1201,7 +1402,7 @@ functype
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$35))))
+                                    (typevar 10:typevar$41))))
                               (expr
                                 (localid 1:a)
                                 (exprseq
@@ -1232,7 +1433,7 @@ functype
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$33))
+                      (typevar 10:typevar$39))
                     (body
                       (expr
                         (funcname
@@ -1274,7 +1475,7 @@ functype
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 10:typevar$29))
+              (typevar 10:typevar$35))
             (where)
             (body
               (expr
@@ -1339,7 +1540,9 @@ functype
           ^ = function
           apply = function
           bool = function
-          create = function
+          create =
+            function
+            function
           max = function
           min = function
           | = function}
@@ -1348,6 +1551,39 @@ functype
         (typeparams)
         (where)
         (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:bool)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (false)))))))))
           (function
             {
               some = paramdef}
@@ -1454,7 +1690,7 @@ functype
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$58))
+                          (typevar 10:typevar$64))
                         (body
                           (expr
                             (localid 5:other)
@@ -1463,7 +1699,7 @@ functype
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$59))
+                      (typevar 10:typevar$65))
                     (body
                       (expr
                         (false))))))))
@@ -1515,7 +1751,7 @@ functype
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$62))
+                          (typevar 10:typevar$68))
                         (body
                           (expr
                             (true))))))
@@ -1523,7 +1759,7 @@ functype
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$63))
+                      (typevar 10:typevar$69))
                     (body
                       (expr
                         (localid 5:other)
@@ -2035,7 +2271,7 @@ functype
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$84))))
+              (typevar 10:typevar$90))))
         (where)
         (classbody
           (function
@@ -2151,7 +2387,9 @@ functype
           ceil = function
           cos = function
           cosh = function
-          create = function
+          create =
+            function
+            function
           e = function
           exp = function
           f32 = function
@@ -2189,6 +2427,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:f32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:f32)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -2203,7 +2474,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:f64)
+                      (ident 3:f32)
                       (typeargs))))))
             (type
               (typename
@@ -2216,13 +2487,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convf32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -4445,7 +4710,9 @@ functype
           ceil = function
           cos = function
           cosh = function
-          create = function
+          create =
+            function
+            function
           e = function
           exp = function
           f32 = function
@@ -4482,6 +4749,39 @@ functype
         (typeparams)
         (where)
         (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:f64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:f64)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
           (function
             {
               some = paramdef}
@@ -6686,7 +6986,9 @@ functype
           ^ = function
           abs = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -6710,6 +7012,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i16)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i16)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -6724,7 +7059,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i16)
                       (typeargs))))))
             (type
               (typename
@@ -6737,13 +7072,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convi16)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -8262,7 +8591,9 @@ functype
           ^ = function
           abs = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -8286,6 +8617,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -8300,7 +8664,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i32)
                       (typeargs))))))
             (type
               (typename
@@ -8313,13 +8677,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convi32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -9838,7 +10196,9 @@ functype
           ^ = function
           abs = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -9862,6 +10222,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i64)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -9876,7 +10269,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i64)
                       (typeargs))))))
             (type
               (typename
@@ -9889,13 +10282,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convi64)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -11413,7 +11800,9 @@ functype
           >> = function
           ^ = function
           abs = function
-          create = function
+          create =
+            function
+            function
           max = function
           min = function
           | = function}
@@ -11422,6 +11811,39 @@ functype
         (typeparams)
         (where)
         (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 2:i8)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
           (function
             {
               some = paramdef}
@@ -11437,7 +11859,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 2:i8)
                       (typeargs))))))
             (type
               (typename
@@ -11450,13 +11872,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 6:convi8)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -12448,7 +12864,9 @@ functype
           ^ = function
           abs = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -12472,6 +12890,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:ilong)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:ilong)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -12486,7 +12937,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:ilong)
                       (typeargs))))))
             (type
               (typename
@@ -12499,13 +12950,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convilong)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -14120,7 +14565,9 @@ functype
           ^ = function
           abs = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -14144,6 +14591,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:isize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:isize)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -14158,7 +14638,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:isize)
                       (typeargs))))))
             (type
               (typename
@@ -14171,13 +14651,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convisize)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -15771,7 +16245,7 @@ functype
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$872))))
+              (typevar 11:typevar$878))))
         (where)
         (classbody
           (function
@@ -15854,7 +16328,7 @@ functype
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1419))
+              (typevar 12:typevar$1425))
             (where)
             (body
               (expr
@@ -15937,7 +16411,9 @@ functype
           >> = function
           ^ = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -15961,6 +16437,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:u16)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:u16)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -15975,7 +16484,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:u16)
                       (typeargs))))))
             (type
               (typename
@@ -15988,13 +16497,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convu16)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -17477,7 +17980,9 @@ functype
           >> = function
           ^ = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -17501,6 +18006,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:u32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:u32)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -17515,7 +18053,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:u32)
                       (typeargs))))))
             (type
               (typename
@@ -17528,13 +18066,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convu32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -19017,7 +19549,9 @@ functype
           >> = function
           ^ = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -19040,6 +19574,39 @@ functype
         (typeparams)
         (where)
         (classbody
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:u64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:u64)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
           (function
             {
               some = paramdef}
@@ -20551,7 +21118,9 @@ functype
           >> = function
           ^ = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -20575,6 +21144,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 2:u8)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:u8)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -20589,7 +21191,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 2:u8)
                       (typeargs))))))
             (type
               (typename
@@ -20602,13 +21204,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 6:convu8)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -22091,7 +22687,9 @@ functype
           >> = function
           ^ = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -22115,6 +22713,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:ulong)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:ulong)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -22129,7 +22760,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:ulong)
                       (typeargs))))))
             (type
               (typename
@@ -22142,13 +22773,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convulong)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -23631,7 +24256,9 @@ functype
           >> = function
           ^ = function
           bool = function
-          create = function
+          create =
+            function
+            function
           f32 = function
           f64 = function
           i16 = function
@@ -23655,6 +24282,39 @@ functype
         (where)
         (classbody
           (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:usize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
+          (function
             {
               some = paramdef}
             (rhs)
@@ -23669,7 +24329,7 @@ functype
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:usize)
                       (typeargs))))))
             (type
               (typename
@@ -23682,13 +24342,7 @@ functype
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convusize)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef

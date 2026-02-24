@@ -1,8 +1,22 @@
 array[T]
 {
-  create(size: usize): array[T]
+  create(some: array[T]): array[T]
   {
-    :::newarray[T](size)
+    some
+  }
+
+  fill(size: usize, from: T = T): array[T]
+  {
+    let a = :::newarray[T](size);
+    var i = 0;
+
+    while i < size
+    {
+      a(i) = from;
+      i = i + 1
+    }
+
+    a
   }
 
   size(self: array[T]): usize

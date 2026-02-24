@@ -428,6 +428,7 @@ ident
           T = typeparam
           apply = function
           create = function
+          fill = function
           size = function
           values = function}
         (none)
@@ -441,21 +442,32 @@ ident
         (classbody
           (function
             {
-              size = paramdef}
+              some = paramdef}
             (rhs)
             (ident 6:create)
             (typeparams)
             (params
               (paramdef
-                (ident 4:size)
+                (ident 4:some)
                 (type
                   (typename
                     (nameelement
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 5:usize)
-                      (typeargs))))
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))
                 (body)))
             (type
               (typename
@@ -479,24 +491,147 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 8:newarray)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 5:array)
-                            (typeargs))
-                          (nameelement
-                            (ident 1:T)
-                            (typeargs)))))))
-                (exprseq
+                (localid 4:some))))
+          (function
+            {
+              a = let
+              from = paramdef
+              i = var
+              size = paramdef}
+            (rhs)
+            (ident 4:fill)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:size)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))
+                (body))
+              (paramdef
+                (ident 4:from)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs))
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs))))
+                (body
                   (expr
-                    (localid 4:size))))))
+                    (funcname
+                      (nameelement
+                        (ident 8:_builtin)
+                        (typeargs))
+                      (nameelement
+                        (ident 5:array)
+                        (typeargs))
+                      (nameelement
+                        (ident 1:T)
+                        (typeargs))
+                      (nameelement
+                        (ident 6:create)
+                        (typeargs)))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:a)
+                      (type
+                        (typevar 10:typevar$25))))
+                  (expr
+                    (triplecolon
+                      (nameelement
+                        (ident 8:newarray)
+                        (typeargs
+                          (type
+                            (typename
+                              (nameelement
+                                (ident 8:_builtin)
+                                (typeargs))
+                              (nameelement
+                                (ident 5:array)
+                                (typeargs))
+                              (nameelement
+                                (ident 1:T)
+                                (typeargs)))))))
+                    (exprseq
+                      (expr
+                        (localid 4:size))))))
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar 10:typevar$26))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:i)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 4:size))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 10:typevar$27))
+                    (body
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:a)
+                            (exprseq
+                              (expr
+                                (localid 1:i))))
+                          (expr
+                            (localid 4:from))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (localid 1:a))))
           (function
             {
               self = paramdef}
@@ -705,7 +840,7 @@ ident
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$26))))
+              (typevar 10:typevar$32))))
         (where)
         (classbody
           (fielddef
@@ -990,7 +1125,7 @@ ident
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$34))
+                          (typevar 10:typevar$40))
                         (body
                           (expr
                             (=
@@ -998,7 +1133,7 @@ ident
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$36))))
+                                    (typevar 10:typevar$42))))
                               (expr
                                 (localid 4:self)
                                 (dot
@@ -1010,7 +1145,7 @@ ident
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$37))))
+                                    (typevar 10:typevar$43))))
                               (expr
                                 (localid 1:a)
                                 (exprseq
@@ -1041,7 +1176,7 @@ ident
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$35))
+                      (typevar 10:typevar$41))
                     (body
                       (expr
                         (funcname
@@ -1084,7 +1219,7 @@ ident
                               (typeargs))))))))
                 (body)))
             (type
-              (typevar 10:typevar$31))
+              (typevar 10:typevar$37))
             (where)
             (body
               (expr
@@ -1176,7 +1311,9 @@ ident
                     (nameelement
                       (ident 4:bool)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (false)))))
             (type
               (typename
                 (nameelement
@@ -1269,7 +1406,7 @@ ident
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$60))
+                          (typevar 10:typevar$66))
                         (body
                           (expr
                             (localid 5:other)
@@ -1278,7 +1415,7 @@ ident
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$61))
+                      (typevar 10:typevar$67))
                     (body
                       (expr
                         (false))))))))
@@ -1332,7 +1469,7 @@ ident
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$64))
+                          (typevar 10:typevar$70))
                         (body
                           (expr
                             (true))))))
@@ -1340,7 +1477,7 @@ ident
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$65))
+                      (typevar 10:typevar$71))
                     (body
                       (expr
                         (localid 5:other)
@@ -1872,7 +2009,7 @@ ident
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$86))))
+              (typevar 10:typevar$92))))
         (where)
         (classbody
           (function
@@ -2041,9 +2178,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:f64)
+                      (ident 3:f32)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -2055,13 +2194,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convf32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -4407,7 +4540,9 @@ ident
                     (nameelement
                       (ident 3:f64)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -6702,9 +6837,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i16)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -6716,13 +6853,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convi16)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -8333,9 +8464,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i32)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -8347,13 +8480,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convi32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -9964,9 +10091,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:i64)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -9978,13 +10107,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convi64)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -11580,9 +11703,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 2:i8)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -11594,13 +11719,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 6:convi8)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -12669,9 +12788,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:ilong)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -12683,13 +12804,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convilong)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -14400,9 +14515,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:isize)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -14414,13 +14531,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convisize)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -16066,7 +16177,7 @@ ident
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$874))))
+              (typevar 11:typevar$880))))
         (where)
         (classbody
           (function
@@ -16210,9 +16321,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:u16)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -16224,13 +16337,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convu16)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -17804,9 +17911,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 3:u32)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -17818,13 +17927,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 7:convu32)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -19400,7 +19503,9 @@ ident
                     (nameelement
                       (ident 3:u64)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -20986,9 +21091,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 2:u8)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -21000,13 +21107,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 6:convu8)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -22580,9 +22681,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:ulong)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -22594,13 +22697,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convulong)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef
@@ -24174,9 +24271,11 @@ ident
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 3:u64)
+                      (ident 5:usize)
                       (typeargs))))
-                (body)))
+                (body
+                  (expr
+                    (int 1:0)))))
             (type
               (typename
                 (nameelement
@@ -24188,13 +24287,7 @@ ident
             (where)
             (body
               (expr
-                (triplecolon
-                  (nameelement
-                    (ident 9:convusize)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 4:some))))))
+                (localid 4:some))))
           (function
             {
               other = paramdef

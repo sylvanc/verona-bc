@@ -1,8 +1,8 @@
 i16
 {
-  create(some: u64): i16
+  create(some: i16 = 0): i16
   {
-    :::convi16(some)
+    some
   }
 
   +(self: i16, other: i16): i16

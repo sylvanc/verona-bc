@@ -3,7 +3,7 @@
 ## To Do
 
 Syntax:
-- Array literals.
+- `x + y z` doesn't bind `y z` before `+`.
 - If `f` is a field on `x`, `x.f(y)` doesn't call the apply method on `f`.
   - It tries to call the `f` method with 2 arguments instead of 1.
 - Partial application, `_`.

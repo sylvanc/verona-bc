@@ -1,8 +1,8 @@
 f32
 {
-  create(some: f64): f32
+  create(some: f32 = 0): f32
   {
-    :::convf32(some)
+    some
   }
 
   +(self: f32, other: f32): f32

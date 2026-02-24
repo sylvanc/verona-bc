@@ -1,6 +1,6 @@
 f64
 {
-  create(some: f64): f64
+  create(some: f64 = 0): f64
   {
     some
   }

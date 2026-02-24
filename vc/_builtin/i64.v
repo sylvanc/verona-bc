@@ -1,8 +1,8 @@
 i64
 {
-  create(some: u64): i64
+  create(some: i64 = 0): i64
   {
-    :::convi64(some)
+    some
   }
 
   +(self: i64, other: i64): i64

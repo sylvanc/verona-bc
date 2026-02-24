@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2097)
+            (localid 5:$2140)
             (functionid 25:shape_recurse::main::0::0)
             (args)))
         (ret
-          (localid 5:$2097)))))
+          (localid 5:$2140)))))
   (func
     (functionid 25:shape_recurse::main::0::0)
     (params)
@@ -27,28 +27,28 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1479)
+            (localid 10:local$1504)
             (i32)
             (int 2:42))
           (call
-            (localid 10:local$1427)
+            (localid 10:local$1433)
             (functionid 32:shape_recurse::box::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1479))))
+                (localid 10:local$1504))))
           (copy
             (localid 1:b)
-            (localid 10:local$1427))
+            (localid 10:local$1433))
           (call
-            (localid 10:local$1428)
+            (localid 10:local$1434)
             (functionid 27:shape_recurse::invoke::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:b)))))
         (ret
-          (localid 10:local$1428)))))
+          (localid 10:local$1434)))))
   (primitive
     (i32)
     (methods))
@@ -65,14 +65,14 @@ validids
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1426)
+            (localid 10:local$1432)
             (classid 21:shape_recurse::box::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:x)))))
         (ret
-          (localid 10:local$1426)))))
+          (localid 10:local$1432)))))
   (func
     (functionid 27:shape_recurse::invoke::1::0)
     (params
@@ -86,18 +86,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1477)
+            (localid 10:local$1502)
             (localid 1:r)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1478)
-            (localid 10:local$1477)
+            (localid 10:local$1503)
+            (localid 10:local$1502)
             (args
               (arg
                 (argcopy)
                 (localid 1:r)))))
         (ret
-          (localid 10:local$1478)))))
+          (localid 10:local$1503)))))
   (type
     (typeid 26:shape_recurse::returner::0)
     (classid 21:shape_recurse::box::0))
@@ -127,18 +127,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1475)
+            (localid 10:local$1500)
             (localid 4:self)
             (methodid 7:v::1::0))
           (calldyn
-            (localid 10:local$1476)
-            (localid 10:local$1475)
+            (localid 10:local$1501)
+            (localid 10:local$1500)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1476)))))
+          (localid 10:local$1501)))))
   (func
     (functionid 27:shape_recurse::box::v::1::0)
     (params
@@ -152,17 +152,17 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1425)
+            (localid 10:local$1431)
             (functionid 32:shape_recurse::box::v::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1771)
-            (localid 10:local$1425)))
+            (localid 10:local$1816)
+            (localid 10:local$1431)))
         (ret
-          (localid 10:local$1771)))))
+          (localid 10:local$1816)))))
   (func
     (functionid 32:shape_recurse::box::v::1::ref::0)
     (params
@@ -177,13 +177,13 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1474)
+            (localid 10:local$1499)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 1:v)))
         (ret
-          (localid 10:local$1474)))))
+          (localid 10:local$1499)))))
   (primitive
     (ref
       (i32))

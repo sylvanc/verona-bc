@@ -697,9 +697,21 @@ namespace vc
             }
             else
             {
+              // Save original Type before reification overwrites it.
+              // ensure_array_reified needs the TypeName form for subst.
+              auto orig_type = clone(n / Type);
               auto arr_type = Array << inner;
               local_types[(n / LocalId)->location()] = clone(arr_type);
               n / Type = arr_type;
+
+              // For array literals, trigger reification of the array class
+              // so method invocations (size, apply) can be resolved.
+              auto loc_view = (n / LocalId)->location().view();
+              bool is_array_lit =
+                loc_view.size() >= 5 && loc_view.substr(0, 5) == "array";
+
+              if (is_array_lit)
+                ensure_array_reified(orig_type, r.subst);
             }
           }
           else if (n == FFI)
@@ -916,6 +928,27 @@ namespace vc
 
       r_vec.push_back({ref_def, {}, std::move(expected_id), {}, {}});
       worklist.push_back(&r_vec.back());
+    }
+
+    // Ensure that the array wrapper class is reified for a given element type.
+    // Called from array literal processing so that method invocations (size,
+    // apply) have a class reification to bind against.
+    void ensure_array_reified(
+      const Node& elem_type, const NodeMap<Node>& outer_subst)
+    {
+      auto array_defs = builtin->look(Location("array"));
+      assert(!array_defs.empty());
+      auto array_def = array_defs.front();
+
+      auto tps = array_def / TypeParams;
+      assert(tps->size() == 1);
+
+      // Build subst mapping the array's TypeParam T to the element type.
+      // Include outer_subst so any TypeParam refs in elem_type are resolved.
+      NodeMap<Node> subst = outer_subst;
+      subst[tps->at(0)] = clone(elem_type);
+
+      find_or_push(array_def, std::move(subst));
     }
 
     void reify_call(Node& call, const NodeMap<Node>& subst)
