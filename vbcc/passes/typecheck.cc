@@ -1071,10 +1071,11 @@ namespace vbcc
           // When produces a cown.
           set_type(env, node / LocalId, Node(Dyn));
         }
-        else if (node == Typetest)
+        else if (node == TypeCond)
         {
-          // Typetest always produces a Bool.
-          set_type(env, node / LocalId, Node(Bool));
+          // TypeCond dst gets the tested type (narrowed value on match).
+          auto tested_type = resolve_type(node / Type);
+          set_type(env, node / LocalId, tested_type);
         }
         else if (node == Global)
         {

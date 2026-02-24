@@ -672,8 +672,8 @@ namespace vbci
         return os << "WhenStatic";
       case Op::WhenDynamic:
         return os << "WhenDynamic";
-      case Op::Typetest:
-        return os << "Typetest";
+      case Op::TypeCond:
+        return os << "TypeCond";
       case Op::TailcallStatic:
         return os << "TailcallStatic";
       case Op::TailcallDynamic:
@@ -1417,14 +1417,25 @@ namespace vbci
           break;
         }
 
-        case Op::Typetest:
+        case Op::TypeCond:
         {
           process([](
                     Register& dst,
                     const Register& src,
                     Constant<size_t> type_id,
-                    Program& program) INLINE {
-            dst = ValueImmortal(program.subtype(src->type_id(), type_id));
+                    Constant<size_t> on_true,
+                    Constant<size_t> on_false,
+                    Program& program,
+                    Thread& self) INLINE {
+            if (program.subtype(src->type_id(), type_id))
+            {
+              dst = src;
+              self.branch(on_true);
+            }
+            else
+            {
+              self.branch(on_false);
+            }
           });
           break;
         }

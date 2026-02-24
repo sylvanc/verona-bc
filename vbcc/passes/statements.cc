@@ -196,7 +196,7 @@ namespace vbcc
           HeapArrayConst,
           RegionArray,
           RegionArrayConst,
-          Typetest) *
+          TypeCond) *
             T(GlobalId)[GlobalId] >>
           [](Match& _) { return ClassId ^ _(GlobalId); },
 
@@ -532,9 +532,13 @@ namespace vbcc
                            << (Cown << _(Type));
           },
 
-        // Type test.
-        Dst * T(Typetest) * T(LocalId)[Rhs] * TypePat[Type] >>
-          [](Match& _) { return Typetest << _(LocalId) << _(Rhs) << _(Type); },
+        // TypeCond terminator.
+        Dst * T(TypeCond) * T(LocalId)[Rhs] * TypePat[Type] *
+            T(LabelId)[True] * T(LabelId)[False] >>
+          [](Match& _) {
+            return TypeCond << _(LocalId) << _(Rhs) << _(Type) << _(True)
+                            << _(False);
+          },
 
         // Terminators.
         (T(Tailcall) << End) * T(GlobalId)[GlobalId] * CallArgs[Args] >>

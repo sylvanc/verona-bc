@@ -38,8 +38,7 @@ func @conn_read($self: @Conn, $data: [u8]): none
   jump ^while
 ^while
   $plaintext = ffi @ssl_plaintext($ssl)
-  $done = typetest $plaintext none
-  cond $done ^done ^body
+  $done = typecond $plaintext none ^done ^body
 ^body
   $text = makeptr $plaintext
   $len = len $plaintext

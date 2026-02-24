@@ -423,6 +423,14 @@ namespace vc
             (T(Group) << (T(Ident)[Ident] * T(Equals) * Any++[Expr] * End)) >>
           [](Match& _) { return NewArg << _(Ident) << (Expr << _[Expr]); },
 
+        // Shorthand field initializer: `new { foo }` desugars to
+        // `new { foo = foo }`.
+        In(NewArgs) * (T(Group) << (T(Ident)[Ident] * End)) >>
+          [](Match& _) {
+            auto id = _(Ident);
+            return NewArg << clone(id) << (Expr << (Ident ^ id));
+          },
+
         // Lambda.
         In(Expr) * ParamsPat[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
@@ -528,38 +536,52 @@ namespace vc
         // For.
         In(Expr) * T(For) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
           [](Match& _) {
+            // for e (a, b, ...) -> { body }
+            // desugars to:
+            // let it = e;
+            // while true {
+            //   let (a, b, ...) = it.next() else { break }
+            //   body
+            // }
             auto params = _(Lambda) / Params;
             auto type = _(Lambda) / Type;
             auto body = _(Lambda) / Body;
             auto id = _.fresh(Location("it"));
 
-            if (!params->empty())
+            if (params->empty())
+              return err(_(Lambda), "For loop must have parameters");
+
+            // Unpack arguments.
+            Node lhs = Tuple;
+
+            for (auto& p : *params)
             {
-              // Unpack arguments.
-              Node lhs = Tuple;
+              if (!(p / Body)->empty())
+                return err(p, "For loop parameter can't have a default value");
 
-              for (auto& p : *params)
-              {
-                if (!(p / Body)->empty())
-                  return err(
-                    p, "For loop parameter can't have a default value");
-
-                lhs << (Expr << (Let << (p / Ident) << (p / Type)));
-              }
-
-              if (lhs->size() == 1)
-                lhs = lhs->front();
-              else
-                lhs = Expr << lhs;
-
-              // On each iteration, call `next` on the iterator and assign the
-              // result to the loop variable(s).
-              body->push_front(
-                Expr
-                << (Equals << lhs
-                           << (Expr << (Ident ^ id)
-                                    << (Dot << (Ident ^ "next") << TypeArgs))));
+              lhs << (Expr << (Let << (p / Ident) << (p / Type)));
             }
+
+            if (lhs->size() == 1)
+              lhs = lhs->front();
+            else
+              lhs = Expr << lhs;
+
+            // On each iteration, call `next` on the iterator and assign the
+            // result to the loop variable(s). Break if it's nomatch.
+            body->push_front(
+              Expr
+              << (Equals
+                  << lhs
+                  << (Expr
+                      << (Else
+                          << (Expr << (Ident ^ id)
+                                   << (Dot << (Ident ^ "next") << TypeArgs))
+                          << (Block
+                              << Params << make_type(_)
+                              << (Body
+                                  << (Break
+                                      << (Expr << (Ident ^ "none")))))))));
 
             return ExprSeq << (Expr
                                << (Equals
@@ -567,11 +589,8 @@ namespace vc
                                        << (Let << (Ident ^ id) << make_type(_)))
                                    << (Expr << _[For])))
                            << (Expr
-                               << (While
-                                   << (Expr << (Ident ^ id)
-                                            << (Dot << (Ident ^ "has_next")
-                                                    << TypeArgs))
-                                   << (Block << Params << type << body)));
+                               << (While << (Expr << True)
+                                         << (Block << Params << type << body)));
           },
 
         // When.
@@ -887,8 +906,8 @@ namespace vc
             auto type = make_selftype(node / Ident);
 
             cls_body
-              << (Function << Rhs << (Ident ^ "create") << TypeParams
-                           << params << type << Where
+              << (Function << Rhs << (Ident ^ "create") << TypeParams << params
+                           << type << Where
                            << (Body << (Expr << (New << new_args))));
           }
         }

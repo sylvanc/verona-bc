@@ -479,12 +479,6 @@ namespace vc
             reify_typename(string_type, {});
             local_types[(n / LocalId)->location()] = Array << clone(U8);
           }
-          else if (n == Typetest)
-          {
-            n / Type = reify_type(n / Type, r.subst);
-            reify_primitive(Bool);
-            local_types[(n / LocalId)->location()] = clone(Bool);
-          }
           else if (n->in({Eq, Ne, Lt, Le, Gt, Ge}))
           {
             reify_primitive(Bool);
@@ -630,6 +624,15 @@ namespace vc
 
         for (auto& n : remove)
           n->parent()->replace(n);
+
+        // Handle TypeCond terminator (not in Body).
+        auto term = l / Return;
+
+        if (term == TypeCond)
+        {
+          term / Type = reify_type(term / Type, r.subst);
+          local_types[(term / LocalId)->location()] = clone(term / Type);
+        }
       }
 
       r.reification = Func << r.id << params << r_type << vars << labels;

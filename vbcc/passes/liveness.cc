@@ -75,7 +75,7 @@ namespace vbcc
           }
           else if (node->in({Convert,  Copy,     HeapArrayConst,
                              ArrayRef, Load,     Store,
-                             Lookup,   Typetest, Neg,
+                             Lookup,   Neg,
                              Not,      Abs,      Ceil,
                              Floor,    Exp,      Log,
                              Sqrt,     Cbrt,     IsInf,
@@ -144,6 +144,19 @@ namespace vbcc
             func_state.labels.at(pred).succ.push_back(rhs);
             func_state.labels.at(lhs).pred.push_back(pred);
             func_state.labels.at(rhs).pred.push_back(pred);
+          }
+          else if (node == TypeCond)
+          {
+            use(node / Rhs);
+            def(node / LocalId);
+            auto& func_state = state->get_func(node->parent(Func) / FunctionId);
+            auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
+            auto t = *func_state.get_label_id(node / True);
+            auto f = *func_state.get_label_id(node / False);
+            func_state.labels.at(pred).succ.push_back(t);
+            func_state.labels.at(pred).succ.push_back(f);
+            func_state.labels.at(t).pred.push_back(pred);
+            func_state.labels.at(f).pred.push_back(pred);
           }
           else if (node == Error)
           {

@@ -89,20 +89,18 @@ anf
               (var
                 (ident 10:local$1395)
                 (type
-                  (typevar 12:typevar$1396)))
-              (typetest
-                (localid 10:local$1993)
-                (localid 10:local$1395)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 7:nomatch)
-                      (typeargs))))))
-            (cond
+                  (typevar 12:typevar$1396))))
+            (typecond
               (localid 10:local$1993)
+              (localid 10:local$1395)
+              (type
+                (typename
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 7:nomatch)
+                    (typeargs))))
               (labelid 9:body$1994)
               (labelid 9:join$1995)))
           (label
@@ -171,20 +169,18 @@ anf
               (labelid 9:join$1995)))
           (label
             (labelid 9:join$1995)
-            (body
-              (typetest
-                (localid 10:local$2029)
-                (localid 10:local$1395)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 7:nomatch)
-                      (typeargs))))))
-            (cond
+            (body)
+            (typecond
               (localid 10:local$2029)
+              (localid 10:local$1395)
+              (type
+                (typename
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 7:nomatch)
+                    (typeargs))))
               (labelid 9:body$2030)
               (labelid 9:join$2031)))
           (label
@@ -781,20 +777,18 @@ anf
                   (var
                     (ident 10:local$1404)
                     (type
-                      (typevar 12:typevar$1405)))
-                  (typetest
-                    (localid 10:local$1997)
-                    (localid 10:local$1404)
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 7:nomatch)
-                          (typeargs))))))
-                (cond
+                      (typevar 12:typevar$1405))))
+                (typecond
                   (localid 10:local$1997)
+                  (localid 10:local$1404)
+                  (type
+                    (typename
+                      (nameelement
+                        (ident 8:_builtin)
+                        (typeargs))
+                      (nameelement
+                        (ident 7:nomatch)
+                        (typeargs))))
                   (labelid 9:body$1998)
                   (labelid 9:join$1999)))
               (label
@@ -890,20 +884,18 @@ anf
                   (var
                     (ident 10:local$1407)
                     (type
-                      (typevar 12:typevar$1408)))
-                  (typetest
-                    (localid 10:local$2000)
-                    (localid 10:local$1407)
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 7:nomatch)
-                          (typeargs))))))
-                (cond
+                      (typevar 12:typevar$1408))))
+                (typecond
                   (localid 10:local$2000)
+                  (localid 10:local$1407)
+                  (type
+                    (typename
+                      (nameelement
+                        (ident 8:_builtin)
+                        (typeargs))
+                      (nameelement
+                        (ident 7:nomatch)
+                        (typeargs))))
                   (labelid 9:body$2001)
                   (labelid 9:join$2002)))
               (label
@@ -7148,7 +7140,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 3:i16)
                   (typeargs))))
             (where)
             (labels
@@ -8749,7 +8741,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 3:i32)
                   (typeargs))))
             (where)
             (labels
@@ -10350,7 +10342,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 3:i64)
                   (typeargs))))
             (where)
             (labels
@@ -11936,7 +11928,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 2:i8)
                   (typeargs))))
             (where)
             (labels
@@ -12968,7 +12960,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 5:ilong)
                   (typeargs))))
             (where)
             (labels
@@ -14663,7 +14655,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 5:isize)
                   (typeargs))))
             (where)
             (labels
@@ -16567,7 +16559,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 3:u16)
                   (typeargs))))
             (where)
             (labels
@@ -18132,7 +18124,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 3:u32)
                   (typeargs))))
             (where)
             (labels
@@ -19693,7 +19685,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 3:u64)
                   (typeargs))))
             (where)
             (labels
@@ -21258,7 +21250,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 2:u8)
                   (typeargs))))
             (where)
             (labels
@@ -22823,7 +22815,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 5:ulong)
                   (typeargs))))
             (where)
             (labels
@@ -24388,7 +24380,7 @@ anf
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:bool)
+                  (ident 5:usize)
                   (typeargs))))
             (where)
             (labels

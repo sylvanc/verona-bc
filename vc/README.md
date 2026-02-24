@@ -2,13 +2,14 @@
 
 ## To Do
 
+Syntax:
+- If `f` is a field on `x`, `x.f(y)` doesn't call the apply method on `f`.
+  - It tries to call the `f` method with 2 arguments instead of 1.
+- Partial application, `_`.
+
 Post reification type checking.
 - Clean up error messages.
 - Sources of `Dyn`: tuples, `any`, no annotation. Anything else?
-- Change `typetest` to return a value of the correct type.
-
-Reification.
-- If shapes have the same union type, compact them?
 
 Names.
 - Allow looking down a type parameter.
@@ -44,10 +45,7 @@ Tuples:
 - Destructing when the tuple is too long ignores the extra elements. Should it?
 - Flatten a tuple into another tuple.
 
-Expressions:
-- Partial application, `_`.
-
-Syntax:
+Semantics:
 - Region creation.
 
 Builtin:

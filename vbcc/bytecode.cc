@@ -1039,11 +1039,6 @@ namespace vbcc
             code << uleb(+Op::WhenDynamic) << dst(stmt)
                  << uleb(typ(stmt / Cown)) << src(stmt);
           }
-          else if (stmt == Typetest)
-          {
-            code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
-                 << uleb(typ(stmt / Type));
-          }
           else if (stmt == Add)
           {
             code << uleb(+Op::Add) << dst(stmt) << lhs(stmt) << rhs(stmt);
@@ -1288,6 +1283,13 @@ namespace vbcc
           auto t = *func_state.get_label_id(term / Lhs);
           auto f = *func_state.get_label_id(term / Rhs);
           code << uleb(+Op::Cond) << dst(term) << uleb(t) << uleb(f);
+        }
+        else if (term == TypeCond)
+        {
+          auto t = *func_state.get_label_id(term / True);
+          auto f = *func_state.get_label_id(term / False);
+          code << uleb(+Op::TypeCond) << dst(term) << src(term)
+               << uleb(typ(term / Type)) << uleb(t) << uleb(f);
         }
         else if (term == Jump)
         {

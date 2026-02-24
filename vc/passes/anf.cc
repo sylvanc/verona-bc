@@ -40,13 +40,6 @@ namespace vc
                 << Args;
   }
 
-  Node test_nomatch(Node dst, Node src)
-  {
-    assert(dst == LocalId);
-    assert(src == LocalId);
-    return Typetest << (LocalId ^ dst) << (LocalId ^ src) << type_nomatch();
-  }
-
   const auto CallPat = T(Call)[Call] << (T(FuncName)[FuncName] * T(Args)[Args]);
 
   const auto CallDynPat = T(CallDyn)[CallDyn]
@@ -255,7 +248,7 @@ namespace vc
           },
 
         // If body.
-        // TODO: distinguish typetest by param count
+        // TODO: distinguish typecond by param count
         In(Body) * T(If)
             << (T(Expr)[Cond] *
                 (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body])) *
@@ -321,7 +314,7 @@ namespace vc
           },
 
         // Else body.
-        // TODO: distinguish typetest by param count
+        // TODO: distinguish typecond by param count
         In(Body) * T(Else)
             << (T(LocalId)[LocalId] *
                 (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body]))) >>
@@ -330,13 +323,14 @@ namespace vc
             auto id = _.fresh(l_local);
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
-            return Seq << test_nomatch((LocalId ^ id), _(LocalId))
-                       << (Cond << (LocalId ^ id) << (LabelId ^ body)
-                                << (LabelId ^ join))
-                       << (Label << (LabelId ^ body)
-                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
-                                             << (Jump << (LabelId ^ join))))
-                       << (Label << (LabelId ^ join) << Body);
+            return Seq
+              << (TypeCond << (LocalId ^ id) << (LocalId ^ _(LocalId))
+                           << type_nomatch() << (LabelId ^ body)
+                           << (LabelId ^ join))
+              << (Label << (LabelId ^ body)
+                        << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                    << (Jump << (LabelId ^ join))))
+              << (Label << (LabelId ^ join) << Body);
           },
 
         // Break, continue.
@@ -631,7 +625,7 @@ namespace vc
 
           if (term == LocalId)
             node << (Return << term);
-          else if (term->in({Return, Raise, Throw, Jump, Cond}))
+          else if (term->in({Return, Raise, Throw, Jump, Cond, TypeCond}))
             node << term;
           else
           {
@@ -644,7 +638,7 @@ namespace vc
         {
           for (auto& child : *node)
           {
-            if (child->in({Return, Raise, Throw, Jump, Cond}))
+            if (child->in({Return, Raise, Throw, Jump, Cond, TypeCond}))
             {
               node->replace(child, err(child, "Terminators must come last"));
               ok = false;

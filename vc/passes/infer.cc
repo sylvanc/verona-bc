@@ -1477,12 +1477,6 @@ namespace vc
               env[dst->location()] =
                 LocalTypeInfo::computed(primitive_type(F64));
             }
-            else if (stmt == Typetest)
-            {
-              auto dst = stmt / LocalId;
-              env[dst->location()] =
-                LocalTypeInfo::computed(primitive_type(Bool));
-            }
             else if (stmt == Call)
             {
               // Phase 2+3: type arg inference and literal refinement.
@@ -1757,6 +1751,14 @@ namespace vc
 
             if (expected_prim)
               try_refine(env, ret_src->location(), expected_prim);
+          }
+          else if (term == TypeCond)
+          {
+            // TypeCond dst gets the tested type (narrowed value).
+            auto dst = term / LocalId;
+            auto tested_type = term / Type;
+            env[dst->location()] =
+              LocalTypeInfo::computed(clone(tested_type));
           }
         }
 

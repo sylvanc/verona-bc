@@ -80,7 +80,7 @@ namespace vbcc
         "try\\b" >> [](auto& m) { m.add(Try); },
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
         "when\\b" >> [](auto& m) { m.add(When); },
-        "typetest\\b" >> [](auto& m) { m.add(Typetest); },
+        "typecond\\b" >> [](auto& m) { m.add(TypeCond); },
 
         // Terminators.
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },
