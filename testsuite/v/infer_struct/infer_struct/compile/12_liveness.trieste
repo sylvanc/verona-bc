@@ -12,11 +12,11 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2025)
+            (localid 5:$2087)
             (functionid 24:infer_struct::main::0::0)
             (args)))
         (ret
-          (localid 5:$2025)))))
+          (localid 5:$2087)))))
   (func
     (functionid 24:infer_struct::main::0::0)
     (params)
@@ -27,28 +27,28 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1444)
+            (localid 10:local$1469)
             (i32)
             (int 1:1))
           (call
-            (localid 10:local$1402)
+            (localid 10:local$1419)
             (functionid 35:infer_struct::wrapper::create::1::0)
             (args
               (arg
                 (argmove)
-                (localid 10:local$1444))))
+                (localid 10:local$1469))))
           (move
             (localid 1:w)
-            (localid 10:local$1402))
+            (localid 10:local$1419))
           (call
-            (localid 10:local$1403)
+            (localid 10:local$1420)
             (functionid 26:infer_struct::unwrap::1::0)
             (args
               (arg
                 (argmove)
                 (localid 1:w)))))
         (ret
-          (localid 10:local$1403)))))
+          (localid 10:local$1420)))))
   (primitive
     (i32)
     (methods))
@@ -65,14 +65,14 @@ liveness
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1401)
+            (localid 10:local$1418)
             (classid 24:infer_struct::wrapper::0)
             (args
               (arg
                 (argmove)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1401)))))
+          (localid 10:local$1418)))))
   (func
     (functionid 26:infer_struct::unwrap::1::0)
     (params
@@ -86,18 +86,18 @@ liveness
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1442)
+            (localid 10:local$1467)
             (localid 1:w)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1443)
-            (localid 10:local$1442)
+            (localid 10:local$1468)
+            (localid 10:local$1467)
             (args
               (arg
                 (argmove)
                 (localid 1:w)))))
         (ret
-          (localid 10:local$1443)))))
+          (localid 10:local$1468)))))
   (class
     (classid 24:infer_struct::wrapper::0)
     (fields
@@ -121,17 +121,17 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1400)
+            (localid 10:local$1417)
             (functionid 37:infer_struct::wrapper::val::1::ref::0)
             (args
               (arg
                 (argmove)
                 (localid 4:self))))
           (load
-            (localid 10:local$1728)
-            (localid 10:local$1400)))
+            (localid 10:local$1761)
+            (localid 10:local$1417)))
         (ret
-          (localid 10:local$1728)))))
+          (localid 10:local$1761)))))
   (func
     (functionid 37:infer_struct::wrapper::val::1::ref::0)
     (params
@@ -146,13 +146,13 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1441)
+            (localid 10:local$1466)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1441)))))
+          (localid 10:local$1466)))))
   (primitive
     (ref
       (i32))

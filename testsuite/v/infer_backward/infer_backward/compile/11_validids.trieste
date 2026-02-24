@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2032)
+            (localid 5:$2094)
             (functionid 26:infer_backward::main::0::0)
             (args)))
         (ret
-          (localid 5:$2032)))))
+          (localid 5:$2094)))))
   (func
     (functionid 26:infer_backward::main::0::0)
     (params)
@@ -27,28 +27,28 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1451)
+            (localid 10:local$1476)
             (i32)
             (int 2:42))
           (call
-            (localid 10:local$1407)
+            (localid 10:local$1424)
             (functionid 26:infer_backward::wrap::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1451))))
+                (localid 10:local$1476))))
           (copy
             (localid 1:w)
-            (localid 10:local$1407))
+            (localid 10:local$1424))
           (call
-            (localid 10:local$1408)
+            (localid 10:local$1425)
             (functionid 32:infer_backward::unwrap_i32::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 10:local$1408)))))
+          (localid 10:local$1425)))))
   (primitive
     (i32)
     (methods))
@@ -65,14 +65,14 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1406)
+            (localid 10:local$1423)
             (functionid 37:infer_backward::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1406)))))
+          (localid 10:local$1423)))))
   (func
     (functionid 32:infer_backward::unwrap_i32::1::0)
     (params
@@ -86,18 +86,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1449)
+            (localid 10:local$1474)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1450)
-            (localid 10:local$1449)
+            (localid 10:local$1475)
+            (localid 10:local$1474)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 10:local$1450)))))
+          (localid 10:local$1475)))))
   (class
     (classid 26:infer_backward::wrapper::0)
     (fields
@@ -124,18 +124,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1447)
+            (localid 10:local$1472)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1448)
-            (localid 10:local$1447)
+            (localid 10:local$1473)
+            (localid 10:local$1472)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1448)))))
+          (localid 10:local$1473)))))
   (func
     (functionid 34:infer_backward::wrapper::val::1::0)
     (params
@@ -149,17 +149,17 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1404)
+            (localid 10:local$1421)
             (functionid 39:infer_backward::wrapper::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1735)
-            (localid 10:local$1404)))
+            (localid 10:local$1768)
+            (localid 10:local$1421)))
         (ret
-          (localid 10:local$1735)))))
+          (localid 10:local$1768)))))
   (func
     (functionid 39:infer_backward::wrapper::val::1::ref::0)
     (params
@@ -174,13 +174,13 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1446)
+            (localid 10:local$1471)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1446)))))
+          (localid 10:local$1471)))))
   (primitive
     (ref
       (i32))
@@ -198,11 +198,11 @@ validids
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1405)
+            (localid 10:local$1422)
             (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1405))))))
+          (localid 10:local$1422))))))

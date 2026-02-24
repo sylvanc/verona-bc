@@ -5,17 +5,16 @@ main(): i32
 
   while index < arr.size
   {
-    arr(index) = index;
-    index = index + 1;
+    arr(index) = index.i32;
+    index = index + 1
   }
 
   var sum = 0;
 
   for arr.values() i ->
   {
-    sum = sum + i;
+    sum = sum + i
   }
 
-  // Returns 45, the sum of 0..9.
   sum
 }

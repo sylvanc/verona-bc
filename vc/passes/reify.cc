@@ -225,6 +225,16 @@ namespace vc
       if (inner == Type)
         inner = inner->front();
 
+      if (inner == Union)
+      {
+        Node r = Union;
+
+        for (auto& child : *inner)
+          r << resolve_typearg(child, subst);
+
+        return r;
+      }
+
       if (inner != TypeName)
         return arg;
 
@@ -241,19 +251,58 @@ namespace vc
         def = defs.front();
       }
 
-      if (def != TypeParam)
+      if (def == TypeParam)
+      {
+        // It's a TypeParam. Look it up in the subst map.
+        auto find = subst.find(def);
+
+        if (find != subst.end())
+          return find->second;
+
+        // TypeParam not in subst — return Dyn to prevent self-referential
+        // substitution cycles (where a TypeParam maps to a reference to
+        // itself, causing infinite recursion in reify_type).
+        return Type << Dyn;
+      }
+
+      // Not a bare TypeParam. Recursively resolve TypeParams in any nested
+      // TypeArgs (e.g., array[T] → array[i32] when T → i32 is in subst).
+      bool changed = false;
+      Node resolved_name = TypeName;
+
+      for (auto& elem : *inner)
+      {
+        auto ta = elem / TypeArgs;
+
+        if (ta->empty())
+        {
+          resolved_name << clone(elem);
+          continue;
+        }
+
+        Node new_ta = TypeArgs;
+
+        for (auto& a : *ta)
+        {
+          auto resolved = resolve_typearg(a, subst);
+
+          if (resolved != a)
+            changed = true;
+
+          new_ta << clone(resolved);
+        }
+
+        resolved_name << (NameElement << clone(elem / Ident) << new_ta);
+      }
+
+      if (!changed)
         return arg;
 
-      // It's a TypeParam. Look it up in the subst map.
-      auto find = subst.find(def);
+      // Re-wrap in Type if the original was wrapped.
+      if (arg == Type)
+        return Type << resolved_name;
 
-      if (find != subst.end())
-        return find->second;
-
-      // TypeParam not in subst — return Dyn to prevent self-referential
-      // substitution cycles (where a TypeParam maps to a reference to
-      // itself, causing infinite recursion in reify_type).
-      return Type << Dyn;
+      return resolved_name;
     }
 
     // Check whether two substitution maps are equivalent under invariance.

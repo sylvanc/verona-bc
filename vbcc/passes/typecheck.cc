@@ -1,5 +1,8 @@
 #include "../lang.h"
 
+#include <map>
+#include <queue>
+
 namespace vbcc
 {
   // Static type checker for the IR. Runs after liveness to catch type errors
@@ -334,6 +337,89 @@ namespace vbcc
     return std::string(t->type().str());
   }
 
+  // Subtract a type from a (possibly union) type.
+  // Returns the type with `to_remove` components stripped out.
+  static Node type_subtract(const Node& type, const Node& to_remove)
+  {
+    if (!type || type == Dyn)
+      return type ? clone(type) : Node(Dyn);
+
+    if (type == Union)
+    {
+      Node result = Union;
+      for (auto& child : *type)
+      {
+        // Keep members that don't match to_remove.
+        if (!ir_subtype(child, to_remove) || !ir_subtype(to_remove, child))
+          result << clone(child);
+      }
+
+      if (result->size() == 0)
+        return Node(Dyn);
+      if (result->size() == 1)
+        return clone(result->front());
+      return result;
+    }
+
+    // Non-union: if it equals to_remove, nothing left.
+    if (ir_subtype(type, to_remove) && ir_subtype(to_remove, type))
+      return Node(Dyn);
+    return clone(type);
+  }
+
+  // Merge (union) two types at a control flow join point.
+  static Node type_merge(const Node& a, const Node& b)
+  {
+    if (!a || a == Dyn)
+      return Node(Dyn);
+    if (!b || b == Dyn)
+      return Node(Dyn);
+
+    // If equal, keep one.
+    if (ir_subtype(a, b) && ir_subtype(b, a))
+      return clone(a);
+
+    // Build union from both sides.
+    std::vector<Node> members;
+    auto add = [&](const Node& t) {
+      if (t == Union)
+      {
+        for (auto& child : *t)
+          members.push_back(child);
+      }
+      else
+      {
+        members.push_back(t);
+      }
+    };
+    add(a);
+    add(b);
+
+    // Deduplicate.
+    std::vector<Node> unique;
+    for (auto& m : members)
+    {
+      bool found = false;
+      for (auto& u : unique)
+      {
+        if (ir_subtype(m, u) && ir_subtype(u, m))
+        {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        unique.push_back(m);
+    }
+
+    if (unique.size() == 1)
+      return clone(unique[0]);
+    Node result = Union;
+    for (auto& u : unique)
+      result << clone(u);
+    return result;
+  }
+
   PassDef typecheck(std::shared_ptr<Bytecode> state)
   {
     PassDef p{"typecheck", wfIR, dir::topdown | dir::once, {}};
@@ -355,8 +441,11 @@ namespace vbcc
       // We cannot call replace() during traverse() because it invalidates
       // the parent's child iterators.
       std::vector<std::pair<Node, std::string>> errors;
+      bool checking = false;
 
       auto type_err = [&](const Node& node, const std::string& msg) {
+        if (!checking)
+          return;
         state->error = true;
         errors.push_back({node, msg});
       };
@@ -546,22 +635,10 @@ namespace vbcc
         return Node(Dyn);
       };
 
-      top->traverse([&](auto node) {
-        if (node == Func)
-        {
-          cur_func = node;
-          env.clear();
-          lookup_info.clear();
-
-          // Initialize parameter types (resolve TypeId).
-          for (auto& param : *(node / Params))
-            set_type(env, param / LocalId, resolve_type(param / Type));
-
-          // Variables start as Dyn (no type annotation in IR).
-          for (auto& var : *(node / Vars))
-            set_type(env, var, Node(Dyn));
-        }
-        else if (node == Error)
+      // Lambda to process a single instruction or terminator node.
+      // Returns bool for convenience (callers ignore the value).
+      auto process_node = [&](const Node& node) -> bool {
+        if (node == Error)
         {
           return false;
         }
@@ -1470,9 +1547,217 @@ namespace vbcc
         }
 
         return true;
-      });
+      };
 
-      // Apply collected errors after traversal completes.
+      // Per-label type environments for control-flow-sensitive checking.
+      // Instead of one flat env per function, we maintain per-label entry/exit
+      // envs and merge at join points. This enables TypeCond to narrow the
+      // source variable's type on the non-match branch.
+      using TypeEnv = std::unordered_map<std::string, Node>;
+
+      for (auto& func_node : *top)
+      {
+        if (func_node != Func)
+          continue;
+        if (func_node->get_contains_error())
+          continue;
+
+        cur_func = func_node;
+        lookup_info.clear();
+
+        auto labels_node = func_node / Labels;
+        size_t n_labels = labels_node->size();
+        if (n_labels == 0)
+          continue;
+
+        // Map func_state label indices to AST label nodes.
+        auto& func_state = state->get_func(func_node / FunctionId);
+        size_t n_fs_labels = func_state.labels.size();
+
+        std::vector<Node> label_vec(n_fs_labels);
+        for (auto& label : *labels_node)
+        {
+          auto fs_idx = func_state.get_label_id(label / LabelId);
+          if (fs_idx)
+            label_vec[*fs_idx] = label;
+        }
+
+        // Find the start label (first in AST order).
+        auto start_opt =
+          func_state.get_label_id(labels_node->front() / LabelId);
+        size_t start_idx = start_opt ? *start_opt : 0;
+
+        // Per-label exit environments and branch-specific exits for TypeCond.
+        std::vector<TypeEnv> exit_envs(n_fs_labels);
+        std::vector<std::unordered_map<std::string, TypeEnv>> branch_exits(
+          n_fs_labels);
+        std::vector<std::string> fingerprints(n_fs_labels);
+
+        // Initialize start label entry env with params and vars.
+        TypeEnv init_env;
+        for (auto& param : *(func_node / Params))
+        {
+          auto key = std::string((param / LocalId)->location().view());
+          init_env[key] = resolve_type(param / Type);
+        }
+        for (auto& var : *(func_node / Vars))
+        {
+          auto key = std::string(var->location().view());
+          init_env[key] = Node(Dyn);
+        }
+
+        // Environment fingerprint for convergence detection.
+        auto make_fingerprint = [&](const TypeEnv& e) -> std::string {
+          std::map<std::string, std::string> sorted;
+          for (auto& [k, v] : e)
+            sorted[k] = type_name(v);
+          std::string fp;
+          for (auto& [k, v] : sorted)
+            fp += k + ":" + v + ";";
+          return fp;
+        };
+
+        // Worklist: process labels until type environments stabilize.
+        std::vector<bool> in_wl(n_fs_labels, true);
+        std::queue<size_t> wl;
+        for (size_t i = 0; i < n_fs_labels; i++)
+          wl.push(i);
+
+        size_t iterations = 0;
+        size_t max_iterations = n_fs_labels * 10;
+
+        while (!wl.empty() && iterations < max_iterations)
+        {
+          iterations++;
+          auto idx = wl.front();
+          wl.pop();
+          in_wl[idx] = false;
+
+          if (!label_vec[idx])
+            continue;
+
+          // Merge entry env from predecessors.
+          env.clear();
+          if (idx == start_idx)
+            env = init_env;
+
+          auto& ls = func_state.labels.at(idx);
+          for (auto pred_idx : ls.pred)
+          {
+            auto this_name = std::string(
+              (label_vec[idx] / LabelId)->location().view());
+            auto& be = branch_exits[pred_idx];
+            auto it = be.find(this_name);
+            TypeEnv* pred_exit =
+              (it != be.end()) ? &it->second : &exit_envs[pred_idx];
+
+            for (auto& [key, type] : *pred_exit)
+            {
+              auto eit = env.find(key);
+              if (eit == env.end())
+                env[key] = clone(type);
+              else
+                eit->second = type_merge(eit->second, type);
+            }
+          }
+
+          // Process body instructions.
+          auto body = label_vec[idx] / Body;
+          for (auto& inst : *body)
+            process_node(inst);
+
+          // Process terminator.
+          auto term = label_vec[idx]->back();
+          process_node(term);
+
+          // For TypeCond, create branch-specific exit envs that narrow
+          // the source variable's type on each branch.
+          branch_exits[idx].clear();
+          if (term == TypeCond)
+          {
+            auto src_name =
+              std::string((term / Rhs)->location().view());
+            auto src_type = resolve_type(get_type(env, term / Rhs));
+            auto tested_type = resolve_type(term / Type);
+
+            auto true_name =
+              std::string((term / True)->location().view());
+            auto false_name =
+              std::string((term / False)->location().view());
+
+            // True branch: src narrowed TO the tested type.
+            TypeEnv true_env = env;
+            true_env[src_name] = clone(tested_type);
+            branch_exits[idx][true_name] = std::move(true_env);
+
+            // False branch: src narrowed to type MINUS the tested type.
+            TypeEnv false_env = env;
+            if (src_type)
+              false_env[src_name] = type_subtract(src_type, tested_type);
+            branch_exits[idx][false_name] = std::move(false_env);
+          }
+
+          // Check if exit env changed; if so, reprocess successors.
+          auto fp = make_fingerprint(env);
+          if (fp != fingerprints[idx])
+          {
+            fingerprints[idx] = fp;
+            exit_envs[idx] = env;
+
+            for (auto succ_idx : ls.succ)
+            {
+              if (!in_wl[succ_idx])
+              {
+                in_wl[succ_idx] = true;
+                wl.push(succ_idx);
+              }
+            }
+          }
+        }
+
+        // Final error-checking pass with converged type environments.
+        checking = true;
+        for (size_t idx = 0; idx < n_fs_labels; idx++)
+        {
+          if (!label_vec[idx])
+            continue;
+
+          // Recompute entry env from converged exit envs.
+          env.clear();
+          if (idx == start_idx)
+            env = init_env;
+
+          auto& ls2 = func_state.labels.at(idx);
+          for (auto pred_idx : ls2.pred)
+          {
+            auto this_name = std::string(
+              (label_vec[idx] / LabelId)->location().view());
+            auto& be = branch_exits[pred_idx];
+            auto it = be.find(this_name);
+            TypeEnv* pred_exit =
+              (it != be.end()) ? &it->second : &exit_envs[pred_idx];
+
+            for (auto& [key, type] : *pred_exit)
+            {
+              auto eit = env.find(key);
+              if (eit == env.end())
+                env[key] = clone(type);
+              else
+                eit->second = type_merge(eit->second, type);
+            }
+          }
+
+          // Process body instructions and terminator for errors.
+          auto body2 = label_vec[idx] / Body;
+          for (auto& inst : *body2)
+            process_node(inst);
+
+          auto term2 = label_vec[idx]->back();
+          process_node(term2);
+        }
+        checking = false;
+      }
+
       for (auto& [n, msg] : errors)
         n->parent()->replace(n, err(clone(n), msg));
 

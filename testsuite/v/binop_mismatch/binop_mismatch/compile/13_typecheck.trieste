@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2014)
+            (localid 5:$2076)
             (functionid 26:binop_mismatch::main::0::0)
             (args)))
         (ret
-          (localid 5:$2014)))))
+          (localid 5:$2076)))))
   (func
     (functionid 26:binop_mismatch::main::0::0)
     (params)
@@ -29,26 +29,26 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1393)
+            (localid 10:local$1410)
             (i32)
             (int 1:1))
           (move
             (localid 1:x)
-            (localid 10:local$1393))
+            (localid 10:local$1410))
           (const
-            (localid 10:local$1394)
+            (localid 10:local$1411)
             (u32)
             (int 1:2))
           (move
             (localid 1:y)
-            (localid 10:local$1394))
+            (localid 10:local$1411))
           (lookup
-            (localid 10:local$1432)
+            (localid 10:local$1457)
             (localid 1:x)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 10:local$1433)
-            (localid 10:local$1432)
+            (localid 10:local$1458)
+            (localid 10:local$1457)
             (args
               (arg
                 (argmove)
@@ -57,7 +57,7 @@ typecheck
                 (errormsg 66:call: argument type 'u32' is not a subtype of parameter type 'i32')
                 (arg)))))
         (ret
-          (localid 10:local$1433)))))
+          (localid 10:local$1458)))))
   (primitive
     (i32)
     (methods
@@ -83,8 +83,8 @@ typecheck
         (labelid 5:start)
         (body
           (add
-            (localid 10:local$1507)
+            (localid 10:local$1540)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 10:local$1507))))))
+          (localid 10:local$1540))))))

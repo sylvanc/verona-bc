@@ -45,4 +45,9 @@ arrayiter[T]
       nomatch
     }
   }
+
+  rewind(self: arrayiter[T])
+  {
+    self.index = 0
+  }
 }
