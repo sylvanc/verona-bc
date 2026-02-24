@@ -177,6 +177,20 @@ namespace vc
           Node args = Args;
           return resolve_triplecolon(_(TripleColon), args);
         },
+
+        // Application with RHS tuple.
+        In(Expr) * ValuePat[Lhs] * T(Tuple)[Tuple] >>
+          [](Match& _) {
+            return CallDyn << (Expr << _(Lhs)) << (Ident ^ "apply") << TypeArgs
+                           << (Args << *_(Tuple));
+          },
+
+        // Application with RHS value.
+        In(Expr) * ValuePat[Lhs] * ValuePat[Rhs] >>
+          [](Match& _) {
+            return CallDyn << (Expr << _(Lhs)) << (Ident ^ "apply") << TypeArgs
+                           << (Args << (Expr << _(Rhs)));
+          },
       }};
 
     return p;

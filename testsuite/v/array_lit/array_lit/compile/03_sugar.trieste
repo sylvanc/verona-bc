@@ -139,24 +139,11 @@ sugar
                   (ident 4:size)
                   (typeargs)))
               (block
-                {
-                  val = let}
+                {}
                 (params)
                 (type
                   (typevar 9:typevar$4))
                 (body
-                  (expr
-                    (=
-                      (expr
-                        (let
-                          (ident 3:val)
-                          (type
-                            (typevar 9:typevar$5))))
-                      (expr
-                        (localid 1:a)
-                        (exprseq
-                          (expr
-                            (localid 5:index))))))
                   (expr
                     (=
                       (expr
@@ -166,7 +153,10 @@ sugar
                         (methodname
                           (symbolid 1:+)
                           (typeargs))
-                        (localid 3:val))))
+                        (localid 1:a)
+                        (exprseq
+                          (expr
+                            (localid 5:index))))))
                   (expr
                     (=
                       (expr
@@ -264,7 +254,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 9:typevar$8))))
+              (typevar 9:typevar$7))))
         (where)
         (classbody
           (function
@@ -458,7 +448,7 @@ sugar
                     (let
                       (ident 1:a)
                       (type
-                        (typevar 10:typevar$17))))
+                        (typevar 10:typevar$16))))
                   (expr
                     (triplecolon
                       (nameelement
@@ -484,7 +474,7 @@ sugar
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 10:typevar$18))))
+                        (typevar 10:typevar$17))))
                   (expr
                     (int 1:0))))
               (expr
@@ -499,7 +489,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$19))
+                      (typevar 10:typevar$18))
                     (body
                       (expr
                         (=
@@ -678,7 +668,7 @@ sugar
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1415))
+              (typevar 12:typevar$1414))
             (where)
             (body
               (expr
@@ -804,7 +794,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$24))))
+              (typevar 10:typevar$23))))
         (where)
         (classbody
           (fielddef
@@ -897,7 +887,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1416))
+              (typevar 12:typevar$1415))
             (where)
             (body
               (expr
@@ -1041,7 +1031,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1417))
+              (typevar 12:typevar$1416))
             (where)
             (body
               (expr
@@ -1207,7 +1197,7 @@ sugar
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$32))
+                          (typevar 10:typevar$31))
                         (body
                           (expr
                             (=
@@ -1215,7 +1205,7 @@ sugar
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$34))))
+                                    (typevar 10:typevar$33))))
                               (expr
                                 (localid 4:self)
                                 (dot
@@ -1227,7 +1217,7 @@ sugar
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$35))))
+                                    (typevar 10:typevar$34))))
                               (expr
                                 (localid 1:a)
                                 (exprseq
@@ -1258,7 +1248,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$33))
+                      (typevar 10:typevar$32))
                     (body
                       (expr
                         (funcname
@@ -1300,7 +1290,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 10:typevar$29))
+              (typevar 10:typevar$28))
             (where)
             (body
               (expr
@@ -1515,7 +1505,7 @@ sugar
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$58))
+                          (typevar 10:typevar$57))
                         (body
                           (expr
                             (localid 5:other)
@@ -1524,7 +1514,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$59))
+                      (typevar 10:typevar$58))
                     (body
                       (expr
                         (false))))))))
@@ -1576,7 +1566,7 @@ sugar
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$62))
+                          (typevar 10:typevar$61))
                         (body
                           (expr
                             (true))))))
@@ -1584,7 +1574,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$63))
+                      (typevar 10:typevar$62))
                     (body
                       (expr
                         (localid 5:other)
@@ -2096,7 +2086,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$84))))
+              (typevar 10:typevar$83))))
         (where)
         (classbody
           (function
@@ -16070,7 +16060,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$872))))
+              (typevar 11:typevar$871))))
         (where)
         (classbody
           (function
@@ -16153,7 +16143,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1418))
+              (typevar 12:typevar$1417))
             (where)
             (body
               (expr

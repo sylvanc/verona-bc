@@ -536,10 +536,16 @@ dot
                       (expr
                         (=
                           (expr
-                            (localid 1:a)
-                            (exprseq
+                            (calldyn
                               (expr
-                                (localid 1:i))))
+                                (localid 1:a))
+                              (ident 5:apply)
+                              (typeargs)
+                              (args
+                                (expr
+                                  (exprseq
+                                    (expr
+                                      (localid 1:i)))))))
                           (expr
                             (localid 4:from))))
                       (expr
@@ -1266,15 +1272,21 @@ dot
                                   (type
                                     (typevar 10:typevar$37))))
                               (expr
-                                (localid 1:a)
-                                (exprseq
+                                (calldyn
                                   (expr
-                                    (calldyn
-                                      (expr
-                                        (localid 4:self))
-                                      (ident 5:index)
-                                      (typeargs)
-                                      (args)))))))
+                                    (localid 1:a))
+                                  (ident 5:apply)
+                                  (typeargs)
+                                  (args
+                                    (expr
+                                      (exprseq
+                                        (expr
+                                          (calldyn
+                                            (expr
+                                              (localid 4:self))
+                                            (ident 5:index)
+                                            (typeargs)
+                                            (args))))))))))
                           (expr
                             (=
                               (expr
@@ -1563,8 +1575,12 @@ dot
                           (typevar 10:typevar$60))
                         (body
                           (expr
-                            (localid 5:other)
-                            (tuple))))))
+                            (calldyn
+                              (expr
+                                (localid 5:other))
+                              (ident 5:apply)
+                              (typeargs)
+                              (args)))))))
                   (block
                     {}
                     (params)
@@ -1632,8 +1648,12 @@ dot
                       (typevar 10:typevar$65))
                     (body
                       (expr
-                        (localid 5:other)
-                        (tuple))))))))
+                        (calldyn
+                          (expr
+                            (localid 5:other))
+                          (ident 5:apply)
+                          (typeargs)
+                          (args)))))))))
           (function
             {
               other = paramdef

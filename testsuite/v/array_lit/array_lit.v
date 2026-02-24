@@ -8,8 +8,7 @@ main(): i32
 
   while index < a.size
   {
-    let val = a(index);
-    sum = sum + val;
+    sum = sum + a(index);
     index = index + usize 1
   }
 

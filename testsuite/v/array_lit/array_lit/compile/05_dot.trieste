@@ -141,24 +141,11 @@ dot
                   (typeargs)
                   (args)))
               (block
-                {
-                  val = let}
+                {}
                 (params)
                 (type
                   (typevar 9:typevar$4))
                 (body
-                  (expr
-                    (=
-                      (expr
-                        (let
-                          (ident 3:val)
-                          (type
-                            (typevar 9:typevar$5))))
-                      (expr
-                        (localid 1:a)
-                        (exprseq
-                          (expr
-                            (localid 5:index))))))
                   (expr
                     (=
                       (expr
@@ -168,7 +155,16 @@ dot
                         (methodname
                           (symbolid 1:+)
                           (typeargs))
-                        (localid 3:val))))
+                        (calldyn
+                          (expr
+                            (localid 1:a))
+                          (ident 5:apply)
+                          (typeargs)
+                          (args
+                            (expr
+                              (exprseq
+                                (expr
+                                  (localid 5:index)))))))))
                   (expr
                     (=
                       (expr
@@ -266,7 +262,7 @@ dot
           (typeparam
             (ident 1:T)
             (type
-              (typevar 9:typevar$8))))
+              (typevar 9:typevar$7))))
         (where)
         (classbody
           (function
@@ -460,7 +456,7 @@ dot
                     (let
                       (ident 1:a)
                       (type
-                        (typevar 10:typevar$17))))
+                        (typevar 10:typevar$16))))
                   (expr
                     (newarray
                       (type
@@ -485,7 +481,7 @@ dot
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 10:typevar$18))))
+                        (typevar 10:typevar$17))))
                   (expr
                     (int 1:0))))
               (expr
@@ -500,15 +496,21 @@ dot
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$19))
+                      (typevar 10:typevar$18))
                     (body
                       (expr
                         (=
                           (expr
-                            (localid 1:a)
-                            (exprseq
+                            (calldyn
                               (expr
-                                (localid 1:i))))
+                                (localid 1:a))
+                              (ident 5:apply)
+                              (typeargs)
+                              (args
+                                (expr
+                                  (exprseq
+                                    (expr
+                                      (localid 1:i)))))))
                           (expr
                             (localid 4:from))))
                       (expr
@@ -676,7 +678,7 @@ dot
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1415))
+              (typevar 12:typevar$1414))
             (where)
             (body
               (expr
@@ -802,7 +804,7 @@ dot
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$24))))
+              (typevar 10:typevar$23))))
         (where)
         (classbody
           (fielddef
@@ -895,7 +897,7 @@ dot
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1416))
+              (typevar 12:typevar$1415))
             (where)
             (body
               (expr
@@ -1039,7 +1041,7 @@ dot
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1417))
+              (typevar 12:typevar$1416))
             (where)
             (body
               (expr
@@ -1211,7 +1213,7 @@ dot
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$32))
+                          (typevar 10:typevar$31))
                         (body
                           (expr
                             (=
@@ -1219,7 +1221,7 @@ dot
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$34))))
+                                    (typevar 10:typevar$33))))
                               (expr
                                 (calldyn
                                   (expr
@@ -1233,17 +1235,23 @@ dot
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$35))))
+                                    (typevar 10:typevar$34))))
                               (expr
-                                (localid 1:a)
-                                (exprseq
+                                (calldyn
                                   (expr
-                                    (calldyn
-                                      (expr
-                                        (localid 4:self))
-                                      (ident 5:index)
-                                      (typeargs)
-                                      (args)))))))
+                                    (localid 1:a))
+                                  (ident 5:apply)
+                                  (typeargs)
+                                  (args
+                                    (expr
+                                      (exprseq
+                                        (expr
+                                          (calldyn
+                                            (expr
+                                              (localid 4:self))
+                                            (ident 5:index)
+                                            (typeargs)
+                                            (args))))))))))
                           (expr
                             (=
                               (expr
@@ -1270,7 +1278,7 @@ dot
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$33))
+                      (typevar 10:typevar$32))
                     (body
                       (expr
                         (funcname
@@ -1312,7 +1320,7 @@ dot
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 10:typevar$29))
+              (typevar 10:typevar$28))
             (where)
             (body
               (expr
@@ -1529,16 +1537,20 @@ dot
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$58))
+                          (typevar 10:typevar$57))
                         (body
                           (expr
-                            (localid 5:other)
-                            (tuple))))))
+                            (calldyn
+                              (expr
+                                (localid 5:other))
+                              (ident 5:apply)
+                              (typeargs)
+                              (args)))))))
                   (block
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$59))
+                      (typevar 10:typevar$58))
                     (body
                       (expr
                         (false))))))))
@@ -1590,7 +1602,7 @@ dot
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$62))
+                          (typevar 10:typevar$61))
                         (body
                           (expr
                             (true))))))
@@ -1598,11 +1610,15 @@ dot
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$63))
+                      (typevar 10:typevar$62))
                     (body
                       (expr
-                        (localid 5:other)
-                        (tuple))))))))
+                        (calldyn
+                          (expr
+                            (localid 5:other))
+                          (ident 5:apply)
+                          (typeargs)
+                          (args)))))))))
           (function
             {
               other = paramdef
@@ -2092,7 +2108,7 @@ dot
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$84))))
+              (typevar 10:typevar$83))))
         (where)
         (classbody
           (function
@@ -15778,7 +15794,7 @@ dot
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$872))))
+              (typevar 11:typevar$871))))
         (where)
         (classbody
           (function
@@ -15861,7 +15877,7 @@ dot
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1418))
+              (typevar 12:typevar$1417))
             (where)
             (body
               (expr
