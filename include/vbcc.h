@@ -85,6 +85,7 @@ namespace vbcc
   inline const auto Try = TokenDef("try");
   inline const auto FFI = TokenDef("ffi");
   inline const auto When = TokenDef("when");
+  inline const auto Typetest = TokenDef("typetest");
 
   // Terminators.
   inline const auto Tailcall = TokenDef("tailcall");
@@ -92,7 +93,6 @@ namespace vbcc
   inline const auto Raise = TokenDef("raise");
   inline const auto Throw = TokenDef("throw");
   inline const auto Cond = TokenDef("cond");
-  inline const auto TypeCond = TokenDef("typecond");
   inline const auto Jump = TokenDef("jump");
 
   // Binary operators.
@@ -228,10 +228,10 @@ namespace vbcc
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
     Subcall | SubcallDyn | Try | TryDyn | FFI | When | WhenDyn |
-    wfBinop | wfUnop | wfConst;
+    wfBinop | wfUnop | wfConst | Typetest;
 
   inline const auto wfTerminator =
-    Tailcall | TailcallDyn | Return | Raise | Throw | Cond | TypeCond | Jump;
+    Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
 
   inline const auto wfDst = (LocalId >>= LocalId);
   inline const auto wfSrc = (Rhs >>= LocalId);
@@ -319,7 +319,7 @@ namespace vbcc
     | (Raise <<= LocalId)
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
-    | (TypeCond <<= wfDst * wfSrc * (Type >>= wfType) * (True >>= LabelId) * (False >>= LabelId))
+    | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Jump <<= LabelId)
     | (Add <<= wfDst * wfLhs * wfRhs)
     | (Sub <<= wfDst * wfLhs * wfRhs)

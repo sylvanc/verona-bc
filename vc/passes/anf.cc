@@ -314,7 +314,7 @@ namespace vc
           },
 
         // Else body.
-        // TODO: distinguish typecond by param count
+        // TODO: distinguish typetest by param count
         In(Body) * T(Else)
             << (T(LocalId)[LocalId] *
                 (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body]))) >>
@@ -324,9 +324,10 @@ namespace vc
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
             return Seq
-              << (TypeCond << (LocalId ^ id) << (LocalId ^ _(LocalId))
-                           << type_nomatch() << (LabelId ^ body)
-                           << (LabelId ^ join))
+              << (Typetest << (LocalId ^ id) << (LocalId ^ _(LocalId))
+                           << type_nomatch())
+              << (Cond << (LocalId ^ id) << (LabelId ^ body)
+                       << (LabelId ^ join))
               << (Label << (LabelId ^ body)
                         << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
                                     << (Jump << (LabelId ^ join))))
@@ -625,7 +626,7 @@ namespace vc
 
           if (term == LocalId)
             node << (Return << term);
-          else if (term->in({Return, Raise, Throw, Jump, Cond, TypeCond}))
+          else if (term->in({Return, Raise, Throw, Jump, Cond}))
             node << term;
           else
           {
@@ -638,7 +639,7 @@ namespace vc
         {
           for (auto& child : *node)
           {
-            if (child->in({Return, Raise, Throw, Jump, Cond, TypeCond}))
+            if (child->in({Return, Raise, Throw, Jump, Cond}))
             {
               node->replace(child, err(child, "Terminators must come last"));
               ok = false;

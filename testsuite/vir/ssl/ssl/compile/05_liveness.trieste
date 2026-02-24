@@ -267,11 +267,13 @@ liveness
             (args
               (arg
                 (argcopy)
-                (localid 4:$ssl)))))
-        (typecond
+                (localid 4:$ssl))))
+          (typetest
+            (localid 5:$done)
+            (localid 10:$plaintext)
+            (none)))
+        (cond
           (localid 5:$done)
-          (localid 10:$plaintext)
-          (none)
           (labelid 5:^done)
           (labelid 5:^body)))
       (label

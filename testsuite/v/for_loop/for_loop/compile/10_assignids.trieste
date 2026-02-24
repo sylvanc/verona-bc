@@ -204,11 +204,13 @@ assignids
             (args
               (arg
                 (argcopy)
-                (localid 4:it$7)))))
-        (typecond
+                (localid 4:it$7))))
+          (typetest
+            (localid 10:local$2114)
+            (localid 10:local$1784)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
           (localid 10:local$2114)
-          (localid 10:local$1784)
-          (classid 20:_builtin::nomatch::0)
           (labelid 9:body$2115)
           (labelid 9:join$2116)))
       (label
@@ -638,11 +640,13 @@ assignids
           (labelid 9:join$1483)))
       (label
         (labelid 9:join$1483)
-        (body)
-        (typecond
+        (body
+          (typetest
+            (localid 10:local$2068)
+            (localid 10:local$1431)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
           (localid 10:local$2068)
-          (localid 10:local$1431)
-          (classid 20:_builtin::nomatch::0)
           (labelid 9:body$2069)
           (labelid 9:join$2070)))
       (label

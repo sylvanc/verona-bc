@@ -112,11 +112,13 @@ VIR
         (body
           (load
             (localid 2:$y)
-            (localid 2:$x)))
-        (typecond
+            (localid 2:$x))
+          (typetest
+            (localid 2:$z)
+            (localid 2:$y)
+            (i32)))
+        (cond
           (localid 2:$z)
-          (localid 2:$y)
-          (i32)
           (labelid 5:^true)
           (labelid 6:^false)))
       (label

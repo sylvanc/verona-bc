@@ -277,7 +277,7 @@ namespace vc
   inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
     RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | NewArray |
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | Var |
-    When | wfBinop | wfUnop | wfNulop | FFI;
+    When | wfBinop | wfUnop | wfNulop | FFI | Typetest;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -312,7 +312,7 @@ namespace vc
     | (Raise <<= LocalId)
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
-    | (TypeCond <<= wfDst * wfSrc * Type * (True >>= LabelId) * (False >>= LabelId))
+    | (Typetest <<= wfDst * wfSrc * Type)
     | (Jump <<= LabelId)
     | (When <<= wfDst * wfSrc * Args * Type)
     | (Add <<= wfDst * wfLhs * wfRhs)

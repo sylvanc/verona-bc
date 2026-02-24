@@ -267,14 +267,12 @@ namespace vbci
     // Arg2 = function pointer.
     WhenDynamic,
 
-    // If the dynamic type of src is a subtype of the type ID, copy src to dst
-    // and branch to the true label. Otherwise, branch to the false label.
+    // Test if the dynamic type of src is a subtype of the type ID.
+    // Stores a boolean result in dst.
     // Arg0 = dst.
     // Arg1 = src.
     // Arg2 = type ID.
-    // Arg3 = on-true label.
-    // Arg4 = on-false label.
-    TypeCond,
+    Typetest,
 
     // Replace the current frame with a new one.
     // Arg0 = function ID.

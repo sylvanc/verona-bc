@@ -1735,6 +1735,13 @@ namespace vc
                 }
               }
             }
+            else if (stmt == Typetest)
+            {
+              // Typetest dst is a boolean.
+              auto dst = stmt / LocalId;
+              env[dst->location()] =
+                LocalTypeInfo::computed(Node(Bool));
+            }
             // All other statements:
             // result type unknown, don't record in env.
           }
@@ -1751,14 +1758,6 @@ namespace vc
 
             if (expected_prim)
               try_refine(env, ret_src->location(), expected_prim);
-          }
-          else if (term == TypeCond)
-          {
-            // TypeCond dst gets the tested type (narrowed value).
-            auto dst = term / LocalId;
-            auto tested_type = term / Type;
-            env[dst->location()] =
-              LocalTypeInfo::computed(clone(tested_type));
           }
         }
 

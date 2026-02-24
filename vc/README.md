@@ -7,10 +7,6 @@ Syntax:
   - It tries to call the `f` method with 2 arguments instead of 1.
 - Partial application, `_`.
 
-Post reification type checking.
-- Clean up error messages.
-- Sources of `Dyn`: tuples, `any`, no annotation. Anything else?
-
 Names.
 - Allow looking down a type parameter.
 - Can we look down an algebraic type (via an alias)?
@@ -22,6 +18,8 @@ Sub-typing.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Types:
+- In `infer`, are we treating `if` and `else` correctly? What about other control flow?
+- Sources of `Dyn`: tuples, `any`, no annotation. Anything else?
 - Can we get rid of `TypeVar`? Or does it just not need an ID?
   - Use `any` at function boundaries if not annotated?
 - IR type for tuple. Could be `[dyn]` of correct size with elements that type check.

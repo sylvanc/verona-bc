@@ -107,7 +107,8 @@ namespace vbcc
       TryDyn,
       FFI,
       When,
-      WhenDyn);
+      WhenDyn,
+      Typetest);
 
   Parse parser();
   PassDef statements();

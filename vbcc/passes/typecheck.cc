@@ -1148,11 +1148,10 @@ namespace vbcc
           // When produces a cown.
           set_type(env, node / LocalId, Node(Dyn));
         }
-        else if (node == TypeCond)
+        else if (node == Typetest)
         {
-          // TypeCond dst gets the tested type (narrowed value on match).
-          auto tested_type = resolve_type(node / Type);
-          set_type(env, node / LocalId, tested_type);
+          // Typetest dst is a boolean.
+          set_type(env, node / LocalId, Node(Bool));
         }
         else if (node == Global)
         {
@@ -1670,31 +1669,46 @@ namespace vbcc
           auto term = label_vec[idx]->back();
           process_node(term);
 
-          // For TypeCond, create branch-specific exit envs that narrow
-          // the source variable's type on each branch.
+          // For Cond preceded by Typetest, create branch-specific exit envs
+          // that narrow the source variable's type on each branch.
           branch_exits[idx].clear();
-          if (term == TypeCond)
+          if (term == Cond)
           {
-            auto src_name =
-              std::string((term / Rhs)->location().view());
-            auto src_type = resolve_type(get_type(env, term / Rhs));
-            auto tested_type = resolve_type(term / Type);
+            auto cond_var = term / LocalId;
 
-            auto true_name =
-              std::string((term / True)->location().view());
-            auto false_name =
-              std::string((term / False)->location().view());
+            // Check if the last body statement is a Typetest whose dst
+            // matches the Cond operand.
+            if (body->size() > 0)
+            {
+              auto last_stmt = body->back();
+              if (
+                last_stmt == Typetest &&
+                (last_stmt / LocalId)->location() == cond_var->location())
+              {
+                auto src_name =
+                  std::string((last_stmt / Rhs)->location().view());
+                auto src_type =
+                  resolve_type(get_type(env, last_stmt / Rhs));
+                auto tested_type = resolve_type(last_stmt / Type);
 
-            // True branch: src narrowed TO the tested type.
-            TypeEnv true_env = env;
-            true_env[src_name] = clone(tested_type);
-            branch_exits[idx][true_name] = std::move(true_env);
+                auto true_name =
+                  std::string((term / Lhs)->location().view());
+                auto false_name =
+                  std::string((term / Rhs)->location().view());
 
-            // False branch: src narrowed to type MINUS the tested type.
-            TypeEnv false_env = env;
-            if (src_type)
-              false_env[src_name] = type_subtract(src_type, tested_type);
-            branch_exits[idx][false_name] = std::move(false_env);
+                // True branch: src narrowed TO the tested type.
+                TypeEnv true_env = env;
+                true_env[src_name] = clone(tested_type);
+                branch_exits[idx][true_name] = std::move(true_env);
+
+                // False branch: src narrowed to type MINUS the tested type.
+                TypeEnv false_env = env;
+                if (src_type)
+                  false_env[src_name] =
+                    type_subtract(src_type, tested_type);
+                branch_exits[idx][false_name] = std::move(false_env);
+              }
+            }
           }
 
           // Check if exit env changed; if so, reprocess successors.

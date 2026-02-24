@@ -262,10 +262,12 @@ statements
       (arg
         (argcopy)
         (localid 4:$ssl))))
-  (typecond
+  (typetest
     (localid 5:$done)
     (localid 10:$plaintext)
-    (none)
+    (none))
+  (cond
+    (localid 5:$done)
     (labelid 5:^done)
     (labelid 5:^body))
   (labelid 5:^body)

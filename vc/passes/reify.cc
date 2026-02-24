@@ -667,21 +667,16 @@ namespace vc
           {
             n->parent()->replace(n, reify_when(n, r));
           }
+          else if (n == Typetest)
+          {
+            n / Type = reify_type(n / Type, r.subst);
+          }
 
           return false;
         });
 
         for (auto& n : remove)
           n->parent()->replace(n);
-
-        // Handle TypeCond terminator (not in Body).
-        auto term = l / Return;
-
-        if (term == TypeCond)
-        {
-          term / Type = reify_type(term / Type, r.subst);
-          local_types[(term / LocalId)->location()] = clone(term / Type);
-        }
       }
 
       r.reification = Func << r.id << params << r_type << vars << labels;

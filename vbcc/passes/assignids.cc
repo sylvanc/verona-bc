@@ -184,13 +184,6 @@ namespace vbcc
           state->get_func(dst->parent(Func) / FunctionId).add_register(dst);
           return NoChange;
         },
-
-        // TypeCond is a terminator that also defines a destination register.
-        T(TypeCond)[TypeCond] >> [state](Match& _) -> Node {
-          auto dst = _(TypeCond) / LocalId;
-          state->get_func(dst->parent(Func) / FunctionId).add_register(dst);
-          return NoChange;
-        },
       }};
 
     p.post([state](auto top) {
