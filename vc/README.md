@@ -3,6 +3,7 @@
 ## To Do
 
 Syntax:
+- Array literals.
 - If `f` is a field on `x`, `x.f(y)` doesn't call the apply method on `f`.
   - It tries to call the `f` method with 2 arguments instead of 1.
 - Partial application, `_`.
@@ -19,7 +20,7 @@ Sub-typing.
 
 Types:
 - In `infer`, are we treating `if` and `else` correctly? What about other control flow?
-- Sources of `Dyn`: tuples, `any`, no annotation. Anything else?
+- Sources of `Dyn`: `any`, no annotation. Anything else?
 - Can we get rid of `TypeVar`? Or does it just not need an ID?
   - Use `any` at function boundaries if not annotated?
 - IR type for tuple. Could be `[dyn]` of correct size with elements that type check.
@@ -55,7 +56,6 @@ Packages:
 - Remove `vbci` dependency on `uv` and `openssl`, load those from packages.
 - CLI.
   - Needs a map, so do an RB tree or hash map.
-    - A map needs structural types.
   - Needs arguments, environment variables.
   - Needs console I/O to print usage and errors.
 - `stdin`, `stdout`, `stderr`.

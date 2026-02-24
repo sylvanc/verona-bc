@@ -47,7 +47,6 @@ namespace vc
   inline const auto ClassBody = TokenDef("classbody");
 
   inline const auto Isect = TokenDef("isect");
-  inline const auto TupleType = TokenDef("tupletype");
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
   inline const auto TypeVar = TokenDef("typevar", flag::print);
@@ -242,9 +241,8 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprDot =
-    (wfExprSugar | CallDyn | Convert | Binop | Unop | Nulop | FFI | NewArray |
-     ArrayRef) -
+  inline const auto wfExprDot = (wfExprSugar | CallDyn | Convert | Binop |
+                                 Unop | Nulop | FFI | NewArray | ArrayRef) -
     Dot - TripleColon;
 
   // clang-format off
@@ -276,8 +274,8 @@ namespace vc
 
   inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
     RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | NewArray |
-    NewArrayConst | Load | Store | Lookup | Call | CallDyn | Var |
-    When | wfBinop | wfUnop | wfNulop | FFI | Typetest;
+    NewArrayConst | Load | Store | Lookup | Call | CallDyn | Var | When |
+    wfBinop | wfUnop | wfNulop | FFI | Typetest;
 
   // clang-format off
   inline const auto wfPassANF =

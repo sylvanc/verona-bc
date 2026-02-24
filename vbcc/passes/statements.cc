@@ -6,10 +6,10 @@ namespace vbcc
     T(I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize);
   const auto FloatType = T(F32, F64);
   const auto PrimitiveType = T(None, Bool) / IntType / FloatType;
-  const auto BuiltinType =
-    PrimitiveType / T(Ptr) / (T(Array, Ref, Cown) << Any);
-  const auto TypeNoUnion =
-    PrimitiveType / T(Ptr, Dyn, GlobalId) / (T(Array, Ref, Cown) << Any);
+  const auto BuiltinType = PrimitiveType / T(Ptr) /
+    (T(Array, Ref, Cown) << Any) / (T(TupleType) << Any);
+  const auto TypeNoUnion = PrimitiveType / T(Ptr, Dyn, GlobalId) /
+    (T(Array, Ref, Cown) << Any) / (T(TupleType) << Any);
   const auto TypePat = (TypeNoUnion / (T(Union) << Any)) * --(T(Union) << End);
 
   const auto IntLiteral = T(Bin, Oct, Hex, Int);
@@ -153,6 +153,21 @@ namespace vbcc
         // Array type.
         T(LBracket) * TypePat[Type] * T(RBracket) >>
           [](Match& _) { return Array << _(Type); },
+
+        // Tuple type: tuple(type, type, ...)
+        (T(TupleType) << End) * T(LParen) *
+            (TypePat * (T(Comma) * TypePat)++)[Rhs] * T(RParen) >>
+          [](Match& _) {
+            Node r = TupleType;
+
+            for (auto& child : _[Rhs])
+            {
+              if (child != Comma)
+                r << child;
+            }
+
+            return r;
+          },
 
         // Ref type.
         T(Ref) * TypePat[Type] >> [](Match& _) { return Ref << _(Type); },
@@ -534,9 +549,7 @@ namespace vbcc
 
         // Typetest statement.
         Dst * T(Typetest) * T(LocalId)[Rhs] * TypePat[Type] >>
-          [](Match& _) {
-            return Typetest << _(LocalId) << _(Rhs) << _(Type);
-          },
+          [](Match& _) { return Typetest << _(LocalId) << _(Rhs) << _(Type); },
 
         // Terminators.
         (T(Tailcall) << End) * T(GlobalId)[GlobalId] * CallArgs[Args] >>

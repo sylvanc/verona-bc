@@ -1423,6 +1423,14 @@ namespace vbcc
       for (auto t : child_types)
         b << uleb(t);
     }
+    else if (type == TupleType)
+    {
+      b << uleb(+TypeTag::Tuple);
+      b << uleb(type->size());
+
+      for (auto& child : *type)
+        b << uleb(typ(child));
+    }
 
     // Check if we already have this type encoded.
     auto find = type_map.find(b);

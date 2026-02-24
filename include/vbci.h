@@ -406,6 +406,7 @@ namespace vbci
     Cown,
     Ref,
     Union,
+    Tuple,
   };
 
   enum class RegionType

@@ -606,12 +606,38 @@ namespace vc
             auto arr_loc = (n / Arg / Rhs)->location();
             auto arr_it = local_types.find(arr_loc);
 
-            if (arr_it != local_types.end() && (arr_it->second == Array))
+            if (arr_it != local_types.end())
             {
-              auto elem = clone(arr_it->second->front());
-              ensure_ref_reified(elem);
-              local_types[(n / LocalId)->location()] =
-                Node(Ref) << elem;
+              Node elem;
+
+              if (arr_it->second == TupleType && n == ArrayRefConst)
+              {
+                // TupleType is a peer of Array: extract per-element type
+                // by constant index.
+                auto idx = from_chars_sep_v<size_t>(n / Rhs);
+
+                if (idx < arr_it->second->size())
+                  elem = clone(arr_it->second->at(idx));
+                else
+                  elem = Dyn;
+              }
+              else if (arr_it->second == TupleType)
+              {
+                // Runtime-indexed access on a TupleType: element type is
+                // unknown at compile time.
+                elem = Dyn;
+              }
+              else if (arr_it->second == Array)
+              {
+                elem = clone(arr_it->second->front());
+              }
+
+              if (elem)
+              {
+                ensure_ref_reified(elem);
+                local_types[(n / LocalId)->location()] =
+                  Node(Ref) << elem;
+              }
             }
           }
           else if (n == Load)
@@ -653,11 +679,28 @@ namespace vc
           {
             reify_call(n, r.subst);
           }
-          else if (n->in({NewArray, NewArrayConst}))
+          else if (n == NewArray)
           {
             auto arr_type = Array << reify_type(n / Type, r.subst);
             local_types[(n / LocalId)->location()] = clone(arr_type);
             n / Type = arr_type;
+          }
+          else if (n == NewArrayConst)
+          {
+            auto inner = reify_type(n / Type, r.subst);
+
+            if (inner == TupleType)
+            {
+              // TupleType is a peer of Array, not wrapped in it.
+              local_types[(n / LocalId)->location()] = clone(inner);
+              n / Type = inner;
+            }
+            else
+            {
+              auto arr_type = Array << inner;
+              local_types[(n / LocalId)->location()] = clone(arr_type);
+              n / Type = arr_type;
+            }
           }
           else if (n == FFI)
           {
@@ -699,9 +742,16 @@ namespace vc
       if (type == TypeVar)
         return Dyn;
 
-      // Use [Dyn] for now.
+      // Preserve TupleType with reified element types.
       if (type == TupleType)
-        return Array << Dyn;
+      {
+        Node r = TupleType;
+
+        for (auto& child : *type)
+          r << reify_type(child, subst);
+
+        return r;
+      }
 
       if (type == Union)
       {

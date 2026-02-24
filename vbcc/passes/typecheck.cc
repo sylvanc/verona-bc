@@ -125,7 +125,7 @@ namespace vbcc
           return false;
       return t->size() > 0;
     }
-    return t == Array;
+    return t == Array || t == TupleType;
   }
 
   static bool is_cown_type(const Node& t)
@@ -259,6 +259,35 @@ namespace vbcc
       return ir_subtype(sub / Type, super / Type) &&
         ir_subtype(super / Type, sub / Type);
 
+    // TupleType vs TupleType: covariant element-wise, same arity.
+    if (sub == TupleType && super == TupleType)
+    {
+      if (sub->size() != super->size())
+        return false;
+
+      for (size_t i = 0; i < sub->size(); i++)
+      {
+        if (!ir_subtype(sub->at(i), super->at(i)))
+          return false;
+      }
+
+      return true;
+    }
+
+    // TupleType <: Array(T) if all elements <: T.
+    if (sub == TupleType && super == Array && super->size() > 0)
+    {
+      auto elem_type = super->front();
+
+      for (auto& child : *sub)
+      {
+        if (!ir_subtype(child, elem_type))
+          return false;
+      }
+
+      return true;
+    }
+
     // ClassId is a subtype of a Union containing that ClassId.
     // (Handled by the Union super case above.)
 
@@ -323,6 +352,20 @@ namespace vbcc
     if (t == Union)
     {
       std::string result = "Union(";
+      bool first = true;
+      for (auto& child : *t)
+      {
+        if (!first)
+          result += ", ";
+        result += type_name(child);
+        first = false;
+      }
+      result += ")";
+      return result;
+    }
+    if (t == TupleType)
+    {
+      std::string result = "Tuple(";
       bool first = true;
       for (auto& child : *t)
       {
@@ -508,6 +551,30 @@ namespace vbcc
           {
             auto result = Node(t->type());
             result << clone(resolved);
+            return result;
+          }
+        }
+        if (t == TupleType)
+        {
+          bool changed = false;
+          std::vector<Node> resolved_children;
+
+          for (auto& child : *t)
+          {
+            auto resolved = resolve_type(child);
+            resolved_children.push_back(resolved);
+
+            if (resolved.get() != child.get())
+              changed = true;
+          }
+
+          if (changed)
+          {
+            auto result = Node(TupleType);
+
+            for (auto& rc : resolved_children)
+              result << clone(rc);
+
             return result;
           }
         }
@@ -819,7 +886,21 @@ namespace vbcc
           }
 
           // dst gets Ref of the array's element type.
-          if (src_type && src_type == Array && src_type->size() > 0)
+          if (src_type && src_type == TupleType && node == ArrayRefConst)
+          {
+            // TupleType is a peer of Array: extract per-element type by
+            // constant index.
+            auto idx_node = node / Rhs;
+            auto idx = from_chars_sep_v<size_t>(idx_node);
+            if (idx < src_type->size())
+              set_type(
+                env,
+                node / LocalId,
+                Node(Ref) << clone(src_type->at(idx)));
+            else
+              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+          }
+          else if (src_type && src_type == Array && src_type->size() > 0)
             set_type(env, node / LocalId, Node(Ref) << clone(src_type / Type));
           else if (src_type && src_type == Union)
           {
@@ -828,12 +909,20 @@ namespace vbcc
             bool all_ok = true;
             for (auto& member : *src_type)
             {
-              if (member != Array || member->size() == 0)
+              if (member == TupleType)
+              {
+                // TupleType in a union: element type unknown at runtime.
+                union_type << (Node(Ref) << Node(Dyn));
+              }
+              else if (member == Array && member->size() > 0)
+              {
+                union_type << (Node(Ref) << clone(member / Type));
+              }
+              else
               {
                 all_ok = false;
                 break;
               }
-              union_type << (Node(Ref) << clone(member / Type));
             }
             if (all_ok && union_type->size() == 1)
               set_type(env, node / LocalId, clone(union_type->front()));

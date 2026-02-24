@@ -243,6 +243,8 @@ namespace vbci
           return {ValueType::Invalid, &ffi_type_value};
         case TypeTag::Union:
           return layout_union_type(c);
+        case TypeTag::Tuple:
+          return {ValueType::Array, &ffi_type_pointer};
         default:
           break;
       }
@@ -283,7 +285,16 @@ namespace vbci
 
   bool Program::is_array(uint32_t type_id)
   {
-    return is_complex(type_id) && (complex_type(type_id).tag == TypeTag::Array);
+    return is_complex(type_id) &&
+      (complex_type(type_id).tag == TypeTag::Array ||
+       complex_type(type_id).tag == TypeTag::Tuple);
+  }
+
+  // Used by runtime Typetest instructions for tuple type checking.
+  bool Program::is_tuple(uint32_t type_id)
+  {
+    return is_complex(type_id) &&
+      (complex_type(type_id).tag == TypeTag::Tuple);
   }
 
   bool Program::is_ref(uint32_t type_id)
@@ -304,6 +315,9 @@ namespace vbci
   uint32_t Program::unarray(uint32_t type_id)
   {
     auto& t = complex_type(type_id);
+
+    if (t.tag == TypeTag::Tuple)
+      return DynId;
 
     if (t.tag != TypeTag::Array)
       Value::error(Error::BadType);
@@ -385,12 +399,44 @@ namespace vbci
 
     if (is_complex(sub))
     {
-      // Sub is an array, cown, or ref. Sub must be invariant with super.
+      // Sub is an array, cown, ref, or tuple.
       if (!is_complex(super))
         return false;
 
       auto& sub_t = complex_type(sub);
       auto& super_t = complex_type(super);
+
+      // Tuple vs Tuple: covariant element-wise, same arity.
+      // Covariance is safe because tuples are read-only after construction
+      // (constructed via NewArrayConst + Store, read via ArrayRefConst + Load).
+      if (sub_t.tag == TypeTag::Tuple && super_t.tag == TypeTag::Tuple)
+      {
+        if (sub_t.children.size() != super_t.children.size())
+          return false;
+
+        for (size_t i = 0; i < sub_t.children.size(); i++)
+        {
+          if (!subtype(sub_t.children[i], super_t.children[i]))
+            return false;
+        }
+
+        return true;
+      }
+
+      // Tuple vs Array: tuple is a subtype of Array(T) if all element
+      // types are subtypes of T.
+      if (sub_t.tag == TypeTag::Tuple && super_t.tag == TypeTag::Array)
+      {
+        auto super_elem = super_t.children.at(0);
+
+        for (auto c : sub_t.children)
+        {
+          if (!subtype(c, super_elem))
+            return false;
+        }
+
+        return true;
+      }
 
       if (sub_t.tag != super_t.tag)
         return false;
@@ -884,6 +930,15 @@ namespace vbci
       }
 
       case TypeTag::Union:
+      {
+        auto size = uleb(pc);
+
+        for (size_t i = 0; i < size; i++)
+          t.children.push_back(uleb(pc));
+        break;
+      }
+
+      case TypeTag::Tuple:
       {
         auto size = uleb(pc);
 

@@ -123,6 +123,7 @@ namespace vbci
 
     bool is_complex(uint32_t type_id);
     bool is_array(uint32_t type_id);
+    bool is_tuple(uint32_t type_id);
     bool is_ref(uint32_t type_id);
     bool is_cown(uint32_t type_id);
     bool is_union(uint32_t type_id);

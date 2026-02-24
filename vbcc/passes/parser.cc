@@ -4,9 +4,9 @@ namespace vbcc
 {
   const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Vars |
     Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |
-    LBracket | RBracket | Comma | Colon | Union | Vararg | wfRegionType |
-    wfPrimitiveType | Ptr | Dyn | Ref | Cown | wfStatement | wfTerminator |
-    wfLiteral | String | RawString;
+    LBracket | RBracket | Comma | Colon | Union | TupleType | Vararg |
+    wfRegionType | wfPrimitiveType | Ptr | Dyn | Ref | Cown | wfStatement |
+    wfTerminator | wfLiteral | String | RawString;
 
   // clang-format off
   const auto wfParser =
@@ -59,6 +59,7 @@ namespace vbcc
         "usize\\b" >> [](auto& m) { m.add(USize); },
         "ptr\\b" >> [](auto& m) { m.add(Ptr); },
         "dyn\\b" >> [](auto& m) { m.add(Dyn); },
+        "tuple\\b" >> [](auto& m) { m.add(TupleType); },
 
         // Op codes.
         "global\\b" >> [](auto& m) { m.add(Global); },

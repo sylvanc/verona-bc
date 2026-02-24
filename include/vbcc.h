@@ -172,6 +172,7 @@ namespace vbcc
   inline const auto Symbols = TokenDef("symbols");
   inline const auto Vararg = TokenDef("vararg");
   inline const auto Union = TokenDef("union");
+  inline const auto TupleType = TokenDef("tupletype");
   inline const auto Field = TokenDef("field");
   inline const auto Fields = TokenDef("fields");
   inline const auto Method = TokenDef("method");
@@ -207,7 +208,8 @@ namespace vbcc
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
   inline const auto wfBuiltinType = wfPrimitiveType | Ptr | Array | Ref | Cown;
-  inline const auto wfType = wfBuiltinType | Dyn | ClassId | TypeId | Union;
+  inline const auto wfType =
+    wfBuiltinType | Dyn | ClassId | TypeId | Union | TupleType;
 
   inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
   inline const auto wfLiteral =
@@ -227,8 +229,8 @@ namespace vbcc
     StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
-    Subcall | SubcallDyn | Try | TryDyn | FFI | When | WhenDyn |
-    wfBinop | wfUnop | wfConst | Typetest;
+    Subcall | SubcallDyn | Try | TryDyn | FFI | When | WhenDyn | wfBinop |
+    wfUnop | wfConst | Typetest;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
@@ -251,6 +253,7 @@ namespace vbcc
     | (Ref <<= (Type >>= wfType))
     | (Cown <<= (Type >>= wfType))
     | (Union <<= wfType++)
+    | (TupleType <<= wfType++[2])
     | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
     | (Symbol <<=
