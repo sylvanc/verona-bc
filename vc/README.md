@@ -2,8 +2,9 @@
 
 ## To Do
 
-Syntax:
-- `_` bindings to ignore values.
+Investigate problems with `else` on non-if expressions.
+
+Investigate if the return type influences type inference.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
