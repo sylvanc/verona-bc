@@ -2351,6 +2351,10 @@ namespace vc
                   {
                     // Refine all remaining default Consts of the same
                     // default type to the expected return type.
+                    // Track which locations were refined so the cascade
+                    // only propagates from affected sources.
+                    std::set<Location> cascade_changed;
+
                     for (auto& [loc, info] : env)
                     {
                       if (!info.is_default || !info.const_node)
@@ -2392,9 +2396,28 @@ namespace vc
                       }
                     }
 
+                    // Seed cascade_changed with locations that have
+                    // the expected primitive type. This conservatively
+                    // includes entries that always had this type (not
+                    // just newly-refined ones), which is safe because
+                    // types_equal prevents no-op re-propagation.
+                    for (auto& [loc, info] : env)
+                    {
+                      auto p = extract_primitive(info.type);
+
+                      if (
+                        p && p->type() == expected_prim->type() &&
+                        !info.is_default && !info.is_fixed)
+                        cascade_changed.insert(loc);
+                    }
+
                     // Cascade: re-iterate all statements in all labels
                     // to re-propagate types through Copy/Move, Lookup,
                     // and CallDyn after refining default Consts.
+                    // Only propagate from locations that were affected
+                    // by the refinement (in cascade_changed) to prevent
+                    // oscillation when a variable is assigned from
+                    // multiple sources with different types.
                     bool changed = true;
 
                     while (changed)
@@ -2409,6 +2432,14 @@ namespace vc
                           {
                             auto cp_dst = stmt2 / LocalId;
                             auto cp_src = stmt2 / Rhs;
+
+                            // Only propagate if the source was affected
+                            // by refinement.
+                            if (
+                              cascade_changed.find(cp_src->location()) ==
+                              cascade_changed.end())
+                              continue;
+
                             auto dst_it = env.find(cp_dst->location());
                             auto src_it = env.find(cp_src->location());
 
@@ -2425,6 +2456,7 @@ namespace vc
                                   dst_it->second.type, new_info.type))
                               {
                                 env[cp_dst->location()] = new_info;
+                                cascade_changed.insert(cp_dst->location());
                                 changed = true;
                               }
                             }
@@ -2433,6 +2465,12 @@ namespace vc
                           {
                             auto lk_dst = stmt2 / LocalId;
                             auto lk_src = stmt2 / Rhs;
+
+                            if (
+                              cascade_changed.find(lk_src->location()) ==
+                              cascade_changed.end())
+                              continue;
+
                             auto lk_hand = (stmt2 / Lhs)->type();
                             auto lk_ident = stmt2 / Ident;
                             auto lk_ta = stmt2 / TypeArgs;
@@ -2459,6 +2497,7 @@ namespace vc
                                 {
                                   env[lk_dst->location()] =
                                     LocalTypeInfo::computed(rt);
+                                  cascade_changed.insert(lk_dst->location());
                                   changed = true;
                                 }
                               }
@@ -2469,6 +2508,30 @@ namespace vc
                             auto cd_dst = stmt2 / LocalId;
                             auto cd_src = stmt2 / Rhs;
                             auto cd_args = stmt2 / Args;
+
+                            // Check if any input to this CallDyn was
+                            // affected.
+                            bool src_changed =
+                              cascade_changed.find(cd_src->location()) !=
+                              cascade_changed.end();
+                            bool arg_changed = false;
+
+                            for (auto& arg_node : *cd_args)
+                            {
+                              auto as = arg_node / Rhs;
+
+                              if (
+                                cascade_changed.find(as->location()) !=
+                                cascade_changed.end())
+                              {
+                                arg_changed = true;
+                                break;
+                              }
+                            }
+
+                            if (!src_changed && !arg_changed)
+                              continue;
+
                             auto li = lookup_stmts.find(cd_src->location());
 
                             if (li != lookup_stmts.end())
@@ -2506,7 +2569,10 @@ namespace vc
                                       auto as = arg_node / Rhs;
 
                                       if (try_refine(env, as->location(), pp))
+                                      {
+                                        cascade_changed.insert(as->location());
                                         changed = true;
+                                      }
                                     }
 
                                     idx++;
@@ -2516,21 +2582,25 @@ namespace vc
                             }
 
                             // Re-propagate CallDyn result type.
-                            auto src_it = env.find(cd_src->location());
-
-                            if (src_it != env.end())
+                            if (src_changed)
                             {
-                              auto dst_it = env.find(cd_dst->location());
+                              auto src_it = env.find(cd_src->location());
 
-                              if (
-                                dst_it == env.end() ||
-                                !types_equal(
-                                  dst_it->second.type, src_it->second.type))
+                              if (src_it != env.end())
                               {
-                                env[cd_dst->location()] =
-                                  LocalTypeInfo::computed(
-                                    clone(src_it->second.type));
-                                changed = true;
+                                auto dst_it = env.find(cd_dst->location());
+
+                                if (
+                                  dst_it == env.end() ||
+                                  !types_equal(
+                                    dst_it->second.type, src_it->second.type))
+                                {
+                                  env[cd_dst->location()] =
+                                    LocalTypeInfo::computed(
+                                      clone(src_it->second.type));
+                                  cascade_changed.insert(cd_dst->location());
+                                  changed = true;
+                                }
                               }
                             }
                           }

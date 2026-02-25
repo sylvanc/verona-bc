@@ -227,6 +227,14 @@ namespace vc
         In(Lhs) * T(Tuple)[Tuple] >>
           [](Match& _) { return TupleLHS << *_[Tuple]; },
 
+        // Discard assignment: _ = expr.
+        T(Equals) << (T(DontCare) * T(LocalId)[Rhs]) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body << (Copy << (LocalId ^ id) << _(Rhs)))
+                       << (LocalId ^ id);
+          },
+
         // Assignment.
         T(Equals) << (T(LocalId)[Lhs] * T(LocalId)[Rhs]) >>
           [](Match& _) {
@@ -250,7 +258,7 @@ namespace vc
 
         // Destructuring assignment.
         T(Equals)
-            << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId, Let)++)) *
+            << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId, Let, DontCare)++)) *
                 T(LocalId)[Rhs]) >>
           [](Match& _) {
             // If the RHS is too short, this will throw an error.
@@ -271,7 +279,12 @@ namespace vc
                   << (Lift << Body
                            << (Load << (LocalId ^ val) << (LocalId ^ ref)));
 
-              if (l->type() == Let)
+              if (l->type() == DontCare)
+              {
+                // Discard: value is loaded but never used.
+                tuple << (LocalId ^ val);
+              }
+              else if (l->type() == Let)
               {
                 // Let is single-assignment: just copy the value, no swap.
                 auto name = (l / Ident)->location();
@@ -292,6 +305,10 @@ namespace vc
         // Invalid l-values.
         In(Lhs) * T(FuncName, If, Else, While, When)[Lhs] >>
           [](Match& _) { return err(_(Lhs), "Can't assign to this"); },
+
+        // Error on remaining DontCare (not on LHS of assignment).
+        !In(Equals, TupleLHS) * T(DontCare)[DontCare] >>
+          [](Match& _) { return err(_(DontCare), "'_' can only be used on the left side of an assignment"); },
 
         // If expression.
         In(Expr) * T(If)[If] >>
@@ -677,6 +694,14 @@ namespace vc
         // Compact TupleLHS.
         T(Lhs) << (T(TupleLHS)[TupleLHS] * End) >>
           [](Match& _) { return _(TupleLHS); },
+
+        // Compact LHS DontCare.
+        T(Lhs) << (T(DontCare) * End) >>
+          [](Match&) -> Node { return DontCare; },
+
+        // Compact TupleLHS DontCare.
+        In(TupleLHS) * T(Lhs) << (T(DontCare) * End) >>
+          [](Match&) -> Node { return DontCare; },
 
         // Compact LHS Let inside TupleLHS. This must fire before the Let
         // rule converts Let to LocalId, so that Let survives into the

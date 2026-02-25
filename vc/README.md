@@ -5,6 +5,21 @@
 Syntax:
 - `_` bindings to ignore values.
 
+Lambdas.
+- A free `var` is captured by reference. The lambda must be `stack` allocated.
+- How can we have stateful lambdas?
+
+Patterns for lambdas.
+- If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
+- If a lambda can be a pattern, pattern matching becomes a series of `else`.
+- A pattern can be any object that implements `==`.
+  - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
+- `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
+
+Calls.
+- Try (rename to `catch`?), sub-call.
+- Raise, throw.
+
 Tuples:
 - Test case for an array of tuples.
 - Destructing when the tuple is too short throws an error. Should it?
@@ -21,21 +36,6 @@ Types.
 - Check recursion on type alias.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 - Can type parameters take type arguments?
-
-Calls.
-- Try (rename to `catch`?), sub-call.
-- Raise, throw.
-
-Lambdas.
-- A free `var` is captured by reference. The lambda must be `stack` allocated.
-- How can we have stateful lambdas?
-
-Patterns for lambdas.
-- If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
-- If a lambda can be a pattern, pattern matching becomes a series of `else`.
-- A pattern can be any object that implements `==`.
-  - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
-- `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
 
 Semantics:
 - Region creation.
