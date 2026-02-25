@@ -291,7 +291,11 @@ namespace vc
               return ValueParam << _(Ident) << (Type << _[Type])
                                 << (Body << (Group << _[Body]));
 
-            return TypeParam << _(Ident) << make_type(_, _[Body]);
+            if (!_[Body].empty())
+              return err(
+                _(Ident), "Can't have a default value for a type parameter");
+
+            return TypeParam << _(Ident);
           },
 
         In(TypeParams) * T(Group)[Group] >>

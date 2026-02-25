@@ -22,7 +22,6 @@ Sub-typing.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Types:
-- Sources of `Dyn`: `any`, no annotation. Anything else?
 - Can type parameters take type arguments?
 - Type annotations on local variables.
   - Emit a type assertion that gets checked in `infer`?

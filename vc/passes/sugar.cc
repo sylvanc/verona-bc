@@ -197,7 +197,7 @@ namespace vc
             Node typeparams = TypeParams;
 
             for (auto& ftp : free_tps)
-              typeparams << (TypeParam << (Ident ^ ftp.name) << make_type(_));
+              typeparams << (TypeParam << (Ident ^ ftp.name));
 
             // Build TypeArgs for internal use (self type): FQ refs to
             // the lambda class's own type params.

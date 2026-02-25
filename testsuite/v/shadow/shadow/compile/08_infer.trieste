@@ -407,7 +407,13 @@ infer
                   (var
                     (ident 8:local$10)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:i32)
+                          (typeargs)))))
                   (typetest
                     (localid 9:local$892)
                     (localid 8:local$10)
@@ -893,7 +899,13 @@ infer
               (var
                 (ident 8:local$18)
                 (type
-                  (typevar)))
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (typetest
                 (localid 9:local$897)
                 (localid 8:local$18)
@@ -1015,7 +1027,13 @@ infer
               (var
                 (ident 8:local$20)
                 (type
-                  (typevar)))
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (copy
                 (localid 9:local$542)
                 (localid 1:b))
@@ -1180,7 +1198,13 @@ infer
               (var
                 (ident 8:local$23)
                 (type
-                  (typevar)))
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (typetest
                 (localid 9:local$902)
                 (localid 8:local$23)
@@ -1425,7 +1449,13 @@ infer
               (var
                 (ident 8:local$29)
                 (type
-                  (typevar)))
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (typetest
                 (localid 9:local$908)
                 (localid 8:local$29)
@@ -1674,9 +1704,7 @@ infer
         (ident 5:array)
         (typeparams
           (typeparam
-            (ident 1:T)
-            (type
-              (typevar))))
+            (ident 1:T)))
         (where)
         (classbody
           (function
@@ -1904,7 +1932,13 @@ infer
                   (var
                     (ident 1:i)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (const
                     (localid 8:local$33)
                     (usize)
@@ -2019,7 +2053,13 @@ infer
                   (var
                     (ident 8:local$34)
                     (type
-                      (typevar))))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs))))))
                 (ret
                   (localid 1:a)))))
           (function
@@ -2328,9 +2368,7 @@ infer
         (ident 9:arrayiter)
         (typeparams
           (typeparam
-            (ident 1:T)
-            (type
-              (typevar))))
+            (ident 1:T)))
         (where)
         (classbody
           (fielddef
@@ -2990,7 +3028,13 @@ infer
                   (var
                     (ident 8:local$41)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 7:nomatch)
+                          (typeargs)))))
                   (typetest
                     (localid 9:local$916)
                     (localid 8:local$41)
@@ -3366,7 +3410,13 @@ infer
                   (var
                     (ident 8:local$46)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:bool)
+                          (typeargs)))))
                   (typetest
                     (localid 9:local$920)
                     (localid 8:local$46)
@@ -3477,7 +3527,13 @@ infer
                   (var
                     (ident 8:local$48)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:bool)
+                          (typeargs)))))
                   (typetest
                     (localid 9:local$923)
                     (localid 8:local$48)
@@ -4019,9 +4075,7 @@ infer
         (ident 4:cown)
         (typeparams
           (typeparam
-            (ident 1:T)
-            (type
-              (typevar))))
+            (ident 1:T)))
         (where)
         (classbody
           (function
@@ -18805,9 +18859,7 @@ infer
         (ident 3:ref)
         (typeparams
           (typeparam
-            (ident 1:T)
-            (type
-              (typevar))))
+            (ident 1:T)))
         (where)
         (classbody
           (function
@@ -19671,11 +19723,23 @@ infer
                   (var
                     (ident 8:local$83)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 7:nomatch)
+                          (typeargs)))))
                   (var
                     (ident 1:i)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (const
                     (localid 8:local$84)
                     (usize)
@@ -19855,7 +19919,13 @@ infer
                   (var
                     (ident 9:local$377)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 7:nomatch)
+                          (typeargs)))))
                   (const
                     (localid 9:local$378)
                     (usize)
@@ -19894,7 +19964,13 @@ infer
                   (var
                     (ident 8:local$85)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (const
                     (localid 8:local$86)
                     (bool)
@@ -20074,7 +20150,13 @@ infer
                   (var
                     (ident 1:i)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (const
                     (localid 8:local$87)
                     (usize)
@@ -20252,7 +20334,13 @@ infer
                   (var
                     (ident 9:local$388)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 7:nomatch)
+                          (typeargs)))))
                   (typetest
                     (localid 9:local$967)
                     (localid 9:local$388)
@@ -20321,7 +20409,13 @@ infer
                   (var
                     (ident 9:local$389)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 7:nomatch)
+                          (typeargs)))))
                   (copy
                     (localid 9:local$388)
                     (localid 9:local$389)))
@@ -20368,7 +20462,13 @@ infer
                   (var
                     (ident 8:local$88)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (lookup
                     (localid 9:local$391)
                     (localid 4:self)
@@ -20748,7 +20848,13 @@ infer
                   (var
                     (ident 1:i)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (const
                     (localid 8:local$90)
                     (usize)
@@ -20908,11 +21014,23 @@ infer
                   (var
                     (ident 8:local$91)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (var
                     (ident 1:j)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (const
                     (localid 8:local$92)
                     (usize)
@@ -21099,7 +21217,13 @@ infer
                   (var
                     (ident 8:local$93)
                     (type
-                      (typevar)))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
                   (call
                     (localid 8:local$94)
                     (rhs)

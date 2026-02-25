@@ -2604,6 +2604,59 @@ namespace vc
           }
         }
 
+        // Error on any remaining TypeVar param or return types.
+        for (auto& pd : *params)
+        {
+          auto type = pd / Type;
+
+          if (type->front() == TypeVar)
+          {
+            node->parent()->replace(
+              node, err(pd / Ident, "Cannot infer type of parameter"));
+            return false;
+          }
+        }
+
+        func_ret_type = node / Type;
+
+        if (func_ret_type->front() == TypeVar)
+        {
+          node->parent()->replace(
+            node,
+            err(node / Ident, "Cannot infer return type of function"));
+          return false;
+        }
+
+        // Resolve TypeVar in Var nodes: replace with env type or error.
+        for (auto& lbl : *labels)
+        {
+          for (auto& stmt : *(lbl / Body))
+          {
+            if (stmt != Var)
+              continue;
+
+            auto type = stmt / Type;
+
+            if (type->front() != TypeVar)
+              continue;
+
+            auto ident = stmt / Ident;
+            auto it = env.find(ident->location());
+
+            if (
+              it != env.end() && it->second.type->front() != TypeVar)
+            {
+              stmt->replace(type, clone(it->second.type));
+            }
+            else
+            {
+              node->parent()->replace(
+                node, err(ident, "Cannot infer type of variable"));
+              return false;
+            }
+          }
+        }
+
         return false;
       });
 

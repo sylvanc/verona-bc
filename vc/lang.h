@@ -162,7 +162,7 @@ namespace vc
     | (TypeName <<= NameElement++[1])
     | (NameElement <<= wfFuncId * TypeArgs)
     | (TypeParams <<= (TypeParam | ValueParam)++)
-    | (TypeParam <<= Ident * Type)[Ident]
+    | (TypeParam <<= Ident)[Ident]
     | (ValueParam <<= Ident * Type * Body)[Ident]
     | (TypeArgs <<= (Type | Expr)++)
     | (Params <<= ParamDef++)
@@ -373,10 +373,16 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto wfTypeInfer = wfTypeNoFunc - TypeVar;
+
   // clang-format off
   inline const auto wfPassInfer =
       wfPassANF
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
+    | (Type <<= wfTypeInfer)
+    | (Union <<= wfTypeInfer++[2])
+    | (Isect <<= wfTypeInfer++[2])
+    | (TupleType <<= wfTypeInfer++[2])
     ;
   // clang-format on
 

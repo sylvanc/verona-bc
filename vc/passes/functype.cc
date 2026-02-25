@@ -87,7 +87,7 @@ namespace vc
           for (auto& ftp : free_tps)
           {
             auto tp_name = std::string((ftp.def / Ident)->location().view());
-            typeparams << (TypeParam << (Ident ^ tp_name) << (Type << TypeVar));
+            typeparams << (TypeParam << (Ident ^ tp_name));
           }
 
           // Build a substitution from original FQ TypeParam references

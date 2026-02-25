@@ -749,10 +749,6 @@ namespace vc
       if (type == Dyn)
         return Dyn;
 
-      // Use Dyn until we resolve type variables.
-      if (type == TypeVar)
-        return Dyn;
-
       // Preserve TupleType with reified element types.
       if (type == TupleType)
       {
