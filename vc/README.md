@@ -2,11 +2,15 @@
 
 ## To Do
 
+Fix `-p` with `--dump_passes` bug.
+
 Syntax:
+- Character literals. `Char` literal in `vbcc`, custom parse code.
 - Partial application, `_`.
 - Implement `Hash`.
 
 Tuples:
+- Test case for an array of tuples.
 - Destructing when the tuple is too short throws an error. Should it?
 - Destructing when the tuple is too long ignores the extra elements. Should it?
 - Flatten a tuple into another tuple.
@@ -22,13 +26,12 @@ Sub-typing.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 
 Types:
-- In `infer`, are we treating `if` and `else` correctly? What about other control flow?
 - Sources of `Dyn`: `any`, no annotation. Anything else?
 - Can we get rid of `TypeVar`? Or does it just not need an ID?
   - Use `any` at function boundaries if not annotated?
-- IR type for tuple. Could be `[dyn]` of correct size with elements that type check.
 - Can type parameters take type arguments?
 - Type annotations on local variables.
+  - Emit a type assertion that gets checked in `infer`?
 
 Calls.
 - Try (rename to `catch`?), sub-call.

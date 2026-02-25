@@ -36,5 +36,5 @@ invoke(r: returner): i32
 main(): i32
 {
   let b = box::create(42);
-  invoke(b)
+  shape_recurse::invoke(b)
 }

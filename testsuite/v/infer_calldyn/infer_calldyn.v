@@ -27,5 +27,5 @@ main(): i32
 {
   let w = wrapper[i32](1);
   let v = w.get;
-  identity(v)
+  infer_calldyn::identity(v)
 }

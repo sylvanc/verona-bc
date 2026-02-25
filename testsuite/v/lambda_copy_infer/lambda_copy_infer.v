@@ -24,6 +24,6 @@ wrap_copy[T](val: T): wrapper[T]
 
 main(): i32
 {
-  let w = wrap_copy[i32](42);
+  let w = lambda_copy_infer::wrap_copy[i32](42);
   w.get
 }

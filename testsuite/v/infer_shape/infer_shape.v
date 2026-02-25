@@ -30,5 +30,5 @@ extract[T](g: getter[T]): T
 main(): i32
 {
   let b = box[i32](42);
-  extract(b)
+  infer_shape::extract(b)
 }

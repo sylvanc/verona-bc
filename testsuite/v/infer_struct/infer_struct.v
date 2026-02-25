@@ -19,5 +19,5 @@ unwrap[T](w: wrapper[T]): T
 main(): i32
 {
   let w = wrapper[i32](1);
-  unwrap(w)
+  infer_struct::unwrap(w)
 }

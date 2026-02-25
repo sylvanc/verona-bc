@@ -30,6 +30,6 @@ unwrap_i32(w: wrapper[i32]): i32
 
 main(): i32
 {
-  let w = wrap(42);
-  unwrap_i32(w)
+  let w = infer_backward::wrap(42);
+  infer_backward::unwrap_i32(w)
 }

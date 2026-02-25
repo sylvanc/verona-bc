@@ -5,5 +5,5 @@ add(a: i32, b: i32): i32
 
 main(): i32
 {
-  add(1, 2)
+  infer_call::add(1, 2)
 }

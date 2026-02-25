@@ -46,8 +46,7 @@ namespace vc
   {
     return Type
       << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                   << (NameElement << (Ident ^ "array")
-                                   << (TypeArgs << primitive_type(U8))));
+                   << (NameElement << (Ident ^ "string") << TypeArgs));
   }
 
   // Build a source-level Type node for _builtin::ref[inner].
@@ -436,7 +435,18 @@ namespace vc
   // Given a receiver type (e.g., wrapper[i32]), a method name, hand,
   // arity, and method-level TypeArgs, find the method definition
   // and return the substituted return type.
-  Node resolve_method_return_type(
+  // Information about a resolved method.
+  struct MethodInfo
+  {
+    Node func; // The matched Function node.
+    NodeMap<Node> subst; // Combined class + function TypeParam substitutions.
+  };
+
+  // Find a method on a class by receiver type, name, hand, and arity.
+  // Returns the Function node and substitution map, or empty MethodInfo
+  // if not found. If the receiver is ref[T] or cown[T] and the method
+  // is not found on the wrapper, tries the inner type T.
+  MethodInfo resolve_method(
     Node top,
     const Node& receiver_type,
     const Node& method_ident,
@@ -472,7 +482,9 @@ namespace vc
       if ((child / Ident)->location().view() != method_name)
         continue;
 
-      if ((child / Lhs)->type() != hand)
+      auto child_hand = (child / Lhs)->type();
+
+      if (child_hand != hand)
         continue;
 
       if ((child / Params)->size() != arity)
@@ -489,12 +501,61 @@ namespace vc
           subst[func_tps->at(i)] = method_typeargs->at(i);
       }
 
-      // Apply substitution to the return type.
-      auto ret_type = child / Type;
-      return apply_subst(top, ret_type, subst);
+      return {child, std::move(subst)};
     }
 
+    // Method not found on the direct type. If this is ref[T] or cown[T],
+    // try the inner type T (auto-deref for method resolution).
+    auto ref_inner = extract_ref_inner(receiver_type);
+
+    if (!ref_inner)
+      ref_inner = extract_cown_inner(receiver_type);
+
+    if (ref_inner)
+      return resolve_method(
+        top, ref_inner, method_ident, hand, arity, method_typeargs);
+
     return {};
+  }
+
+  Node resolve_method_return_type(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs)
+  {
+    auto info = resolve_method(
+      top, receiver_type, method_ident, hand, arity, method_typeargs);
+
+    if (!info.func)
+      return {};
+
+    auto ret = apply_subst(top, info.func / Type, info.subst);
+
+    // If the return type is TypeVar (e.g., auto-generated rhs wrapper
+    // not yet processed), compute the return type from the lhs
+    // counterpart: the rhs wrapper calls the lhs version (via a Call
+    // with Lhs hand) and does a Load, so the return type is the lhs
+    // version's return type with ref unwrapped.
+    if (ret && ret->front() == TypeVar && hand == Rhs)
+    {
+      auto lhs_info = resolve_method(
+        top, receiver_type, method_ident, Lhs, arity, method_typeargs);
+
+      if (lhs_info.func)
+      {
+        auto lhs_ret =
+          apply_subst(top, lhs_info.func / Type, lhs_info.subst);
+        auto inner = extract_ref_inner(lhs_ret);
+
+        if (inner)
+          return inner;
+      }
+    }
+
+    return ret;
   }
 
   // Extract the primitive token node from a source-level Type node that
@@ -531,6 +592,44 @@ namespace vc
   // Like extract_primitive but also handles union and intersection
   // types by scanning all components for primitives. Returns empty
   // if ambiguous (components with different primitive types found).
+  // Compare two Type nodes for equality by primitive token.
+  // For primitives, compares the _builtin type name.
+  // For non-primitives, falls back to comparing inner Token types
+  // and (for TypeName) the last NameElement's ident.
+  bool types_equal(const Node& a, const Node& b)
+  {
+    if (a != Type || b != Type)
+      return false;
+
+    auto ia = a->front();
+    auto ib = b->front();
+
+    // Different inner Token types → not equal.
+    if (ia->type() != ib->type())
+      return false;
+
+    // Both are TypeName: compare the fully-qualified name.
+    if (ia == TypeName && ib == TypeName)
+    {
+      if (ia->size() != ib->size())
+        return false;
+
+      for (size_t i = 0; i < ia->size(); i++)
+      {
+        auto ea = ia->at(i) / Ident;
+        auto eb = ib->at(i) / Ident;
+
+        if (ea->location().view() != eb->location().view())
+          return false;
+      }
+
+      return true;
+    }
+
+    // Same Token type (TypeVar, Dyn, etc.) — treat as equal.
+    return true;
+  }
+
   Node extract_callable_primitive(const Node& type_node)
   {
     auto prim = extract_primitive(type_node);
@@ -563,6 +662,20 @@ namespace vc
     }
 
     return candidate;
+  }
+
+  // Extract primitive from ref[T] or cown[T] wrapper's inner type.
+  Node extract_wrapper_primitive(const Node& type_node)
+  {
+    auto inner = extract_ref_inner(type_node);
+
+    if (!inner)
+      inner = extract_cown_inner(type_node);
+
+    if (inner)
+      return extract_callable_primitive(inner);
+
+    return {};
   }
 
   // Return the default primitive type for a literal node.
@@ -1627,75 +1740,147 @@ namespace vc
               auto dst = stmt / LocalId;
               auto src = stmt / Rhs;
               auto args = stmt / Args;
+              bool refined = false;
 
-              // Refine default-typed args using non-default args.
-              // E.g., sum + v where sum is u64 (default) and v is i32
-              // should refine sum to i32.
-              Node target_prim;
+              // Look up the corresponding Lookup statement.
+              auto lookup_it = lookup_stmts.find(src->location());
 
-              for (auto& arg_node : *args)
+              // Phase 1: Parameter-type-based refinement.
+              // Resolve the method from the receiver's class and use
+              // each parameter's type to refine the corresponding arg.
+              if (lookup_it != lookup_stmts.end())
               {
-                auto arg_src = arg_node / Rhs;
-                auto it = env.find(arg_src->location());
+                auto lookup_node = lookup_it->second;
+                auto lookup_src = lookup_node / Rhs;
+                auto recv_it = env.find(lookup_src->location());
 
-                if (it == env.end())
-                  continue;
-
-                if (it->second.is_default)
-                  continue;
-
-                auto prim = extract_callable_primitive(it->second.type);
-
-                if (prim)
+                if (recv_it != env.end())
                 {
-                  target_prim = prim;
-                  break;
+                  auto hand = (lookup_node / Lhs)->type();
+                  auto method_ident = lookup_node / Ident;
+                  auto method_ta = lookup_node / TypeArgs;
+                  auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+
+                  auto info = resolve_method(
+                    top,
+                    recv_it->second.type,
+                    method_ident,
+                    hand,
+                    arity,
+                    method_ta);
+
+                  if (info.func)
+                  {
+                    auto params = info.func / Params;
+                    size_t i = 0;
+
+                    for (auto& arg_node : *args)
+                    {
+                      if (i >= params->size())
+                        break;
+
+                      auto param_type =
+                        apply_subst(top, params->at(i) / Type, info.subst);
+                      auto prim = extract_callable_primitive(param_type);
+
+                      if (prim)
+                      {
+                        auto arg_src = arg_node / Rhs;
+
+                        if (try_refine(env, arg_src->location(), prim))
+                          refined = true;
+                      }
+
+                      i++;
+                    }
+                  }
                 }
               }
 
-              if (target_prim)
+              // Phase 2: Fallback arg-to-arg refinement.
+              // Use the first non-default primitive arg to refine all
+              // default-typed args.
+              if (!refined)
               {
-                bool refined = false;
+                Node target_prim;
 
                 for (auto& arg_node : *args)
                 {
                   auto arg_src = arg_node / Rhs;
+                  auto it = env.find(arg_src->location());
 
-                  if (try_refine(env, arg_src->location(), target_prim))
-                    refined = true;
+                  if (it == env.end() || it->second.is_default)
+                    continue;
+
+                  auto prim = extract_callable_primitive(it->second.type);
+
+                  if (!prim)
+                    prim = extract_wrapper_primitive(it->second.type);
+
+                  if (prim)
+                  {
+                    target_prim = prim;
+                    break;
+                  }
                 }
 
-                // Re-resolve the Lookup with the updated receiver type.
-                if (refined)
+                // If no non-default arg, try the receiver's type.
+                if (!target_prim && lookup_it != lookup_stmts.end())
                 {
-                  auto lookup_it = lookup_stmts.find(src->location());
+                  auto lookup_node = lookup_it->second;
+                  auto lookup_src = lookup_node / Rhs;
+                  auto recv_it = env.find(lookup_src->location());
 
-                  if (lookup_it != lookup_stmts.end())
+                  if (recv_it != env.end() && !recv_it->second.is_default)
                   {
-                    auto lookup_node = lookup_it->second;
-                    auto lookup_src = lookup_node / Rhs;
-                    auto lookup_dst = lookup_node / LocalId;
-                    auto hand = (lookup_node / Lhs)->type();
-                    auto method_ident = lookup_node / Ident;
-                    auto method_ta = lookup_node / TypeArgs;
-                    auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
-                    auto recv_it = env.find(lookup_src->location());
+                    auto prim =
+                      extract_callable_primitive(recv_it->second.type);
 
-                    if (recv_it != env.end())
-                    {
-                      auto ret_type = resolve_method_return_type(
-                        top,
-                        recv_it->second.type,
-                        method_ident,
-                        hand,
-                        arity,
-                        method_ta);
+                    if (!prim)
+                      prim = extract_wrapper_primitive(recv_it->second.type);
 
-                      if (ret_type)
-                        env[lookup_dst->location()] =
-                          LocalTypeInfo::computed(ret_type);
-                    }
+                    if (prim)
+                      target_prim = prim;
                   }
+                }
+
+                if (target_prim)
+                {
+                  for (auto& arg_node : *args)
+                  {
+                    auto arg_src = arg_node / Rhs;
+
+                    if (try_refine(env, arg_src->location(), target_prim))
+                      refined = true;
+                  }
+                }
+              }
+
+              // Re-resolve the Lookup return type after refinement.
+              if (refined && lookup_it != lookup_stmts.end())
+              {
+                auto lookup_node = lookup_it->second;
+                auto lookup_src = lookup_node / Rhs;
+                auto lookup_dst = lookup_node / LocalId;
+                auto hand = (lookup_node / Lhs)->type();
+                auto method_ident = lookup_node / Ident;
+                auto method_ta = lookup_node / TypeArgs;
+                auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+                auto recv_it = env.find(lookup_src->location());
+
+                if (recv_it != env.end())
+                {
+                  auto ret_type = resolve_method_return_type(
+                    top,
+                    recv_it->second.type,
+                    method_ident,
+                    hand,
+                    arity,
+                    method_ta);
+
+                  if (ret_type)
+                    env[lookup_dst->location()] =
+                      LocalTypeInfo::computed(ret_type);
                 }
               }
 
@@ -1869,7 +2054,250 @@ namespace vc
             auto expected_prim = extract_primitive(func_ret_type);
 
             if (expected_prim)
-              try_refine(env, ret_src->location(), expected_prim);
+            {
+              if (!try_refine(env, ret_src->location(), expected_prim))
+              {
+                // Direct refinement failed (returned value is computed,
+                // not a default Const). Refine ALL remaining default
+                // Const nodes of compatible type in the function, then
+                // cascade via re-propagation.
+                auto ret_it = env.find(ret_src->location());
+
+                if (ret_it != env.end())
+                {
+                  auto ret_prim = extract_primitive(ret_it->second.type);
+
+                  // Only proceed if the return value's type differs
+                  // from the expected type and both are in the same
+                  // numeric category (integer or float).
+                  if (
+                    ret_prim &&
+                    ret_prim->type() != expected_prim->type() &&
+                    ((ret_prim->in(integer_types) &&
+                      expected_prim->in(integer_types)) ||
+                     (ret_prim->in(float_types) &&
+                      expected_prim->in(float_types))))
+                  {
+                    // Refine all remaining default Consts of the same
+                    // default type to the expected return type.
+                    for (auto& [loc, info] : env)
+                    {
+                      if (!info.is_default || !info.const_node)
+                        continue;
+
+                      auto info_prim = extract_primitive(info.type);
+
+                      if (
+                        info_prim &&
+                        info_prim->type() == ret_prim->type())
+                      {
+                        refine_const(
+                          env, info.const_node, expected_prim->type());
+                        // refine_const invalidates iterators via
+                        // is_default/const_node changes; restart.
+                        break;
+                      }
+                    }
+
+                    // Repeat until no more defaults remain.
+                    bool found_default = true;
+
+                    while (found_default)
+                    {
+                      found_default = false;
+
+                      for (auto& [loc, info] : env)
+                      {
+                        if (!info.is_default || !info.const_node)
+                          continue;
+
+                        auto info_prim = extract_primitive(info.type);
+
+                        if (
+                          info_prim &&
+                          info_prim->type() == ret_prim->type())
+                        {
+                          refine_const(
+                            env, info.const_node, expected_prim->type());
+                          found_default = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Cascade: re-iterate all statements in all labels
+                    // to re-propagate types through Copy/Move, Lookup,
+                    // and CallDyn after refining default Consts.
+                    bool changed = true;
+
+                    while (changed)
+                    {
+                      changed = false;
+
+                      for (auto& lbl2 : *labels)
+                      {
+                        for (auto& stmt2 : *(lbl2 / Body))
+                        {
+                          if (stmt2->in({Copy, Move}))
+                          {
+                            auto cp_dst = stmt2 / LocalId;
+                            auto cp_src = stmt2 / Rhs;
+                            auto dst_it = env.find(cp_dst->location());
+                            auto src_it = env.find(cp_src->location());
+
+                            if (
+                              src_it != env.end() &&
+                              (dst_it == env.end() ||
+                               !dst_it->second.is_fixed))
+                            {
+                              auto new_info =
+                                LocalTypeInfo::propagated(src_it->second);
+
+                              if (
+                                dst_it == env.end() ||
+                                !types_equal(
+                                  dst_it->second.type,
+                                  new_info.type))
+                              {
+                                env[cp_dst->location()] = new_info;
+                                changed = true;
+                              }
+                            }
+                          }
+                          else if (stmt2 == Lookup)
+                          {
+                            auto lk_dst = stmt2 / LocalId;
+                            auto lk_src = stmt2 / Rhs;
+                            auto lk_hand = (stmt2 / Lhs)->type();
+                            auto lk_ident = stmt2 / Ident;
+                            auto lk_ta = stmt2 / TypeArgs;
+                            auto lk_ar =
+                              from_chars_sep_v<size_t>(stmt2 / Int);
+                            auto src_it =
+                              env.find(lk_src->location());
+
+                            if (src_it != env.end())
+                            {
+                              auto rt = resolve_method_return_type(
+                                top,
+                                src_it->second.type,
+                                lk_ident,
+                                lk_hand,
+                                lk_ar,
+                                lk_ta);
+
+                              if (rt)
+                              {
+                                auto dst_it =
+                                  env.find(lk_dst->location());
+
+                                if (
+                                  dst_it == env.end() ||
+                                  !types_equal(
+                                    dst_it->second.type, rt))
+                                {
+                                  env[lk_dst->location()] =
+                                    LocalTypeInfo::computed(rt);
+                                  changed = true;
+                                }
+                              }
+                            }
+                          }
+                          else if (stmt2 == CallDyn)
+                          {
+                            auto cd_dst = stmt2 / LocalId;
+                            auto cd_src = stmt2 / Rhs;
+                            auto cd_args = stmt2 / Args;
+                            auto li =
+                              lookup_stmts.find(cd_src->location());
+
+                            if (li != lookup_stmts.end())
+                            {
+                              auto lk = li->second;
+                              auto lk_src = lk / Rhs;
+                              auto ri =
+                                env.find(lk_src->location());
+
+                              if (ri != env.end())
+                              {
+                                auto hi = (lk / Lhs)->type();
+                                auto mi = lk / Ident;
+                                auto ta = lk / TypeArgs;
+                                auto ar =
+                                  from_chars_sep_v<size_t>(lk / Int);
+
+                                auto minfo = resolve_method(
+                                  top,
+                                  ri->second.type,
+                                  mi,
+                                  hi,
+                                  ar,
+                                  ta);
+
+                                if (minfo.func)
+                                {
+                                  auto params =
+                                    minfo.func / Params;
+                                  size_t idx = 0;
+
+                                  for (auto& arg_node : *cd_args)
+                                  {
+                                    if (idx >= params->size())
+                                      break;
+
+                                    auto pt = apply_subst(
+                                      top,
+                                      params->at(idx) / Type,
+                                      minfo.subst);
+                                    auto pp =
+                                      extract_callable_primitive(pt);
+
+                                    if (pp)
+                                    {
+                                      auto as = arg_node / Rhs;
+
+                                      if (try_refine(
+                                            env,
+                                            as->location(),
+                                            pp))
+                                        changed = true;
+                                    }
+
+                                    idx++;
+                                  }
+                                }
+                              }
+                            }
+
+                            // Re-propagate CallDyn result type.
+                            auto src_it =
+                              env.find(cd_src->location());
+
+                            if (src_it != env.end())
+                            {
+                              auto dst_it =
+                                env.find(cd_dst->location());
+
+                              if (
+                                dst_it == env.end() ||
+                                !types_equal(
+                                  dst_it->second.type,
+                                  src_it->second.type))
+                              {
+                                env[cd_dst->location()] =
+                                  LocalTypeInfo::computed(
+                                    clone(src_it->second.type));
+                                changed = true;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
 

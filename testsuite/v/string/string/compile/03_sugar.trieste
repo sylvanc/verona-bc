@@ -15,9 +15,9 @@ sugar
     (classbody
       (function
         {
-          c = let
-          s = let
-          sz = let}
+          ab = let
+          result = var
+          s = let}
         (rhs)
         (ident 4:main)
         (typeparams)
@@ -44,87 +44,76 @@ sugar
           (expr
             (=
               (expr
-                (let
-                  (ident 2:sz)
+                (var
+                  (ident 6:result)
                   (type
                     (typevar 9:typevar$2))))
+              (expr
+                (int 1:0))))
+          (expr
+            (if
               (expr
                 (localid 1:s)
                 (dot
                   (ident 4:size)
-                  (typeargs)))))
+                  (typeargs))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (int 1:5))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 9:typevar$3))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 1:1))))))))
           (expr
-            (=
-              (expr
-                (let
-                  (ident 1:c)
-                  (type
-                    (typevar 9:typevar$3))))
+            (if
               (expr
                 (localid 1:s)
                 (exprseq
                   (expr
-                    (funcname
-                      (nameelement
-                        (ident 8:_builtin)
-                        (typeargs))
-                      (nameelement
-                        (ident 5:usize)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs)))
-                    (int 1:1))))))
-          (expr
-            (else
-              (expr
-                (if
+                    (int 1:1)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (int 3:101))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 9:typevar$4))
+                (body
                   (expr
-                    (exprseq
+                    (=
                       (expr
-                        (localid 2:sz)
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
                         (methodname
-                          (symbolid 2:==)
+                          (symbolid 1:+)
                           (typeargs))
-                        (funcname
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 5:usize)
-                            (typeargs))
-                          (nameelement
-                            (ident 6:create)
-                            (typeargs)))
-                        (int 1:5)))
-                    (methodname
-                      (symbolid 1:&)
-                      (typeargs))
-                    (exprseq
-                      (expr
-                        (localid 1:c)
-                        (methodname
-                          (symbolid 2:==)
-                          (typeargs))
-                        (funcname
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 2:u8)
-                            (typeargs))
-                          (nameelement
-                            (ident 6:create)
-                            (typeargs)))
-                        (int 3:101))))
-                  (block
-                    {}
-                    (params)
-                    (type
-                      (typevar 9:typevar$4))
-                    (body
-                      (expr
-                        (int 1:0))))))
+                        (int 1:2))))))))
+          (expr
+            (if
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (localid 1:s)
+                (dot
+                  (ident 4:bool)
+                  (typeargs)))
               (block
                 {}
                 (params)
@@ -132,7 +121,506 @@ sugar
                   (typevar 9:typevar$5))
                 (body
                   (expr
-                    (int 1:1))))))))
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 1:4))))))))
+          (expr
+            (if
+              (expr
+                (string 0:)
+                (dot
+                  (ident 4:bool)
+                  (typeargs)))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 9:typevar$6))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 1:8))))))))
+          (expr
+            (if
+              (expr
+                (localid 1:s)
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (string 5:hello))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 9:typevar$7))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 2:16))))))))
+          (expr
+            (if
+              (expr
+                (localid 1:s)
+                (methodname
+                  (symbolid 2:==)
+                  (typeargs))
+                (string 5:world))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 9:typevar$8))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 2:32))))))))
+          (expr
+            (if
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (string 3:abc)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (string 3:abd))))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 9:typevar$9))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 2:64))))))))
+          (expr
+            (if
+              (expr
+                (string 3:abd)
+                (methodname
+                  (symbolid 1:<)
+                  (typeargs))
+                (string 3:abc))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$10))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 3:128))))))))
+          (expr
+            (if
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (string 3:abc)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (string 4:abcd))))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$11))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 3:256))))))))
+          (expr
+            (if
+              (expr
+                (string 4:abcd)
+                (methodname
+                  (symbolid 1:<)
+                  (typeargs))
+                (string 3:abc))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$12))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 3:512))))))))
+          (expr
+            (if
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (string 1:b)
+                    (methodname
+                      (symbolid 1:>)
+                      (typeargs))
+                    (string 1:a))))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$13))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 4:1024))))))))
+          (expr
+            (if
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (string 1:a)
+                    (methodname
+                      (symbolid 2:<=)
+                      (typeargs))
+                    (string 1:a))))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$14))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 4:2048))))))))
+          (expr
+            (if
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (string 1:a)
+                    (methodname
+                      (symbolid 2:>=)
+                      (typeargs))
+                    (string 1:a))))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$15))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 4:4096))))))))
+          (expr
+            (=
+              (expr
+                (let
+                  (ident 2:ab)
+                  (type
+                    (typevar 10:typevar$16))))
+              (expr
+                (string 2:he)
+                (methodname
+                  (symbolid 1:+)
+                  (typeargs))
+                (string 3:llo))))
+          (expr
+            (if
+              (expr
+                (localid 2:ab)
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (string 5:hello))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$17))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 4:8192))))))))
+          (expr
+            (if
+              (expr
+                (localid 2:ab)
+                (dot
+                  (ident 4:size)
+                  (typeargs))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (int 1:5))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$18))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 5:16384))))))))
+          (expr
+            (if
+              (expr
+                (string 0:)
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (string 0:))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$19))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 5:32768))))))))
+          (expr
+            (if
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (string 0:)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (string 1:a))))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$20))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 5:65536))))))))
+          (expr
+            (if
+              (expr
+                (string 1:a)
+                (methodname
+                  (symbolid 1:<)
+                  (typeargs))
+                (string 0:))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$21))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 6:131072))))))))
+          (expr
+            (if
+              (expr
+                (string 3:abc)
+                (methodname
+                  (symbolid 1:<)
+                  (typeargs))
+                (string 3:abc))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$22))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 6:262144))))))))
+          (expr
+            (if
+              (expr
+                (exprseq
+                  (expr
+                    (string 0:)
+                    (methodname
+                      (symbolid 1:+)
+                      (typeargs))
+                    (string 5:hello)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (string 5:hello))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$23))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 6:524288))))))))
+          (expr
+            (if
+              (expr
+                (exprseq
+                  (expr
+                    (string 5:hello)
+                    (methodname
+                      (symbolid 1:+)
+                      (typeargs))
+                    (string 0:)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (string 5:hello))
+              (block
+                {}
+                (params)
+                (type
+                  (typevar 10:typevar$24))
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 6:result))
+                      (expr
+                        (localid 6:result)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 7:1048576))))))))
+          (expr
+            (localid 6:result))))
       (function
         {}
         (rhs)
@@ -212,7 +700,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 9:typevar$8))))
+              (typevar 10:typevar$27))))
         (where)
         (classbody
           (function
@@ -406,7 +894,7 @@ sugar
                     (let
                       (ident 1:a)
                       (type
-                        (typevar 10:typevar$17))))
+                        (typevar 10:typevar$36))))
                   (expr
                     (triplecolon
                       (nameelement
@@ -432,7 +920,7 @@ sugar
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 10:typevar$18))))
+                        (typevar 10:typevar$37))))
                   (expr
                     (int 1:0))))
               (expr
@@ -447,7 +935,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$19))
+                      (typevar 10:typevar$38))
                     (body
                       (expr
                         (=
@@ -626,7 +1114,7 @@ sugar
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1455))
+              (typevar 12:typevar$1514))
             (where)
             (body
               (expr
@@ -752,7 +1240,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$24))))
+              (typevar 10:typevar$43))))
         (where)
         (classbody
           (fielddef
@@ -845,7 +1333,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1456))
+              (typevar 12:typevar$1515))
             (where)
             (body
               (expr
@@ -989,7 +1477,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1457))
+              (typevar 12:typevar$1516))
             (where)
             (body
               (expr
@@ -1155,7 +1643,7 @@ sugar
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$32))
+                          (typevar 10:typevar$51))
                         (body
                           (expr
                             (=
@@ -1163,7 +1651,7 @@ sugar
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$34))))
+                                    (typevar 10:typevar$53))))
                               (expr
                                 (localid 4:self)
                                 (dot
@@ -1175,7 +1663,7 @@ sugar
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$35))))
+                                    (typevar 10:typevar$54))))
                               (expr
                                 (localid 1:a)
                                 (exprseq
@@ -1206,7 +1694,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$33))
+                      (typevar 10:typevar$52))
                     (body
                       (expr
                         (funcname
@@ -1248,7 +1736,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 10:typevar$29))
+              (typevar 10:typevar$48))
             (where)
             (body
               (expr
@@ -1463,7 +1951,7 @@ sugar
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$58))
+                          (typevar 10:typevar$77))
                         (body
                           (expr
                             (localid 5:other)
@@ -1472,7 +1960,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$59))
+                      (typevar 10:typevar$78))
                     (body
                       (expr
                         (false))))))))
@@ -1524,7 +2012,7 @@ sugar
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$62))
+                          (typevar 10:typevar$81))
                         (body
                           (expr
                             (true))))))
@@ -1532,7 +2020,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$63))
+                      (typevar 10:typevar$82))
                     (body
                       (expr
                         (localid 5:other)
@@ -2044,7 +2532,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$84))))
+              (typevar 11:typevar$103))))
         (where)
         (classbody
           (function
@@ -3824,7 +4312,7 @@ sugar
                     (ident 3:f32)
                     (typeargs))
                   (nameelement
-                    (ident 3:f32)
+                    (ident 6:create)
                     (typeargs)))
                 (triplecolon
                   (nameelement
@@ -3856,7 +4344,7 @@ sugar
                     (ident 3:f32)
                     (typeargs))
                   (nameelement
-                    (ident 3:f32)
+                    (ident 6:create)
                     (typeargs)))
                 (triplecolon
                   (nameelement
@@ -3888,7 +4376,7 @@ sugar
                     (ident 3:f32)
                     (typeargs))
                   (nameelement
-                    (ident 3:f32)
+                    (ident 6:create)
                     (typeargs)))
                 (triplecolon
                   (nameelement
@@ -3920,7 +4408,7 @@ sugar
                     (ident 3:f32)
                     (typeargs))
                   (nameelement
-                    (ident 3:f32)
+                    (ident 6:create)
                     (typeargs)))
                 (triplecolon
                   (nameelement
@@ -3956,16 +4444,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:f32)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -6236,16 +6717,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:f64)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -7838,16 +8312,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:i16)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -9440,16 +9907,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:i32)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -11042,16 +11502,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:i64)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -12644,16 +13097,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 2:i8)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -14246,16 +14692,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:ilong)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -15944,16 +16383,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:isize)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -16536,7 +16968,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$902))))
+              (typevar 11:typevar$921))))
         (where)
         (classbody
           (function
@@ -16619,7 +17051,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1458))
+              (typevar 12:typevar$1517))
             (where)
             (body
               (expr
@@ -16683,9 +17115,17 @@ sugar
                   (newargs)))))))
       (classdef
         {
+          != = function
+          + = function
+          < = function
+          <= = function
+          == = function
+          > = function
+          >= = function
           apply =
             function
             function
+          bool = function
           create = function
           data =
             function
@@ -16781,7 +17221,7 @@ sugar
                       (ident 6:string)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1459))
+              (typevar 12:typevar$1518))
             (where)
             (body
               (expr
@@ -16966,7 +17406,7 @@ sugar
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1460))
+              (typevar 12:typevar$1519))
             (where)
             (body
               (expr
@@ -17031,7 +17471,761 @@ sugar
                   (typeargs))
                 (dot
                   (ident 6:values)
-                  (typeargs)))))))
+                  (typeargs)))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 4:bool)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 4:self)
+                (dot
+                  (ident 4:size)
+                  (typeargs))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (int 1:0))))
+          (function
+            {
+              i = var
+              other = paramdef
+              self = paramdef}
+            (rhs)
+            (symbolid 2:==)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:other)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (if
+                  (expr
+                    (localid 4:self)
+                    (dot
+                      (ident 4:size)
+                      (typeargs))
+                    (methodname
+                      (symbolid 2:!=)
+                      (typeargs))
+                    (localid 5:other)
+                    (dot
+                      (ident 4:size)
+                      (typeargs)))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 11:typevar$945))
+                    (body
+                      (ret
+                        (expr
+                          (false)))))))
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar 11:typevar$946))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:i)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 4:self)
+                    (dot
+                      (ident 4:size)
+                      (typeargs)))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 11:typevar$947))
+                    (body
+                      (expr
+                        (if
+                          (expr
+                            (exprseq
+                              (expr
+                                (localid 4:self)
+                                (dot
+                                  (ident 4:data)
+                                  (typeargs))))
+                            (exprseq
+                              (expr
+                                (localid 1:i)))
+                            (methodname
+                              (symbolid 2:!=)
+                              (typeargs))
+                            (exprseq
+                              (expr
+                                (localid 5:other)
+                                (dot
+                                  (ident 4:data)
+                                  (typeargs))))
+                            (exprseq
+                              (expr
+                                (localid 1:i))))
+                          (block
+                            {}
+                            (params)
+                            (type
+                              (typevar 11:typevar$948))
+                            (body
+                              (ret
+                                (expr
+                                  (false)))))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (true))))
+          (function
+            {
+              other = paramdef
+              self = paramdef}
+            (rhs)
+            (symbolid 2:!=)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:other)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (localid 4:self)
+                    (methodname
+                      (symbolid 2:==)
+                      (typeargs))
+                    (localid 5:other))))))
+          (function
+            {
+              i = var
+              len = let
+              other = paramdef
+              self = paramdef}
+            (rhs)
+            (symbolid 1:<)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:other)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 3:len)
+                      (type
+                        (typevar 11:typevar$953))))
+                  (expr
+                    (localid 4:self)
+                    (dot
+                      (ident 4:size)
+                      (typeargs))
+                    (dot
+                      (ident 3:min)
+                      (typeargs))
+                    (exprseq
+                      (expr
+                        (localid 5:other)
+                        (dot
+                          (ident 4:size)
+                          (typeargs)))))))
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar 11:typevar$954))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:i)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 3:len))
+                  (block
+                    {
+                      oc = let
+                      sc = let}
+                    (params)
+                    (type
+                      (typevar 11:typevar$955))
+                    (body
+                      (expr
+                        (=
+                          (expr
+                            (let
+                              (ident 2:sc)
+                              (type
+                                (typevar 11:typevar$956))))
+                          (expr
+                            (exprseq
+                              (expr
+                                (localid 4:self)
+                                (dot
+                                  (ident 4:data)
+                                  (typeargs))))
+                            (exprseq
+                              (expr
+                                (localid 1:i))))))
+                      (expr
+                        (=
+                          (expr
+                            (let
+                              (ident 2:oc)
+                              (type
+                                (typevar 11:typevar$957))))
+                          (expr
+                            (exprseq
+                              (expr
+                                (localid 5:other)
+                                (dot
+                                  (ident 4:data)
+                                  (typeargs))))
+                            (exprseq
+                              (expr
+                                (localid 1:i))))))
+                      (expr
+                        (else
+                          (expr
+                            (if
+                              (expr
+                                (localid 2:sc)
+                                (methodname
+                                  (symbolid 1:<)
+                                  (typeargs))
+                                (localid 2:oc))
+                              (block
+                                {}
+                                (params)
+                                (type
+                                  (typevar 11:typevar$959))
+                                (body
+                                  (ret
+                                    (expr
+                                      (true)))))))
+                          (block
+                            {}
+                            (params)
+                            (type
+                              (typevar 11:typevar$958))
+                            (body
+                              (expr
+                                (if
+                                  (expr
+                                    (localid 2:oc)
+                                    (methodname
+                                      (symbolid 1:<)
+                                      (typeargs))
+                                    (localid 2:sc))
+                                  (block
+                                    {}
+                                    (params)
+                                    (type
+                                      (typevar 11:typevar$960))
+                                    (body
+                                      (ret
+                                        (expr
+                                          (false)))))))))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (localid 4:self)
+                (dot
+                  (ident 4:size)
+                  (typeargs))
+                (methodname
+                  (symbolid 1:<)
+                  (typeargs))
+                (localid 5:other)
+                (dot
+                  (ident 4:size)
+                  (typeargs)))))
+          (function
+            {
+              other = paramdef
+              self = paramdef}
+            (rhs)
+            (symbolid 2:<=)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:other)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (localid 5:other)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 4:self))))))
+          (function
+            {
+              other = paramdef
+              self = paramdef}
+            (rhs)
+            (symbolid 1:>)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:other)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 5:other)
+                (methodname
+                  (symbolid 1:<)
+                  (typeargs))
+                (localid 4:self))))
+          (function
+            {
+              other = paramdef
+              self = paramdef}
+            (rhs)
+            (symbolid 2:>=)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:other)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (methodname
+                  (symbolid 1:!)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (localid 4:self)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 5:other))))))
+          (function
+            {
+              i = var
+              j = var
+              other = paramdef
+              result = let
+              self = paramdef}
+            (rhs)
+            (symbolid 1:+)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:other)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 6:string)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 6:result)
+                      (type
+                        (typevar 11:typevar$969))))
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 8:_builtin)
+                        (typeargs))
+                      (nameelement
+                        (ident 5:array)
+                        (typeargs
+                          (type
+                            (typename
+                              (nameelement
+                                (ident 8:_builtin)
+                                (typeargs))
+                              (nameelement
+                                (ident 2:u8)
+                                (typeargs))))))
+                      (nameelement
+                        (ident 4:fill)
+                        (typeargs)))
+                    (exprseq
+                      (expr
+                        (localid 4:self)
+                        (dot
+                          (ident 4:size)
+                          (typeargs))
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (localid 5:other)
+                        (dot
+                          (ident 4:size)
+                          (typeargs)))))))
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar 11:typevar$970))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:i)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 4:self)
+                    (dot
+                      (ident 4:size)
+                      (typeargs)))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 11:typevar$971))
+                    (body
+                      (expr
+                        (=
+                          (expr
+                            (localid 6:result)
+                            (exprseq
+                              (expr
+                                (localid 1:i))))
+                          (expr
+                            (exprseq
+                              (expr
+                                (localid 4:self)
+                                (dot
+                                  (ident 4:data)
+                                  (typeargs))))
+                            (exprseq
+                              (expr
+                                (localid 1:i))))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:j)
+                      (type
+                        (typevar 11:typevar$972))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:j)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 5:other)
+                    (dot
+                      (ident 4:size)
+                      (typeargs)))
+                  (block
+                    {}
+                    (params)
+                    (type
+                      (typevar 11:typevar$973))
+                    (body
+                      (expr
+                        (=
+                          (expr
+                            (localid 6:result)
+                            (exprseq
+                              (expr
+                                (localid 1:i))))
+                          (expr
+                            (exprseq
+                              (expr
+                                (localid 5:other)
+                                (dot
+                                  (ident 4:data)
+                                  (typeargs))))
+                            (exprseq
+                              (expr
+                                (localid 1:j))))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:j))
+                          (expr
+                            (localid 1:j)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:string)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 6:result))))))))
       (classdef
         {
           ! = function
@@ -18103,16 +19297,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:u16)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -19669,16 +20856,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:u32)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -21235,16 +22415,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:u64)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -22801,16 +23974,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 2:u8)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -24367,16 +25533,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:ulong)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {
@@ -25933,16 +27092,9 @@ sugar
             (body
               (expr
                 (localid 4:self)
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:usize)
-                    (typeargs))
-                  (nameelement
-                    (symbolid 2:!=)
-                    (typeargs)))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
                 (int 1:0))))
           (function
             {

@@ -26,6 +26,6 @@ apply_with_offset[T](val: T, offset: T): wrapper[T]
 
 main(): i32
 {
-  let w = apply_with_offset[i32](10, 42);
+  let w = lambda_tp_freevar::apply_with_offset[i32](10, 42);
   w.get
 }

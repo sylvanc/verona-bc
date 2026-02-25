@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2193)
+            (localid 5:$2418)
             (functionid 24:lambda_infer::main::0::0)
             (args)))
         (ret
-          (localid 5:$2193)))))
+          (localid 5:$2418)))))
   (func
     (functionid 24:lambda_infer::main::0::0)
     (params)
@@ -27,32 +27,32 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1551)
+            (localid 10:local$1609)
             (i32)
             (int 2:42))
           (call
-            (localid 10:local$1477)
+            (localid 10:local$1517)
             (functionid 34:lambda_infer::apply_and_wrap::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1551))))
+                (localid 10:local$1609))))
           (copy
             (localid 1:w)
-            (localid 10:local$1477))
+            (localid 10:local$1517))
           (lookup
-            (localid 10:local$1552)
+            (localid 10:local$1610)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1553)
-            (localid 10:local$1552)
+            (localid 10:local$1611)
+            (localid 10:local$1610)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 10:local$1553)))))
+          (localid 10:local$1611)))))
   (primitive
     (i32)
     (methods))
@@ -69,19 +69,19 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1476)
-            (functionid 39:lambda_infer::lambda$1464::create::0::0)
+            (localid 10:local$1516)
+            (functionid 39:lambda_infer::lambda$1504::create::0::0)
             (args))
           (copy
             (localid 1:f)
-            (localid 10:local$1476))
+            (localid 10:local$1516))
           (lookup
-            (localid 10:local$1549)
+            (localid 10:local$1607)
             (localid 1:f)
             (methodid 11:apply::2::0))
           (calldyn
-            (localid 10:local$1550)
-            (localid 10:local$1549)
+            (localid 10:local$1608)
+            (localid 10:local$1607)
             (args
               (arg
                 (argcopy)
@@ -90,7 +90,7 @@ reify
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1550)))))
+          (localid 10:local$1608)))))
   (class
     (classid 24:lambda_infer::wrapper::0)
     (fields
@@ -105,33 +105,33 @@ reify
         (methodid 9:val::1::0)
         (functionid 32:lambda_infer::wrapper::val::1::0))))
   (func
-    (functionid 39:lambda_infer::lambda$1464::create::0::0)
+    (functionid 39:lambda_infer::lambda$1504::create::0::0)
     (params)
-    (classid 28:lambda_infer::lambda$1464::0)
+    (classid 28:lambda_infer::lambda$1504::0)
     (vars)
     (labels
       (label
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1474)
-            (classid 28:lambda_infer::lambda$1464::0)
+            (localid 10:local$1514)
+            (classid 28:lambda_infer::lambda$1504::0)
             (args)))
         (ret
-          (localid 10:local$1474)))))
+          (localid 10:local$1514)))))
   (class
-    (classid 28:lambda_infer::lambda$1464::0)
+    (classid 28:lambda_infer::lambda$1504::0)
     (fields)
     (methods
       (method
         (methodid 11:apply::2::0)
-        (functionid 38:lambda_infer::lambda$1464::apply::2::0))))
+        (functionid 38:lambda_infer::lambda$1504::apply::2::0))))
   (func
-    (functionid 38:lambda_infer::lambda$1464::apply::2::0)
+    (functionid 38:lambda_infer::lambda$1504::apply::2::0)
     (params
       (param
         (localid 4:self)
-        (classid 28:lambda_infer::lambda$1464::0))
+        (classid 28:lambda_infer::lambda$1504::0))
       (param
         (localid 1:x)
         (i32)))
@@ -142,14 +142,14 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1475)
+            (localid 10:local$1515)
             (functionid 35:lambda_infer::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:x)))))
         (ret
-          (localid 10:local$1475)))))
+          (localid 10:local$1515)))))
   (func
     (functionid 35:lambda_infer::wrapper::create::1::0)
     (params
@@ -163,14 +163,14 @@ reify
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1473)
+            (localid 10:local$1513)
             (classid 24:lambda_infer::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1473)))))
+          (localid 10:local$1513)))))
   (func
     (functionid 32:lambda_infer::wrapper::get::1::0)
     (params
@@ -184,18 +184,18 @@ reify
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1547)
+            (localid 10:local$1605)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1548)
-            (localid 10:local$1547)
+            (localid 10:local$1606)
+            (localid 10:local$1605)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1548)))))
+          (localid 10:local$1606)))))
   (func
     (functionid 32:lambda_infer::wrapper::val::1::0)
     (params
@@ -209,17 +209,17 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1472)
+            (localid 10:local$1512)
             (functionid 37:lambda_infer::wrapper::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1873)
-            (localid 10:local$1472)))
+            (localid 10:local$1989)
+            (localid 10:local$1512)))
         (ret
-          (localid 10:local$1873)))))
+          (localid 10:local$1989)))))
   (func
     (functionid 37:lambda_infer::wrapper::val::1::ref::0)
     (params
@@ -234,13 +234,13 @@ reify
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1546)
+            (localid 10:local$1604)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1546)))))
+          (localid 10:local$1604)))))
   (primitive
     (ref
       (i32))

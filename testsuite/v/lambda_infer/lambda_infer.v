@@ -24,6 +24,6 @@ apply_and_wrap[T](val: T): wrapper[T]
 
 main(): i32
 {
-  let w = apply_and_wrap[i32](42);
+  let w = lambda_infer::apply_and_wrap[i32](42);
   w.get
 }

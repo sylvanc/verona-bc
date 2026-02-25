@@ -12,11 +12,11 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2174)
+            (localid 5:$2399)
             (functionid 24:infer_newarg::main::0::0)
             (args)))
         (ret
-          (localid 5:$2174)))))
+          (localid 5:$2399)))))
   (func
     (functionid 24:infer_newarg::main::0::0)
     (params)
@@ -27,32 +27,32 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1533)
+            (localid 10:local$1591)
             (i32)
             (int 1:1))
           (call
-            (localid 10:local$1463)
+            (localid 10:local$1503)
             (functionid 32:infer_newarg::cell::create::1::0)
             (args
               (arg
                 (argmove)
-                (localid 10:local$1533))))
+                (localid 10:local$1591))))
           (move
             (localid 1:c)
-            (localid 10:local$1463))
+            (localid 10:local$1503))
           (lookup
-            (localid 10:local$1534)
+            (localid 10:local$1592)
             (localid 1:c)
             (methodid 7:f::1::0))
           (calldyn
-            (localid 10:local$1535)
-            (localid 10:local$1534)
+            (localid 10:local$1593)
+            (localid 10:local$1592)
             (args
               (arg
                 (argmove)
                 (localid 1:c)))))
         (ret
-          (localid 10:local$1535)))))
+          (localid 10:local$1593)))))
   (primitive
     (i32)
     (methods))
@@ -69,14 +69,14 @@ liveness
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1462)
+            (localid 10:local$1502)
             (classid 21:infer_newarg::cell::0)
             (args
               (arg
                 (argmove)
                 (localid 1:f)))))
         (ret
-          (localid 10:local$1462)))))
+          (localid 10:local$1502)))))
   (class
     (classid 21:infer_newarg::cell::0)
     (fields
@@ -100,17 +100,17 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1461)
+            (localid 10:local$1501)
             (functionid 32:infer_newarg::cell::f::1::ref::0)
             (args
               (arg
                 (argmove)
                 (localid 4:self))))
           (load
-            (localid 10:local$1855)
-            (localid 10:local$1461)))
+            (localid 10:local$1971)
+            (localid 10:local$1501)))
         (ret
-          (localid 10:local$1855)))))
+          (localid 10:local$1971)))))
   (func
     (functionid 32:infer_newarg::cell::f::1::ref::0)
     (params
@@ -125,13 +125,13 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1532)
+            (localid 10:local$1590)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 1:f)))
         (ret
-          (localid 10:local$1532)))))
+          (localid 10:local$1590)))))
   (primitive
     (ref
       (i32))
