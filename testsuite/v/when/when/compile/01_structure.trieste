@@ -427,6 +427,7 @@ structure
       none = classdef
       ptr = classdef
       ref = classdef
+      string = classdef
       to_bool = classdef
       u16 = classdef
       u32 = classdef
@@ -3619,10 +3620,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:f32)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -5759,10 +5757,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:f64)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -7269,10 +7264,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:i16)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -8779,10 +8771,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:i32)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -10289,10 +10278,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:i64)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -10770,9 +10756,24 @@ structure
           >> = function
           ^ = function
           abs = function
+          bool = function
           create = function
+          f32 = function
+          f64 = function
+          i16 = function
+          i32 = function
+          i64 = function
+          i8 = function
+          ilong = function
+          isize = function
           max = function
           min = function
+          u16 = function
+          u32 = function
+          u64 = function
+          u8 = function
+          ulong = function
+          usize = function
           | = function}
         (none)
         (ident 2:i8)
@@ -11746,6 +11747,494 @@ structure
                 (triplecolon
                   (nameelement
                     (ident 3:abs)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 4:bool)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:self)
+                    (typeargs)))
+                (funcname
+                  (nameelement
+                    (symbolid 2:!=)
+                    (typeargs)))
+                (int 1:0))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 2:i8)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 2:i8)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:self)
+                    (typeargs))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:i16)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:i16)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convi16)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:i32)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:i32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convi32)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:i64)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:i64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convi64)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 2:u8)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 2:u8)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 6:convu8)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:u16)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:u16)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convu16)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:u32)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:u32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convu32)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:u64)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:u64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convu64)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:ilong)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 5:ilong)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convilong)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:ulong)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 5:ulong)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convulong)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:isize)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 5:isize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convisize)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:usize)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 5:usize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convusize)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:f32)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:f32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convf32)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:f64)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:f64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convf64)
                     (typeargs)))
                 (exprseq
                   (expr
@@ -12803,10 +13292,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:ilong)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -14407,10 +14893,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:isize)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -14956,7 +15439,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$883))))
+              (typevar 11:typevar$913))))
         (where)
         (classbody
           (function
@@ -15020,6 +15503,235 @@ structure
               (expr
                 (new
                   (newargs)))))))
+      (classdef
+        {
+          apply = function
+          create = function
+          data = function
+          size = function
+          values = function}
+        (none)
+        (ident 6:string)
+        (typeparams)
+        (where)
+        (classbody
+          (fielddef
+            (ident 4:data)
+            (type
+              (typename
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 2:u8)
+                          (typeargs)))))))))
+          (function
+            {
+              self = paramdef}
+            (lhs)
+            (ident 4:data)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 2:u8)
+                                  (typeargs))))))))))))
+            (where)
+            (body
+              (expr
+                (fieldref
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))
+                  (fieldid 4:data)))))
+          (function
+            {
+              data = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:data)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 2:u8)
+                              (typeargs))))))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 6:string)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs
+                    (newarg
+                      (ident 4:data)
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 4:data)
+                            (typeargs))))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 4:size)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 5:usize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:self)
+                    (typeargs)))
+                (dot
+                  (ident 4:data)
+                  (typeargs))
+                (dot
+                  (ident 4:size)
+                  (typeargs)))))
+          (function
+            {
+              index = paramdef
+              self = paramdef}
+            (lhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))
+                (body))
+              (paramdef
+                (ident 5:index)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 2:u8)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (ref)
+                (funcname
+                  (nameelement
+                    (ident 4:self)
+                    (typeargs)))
+                (dot
+                  (ident 4:data)
+                  (typeargs))
+                (dot
+                  (ident 5:apply)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 5:index)
+                        (typeargs))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 6:values)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 9:arrayiter)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 2:u8)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:self)
+                    (typeargs)))
+                (dot
+                  (ident 4:data)
+                  (typeargs))
+                (dot
+                  (ident 6:values)
+                  (typeargs)))))))
       (classdef
         {
           ! = function
@@ -16036,10 +16748,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:u16)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -17512,10 +18221,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:u32)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -18988,10 +19694,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:u64)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -20464,10 +21167,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 2:u8)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -21940,10 +22640,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:ulong)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -23416,10 +24113,7 @@ structure
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:usize)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}

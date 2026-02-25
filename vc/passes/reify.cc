@@ -3,10 +3,6 @@
 
 namespace vc
 {
-  const auto string_type = TypeName
-    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-    << (NameElement << (Ident ^ "string") << TypeArgs);
-
   const std::map<std::string_view, Token> wrapper_types = {
     {"array", Array},
     {"cown", Cown},
@@ -525,7 +521,10 @@ namespace vc
           }
           else if (n == ConstStr)
           {
-            reify_typename(string_type, {});
+            Node u8_type = TypeName
+              << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+              << (NameElement << (Ident ^ "u8") << TypeArgs);
+            ensure_array_reified(u8_type, {});
             local_types[(n / LocalId)->location()] = Array << clone(U8);
           }
           else if (n->in({Eq, Ne, Lt, Le, Gt, Ge}))

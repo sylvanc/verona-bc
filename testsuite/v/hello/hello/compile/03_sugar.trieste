@@ -69,6 +69,7 @@ sugar
       none = classdef
       ptr = classdef
       ref = classdef
+      string = classdef
       to_bool = classdef
       u16 = classdef
       u32 = classdef
@@ -520,7 +521,7 @@ sugar
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1410))
+              (typevar 12:typevar$1450))
             (where)
             (body
               (expr
@@ -739,7 +740,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1411))
+              (typevar 12:typevar$1451))
             (where)
             (body
               (expr
@@ -883,7 +884,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1412))
+              (typevar 12:typevar$1452))
             (where)
             (body
               (expr
@@ -3860,10 +3861,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:f32)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -6143,10 +6141,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:f64)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -7748,10 +7743,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:i16)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -9353,10 +9345,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:i32)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -10958,10 +10947,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:i64)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -11467,11 +11453,26 @@ sugar
           >> = function
           ^ = function
           abs = function
+          bool = function
           create =
             function
             function
+          f32 = function
+          f64 = function
+          i16 = function
+          i32 = function
+          i64 = function
+          i8 = function
+          ilong = function
+          isize = function
           max = function
           min = function
+          u16 = function
+          u32 = function
+          u64 = function
+          u8 = function
+          ulong = function
+          usize = function
           | = function}
         (none)
         (ident 2:i8)
@@ -12505,6 +12506,530 @@ sugar
                 (triplecolon
                   (nameelement
                     (ident 3:abs)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 4:bool)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:bool)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 4:self)
+                (funcname
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 2:i8)
+                    (typeargs))
+                  (nameelement
+                    (symbolid 2:!=)
+                    (typeargs)))
+                (int 1:0))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 2:i8)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 2:i8)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 4:self))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:i16)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i16)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convi16)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:i32)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convi32)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:i64)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convi64)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 2:u8)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 2:u8)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 6:convu8)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:u16)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:u16)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convu16)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:u32)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:u32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convu32)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:u64)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:u64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convu64)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:ilong)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:ilong)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convilong)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:ulong)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:ulong)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convulong)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:isize)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:isize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convisize)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 5:usize)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:usize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 9:convusize)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:f32)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:f32)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convf32)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 4:self))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:f64)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 2:i8)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:f64)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 7:convf64)
                     (typeargs)))
                 (exprseq
                   (expr
@@ -13626,10 +14151,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:ilong)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -15327,10 +15849,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:isize)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -15912,7 +16431,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$867))))
+              (typevar 11:typevar$897))))
         (where)
         (classbody
           (function
@@ -15995,7 +16514,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1413))
+              (typevar 12:typevar$1453))
             (where)
             (body
               (expr
@@ -16057,6 +16576,357 @@ sugar
               (expr
                 (new
                   (newargs)))))))
+      (classdef
+        {
+          apply =
+            function
+            function
+          create = function
+          data =
+            function
+            function
+          size = function
+          values = function}
+        (none)
+        (ident 6:string)
+        (typeparams)
+        (where)
+        (classbody
+          (fielddef
+            (ident 4:data)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 2:u8)
+                          (typeargs)))))))))
+          (function
+            {
+              self = paramdef}
+            (lhs)
+            (ident 4:data)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 2:u8)
+                                  (typeargs))))))))))))
+            (where)
+            (body
+              (expr
+                (fieldref
+                  (expr
+                    (localid 4:self))
+                  (fieldid 4:data)))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 4:data)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typevar 12:typevar$1454))
+            (where)
+            (body
+              (expr
+                (load
+                  (expr
+                    (ref)
+                    (call
+                      (funcname
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:string)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:data)
+                          (typeargs)))
+                      (args
+                        (expr
+                          (localid 4:self)))))))))
+          (function
+            {
+              data = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:data)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 2:u8)
+                              (typeargs))))))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 6:string)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs
+                    (newarg
+                      (ident 4:data)
+                      (expr
+                        (localid 4:data))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 4:size)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:usize)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (localid 4:self)
+                (dot
+                  (ident 4:data)
+                  (typeargs))
+                (dot
+                  (ident 4:size)
+                  (typeargs)))))
+          (function
+            {
+              index = paramdef
+              self = paramdef}
+            (lhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:index)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 2:u8)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (ref)
+                (localid 4:self)
+                (dot
+                  (ident 4:data)
+                  (typeargs))
+                (dot
+                  (ident 5:apply)
+                  (typeargs))
+                (exprseq
+                  (expr
+                    (localid 5:index))))))
+          (function
+            {
+              index = paramdef
+              self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs)))))
+              (paramdef
+                (ident 5:index)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))))
+            (type
+              (typevar 12:typevar$1455))
+            (where)
+            (body
+              (expr
+                (load
+                  (expr
+                    (ref)
+                    (call
+                      (funcname
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:string)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:apply)
+                          (typeargs)))
+                      (args
+                        (expr
+                          (localid 4:self))
+                        (expr
+                          (localid 5:index)))))))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 6:values)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:string)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 9:arrayiter)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 2:u8)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (localid 4:self)
+                (dot
+                  (ident 4:data)
+                  (typeargs))
+                (dot
+                  (ident 6:values)
+                  (typeargs)))))))
       (classdef
         {
           ! = function
@@ -17138,10 +18008,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:u16)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -18707,10 +19574,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:u32)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -20276,10 +21140,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 3:u64)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -21845,10 +22706,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 2:u8)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -23414,10 +24272,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:ulong)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}
@@ -24983,10 +25838,7 @@ sugar
                   (nameelement
                     (symbolid 2:!=)
                     (typeargs)))
-                (int 1:0)
-                (dot
-                  (ident 5:usize)
-                  (typeargs)))))
+                (int 1:0))))
           (function
             {
               self = paramdef}

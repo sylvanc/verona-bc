@@ -1523,9 +1523,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:f32))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -2553,9 +2551,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:f64))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -3287,9 +3283,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:i16))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -4021,9 +4015,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:i32))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -4755,9 +4747,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:i64))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -5475,6 +5465,240 @@ parse
                 (ident 3:abs)
                 (paren
                   (group
+                    (ident 4:self))))))
+          (group
+            (ident 4:bool)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 4:bool)
+            (brace
+              (group
+                (ident 4:self)
+                (symbolid 2:!=)
+                (int 1:0))))
+          (group
+            (ident 2:i8)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 2:i8)
+            (brace
+              (group
+                (ident 4:self))))
+          (group
+            (ident 3:i16)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:i16)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convi16)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 3:i32)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:i32)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convi32)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 3:i64)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:i64)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convi64)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 2:u8)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 2:u8)
+            (brace
+              (group
+                (triplecolon)
+                (ident 6:convu8)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 3:u16)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:u16)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convu16)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 3:u32)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:u32)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convu32)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 3:u64)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:u64)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convu64)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 5:ilong)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 5:ilong)
+            (brace
+              (group
+                (triplecolon)
+                (ident 9:convilong)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 5:ulong)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 5:ulong)
+            (brace
+              (group
+                (triplecolon)
+                (ident 9:convulong)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 5:isize)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 5:isize)
+            (brace
+              (group
+                (triplecolon)
+                (ident 9:convisize)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 5:usize)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 5:usize)
+            (brace
+              (group
+                (triplecolon)
+                (ident 9:convusize)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 3:f32)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:f32)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convf32)
+                (paren
+                  (group
+                    (ident 4:self))))))
+          (group
+            (ident 3:f64)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 2:i8)))
+            (:)
+            (ident 3:f64)
+            (brace
+              (group
+                (triplecolon)
+                (ident 7:convf64)
+                (paren
+                  (group
                     (ident 4:self)))))))))
     (file
       (group
@@ -5987,9 +6211,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 5:ilong))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -6770,9 +6992,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 5:isize))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -7050,6 +7270,101 @@ parse
             (brace
               (group
                 (ident 4:self)))))))
+    (file
+      (group
+        (ident 6:string)
+        (brace
+          (group
+            (ident 4:data)
+            (:)
+            (ident 5:array)
+            (bracket
+              (group
+                (ident 2:u8))))
+          (group
+            (semi))
+          (group
+            (ident 6:create)
+            (paren
+              (group
+                (ident 4:data)
+                (:)
+                (ident 5:array)
+                (bracket
+                  (group
+                    (ident 2:u8)))))
+            (:)
+            (ident 6:string)
+            (brace
+              (group
+                (new)
+                (brace
+                  (group
+                    (ident 4:data))))))
+          (group
+            (ident 4:size)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 6:string)))
+            (:)
+            (ident 5:usize)
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 4:size))))
+          (group
+            (ident 3:ref)
+            (ident 5:apply)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 5:index)
+                  (:)
+                  (ident 5:usize))))
+            (:)
+            (ident 3:ref)
+            (bracket
+              (group
+                (ident 2:u8)))
+            (brace
+              (group
+                (ident 3:ref)
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 5:apply)
+                (paren
+                  (group
+                    (ident 5:index))))))
+          (group
+            (ident 6:values)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 6:string)))
+            (:)
+            (ident 9:arrayiter)
+            (bracket
+              (group
+                (ident 2:u8)))
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 6:values)))))))
     (file
       (group
         (ident 3:u16)
@@ -7545,9 +7860,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:u16))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -8263,9 +8576,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:u32))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -8981,9 +9292,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 3:u64))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -9699,9 +10008,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 2:u8))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -10417,9 +10724,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 5:ulong))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren
@@ -11135,9 +11440,7 @@ parse
               (group
                 (ident 4:self)
                 (symbolid 2:!=)
-                (int 1:0)
-                (dot)
-                (ident 5:usize))))
+                (int 1:0))))
           (group
             (ident 2:i8)
             (paren

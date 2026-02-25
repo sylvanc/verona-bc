@@ -112,7 +112,7 @@ ilong
   
   bool(self: ilong): bool
   {
-    self != 0.ilong
+    self != 0
   }
 
   i8(self: ilong): i8

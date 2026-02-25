@@ -487,10 +487,20 @@ namespace vc
 
         In(Expr) * T(String, RawString)[String] >>
           [](Match& _) {
-            auto id = _.fresh(l_local);
-            return Seq << (Lift << Body
-                                << (ConstStr << (LocalId ^ id) << _(String)))
-                       << (LocalId ^ id);
+            auto arr_id = _.fresh(l_local);
+            auto str_id = _.fresh(l_local);
+            Node funcname = FuncName
+              << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+              << (NameElement << (Ident ^ "string") << TypeArgs)
+              << (NameElement << (Ident ^ "create") << TypeArgs);
+            return Seq
+              << (Lift << Body
+                       << (ConstStr << (LocalId ^ arr_id) << _(String)))
+              << (Lift << Body
+                       << (Call << (LocalId ^ str_id) << Rhs
+                                << funcname
+                                << (Args << (LocalId ^ arr_id))))
+              << (LocalId ^ str_id);
           },
 
         // Dynamic call.

@@ -109,4 +109,79 @@ i8
   {
     :::abs(self)
   }
+
+  bool(self: i8): bool
+  {
+    self != 0
+  }
+
+  i8(self: i8): i8
+  {
+    self
+  }
+
+  i16(self: i8): i16
+  {
+    :::convi16(self)
+  }
+
+  i32(self: i8): i32
+  {
+    :::convi32(self)
+  }
+
+  i64(self: i8): i64
+  {
+    :::convi64(self)
+  }
+
+  u8(self: i8): u8
+  {
+    :::convu8(self)
+  }
+
+  u16(self: i8): u16
+  {
+    :::convu16(self)
+  }
+
+  u32(self: i8): u32
+  {
+    :::convu32(self)
+  }
+
+  u64(self: i8): u64
+  {
+    :::convu64(self)
+  }
+
+  ilong(self: i8): ilong
+  {
+    :::convilong(self)
+  }
+
+  ulong(self: i8): ulong
+  {
+    :::convulong(self)
+  }
+
+  isize(self: i8): isize
+  {
+    :::convisize(self)
+  }
+
+  usize(self: i8): usize
+  {
+    :::convusize(self)
+  }
+
+  f32(self: i8): f32
+  {
+    :::convf32(self)
+  }
+
+  f64(self: i8): f64
+  {
+    :::convf64(self)
+  }
 }

@@ -217,7 +217,7 @@ f32
 
   bool(self: f32): bool
   {
-    self != 0.f32
+    self != 0
   }
 
   i8(self: f32): i8

@@ -107,7 +107,7 @@ usize
 
   bool(self: usize): bool
   {
-    self != 0.usize
+    self != 0
   }
 
   i8(self: usize): i8

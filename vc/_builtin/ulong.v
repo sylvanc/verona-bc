@@ -107,7 +107,7 @@ ulong
 
   bool(self: ulong): bool
   {
-    self != 0.ulong
+    self != 0
   }
 
   i8(self: ulong): i8

@@ -107,7 +107,7 @@ u32
 
   bool(self: u32): bool
   {
-    self != 0.u32
+    self != 0
   }
 
   i8(self: u32): i8

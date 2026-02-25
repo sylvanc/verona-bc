@@ -3,10 +3,13 @@
 ## To Do
 
 Syntax:
-- `x + y z` doesn't bind `y z` before `+`.
-- If `f` is a field on `x`, `x.f(y)` doesn't call the apply method on `f`.
-  - It tries to call the `f` method with 2 arguments instead of 1.
 - Partial application, `_`.
+- Implement `Hash`.
+
+Tuples:
+- Destructing when the tuple is too short throws an error. Should it?
+- Destructing when the tuple is too long ignores the extra elements. Should it?
+- Flatten a tuple into another tuple.
 
 Names.
 - Allow looking down a type parameter.
@@ -41,16 +44,8 @@ Patterns for lambdas.
   - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
 - `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
 
-Tuples:
-- Destructing when the tuple is too short throws an error. Should it?
-- Destructing when the tuple is too long ignores the extra elements. Should it?
-- Flatten a tuple into another tuple.
-
 Semantics:
 - Region creation.
-
-Builtin:
-- String. Just so that string literals have a type that isn't `array[u8]`.
 
 Packages:
 - Remove `vbci` dependency on `uv` and `openssl`, load those from packages.

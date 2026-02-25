@@ -112,7 +112,7 @@ i16
 
   bool(self: i16): bool
   {
-    self != 0.i16
+    self != 0
   }
 
   i8(self: i16): i8
