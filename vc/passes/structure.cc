@@ -7,11 +7,11 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, TypeVar, TypeSelf};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, True,     False,  Bin,       Oct,         Int,
-    Hex,     Float,    HexFloat, String, RawString, Tuple,       ArrayLit,
-    Let,     Var,      New,      Lambda, Dot,       Ref,         FuncName,
-    If,      While,    When,     Equals, Else,      Try,         TripleColon,
-    FieldRef};
+    ExprSeq, DontCare, True,     False,    Bin,         Oct,
+    Int,     Hex,      Float,    HexFloat, String,      RawString,
+    Char,    Tuple,    ArrayLit, Let,      Var,         New,
+    Lambda,  Dot,      Ref,      FuncName, If,          While,
+    When,    Equals,   Else,     Try,      TripleColon, FieldRef};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);

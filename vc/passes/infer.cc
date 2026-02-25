@@ -687,7 +687,7 @@ namespace vc
     if (lit == None)
       return None;
 
-    if (lit->in({Bin, Oct, Int, Hex}))
+    if (lit->in({Bin, Oct, Int, Hex, Char}))
       return U64;
 
     if (lit->in({Float, HexFloat}))

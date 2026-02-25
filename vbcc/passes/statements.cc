@@ -12,7 +12,7 @@ namespace vbcc
     (T(Array, Ref, Cown) << Any) / (T(TupleType) << Any);
   const auto TypePat = (TypeNoUnion / (T(Union) << Any)) * --(T(Union) << End);
 
-  const auto IntLiteral = T(Bin, Oct, Hex, Int);
+  const auto IntLiteral = T(Bin, Oct, Hex, Int, Char);
   const auto FloatLiteral = T(Float, HexFloat);
 
   const auto Dst = T(LocalId)[LocalId] * T(Equals);

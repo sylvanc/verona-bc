@@ -7,7 +7,7 @@ main(): i32
   if s.size != 5 { result = result + 1 }
 
   // indexing
-  if s(1) != 101 { result = result + 2 }
+  if s(1) != 'e' { result = result + 2 }
 
   // bool
   if !s.bool { result = result + 4 }

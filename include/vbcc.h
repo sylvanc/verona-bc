@@ -164,6 +164,7 @@ namespace vbcc
   inline const auto HexFloat = TokenDef("hexfloat", flag::print);
   inline const auto String = TokenDef("string", flag::print);
   inline const auto RawString = TokenDef("rawstring", flag::print);
+  inline const auto Char = TokenDef("char", flag::print);
 
   // Structure.
   inline const auto Source = TokenDef("source");
@@ -211,7 +212,7 @@ namespace vbcc
   inline const auto wfType =
     wfBuiltinType | Dyn | ClassId | TypeId | Union | TupleType;
 
-  inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
+  inline const auto wfIntLiteral = Bin | Oct | Hex | Int | Char;
   inline const auto wfLiteral =
     None | True | False | wfIntLiteral | Float | HexFloat;
 

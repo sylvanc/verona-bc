@@ -93,6 +93,7 @@ namespace vc
       HexFloat,
       String,
       RawString,
+      Char,
       Convert,
       Binop,
       Unop,
@@ -132,7 +133,7 @@ namespace vc
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
 
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
-    wfLiteral | String | RawString | Tuple | ArrayLit | Let | Var | New |
+    wfLiteral | Char | String | RawString | Tuple | ArrayLit | Let | Var | New |
     Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals | Hash |
     Try | FieldRef;
 

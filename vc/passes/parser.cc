@@ -143,8 +143,8 @@ namespace vc
             m.mode("string");
           },
 
-        // TODO: Character literal.
-        // "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
+        // Character literal.
+        "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},

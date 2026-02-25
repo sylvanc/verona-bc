@@ -2,10 +2,7 @@
 
 ## To Do
 
-Fix `-p` with `--dump_passes` bug.
-
 Syntax:
-- Character literals. `Char` literal in `vbcc`, custom parse code.
 - Partial application, `_`.
 - Implement `Hash`.
 

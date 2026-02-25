@@ -470,7 +470,7 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        In(Expr) * T(Bin, Oct, Int, Hex)[Int] >>
+        In(Expr) * T(Bin, Oct, Int, Hex, Char)[Int] >>
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body << (Const << (LocalId ^ id) << _(Int)))

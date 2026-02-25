@@ -194,6 +194,9 @@ namespace vbcc
         // Escaped string.
         "\"((?:\\\"|[^\"])*?)\"" >> [](auto& m) { m.add(String, 1); },
 
+        // Character literal.
+        "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
+ 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},
       });
