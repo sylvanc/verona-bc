@@ -12,11 +12,11 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$895)
+            (localid 4:$903)
             (functionid 23:rhs_default::main::0::0)
             (args)))
         (ret
-          (localid 4:$895)))))
+          (localid 4:$903)))))
   (func
     (functionid 23:rhs_default::main::0::0)
     (params)
@@ -49,6 +49,9 @@ assignids
   (primitive
     (i32)
     (methods
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 24:_builtin::i32::i32::1::0))
       (method
         (methodid 7:+::2::0)
         (functionid 22:_builtin::i32::+::2::0))))
@@ -88,15 +91,15 @@ assignids
         (body
           (const
             (localid 8:local$82)
-            (u64)
+            (i32)
             (int 2:10))
           (lookup
-            (localid 9:local$804)
+            (localid 9:local$807)
             (localid 8:local$82)
             (methodid 9:i32::1::0))
           (calldyn
-            (localid 9:local$805)
-            (localid 9:local$804)
+            (localid 9:local$808)
+            (localid 9:local$807)
             (args
               (arg
                 (argcopy)
@@ -110,18 +113,9 @@ assignids
                 (localid 4:self))
               (arg
                 (argcopy)
-                (localid 9:local$805)))))
+                (localid 9:local$808)))))
         (ret
           (localid 7:local$2)))))
-  (primitive
-    (u64)
-    (methods
-      (method
-        (methodid 9:i32::1::0)
-        (functionid 24:_builtin::u64::i32::1::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::u64::+::2::0))))
   (func
     (functionid 31:rhs_default::myclass::get::2::0)
     (params
@@ -153,12 +147,12 @@ assignids
                 (argcopy)
                 (localid 7:local$3))))
           (lookup
-            (localid 9:local$842)
+            (localid 9:local$849)
             (localid 9:local$462)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 9:local$843)
-            (localid 9:local$842)
+            (localid 9:local$850)
+            (localid 9:local$849)
             (args
               (arg
                 (argcopy)
@@ -167,7 +161,16 @@ assignids
                 (argcopy)
                 (localid 6:offset)))))
         (ret
-          (localid 9:local$843)))))
+          (localid 9:local$850)))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 24:_builtin::u64::i32::1::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::u64::+::2::0))))
   (func
     (functionid 24:_builtin::u64::i32::1::0)
     (params
@@ -181,11 +184,11 @@ assignids
         (labelid 5:start)
         (body
           (convert
-            (localid 9:local$748)
+            (localid 9:local$751)
             (i32)
             (localid 4:self)))
         (ret
-          (localid 9:local$748)))))
+          (localid 9:local$751)))))
   (func
     (functionid 22:_builtin::u64::+::2::0)
     (params
@@ -207,6 +210,20 @@ assignids
             (localid 5:other)))
         (ret
           (localid 9:local$376)))))
+  (func
+    (functionid 24:_builtin::i32::i32::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:self)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params

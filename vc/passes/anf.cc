@@ -380,28 +380,38 @@ namespace vc
         // Else expression.
         In(Expr) * T(Else) << (T(LocalId)[Lhs] * (T(Block)[Block])) >>
           [](Match& _) {
-            return Seq << (Lift << Body << (Else << _(Lhs) << _(Block)))
-                       << (LocalId ^ _(Lhs));
+            auto id = _.fresh(l_local);
+            return Seq
+              << (Lift << Body << (Else << _(Lhs) << _(Block) << (LocalId ^ id)))
+              << (Var << (Ident ^ id));
           },
 
         // Else body.
         // TODO: distinguish typetest by param count
         In(Body) * T(Else)
-            << (T(LocalId)[LocalId] *
-                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body]))) >>
+            << (T(LocalId)[Lhs] *
+                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body])) *
+                T(LocalId)[LocalId]) >>
           [](Match& _) {
             // TODO: what do we do with Type?
             auto id = _.fresh(l_local);
-            auto body = _.fresh(l_body);
+            auto ok = _.fresh(l_body);
+            auto else_lbl = _.fresh(l_body);
             auto join = _.fresh(l_join);
-            return Seq << (Typetest << (LocalId ^ id) << (LocalId ^ _(LocalId))
-                                    << type_nomatch())
-                       << (Cond << (LocalId ^ id) << (LabelId ^ body)
-                                << (LabelId ^ join))
-                       << (Label << (LabelId ^ body)
-                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
-                                             << (Jump << (LabelId ^ join))))
-                       << (Label << (LabelId ^ join) << Body);
+            return Seq
+              << (Typetest << (LocalId ^ id) << (LocalId ^ _(Lhs))
+                           << type_nomatch())
+              << (Cond << (LocalId ^ id) << (LabelId ^ else_lbl)
+                       << (LabelId ^ ok))
+              << (Label << (LabelId ^ ok)
+                        << (Body
+                            << (Copy << (LocalId ^ _(LocalId))
+                                     << (LocalId ^ _(Lhs)))
+                            << (Jump << (LabelId ^ join))))
+              << (Label << (LabelId ^ else_lbl)
+                        << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                    << (Jump << (LabelId ^ join))))
+              << (Label << (LabelId ^ join) << Body);
           },
 
         // Break, continue.

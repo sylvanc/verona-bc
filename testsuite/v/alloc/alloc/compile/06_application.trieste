@@ -258,29 +258,14 @@ application
                     (expr
                       (exprseq
                         (expr
-                          (call
-                            (funcname
-                              (nameelement
-                                (ident 8:_builtin)
-                                (typeargs))
-                              (nameelement
-                                (ident 3:i32)
-                                (typeargs))
-                              (nameelement
-                                (ident 6:create)
-                                (typeargs)))
+                          (calldyn
+                            (expr
+                              (int 1:1))
+                            (symbolid 1:+)
+                            (typeargs)
                             (args
                               (expr
-                                (exprseq
-                                  (expr
-                                    (calldyn
-                                      (expr
-                                        (int 1:1))
-                                      (symbolid 1:+)
-                                      (typeargs)
-                                      (args
-                                        (expr
-                                          (int 1:2)))))))))))))))))
+                                (int 1:2))))))))))))
           (expr
             (=
               (expr
@@ -301,29 +286,14 @@ application
                     (expr
                       (exprseq
                         (expr
-                          (call
-                            (funcname
-                              (nameelement
-                                (ident 8:_builtin)
-                                (typeargs))
-                              (nameelement
-                                (ident 3:i32)
-                                (typeargs))
-                              (nameelement
-                                (ident 6:create)
-                                (typeargs)))
+                          (calldyn
+                            (expr
+                              (int 1:3))
+                            (symbolid 1:+)
+                            (typeargs)
                             (args
                               (expr
-                                (exprseq
-                                  (expr
-                                    (calldyn
-                                      (expr
-                                        (int 1:3))
-                                      (symbolid 1:+)
-                                      (typeargs)
-                                      (args
-                                        (expr
-                                          (int 1:4)))))))))))))))))
+                                (int 1:4))))))))))))
           (expr
             (=
               (expr
@@ -334,20 +304,7 @@ application
                   (typeargs)
                   (args)))
               (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 3:i32)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args
-                    (expr
-                      (int 1:3)))))))
+                (int 1:3))))
           (expr
             (calldyn
               (expr

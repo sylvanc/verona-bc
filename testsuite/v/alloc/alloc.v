@@ -11,8 +11,8 @@ cell
 main(): i32
 {
   let a = cell;
-  var b = cell (i32(1 + 2));
-  b = cell (i32(3 + 4));
-  a.f = i32 3;
+  var b = cell (1 + 2);
+  b = cell (3 + 4);
+  a.f = 3;
   a.f + b.f
 }

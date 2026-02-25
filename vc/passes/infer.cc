@@ -136,7 +136,7 @@ namespace vc
     bool is_default; // True if type came from Const default (U64/F64)
     bool is_fixed; // True if from Param or TypeAssertion
     Node const_node; // If from a Const, the Const stmt (for refinement)
-    Node call_node; // If from a default-inferred Call, the Call stmt
+    Node call_node; // If from a default-inferred Call/CallDyn, the stmt
 
     // Factory: fixed type from Param or TypeAssertion.
     static LocalTypeInfo fixed(Node type)
@@ -981,8 +981,91 @@ namespace vc
     }
   }
 
+  // Backward-refine a prior CallDyn whose result was all-default.
+  // Given an expected primitive type from a downstream Call, refine
+  // the CallDyn's Const args, re-resolve the Lookup, and update env.
+  void backward_refine_calldyn(
+    Node calldyn,
+    const Node& expected_prim,
+    TypeEnv& env,
+    Node top,
+    std::map<Location, Node>& lookup_stmts)
+  {
+    assert(calldyn == CallDyn);
+    assert(expected_prim);
+    auto dst = calldyn / LocalId;
+    auto src = calldyn / Rhs;
+    auto args = calldyn / Args;
+
+    // Find the corresponding Lookup statement.
+    auto lookup_it = lookup_stmts.find(src->location());
+
+    if (lookup_it == lookup_stmts.end())
+      return;
+
+    auto lookup_node = lookup_it->second;
+
+    // Refine each default-typed Const arg to match expected_prim.
+    bool refined = false;
+
+    for (auto& arg_node : *args)
+    {
+      auto arg_src = arg_node / Rhs;
+
+      if (try_refine(env, arg_src->location(), expected_prim))
+        refined = true;
+    }
+
+    // Also refine the Lookup receiver if it's a default-typed Const.
+    auto lookup_src = lookup_node / Rhs;
+
+    if (try_refine(env, lookup_src->location(), expected_prim))
+      refined = true;
+
+    if (!refined)
+      return;
+
+    LOG(Trace) << "backward_refine_calldyn: refined to "
+               << expected_prim->type().str() << std::endl;
+
+    // Re-resolve the Lookup return type after refinement.
+    auto lookup_dst = lookup_node / LocalId;
+    auto hand = (lookup_node / Lhs)->type();
+    auto method_ident = lookup_node / Ident;
+    auto method_ta = lookup_node / TypeArgs;
+    auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+    auto recv_it = env.find(lookup_src->location());
+
+    if (recv_it != env.end())
+    {
+      auto ret_type = resolve_method_return_type(
+        top,
+        recv_it->second.type,
+        method_ident,
+        hand,
+        arity,
+        method_ta);
+
+      if (ret_type)
+        env[lookup_dst->location()] = LocalTypeInfo::computed(ret_type);
+    }
+
+    // Update the CallDyn result type from the updated Lookup.
+    auto src_it = env.find(src->location());
+
+    if (src_it != env.end())
+    {
+      env[dst->location()] =
+        LocalTypeInfo::computed(clone(src_it->second.type));
+    }
+  }
+
   // Try to infer TypeArgs and refine Const types at a Call site.
-  void infer_call(Node call, TypeEnv& env, Node top)
+  void infer_call(
+    Node call,
+    TypeEnv& env,
+    Node top,
+    std::map<Location, Node>& lookup_stmts)
   {
     std::vector<ScopeInfo> scopes;
     auto func_def = navigate_call(call, top, scopes);
@@ -1295,29 +1378,45 @@ namespace vc
 
       auto& arg_info = arg_it->second;
 
-      if (!arg_info.is_default || !arg_info.call_node)
+      if (!arg_info.is_default)
         continue;
 
-      // Save call_node before backward_refine_call potentially
-      // invalidates the arg_info reference by updating env.
-      auto prior_call_node = arg_info.call_node;
-
-      // Compute the expected type for this arg from formal + subst.
-      auto expected = apply_subst(top, formal_type, subst);
-
-      if (!expected)
-        continue;
-
-      backward_refine_call(prior_call_node, expected, env, top);
-
-      // Update the arg's env entry to reflect the refined type.
-      auto prior_dst = prior_call_node / LocalId;
-      auto updated_it = env.find(prior_dst->location());
-
-      if (updated_it != env.end())
+      if (arg_info.call_node)
       {
-        env[arg_src->location()] =
-          LocalTypeInfo::propagated(updated_it->second);
+        // Backward-refine a prior Call whose TypeArgs were inferred
+        // entirely from default-typed literals.
+        auto prior_call_node = arg_info.call_node;
+
+        // Compute the expected type for this arg from formal + subst.
+        auto expected = apply_subst(top, formal_type, subst);
+
+        if (!expected)
+          continue;
+
+        if (prior_call_node == Call)
+        {
+          backward_refine_call(prior_call_node, expected, env, top);
+        }
+        else if (prior_call_node == CallDyn)
+        {
+          auto expected_prim = extract_primitive(expected);
+
+          if (expected_prim)
+          {
+            backward_refine_calldyn(
+              prior_call_node, expected_prim, env, top, lookup_stmts);
+          }
+        }
+
+        // Update the arg's env entry to reflect the refined type.
+        auto prior_dst = prior_call_node / LocalId;
+        auto updated_it = env.find(prior_dst->location());
+
+        if (updated_it != env.end())
+        {
+          env[arg_src->location()] =
+            LocalTypeInfo::propagated(updated_it->second);
+        }
       }
     }
   }
@@ -1533,7 +1632,19 @@ namespace vc
                 auto inner = extract_ref_inner(src_it->second.type);
 
                 if (inner)
+                {
                   env[dst->location()] = LocalTypeInfo::computed(inner);
+
+                  // Refine the stored value based on ref content type.
+                  auto expected_prim = extract_primitive(inner);
+
+                  if (expected_prim)
+                  {
+                    auto arg = stmt / Arg;
+                    auto val_src = arg / Rhs;
+                    try_refine(env, val_src->location(), expected_prim);
+                  }
+                }
               }
 
               // Track tuple element types: Store through a ref that
@@ -1809,7 +1920,7 @@ namespace vc
             else if (stmt == Call)
             {
               // Phase 2+3: type arg inference and literal refinement.
-              infer_call(stmt, env, top);
+              infer_call(stmt, env, top, lookup_stmts);
             }
             else if (stmt == Lookup)
             {
@@ -2158,7 +2269,15 @@ namespace vc
                   auto recv_it = env.find(recv_loc);
 
                   if (recv_it != env.end() && recv_it->second.is_default)
+                  {
+                    // Default-ness propagates from the receiver through
+                    // the method call. If the receiver is concrete, the
+                    // method's param types will refine args via Phase 1
+                    // of the CallDyn handler. call_node enables Phase 4
+                    // backward refinement through CallDyn chains.
                     info.is_default = true;
+                    info.call_node = stmt;
+                  }
                 }
 
                 env[dst->location()] = info;

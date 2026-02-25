@@ -2,10 +2,6 @@
 
 ## To Do
 
-Investigate problems with `else` on non-if expressions.
-
-Investigate if the return type influences type inference.
-
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
 - How can we have stateful lambdas?
