@@ -49,7 +49,7 @@ namespace vc
   inline const auto Isect = TokenDef("isect");
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
-  inline const auto TypeVar = TokenDef("typevar", flag::print);
+  inline const auto TypeVar = TokenDef("typevar");
   inline const auto TypeSelf = TokenDef("typeself");
 
   inline const auto WhereAnd = TokenDef("whereand");
@@ -379,8 +379,6 @@ namespace vc
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     ;
   // clang-format on
-
-  inline const auto l_typevar = Location("typevar");
 
   Node make_type(Match& _, NodeRange r = {});
   Node make_typeargs(Node typeparams);

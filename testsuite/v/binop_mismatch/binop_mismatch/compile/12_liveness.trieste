@@ -12,11 +12,11 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2396)
+            (localid 4:$884)
             (functionid 26:binop_mismatch::main::0::0)
             (args)))
         (ret
-          (localid 5:$2396)))))
+          (localid 4:$884)))))
   (func
     (functionid 26:binop_mismatch::main::0::0)
     (params)
@@ -29,26 +29,26 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1500)
+            (localid 7:local$0)
             (i32)
             (int 1:1))
           (move
             (localid 1:x)
-            (localid 10:local$1500))
+            (localid 7:local$0))
           (const
-            (localid 10:local$1501)
+            (localid 7:local$1)
             (u32)
             (int 1:2))
           (move
             (localid 1:y)
-            (localid 10:local$1501))
+            (localid 7:local$1))
           (lookup
-            (localid 10:local$1588)
+            (localid 8:local$79)
             (localid 1:x)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 10:local$1589)
-            (localid 10:local$1588)
+            (localid 8:local$80)
+            (localid 8:local$79)
             (args
               (arg
                 (argmove)
@@ -57,7 +57,7 @@ liveness
                 (argmove)
                 (localid 1:y)))))
         (ret
-          (localid 10:local$1589)))))
+          (localid 8:local$80)))))
   (primitive
     (i32)
     (methods
@@ -83,8 +83,8 @@ liveness
         (labelid 5:start)
         (body
           (add
-            (localid 10:local$1684)
+            (localid 9:local$175)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 10:local$1684))))))
+          (localid 9:local$175))))))

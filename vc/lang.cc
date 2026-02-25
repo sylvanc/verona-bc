@@ -4,7 +4,7 @@ namespace vc
 {
   Node make_type(Match& _, NodeRange r)
   {
-    return Type << (r || (TypeVar ^ _.fresh(l_typevar)));
+    return Type << (r || TypeVar);
   }
 
   Node make_typeargs(Node typeparams)

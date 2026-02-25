@@ -23,8 +23,6 @@ Sub-typing.
 
 Types:
 - Sources of `Dyn`: `any`, no annotation. Anything else?
-- Can we get rid of `TypeVar`? Or does it just not need an ID?
-  - Use `any` at function boundaries if not annotated?
 - Can type parameters take type arguments?
 - Type annotations on local variables.
   - Emit a type assertion that gets checked in `infer`?
@@ -35,6 +33,7 @@ Calls.
 
 Lambdas.
 - A free `var` is captured by reference. The lambda must be `stack` allocated.
+- How can we have stateful lambdas?
 
 Patterns for lambdas.
 - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.

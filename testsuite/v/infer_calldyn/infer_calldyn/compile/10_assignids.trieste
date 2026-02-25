@@ -12,11 +12,11 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2413)
+            (localid 4:$891)
             (functionid 25:infer_calldyn::main::0::0)
             (args)))
         (ret
-          (localid 5:$2413)))))
+          (localid 4:$891)))))
   (func
     (functionid 25:infer_calldyn::main::0::0)
     (params)
@@ -27,42 +27,42 @@ assignids
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1603)
+            (localid 8:local$84)
             (i32)
             (int 1:1))
           (call
-            (localid 10:local$1512)
+            (localid 7:local$2)
             (functionid 36:infer_calldyn::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1603))))
+                (localid 8:local$84))))
           (copy
             (localid 1:w)
-            (localid 10:local$1512))
+            (localid 7:local$2))
           (lookup
-            (localid 10:local$1604)
+            (localid 8:local$85)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1605)
-            (localid 10:local$1604)
+            (localid 8:local$86)
+            (localid 8:local$85)
             (args
               (arg
                 (argcopy)
                 (localid 1:w))))
           (copy
             (localid 1:v)
-            (localid 10:local$1605))
+            (localid 8:local$86))
           (call
-            (localid 10:local$1513)
+            (localid 7:local$3)
             (functionid 29:infer_calldyn::identity::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:v)))))
         (ret
-          (localid 10:local$1513)))))
+          (localid 7:local$3)))))
   (primitive
     (i32)
     (methods))
@@ -79,14 +79,14 @@ assignids
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1511)
+            (localid 7:local$1)
             (classid 25:infer_calldyn::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1511)))))
+          (localid 7:local$1)))))
   (func
     (functionid 29:infer_calldyn::identity::1::0)
     (params
@@ -127,18 +127,18 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1601)
+            (localid 8:local$82)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1602)
-            (localid 10:local$1601)
+            (localid 8:local$83)
+            (localid 8:local$82)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1602)))))
+          (localid 8:local$83)))))
   (func
     (functionid 33:infer_calldyn::wrapper::val::1::0)
     (params
@@ -152,17 +152,17 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1510)
+            (localid 7:local$0)
             (functionid 38:infer_calldyn::wrapper::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1983)
-            (localid 10:local$1510)))
+            (localid 9:local$461)
+            (localid 7:local$0)))
         (ret
-          (localid 10:local$1983)))))
+          (localid 9:local$461)))))
   (func
     (functionid 38:infer_calldyn::wrapper::val::1::ref::0)
     (params
@@ -177,13 +177,13 @@ assignids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1600)
+            (localid 8:local$81)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1600)))))
+          (localid 8:local$81)))))
   (primitive
     (ref
       (i32))
