@@ -760,67 +760,40 @@ namespace vc
 
   // Navigate a Call node's FuncName from top, collecting scope
   // definitions along the path. Returns the target Function def on
-  // success, or an empty Node on failure.
+  // success, or an empty Node on failure. Uses find_func_def for
+  // Function overload resolution, then rebuilds the scope path.
   Node navigate_call(Node call, Node top, std::vector<ScopeInfo>& scopes)
   {
     assert(call == Call);
     auto funcname = call / FuncName;
     auto args = call / Args;
-    auto hand = (call / Lhs)->type();
+    auto func_def =
+      find_func_def(top, funcname, args->size(), call / Lhs);
 
+    if (!func_def)
+      return {};
+
+    // Collect scope info by re-walking the path.
     Node def = top;
 
     for (auto it = funcname->begin(); it != funcname->end(); ++it)
     {
       auto& elem = *it;
-      assert(elem == NameElement);
       auto defs = def->look((elem / Ident)->location());
-
-      if (defs.empty())
-        return {};
 
       bool is_last = (it + 1 == funcname->end());
 
       if (is_last)
       {
-        // Filter for the correct Function overload by hand and arity.
-        bool found = false;
-
-        for (auto& d : defs)
-        {
-          if (d != Function)
-            continue;
-
-          if ((d / Lhs)->type() != hand)
-            continue;
-
-          if ((d / Params)->size() != args->size())
-            continue;
-
-          def = d;
-          found = true;
-          break;
-        }
-
-        if (!found)
-          return {};
+        scopes.push_back({elem, func_def});
       }
       else
       {
         def = defs.front();
-
-        if (def == TypeParam)
-          return {};
+        scopes.push_back({elem, def});
       }
-
-      scopes.push_back({elem, def});
     }
 
-    if (scopes.empty())
-      return {};
-
-    auto func_def = scopes.back().def;
-    assert(func_def == Function);
     return func_def;
   }
 
@@ -1192,6 +1165,102 @@ namespace vc
       arg_info.is_fixed = true;
     }
 
+    // Reverse propagation: when a formal param has TypeVar type,
+    // resolve it from either a matching FieldDef (if already concrete)
+    // or the actual arg type. FieldDef takes priority because it may
+    // have been resolved by a sibling method (e.g., apply inferred
+    // field types before create is called).
+    {
+      auto parent_cls = func_def->parent(ClassDef);
+
+      for (size_t i = 0; i < params->size(); i++)
+      {
+        auto param = params->at(i);
+        auto formal_type = param / Type;
+
+        if (formal_type->front() != TypeVar)
+          continue;
+
+        // Check if a matching FieldDef already has a concrete type.
+        Node resolved_type;
+
+        if (parent_cls)
+        {
+          auto param_name = (param / Ident)->location().view();
+
+          for (auto& child : *(parent_cls / ClassBody))
+          {
+            if (child != FieldDef)
+              continue;
+
+            if ((child / Ident)->location().view() != param_name)
+              continue;
+
+            auto ft = child / Type;
+
+            if (ft->front() != TypeVar)
+              resolved_type = ft;
+
+            break;
+          }
+        }
+
+        if (!resolved_type)
+        {
+          // Fall back to the actual arg's type, but only if the arg
+          // is not a default-typed literal. Default types (e.g., u64
+          // for integer literals) are unreliable and would poison the
+          // param type — the correct type will be resolved later when
+          // the function body is re-processed in the second pass.
+          auto arg_node = args->at(i);
+          auto arg_src = arg_node / Rhs;
+          auto it = env.find(arg_src->location());
+
+          if (
+            it == env.end() || it->second.type->front() == TypeVar ||
+            it->second.is_default)
+            continue;
+
+          resolved_type = it->second.type;
+        }
+
+        // Update the callee's param type.
+        param->replace(formal_type, clone(resolved_type));
+
+        // Also refine the actual arg if it's a default-typed literal.
+        auto resolved_prim = extract_primitive(resolved_type);
+
+        if (resolved_prim)
+        {
+          auto arg_node = args->at(i);
+          auto arg_src = arg_node / Rhs;
+          try_refine(env, arg_src->location(), resolved_prim);
+        }
+
+        // Update matching FieldDef if still TypeVar.
+        if (parent_cls)
+        {
+          auto param_name = (param / Ident)->location().view();
+
+          for (auto& child : *(parent_cls / ClassBody))
+          {
+            if (child != FieldDef)
+              continue;
+
+            if ((child / Ident)->location().view() != param_name)
+              continue;
+
+            auto field_type = child / Type;
+
+            if (field_type->front() == TypeVar)
+              child->replace(field_type, clone(resolved_type));
+
+            break;
+          }
+        }
+      }
+    }
+
     // Record the call's result type in the env, with all TypeParam
     // references substituted.
     auto ret_type = func_def / Type;
@@ -1253,15 +1322,44 @@ namespace vc
     }
   }
 
-  PassDef infer()
+  // Check if a function has any remaining TypeVar param or return types.
+  static bool has_typevar(Node func)
   {
-    PassDef p{"infer", wfPassInfer, dir::once, {}};
+    assert(func == Function);
 
-    p.post([](auto top) {
-      top->traverse([&](auto node) {
-        if (node != Function)
-          return node == Top || node == ClassDef || node == ClassBody;
+    for (auto& pd : *(func / Params))
+    {
+      if ((pd / Type)->front() == TypeVar)
+        return true;
+    }
 
+    if ((func / Type)->front() == TypeVar)
+      return true;
+
+    // Also check FieldDefs in the parent class: if any field is still
+    // TypeVar, the function body may reference it via FieldRef/Load
+    // and needs re-processing once the field type is resolved.
+    auto parent_cls = func->parent(ClassDef);
+
+    if (parent_cls)
+    {
+      for (auto& child : *(parent_cls / ClassBody))
+      {
+        if (child != FieldDef)
+          continue;
+
+        if ((child / Type)->front() == TypeVar)
+          return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Process a single function for type inference.
+  // Returns true if the function was processed without error.
+  static bool process_function(Node node, Node top, bool check_errors)
+  {
         TypeEnv env;
         std::map<Location, Node> lookup_stmts;
         std::vector<std::pair<Location, Location>> typevar_aliases;
@@ -1614,6 +1712,17 @@ namespace vc
                         continue;
 
                       auto ft = apply_subst(top, child / Type, new_subst);
+
+                      // If arg env is TypeVar and field has concrete
+                      // type, update env from field type.
+                      if (
+                        it->second.type->front() == TypeVar &&
+                        ft && ft->front() != TypeVar)
+                      {
+                        it->second.type = clone(ft);
+                        it->second.is_fixed = true;
+                      }
+
                       auto expected_prim = extract_primitive(ft);
 
                       if (expected_prim)
@@ -1804,6 +1913,135 @@ namespace vc
                             {
                               arg_it->second.is_default = false;
                               arg_it->second.const_node = {};
+                            }
+                          }
+                        }
+                      }
+
+                      // When an arg's env type is TypeVar and the
+                      // formal param has a concrete type, update env.
+                      // This resolves TypeVar params in anonymous class
+                      // apply methods from the callee's param types.
+                      if (param_type && param_type->front() != TypeVar)
+                      {
+                        auto arg_src = arg_node / Rhs;
+                        auto arg_it = env.find(arg_src->location());
+
+                        if (
+                          arg_it != env.end() &&
+                          arg_it->second.type->front() == TypeVar)
+                        {
+                          arg_it->second.type = clone(param_type);
+                          arg_it->second.is_fixed = true;
+                        }
+                      }
+
+                      i++;
+                    }
+
+                    // Reverse propagation: when a method param has
+                    // TypeVar type, resolve from FieldDef (if concrete)
+                    // or actual arg type. FieldDef takes priority.
+                    auto parent_cls = info.func->parent(ClassDef);
+                    i = 0;
+
+                    for (auto& arg_node : *args)
+                    {
+                      if (i >= params->size())
+                        break;
+
+                      auto param = params->at(i);
+                      auto formal_type = param / Type;
+
+                      if (formal_type->front() == TypeVar)
+                      {
+                        // Check if FieldDef already has concrete type.
+                        Node resolved_type;
+
+                        if (parent_cls)
+                        {
+                          auto pname =
+                            (param / Ident)->location().view();
+
+                          for (auto& child :
+                               *(parent_cls / ClassBody))
+                          {
+                            if (child != FieldDef)
+                              continue;
+
+                            if (
+                              (child / Ident)->location().view() !=
+                              pname)
+                              continue;
+
+                            auto ft = child / Type;
+
+                            if (ft->front() != TypeVar)
+                              resolved_type = ft;
+
+                            break;
+                          }
+                        }
+
+                        if (!resolved_type)
+                        {
+                          // Fall back to actual arg type, but skip
+                          // default-typed literals to avoid poisoning.
+                          auto arg_src = arg_node / Rhs;
+                          auto arg_it =
+                            env.find(arg_src->location());
+
+                          if (
+                            arg_it != env.end() &&
+                            arg_it->second.type->front() != TypeVar &&
+                            !arg_it->second.is_default)
+                          {
+                            resolved_type = arg_it->second.type;
+                          }
+                        }
+
+                        if (resolved_type)
+                        {
+                          param->replace(
+                            formal_type, clone(resolved_type));
+
+                          // Refine actual arg if default-typed.
+                          auto resolved_prim =
+                            extract_primitive(resolved_type);
+
+                          if (resolved_prim)
+                          {
+                            auto arg_src = arg_node / Rhs;
+                            try_refine(
+                              env,
+                              arg_src->location(),
+                              resolved_prim);
+                          }
+
+                          // Update FieldDef if still TypeVar.
+                          if (parent_cls)
+                          {
+                            auto pname =
+                              (param / Ident)->location().view();
+
+                            for (auto& child :
+                                 *(parent_cls / ClassBody))
+                            {
+                              if (child != FieldDef)
+                                continue;
+
+                              if (
+                                (child / Ident)->location().view() !=
+                                pname)
+                                continue;
+
+                              auto ft = child / Type;
+
+                              if (ft->front() == TypeVar)
+                                child->replace(
+                                  ft, clone(resolved_type));
+
+                              break;
                             }
                           }
                         }
@@ -2488,6 +2726,10 @@ namespace vc
         // Lambda apply methods start with TypeVar param types; after
         // processing the body, the env may have concrete types inferred
         // from call sites within the body.
+        // Also update matching FieldDefs in the parent class so that
+        // callers (create methods, field loads) see concrete types.
+        auto parent_cls = node->parent(ClassDef);
+
         for (auto& pd : *params)
         {
           auto type = pd / Type;
@@ -2505,6 +2747,57 @@ namespace vc
             continue;
 
           pd->replace(type, clone(it->second.type));
+
+          // Propagate to FieldDef with matching name.
+          if (parent_cls)
+          {
+            auto pname = ident->location().view();
+
+            for (auto& child : *(parent_cls / ClassBody))
+            {
+              if (child != FieldDef)
+                continue;
+
+              if ((child / Ident)->location().view() != pname)
+                continue;
+
+              auto ft = child / Type;
+
+              if (ft->front() == TypeVar)
+                child->replace(ft, clone(it->second.type));
+
+              break;
+            }
+          }
+        }
+
+        // Propagate env types to TypeVar FieldDefs in the parent class.
+        // When the function body infers a concrete type for a local
+        // that corresponds to a field (e.g., $cap0 in apply bodies),
+        // update the FieldDef so other methods (create, etc.) see it.
+        if (parent_cls)
+        {
+          for (auto& child : *(parent_cls / ClassBody))
+          {
+            if (child != FieldDef)
+              continue;
+
+            auto ft = child / Type;
+
+            if (ft->front() != TypeVar)
+              continue;
+
+            auto fname = (child / Ident)->location();
+            auto it = env.find(fname);
+
+            if (it == env.end())
+              continue;
+
+            if (it->second.type->front() == TypeVar)
+              continue;
+
+            child->replace(ft, clone(it->second.type));
+          }
         }
 
         // Update TypeVar return type from the return local's env type.
@@ -2564,14 +2857,13 @@ namespace vc
         }
 
         // Error on any remaining TypeVar param or return types,
-        // but only if we're not in a generic context. Functions inside
-        // generic classes (e.g., lambda apply methods with captured type
-        // params) legitimately keep TypeVar until reification resolves them.
+        // but only if we're not in a generic context and error
+        // checking is enabled (second pass).
         bool in_generic_context = (node / TypeParams)->size() > 0 ||
           ((node->parent({ClassDef}) != nullptr) &&
            (node->parent({ClassDef}) / TypeParams)->size() > 0);
 
-        if (!in_generic_context)
+        if (check_errors && !in_generic_context)
         {
           for (auto& pd : *params)
           {
@@ -2611,8 +2903,63 @@ namespace vc
           }
         }
 
+        return true;
+  }
+
+  PassDef infer()
+  {
+    PassDef p{"infer", wfPassInfer, dir::once, {}};
+
+    p.post([](auto top) {
+      // First pass: process all functions, skip TypeVar error checks.
+      // Caller-side type propagation fills TypeVar params/fields in
+      // anonymous class methods.
+      Nodes deferred;
+
+      top->traverse([&](auto node) {
+        if (node != Function)
+          return node == Top || node == ClassDef || node == ClassBody;
+
+        process_function(node, top, false);
+
+        // Collect functions that still have unresolved TypeVar types.
+        if (has_typevar(node))
+          deferred.push_back(node);
+
         return false;
       });
+
+      // Second pass: iteratively re-process deferred functions until
+      // no more progress is made. Each iteration may resolve FieldDef
+      // types that allow sibling methods to resolve in the next
+      // iteration (e.g., apply resolves field types from the callee's
+      // signature, then create resolves its params from FieldDefs).
+      bool progress = true;
+
+      while (progress)
+      {
+        progress = false;
+
+        for (auto& func : deferred)
+        {
+          if (!has_typevar(func))
+            continue;
+
+          process_function(func, top, false);
+
+          if (!has_typevar(func))
+            progress = true;
+        }
+      }
+
+      // Final check: error on any remaining unresolved TypeVars.
+      for (auto& func : deferred)
+      {
+        if (!has_typevar(func))
+          continue;
+
+        process_function(func, top, true);
+      }
 
       return 0;
     });

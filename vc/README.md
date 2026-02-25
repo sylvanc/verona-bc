@@ -3,7 +3,7 @@
 ## To Do
 
 Syntax:
-- Partial application, `_`.
+- `_` bindings to ignore values.
 
 Tuples:
 - Test case for an array of tuples.

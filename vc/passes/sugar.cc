@@ -107,222 +107,17 @@ namespace vc
 
             auto id = _.fresh(l_lambda);
 
-            // Build FQ scope prefix for the enclosing class. The Lift
-            // will place the lambda ClassDef into this class's ClassBody,
-            // so all FQ references to the lambda class need this prefix.
+            // Build scope info.
             auto enclosing_cls = lambda->parent(ClassDef);
             assert(enclosing_cls);
             auto cls_path = scope_path(enclosing_cls);
-            auto cls_ta = fq_typeargs(cls_path, enclosing_cls / TypeParams);
 
-            // Find free type parameters from enclosing scopes.
-            // A free type param is one defined in a Function or ClassDef
-            // that encloses the lambda. After ident, references to it are
-            // fully qualified TypeNames like scope1::scope2::T.
-            struct FreeTP
-            {
-              std::string name;
-              Nodes path; // scope_path of the defining scope
-            };
+            // Collect and rewrite free type params.
+            auto free_tps = collect_free_typeparams(lambda);
+            rewrite_typeparam_refs(lambda, free_tps, cls_path, id);
 
-            std::vector<FreeTP> free_tps;
-            std::set<std::string> seen_tp_names;
-
-            {
-              auto scope = lambda->parent({ClassDef, Function});
-
-              while (scope)
-              {
-                auto sp = scope_path(scope);
-
-                for (auto& tp : *(scope / TypeParams))
-                {
-                  auto name = std::string((tp / Ident)->location().view());
-
-                  if (seen_tp_names.insert(name).second)
-                    free_tps.push_back({name, sp});
-                }
-
-                scope = scope->parent({ClassDef, Function});
-              }
-            }
-
-            // Check if a TypeName is a FQ reference to a free type param.
-            // Match: NameElement idents == scope_path idents + tp name.
-            auto is_free_tp = [&](Node tn, size_t& idx) -> bool {
-              for (size_t i = 0; i < free_tps.size(); i++)
-              {
-                auto& ftp = free_tps[i];
-
-                if (tn->size() != ftp.path.size() + 1)
-                  continue;
-
-                bool match = true;
-
-                for (size_t j = 0; j < ftp.path.size(); j++)
-                {
-                  if (
-                    (tn->at(j) / Ident)->location().view() !=
-                    (ftp.path[j] / Ident)->location().view())
-                  {
-                    match = false;
-                    break;
-                  }
-                }
-
-                if (
-                  match &&
-                  ((tn->at(ftp.path.size()) / Ident)->location().view() ==
-                   ftp.name))
-                {
-                  idx = i;
-                  return true;
-                }
-              }
-
-              return false;
-            };
-
-            // Collect all TypeName references to free type params.
-            std::vector<std::pair<Node, size_t>> tp_refs;
-
-            lambda->traverse([&](auto node) {
-              if (node == TypeName)
-              {
-                size_t idx;
-
-                if (is_free_tp(node, idx))
-                  tp_refs.push_back({node, idx});
-              }
-
-              return true;
-            });
-
-            // Rewrite TypeName references inside the lambda from
-            // enclosing-scope type params to the lambda class's own.
-            // New path: cls_path :: lambda_id :: tp_name.
-            for (auto& [old_tn, idx] : tp_refs)
-            {
-              Node new_tn = TypeName;
-
-              for (auto& s : cls_path)
-                new_tn << (NameElement << clone(s / Ident) << TypeArgs);
-
-              new_tn << (NameElement << (Ident ^ id) << TypeArgs);
-              new_tn
-                << (NameElement << (Ident ^ free_tps[idx].name) << TypeArgs);
-              old_tn->parent()->replace(old_tn, new_tn);
-            }
-
-            // Rewrite FQ type param references in a type node from
-            // enclosing-scope paths to the lambda class's own type params.
-            auto rewrite_tp_refs_in = [&](Node type_node) {
-              std::vector<std::pair<Node, size_t>> refs;
-
-              type_node->traverse([&](auto node) {
-                if (node == TypeName)
-                {
-                  size_t idx;
-
-                  if (is_free_tp(node, idx))
-                    refs.push_back({node, idx});
-                }
-
-                return true;
-              });
-
-              for (auto& [old_tn, idx] : refs)
-              {
-                Node new_tn = TypeName;
-
-                for (auto& s : cls_path)
-                  new_tn << (NameElement << clone(s / Ident) << TypeArgs);
-
-                new_tn << (NameElement << (Ident ^ id) << TypeArgs);
-                new_tn << (NameElement << (Ident ^ free_tps[idx].name)
-                                       << TypeArgs);
-                old_tn->parent()->replace(old_tn, new_tn);
-              }
-            };
-
-            // Populate TypeParams for the lambda class.
-            Node typeparams = TypeParams;
-
-            for (auto& ftp : free_tps)
-              typeparams << (TypeParam << (Ident ^ ftp.name));
-
-            // Build TypeArgs for internal use (self type): FQ refs to
-            // the lambda class's own type params.
-            Node lambda_ta = TypeArgs;
-
-            for (auto& ftp : free_tps)
-            {
-              Node tp_tn = TypeName;
-
-              for (auto& s : cls_path)
-                tp_tn << (NameElement << clone(s / Ident) << TypeArgs);
-
-              tp_tn << (NameElement << (Ident ^ id) << TypeArgs);
-              tp_tn << (NameElement << (Ident ^ ftp.name) << TypeArgs);
-              lambda_ta << (Type << tp_tn);
-            }
-
-            // Build TypeArgs for creation site: FQ refs to the
-            // enclosing scope's type params (the originals).
-            Node outer_ta = TypeArgs;
-
-            for (auto& ftp : free_tps)
-            {
-              Node tp_tn = TypeName;
-
-              for (auto& s : ftp.path)
-                tp_tn << (NameElement << clone(s / Ident) << TypeArgs);
-
-              tp_tn << (NameElement << (Ident ^ ftp.name) << TypeArgs);
-              outer_ta << (Type << tp_tn);
-            }
-
-            // Build FQ TypeName for use inside the lambda class
-            // (self type, create return type).
-            Node fq_tn = TypeName;
-
-            for (auto& s : cls_path)
-            {
-              if (s == enclosing_cls)
-                fq_tn
-                  << (NameElement << clone(enclosing_cls / Ident)
-                                  << clone(cls_ta));
-              else
-                fq_tn << (NameElement << clone(s / Ident) << TypeArgs);
-            }
-
-            fq_tn << (NameElement << (Ident ^ id) << clone(lambda_ta));
-
-            auto type = Type << clone(fq_tn);
-
-            // Build FQ TypeName for the creation site call.
-            Node fq_tn_create = TypeName;
-
-            for (auto& s : cls_path)
-            {
-              if (s == enclosing_cls)
-                fq_tn_create
-                  << (NameElement << clone(enclosing_cls / Ident)
-                                  << clone(cls_ta));
-              else
-                fq_tn_create << (NameElement << clone(s / Ident) << TypeArgs);
-            }
-
-            fq_tn_create << (NameElement << (Ident ^ id) << clone(outer_ta));
-
-            Node classbody = ClassBody;
-            Node create_params = Params;
-            Node create_args = Args;
-            Node apply_params = Params
-              << (ParamDef << (Ident ^ "self") << clone(type) << Body)
-              << *_(Params);
-            Node apply_body = Body;
-            Node new_args = NewArgs;
+            // Build fields from free variables.
+            std::vector<AnonClassField> fields;
 
             for (auto& [freevar, fv_type] : freevars)
             {
@@ -330,60 +125,51 @@ namespace vc
 
               if (fv_type)
               {
-                // Use the captured type from the enclosing scope,
-                // rewriting any FQ type param references to point at
-                // the lambda class's own type params.
                 fv_resolved = clone(fv_type);
-                rewrite_tp_refs_in(fv_resolved);
+                rewrite_typeparam_refs(
+                  fv_resolved, free_tps, cls_path, id);
               }
               else
               {
-                // Fallback: no definition found, use TypeVar.
                 fv_resolved = make_type(_);
               }
 
-              classbody << (FieldDef << (Ident ^ freevar) << clone(fv_resolved));
-              create_params
-                << (ParamDef << (Ident ^ freevar) << clone(fv_resolved)
-                             << Body);
-              create_args << (Expr << (LocalId ^ freevar));
+              fields.push_back(
+                {freevar, fv_resolved, Expr << (LocalId ^ freevar)});
+            }
 
+            // Build apply body: field-loading preamble + lambda body.
+            Node apply_body = Body;
+
+            for (auto& field : fields)
+            {
               apply_body
                 << (Expr
                     << (Equals
                         << (Expr
-                            << (Let << (Ident ^ freevar)
-                                    << clone(fv_resolved)))
+                            << (Let << (Ident ^ field.name)
+                                    << clone(field.type)))
                         << (Expr
                             << (Load
                                 << (Expr
-                                    << (FieldRef << (Expr << (LocalId ^ "self"))
-                                                 << (FieldId ^ freevar)))))));
-
-              new_args
-                << (NewArg << (Ident ^ freevar)
-                           << (Expr << (LocalId ^ freevar)));
+                                    << (FieldRef
+                                        << (Expr << (LocalId ^ "self"))
+                                        << (FieldId ^ field.name)))))));
             }
 
             apply_body << *_(Body);
 
-            return Seq
-              << (Lift << ClassBody
-                       << (ClassDef
-                           << None << (Ident ^ id) << typeparams << Where
-                           << (classbody
-                               << (Function
-                                   << Rhs << (Ident ^ "create") << TypeParams
-                                   << create_params << type << Where
-                                   << (Body << (Expr << (New << new_args))))
-                               << (Function << Rhs << (Ident ^ "apply")
-                                            << TypeParams << apply_params
-                                            << _(Type) << Where
-                                            << apply_body))))
-              << (Call << (FuncName
-                           << *clone(fq_tn_create)
-                           << (NameElement << (Ident ^ "create") << TypeArgs))
-                       << create_args);
+            auto result = make_anon_class(
+              id,
+              lambda,
+              free_tps,
+              fields,
+              _(Params),
+              _(Type),
+              apply_body);
+
+            return Seq << (Lift << ClassBody << result.class_def)
+                       << result.create_call;
           },
 
         // Default arguments.

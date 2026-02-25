@@ -493,6 +493,7 @@ infer
                   (localid 8:local$10)))))))
       (classdef
         {
+          apply = function
           create = function}
         (none)
         (ident 8:lambda$2)
@@ -531,11 +532,128 @@ infer
                     (newargs)))
                 (ret
                   (localid 8:local$11)))))
-          (error
-            (errormsg 30:Cannot infer type of parameter)
-            (ident 1:x))))
+          (function
+            {
+              self = paramdef
+              x = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 4:when)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:lambda$2)
+                      (typeargs)))))
+              (paramdef
+                (ident 1:x)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ref)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 4:when)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cell)
+                              (typeargs))))))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 4:when)
+                  (typeargs))
+                (nameelement
+                  (ident 4:cell)
+                  (typeargs))))
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (lookup
+                    (localid 9:local$102)
+                    (localid 1:x)
+                    (rhs)
+                    (symbolid 1:*)
+                    (typeargs)
+                    (int 1:1))
+                  (calldyn
+                    (localid 9:local$103)
+                    (localid 9:local$102)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 1:x))))
+                  (lookup
+                    (localid 9:local$872)
+                    (localid 9:local$103)
+                    (rhs)
+                    (ident 1:f)
+                    (typeargs)
+                    (int 1:1))
+                  (calldyn
+                    (localid 9:local$873)
+                    (localid 9:local$872)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 9:local$103))))
+                  (copy
+                    (localid 9:local$926)
+                    (localid 1:v))
+                  (copy
+                    (localid 1:v)
+                    (localid 9:local$873))
+                  (lookup
+                    (localid 9:local$486)
+                    (localid 1:v)
+                    (rhs)
+                    (symbolid 1:+)
+                    (typeargs)
+                    (int 1:2))
+                  (calldyn
+                    (localid 9:local$487)
+                    (localid 9:local$486)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 1:v))
+                      (arg
+                        (argcopy)
+                        (localid 1:v))))
+                  (call
+                    (localid 8:local$12)
+                    (rhs)
+                    (funcname
+                      (nameelement
+                        (ident 4:when)
+                        (typeargs))
+                      (nameelement
+                        (ident 4:cell)
+                        (typeargs))
+                      (nameelement
+                        (ident 6:create)
+                        (typeargs)))
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 9:local$487)))))
+                (ret
+                  (localid 8:local$12)))))))
       (classdef
         {
+          apply = function
           create = function}
         (none)
         (ident 8:lambda$3)
@@ -574,9 +692,179 @@ infer
                     (newargs)))
                 (ret
                   (localid 8:local$13)))))
-          (error
-            (errormsg 30:Cannot infer type of parameter)
-            (ident 1:y))))
+          (function
+            {
+              self = paramdef
+              y = paramdef
+              z = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 4:when)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:lambda$3)
+                      (typeargs)))))
+              (paramdef
+                (ident 1:y)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ref)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 4:when)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cell)
+                              (typeargs)))))))))
+              (paramdef
+                (ident 1:z)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ref)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 4:when)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cell)
+                              (typeargs))))))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 4:when)
+                  (typeargs))
+                (nameelement
+                  (ident 4:cell)
+                  (typeargs))))
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (lookup
+                    (localid 9:local$104)
+                    (localid 1:y)
+                    (rhs)
+                    (symbolid 1:*)
+                    (typeargs)
+                    (int 1:1))
+                  (calldyn
+                    (localid 9:local$105)
+                    (localid 9:local$104)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 1:y))))
+                  (lookup
+                    (localid 9:local$106)
+                    (localid 1:z)
+                    (rhs)
+                    (symbolid 1:*)
+                    (typeargs)
+                    (int 1:1))
+                  (calldyn
+                    (localid 9:local$107)
+                    (localid 9:local$106)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 1:z))))
+                  (lookup
+                    (localid 9:local$874)
+                    (localid 9:local$105)
+                    (rhs)
+                    (ident 1:f)
+                    (typeargs)
+                    (int 1:1))
+                  (calldyn
+                    (localid 9:local$875)
+                    (localid 9:local$874)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 9:local$105))))
+                  (lookup
+                    (localid 9:local$876)
+                    (localid 9:local$107)
+                    (rhs)
+                    (ident 1:f)
+                    (typeargs)
+                    (int 1:1))
+                  (calldyn
+                    (localid 9:local$877)
+                    (localid 9:local$876)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 9:local$107))))
+                  (lookup
+                    (localid 9:local$927)
+                    (localid 9:local$875)
+                    (rhs)
+                    (symbolid 1:+)
+                    (typeargs)
+                    (int 1:2))
+                  (calldyn
+                    (localid 9:local$928)
+                    (localid 9:local$927)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 9:local$875))
+                      (arg
+                        (argcopy)
+                        (localid 9:local$877))))
+                  (copy
+                    (localid 9:local$936)
+                    (localid 3:sum))
+                  (copy
+                    (localid 3:sum)
+                    (localid 9:local$928))
+                  (ffi
+                    (localid 8:local$14)
+                    (symbolid 8:printval)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 3:sum))))
+                  (call
+                    (localid 8:local$15)
+                    (rhs)
+                    (funcname
+                      (nameelement
+                        (ident 4:when)
+                        (typeargs))
+                      (nameelement
+                        (ident 4:cell)
+                        (typeargs))
+                      (nameelement
+                        (ident 6:create)
+                        (typeargs)))
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 3:sum)))))
+                (ret
+                  (localid 8:local$15)))))))
       (function
         {}
         (rhs)
@@ -712,7 +1000,13 @@ infer
                     (argcopy)
                     (localid 1:a)))
                 (type
-                  (typevar)))
+                  (typename
+                    (nameelement
+                      (ident 4:when)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cell)
+                      (typeargs)))))
               (copy
                 (localid 9:local$880)
                 (localid 1:c))
@@ -754,7 +1048,13 @@ infer
                     (argcopy)
                     (localid 1:c)))
                 (type
-                  (typevar)))
+                  (typename
+                    (nameelement
+                      (ident 4:when)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cell)
+                      (typeargs)))))
               (copy
                 (localid 9:local$881)
                 (localid 1:d))
@@ -2007,15 +2307,15 @@ infer
                     (typeargs)
                     (int 1:2))
                   (lookup
-                    (localid 9:local$911)
+                    (localid 9:local$919)
                     (localid 9:local$511)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
-                    (localid 9:local$912)
-                    (localid 9:local$911)
+                    (localid 9:local$920)
+                    (localid 9:local$919)
                     (args
                       (arg
                         (argcopy)
@@ -2029,7 +2329,7 @@ infer
                         (localid 9:local$509))
                       (arg
                         (argcopy)
-                        (localid 9:local$912)))))
+                        (localid 9:local$920)))))
                 (cond
                   (localid 9:local$886)
                   (labelid 8:body$116)
@@ -2144,7 +2444,7 @@ infer
                         (argcopy)
                         (localid 9:local$118))))
                   (store
-                    (localid 9:local$925)
+                    (localid 9:local$929)
                     (localid 9:local$517)
                     (arg
                       (argcopy)
@@ -18942,15 +19242,15 @@ infer
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$926)
+                    (localid 9:local$921)
                     (localid 9:local$859)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$927)
-                    (localid 9:local$926)
+                    (localid 9:local$922)
+                    (localid 9:local$921)
                     (args
                       (arg
                         (argcopy)
@@ -18959,15 +19259,15 @@ infer
                         (argcopy)
                         (localid 1:i))))
                   (lookup
-                    (localid 9:local$928)
+                    (localid 9:local$923)
                     (localid 9:local$861)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$929)
-                    (localid 9:local$928)
+                    (localid 9:local$924)
+                    (localid 9:local$923)
                     (args
                       (arg
                         (argcopy)
@@ -18976,24 +19276,24 @@ infer
                         (argcopy)
                         (localid 1:i))))
                   (lookup
-                    (localid 9:local$935)
-                    (localid 9:local$927)
+                    (localid 9:local$934)
+                    (localid 9:local$922)
                     (rhs)
                     (symbolid 2:!=)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$936)
                     (localid 9:local$935)
+                    (localid 9:local$934)
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$927))
+                        (localid 9:local$922))
                       (arg
                         (argcopy)
-                        (localid 9:local$929)))))
+                        (localid 9:local$924)))))
                 (cond
-                  (localid 9:local$936)
+                  (localid 9:local$935)
                   (labelid 8:body$701)
                   (labelid 8:join$702)))
               (label
@@ -19218,7 +19518,7 @@ infer
                         (argcopy)
                         (localid 9:local$333))))
                   (copy
-                    (localid 9:local$913)
+                    (localid 9:local$925)
                     (localid 3:len))
                   (copy
                     (localid 3:len)
@@ -19293,15 +19593,15 @@ infer
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$914)
+                    (localid 9:local$896)
                     (localid 9:local$712)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$915)
-                    (localid 9:local$914)
+                    (localid 9:local$897)
+                    (localid 9:local$896)
                     (args
                       (arg
                         (argcopy)
@@ -19314,7 +19614,7 @@ infer
                     (localid 2:sc))
                   (copy
                     (localid 2:sc)
-                    (localid 9:local$915))
+                    (localid 9:local$897))
                   (lookup
                     (localid 9:local$713)
                     (localid 5:other)
@@ -19330,15 +19630,15 @@ infer
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$916)
+                    (localid 9:local$898)
                     (localid 9:local$714)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$917)
-                    (localid 9:local$916)
+                    (localid 9:local$899)
+                    (localid 9:local$898)
                     (args
                       (arg
                         (argcopy)
@@ -19351,7 +19651,7 @@ infer
                     (localid 2:oc))
                   (copy
                     (localid 2:oc)
-                    (localid 9:local$917))
+                    (localid 9:local$899))
                   (call
                     (localid 9:local$334)
                     (rhs)
@@ -19402,7 +19702,7 @@ infer
                   (var
                     (ident 9:local$334))
                   (typetest
-                    (localid 9:local$896)
+                    (localid 9:local$900)
                     (localid 9:local$334)
                     (type
                       (typename
@@ -19413,11 +19713,11 @@ infer
                           (ident 7:nomatch)
                           (typeargs))))))
                 (cond
-                  (localid 9:local$896)
-                  (labelid 8:body$897)
-                  (labelid 8:join$898)))
+                  (localid 9:local$900)
+                  (labelid 8:body$901)
+                  (labelid 8:join$902)))
               (label
-                (labelid 8:body$897)
+                (labelid 8:body$901)
                 (body
                   (call
                     (localid 9:local$335)
@@ -19434,15 +19734,15 @@ infer
                         (typeargs)))
                     (args))
                   (lookup
-                    (localid 9:local$899)
+                    (localid 9:local$903)
                     (localid 2:oc)
                     (rhs)
                     (symbolid 1:<)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$900)
-                    (localid 9:local$899)
+                    (localid 9:local$904)
+                    (localid 9:local$903)
                     (args
                       (arg
                         (argcopy)
@@ -19451,7 +19751,7 @@ infer
                         (argcopy)
                         (localid 2:sc)))))
                 (cond
-                  (localid 9:local$900)
+                  (localid 9:local$904)
                   (labelid 8:body$716)
                   (labelid 8:join$717)))
               (label
@@ -19472,9 +19772,9 @@ infer
                     (localid 9:local$334)
                     (localid 9:local$335)))
                 (jump
-                  (labelid 8:join$898)))
+                  (labelid 8:join$902)))
               (label
-                (labelid 8:join$898)
+                (labelid 8:join$902)
                 (body
                   (const
                     (localid 9:local$336)
@@ -19498,14 +19798,14 @@ infer
                         (argcopy)
                         (localid 9:local$336))))
                   (copy
-                    (localid 9:local$901)
+                    (localid 9:local$905)
                     (localid 1:i))
                   (copy
                     (localid 1:i)
                     (localid 9:local$720))
                   (copy
                     (localid 8:local$78)
-                    (localid 9:local$901)))
+                    (localid 9:local$905)))
                 (jump
                   (labelid 8:cond$327)))
               (label
@@ -19619,21 +19919,21 @@ infer
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$902)
+                    (localid 9:local$906)
                     (localid 9:local$342)
                     (rhs)
                     (symbolid 1:!)
                     (typeargs)
                     (int 1:1))
                   (calldyn
-                    (localid 9:local$903)
-                    (localid 9:local$902)
+                    (localid 9:local$907)
+                    (localid 9:local$906)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$342)))))
                 (ret
-                  (localid 9:local$903)))))
+                  (localid 9:local$907)))))
           (function
             {
               other = paramdef
@@ -19753,21 +20053,21 @@ infer
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$904)
+                    (localid 9:local$908)
                     (localid 9:local$346)
                     (rhs)
                     (symbolid 1:!)
                     (typeargs)
                     (int 1:1))
                   (calldyn
-                    (localid 9:local$905)
-                    (localid 9:local$904)
+                    (localid 9:local$909)
+                    (localid 9:local$908)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$346)))))
                 (ret
-                  (localid 9:local$905)))))
+                  (localid 9:local$909)))))
           (function
             {
               i = var
@@ -19842,15 +20142,15 @@ infer
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$906)
+                    (localid 9:local$910)
                     (localid 9:local$722)
                     (rhs)
                     (symbolid 1:+)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$907)
-                    (localid 9:local$906)
+                    (localid 9:local$911)
+                    (localid 9:local$910)
                     (args
                       (arg
                         (argcopy)
@@ -19882,7 +20182,7 @@ infer
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$907))))
+                        (localid 9:local$911))))
                   (copy
                     (localid 9:local$725)
                     (localid 6:result))
@@ -19990,15 +20290,15 @@ infer
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$918)
+                    (localid 9:local$912)
                     (localid 9:local$732)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$919)
-                    (localid 9:local$918)
+                    (localid 9:local$913)
+                    (localid 9:local$912)
                     (args
                       (arg
                         (argcopy)
@@ -20011,7 +20311,7 @@ infer
                     (localid 9:local$730)
                     (arg
                       (argcopy)
-                      (localid 9:local$919)))
+                      (localid 9:local$913)))
                   (const
                     (localid 9:local$350)
                     (usize)
@@ -20034,14 +20334,14 @@ infer
                         (argcopy)
                         (localid 9:local$350))))
                   (copy
-                    (localid 9:local$908)
+                    (localid 9:local$914)
                     (localid 1:i))
                   (copy
                     (localid 1:i)
                     (localid 9:local$734))
                   (copy
                     (localid 8:local$81)
-                    (localid 9:local$908)))
+                    (localid 9:local$914)))
                 (jump
                   (labelid 8:cond$347)))
               (label
@@ -20150,15 +20450,15 @@ infer
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$920)
+                    (localid 9:local$915)
                     (localid 9:local$741)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 9:local$921)
-                    (localid 9:local$920)
+                    (localid 9:local$916)
+                    (localid 9:local$915)
                     (args
                       (arg
                         (argcopy)
@@ -20171,7 +20471,7 @@ infer
                     (localid 9:local$739)
                     (arg
                       (argcopy)
-                      (localid 9:local$921)))
+                      (localid 9:local$916)))
                   (const
                     (localid 9:local$354)
                     (usize)
@@ -20194,7 +20494,7 @@ infer
                         (argcopy)
                         (localid 9:local$354))))
                   (copy
-                    (localid 9:local$909)
+                    (localid 9:local$917)
                     (localid 1:i))
                   (copy
                     (localid 1:i)
@@ -20221,14 +20521,14 @@ infer
                         (argcopy)
                         (localid 9:local$355))))
                   (copy
-                    (localid 9:local$910)
+                    (localid 9:local$918)
                     (localid 1:j))
                   (copy
                     (localid 1:j)
                     (localid 9:local$745))
                   (copy
                     (localid 8:local$83)
-                    (localid 9:local$910)))
+                    (localid 9:local$918)))
                 (jump
                   (labelid 8:cond$351)))
               (label

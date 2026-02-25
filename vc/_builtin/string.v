@@ -38,7 +38,7 @@ string
 
     while i < self.size
     {
-      if (self.data)(i) != (other.data)(i)
+      if self.data()(i) != other.data()(i)
       {
         return false
       }
@@ -61,8 +61,8 @@ string
 
     while i < len
     {
-      let sc = (self.data)(i);
-      let oc = (other.data)(i);
+      let sc = self.data()(i);
+      let oc = other.data()(i);
 
       if sc < oc
       {
@@ -101,7 +101,7 @@ string
 
     while i < self.size
     {
-      result(i) = (self.data)(i);
+      result(i) = self.data()(i);
       i = i + 1
     }
 
@@ -109,7 +109,7 @@ string
 
     while j < other.size
     {
-      result(i) = (other.data)(j);
+      result(i) = other.data()(j);
       i = i + 1;
       j = j + 1
     }

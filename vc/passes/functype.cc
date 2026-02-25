@@ -8,15 +8,15 @@ namespace vc
   // Given a FuncType node and the Top node, collect all TypeName children
   // that resolve to TypeParam definitions. Returns a list of
   // (TypeParam def node, TypeName node) pairs, deduplicated by def identity.
-  struct FreeTP
+  struct FuncTypeFreeTP
   {
     Node def; // The TypeParam definition node.
     Node name; // The FQ TypeName referencing it.
   };
 
-  std::vector<FreeTP> collect_free_typeparams(Node ft, Node top)
+  std::vector<FuncTypeFreeTP> collect_functype_free_typeparams(Node ft, Node top)
   {
-    std::vector<FreeTP> result;
+    std::vector<FuncTypeFreeTP> result;
     std::set<Node> seen;
 
     ft->traverse([&](auto node) {
@@ -76,7 +76,7 @@ namespace vc
           auto cls_ta = fq_typeargs(cls_path, enclosing_cls / TypeParams);
 
           // Collect free type params referenced inside the FuncType.
-          auto free_tps = collect_free_typeparams(ft, top);
+          auto free_tps = collect_functype_free_typeparams(ft, top);
 
           // Fresh name for the synthetic shape.
           auto id = _.fresh(l_functype);

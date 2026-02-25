@@ -395,9 +395,56 @@ namespace vc
   Node make_typeargs(Node typeparams);
   Nodes scope_path(Node node);
   Node find_def(Node top, const Node& name);
+  Node find_func_def(
+    Node top, const Node& funcname, size_t arity, Node hand);
   Node fq_typeparam(const Nodes& path, Node tp);
   Node fq_typeargs(const Nodes& path, Node tps);
   Node make_selftype(Node node, bool fq = false);
+
+  // Free type parameter from an enclosing scope.
+  struct FreeTP
+  {
+    std::string name;
+    Nodes path; // scope_path of the defining scope
+  };
+
+  // Collect free type parameters from enclosing ClassDef/Function scopes.
+  std::vector<FreeTP> collect_free_typeparams(Node node);
+
+  // Rewrite FQ TypeName references to free type params so they point at
+  // a new class's own type params instead of the enclosing scope's.
+  void rewrite_typeparam_refs(
+    Node subtree,
+    const std::vector<FreeTP>& free_tps,
+    const Nodes& cls_path,
+    Location new_class_id);
+
+  // A captured field for an anonymous class.
+  struct AnonClassField
+  {
+    Location name;       // field / create param name
+    Node type;           // Type node (cloned)
+    Node create_arg;     // Expr for the create call argument
+  };
+
+  // Result of make_anon_class.
+  struct AnonClass
+  {
+    Node class_def;   // ClassDef to Lift into ClassBody
+    Node create_call; // Call expression to create an instance
+  };
+
+  // Build an anonymous class with fields, a create method, and an apply
+  // method. The class mirrors the free type params from enclosing scopes.
+  // apply_body must already include field-loading preamble if needed.
+  AnonClass make_anon_class(
+    Location id,
+    Node context_node,
+    const std::vector<FreeTP>& free_tps,
+    std::vector<AnonClassField>& fields,
+    Node apply_params,
+    Node apply_ret_type,
+    Node apply_body);
 
   Parse parser();
   PassDef structure(const Parse& parse);
