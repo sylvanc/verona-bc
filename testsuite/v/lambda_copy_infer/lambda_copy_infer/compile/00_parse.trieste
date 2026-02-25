@@ -40,7 +40,12 @@ parse
             (ident 3:get)
             (paren
               (group
-                (ident 4:self)))
+                (ident 4:self)
+                (:)
+                (ident 7:wrapper)
+                (bracket
+                  (group
+                    (ident 1:T)))))
             (:)
             (ident 1:T)
             (brace

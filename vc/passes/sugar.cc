@@ -66,7 +66,7 @@ namespace vc
             << (T(Params)[Params] * T(Type)[Type] * T(Body)[Body]) >>
           [](Match& _) {
             auto lambda = _(Lambda);
-            std::set<Location> freevars;
+            std::map<Location, Node> freevars;
 
             lambda->traverse([&](auto node) {
               bool ok = true;
@@ -78,7 +78,28 @@ namespace vc
               else if (node == LocalId)
               {
                 if (node->lookup(lambda).empty())
-                  freevars.emplace(node->location());
+                {
+                  auto loc = node->location();
+
+                  if (freevars.find(loc) == freevars.end())
+                  {
+                    // Look up the definition in the enclosing scope
+                    // (no boundary) to get its type.
+                    Node fv_type;
+                    auto defs = node->lookup();
+
+                    for (auto& def : defs)
+                    {
+                      if (def->in({ParamDef, Let, Var}))
+                      {
+                        fv_type = clone(def / Type);
+                        break;
+                      }
+                    }
+
+                    freevars.emplace(loc, fv_type);
+                  }
+                }
               }
 
               return ok;
@@ -193,6 +214,37 @@ namespace vc
               old_tn->parent()->replace(old_tn, new_tn);
             }
 
+            // Rewrite FQ type param references in a type node from
+            // enclosing-scope paths to the lambda class's own type params.
+            auto rewrite_tp_refs_in = [&](Node type_node) {
+              std::vector<std::pair<Node, size_t>> refs;
+
+              type_node->traverse([&](auto node) {
+                if (node == TypeName)
+                {
+                  size_t idx;
+
+                  if (is_free_tp(node, idx))
+                    refs.push_back({node, idx});
+                }
+
+                return true;
+              });
+
+              for (auto& [old_tn, idx] : refs)
+              {
+                Node new_tn = TypeName;
+
+                for (auto& s : cls_path)
+                  new_tn << (NameElement << clone(s / Ident) << TypeArgs);
+
+                new_tn << (NameElement << (Ident ^ id) << TypeArgs);
+                new_tn << (NameElement << (Ident ^ free_tps[idx].name)
+                                       << TypeArgs);
+                old_tn->parent()->replace(old_tn, new_tn);
+              }
+            };
+
             // Populate TypeParams for the lambda class.
             Node typeparams = TypeParams;
 
@@ -272,19 +324,36 @@ namespace vc
             Node apply_body = Body;
             Node new_args = NewArgs;
 
-            for (auto& freevar : freevars)
+            for (auto& [freevar, fv_type] : freevars)
             {
-              auto typevar = make_type(_);
-              classbody << (FieldDef << (Ident ^ freevar) << typevar);
+              Node fv_resolved;
+
+              if (fv_type)
+              {
+                // Use the captured type from the enclosing scope,
+                // rewriting any FQ type param references to point at
+                // the lambda class's own type params.
+                fv_resolved = clone(fv_type);
+                rewrite_tp_refs_in(fv_resolved);
+              }
+              else
+              {
+                // Fallback: no definition found, use TypeVar.
+                fv_resolved = make_type(_);
+              }
+
+              classbody << (FieldDef << (Ident ^ freevar) << clone(fv_resolved));
               create_params
-                << (ParamDef << (Ident ^ freevar) << clone(typevar) << Body);
+                << (ParamDef << (Ident ^ freevar) << clone(fv_resolved)
+                             << Body);
               create_args << (Expr << (LocalId ^ freevar));
 
               apply_body
                 << (Expr
                     << (Equals
                         << (Expr
-                            << (Let << (Ident ^ freevar) << clone(typevar)))
+                            << (Let << (Ident ^ freevar)
+                                    << clone(fv_resolved)))
                         << (Expr
                             << (Load
                                 << (Expr

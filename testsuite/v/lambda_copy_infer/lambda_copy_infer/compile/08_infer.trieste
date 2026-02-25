@@ -20,6 +20,7 @@ infer
         {
           T = typeparam
           create = function
+          get = function
           val =
             function
             function}
@@ -251,9 +252,66 @@ infer
                         (localid 3:val)))))
                 (ret
                   (localid 7:local$2)))))
-          (error
-            (errormsg 30:Cannot infer type of parameter)
-            (ident 4:self))))
+          (function
+            {
+              self = paramdef}
+            (rhs)
+            (ident 3:get)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 17:lambda_copy_infer)
+                      (typeargs))
+                    (nameelement
+                      (ident 7:wrapper)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 17:lambda_copy_infer)
+                              (typeargs))
+                            (nameelement
+                              (ident 7:wrapper)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 17:lambda_copy_infer)
+                  (typeargs))
+                (nameelement
+                  (ident 7:wrapper)
+                  (typeargs))
+                (nameelement
+                  (ident 1:T)
+                  (typeargs))))
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (lookup
+                    (localid 8:local$85)
+                    (localid 4:self)
+                    (rhs)
+                    (ident 3:val)
+                    (typeargs)
+                    (int 1:1))
+                  (calldyn
+                    (localid 8:local$86)
+                    (localid 8:local$85)
+                    (args
+                      (arg
+                        (argcopy)
+                        (localid 4:self)))))
+                (ret
+                  (localid 8:local$86)))))))
       (classdef
         {
           T = typeparam

@@ -10,7 +10,7 @@ wrapper[T]
     new { val = val }
   }
 
-  get(self): T
+  get(self: wrapper[T]): T
   {
     self.val
   }

@@ -854,6 +854,26 @@ namespace vc
               ok = false;
             }
           }
+
+          // Function parameters must have explicit type annotations.
+          // Lambda parameters may omit types (inferred from call site).
+          if (node->parent(Function) && !node->parent(Lambda))
+          {
+            for (auto& child : *node)
+            {
+              if (
+                (child == ParamDef) &&
+                ((child / Type)->front() == TypeVar))
+              {
+                node->replace(
+                  child,
+                  err(
+                    child / Ident,
+                    "Function parameters must have a type annotation"));
+                ok = false;
+              }
+            }
+          }
         }
         else if (node == NewArgs)
         {

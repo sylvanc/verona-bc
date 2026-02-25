@@ -1,5 +1,5 @@
 vc
-typecheck
+validids
 (top
   {}
   (func
@@ -35,9 +35,9 @@ typecheck
             (functionid 34:lambda_copy_infer::wrap_copy::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$89))))
-          (move
+          (copy
             (localid 1:w)
             (localid 7:local$6))
           (lookup
@@ -49,7 +49,7 @@ typecheck
             (localid 8:local$90)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:w)))))
         (ret
           (localid 8:local$91)))))
@@ -72,7 +72,7 @@ typecheck
             (localid 7:local$5)
             (functionid 41:lambda_copy_infer::lambda$0::create::0::0)
             (args))
-          (move
+          (copy
             (localid 1:f)
             (localid 7:local$5))
           (lookup
@@ -84,10 +84,10 @@ typecheck
             (localid 8:local$87)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:f))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:val)))))
         (ret
           (localid 8:local$88)))))
@@ -141,7 +141,7 @@ typecheck
       (label
         (labelid 5:start)
         (body
-          (move
+          (copy
             (localid 1:y)
             (localid 1:x))
           (call
@@ -149,7 +149,7 @@ typecheck
             (functionid 40:lambda_copy_infer::wrapper::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:y)))))
         (ret
           (localid 7:local$4)))))
@@ -170,7 +170,7 @@ typecheck
             (classid 29:lambda_copy_infer::wrapper::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:val)))))
         (ret
           (localid 7:local$2)))))
@@ -195,7 +195,7 @@ typecheck
             (localid 8:local$85)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 4:self)))))
         (ret
           (localid 8:local$86)))))
@@ -216,7 +216,7 @@ typecheck
             (functionid 42:lambda_copy_infer::wrapper::val::1::ref::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 4:self))))
           (load
             (localid 9:local$466)
@@ -239,7 +239,7 @@ typecheck
           (fieldref
             (localid 8:local$84)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret

@@ -2604,7 +2604,17 @@ namespace vc
           }
         }
 
-        // Error on any remaining TypeVar param or return types.
+        // Error on any remaining TypeVar param or return types,
+        // but only if we're not in a generic context. Functions inside
+        // generic classes (e.g., lambda apply methods with captured type
+        // params) legitimately keep TypeVar until reification resolves them.
+        bool in_generic_context =
+          (node / TypeParams)->size() > 0 ||
+          ((node->parent({ClassDef}) != nullptr) &&
+           (node->parent({ClassDef}) / TypeParams)->size() > 0);
+
+        if (!in_generic_context)
+        {
         for (auto& pd : *params)
         {
           auto type = pd / Type;
@@ -2625,6 +2635,7 @@ namespace vc
             node,
             err(node / Ident, "Cannot infer return type of function"));
           return false;
+        }
         }
 
         // Resolve TypeVar in Var nodes: replace with env type or error.
@@ -2648,7 +2659,7 @@ namespace vc
             {
               stmt->replace(type, clone(it->second.type));
             }
-            else
+            else if (!in_generic_context)
             {
               node->parent()->replace(
                 node, err(ident, "Cannot infer type of variable"));

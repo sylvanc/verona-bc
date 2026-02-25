@@ -1,5 +1,5 @@
 vc
-typecheck
+assignids
 (top
   {}
   (func
@@ -39,12 +39,12 @@ typecheck
             (functionid 42:lambda_tp_freevar::apply_with_offset::2::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$90))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$91))))
-          (move
+          (copy
             (localid 1:w)
             (localid 7:local$6))
           (lookup
@@ -56,7 +56,7 @@ typecheck
             (localid 8:local$92)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:w)))))
         (ret
           (localid 8:local$93)))))
@@ -83,9 +83,9 @@ typecheck
             (functionid 41:lambda_tp_freevar::lambda$0::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 6:offset))))
-          (move
+          (copy
             (localid 1:f)
             (localid 7:local$5))
           (lookup
@@ -97,10 +97,10 @@ typecheck
             (localid 8:local$88)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:f))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:val)))))
         (ret
           (localid 8:local$89)))))
@@ -134,7 +134,7 @@ typecheck
             (classid 30:lambda_tp_freevar::lambda$0::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 6:offset)))))
         (ret
           (localid 7:local$3)))))
@@ -166,13 +166,13 @@ typecheck
           (fieldref
             (localid 8:local$87)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:self))
             (fieldid 6:offset))
           (load
             (localid 9:local$811)
             (localid 8:local$87))
-          (move
+          (copy
             (localid 6:offset)
             (localid 9:local$811))
           (call
@@ -180,7 +180,7 @@ typecheck
             (functionid 40:lambda_tp_freevar::wrapper::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 6:offset)))))
         (ret
           (localid 7:local$4)))))
@@ -205,7 +205,7 @@ typecheck
             (classid 29:lambda_tp_freevar::wrapper::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:v)))))
         (ret
           (localid 7:local$2)))))
@@ -230,7 +230,7 @@ typecheck
             (localid 8:local$85)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 4:self)))))
         (ret
           (localid 8:local$86)))))
@@ -251,7 +251,7 @@ typecheck
             (functionid 44:lambda_tp_freevar::wrapper::value::1::ref::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 4:self))))
           (load
             (localid 9:local$468)
@@ -274,7 +274,7 @@ typecheck
           (fieldref
             (localid 8:local$84)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:self))
             (fieldid 5:value)))
         (ret

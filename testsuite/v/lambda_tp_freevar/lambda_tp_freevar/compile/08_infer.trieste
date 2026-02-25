@@ -315,7 +315,8 @@ infer
       (classdef
         {
           T = typeparam
-          apply = function}
+          apply = function
+          create = function}
         (none)
         (ident 8:lambda$0)
         (typeparams
@@ -326,10 +327,87 @@ infer
           (fielddef
             (ident 6:offset)
             (type
-              (typevar)))
-          (error
-            (errormsg 30:Cannot infer type of parameter)
-            (ident 6:offset))
+              (typename
+                (nameelement
+                  (ident 17:lambda_tp_freevar)
+                  (typeargs))
+                (nameelement
+                  (ident 8:lambda$0)
+                  (typeargs))
+                (nameelement
+                  (ident 1:T)
+                  (typeargs)))))
+          (function
+            {
+              offset = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 6:offset)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 17:lambda_tp_freevar)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:lambda$0)
+                      (typeargs))
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 17:lambda_tp_freevar)
+                  (typeargs))
+                (nameelement
+                  (ident 8:lambda$0)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 17:lambda_tp_freevar)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:lambda$0)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (labels
+              (label
+                (labelid 5:start)
+                (body
+                  (new
+                    (localid 7:local$3)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 17:lambda_tp_freevar)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:lambda$0)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 17:lambda_tp_freevar)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 8:lambda$0)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))))
+                    (newargs
+                      (newarg
+                        (ident 6:offset)
+                        (localid 6:offset)))))
+                (ret
+                  (localid 7:local$3)))))
           (function
             {
               self = paramdef
