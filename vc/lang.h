@@ -75,6 +75,7 @@ namespace vc
   inline const auto Semi = TokenDef("semi");
   inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
   inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
+  inline const auto TypeAssertion = TokenDef("typeassertion");
   inline const auto If = TokenDef("if");
   inline const auto Else = TokenDef("else");
   inline const auto While = TokenDef("while");
@@ -280,7 +281,7 @@ namespace vc
   inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
     RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | NewArray |
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | Var | When |
-    wfBinop | wfUnop | wfNulop | FFI | Typetest;
+    wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -318,6 +319,8 @@ namespace vc
     | (Typetest <<= wfDst * wfSrc * Type)
     | (Jump <<= LabelId)
     | (When <<= wfDst * wfSrc * Args * Type)
+    | (Var <<= Ident)[Ident]
+    | (TypeAssertion <<= LocalId * Type)
     | (Add <<= wfDst * wfLhs * wfRhs)
     | (Sub <<= wfDst * wfLhs * wfRhs)
     | (Mul <<= wfDst * wfLhs * wfRhs)
@@ -374,10 +377,12 @@ namespace vc
   // clang-format on
 
   inline const auto wfTypeInfer = wfTypeNoFunc - TypeVar;
+  inline const auto wfBodyInfer = wfBodyANF - TypeAssertion;
 
   // clang-format off
   inline const auto wfPassInfer =
       wfPassANF
+    | (Body <<= wfBodyInfer++)
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     | (Type <<= wfTypeInfer)
     | (Union <<= wfTypeInfer++[2])

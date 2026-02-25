@@ -275,8 +275,9 @@ namespace vc
               {
                 // Let is single-assignment: just copy the value, no swap.
                 auto name = (l / Ident)->location();
-                seq << (Lift << Body
-                             << (Copy << (LocalId ^ name) << (LocalId ^ val)));
+                seq
+                  << (Lift << Body
+                           << (Copy << (LocalId ^ name) << (LocalId ^ val)));
                 tuple << (LocalId ^ val);
               }
               else
@@ -297,7 +298,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body << (_(If) << (LocalId ^ id)))
-                       << (Var << (Ident ^ id) << make_type(_));
+                       << (Var << (Ident ^ id));
           },
 
         // If body.
@@ -324,7 +325,7 @@ namespace vc
           [](Match& _) {
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body << (_(While) << (LocalId ^ id)))
-                       << (Var << (Ident ^ id) << make_type(_));
+                       << (Var << (Ident ^ id));
           },
 
         // While body.
@@ -376,15 +377,14 @@ namespace vc
             auto id = _.fresh(l_local);
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
-            return Seq
-              << (Typetest << (LocalId ^ id) << (LocalId ^ _(LocalId))
-                           << type_nomatch())
-              << (Cond << (LocalId ^ id) << (LabelId ^ body)
-                       << (LabelId ^ join))
-              << (Label << (LabelId ^ body)
-                        << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
-                                    << (Jump << (LabelId ^ join))))
-              << (Label << (LabelId ^ join) << Body);
+            return Seq << (Typetest << (LocalId ^ id) << (LocalId ^ _(LocalId))
+                                    << type_nomatch())
+                       << (Cond << (LocalId ^ id) << (LabelId ^ body)
+                                << (LabelId ^ join))
+                       << (Label << (LabelId ^ body)
+                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                             << (Jump << (LabelId ^ join))))
+                       << (Label << (LabelId ^ join) << Body);
           },
 
         // Break, continue.
@@ -449,17 +449,53 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        // Replace Let with LocalId.
-        // TODO: what about the Type?
+        // Replace Let with LocalId. If the Let has an explicit type
+        // annotation (non-TypeVar), emit a TypeAssertion.
         In(Expr, Lhs) * T(Let)[Let] >>
-          [](Match& _) { return LocalId ^ (_(Let) / Ident); },
+          [](Match& _) {
+            auto let = _(Let);
+            auto type = let / Type;
+            auto local = LocalId ^ (let / Ident);
 
-        // Lift variable declarations.
-        // TODO: what about the Type?
+            if (type->front() != TypeVar)
+            {
+              return Seq << (Lift
+                             << Body
+                             << (TypeAssertion << clone(local) << clone(type)))
+                         << local;
+            }
+
+            return local;
+          },
+
+        // Lift variable declarations. If the Var has an explicit type
+        // annotation (non-TypeVar), emit a TypeAssertion. Strip the
+        // type from the Var node (Var <<= Ident after ANF).
         In(Expr, Lhs) * T(Var)[Var] >>
           [](Match& _) {
-            return Seq << (Lift << Body << _(Var))
-                       << (LocalId ^ (_(Var) / Ident));
+            auto var = _(Var);
+            auto ident = var / Ident;
+            Node assertion;
+
+            // Synthetic Vars (from If/While desugaring) have no Type child.
+            if (var->size() > 1)
+            {
+              auto type = var / Type;
+
+              if (type->front() != TypeVar)
+                assertion = TypeAssertion << (LocalId ^ ident) << clone(type);
+
+              // Strip the Type child from Var.
+              var->erase(std::next(var->begin()), var->end());
+            }
+
+            if (assertion)
+            {
+              return Seq << (Lift << Body << var) << (Lift << Body << assertion)
+                         << (LocalId ^ ident);
+            }
+
+            return Seq << (Lift << Body << var) << (LocalId ^ ident);
           },
 
         // Lift literals.
@@ -493,14 +529,14 @@ namespace vc
               << (NameElement << (Ident ^ "_builtin") << TypeArgs)
               << (NameElement << (Ident ^ "string") << TypeArgs)
               << (NameElement << (Ident ^ "create") << TypeArgs);
-            return Seq
-              << (Lift << Body
-                       << (ConstStr << (LocalId ^ arr_id) << _(String)))
-              << (Lift << Body
-                       << (Call << (LocalId ^ str_id) << Rhs
-                                << funcname
-                                << (Args << (LocalId ^ arr_id))))
-              << (LocalId ^ str_id);
+            return Seq << (Lift
+                           << Body
+                           << (ConstStr << (LocalId ^ arr_id) << _(String)))
+                       << (Lift
+                           << Body
+                           << (Call << (LocalId ^ str_id) << Rhs << funcname
+                                    << (Args << (LocalId ^ arr_id))))
+                       << (LocalId ^ str_id);
           },
 
         // Dynamic call.

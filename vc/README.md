@@ -15,16 +15,12 @@ Names.
 - Allow looking down a type parameter.
 - Can we look down an algebraic type (via an alias)?
 
-Sub-typing.
+Types.
 - Better contradiction for type aliases.
 - Intersections can fulfill shapes.
 - Check recursion on type alias.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
-
-Types:
 - Can type parameters take type arguments?
-- Type annotations on local variables.
-  - Emit a type assertion that gets checked in `infer`?
 
 Calls.
 - Try (rename to `catch`?), sub-call.

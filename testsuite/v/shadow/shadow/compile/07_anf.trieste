@@ -342,6 +342,16 @@ anf
               (label
                 (labelid 5:start)
                 (body
+                  (typeassertion
+                    (localid 1:y)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:i32)
+                          (typeargs)))))
                   (call
                     (localid 8:local$10)
                     (rhs)
@@ -366,6 +376,16 @@ anf
               (label
                 (labelid 8:body$114)
                 (body
+                  (typeassertion
+                    (localid 3:x$0)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:i32)
+                          (typeargs)))))
                   (const
                     (localid 9:local$536)
                     (int 1:5))
@@ -401,9 +421,7 @@ anf
                 (labelid 8:join$115)
                 (body
                   (var
-                    (ident 8:local$10)
-                    (type
-                      (typevar)))
+                    (ident 8:local$10))
                   (typetest
                     (localid 9:local$892)
                     (localid 8:local$10)
@@ -711,6 +729,16 @@ anf
                   (copy
                     (localid 5:inner)
                     (localid 8:local$15))
+                  (typeassertion
+                    (localid 1:r)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:i32)
+                          (typeargs)))))
                   (const
                     (localid 9:local$124)
                     (int 3:200))
@@ -796,6 +824,16 @@ anf
           (label
             (labelid 5:start)
             (body
+              (typeassertion
+                (localid 1:x)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (const
                 (localid 9:local$131)
                 (int 1:1))
@@ -846,6 +884,16 @@ anf
           (label
             (labelid 8:body$129)
             (body
+              (typeassertion
+                (localid 3:x$4)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (const
                 (localid 9:local$539)
                 (int 2:99))
@@ -881,9 +929,7 @@ anf
             (labelid 8:join$130)
             (body
               (var
-                (ident 8:local$18)
-                (type
-                  (typevar)))
+                (ident 8:local$18))
               (typetest
                 (localid 9:local$897)
                 (localid 8:local$18)
@@ -930,6 +976,16 @@ anf
           (label
             (labelid 8:join$899)
             (body
+              (typeassertion
+                (localid 1:a)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (copy
                 (localid 9:local$540)
                 (localid 1:a))
@@ -965,6 +1021,16 @@ anf
           (label
             (labelid 8:body$135)
             (body
+              (typeassertion
+                (localid 3:x$3)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (const
                 (localid 9:local$541)
                 (int 2:77))
@@ -1000,9 +1066,17 @@ anf
             (labelid 8:join$136)
             (body
               (var
-                (ident 8:local$20)
+                (ident 8:local$20))
+              (typeassertion
+                (localid 1:b)
                 (type
-                  (typevar)))
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (copy
                 (localid 9:local$542)
                 (localid 1:b))
@@ -1066,12 +1140,32 @@ anf
                   (arg
                     (argcopy)
                     (localid 8:local$22))))
+              (typeassertion
+                (localid 1:c)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (copy
                 (localid 9:local$544)
                 (localid 1:c))
               (copy
                 (localid 1:c)
                 (localid 1:x))
+              (typeassertion
+                (localid 1:d)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (call
                 (localid 8:local$23)
                 (rhs)
@@ -1162,9 +1256,7 @@ anf
             (labelid 8:join$141)
             (body
               (var
-                (ident 8:local$23)
-                (type
-                  (typevar)))
+                (ident 8:local$23))
               (typetest
                 (localid 9:local$902)
                 (localid 8:local$23)
@@ -1237,6 +1329,16 @@ anf
               (copy
                 (localid 1:h)
                 (localid 8:local$25))
+              (typeassertion
+                (localid 1:e)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (const
                 (localid 9:local$151)
                 (int 3:100))
@@ -1300,6 +1402,16 @@ anf
               (copy
                 (localid 5:outer)
                 (localid 8:local$27))
+              (typeassertion
+                (localid 1:g)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (const
                 (localid 9:local$154)
                 (int 2:10))
@@ -1343,6 +1455,16 @@ anf
               (copy
                 (localid 1:g)
                 (localid 9:local$156))
+              (typeassertion
+                (localid 1:s)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (call
                 (localid 8:local$29)
                 (rhs)
@@ -1367,6 +1489,16 @@ anf
           (label
             (labelid 8:body$148)
             (body
+              (typeassertion
+                (localid 3:x$2)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (const
                 (localid 9:local$550)
                 (int 1:7))
@@ -1402,9 +1534,7 @@ anf
             (labelid 8:join$149)
             (body
               (var
-                (ident 8:local$29)
-                (type
-                  (typevar)))
+                (ident 8:local$29))
               (typetest
                 (localid 9:local$908)
                 (localid 8:local$29)
@@ -1423,6 +1553,16 @@ anf
           (label
             (labelid 8:body$909)
             (body
+              (typeassertion
+                (localid 3:x$1)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs)))))
               (const
                 (localid 9:local$159)
                 (int 1:8))
@@ -1878,9 +2018,7 @@ anf
                     (localid 1:a)
                     (localid 9:local$551))
                   (var
-                    (ident 1:i)
-                    (type
-                      (typevar)))
+                    (ident 1:i))
                   (const
                     (localid 8:local$33)
                     (int 1:0))
@@ -1991,9 +2129,7 @@ anf
                 (labelid 8:join$165)
                 (body
                   (var
-                    (ident 8:local$34)
-                    (type
-                      (typevar))))
+                    (ident 8:local$34)))
                 (ret
                   (localid 1:a)))))
           (function
@@ -2926,9 +3062,7 @@ anf
                 (labelid 8:join$171)
                 (body
                   (var
-                    (ident 8:local$41)
-                    (type
-                      (typevar)))
+                    (ident 8:local$41))
                   (typetest
                     (localid 9:local$916)
                     (localid 8:local$41)
@@ -3294,9 +3428,7 @@ anf
                 (labelid 8:join$177)
                 (body
                   (var
-                    (ident 8:local$46)
-                    (type
-                      (typevar)))
+                    (ident 8:local$46))
                   (typetest
                     (localid 9:local$920)
                     (localid 8:local$46)
@@ -3403,9 +3535,7 @@ anf
                 (labelid 8:join$179)
                 (body
                   (var
-                    (ident 8:local$48)
-                    (type
-                      (typevar)))
+                    (ident 8:local$48))
                   (typetest
                     (localid 9:local$923)
                     (localid 8:local$48)
@@ -19545,13 +19675,9 @@ anf
                 (labelid 8:join$372)
                 (body
                   (var
-                    (ident 8:local$83)
-                    (type
-                      (typevar)))
+                    (ident 8:local$83))
                   (var
-                    (ident 1:i)
-                    (type
-                      (typevar)))
+                    (ident 1:i))
                   (const
                     (localid 8:local$84)
                     (int 1:0))
@@ -19727,9 +19853,7 @@ anf
                 (labelid 8:join$757)
                 (body
                   (var
-                    (ident 9:local$377)
-                    (type
-                      (typevar)))
+                    (ident 9:local$377))
                   (const
                     (localid 9:local$378)
                     (int 1:1))
@@ -19765,9 +19889,7 @@ anf
                 (labelid 8:join$376)
                 (body
                   (var
-                    (ident 8:local$85)
-                    (type
-                      (typevar)))
+                    (ident 8:local$85))
                   (const
                     (localid 8:local$86)
                     (true)))
@@ -19944,9 +20066,7 @@ anf
                     (localid 3:len)
                     (localid 9:local$941))
                   (var
-                    (ident 1:i)
-                    (type
-                      (typevar)))
+                    (ident 1:i))
                   (const
                     (localid 8:local$87)
                     (int 1:0))
@@ -20120,9 +20240,7 @@ anf
                 (labelid 8:join$765)
                 (body
                   (var
-                    (ident 9:local$388)
-                    (type
-                      (typevar)))
+                    (ident 9:local$388))
                   (typetest
                     (localid 9:local$967)
                     (localid 9:local$388)
@@ -20188,9 +20306,7 @@ anf
                 (labelid 8:join$772)
                 (body
                   (var
-                    (ident 9:local$389)
-                    (type
-                      (typevar)))
+                    (ident 9:local$389))
                   (copy
                     (localid 9:local$388)
                     (localid 9:local$389)))
@@ -20234,9 +20350,7 @@ anf
                 (labelid 8:join$383)
                 (body
                   (var
-                    (ident 8:local$88)
-                    (type
-                      (typevar)))
+                    (ident 8:local$88))
                   (lookup
                     (localid 9:local$391)
                     (localid 4:self)
@@ -20614,9 +20728,7 @@ anf
                     (localid 6:result)
                     (localid 8:local$89))
                   (var
-                    (ident 1:i)
-                    (type
-                      (typevar)))
+                    (ident 1:i))
                   (const
                     (localid 8:local$90)
                     (int 1:0))
@@ -20772,13 +20884,9 @@ anf
                 (labelid 8:join$403)
                 (body
                   (var
-                    (ident 8:local$91)
-                    (type
-                      (typevar)))
+                    (ident 8:local$91))
                   (var
-                    (ident 1:j)
-                    (type
-                      (typevar)))
+                    (ident 1:j))
                   (const
                     (localid 8:local$92)
                     (int 1:0))
@@ -20960,9 +21068,7 @@ anf
                 (labelid 8:join$407)
                 (body
                   (var
-                    (ident 8:local$93)
-                    (type
-                      (typevar)))
+                    (ident 8:local$93))
                   (call
                     (localid 8:local$94)
                     (rhs)

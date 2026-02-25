@@ -134,11 +134,11 @@ namespace vc
   {
     Node type; // Source-level Type node (e.g., Type << TypeName << ...)
     bool is_default; // True if type came from Const default (U64/F64)
-    bool is_fixed; // True if from Param or explicit Var annotation
+    bool is_fixed; // True if from Param or TypeAssertion
     Node const_node; // If from a Const, the Const stmt (for refinement)
     Node call_node; // If from a default-inferred Call, the Call stmt
 
-    // Factory: fixed type from Param or explicit Var annotation.
+    // Factory: fixed type from Param or TypeAssertion.
     static LocalTypeInfo fixed(Node type)
     {
       return {std::move(type), false, true, {}, {}};
@@ -546,8 +546,7 @@ namespace vc
 
       if (lhs_info.func)
       {
-        auto lhs_ret =
-          apply_subst(top, lhs_info.func / Type, lhs_info.subst);
+        auto lhs_ret = apply_subst(top, lhs_info.func / Type, lhs_info.subst);
         auto inner = extract_ref_inner(lhs_ret);
 
         if (inner)
@@ -1297,8 +1296,8 @@ namespace vc
         // Single forward pass over all labels:
         // - Phase 1: assign default types to Const nodes
         // - Phase 2: build type env, infer TypeArgs at Call sites
-        // - Phase 3: refine Const types from Call expectations and Var
-        //   annotations
+        // - Phase 3: refine Const types from Call expectations and type
+        //   assertions
         auto labels = node / Labels;
 
         for (auto& lbl : *labels)
@@ -1341,7 +1340,7 @@ namespace vc
                 dst_it != env.end() && dst_it->second.is_fixed &&
                 src_it != env.end())
               {
-                // Phase 3: dst has a fixed type (Var annotation).
+                // Phase 3: dst has a fixed type (type assertion).
                 // If src is a refinable Const, refine to match dst.
                 auto dst_prim = extract_primitive(dst_it->second.type);
 
@@ -1454,8 +1453,9 @@ namespace vc
                 auto& [tup_loc, elem_idx] = ref_it->second;
                 auto tup_it = tuple_locals.find(tup_loc);
 
-                if (tup_it != tuple_locals.end() &&
-                    elem_idx < tup_it->second.size)
+                if (
+                  tup_it != tuple_locals.end() &&
+                  elem_idx < tup_it->second.size)
                 {
                   // Get the type of the value being stored.
                   auto arg = stmt / Arg;
@@ -1518,8 +1518,7 @@ namespace vc
                   // Track ref-to-tuple mapping for tuple construction.
                   if (stmt == ArrayRefConst)
                   {
-                    auto tup_it =
-                      tuple_locals.find(arr_src->location());
+                    auto tup_it = tuple_locals.find(arr_src->location());
 
                     if (tup_it != tuple_locals.end())
                     {
@@ -1549,15 +1548,13 @@ namespace vc
                 auto sz_node = stmt / Rhs;
                 auto sz = from_chars_sep_v<size_t>(sz_node);
                 auto loc_view = dst->location().view();
-                bool is_arr = loc_view.size() >= 5 &&
-                  loc_view.substr(0, 5) == "array";
-                tuple_locals[dst->location()] =
-                  {stmt, sz, {}, is_arr, {}};
+                bool is_arr =
+                  loc_view.size() >= 5 && loc_view.substr(0, 5) == "array";
+                tuple_locals[dst->location()] = {stmt, sz, {}, is_arr, {}};
                 tuple_locals[dst->location()].element_types.resize(sz);
 
                 if (is_arr)
-                  tuple_locals[dst->location()].element_value_locs.resize(
-                    sz);
+                  tuple_locals[dst->location()].element_value_locs.resize(sz);
               }
             }
             else if (stmt == MakePtr)
@@ -1567,14 +1564,12 @@ namespace vc
               env[dst->location()] =
                 LocalTypeInfo::computed(primitive_type(Ptr));
             }
-            else if (stmt == Var)
+            else if (stmt == TypeAssertion)
             {
-              auto ident = stmt / Ident;
-              auto type = stmt / Type;
-
-              // Only record if explicitly annotated (not TypeVar).
-              if (type->front() != TypeVar)
-                env[ident->location()] = LocalTypeInfo::fixed(clone(type));
+              // Record the asserted type as fixed for this local.
+              auto local_id = stmt / LocalId;
+              env[local_id->location()] =
+                LocalTypeInfo::fixed(clone(stmt / Type));
             }
             else if (stmt == New)
             {
@@ -1800,16 +1795,12 @@ namespace vc
                           // the resolved method signature.
                           auto arg_it = env.find(arg_src->location());
 
-                          if (
-                            arg_it != env.end() &&
-                            arg_it->second.is_default)
+                          if (arg_it != env.end() && arg_it->second.is_default)
                           {
                             auto arg_prim =
                               extract_primitive(arg_it->second.type);
 
-                            if (
-                              arg_prim &&
-                              arg_prim->type() == prim->type())
+                            if (arg_prim && arg_prim->type() == prim->type())
                             {
                               arg_it->second.is_default = false;
                               arg_it->second.const_node = {};
@@ -1916,8 +1907,7 @@ namespace vc
 
               if (src_it != env.end())
               {
-                auto info =
-                  LocalTypeInfo::computed(clone(src_it->second.type));
+                auto info = LocalTypeInfo::computed(clone(src_it->second.type));
 
                 // If the Lookup receiver was default, propagate default
                 // status to the CallDyn result. This ensures that
@@ -1926,8 +1916,7 @@ namespace vc
                 // refining downstream literals.
                 if (lookup_it != lookup_stmts.end())
                 {
-                  auto recv_loc =
-                    (lookup_it->second / Rhs)->location();
+                  auto recv_loc = (lookup_it->second / Rhs)->location();
                   auto recv_it = env.find(recv_loc);
 
                   if (recv_it != env.end() && recv_it->second.is_default)
@@ -2082,8 +2071,7 @@ namespace vc
             {
               // Typetest dst is a boolean.
               auto dst = stmt / LocalId;
-              env[dst->location()] =
-                LocalTypeInfo::computed(Node(Bool));
+              env[dst->location()] = LocalTypeInfo::computed(Node(Bool));
             }
             // All other statements:
             // result type unknown, don't record in env.
@@ -2117,8 +2105,7 @@ namespace vc
                   // from the expected type and both are in the same
                   // numeric category (integer or float).
                   if (
-                    ret_prim &&
-                    ret_prim->type() != expected_prim->type() &&
+                    ret_prim && ret_prim->type() != expected_prim->type() &&
                     ((ret_prim->in(integer_types) &&
                       expected_prim->in(integer_types)) ||
                      (ret_prim->in(float_types) &&
@@ -2133,9 +2120,7 @@ namespace vc
 
                       auto info_prim = extract_primitive(info.type);
 
-                      if (
-                        info_prim &&
-                        info_prim->type() == ret_prim->type())
+                      if (info_prim && info_prim->type() == ret_prim->type())
                       {
                         refine_const(
                           env, info.const_node, expected_prim->type());
@@ -2159,9 +2144,7 @@ namespace vc
 
                         auto info_prim = extract_primitive(info.type);
 
-                        if (
-                          info_prim &&
-                          info_prim->type() == ret_prim->type())
+                        if (info_prim && info_prim->type() == ret_prim->type())
                         {
                           refine_const(
                             env, info.const_node, expected_prim->type());
@@ -2193,8 +2176,7 @@ namespace vc
 
                             if (
                               src_it != env.end() &&
-                              (dst_it == env.end() ||
-                               !dst_it->second.is_fixed))
+                              (dst_it == env.end() || !dst_it->second.is_fixed))
                             {
                               auto new_info =
                                 LocalTypeInfo::propagated(src_it->second);
@@ -2202,8 +2184,7 @@ namespace vc
                               if (
                                 dst_it == env.end() ||
                                 !types_equal(
-                                  dst_it->second.type,
-                                  new_info.type))
+                                  dst_it->second.type, new_info.type))
                               {
                                 env[cp_dst->location()] = new_info;
                                 changed = true;
@@ -2217,10 +2198,8 @@ namespace vc
                             auto lk_hand = (stmt2 / Lhs)->type();
                             auto lk_ident = stmt2 / Ident;
                             auto lk_ta = stmt2 / TypeArgs;
-                            auto lk_ar =
-                              from_chars_sep_v<size_t>(stmt2 / Int);
-                            auto src_it =
-                              env.find(lk_src->location());
+                            auto lk_ar = from_chars_sep_v<size_t>(stmt2 / Int);
+                            auto src_it = env.find(lk_src->location());
 
                             if (src_it != env.end())
                             {
@@ -2234,13 +2213,11 @@ namespace vc
 
                               if (rt)
                               {
-                                auto dst_it =
-                                  env.find(lk_dst->location());
+                                auto dst_it = env.find(lk_dst->location());
 
                                 if (
                                   dst_it == env.end() ||
-                                  !types_equal(
-                                    dst_it->second.type, rt))
+                                  !types_equal(dst_it->second.type, rt))
                                 {
                                   env[lk_dst->location()] =
                                     LocalTypeInfo::computed(rt);
@@ -2254,36 +2231,27 @@ namespace vc
                             auto cd_dst = stmt2 / LocalId;
                             auto cd_src = stmt2 / Rhs;
                             auto cd_args = stmt2 / Args;
-                            auto li =
-                              lookup_stmts.find(cd_src->location());
+                            auto li = lookup_stmts.find(cd_src->location());
 
                             if (li != lookup_stmts.end())
                             {
                               auto lk = li->second;
                               auto lk_src = lk / Rhs;
-                              auto ri =
-                                env.find(lk_src->location());
+                              auto ri = env.find(lk_src->location());
 
                               if (ri != env.end())
                               {
                                 auto hi = (lk / Lhs)->type();
                                 auto mi = lk / Ident;
                                 auto ta = lk / TypeArgs;
-                                auto ar =
-                                  from_chars_sep_v<size_t>(lk / Int);
+                                auto ar = from_chars_sep_v<size_t>(lk / Int);
 
                                 auto minfo = resolve_method(
-                                  top,
-                                  ri->second.type,
-                                  mi,
-                                  hi,
-                                  ar,
-                                  ta);
+                                  top, ri->second.type, mi, hi, ar, ta);
 
                                 if (minfo.func)
                                 {
-                                  auto params =
-                                    minfo.func / Params;
+                                  auto params = minfo.func / Params;
                                   size_t idx = 0;
 
                                   for (auto& arg_node : *cd_args)
@@ -2292,20 +2260,14 @@ namespace vc
                                       break;
 
                                     auto pt = apply_subst(
-                                      top,
-                                      params->at(idx) / Type,
-                                      minfo.subst);
-                                    auto pp =
-                                      extract_callable_primitive(pt);
+                                      top, params->at(idx) / Type, minfo.subst);
+                                    auto pp = extract_callable_primitive(pt);
 
                                     if (pp)
                                     {
                                       auto as = arg_node / Rhs;
 
-                                      if (try_refine(
-                                            env,
-                                            as->location(),
-                                            pp))
+                                      if (try_refine(env, as->location(), pp))
                                         changed = true;
                                     }
 
@@ -2316,19 +2278,16 @@ namespace vc
                             }
 
                             // Re-propagate CallDyn result type.
-                            auto src_it =
-                              env.find(cd_src->location());
+                            auto src_it = env.find(cd_src->location());
 
                             if (src_it != env.end())
                             {
-                              auto dst_it =
-                                env.find(cd_dst->location());
+                              auto dst_it = env.find(cd_dst->location());
 
                               if (
                                 dst_it == env.end() ||
                                 !types_equal(
-                                  dst_it->second.type,
-                                  src_it->second.type))
+                                  dst_it->second.type, src_it->second.type))
                               {
                                 env[cd_dst->location()] =
                                   LocalTypeInfo::computed(
@@ -2491,37 +2450,37 @@ namespace vc
           else
           {
             // Tuple: build TupleType from individual element types.
-          bool all_typed = true;
-
-          for (size_t i = 0; i < tracking.size; i++)
-          {
-            if (!tracking.element_types[i])
-            {
-              all_typed = false;
-              break;
-            }
-          }
-
-          if (all_typed && tracking.size > 0)
-          {
-            Node tuple_type = TupleType;
+            bool all_typed = true;
 
             for (size_t i = 0; i < tracking.size; i++)
             {
-              auto& elem = tracking.element_types[i];
-
-              // Each element_type is a source-level Type node
-              // (Type << TypeName << ...). Extract the inner type for
-              // TupleType children.
-              tuple_type << clone(elem->front());
+              if (!tracking.element_types[i])
+              {
+                all_typed = false;
+                break;
+              }
             }
 
-            auto old_type = tracking.stmt / Type;
-            tracking.stmt->replace(old_type, Type << tuple_type);
+            if (all_typed && tracking.size > 0)
+            {
+              Node tuple_type = TupleType;
 
-            // Update the env entry too.
-            env[loc] = LocalTypeInfo::computed(Type << clone(tuple_type));
-          }
+              for (size_t i = 0; i < tracking.size; i++)
+              {
+                auto& elem = tracking.element_types[i];
+
+                // Each element_type is a source-level Type node
+                // (Type << TypeName << ...). Extract the inner type for
+                // TupleType children.
+                tuple_type << clone(elem->front());
+              }
+
+              auto old_type = tracking.stmt / Type;
+              tracking.stmt->replace(old_type, Type << tuple_type);
+
+              // Update the env entry too.
+              env[loc] = LocalTypeInfo::computed(Type << clone(tuple_type));
+            }
           }
         }
 
@@ -2608,63 +2567,47 @@ namespace vc
         // but only if we're not in a generic context. Functions inside
         // generic classes (e.g., lambda apply methods with captured type
         // params) legitimately keep TypeVar until reification resolves them.
-        bool in_generic_context =
-          (node / TypeParams)->size() > 0 ||
+        bool in_generic_context = (node / TypeParams)->size() > 0 ||
           ((node->parent({ClassDef}) != nullptr) &&
            (node->parent({ClassDef}) / TypeParams)->size() > 0);
 
         if (!in_generic_context)
         {
-        for (auto& pd : *params)
-        {
-          auto type = pd / Type;
+          for (auto& pd : *params)
+          {
+            auto type = pd / Type;
 
-          if (type->front() == TypeVar)
+            if (type->front() == TypeVar)
+            {
+              node->parent()->replace(
+                node, err(pd / Ident, "Cannot infer type of parameter"));
+              return false;
+            }
+          }
+
+          func_ret_type = node / Type;
+
+          if (func_ret_type->front() == TypeVar)
           {
             node->parent()->replace(
-              node, err(pd / Ident, "Cannot infer type of parameter"));
+              node, err(node / Ident, "Cannot infer return type of function"));
             return false;
           }
         }
 
-        func_ret_type = node / Type;
-
-        if (func_ret_type->front() == TypeVar)
-        {
-          node->parent()->replace(
-            node,
-            err(node / Ident, "Cannot infer return type of function"));
-          return false;
-        }
-        }
-
-        // Resolve TypeVar in Var nodes: replace with env type or error.
+        // Remove TypeAssertion nodes from bodies.
+        // They are not present in wfPassInfer output.
         for (auto& lbl : *labels)
         {
-          for (auto& stmt : *(lbl / Body))
+          auto body = lbl / Body;
+          auto it = body->begin();
+
+          while (it != body->end())
           {
-            if (stmt != Var)
-              continue;
-
-            auto type = stmt / Type;
-
-            if (type->front() != TypeVar)
-              continue;
-
-            auto ident = stmt / Ident;
-            auto it = env.find(ident->location());
-
-            if (
-              it != env.end() && it->second.type->front() != TypeVar)
-            {
-              stmt->replace(type, clone(it->second.type));
-            }
-            else if (!in_generic_context)
-            {
-              node->parent()->replace(
-                node, err(ident, "Cannot infer type of variable"));
-              return false;
-            }
+            if (*it == TypeAssertion)
+              it = body->erase(it, std::next(it));
+            else
+              ++it;
           }
         }
 
