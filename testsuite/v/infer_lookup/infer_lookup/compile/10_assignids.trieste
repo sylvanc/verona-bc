@@ -12,11 +12,11 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2410)
+            (localid 5:$2413)
             (functionid 24:infer_lookup::main::0::0)
             (args)))
         (ret
-          (localid 5:$2410)))))
+          (localid 5:$2413)))))
   (func
     (functionid 24:infer_lookup::main::0::0)
     (params)
@@ -27,42 +27,42 @@ assignids
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1601)
+            (localid 10:local$1603)
             (i32)
             (int 1:1))
           (call
-            (localid 10:local$1510)
+            (localid 10:local$1512)
             (functionid 35:infer_lookup::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 10:local$1601))))
+                (localid 10:local$1603))))
           (copy
             (localid 1:w)
-            (localid 10:local$1510))
+            (localid 10:local$1512))
           (lookup
-            (localid 10:local$1602)
+            (localid 10:local$1604)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1603)
-            (localid 10:local$1602)
+            (localid 10:local$1605)
+            (localid 10:local$1604)
             (args
               (arg
                 (argcopy)
                 (localid 1:w))))
           (copy
             (localid 1:v)
-            (localid 10:local$1603))
+            (localid 10:local$1605))
           (call
-            (localid 10:local$1511)
+            (localid 10:local$1513)
             (functionid 28:infer_lookup::identity::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:v)))))
         (ret
-          (localid 10:local$1511)))))
+          (localid 10:local$1513)))))
   (primitive
     (i32)
     (methods))
@@ -79,14 +79,14 @@ assignids
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1509)
+            (localid 10:local$1511)
             (classid 24:infer_lookup::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1509)))))
+          (localid 10:local$1511)))))
   (func
     (functionid 28:infer_lookup::identity::1::0)
     (params
@@ -127,18 +127,18 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1599)
+            (localid 10:local$1601)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1600)
-            (localid 10:local$1599)
+            (localid 10:local$1602)
+            (localid 10:local$1601)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1600)))))
+          (localid 10:local$1602)))))
   (func
     (functionid 32:infer_lookup::wrapper::val::1::0)
     (params
@@ -152,17 +152,17 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1508)
+            (localid 10:local$1510)
             (functionid 37:infer_lookup::wrapper::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 10:local$1981)
-            (localid 10:local$1508)))
+            (localid 10:local$1983)
+            (localid 10:local$1510)))
         (ret
-          (localid 10:local$1981)))))
+          (localid 10:local$1983)))))
   (func
     (functionid 37:infer_lookup::wrapper::val::1::ref::0)
     (params
@@ -177,13 +177,13 @@ assignids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1598)
+            (localid 10:local$1600)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1598)))))
+          (localid 10:local$1600)))))
   (primitive
     (ref
       (i32))

@@ -895,10 +895,10 @@ namespace vbci
     if (tag == to)
       return *this;
 
-    if (tag < ValueType::F32)
-      return Value(to, get<uint64_t>());
+    if ((tag == ValueType::F32) || (tag == ValueType::F64))
+      return Value(to, get<double>());
 
-    return Value(to, get<double>());
+    return Value(to, get<uint64_t>());
   }
 
   std::string Value::to_string() const

@@ -8,7 +8,7 @@ sugar
     {
       apply_fn = function
       create = function
-      lambda$1496 = classdef
+      lambda$1498 = classdef
       main = function}
     (none)
     (ident 8:functype)
@@ -71,7 +71,7 @@ sugar
           apply = function
           create = function}
         (none)
-        (ident 11:lambda$1496)
+        (ident 11:lambda$1498)
         (typeparams)
         (where)
         (classbody
@@ -87,7 +87,7 @@ sugar
                   (ident 8:functype)
                   (typeargs))
                 (nameelement
-                  (ident 11:lambda$1496)
+                  (ident 11:lambda$1498)
                   (typeargs))))
             (where)
             (body
@@ -110,7 +110,7 @@ sugar
                       (ident 8:functype)
                       (typeargs))
                     (nameelement
-                      (ident 11:lambda$1496)
+                      (ident 11:lambda$1498)
                       (typeargs)))))
               (paramdef
                 (ident 1:x)
@@ -169,7 +169,7 @@ sugar
                       (ident 8:functype)
                       (typeargs))
                     (nameelement
-                      (ident 11:lambda$1496)
+                      (ident 11:lambda$1498)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -209,6 +209,7 @@ sugar
       any = classdef
       array = classdef
       arrayiter = classdef
+      bits = function
       bool = classdef
       cown = classdef
       create = function
@@ -264,7 +265,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 9:typevar$9))))
+              (typevar 10:typevar$10))))
         (where)
         (classbody
           (function
@@ -458,7 +459,7 @@ sugar
                     (let
                       (ident 1:a)
                       (type
-                        (typevar 10:typevar$18))))
+                        (typevar 10:typevar$19))))
                   (expr
                     (triplecolon
                       (nameelement
@@ -484,7 +485,7 @@ sugar
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 10:typevar$19))))
+                        (typevar 10:typevar$20))))
                   (expr
                     (int 1:0))))
               (expr
@@ -499,7 +500,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$20))
+                      (typevar 10:typevar$21))
                     (body
                       (expr
                         (=
@@ -678,7 +679,7 @@ sugar
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1497))
+              (typevar 12:typevar$1499))
             (where)
             (body
               (expr
@@ -804,7 +805,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$25))))
+              (typevar 10:typevar$26))))
         (where)
         (classbody
           (fielddef
@@ -897,7 +898,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1498))
+              (typevar 12:typevar$1500))
             (where)
             (body
               (expr
@@ -1041,7 +1042,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1499))
+              (typevar 12:typevar$1501))
             (where)
             (body
               (expr
@@ -1207,7 +1208,7 @@ sugar
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$33))
+                          (typevar 10:typevar$34))
                         (body
                           (expr
                             (=
@@ -1215,7 +1216,7 @@ sugar
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$35))))
+                                    (typevar 10:typevar$36))))
                               (expr
                                 (localid 4:self)
                                 (dot
@@ -1227,7 +1228,7 @@ sugar
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$36))))
+                                    (typevar 10:typevar$37))))
                               (expr
                                 (localid 1:a)
                                 (exprseq
@@ -1258,7 +1259,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$34))
+                      (typevar 10:typevar$35))
                     (body
                       (expr
                         (funcname
@@ -1300,7 +1301,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 10:typevar$30))
+              (typevar 10:typevar$31))
             (where)
             (body
               (expr
@@ -1515,7 +1516,7 @@ sugar
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$59))
+                          (typevar 10:typevar$60))
                         (body
                           (expr
                             (localid 5:other)
@@ -1524,7 +1525,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$60))
+                      (typevar 10:typevar$61))
                     (body
                       (expr
                         (false))))))))
@@ -1576,7 +1577,7 @@ sugar
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$63))
+                          (typevar 10:typevar$64))
                         (body
                           (expr
                             (true))))))
@@ -1584,7 +1585,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$64))
+                      (typevar 10:typevar$65))
                     (body
                       (expr
                         (localid 5:other)
@@ -2096,7 +2097,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$85))))
+              (typevar 10:typevar$86))))
         (where)
         (classbody
           (function
@@ -14840,6 +14841,41 @@ sugar
                 (localid 1:a))
               (expr
                 (localid 1:b))))))
+      (function
+        {
+          a = paramdef}
+        (rhs)
+        (ident 4:bits)
+        (typeparams)
+        (params
+          (paramdef
+            (ident 1:a)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:any)
+                  (typeargs))))))
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))
+            (nameelement
+              (ident 3:u64)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (triplecolon
+              (nameelement
+                (ident 4:bits)
+                (typeargs)))
+            (exprseq
+              (expr
+                (localid 1:a))))))
       (classdef
         {
           ! = function
@@ -16532,7 +16568,7 @@ sugar
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$903))))
+              (typevar 11:typevar$905))))
         (where)
         (classbody
           (function
@@ -16615,7 +16651,7 @@ sugar
                               (ident 1:T)
                               (typeargs))))))))))
             (type
-              (typevar 12:typevar$1500))
+              (typevar 12:typevar$1502))
             (where)
             (body
               (expr
@@ -16785,7 +16821,7 @@ sugar
                       (ident 6:string)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1501))
+              (typevar 12:typevar$1503))
             (where)
             (body
               (expr
@@ -16970,7 +17006,7 @@ sugar
                       (ident 5:usize)
                       (typeargs))))))
             (type
-              (typevar 12:typevar$1502))
+              (typevar 12:typevar$1504))
             (where)
             (body
               (expr
@@ -17129,7 +17165,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$927))
+                      (typevar 11:typevar$929))
                     (body
                       (ret
                         (expr
@@ -17140,7 +17176,7 @@ sugar
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 11:typevar$928))))
+                        (typevar 11:typevar$930))))
                   (expr
                     (int 1:0))))
               (expr
@@ -17158,7 +17194,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$929))
+                      (typevar 11:typevar$931))
                     (body
                       (expr
                         (if
@@ -17188,7 +17224,7 @@ sugar
                             {}
                             (params)
                             (type
-                              (typevar 11:typevar$930))
+                              (typevar 11:typevar$932))
                             (body
                               (ret
                                 (expr
@@ -17300,7 +17336,7 @@ sugar
                     (let
                       (ident 3:len)
                       (type
-                        (typevar 11:typevar$935))))
+                        (typevar 11:typevar$937))))
                   (expr
                     (localid 4:self)
                     (dot
@@ -17321,7 +17357,7 @@ sugar
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 11:typevar$936))))
+                        (typevar 11:typevar$938))))
                   (expr
                     (int 1:0))))
               (expr
@@ -17338,7 +17374,7 @@ sugar
                       sc = let}
                     (params)
                     (type
-                      (typevar 11:typevar$937))
+                      (typevar 11:typevar$939))
                     (body
                       (expr
                         (=
@@ -17346,7 +17382,7 @@ sugar
                             (let
                               (ident 2:sc)
                               (type
-                                (typevar 11:typevar$938))))
+                                (typevar 11:typevar$940))))
                           (expr
                             (exprseq
                               (expr
@@ -17363,7 +17399,7 @@ sugar
                             (let
                               (ident 2:oc)
                               (type
-                                (typevar 11:typevar$939))))
+                                (typevar 11:typevar$941))))
                           (expr
                             (exprseq
                               (expr
@@ -17388,7 +17424,7 @@ sugar
                                 {}
                                 (params)
                                 (type
-                                  (typevar 11:typevar$941))
+                                  (typevar 11:typevar$943))
                                 (body
                                   (ret
                                     (expr
@@ -17397,7 +17433,7 @@ sugar
                             {}
                             (params)
                             (type
-                              (typevar 11:typevar$940))
+                              (typevar 11:typevar$942))
                             (body
                               (expr
                                 (if
@@ -17411,7 +17447,7 @@ sugar
                                     {}
                                     (params)
                                     (type
-                                      (typevar 11:typevar$942))
+                                      (typevar 11:typevar$944))
                                     (body
                                       (ret
                                         (expr
@@ -17627,7 +17663,7 @@ sugar
                     (let
                       (ident 6:result)
                       (type
-                        (typevar 11:typevar$951))))
+                        (typevar 11:typevar$953))))
                   (expr
                     (funcname
                       (nameelement
@@ -17666,7 +17702,7 @@ sugar
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 11:typevar$952))))
+                        (typevar 11:typevar$954))))
                   (expr
                     (int 1:0))))
               (expr
@@ -17684,7 +17720,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$953))
+                      (typevar 11:typevar$955))
                     (body
                       (expr
                         (=
@@ -17719,7 +17755,7 @@ sugar
                     (var
                       (ident 1:j)
                       (type
-                        (typevar 11:typevar$954))))
+                        (typevar 11:typevar$956))))
                   (expr
                     (int 1:0))))
               (expr
@@ -17737,7 +17773,7 @@ sugar
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$955))
+                      (typevar 11:typevar$957))
                     (body
                       (expr
                         (=

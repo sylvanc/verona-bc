@@ -12,11 +12,11 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2418)
+            (localid 5:$2421)
             (functionid 28:lambda_typeparam::main::0::0)
             (args)))
         (ret
-          (localid 5:$2418)))))
+          (localid 5:$2421)))))
   (func
     (functionid 28:lambda_typeparam::main::0::0)
     (params)
@@ -27,32 +27,32 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1609)
+            (localid 10:local$1611)
             (i32)
             (int 2:42))
           (call
-            (localid 10:local$1517)
+            (localid 10:local$1519)
             (functionid 38:lambda_typeparam::apply_and_wrap::1::0)
             (args
               (arg
                 (argmove)
-                (localid 10:local$1609))))
+                (localid 10:local$1611))))
           (move
             (localid 1:w)
-            (localid 10:local$1517))
+            (localid 10:local$1519))
           (lookup
-            (localid 10:local$1610)
+            (localid 10:local$1612)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 10:local$1611)
-            (localid 10:local$1610)
+            (localid 10:local$1613)
+            (localid 10:local$1612)
             (args
               (arg
                 (argmove)
                 (localid 1:w)))))
         (ret
-          (localid 10:local$1611)))))
+          (localid 10:local$1613)))))
   (primitive
     (i32)
     (methods))
@@ -69,19 +69,19 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1516)
-            (functionid 43:lambda_typeparam::lambda$1504::create::0::0)
+            (localid 10:local$1518)
+            (functionid 43:lambda_typeparam::lambda$1506::create::0::0)
             (args))
           (move
             (localid 1:f)
-            (localid 10:local$1516))
+            (localid 10:local$1518))
           (lookup
-            (localid 10:local$1607)
+            (localid 10:local$1609)
             (localid 1:f)
             (methodid 11:apply::2::0))
           (calldyn
-            (localid 10:local$1608)
-            (localid 10:local$1607)
+            (localid 10:local$1610)
+            (localid 10:local$1609)
             (args
               (arg
                 (argmove)
@@ -90,7 +90,7 @@ liveness
                 (argmove)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1608)))))
+          (localid 10:local$1610)))))
   (class
     (classid 28:lambda_typeparam::wrapper::0)
     (fields
@@ -105,33 +105,33 @@ liveness
         (methodid 9:val::1::0)
         (functionid 36:lambda_typeparam::wrapper::val::1::0))))
   (func
-    (functionid 43:lambda_typeparam::lambda$1504::create::0::0)
+    (functionid 43:lambda_typeparam::lambda$1506::create::0::0)
     (params)
-    (classid 32:lambda_typeparam::lambda$1504::0)
+    (classid 32:lambda_typeparam::lambda$1506::0)
     (vars)
     (labels
       (label
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1514)
-            (classid 32:lambda_typeparam::lambda$1504::0)
+            (localid 10:local$1516)
+            (classid 32:lambda_typeparam::lambda$1506::0)
             (args)))
         (ret
-          (localid 10:local$1514)))))
+          (localid 10:local$1516)))))
   (class
-    (classid 32:lambda_typeparam::lambda$1504::0)
+    (classid 32:lambda_typeparam::lambda$1506::0)
     (fields)
     (methods
       (method
         (methodid 11:apply::2::0)
-        (functionid 42:lambda_typeparam::lambda$1504::apply::2::0))))
+        (functionid 42:lambda_typeparam::lambda$1506::apply::2::0))))
   (func
-    (functionid 42:lambda_typeparam::lambda$1504::apply::2::0)
+    (functionid 42:lambda_typeparam::lambda$1506::apply::2::0)
     (params
       (param
         (localid 4:self)
-        (classid 32:lambda_typeparam::lambda$1504::0))
+        (classid 32:lambda_typeparam::lambda$1506::0))
       (param
         (localid 1:x)
         (i32)))
@@ -142,14 +142,14 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1515)
+            (localid 10:local$1517)
             (functionid 39:lambda_typeparam::wrapper::create::1::0)
             (args
               (arg
                 (argmove)
                 (localid 1:x)))))
         (ret
-          (localid 10:local$1515)))))
+          (localid 10:local$1517)))))
   (func
     (functionid 39:lambda_typeparam::wrapper::create::1::0)
     (params
@@ -163,14 +163,14 @@ liveness
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1513)
+            (localid 10:local$1515)
             (classid 28:lambda_typeparam::wrapper::0)
             (args
               (arg
                 (argmove)
                 (localid 3:val)))))
         (ret
-          (localid 10:local$1513)))))
+          (localid 10:local$1515)))))
   (func
     (functionid 36:lambda_typeparam::wrapper::get::1::0)
     (params
@@ -184,18 +184,18 @@ liveness
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1605)
+            (localid 10:local$1607)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 10:local$1606)
-            (localid 10:local$1605)
+            (localid 10:local$1608)
+            (localid 10:local$1607)
             (args
               (arg
                 (argmove)
                 (localid 4:self)))))
         (ret
-          (localid 10:local$1606)))))
+          (localid 10:local$1608)))))
   (func
     (functionid 36:lambda_typeparam::wrapper::val::1::0)
     (params
@@ -209,17 +209,17 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1512)
+            (localid 10:local$1514)
             (functionid 41:lambda_typeparam::wrapper::val::1::ref::0)
             (args
               (arg
                 (argmove)
                 (localid 4:self))))
           (load
-            (localid 10:local$1989)
-            (localid 10:local$1512)))
+            (localid 10:local$1991)
+            (localid 10:local$1514)))
         (ret
-          (localid 10:local$1989)))))
+          (localid 10:local$1991)))))
   (func
     (functionid 41:lambda_typeparam::wrapper::val::1::ref::0)
     (params
@@ -234,13 +234,13 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 10:local$1604)
+            (localid 10:local$1606)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 10:local$1604)))))
+          (localid 10:local$1606)))))
   (primitive
     (ref
       (i32))

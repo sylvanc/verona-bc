@@ -109,6 +109,7 @@ structure
       any = classdef
       array = classdef
       arrayiter = classdef
+      bits = function
       bool = classdef
       cown = classdef
       create = function
@@ -166,7 +167,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 9:typevar$6))))
+              (typevar 9:typevar$7))))
         (where)
         (classbody
           (function
@@ -255,7 +256,7 @@ structure
                     (let
                       (ident 1:a)
                       (type
-                        (typevar 10:typevar$15))))
+                        (typevar 10:typevar$16))))
                   (expr
                     (triplecolon
                       (nameelement
@@ -278,7 +279,7 @@ structure
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 10:typevar$16))))
+                        (typevar 10:typevar$17))))
                   (expr
                     (int 1:0))))
               (expr
@@ -300,7 +301,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$17))
+                      (typevar 10:typevar$18))
                     (body
                       (expr
                         (=
@@ -499,7 +500,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$22))))
+              (typevar 10:typevar$23))))
         (where)
         (classbody
           (fielddef
@@ -722,7 +723,7 @@ structure
                           item = let}
                         (params)
                         (type
-                          (typevar 10:typevar$30))
+                          (typevar 10:typevar$31))
                         (body
                           (expr
                             (=
@@ -730,7 +731,7 @@ structure
                                 (let
                                   (ident 1:a)
                                   (type
-                                    (typevar 10:typevar$32))))
+                                    (typevar 10:typevar$33))))
                               (expr
                                 (funcname
                                   (nameelement
@@ -745,7 +746,7 @@ structure
                                 (let
                                   (ident 4:item)
                                   (type
-                                    (typevar 10:typevar$33))))
+                                    (typevar 10:typevar$34))))
                               (expr
                                 (funcname
                                   (nameelement
@@ -792,7 +793,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$31))
+                      (typevar 10:typevar$32))
                     (body
                       (expr
                         (funcname
@@ -820,7 +821,7 @@ structure
                               (typeargs))))))))
                 (body)))
             (type
-              (typevar 10:typevar$27))
+              (typevar 10:typevar$28))
             (where)
             (body
               (expr
@@ -989,7 +990,7 @@ structure
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$56))
+                          (typevar 10:typevar$57))
                         (body
                           (expr
                             (funcname
@@ -1001,7 +1002,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$57))
+                      (typevar 10:typevar$58))
                     (body
                       (expr
                         (false))))))))
@@ -1049,7 +1050,7 @@ structure
                         {}
                         (params)
                         (type
-                          (typevar 10:typevar$60))
+                          (typevar 10:typevar$61))
                         (body
                           (expr
                             (true))))))
@@ -1057,7 +1058,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 10:typevar$61))
+                      (typevar 10:typevar$62))
                     (body
                       (expr
                         (funcname
@@ -1559,7 +1560,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 10:typevar$82))))
+              (typevar 10:typevar$83))))
         (where)
         (classbody
           (function
@@ -13542,6 +13543,39 @@ structure
                   (nameelement
                     (ident 1:b)
                     (typeargs))))))))
+      (function
+        {
+          a = paramdef}
+        (rhs)
+        (ident 4:bits)
+        (typeparams)
+        (params
+          (paramdef
+            (ident 1:a)
+            (type
+              (typename
+                (nameelement
+                  (ident 3:any)
+                  (typeargs))))
+            (body)))
+        (type
+          (typename
+            (nameelement
+              (ident 3:u64)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (triplecolon
+              (nameelement
+                (ident 4:bits)
+                (typeargs)))
+            (exprseq
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:a)
+                    (typeargs))))))))
       (classdef
         {
           ! = function
@@ -15138,7 +15172,7 @@ structure
           (typeparam
             (ident 1:T)
             (type
-              (typevar 11:typevar$900))))
+              (typevar 11:typevar$902))))
         (where)
         (classbody
           (function
@@ -15531,7 +15565,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$924))
+                      (typevar 11:typevar$926))
                     (body
                       (ret
                         (expr
@@ -15542,7 +15576,7 @@ structure
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 11:typevar$925))))
+                        (typevar 11:typevar$927))))
                   (expr
                     (int 1:0))))
               (expr
@@ -15567,7 +15601,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$926))
+                      (typevar 11:typevar$928))
                     (body
                       (expr
                         (if
@@ -15610,7 +15644,7 @@ structure
                             {}
                             (params)
                             (type
-                              (typevar 11:typevar$927))
+                              (typevar 11:typevar$929))
                             (body
                               (ret
                                 (expr
@@ -15723,7 +15757,7 @@ structure
                     (let
                       (ident 3:len)
                       (type
-                        (typevar 11:typevar$932))))
+                        (typevar 11:typevar$934))))
                   (expr
                     (funcname
                       (nameelement
@@ -15750,7 +15784,7 @@ structure
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 11:typevar$933))))
+                        (typevar 11:typevar$935))))
                   (expr
                     (int 1:0))))
               (expr
@@ -15774,7 +15808,7 @@ structure
                       sc = let}
                     (params)
                     (type
-                      (typevar 11:typevar$934))
+                      (typevar 11:typevar$936))
                     (body
                       (expr
                         (=
@@ -15782,7 +15816,7 @@ structure
                             (let
                               (ident 2:sc)
                               (type
-                                (typevar 11:typevar$935))))
+                                (typevar 11:typevar$937))))
                           (expr
                             (exprseq
                               (expr
@@ -15805,7 +15839,7 @@ structure
                             (let
                               (ident 2:oc)
                               (type
-                                (typevar 11:typevar$936))))
+                                (typevar 11:typevar$938))))
                           (expr
                             (exprseq
                               (expr
@@ -15843,7 +15877,7 @@ structure
                                 {}
                                 (params)
                                 (type
-                                  (typevar 11:typevar$938))
+                                  (typevar 11:typevar$940))
                                 (body
                                   (ret
                                     (expr
@@ -15852,7 +15886,7 @@ structure
                             {}
                             (params)
                             (type
-                              (typevar 11:typevar$937))
+                              (typevar 11:typevar$939))
                             (body
                               (expr
                                 (if
@@ -15873,7 +15907,7 @@ structure
                                     {}
                                     (params)
                                     (type
-                                      (typevar 11:typevar$939))
+                                      (typevar 11:typevar$941))
                                     (body
                                       (ret
                                         (expr
@@ -16098,7 +16132,7 @@ structure
                     (let
                       (ident 6:result)
                       (type
-                        (typevar 11:typevar$948))))
+                        (typevar 11:typevar$950))))
                   (expr
                     (funcname
                       (nameelement
@@ -16138,7 +16172,7 @@ structure
                     (var
                       (ident 1:i)
                       (type
-                        (typevar 11:typevar$949))))
+                        (typevar 11:typevar$951))))
                   (expr
                     (int 1:0))))
               (expr
@@ -16163,7 +16197,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$950))
+                      (typevar 11:typevar$952))
                     (body
                       (expr
                         (=
@@ -16217,7 +16251,7 @@ structure
                     (var
                       (ident 1:j)
                       (type
-                        (typevar 11:typevar$951))))
+                        (typevar 11:typevar$953))))
                   (expr
                     (int 1:0))))
               (expr
@@ -16242,7 +16276,7 @@ structure
                     {}
                     (params)
                     (type
-                      (typevar 11:typevar$952))
+                      (typevar 11:typevar$954))
                     (body
                       (expr
                         (=

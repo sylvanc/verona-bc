@@ -1772,6 +1772,7 @@ namespace vc
                   if (info.func)
                   {
                     auto params = info.func / Params;
+                    bool recv_confirmed = !recv_it->second.is_default;
                     size_t i = 0;
 
                     for (auto& arg_node : *args)
@@ -1789,6 +1790,32 @@ namespace vc
 
                         if (try_refine(env, arg_src->location(), prim))
                           refined = true;
+                        else if (recv_confirmed)
+                        {
+                          // Receiver is non-default and method resolved:
+                          // confirm default args whose type already
+                          // matches the parameter type. This prevents
+                          // the return-type refinement sweep from
+                          // overriding a type that is constrained by
+                          // the resolved method signature.
+                          auto arg_it = env.find(arg_src->location());
+
+                          if (
+                            arg_it != env.end() &&
+                            arg_it->second.is_default)
+                          {
+                            auto arg_prim =
+                              extract_primitive(arg_it->second.type);
+
+                            if (
+                              arg_prim &&
+                              arg_prim->type() == prim->type())
+                            {
+                              arg_it->second.is_default = false;
+                              arg_it->second.const_node = {};
+                            }
+                          }
+                        }
                       }
 
                       i++;
@@ -1888,8 +1915,27 @@ namespace vc
               auto src_it = env.find(src->location());
 
               if (src_it != env.end())
-                env[dst->location()] =
+              {
+                auto info =
                   LocalTypeInfo::computed(clone(src_it->second.type));
+
+                // If the Lookup receiver was default, propagate default
+                // status to the CallDyn result. This ensures that
+                // method-resolved types from default-typed receivers
+                // don't prevent the return refinement sweep from
+                // refining downstream literals.
+                if (lookup_it != lookup_stmts.end())
+                {
+                  auto recv_loc =
+                    (lookup_it->second / Rhs)->location();
+                  auto recv_it = env.find(recv_loc);
+
+                  if (recv_it != env.end() && recv_it->second.is_default)
+                    info.is_default = true;
+                }
+
+                env[dst->location()] = info;
+              }
             }
             else if (stmt == FFI)
             {

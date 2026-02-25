@@ -4,7 +4,6 @@
 
 Syntax:
 - Partial application, `_`.
-- Implement `Hash`.
 
 Tuples:
 - Test case for an array of tuples.

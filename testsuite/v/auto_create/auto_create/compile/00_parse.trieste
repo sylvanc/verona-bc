@@ -6498,7 +6498,23 @@ parse
                 (group
                   (ident 1:a))
                 (group
-                  (ident 1:b))))))))
+                  (ident 1:b)))))))
+      (group
+        (ident 4:bits)
+        (paren
+          (group
+            (ident 1:a)
+            (:)
+            (ident 3:any)))
+        (:)
+        (ident 3:u64)
+        (brace
+          (group
+            (triplecolon)
+            (ident 4:bits)
+            (paren
+              (group
+                (ident 1:a)))))))
     (file
       (group
         (ident 5:isize)

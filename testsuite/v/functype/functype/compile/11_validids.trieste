@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 5:$2404)
+            (localid 5:$2407)
             (functionid 20:functype::main::0::0)
             (args)))
         (ret
-          (localid 5:$2404)))))
+          (localid 5:$2407)))))
   (func
     (functionid 20:functype::main::0::0)
     (params)
@@ -27,18 +27,18 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 10:local$1507)
-            (functionid 35:functype::lambda$1496::create::0::0)
+            (localid 10:local$1509)
+            (functionid 35:functype::lambda$1498::create::0::0)
             (args))
           (copy
             (localid 3:inc)
-            (localid 10:local$1507))
+            (localid 10:local$1509))
           (const
-            (localid 10:local$1599)
+            (localid 10:local$1601)
             (i32)
             (int 2:41))
           (call
-            (localid 10:local$1508)
+            (localid 10:local$1510)
             (functionid 24:functype::apply_fn::2::0)
             (args
               (arg
@@ -46,9 +46,9 @@ validids
                 (localid 3:inc))
               (arg
                 (argcopy)
-                (localid 10:local$1599)))))
+                (localid 10:local$1601)))))
         (ret
-          (localid 10:local$1508)))))
+          (localid 10:local$1510)))))
   (primitive
     (i32)
     (methods
@@ -56,20 +56,20 @@ validids
         (methodid 7:+::2::0)
         (functionid 22:_builtin::i32::+::2::0))))
   (func
-    (functionid 35:functype::lambda$1496::create::0::0)
+    (functionid 35:functype::lambda$1498::create::0::0)
     (params)
-    (classid 24:functype::lambda$1496::0)
+    (classid 24:functype::lambda$1498::0)
     (vars)
     (labels
       (label
         (labelid 5:start)
         (body
           (new
-            (localid 10:local$1505)
-            (classid 24:functype::lambda$1496::0)
+            (localid 10:local$1507)
+            (classid 24:functype::lambda$1498::0)
             (args)))
         (ret
-          (localid 10:local$1505)))))
+          (localid 10:local$1507)))))
   (func
     (functionid 24:functype::apply_fn::2::0)
     (params
@@ -86,12 +86,12 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 10:local$1595)
+            (localid 10:local$1597)
             (localid 1:f)
             (methodid 11:apply::2::0))
           (calldyn
-            (localid 10:local$1596)
-            (localid 10:local$1595)
+            (localid 10:local$1598)
+            (localid 10:local$1597)
             (args
               (arg
                 (argcopy)
@@ -100,23 +100,23 @@ validids
                 (argcopy)
                 (localid 1:x)))))
         (ret
-          (localid 10:local$1596)))))
+          (localid 10:local$1598)))))
   (type
-    (typeid 20:functype::fn$1503::0)
-    (classid 24:functype::lambda$1496::0))
+    (typeid 20:functype::fn$1505::0)
+    (classid 24:functype::lambda$1498::0))
   (class
-    (classid 24:functype::lambda$1496::0)
+    (classid 24:functype::lambda$1498::0)
     (fields)
     (methods
       (method
         (methodid 11:apply::2::0)
-        (functionid 34:functype::lambda$1496::apply::2::0))))
+        (functionid 34:functype::lambda$1498::apply::2::0))))
   (func
-    (functionid 34:functype::lambda$1496::apply::2::0)
+    (functionid 34:functype::lambda$1498::apply::2::0)
     (params
       (param
         (localid 4:self)
-        (classid 24:functype::lambda$1496::0))
+        (classid 24:functype::lambda$1498::0))
       (param
         (localid 1:x)
         (i32)))
@@ -127,25 +127,25 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 10:local$1506)
+            (localid 10:local$1508)
             (i32)
             (int 1:1))
           (lookup
-            (localid 10:local$1597)
+            (localid 10:local$1599)
             (localid 1:x)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 10:local$1598)
-            (localid 10:local$1597)
+            (localid 10:local$1600)
+            (localid 10:local$1599)
             (args
               (arg
                 (argcopy)
                 (localid 1:x))
               (arg
                 (argcopy)
-                (localid 10:local$1506)))))
+                (localid 10:local$1508)))))
         (ret
-          (localid 10:local$1598)))))
+          (localid 10:local$1600)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -162,8 +162,8 @@ validids
         (labelid 5:start)
         (body
           (add
-            (localid 10:local$1694)
+            (localid 10:local$1696)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 10:local$1694))))))
+          (localid 10:local$1696))))))
