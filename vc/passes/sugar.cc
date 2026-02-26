@@ -212,7 +212,9 @@ namespace vc
             Node apply_body = Body;
 
             // Collect var-captured names for body rewriting.
-            std::set<Location> var_captures;
+            // Collect names needing body rewriting (both var and let
+            // captures that use $ref_ prefixed FieldRef/RegisterRef).
+            std::set<Location> ref_captures;
 
             for (auto& field : fields)
             {
@@ -233,12 +235,14 @@ namespace vc
                               << (Load
                                   << (Expr
                                       << (FieldRef
-                                          << (Expr << (LocalId ^ "self"))
+                                          << (Expr << (LocalId ^ "$self"))
                                           << (FieldId ^ field.name)))))));
-                var_captures.insert(field.name);
+                ref_captures.insert(field.name);
               }
-              else
+              else if (field.name.view()[0] == '$')
               {
+                // Internal field (e.g., $raise_target): load value
+                // directly into a Let with the same name.
                 apply_body
                   << (Expr
                       << (Equals
@@ -249,8 +253,32 @@ namespace vc
                               << (Load
                                   << (Expr
                                       << (FieldRef
-                                          << (Expr << (LocalId ^ "self"))
+                                          << (Expr << (LocalId ^ "$self"))
                                           << (FieldId ^ field.name)))))));
+              }
+              else
+              {
+                // User let-capture: get a FieldRef for mutable access.
+                // The body will be rewritten to read/write through this
+                // ref, allowing stateful escaping lambdas.
+                auto ref_name =
+                  Location("$ref_" + std::string(field.name.view()));
+                auto ref_type = Type
+                  << (TypeName
+                      << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                      << (NameElement
+                          << (Ident ^ "ref")
+                          << (TypeArgs << clone(field.type))));
+                apply_body
+                  << (Expr
+                      << (Equals
+                          << (Expr
+                              << (Let << (Ident ^ ref_name) << ref_type))
+                          << (Expr
+                              << (FieldRef
+                                  << (Expr << (LocalId ^ "$self"))
+                                  << (FieldId ^ field.name)))));
+                ref_captures.insert(field.name);
               }
             }
 
@@ -267,17 +295,17 @@ namespace vc
 
             apply_body << *_(Body);
 
-            // Rewrite var-captured references in the body.
+            // Rewrite ref-captured references in the body.
             // Reads become Load << (Expr << (LocalId ^ "$ref_x")).
             // Writes (LHS of Equals) become Ref << (LocalId ^ "$ref_x").
-            if (!var_captures.empty())
+            if (!ref_captures.empty())
             {
-              // Collect all LocalId nodes that match var-captured names.
+              // Collect all LocalId nodes that match ref-captured names.
               std::vector<Node> to_rewrite;
               apply_body->traverse([&](auto node) {
                 if (
                   node == LocalId &&
-                  var_captures.count(node->location()) > 0)
+                  ref_captures.count(node->location()) > 0)
                 {
                   to_rewrite.push_back(node);
                 }

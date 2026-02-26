@@ -331,15 +331,15 @@ application
                         (localid 6:offset))))))))
           (function
             {
-              offset = let
-              self = paramdef
+              $ref_offset = let
+              $self = paramdef
               x = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -397,25 +397,31 @@ application
                 (=
                   (expr
                     (let
-                      (ident 6:offset)
+                      (ident 11:$ref_offset)
                       (type
                         (typename
                           (nameelement
-                            (ident 17:lambda_tp_freevar)
+                            (ident 8:_builtin)
                             (typeargs))
                           (nameelement
-                            (ident 8:lambda$0)
-                            (typeargs))
-                          (nameelement
-                            (ident 1:T)
-                            (typeargs))))))
+                            (ident 3:ref)
+                            (typeargs
+                              (type
+                                (typename
+                                  (nameelement
+                                    (ident 17:lambda_tp_freevar)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 8:lambda$0)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 1:T)
+                                    (typeargs))))))))))
                   (expr
-                    (load
+                    (fieldref
                       (expr
-                        (fieldref
-                          (expr
-                            (localid 4:self))
-                          (fieldid 6:offset)))))))
+                        (localid 5:$self))
+                      (fieldid 6:offset)))))
               (expr
                 (call
                   (funcname
@@ -443,7 +449,9 @@ application
                     (expr
                       (exprseq
                         (expr
-                          (localid 6:offset)))))))))))
+                          (load
+                            (expr
+                              (localid 11:$ref_offset)))))))))))))
       (function
         {
           T = typeparam

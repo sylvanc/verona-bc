@@ -335,8 +335,9 @@ namespace vc
     Node stack_new_args = NewArgs;
 
     // Prepend self param to apply_params.
+    // Use $self to avoid conflicts with a captured outer "self".
     auto full_apply_params = Params
-      << (ParamDef << (Ident ^ "self") << clone(self_type) << Body);
+      << (ParamDef << (Ident ^ "$self") << clone(self_type) << Body);
 
     for (auto& child : *apply_params)
       full_apply_params << child;

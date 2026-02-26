@@ -90,7 +90,7 @@ namespace vc
                 << (Expr
                     << (Load
                         << (Expr
-                            << (FieldRef << (Expr << (LocalId ^ "self"))
+                            << (FieldRef << (Expr << (LocalId ^ "$self"))
                                          << (FieldId ^ field.name)))))));
     }
 

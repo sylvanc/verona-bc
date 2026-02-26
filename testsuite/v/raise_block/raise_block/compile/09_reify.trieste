@@ -149,7 +149,7 @@ reify
     (functionid 34:raise_block::lambda$0::apply::2::0)
     (params
       (param
-        (localid 4:self)
+        (localid 5:$self)
         (classid 24:raise_block::lambda$0::0))
       (param
         (localid 1:x)
@@ -165,7 +165,7 @@ reify
             (localid 8:local$84)
             (arg
               (argcopy)
-              (localid 4:self))
+              (localid 5:$self))
             (fieldid 13:$raise_target))
           (load
             (localid 9:local$816)
@@ -177,14 +177,11 @@ reify
             (localid 8:local$85)
             (arg
               (argcopy)
-              (localid 4:self))
+              (localid 5:$self))
             (fieldid 6:target))
-          (load
-            (localid 9:local$817)
-            (localid 8:local$85))
           (copy
-            (localid 6:target)
-            (localid 9:local$817))
+            (localid 11:$ref_target)
+            (localid 8:local$85))
           (setraise
             (localid 8:local$86)
             (localid 13:$raise_target))
@@ -196,6 +193,9 @@ reify
             (localid 9:local$469)
             (localid 1:x)
             (methodid 8:==::2::0))
+          (load
+            (localid 9:local$818)
+            (localid 11:$ref_target))
           (calldyn
             (localid 9:local$470)
             (localid 9:local$469)
@@ -205,7 +205,7 @@ reify
                 (localid 1:x))
               (arg
                 (argcopy)
-                (localid 6:target)))))
+                (localid 9:local$818)))))
         (cond
           (localid 9:local$470)
           (labelid 7:body$82)

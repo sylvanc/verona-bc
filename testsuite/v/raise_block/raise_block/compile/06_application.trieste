@@ -46,15 +46,15 @@ application
           (function
             {
               $raise_target = let
-              self = paramdef
-              target = let
+              $ref_target = let
+              $self = paramdef
               x = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -95,28 +95,34 @@ application
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (=
                   (expr
                     (let
-                      (ident 6:target)
+                      (ident 11:$ref_target)
                       (type
                         (typename
                           (nameelement
                             (ident 8:_builtin)
                             (typeargs))
                           (nameelement
-                            (ident 3:i32)
-                            (typeargs))))))
+                            (ident 3:ref)
+                            (typeargs
+                              (type
+                                (typename
+                                  (nameelement
+                                    (ident 8:_builtin)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 3:i32)
+                                    (typeargs))))))))))
                   (expr
-                    (load
+                    (fieldref
                       (expr
-                        (fieldref
-                          (expr
-                            (localid 4:self))
-                          (fieldid 6:target)))))))
+                        (localid 5:$self))
+                      (fieldid 6:target)))))
               (expr
                 (setraise
                   (expr
@@ -131,7 +137,9 @@ application
                       (typeargs)
                       (args
                         (expr
-                          (localid 6:target)))))
+                          (load
+                            (expr
+                              (localid 11:$ref_target)))))))
                   (block
                     {}
                     (params)

@@ -152,7 +152,7 @@ reify
     (functionid 40:lambda_tp_freevar::lambda$0::apply::2::0)
     (params
       (param
-        (localid 4:self)
+        (localid 5:$self)
         (classid 30:lambda_tp_freevar::lambda$0::0))
       (param
         (localid 1:x)
@@ -167,21 +167,21 @@ reify
             (localid 8:local$87)
             (arg
               (argcopy)
-              (localid 4:self))
+              (localid 5:$self))
             (fieldid 6:offset))
-          (load
-            (localid 9:local$814)
-            (localid 8:local$87))
           (copy
-            (localid 6:offset)
-            (localid 9:local$814))
+            (localid 11:$ref_offset)
+            (localid 8:local$87))
+          (load
+            (localid 9:local$469)
+            (localid 11:$ref_offset))
           (call
             (localid 7:local$4)
             (functionid 40:lambda_tp_freevar::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 6:offset)))))
+                (localid 9:local$469)))))
         (ret
           (localid 7:local$4)))))
   (primitive

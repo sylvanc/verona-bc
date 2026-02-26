@@ -46,14 +46,14 @@ functype
           (function
             {
               $raise_target = let
-              self = paramdef
+              $self = paramdef
               x = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -94,7 +94,7 @@ functype
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (setraise
@@ -203,14 +203,14 @@ functype
           (function
             {
               $raise_target = let
-              self = paramdef
+              $self = paramdef
               x = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -251,7 +251,7 @@ functype
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (setraise
@@ -379,14 +379,14 @@ functype
           (function
             {
               $raise_target = let
-              self = paramdef
+              $self = paramdef
               x = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -427,7 +427,7 @@ functype
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (setraise
@@ -542,15 +542,15 @@ functype
           (function
             {
               $raise_target = let
-              a = let
-              b = let
-              self = paramdef}
+              $ref_a = let
+              $ref_b = let
+              $self = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -581,59 +581,75 @@ functype
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (=
                   (expr
                     (let
-                      (ident 1:a)
+                      (ident 6:$ref_a)
                       (type
                         (typename
                           (nameelement
                             (ident 8:_builtin)
                             (typeargs))
                           (nameelement
-                            (ident 3:i32)
-                            (typeargs))))))
+                            (ident 3:ref)
+                            (typeargs
+                              (type
+                                (typename
+                                  (nameelement
+                                    (ident 8:_builtin)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 3:i32)
+                                    (typeargs))))))))))
                   (expr
-                    (load
+                    (fieldref
                       (expr
-                        (fieldref
-                          (expr
-                            (localid 4:self))
-                          (fieldid 1:a)))))))
+                        (localid 5:$self))
+                      (fieldid 1:a)))))
               (expr
                 (=
                   (expr
                     (let
-                      (ident 1:b)
+                      (ident 6:$ref_b)
                       (type
                         (typename
                           (nameelement
                             (ident 8:_builtin)
                             (typeargs))
                           (nameelement
-                            (ident 3:i32)
-                            (typeargs))))))
+                            (ident 3:ref)
+                            (typeargs
+                              (type
+                                (typename
+                                  (nameelement
+                                    (ident 8:_builtin)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 3:i32)
+                                    (typeargs))))))))))
                   (expr
-                    (load
+                    (fieldref
                       (expr
-                        (fieldref
-                          (expr
-                            (localid 4:self))
-                          (fieldid 1:b)))))))
+                        (localid 5:$self))
+                      (fieldid 1:b)))))
               (expr
                 (setraise
                   (expr
                     (localid 13:$raise_target))))
               (raise
                 (expr
-                  (localid 1:a)
+                  (load
+                    (expr
+                      (localid 6:$ref_a)))
                   (methodname
                     (symbolid 1:+)
                     (typeargs))
-                  (localid 1:b))
+                  (load
+                    (expr
+                      (localid 6:$ref_b))))
                 (type
                   (typename
                     (nameelement
@@ -753,15 +769,15 @@ functype
           (function
             {
               $raise_target = let
-              self = paramdef
-              x = paramdef
-              zero = let}
+              $ref_zero = let
+              $self = paramdef
+              x = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -816,31 +832,37 @@ functype
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (=
                   (expr
                     (let
-                      (ident 4:zero)
+                      (ident 9:$ref_zero)
                       (type
                         (typename
                           (nameelement
-                            (ident 11:raise_infer)
+                            (ident 8:_builtin)
                             (typeargs))
                           (nameelement
-                            (ident 8:lambda$4)
-                            (typeargs))
-                          (nameelement
-                            (ident 1:T)
-                            (typeargs))))))
+                            (ident 3:ref)
+                            (typeargs
+                              (type
+                                (typename
+                                  (nameelement
+                                    (ident 11:raise_infer)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 8:lambda$4)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 1:T)
+                                    (typeargs))))))))))
                   (expr
-                    (load
+                    (fieldref
                       (expr
-                        (fieldref
-                          (expr
-                            (localid 4:self))
-                          (fieldid 4:zero)))))))
+                        (localid 5:$self))
+                      (fieldid 4:zero)))))
               (expr
                 (setraise
                   (expr
@@ -852,7 +874,9 @@ functype
                     (methodname
                       (symbolid 2:==)
                       (typeargs))
-                    (localid 4:zero))
+                    (load
+                      (expr
+                        (localid 9:$ref_zero))))
                   (block
                     {}
                     (params)
@@ -861,7 +885,9 @@ functype
                     (body
                       (raise
                         (expr
-                          (localid 4:zero))
+                          (load
+                            (expr
+                              (localid 9:$ref_zero))))
                         (type
                           (typename
                             (nameelement
@@ -989,15 +1015,15 @@ functype
           (function
             {
               $raise_target = let
+              $self = paramdef
               result = var
-              self = paramdef
               x = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -1038,7 +1064,7 @@ functype
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (setraise

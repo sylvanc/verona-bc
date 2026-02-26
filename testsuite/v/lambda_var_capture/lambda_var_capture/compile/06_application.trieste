@@ -59,14 +59,14 @@ application
             {
               $raise_target = let
               $ref_x = let
-              self = paramdef
+              $self = paramdef
               y = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -113,7 +113,7 @@ application
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (=
@@ -141,7 +141,7 @@ application
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 1:x)))))))
               (expr
                 (setraise
@@ -281,13 +281,13 @@ application
             {
               $raise_target = let
               $ref_x = let
-              self = paramdef}
+              $self = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -324,7 +324,7 @@ application
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (=
@@ -352,7 +352,7 @@ application
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 1:x)))))))
               (expr
                 (setraise
@@ -476,14 +476,14 @@ application
             {
               $raise_target = let
               $ref_x = let
-              self = paramdef
+              $self = paramdef
               t = paramdef}
             (rhs)
             (ident 5:apply)
             (typeparams)
             (params
               (paramdef
-                (ident 4:self)
+                (ident 5:$self)
                 (type
                   (typename
                     (nameelement
@@ -524,7 +524,7 @@ application
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 13:$raise_target)))))))
               (expr
                 (=
@@ -552,7 +552,7 @@ application
                       (expr
                         (fieldref
                           (expr
-                            (localid 4:self))
+                            (localid 5:$self))
                           (fieldid 1:x)))))))
               (expr
                 (setraise

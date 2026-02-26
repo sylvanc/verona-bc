@@ -2,10 +2,6 @@
 
 ## To Do
 
-Lambdas.
-- A free `var` is captured by reference. The lambda must be `stack` allocated.
-- How can we have stateful lambdas?
-
 Patterns for lambdas.
 - If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
 - If a lambda can be a pattern, pattern matching becomes a series of `else`.
