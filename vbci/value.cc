@@ -406,6 +406,14 @@ namespace vbci
     return i32;
   }
 
+  uint64_t Value::get_u64() const
+  {
+    if (tag != ValueType::U64)
+      Value::error(Error::BadConversion);
+
+    return u64;
+  }
+
   Cown* Value::get_cown() const
   {
     if (tag != ValueType::Cown)

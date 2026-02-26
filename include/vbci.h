@@ -237,14 +237,6 @@ namespace vbci
 
     // Arg0 = dst.
     // Arg1 = function ID.
-    SubcallStatic,
-
-    // Arg0 = dst.
-    // Arg1 = function pointer.
-    SubcallDynamic,
-
-    // Arg0 = dst.
-    // Arg1 = function ID.
     TryStatic,
 
     // Arg0 = dst.
@@ -361,6 +353,15 @@ namespace vbci
     // done on cowns.
     Read,
 
+    // Get the current frame's raise target.
+    // Arg0 = dst.
+    GetRaise,
+
+    // Set the current frame's raise target. Returns the previous raise target.
+    // Arg0 = dst (previous raise target).
+    // Arg1 = src (new raise target).
+    SetRaise,
+
     // Constants.
     // Arg0 = dst.
     Const_E,
@@ -419,14 +420,12 @@ namespace vbci
   enum class Condition
   {
     Return,
-    Raise,
     Throw,
   };
 
   enum class CallType
   {
     Call,
-    Subcall,
     Catch
   };
 

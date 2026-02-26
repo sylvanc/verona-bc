@@ -148,7 +148,7 @@ namespace vbcc
           return NoChange;
         },
 
-        T(Call, Subcall, Try)[Call] >> [state](Match& _) -> Node {
+        T(Call, Try)[Call] >> [state](Match& _) -> Node {
           auto call = _(Call);
           auto& func_state = state->get_func(call / FunctionId);
 

@@ -1001,16 +1001,6 @@ namespace vbcc
             args(stmt / Args);
             code << uleb(+Op::CallDynamic) << dst(stmt) << src(stmt);
           }
-          else if (stmt == Subcall)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::SubcallStatic) << dst(stmt) << fn(stmt);
-          }
-          else if (stmt == SubcallDyn)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::SubcallDynamic) << dst(stmt) << src(stmt);
-          }
           else if (stmt == Try)
           {
             args(stmt / Args);
@@ -1251,6 +1241,14 @@ namespace vbcc
           {
             code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
                  << uleb(typ(stmt / Type));
+          }
+          else if (stmt == GetRaise)
+          {
+            code << uleb(+Op::GetRaise) << dst(stmt);
+          }
+          else if (stmt == SetRaise)
+          {
+            code << uleb(+Op::SetRaise) << dst(stmt) << src(stmt);
           }
         }
 

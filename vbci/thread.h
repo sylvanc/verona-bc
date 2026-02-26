@@ -89,6 +89,7 @@ namespace vbci
     void step();
     void pushframe(Function* func, size_t dst, CallType calltype);
     void popframe(Register result, Condition condition);
+    void raise(Register result, Location target);
     void tailcall(Function* func);
     void teardown(bool tailcall = false);
     void branch(size_t label);

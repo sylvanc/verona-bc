@@ -26,7 +26,8 @@ namespace vbci
     finalize_top(finalize_base),
     pc(pc),
     dst(dst),
-    calltype(calltype)
+    calltype(calltype),
+    raise_target(frame_id)
   {
     region.set_frame_local_owner();
   }

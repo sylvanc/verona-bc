@@ -13,7 +13,7 @@ namespace vbci
     UnknownFFI,
     UnknownRegionType,
     UnknownOpcode,
-    TooManyRefs,
+    BadRaiseTarget,
     BadAllocTarget,
     BadLabel,
     BadField,
@@ -57,6 +57,8 @@ namespace vbci
         return "unknown region type";
       case Error::UnknownOpcode:
         return "unknown opcode";
+      case Error::BadRaiseTarget:
+        return "bad raise target";
       case Error::BadAllocTarget:
         return "bad alloc target";
       case Error::BadLabel:

@@ -101,13 +101,13 @@ namespace vbcc
       FnPointer,
       Call,
       CallDyn,
-      Subcall,
-      SubcallDyn,
       Try,
       TryDyn,
       FFI,
       When,
       WhenDyn,
+      GetRaise,
+      SetRaise,
       Typetest);
 
   Parse parser();

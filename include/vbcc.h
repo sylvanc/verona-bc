@@ -81,7 +81,6 @@ namespace vbcc
   inline const auto Store = TokenDef("store");
   inline const auto Lookup = TokenDef("lookup");
   inline const auto Call = TokenDef("call");
-  inline const auto Subcall = TokenDef("subcall");
   inline const auto Try = TokenDef("try");
   inline const auto FFI = TokenDef("ffi");
   inline const auto When = TokenDef("when");
@@ -147,6 +146,10 @@ namespace vbcc
   inline const auto MakePtr = TokenDef("makeptr");
   inline const auto Read = TokenDef("read");
 
+  // Raise target.
+  inline const auto GetRaise = TokenDef("getraise");
+  inline const auto SetRaise = TokenDef("setraise");
+
   // Constants.
   inline const auto Const_E = TokenDef("e");
   inline const auto Const_Pi = TokenDef("pi");
@@ -192,7 +195,6 @@ namespace vbcc
   inline const auto Body = TokenDef("body");
   inline const auto FnPointer = TokenDef("fnpointer");
   inline const auto CallDyn = TokenDef("calldyn");
-  inline const auto SubcallDyn = TokenDef("subcalldyn");
   inline const auto TryDyn = TokenDef("trydyn");
   inline const auto TailcallDyn = TokenDef("tailcalldyn");
   inline const auto WhenDyn = TokenDef("whendyn");
@@ -230,7 +232,7 @@ namespace vbcc
     StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
-    Subcall | SubcallDyn | Try | TryDyn | FFI | When | WhenDyn | wfBinop |
+    Try | TryDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop |
     wfUnop | wfConst | Typetest;
 
   inline const auto wfTerminator =
@@ -306,8 +308,6 @@ namespace vbcc
     | (FnPointer <<= wfDst * (Rhs >>= FunctionId | SymbolId))
     | (Call <<= wfDst * FunctionId * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
-    | (Subcall <<= wfDst * FunctionId * Args)
-    | (SubcallDyn <<= wfDst * wfSrc * Args)
     | (Try <<= wfDst * FunctionId * Args)
     | (TryDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
@@ -320,6 +320,8 @@ namespace vbcc
     | (MoveArgs <<= MoveArg++)
     | (MoveArg <<= (Type >>= ArgMove) * wfSrc)
     | (Return <<= LocalId)
+    | (GetRaise <<= wfDst)
+    | (SetRaise <<= wfDst * wfSrc)
     | (Raise <<= LocalId)
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))

@@ -138,6 +138,7 @@ namespace vbci
     bool is_error() const;
     bool get_bool() const;
     int32_t get_i32() const;
+    uint64_t get_u64() const;
     Cown* get_cown() const;
     Header* get_header() const;
     Object* get_object() const;

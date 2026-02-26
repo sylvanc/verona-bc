@@ -553,10 +553,10 @@ namespace vbci
     for (const auto& [region, calc_stack_rc] : calc_stack_rcs)
     {
       auto actual_stack_rc = region->get_stack_rc();
-      // Due to multi-threading it is not possible to guarantee a strict equality
-      // between calculated and actual stack RCs. We would have to pause all other
-      // threads to do that, which is not feasible. Instead we check that the
-      // actual stack RC is at least the calculated stack RC.
+      // Due to multi-threading it is not possible to guarantee a strict
+      // equality between calculated and actual stack RCs. We would have to
+      // pause all other threads to do that, which is not feasible. Instead we
+      // check that the actual stack RC is at least the calculated stack RC.
 
       if (calc_stack_rc > actual_stack_rc)
       {
@@ -580,7 +580,7 @@ namespace vbci
 #else
     snmalloc::UNUSED(loc);
 #endif
-}
+  }
 
   std::ostream& operator<<(std::ostream& os, Op op)
   {
@@ -658,10 +658,6 @@ namespace vbci
         return os << "CallStatic";
       case Op::CallDynamic:
         return os << "CallDynamic";
-      case Op::SubcallStatic:
-        return os << "SubcallStatic";
-      case Op::SubcallDynamic:
-        return os << "SubcallDynamic";
       case Op::TryStatic:
         return os << "TryStatic";
       case Op::TryDynamic:
@@ -784,6 +780,10 @@ namespace vbci
         return os << "Ptr";
       case Op::Read:
         return os << "Read";
+      case Op::GetRaise:
+        return os << "GetRaise";
+      case Op::SetRaise:
+        return os << "SetRaise";
       case Op::Const_E:
         return os << "Const_E";
       case Op::Const_Pi:
@@ -817,7 +817,8 @@ namespace vbci
       {
         case Op::Global:
         {
-          process([](Register& dst, Global g) INLINE { dst = ValueBorrow(g.global); });
+          process([](Register& dst, Global g)
+                    INLINE { dst = ValueBorrow(g.global); });
           break;
         }
 
@@ -946,9 +947,7 @@ namespace vbci
         {
           process(
             [](Program& program, Register& dst, Constant<size_t> string_id)
-              INLINE {
-                dst = ValueTransfer(program.get_string(string_id));
-              });
+              INLINE { dst = ValueTransfer(program.get_string(string_id)); });
           break;
         }
 
@@ -961,17 +960,17 @@ namespace vbci
 
         case Op::New:
         {
-          process([](Register& dst, Class& cls, Thread& self, Frame& frame)
-                    INLINE {
-                      if (cls.singleton)
-                      {
-                        dst = ValueImmortal(cls.singleton);
-                        return;
-                      }
+          process(
+            [](Register& dst, Class& cls, Thread& self, Frame& frame) INLINE {
+              if (cls.singleton)
+              {
+                dst = ValueImmortal(cls.singleton);
+                return;
+              }
 
-                      self.check_args(cls.fields);
-                      dst = ValueTransfer(&frame.region.object(cls)->init(frame, cls));
-                    });
+              self.check_args(cls.fields);
+              dst = ValueTransfer(&frame.region.object(cls)->init(frame, cls));
+            });
           break;
         }
 
@@ -1073,7 +1072,8 @@ namespace vbci
                     const Register& size,
                     Constant<size_t> type_id,
                     Frame& frame) INLINE {
-            dst = ValueTransfer(stack.array(frame.frame_id, type_id, size->get_size()));
+            dst = ValueTransfer(
+              stack.array(frame.frame_id, type_id, size->get_size()));
           });
           break;
         }
@@ -1145,8 +1145,7 @@ namespace vbci
 
         case Op::Copy:
         {
-          process([](Register& dst, const Register& src)
-                    INLINE { dst = src; });
+          process([](Register& dst, const Register& src) INLINE { dst = src; });
           break;
         }
 
@@ -1165,15 +1164,17 @@ namespace vbci
 
         case Op::RegisterRef:
         {
-          process([](Register& dst, Constant<size_t> idx, Frame& frame)
-                    INLINE { dst = ValueStaticLifetime(frame.base + idx, frame.frame_id); });
+          process([](Register& dst, Constant<size_t> idx, Frame& frame) INLINE {
+            dst = ValueStaticLifetime(frame.base + idx, frame.frame_id);
+          });
           break;
         }
 
         case Op::FieldRefMove:
         {
-          process([](Register& dst, Register src, Constant<size_t> field_id)
-                    INLINE { dst.from_field_ref<true>(std::move(src), field_id); });
+          process(
+            [](Register& dst, Register src, Constant<size_t> field_id)
+              INLINE { dst.from_field_ref<true>(std::move(src), field_id); });
           break;
         }
 
@@ -1186,15 +1187,17 @@ namespace vbci
 
         case Op::ArrayRefMove:
         {
-          process([](Register& dst, Register src, const Register& idx)
-                    INLINE { dst.from_array_ref<true>(std::move(src), idx->get_size()); });
+          process([](Register& dst, Register src, const Register& idx) INLINE {
+            dst.from_array_ref<true>(std::move(src), idx->get_size());
+          });
           break;
         }
 
         case Op::ArrayRefCopy:
         {
-          process([](Register& dst, const Register& src, const Register& idx)
-                    INLINE { dst.from_array_ref<false>(src, idx->get_size()); });
+          process(
+            [](Register& dst, const Register& src, const Register& idx)
+              INLINE { dst.from_array_ref<false>(src, idx->get_size()); });
           break;
         }
 
@@ -1259,7 +1262,9 @@ namespace vbci
         {
           process(
             [](Register& dst, Constant<size_t> symbol_id, Program& program)
-              INLINE { dst = ValueImmortal(program.symbol(symbol_id).raw_pointer()); });
+              INLINE {
+                dst = ValueImmortal(program.symbol(symbol_id).raw_pointer());
+              });
           break;
         }
 
@@ -1289,24 +1294,6 @@ namespace vbci
             [](Constant<size_t> dst_id, const Register& func, Thread& self)
               INLINE {
                 self.pushframe(func->function(), dst_id, CallType::Call);
-              });
-          break;
-        }
-
-        case Op::SubcallStatic:
-        {
-          process(
-            [](Constant<size_t> dst_id, Function* func, Thread& self)
-              INLINE { self.pushframe(func, dst_id, CallType::Subcall); });
-          break;
-        }
-
-        case Op::SubcallDynamic:
-        {
-          process(
-            [](Constant<size_t> dst_id, const Register& func, Thread& self)
-              INLINE {
-                self.pushframe(func->function(), dst_id, CallType::Subcall);
               });
           break;
         }
@@ -1424,7 +1411,8 @@ namespace vbci
                     const Register& src,
                     Constant<size_t> type_id,
                     Program& program) INLINE {
-            dst = ValueImmortal(Value(program.subtype(src->type_id(), type_id)));
+            dst =
+              ValueImmortal(Value(program.subtype(src->type_id(), type_id)));
           });
           break;
         }
@@ -1454,7 +1442,7 @@ namespace vbci
         case Op::Raise:
         {
           process([](Register ret, Thread& self) INLINE {
-            self.popframe(std::move(ret), Condition::Raise);
+            self.raise(std::move(ret), self.frame->raise_target);
           });
           break;
         }
@@ -1491,8 +1479,9 @@ namespace vbci
 
 #define do_binop(opname) \
   { \
-    process([](Register& dst, const Register& lhs, const Register& rhs) \
-              INLINE { dst = ValueImmortal(lhs->op_##opname(rhs.borrow())); }); \
+    process( \
+      [](Register& dst, const Register& lhs, const Register& rhs) \
+        INLINE { dst = ValueImmortal(lhs->op_##opname(rhs.borrow())); }); \
     break; \
   }
         case Op::Add:
@@ -1547,7 +1536,7 @@ namespace vbci
         case Op::Neg:
           do_unop(neg);
         case Op::Not:
-          do_unop(not );
+          do_unop(not);
         case Op::Abs:
           do_unop(abs);
         case Op::Ceil:
@@ -1604,17 +1593,34 @@ namespace vbci
         case Op::Ptr:
           // TODO unsure about this one, does it really make sense?
           {
-            process([](Register& dst, Register& src)
-                      INLINE {
-                        // This feels insanely dangerous, and needs review.
-                        dst = ValueImmortal(src.borrow().op_ptr());
-                      });
+            process([](Register& dst, Register& src) INLINE {
+              // This feels insanely dangerous, and needs review.
+              dst = ValueImmortal(src.borrow().op_ptr());
+            });
             break;
           }
 
+        case Op::GetRaise:
+        {
+          process([](Register& dst, Frame& frame) INLINE {
+            dst = ValueImmortal(Value(frame.raise_target.raw()));
+          });
+          break;
+        }
+
+        case Op::SetRaise:
+        {
+          process([](Register& dst, const Register& src, Frame& frame) INLINE {
+            dst = ValueImmortal(Value(frame.raise_target.raw()));
+            frame.raise_target = Location::from_raw(src->get_u64());
+          });
+          break;
+        }
+
 #define do_const(opname) \
   { \
-    process([](Register& dst) INLINE { dst = ValueImmortal(Value::opname()); }); \
+    process([](Register& dst) \
+              INLINE { dst = ValueImmortal(Value::opname()); }); \
     break; \
   }
         case Op::Const_E:
@@ -1646,8 +1652,6 @@ namespace vbci
     {
       case CallType::Call:
         return os << "Call";
-      case CallType::Subcall:
-        return os << "Subcall";
       case CallType::Catch:
         return os << "Catch";
       default:
@@ -1764,9 +1768,8 @@ namespace vbci
         }
         break;
 
-      case Condition::Raise:
       case Condition::Throw:
-        // TODO: check against the raise type and throw type.
+        // TODO: check against the throw type.
         break;
     }
 
@@ -1786,44 +1789,53 @@ namespace vbci
     {
       case CallType::Call:
       {
-        // This unwraps a Raise.
-        // Return (nothing), raise (pop as return), throw (pop)
-        switch (condition)
+        // Return (nothing), throw (pop)
+        if (condition == Condition::Throw)
         {
-          case Condition::Raise:
-            popframe(std::move(ret), Condition::Return);
-            return;
-
-          case Condition::Throw:
-            popframe(std::move(ret), Condition::Throw);
-            return;
-
-          default:
-            break;
-        }
-        break;
-      }
-
-      case CallType::Subcall:
-      {
-        // This does not unwrap a Raise.
-        // Return (nothing), raise (pop), throw (pop)
-        if (condition != Condition::Return)
-        {
-          popframe(std::move(ret), condition);
+          popframe(std::move(ret), Condition::Throw);
           return;
         }
         break;
       }
 
       default:
-        // Try: return (nothing), raise (nothing), throw (nothing)
+        // Try/Catch: return (nothing), throw (nothing)
+        // Catches everything.
         // TODO: this will catch internal errors as well, should it?
         break;
     }
 
     frame->local(dst) = std::move(ret);
     frame->calltype = CallType::Call;
+  }
+
+  void Thread::raise(Register ret_, Location target)
+  {
+    // Pop frames until we reach the target frame, then convert to Return.
+    Register ret{std::move(ret_)};
+
+    while (frame && frame->frame_id != target)
+    {
+      // Clear any unused arguments.
+      frame->drop_args(args);
+
+      teardown();
+      frames.pop_back();
+
+      if (frames.empty())
+      {
+        // Target frame not found.
+        ret = ValueImmortal(Error::BadRaiseTarget);
+        locals.at(0) = std::move(ret);
+        frame = nullptr;
+        return;
+      }
+
+      frame = &frames.back();
+    }
+
+    // We've reached the target frame. Convert to Return.
+    popframe(std::move(ret), Condition::Return);
   }
 
   void Thread::tailcall(Function* func)
@@ -1869,13 +1881,12 @@ namespace vbci
       finalize.at(i)->finalize();
 
     // Drop references held by stack allocations in the current frame.
-    stack.visit_headers(
-      frame->save, stack.top, [&](Header* h) {
-        if (Program::get().is_array(h->get_type_id()))
-          static_cast<Array*>(h)->destruct();
-        else
-          static_cast<Object*>(h)->destruct();
-      });
+    stack.visit_headers(frame->save, stack.top, [&](Header* h) {
+      if (Program::get().is_array(h->get_type_id()))
+        static_cast<Array*>(h)->destruct();
+      else
+        static_cast<Object*>(h)->destruct();
+    });
 
     // Finalize the frame-local region. A tailcall preserves the region.
     if (!tailcall)
@@ -2066,7 +2077,8 @@ namespace vbci
           }
           else
           {
-            LOG(Trace) << "Closure (" << closure.borrow() << ") region already has owner: " << r;
+            LOG(Trace) << "Closure (" << closure.borrow()
+                       << ") region already has owner: " << r;
           }
         }
       }

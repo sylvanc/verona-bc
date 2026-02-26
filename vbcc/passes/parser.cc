@@ -77,10 +77,12 @@ namespace vbcc
         "store\\b" >> [](auto& m) { m.add(Store); },
         "lookup\\b" >> [](auto& m) { m.add(Lookup); },
         "call\\b" >> [](auto& m) { m.add(Call); },
-        "subcall\\b" >> [](auto& m) { m.add(Subcall); },
+
         "try\\b" >> [](auto& m) { m.add(Try); },
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
         "when\\b" >> [](auto& m) { m.add(When); },
+        "getraise\\b" >> [](auto& m) { m.add(GetRaise); },
+        "setraise\\b" >> [](auto& m) { m.add(SetRaise); },
         "typetest\\b" >> [](auto& m) { m.add(Typetest); },
 
         // Terminators.

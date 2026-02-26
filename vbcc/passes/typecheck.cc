@@ -1079,7 +1079,7 @@ namespace vbcc
           // Function pointer is opaque.
           set_type(env, node / LocalId, Node(Dyn));
         }
-        else if (node->in({Call, Subcall, Try}))
+        else if (node->in({Call, Try}))
         {
           auto func_id = node / FunctionId;
           auto args = node / Args;
@@ -1121,7 +1121,7 @@ namespace vbcc
             set_type(env, node / LocalId, Node(Dyn));
           }
         }
-        else if (node->in({CallDyn, SubcallDyn, TryDyn}))
+        else if (node->in({CallDyn, TryDyn}))
         {
           // Try to resolve the dynamic call through lookup info.
           auto fn_ptr_name =
@@ -1594,6 +1594,16 @@ namespace vbcc
         {
           // Math constants are F64.
           set_type(env, node / LocalId, Node(F64));
+        }
+        else if (node == GetRaise)
+        {
+          // GetRaise returns a U64 (raw frame ID).
+          set_type(env, node / LocalId, Node(U64));
+        }
+        else if (node == SetRaise)
+        {
+          // SetRaise returns previous raise target as U64.
+          set_type(env, node / LocalId, Node(U64));
         }
         else if (node == Source || node == Offset)
         {

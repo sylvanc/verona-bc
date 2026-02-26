@@ -498,19 +498,6 @@ namespace vbcc
             return CallDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
           },
 
-        // Static subcall.
-        Dst * T(Subcall) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
-          [](Match& _) {
-            return Subcall << _(LocalId) << (FunctionId ^ _(GlobalId))
-                           << callargs(_[Args]);
-          },
-
-        // Dynamic subcall.
-        Dst * T(Subcall) * T(LocalId)[Lhs] * CallArgs[Args] >>
-          [](Match& _) {
-            return SubcallDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
-          },
-
         // Static try.
         Dst * T(Try) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
@@ -550,6 +537,14 @@ namespace vbcc
         // Typetest statement.
         Dst * T(Typetest) * T(LocalId)[Rhs] * TypePat[Type] >>
           [](Match& _) { return Typetest << _(LocalId) << _(Rhs) << _(Type); },
+
+        // GetRaise.
+        Dst * T(GetRaise) >>
+          [](Match& _) { return GetRaise << _(LocalId); },
+
+        // SetRaise.
+        Dst * T(SetRaise) * T(LocalId)[Rhs] >>
+          [](Match& _) { return SetRaise << _(LocalId) << _(Rhs); },
 
         // Terminators.
         (T(Tailcall) << End) * T(GlobalId)[GlobalId] * CallArgs[Args] >>

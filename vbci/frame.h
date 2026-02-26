@@ -24,6 +24,7 @@ namespace vbci
     PC pc;
     size_t dst;
     CallType calltype;
+    Location raise_target;
 
     Frame(
       Function* func,

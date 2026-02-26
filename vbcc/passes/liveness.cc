@@ -84,7 +84,8 @@ namespace vbcc
                              Atan,     Sinh,     Cosh,
                              Tanh,     Asinh,    Acosh,
                              Atanh,    Bits,     Len,
-                             MakePtr,  Read,     Typetest}))
+                             MakePtr,  Read,     SetRaise,
+                             Typetest}))
           {
             use(node / Rhs);
             def(node / LocalId);
@@ -103,6 +104,7 @@ namespace vbcc
                       ArrayRefConst,
                       FnPointer,
                       FFI,
+                      GetRaise,
                       Const_E,
                       Const_Pi,
                       Const_Inf,
@@ -154,12 +156,12 @@ namespace vbcc
         },
         [&](auto node) {
           // Handle these in post, because the arguments will be pushed first.
-          if (node->in({Heap, CallDyn, SubcallDyn, TryDyn, WhenDyn}))
+          if (node->in({Heap, CallDyn, TryDyn, WhenDyn}))
           {
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({New, Stack, Region, Call, Subcall, Try, When}))
+          else if (node->in({New, Stack, Region, Call, Try, When}))
           {
             def(node / LocalId);
           }

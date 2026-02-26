@@ -4,17 +4,15 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 ## Non-Local Returns
 
-A function call can be made as a `call`, a `subcall`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
+A function call can be made as a `call` or a `try`. Functions can return via a `return`, a `raise`, or a `throw`.
 
-If you `call` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `return` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+If you `call` and the function does a `return`, your destination register will have the returned value. If the function does a `throw`, you will immediately `throw` the thrown value.
 
-If you `subcall` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `raise` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+If you `try`, your destination register will have the returned value regardless of whether the function does a `return` or a `throw`.
 
-If you `try`, your destination register will have the returned value regardless of whether the function does a `return`, a `raise`, or a `throw`.
+A `raise` pops frames until it reaches a target frame (identified by a raise target), then converts to a `return` from that frame. Each frame has a raise target that defaults to its own frame ID. Use `getraise` to read the current frame's raise target, and `setraise` to set it (returning the previous value). This allows blocks (non-escaping closures) to implement non-local returns: the block captures the enclosing function's raise target at creation time, sets it when invoked, and uses `raise` to return from the enclosing function.
 
-One way to use this is to implement Smalltalk style non-local returns. To do so, functions `call` blocks and other functions, and `return` results, whereas blocks `subcall` functions and other blocks, and either `raise` to return from the calling function (popping all blocks), or `return` to return to the calling block or function.
-
-Another way to use this is to implement exceptions. To do so, `throw` exception values. Exceptions are caught by a `try`.
+Exceptions are implemented via `throw` and `try`. A `throw` propagates through all `call` frames until caught by a `try`.
 
 ## Debug Info
 
