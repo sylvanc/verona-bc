@@ -28,5 +28,5 @@
 21. [Toolchain Usage](21-toolchain-usage.md)
 22. [Built-in Types Reference](22-builtin-types.md)
 23. [Grammar Summary](23-grammar-summary.md)
-24. [Error Handling](24-error-handling.md) *(placeholder — not yet implemented)*
+24. [Error Handling](24-error-handling.md)
 25. [Compile-Time Execution](25-compile-time-execution.md) *(placeholder — not yet implemented)*

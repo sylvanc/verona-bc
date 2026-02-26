@@ -246,19 +246,34 @@ string(data)                  // sugar for string::create(data)
 
 ## 5.10 Identity and Raw Bits
 
-Three free functions in `_builtin` operate on object identity:
+Three free functions in `_builtin` operate on value identity:
 
 ```verona
-is(a, b)                      // true if a and b are the same object (pointer equality)
-isnt(a, b)                    // true if a and b are different objects
-bits(a)                       // raw pointer address as u64
+is(a, b)                      // true if a and b are the same value
+isnt(a, b)                    // true if a and b are different values
+bits(a)                       // the bit representation of the value as u64
 ```
 
-These take `any` — they work on any type.
+These take `any` — they work on any type. For objects and arrays, the value is the address of the allocation. For primitives, the value is the bit representation of the primitive (e.g., `bits(42)` returns `0x000000000000002A`, and `bits(0.5)` returns `0x3FE0000000000000`).
 
 ---
 
-## 5.11 Return
+## 5.11 Dereference (`*`)
+
+The `*` operator is defined as a `ref` method on `ref[T]`, returning a `ref[T]`. It allows both reading and writing through the reference.
+
+For example, in a `when`, the parameters are each a `ref` to the cown contents. You can use `*` to dereferences a cown content reference to access the underlying value:
+
+```verona
+when (c) (x) ->
+{
+  (*x).field                          // access field of the cown's value
+}
+```
+
+---
+
+## 5.12 Return
 
 `return` exits a function early with a value:
 
@@ -281,7 +296,7 @@ These take `any` — they work on any type.
 
 ---
 
-## 5.12 Assignment
+## 5.13 Assignment
 
 Assignment uses `=` and is right-associative:
 
@@ -299,7 +314,7 @@ Assignment evaluates to the **previous value** of the left-hand side:
 
 ```verona
 var x = 1;
-let old = (x = 2);                   // old is 1, x is now 2
+let old = x = 2;                   // old is 1, x is now 2
 ```
 
 For field writes through `ref[T]`, the store also returns the old value. See [Memory Model](19-memory-model.md) for details.

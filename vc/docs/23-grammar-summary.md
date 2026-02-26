@@ -98,6 +98,7 @@ Expr          ::= Literal
                  | 'when' '(' Args ')' '(' Params ')' '->' '{' Body '}'
                  | LambdaExpr
                  | 'return' Expr
+                 | 'raise' Expr
                  | 'break'
                  | 'continue'
                  | 'ref' Expr

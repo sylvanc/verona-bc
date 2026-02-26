@@ -145,7 +145,39 @@ Both `break` and `continue` are statements.
 
 ---
 
-## 6.5 When Blocks
+## 6.5 Raise (Non-Local Return)
+
+`raise` performs a non-local return from a block lambda back to the enclosing function. The raised value becomes the result of the enclosing call expression:
+
+```verona
+find_first(a: i32, b: i32, target: i32): i32
+{
+  let check = (x: i32) -> {
+    if x == target
+    {
+      raise x
+    }
+  };
+  check(a);
+  check(b);
+  0
+}
+```
+
+When `raise x` executes inside the lambda, control returns directly from `find_first` with value `x` — not just from the lambda.
+
+### Rules
+
+- `raise` can only appear inside a lambda body. Using `raise` outside a lambda is a compile error.
+- The lambda captures the raise target (the enclosing function's frame) at creation time.
+- When called, `raise` restores the captured target and returns directly to the enclosing function's caller.
+- `raise` is the only non-local control flow mechanism — there is no `try`/`throw` or exception system.
+
+See [Error Handling](24-error-handling.md) for full details and examples. See [Lambdas](13-lambdas.md) for how block lambdas interact with `raise`.
+
+---
+
+## 6.6 When Blocks
 
 `when` blocks are the concurrency primitive — they acquire cowns and execute a body. See [Concurrency](15-concurrency.md) for full details:
 
@@ -158,7 +190,7 @@ when (c1, c2) (ref1, ref2) ->
 
 ---
 
-## 6.6 Else on Expressions
+## 6.7 Else on Expressions
 
 The `else` keyword can follow an expression to handle the `nomatch` case. This is the mechanism underlying the `for` loop:
 

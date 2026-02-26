@@ -114,6 +114,21 @@ c.read
 
 Multiple readers can access a cown simultaneously, but read access is exclusive with write access. When a cown is accessed via `read` in a `when` block, the behavior receives a read-only reference — writes through it are not permitted.
 
+### Example
+
+```verona
+let c = when () () -> { cell(42) }
+
+// Read-only access — multiple readers can run concurrently
+let r = when (c.read) (x) ->
+{
+  (*x).f                              // read OK
+  // (*x).f = 10;                     // NOT allowed — read-only reference
+}
+```
+
+Using `c.read` instead of `c` tells the scheduler this behavior only needs read access, enabling concurrent execution with other read-only behaviors on the same cown.
+
 ---
 
 ## 15.5 Dereference (`*`)
@@ -175,3 +190,16 @@ main(): i32
   0
 }
 ```
+
+---
+
+## 15.8 Runtime Errors in Behaviors
+
+If a behavior (the body of a `when` block) encounters a runtime error (type mismatch, out-of-bounds access, stack reference escape), the error is **fatal to that behavior**:
+
+- The behavior terminates immediately.
+- All interpreter frames for the behavior are torn down (registers, stack allocations, finalizers, and frame-local regions are cleaned up).
+- The cowns held by the behavior are released so other behaviors can proceed.
+- The result cown of the failed `when` block receives no value.
+
+There is no way to catch or recover from a runtime error within the behavior that caused it. This is by design — runtime errors indicate logic bugs, not expected failure modes. For expected failure cases, use `nomatch` return values or `raise` for non-local return. See [Error Handling](24-error-handling.md).

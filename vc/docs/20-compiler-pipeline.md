@@ -127,3 +127,22 @@ vc build project/ --dump_passes=./dump/
 ```
 
 This creates one `.trieste` file per pass in the dump directory, letting you inspect the AST at each stage.
+
+---
+
+## 20.8 Bytecode Compiler (vbcc)
+
+After `vc` produces IR output, the `vbcc` bytecode compiler transforms it into `.vbc` bytecode. The `vbcc` pipeline adds several additional passes:
+
+| # | Pass | Purpose |
+|---|------|---------|
+| 0 | `statements` | Flatten IR into statement sequences |
+| 1 | `labels` | Resolve jump targets and label offsets |
+| 2 | `assignids` | Assign bytecode identifiers to classes, functions, methods |
+| 3 | `validids` | Validate bytecode identifier assignments |
+| 4 | `liveness` | Register liveness analysis for allocation |
+| 5 | `typecheck` | Final type consistency checks |
+
+After all passes complete, the `Bytecode` class emits the final `.vbc` file.
+
+These passes operate on the IR produced by `vc`'s reify pass. In practice, `vc build` invokes both `vc` and `vbcc` — the user does not need to run them separately.

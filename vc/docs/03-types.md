@@ -191,4 +191,28 @@ Supports logical connectives:
 | `\|` | Either constraint | `T < serializable \| T < printable` |
 | `!` | Negation | `!T < numeric` |
 
+### Combined Constraints
+
+Multiple constraints can be combined to require a type parameter to satisfy several shapes:
+
+```verona
+// T must satisfy both comparable and printable
+format_sorted[T](arr: array[T]) where T < comparable & T < printable
+{
+  sort(arr);
+  for arr.values() elem ->
+  {
+    print_it(elem)
+  }
+}
+```
+
+### Constraints on Multiple Type Parameters
+
+Each type parameter can have its own constraints:
+
+```verona
+transform[A, B](input: A, mapper: mapper[A, B]) where A < printable & B < printable
+```
+
 Where clauses are checked during monomorphization — when a generic function or class is instantiated with concrete type arguments, the compiler verifies that the constraints are satisfied.

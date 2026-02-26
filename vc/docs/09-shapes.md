@@ -193,3 +193,43 @@ print_it(p: printable)
 ```
 
 At each call site, the compiler monomorphizes a specialization for the concrete type passed. There is no runtime dispatch — shapes are resolved statically.
+
+---
+
+## 9.10 Shape Conformance Errors
+
+If a class is used where a shape is expected but does not satisfy the shape, the compiler reports an error during monomorphization (the reify pass). The error indicates which method is missing or has an incompatible signature:
+
+```verona
+shape valued
+{
+  val(self: self): i32;
+}
+
+empty {}
+
+use_valued(v: valued) { v.val }
+
+main(): i32
+{
+  use_valued(empty())                 // error: empty does not satisfy valued
+  // empty has no val(self: empty): i32 method
+}
+```
+
+Shape conformance is checked at compile time — there is no runtime shape checking.
+
+---
+
+## 9.11 Multi-Parameter Shapes
+
+Shapes can have multiple type parameters:
+
+```verona
+shape mapper[A, B]
+{
+  map(self: self, a: A): B;
+}
+```
+
+A class satisfies `mapper[i32, string]` if it has `map(self: self, a: i32): string`.

@@ -127,9 +127,42 @@ ref apply(self: array[T], index: usize): ref[T]
 With this definition, `arr(i) = val` works:
 
 1. `arr(i)` on the left-hand side of `=` calls `ref apply`, returning a `ref[T]`.
-2. The value is stored through the reference.
+2. The compiler emits a `Store` instruction that writes `val` through the reference.
+3. The store performs a region-aware exchange — it updates reference counts, checks ownership rules, and returns the previous value.
 
 Reading `arr(i)` on the right-hand side calls the regular (non-ref) `apply` method. If no explicit RHS `apply` exists, one is auto-generated that calls the `ref` version and loads the value.
+
+### Complete Example: Field Access Flow
+
+Given a class with a field:
+
+```verona
+point
+{
+  x: i32;
+  y: i32;
+}
+```
+
+The compiler auto-generates both a `ref` accessor and a value accessor:
+
+```verona
+// Auto-generated ref accessor (for writes):
+ref x(self: point): ref[i32] { :::fieldref(self, x) }
+
+// Auto-generated value accessor (for reads):
+x(self: point): i32 { /* load through ref x */ }
+```
+
+Now field access works bidirectionally:
+
+```verona
+let p = point(1, 2);
+let v = p.x;                 // calls x(self: point): i32 → reads 1
+p.x = 10;                    // calls ref x(self: point): ref[i32] → stores 10
+```
+
+See [Memory Model §19.6](19-memory-model.md) for how stores work through `ref[T]`.
 
 ---
 

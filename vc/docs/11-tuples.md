@@ -95,6 +95,42 @@ For loop parameters can destructure tuples when the iterator yields them:
 ```verona
 for iter (key, value) ->
 {
-  // body
+  // key and value are bound from each tuple yielded by iter
 }
+```
+
+### Example: Iterating Over Pairs
+
+```verona
+pair_iter
+{
+  index: usize;
+  data: array[i32];
+
+  next(self: pair_iter): (usize, i32) | nomatch
+  {
+    if self.index >= self.data.size { nomatch }
+    else
+    {
+      let i = self.index = self.index + 1;
+      (i, self.data()(i))
+    }
+  }
+}
+
+main(): i32
+{
+  let arr = ::(i32 10, 20, 30);
+  var sum = 0;
+
+  for pair_iter(0, arr) (index, value) ->
+  {
+    sum = sum + value
+  }
+
+  sum                                  // 60
+}
+```
+
+Each call to `next()` returns a `(usize, i32)` tuple, which the `for` loop destructures into `index` and `value`.
 ```

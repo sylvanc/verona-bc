@@ -155,7 +155,44 @@ f(5)                               // 6, not 11
 
 ---
 
-## 13.7 Type Inference for Lambdas
+## 13.7 Block Lambdas and `raise`
+
+A **block lambda** is a lambda that contains a `raise` expression. `raise` performs a non-local return — it exits not just the lambda, but the enclosing function that created it:
+
+```verona
+find_first(a: i32, b: i32, target: i32): i32
+{
+  let check = (x: i32) -> {
+    if x == target
+    {
+      raise x                         // returns directly from find_first
+    }
+  };
+  check(a);
+  check(b);
+  0
+}
+```
+
+When `raise x` executes inside `check`, control returns directly from `find_first` with value `x`.
+
+### How It Works
+
+1. When a lambda containing `raise` is **created**, it captures the current raise target — a reference to the enclosing function's stack frame.
+2. When the lambda is **called** and `raise` executes, it restores the captured target and performs a non-local return to the enclosing function's caller.
+3. The raised value becomes the return value of the enclosing function.
+
+### Rules
+
+- `raise` can only appear inside a lambda. Using it outside a lambda is a compile error.
+- The raise target is captured at lambda creation time, not at call time.
+- Any lambda containing `raise` is a block lambda — there is no separate syntax to mark it.
+
+See [Error Handling](24-error-handling.md) for more examples and the full error handling picture.
+
+---
+
+## 13.8 Type Inference for Lambdas
 
 Lambda parameter and return types can be inferred from context:
 

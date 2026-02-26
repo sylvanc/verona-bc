@@ -32,6 +32,7 @@ Types.
 
 Semantics:
 - Region creation.
+- `final` functions.
 
 Packages:
 - Remove `vbci` dependency on `uv` and `openssl`, load those from packages.

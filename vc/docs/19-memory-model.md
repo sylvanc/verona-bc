@@ -117,15 +117,19 @@ You cannot create `ref[T]` values directly. They are produced only by `ref` meth
 
 ## 19.7 Freezing (Immutability)
 
-Objects can be **frozen** — converted from mutable to immutable. A frozen object's region becomes immortal: no reference counting is needed, and the objects live until the program ends.
-
-Freezing requires the region to be **sendable** — it must have no parent and exactly one stack reference. This ensures no other code holds a mutable reference to the region.
-
-> **Note:** Freezing is a runtime concept. There is currently no syntax-level `freeze` operation exposed to user code. It is used internally by the runtime for cowns.
+> **Note:** Freezing isn't implemented yet.
 
 ---
 
-## 19.8 Cowns and Ownership Transfer
+## 19.8 Object Teardown
+
+When a region is collected or a frame is unwound, objects in it are torn down. Teardown releases any resources held by the object (child region references, cown references, etc.) and frees the object's memory.
+
+There are no user-defined destructors or finalizers in the language. Resource cleanup is managed by the runtime through region deallocation and reference counting.
+
+---
+
+## 19.9 Cowns and Ownership Transfer
 
 When a value is placed into a `cown` (via a `when` block), ownership of the value's region transfers to the cown. The region's parent is set to the cown, and the stack reference count is adjusted.
 
