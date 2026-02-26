@@ -39,6 +39,8 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
+* If we raise or throw a frame local, we need to merge it into the target frame.
+
 * Tail-call optimization.
 * Do delayed-send when the closure still has stack references?
   * Allow creating a behavior with `exec_count_down` 1 higher.

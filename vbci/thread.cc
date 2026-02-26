@@ -1811,30 +1811,55 @@ namespace vbci
 
   void Thread::raise(Register ret_, Location target)
   {
-    // Pop frames until we reach the target frame, then convert to Return.
     Register ret{std::move(ret_)};
 
-    while (frame && frame->frame_id != target)
+    // Validate the target: must be a stack frame with a lower ID than the
+    // current frame (tailcalls retain frame IDs, so no gaps exist).
+    if (!target.is_stack() || target >= frame->frame_id)
     {
-      // Clear any unused arguments.
-      frame->drop_args(args);
+      ret = ValueImmortal(Error::BadRaiseTarget);
+      popframe(std::move(ret), Condition::Throw);
+      return;
+    }
 
-      teardown();
-      frames.pop_back();
+    // Check if the raised value needs relocation before we tear down
+    // intermediate frames.
+    auto retloc = ret->location();
 
-      if (frames.empty())
+    if (retloc.is_stack() && retloc > target)
+    {
+      // Stack-allocated in a frame younger than the target. It will be
+      // destroyed when we tear down intermediate frames.
+      ret = ValueImmortal(Error::BadStackEscape);
+      popframe(std::move(ret), Condition::Throw);
+      return;
+    }
+
+    if (
+      retloc.is_frame_local() &&
+      (retloc.frame_local_index() > target.stack_index()))
+    {
+      // Frame-local in a frame younger than the target. Drag it to the
+      // target frame's region so it survives intermediate teardowns.
+      auto target_local = Location::frame_local(target.stack_index());
+      if (!drag_allocation<false>(target_local, ret->get_header()))
       {
-        // Target frame not found.
-        ret = ValueImmortal(Error::BadRaiseTarget);
-        locals.at(0) = std::move(ret);
-        frame = nullptr;
+        ret = ValueImmortal(Error::BadStackEscape);
+        popframe(std::move(ret), Condition::Throw);
         return;
       }
+    }
 
+    // Tear down all intermediate frames.
+    while (frame->frame_id != target)
+    {
+      frame->drop_args(args);
+      teardown();
+      frames.pop_back();
       frame = &frames.back();
     }
 
-    // We've reached the target frame. Convert to Return.
+    // Target frame reached. Convert to a normal return.
     popframe(std::move(ret), Condition::Return);
   }
 
