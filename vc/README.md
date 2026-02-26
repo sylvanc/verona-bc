@@ -13,10 +13,6 @@ Patterns for lambdas.
   - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
 - `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
 
-Calls.
-- Try (rename to `catch`?).
-- Throw.
-
 Tuples:
 - Test case for an array of tuples.
 - Destructing when the tuple is too short throws an error. Should it?

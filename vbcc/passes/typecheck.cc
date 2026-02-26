@@ -1079,7 +1079,7 @@ namespace vbcc
           // Function pointer is opaque.
           set_type(env, node / LocalId, Node(Dyn));
         }
-        else if (node->in({Call, Try}))
+        else if (node == Call)
         {
           auto func_id = node / FunctionId;
           auto args = node / Args;
@@ -1121,7 +1121,7 @@ namespace vbcc
             set_type(env, node / LocalId, Node(Dyn));
           }
         }
-        else if (node->in({CallDyn, TryDyn}))
+        else if (node == CallDyn)
         {
           // Try to resolve the dynamic call through lookup info.
           auto fn_ptr_name =

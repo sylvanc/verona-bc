@@ -75,17 +75,16 @@ namespace vbcc
           }
           else if (node->in({Convert,  Copy,     HeapArrayConst,
                              ArrayRef, Load,     Store,
-                             Lookup,   Neg,
-                             Not,      Abs,      Ceil,
-                             Floor,    Exp,      Log,
-                             Sqrt,     Cbrt,     IsInf,
-                             IsNaN,    Sin,      Cos,
-                             Tan,      Asin,     Acos,
-                             Atan,     Sinh,     Cosh,
-                             Tanh,     Asinh,    Acosh,
-                             Atanh,    Bits,     Len,
-                             MakePtr,  Read,     SetRaise,
-                             Typetest}))
+                             Lookup,   Neg,      Not,
+                             Abs,      Ceil,     Floor,
+                             Exp,      Log,      Sqrt,
+                             Cbrt,     IsInf,    IsNaN,
+                             Sin,      Cos,      Tan,
+                             Asin,     Acos,     Atan,
+                             Sinh,     Cosh,     Tanh,
+                             Asinh,    Acosh,    Atanh,
+                             Bits,     Len,      MakePtr,
+                             Read,     SetRaise, Typetest}))
           {
             use(node / Rhs);
             def(node / LocalId);
@@ -112,7 +111,7 @@ namespace vbcc
           {
             def(node / LocalId);
           }
-          else if (node->in({Return, Raise, Throw, TailcallDyn}))
+          else if (node->in({Return, Raise, TailcallDyn}))
           {
             kill(node / LocalId);
           }
@@ -156,12 +155,12 @@ namespace vbcc
         },
         [&](auto node) {
           // Handle these in post, because the arguments will be pushed first.
-          if (node->in({Heap, CallDyn, TryDyn, WhenDyn}))
+          if (node->in({Heap, CallDyn, WhenDyn}))
           {
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({New, Stack, Region, Call, Try, When}))
+          else if (node->in({New, Stack, Region, Call, When}))
           {
             def(node / LocalId);
           }

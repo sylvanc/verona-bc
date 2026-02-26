@@ -81,7 +81,6 @@ namespace vbcc
   inline const auto Store = TokenDef("store");
   inline const auto Lookup = TokenDef("lookup");
   inline const auto Call = TokenDef("call");
-  inline const auto Try = TokenDef("try");
   inline const auto FFI = TokenDef("ffi");
   inline const auto When = TokenDef("when");
   inline const auto Typetest = TokenDef("typetest");
@@ -90,7 +89,6 @@ namespace vbcc
   inline const auto Tailcall = TokenDef("tailcall");
   inline const auto Return = TokenDef("ret");
   inline const auto Raise = TokenDef("raise");
-  inline const auto Throw = TokenDef("throw");
   inline const auto Cond = TokenDef("cond");
   inline const auto Jump = TokenDef("jump");
 
@@ -195,7 +193,6 @@ namespace vbcc
   inline const auto Body = TokenDef("body");
   inline const auto FnPointer = TokenDef("fnpointer");
   inline const auto CallDyn = TokenDef("calldyn");
-  inline const auto TryDyn = TokenDef("trydyn");
   inline const auto TailcallDyn = TokenDef("tailcalldyn");
   inline const auto WhenDyn = TokenDef("whendyn");
   inline const auto ConstStr = TokenDef("conststr");
@@ -232,11 +229,11 @@ namespace vbcc
     StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
-    Try | TryDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop |
+    FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop |
     wfUnop | wfConst | Typetest;
 
   inline const auto wfTerminator =
-    Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
+    Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
 
   inline const auto wfDst = (LocalId >>= LocalId);
   inline const auto wfSrc = (Rhs >>= LocalId);
@@ -308,8 +305,6 @@ namespace vbcc
     | (FnPointer <<= wfDst * (Rhs >>= FunctionId | SymbolId))
     | (Call <<= wfDst * FunctionId * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
-    | (Try <<= wfDst * FunctionId * Args)
-    | (TryDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
     | (When <<= wfDst * FunctionId * Args * Cown)
     | (WhenDyn <<= wfDst * wfSrc * Args * Cown)
@@ -323,7 +318,6 @@ namespace vbcc
     | (GetRaise <<= wfDst)
     | (SetRaise <<= wfDst * wfSrc)
     | (Raise <<= LocalId * (Type >>= wfType))
-    | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
     | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Jump <<= LabelId)

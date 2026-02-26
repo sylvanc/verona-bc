@@ -110,8 +110,7 @@ namespace vc
             auto type = _(Type);
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
-                                << (Stack << (LocalId ^ id)
-                                          << type << args))
+                                << (Stack << (LocalId ^ id) << type << args))
                        << (LocalId ^ id);
           },
 
@@ -320,7 +319,11 @@ namespace vc
 
         // Error on remaining DontCare (not on LHS of assignment).
         !In(Equals, TupleLHS) * T(DontCare)[DontCare] >>
-          [](Match& _) { return err(_(DontCare), "'_' can only be used on the left side of an assignment"); },
+          [](Match& _) {
+            return err(
+              _(DontCare),
+              "'_' can only be used on the left side of an assignment");
+          },
 
         // If expression.
         In(Expr) * T(If)[If] >>
@@ -393,9 +396,10 @@ namespace vc
         In(Expr) * T(Else) << (T(LocalId)[Lhs] * (T(Block)[Block])) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
-            return Seq
-              << (Lift << Body << (Else << _(Lhs) << _(Block) << (LocalId ^ id)))
-              << (Var << (Ident ^ id));
+            return Seq << (Lift
+                           << Body
+                           << (Else << _(Lhs) << _(Block) << (LocalId ^ id)))
+                       << (Var << (Ident ^ id));
           },
 
         // Else body.
@@ -410,20 +414,18 @@ namespace vc
             auto ok = _.fresh(l_body);
             auto else_lbl = _.fresh(l_body);
             auto join = _.fresh(l_join);
-            return Seq
-              << (Typetest << (LocalId ^ id) << (LocalId ^ _(Lhs))
-                           << type_nomatch())
-              << (Cond << (LocalId ^ id) << (LabelId ^ else_lbl)
-                       << (LabelId ^ ok))
-              << (Label << (LabelId ^ ok)
-                        << (Body
-                            << (Copy << (LocalId ^ _(LocalId))
-                                     << (LocalId ^ _(Lhs)))
-                            << (Jump << (LabelId ^ join))))
-              << (Label << (LabelId ^ else_lbl)
-                        << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
-                                    << (Jump << (LabelId ^ join))))
-              << (Label << (LabelId ^ join) << Body);
+            return Seq << (Typetest << (LocalId ^ id) << (LocalId ^ _(Lhs))
+                                    << type_nomatch())
+                       << (Cond << (LocalId ^ id) << (LabelId ^ else_lbl)
+                                << (LabelId ^ ok))
+                       << (Label << (LabelId ^ ok)
+                                 << (Body << (Copy << (LocalId ^ _(LocalId))
+                                                   << (LocalId ^ _(Lhs)))
+                                          << (Jump << (LabelId ^ join))))
+                       << (Label << (LabelId ^ else_lbl)
+                                 << (_(Body) << (Copy << (LocalId ^ _(LocalId)))
+                                             << (Jump << (LabelId ^ join))))
+                       << (Label << (LabelId ^ join) << Body);
           },
 
         // Break, continue.
@@ -754,7 +756,7 @@ namespace vc
           [](Match& _) { return Copy << _(Lhs) << _(Rhs); },
 
         // If there's a terminator, elide the incomplete Copy and the Jump.
-        In(Body) * (T(Jump, Return, Raise, Throw))[Return] *
+        In(Body) * (T(Jump, Return, Raise))[Return] *
             (T(Copy) << (T(LocalId) * End)) * T(Jump) * End >>
           [](Match& _) -> Node { return _(Return); },
 
@@ -795,7 +797,7 @@ namespace vc
 
           if (term == LocalId)
             node << (Return << term);
-          else if (term->in({Return, Raise, Throw, Jump, Cond}))
+          else if (term->in({Return, Raise, Jump, Cond}))
             node << term;
           else
           {
@@ -808,7 +810,7 @@ namespace vc
         {
           for (auto& child : *node)
           {
-            if (child->in({Return, Raise, Throw, Jump, Cond}))
+            if (child->in({Return, Raise, Jump, Cond}))
             {
               node->replace(child, err(child, "Terminators must come last"));
               ok = false;

@@ -1001,16 +1001,6 @@ namespace vbcc
             args(stmt / Args);
             code << uleb(+Op::CallDynamic) << dst(stmt) << src(stmt);
           }
-          else if (stmt == Try)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::TryStatic) << dst(stmt) << fn(stmt);
-          }
-          else if (stmt == TryDyn)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::TryDynamic) << dst(stmt) << src(stmt);
-          }
           else if (stmt == FFI)
           {
             args(stmt / Args);
@@ -1276,10 +1266,6 @@ namespace vbcc
         else if (term == Raise)
         {
           code << uleb(+Op::Raise) << dst(term);
-        }
-        else if (term == Throw)
-        {
-          code << uleb(+Op::Throw) << dst(term);
         }
         else if (term == Cond)
         {

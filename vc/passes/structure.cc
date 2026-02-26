@@ -11,7 +11,7 @@ namespace vc
     Int,     Hex,      Float,    HexFloat, String,      RawString,
     Char,    Tuple,    ArrayLit, Let,      Var,         New,
     Lambda,  Dot,      Ref,      FuncName, If,          While,
-    When,    Equals,   Else,     Try,      TripleColon, FieldRef};
+    When,    Equals,   Else,     TripleColon, FieldRef};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -387,9 +387,9 @@ namespace vc
           [](Match& _) { return WhereOr << *_(Union); },
 
         // Terminators.
-        // Break, continue, return, raise, throw.
+        // Break, continue, return, raise.
         T(Expr)[Expr]
-            << (T(Break, Continue, Return, Raise, Throw)[Break] * Any++[Rhs]) >>
+            << (T(Break, Continue, Return, Raise)[Break] * Any++[Rhs]) >>
           [](Match& _) -> Node {
           auto b = _(Break);
           auto e = Expr << (_[Rhs] || Ident ^ "none");

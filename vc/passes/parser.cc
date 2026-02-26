@@ -11,8 +11,8 @@ namespace vc
     Ident | SymbolId | DontCare | Equals | Hash | TripleColon | DoubleColon |
     Colon | Vararg | Dot |
     // Keywords.
-    Use | Where | Let | Var | Try | If | Else | While | For | Break | Continue |
-    When | Return | Raise | Throw | New | Shape | Semi;
+    Use | Where | Let | Var | If | Else | While | For | Break | Continue |
+    When | Return | Raise | New | Shape | Semi;
 
   // clang-format off
   const auto wfParser =
@@ -182,7 +182,6 @@ namespace vc
         "where\\b" >> [](auto& m) { m.add(Where); },
         "let\\b" >> [](auto& m) { m.add(Let); },
         "var\\b" >> [](auto& m) { m.add(Var); },
-        "try\\b" >> [](auto& m) { m.add(Try); },
         "if\\b" >> [](auto& m) { m.add(If); },
         "else\\b" >> [](auto& m) { m.add(Else); },
         "while\\b" >> [](auto& m) { m.add(While); },
@@ -192,7 +191,6 @@ namespace vc
         "continue\\b" >> [](auto& m) { m.add(Continue); },
         "return\\b" >> [](auto& m) { m.add(Return); },
         "raise\\b" >> [](auto& m) { m.add(Raise); },
-        "throw\\b" >> [](auto& m) { m.add(Throw); },
         "new\\b" >> [](auto& m) { m.add(New); },
         "shape\\b" >> [](auto& m) { m.add(Shape); },
 

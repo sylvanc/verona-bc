@@ -498,19 +498,6 @@ namespace vbcc
             return CallDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
           },
 
-        // Static try.
-        Dst * T(Try) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
-          [](Match& _) {
-            return Try << _(LocalId) << (FunctionId ^ _(GlobalId))
-                       << callargs(_[Args]);
-          },
-
-        // Dynamic try.
-        Dst * T(Try) * T(LocalId)[Lhs] * CallArgs[Args] >>
-          [](Match& _) {
-            return TryDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
-          },
-
         // FFI call.
         Dst * T(FFI) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
@@ -560,9 +547,6 @@ namespace vbcc
 
         (T(Raise) << End) * T(LocalId)[LocalId] * TypePat[Type] >>
           [](Match& _) { return Raise << _(LocalId) << _(Type); },
-
-        (T(Throw) << End) * T(LocalId)[LocalId] >>
-          [](Match& _) { return Throw << _(LocalId); },
 
         (T(Cond) << End) * T(LocalId)[LocalId] * T(LabelId)[Lhs] *
             T(LabelId)[Rhs] >>

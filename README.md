@@ -4,15 +4,13 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 ## Non-Local Returns
 
-A function call can be made as a `call` or a `try`. Functions can return via a `return`, a `raise`, or a `throw`.
+Functions return via `return` or `raise`.
 
-If you `call` and the function does a `return`, your destination register will have the returned value. If the function does a `throw`, you will immediately `throw` the thrown value.
-
-If you `try`, your destination register will have the returned value regardless of whether the function does a `return` or a `throw`.
+If the function does a `return`, your destination register will have the returned value.
 
 A `raise` pops frames until it reaches a target frame (identified by a raise target), then converts to a `return` from that frame. Each frame has a raise target that defaults to its own frame ID. Use `getraise` to read the current frame's raise target, and `setraise` to set it (returning the previous value). This allows blocks (non-escaping closures) to implement non-local returns: the block captures the enclosing function's raise target at creation time, sets it when invoked, and uses `raise` to return from the enclosing function.
 
-Exceptions are implemented via `throw` and `try`. A `throw` propagates through all `call` frames until caught by a `try`.
+Runtime errors (type mismatches, stack escapes, etc.) are fatal to the behavior.
 
 ## Debug Info
 
@@ -39,8 +37,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
 
 ## To-Do List
 
-* If we raise or throw a frame local, we need to merge it into the target frame.
-
 * Tail-call optimization.
 * Do delayed-send when the closure still has stack references?
   * Allow creating a behavior with `exec_count_down` 1 higher.
@@ -55,9 +51,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * When freezing a region with a stack RC, how do we know which SCC have those additional incoming edges?
     * In an RC region, can we reuse the existing object RC?
     * No way to do it in a non-RC region.
-* Types.
-  * Cache type check results? Would also prevent circular type checks.
-  * `imm` and other memory location types?
 * Initializing global values.
   * How to clean them up?
   * Immortal global values (compile-time generated) could pack their object identity into the Location field, to avoid any use of the memory address.

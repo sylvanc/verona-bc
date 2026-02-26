@@ -236,14 +236,6 @@ namespace vbci
     CallDynamic,
 
     // Arg0 = dst.
-    // Arg1 = function ID.
-    TryStatic,
-
-    // Arg0 = dst.
-    // Arg1 = function pointer.
-    TryDynamic,
-
-    // Arg0 = dst.
     // Arg1 = symbol ID.
     FFI,
 
@@ -274,11 +266,10 @@ namespace vbci
     // Arg0 = function pointer.
     TailcallDynamic,
 
-    // Return, raise, or throw from the current function.
+    // Return or raise from the current function.
     // Arg0 = return value.
     Return,
     Raise,
-    Throw,
 
     // Jump to a label depending on a boolean condition.
     // Arg0 = condition.
@@ -417,17 +408,6 @@ namespace vbci
     RegionArena
   };
 
-  enum class Condition
-  {
-    Return,
-    Throw,
-  };
-
-  enum class CallType
-  {
-    Call,
-    Catch
-  };
 
   enum class DIOp
   {
@@ -454,11 +434,6 @@ namespace vbci
   inline constexpr size_t operator+(RegionType r)
   {
     return static_cast<size_t>(r);
-  }
-
-  inline constexpr size_t operator+(Condition c)
-  {
-    return static_cast<size_t>(c);
   }
 
   inline constexpr size_t operator+(DIOp c)

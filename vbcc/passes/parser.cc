@@ -78,7 +78,6 @@ namespace vbcc
         "lookup\\b" >> [](auto& m) { m.add(Lookup); },
         "call\\b" >> [](auto& m) { m.add(Call); },
 
-        "try\\b" >> [](auto& m) { m.add(Try); },
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
         "when\\b" >> [](auto& m) { m.add(When); },
         "getraise\\b" >> [](auto& m) { m.add(GetRaise); },
@@ -89,7 +88,6 @@ namespace vbcc
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },
         "ret\\b" >> [](auto& m) { m.add(Return); },
         "raise\\b" >> [](auto& m) { m.add(Raise); },
-        "throw\\b" >> [](auto& m) { m.add(Throw); },
         "cond\\b" >> [](auto& m) { m.add(Cond); },
         "jump\\b" >> [](auto& m) { m.add(Jump); },
 

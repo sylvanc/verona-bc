@@ -2,7 +2,7 @@ cown[T]
 {
   create(): none
   {
-    // TODO: throw
+    // TODO: error
     none
   }
 

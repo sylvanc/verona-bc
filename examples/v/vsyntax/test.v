@@ -71,7 +71,6 @@ foo[T1 = i32, T2 = (f32 | f64) | (i32 | i64)]
       }
       // return 5;
       // raise;
-      // throw "Error";
     }
 
     let e = 7;

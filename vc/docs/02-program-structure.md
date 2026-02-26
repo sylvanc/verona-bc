@@ -132,12 +132,7 @@ main(): i32
 
 ## 2.6 Keywords
 
-The following words are reserved:
-
-**Implemented:** `use`, `where`, `let`, `var`, `if`, `else`, `while`, `for`, `when`,
-`break`, `continue`, `return`, `new`, `shape`
-
-**Reserved for future use:** `try`, `raise`, `throw` — see [Error Handling](24-error-handling.md)
+The following words are reserved: `use`, `where`, `let`, `var`, `if`, `else`, `while`, `for`, `when`, `break`, `continue`, `return`, `raise`, `new`, `shape`.
 
 ---
 

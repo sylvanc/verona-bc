@@ -122,7 +122,7 @@ namespace vc
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
   inline const auto wfBody =
-    Use | Break | Continue | Return | Raise | Throw | Expr;
+    Use | Break | Continue | Return | Raise | Expr;
 
   inline const auto wfBinop = Add | Sub | Mul | Div | Mod | Pow | And | Or |
     Xor | Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
@@ -136,7 +136,7 @@ namespace vc
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
     wfLiteral | Char | String | RawString | Tuple | ArrayLit | Let | Var | New |
     Stack | Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals |
-    Hash | Try | FieldRef | GetRaise | SetRaise;
+    Hash | FieldRef | GetRaise | SetRaise;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -204,7 +204,6 @@ namespace vc
     | (Continue <<= Expr)
     | (Return <<= Expr)
     | (Raise <<= Expr)
-    | (Throw <<= Expr)
     | (SetRaise <<= Expr)
     ;
   // clang-format on
@@ -320,7 +319,6 @@ namespace vc
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
     | (Return <<= LocalId)
     | (Raise <<= LocalId * Type)
-    | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
     | (GetRaise <<= wfDst)
     | (SetRaise <<= wfDst * wfSrc)

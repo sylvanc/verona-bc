@@ -78,20 +78,27 @@ namespace vbci
     {
       assert(args == 0);
       ((arg(args++) = std::forward<Ts>(argv)), ...);
-      auto ret = thread_run(func);
 
-      if (ret->is_error())
-        LOG(Error) << ret->to_string();
+      try
+      {
+        thread_run(func);
+      }
+      catch (Value& error_value)
+      {
+        teardown_all();
+        LOG(Error) << error_value.to_string();
+      }
     }
 
     void thread_run_behavior(verona::rt::Work* work);
     Register thread_run(Function* func);
     void step();
-    void pushframe(Function* func, size_t dst, CallType calltype);
-    void popframe(Register result, Condition condition);
+    void pushframe(Function* func, size_t dst);
+    void popframe(Register result);
     void raise(Register result, Location target);
     void tailcall(Function* func);
     void teardown(bool tailcall = false);
+    void teardown_all();
     void branch(size_t label);
     void check_args(std::vector<uint32_t>& types, bool vararg = false);
     void check_args(std::vector<Field>& fields);

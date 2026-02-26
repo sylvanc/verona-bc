@@ -14,8 +14,7 @@ namespace vbci
     std::vector<Object*>& finalize,
     size_t finalize_base,
     PC pc,
-    size_t dst,
-    CallType calltype)
+    size_t dst)
   : func(func),
     frame_id(frame_id),
     save(save),
@@ -26,7 +25,6 @@ namespace vbci
     finalize_top(finalize_base),
     pc(pc),
     dst(dst),
-    calltype(calltype),
     raise_target(frame_id)
   {
     region.set_frame_local_owner();

@@ -3066,10 +3066,10 @@ namespace vc
           }
           else
           {
-            // No Return terminators. If all exit terminators are Raise
-            // or Throw, the function never returns normally. Set the
-            // return type to none. Jump and Cond are internal control
-            // flow, not function exits.
+            // No Return terminators. If all exit terminators are Raise,
+            // the function never returns normally. Set the return type
+            // to none. Jump and Cond are internal control flow, not
+            // function exits.
             bool all_nonlocal = true;
 
             for (auto& lbl : *labels)
@@ -3079,7 +3079,7 @@ namespace vc
               if (term->in({Jump, Cond}))
                 continue;
 
-              if (!term->in({Raise, Throw}))
+              if (term != Raise)
               {
                 all_nonlocal = false;
                 break;
