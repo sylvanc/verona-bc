@@ -67,6 +67,7 @@ namespace vc
           [](Match& _) {
             auto lambda = _(Lambda);
             std::map<Location, Node> freevars;
+            bool has_raise = false;
 
             lambda->traverse([&](auto node) {
               bool ok = true;
@@ -74,6 +75,10 @@ namespace vc
               if (node == Error)
               {
                 ok = false;
+              }
+              else if (node == Raise)
+              {
+                has_raise = true;
               }
               else if (node == LocalId)
               {
@@ -112,12 +117,44 @@ namespace vc
             assert(enclosing_cls);
             auto cls_path = scope_path(enclosing_cls);
 
+            // Annotate Raise nodes with the enclosing function's return
+            // type, so the type checker can verify the raised value
+            // against the function that will actually receive it.
+            // This must happen before rewrite_typeparam_refs so the
+            // type param references get rewritten correctly.
+            if (has_raise)
+            {
+              auto enclosing_func = lambda->parent(Function);
+              assert(enclosing_func);
+              auto func_ret_type = enclosing_func / Type;
+
+              lambda->traverse([&](auto node) {
+                if (node == Raise && node->size() == 1)
+                  node << clone(func_ret_type);
+                return node != Error;
+              });
+            }
+
             // Collect and rewrite free type params.
             auto free_tps = collect_free_typeparams(lambda);
             rewrite_typeparam_refs(lambda, free_tps, cls_path, id);
 
             // Build fields from free variables.
             std::vector<AnonClassField> fields;
+
+            // For raising lambdas (blocks), add a $raise_target field
+            // that captures the current raise target at creation time.
+            if (has_raise)
+            {
+              auto u64_type = Type
+                << (TypeName
+                    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                    << (NameElement << (Ident ^ "u64") << TypeArgs));
+              fields.push_back(
+                {Location("$raise_target"),
+                 u64_type,
+                 Expr << GetRaise});
+            }
 
             for (auto& [freevar, fv_type] : freevars)
             {
@@ -157,6 +194,17 @@ namespace vc
                                         << (FieldId ^ field.name)))))));
             }
 
+            // For raising lambdas, set the raise target from the
+            // captured field before executing the lambda body.
+            if (has_raise)
+            {
+              apply_body
+                << (Expr
+                    << (SetRaise
+                        << (Expr
+                            << (LocalId ^ "$raise_target"))));
+            }
+
             apply_body << *_(Body);
 
             auto result = make_anon_class(
@@ -166,7 +214,8 @@ namespace vc
               fields,
               _(Params),
               _(Type),
-              apply_body);
+              apply_body,
+              has_raise);
 
             return Seq << (Lift << ClassBody << result.class_def)
                        << result.create_call;

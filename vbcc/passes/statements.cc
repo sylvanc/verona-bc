@@ -558,8 +558,8 @@ namespace vbcc
         (T(Return) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Return << _(LocalId); },
 
-        (T(Raise) << End) * T(LocalId)[LocalId] >>
-          [](Match& _) { return Raise << _(LocalId); },
+        (T(Raise) << End) * T(LocalId)[LocalId] * TypePat[Type] >>
+          [](Match& _) { return Raise << _(LocalId) << _(Type); },
 
         (T(Throw) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Throw << _(LocalId); },

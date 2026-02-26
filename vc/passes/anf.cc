@@ -103,6 +103,18 @@ namespace vc
                        << (LocalId ^ id);
           },
 
+        // Stack (block allocation).
+        In(Expr) * T(Stack) << (T(Type)[Type] * T(NewArgs)[NewArgs]) >>
+          [](Match& _) {
+            auto args = _(NewArgs);
+            auto type = _(Type);
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (Stack << (LocalId ^ id)
+                                          << type << args))
+                       << (LocalId ^ id);
+          },
+
         // New array.
         In(Expr) * T(NewArray)[NewArray]
             << (T(Type)[Type] *
@@ -627,6 +639,23 @@ namespace vc
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
                                 << (Load << (LocalId ^ id) << _(LocalId)))
+                       << (LocalId ^ id);
+          },
+
+        // GetRaise.
+        In(Expr) * T(GetRaise) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body << (GetRaise << (LocalId ^ id)))
+                       << (LocalId ^ id);
+          },
+
+        // SetRaise.
+        In(Expr) * T(SetRaise) << T(LocalId)[LocalId] >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (SetRaise << (LocalId ^ id) << _(LocalId)))
                        << (LocalId ^ id);
           },
 

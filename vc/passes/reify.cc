@@ -662,7 +662,7 @@ namespace vc
             vars << (LocalId ^ (n / Ident));
             remove.push_back(n);
           }
-          else if (n == New)
+          else if (n->in({New, Stack}))
           {
             // Save the type before reify_new transforms the node.
             auto new_type = reify_type(n / Type, r.subst);
@@ -731,6 +731,12 @@ namespace vc
 
         for (auto& n : remove)
           n->parent()->replace(n);
+
+        // Reify the Type child of Raise terminators.
+        auto term = l / Return;
+
+        if (term == Raise)
+          term / Type = reify_type(term / Type, r.subst);
       }
 
       r.reification = Func << r.id << params << r_type << vars << labels;

@@ -397,6 +397,14 @@ namespace vc
           if (_(Expr)->parent() != Body)
             return err(_(Expr), "Can't be used as an expression");
 
+          if (b == Raise)
+          {
+            auto ancestor = _(Expr)->parent({Lambda, Function});
+
+            if (!ancestor || (ancestor == Function))
+              return err(_(Expr), "Raise can only be used inside a lambda");
+          }
+
           return b << e;
         },
 

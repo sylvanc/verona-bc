@@ -1780,7 +1780,21 @@ namespace vc
               env[local_id->location()] =
                 LocalTypeInfo::fixed(clone(stmt / Type));
             }
-            else if (stmt == New)
+            else if (stmt == GetRaise)
+            {
+              // GetRaise produces a u64 (frame ID).
+              auto dst = stmt / LocalId;
+              env[dst->location()] =
+                LocalTypeInfo::computed(primitive_type(U64));
+            }
+            else if (stmt == SetRaise)
+            {
+              // SetRaise returns the previous raise target as u64.
+              auto dst = stmt / LocalId;
+              env[dst->location()] =
+                LocalTypeInfo::computed(primitive_type(U64));
+            }
+            else if (stmt->in({New, Stack}))
             {
               auto dst = stmt / LocalId;
               env[dst->location()] =
@@ -2434,15 +2448,22 @@ namespace vc
             // result type unknown, don't record in env.
           }
 
-          // Refine Const literals returned from this label based on
-          // the function's declared return type.
+          // Refine Const literals returned or raised from this label
+          // based on the target function's declared return type.
+          // For Return, use the current function's return type.
+          // For Raise, use the annotated enclosing function's return type.
           auto term = lbl / Return;
+          Node target_ret_type;
 
           if (term == Return)
+            target_ret_type = node / Type;
+          else if (term == Raise)
+            target_ret_type = term / Type;
+
+          if (target_ret_type)
           {
             auto ret_src = term / LocalId;
-            auto func_ret_type = node / Type;
-            auto expected_prim = extract_primitive(func_ret_type);
+            auto expected_prim = extract_primitive(target_ret_type);
 
             if (expected_prim)
             {
@@ -3042,6 +3063,38 @@ namespace vc
               union_node << clone(rt->front());
 
             node->replace(func_ret_type, Type << union_node);
+          }
+          else
+          {
+            // No Return terminators. If all exit terminators are Raise
+            // or Throw, the function never returns normally. Set the
+            // return type to none. Jump and Cond are internal control
+            // flow, not function exits.
+            bool all_nonlocal = true;
+
+            for (auto& lbl : *labels)
+            {
+              auto term = lbl / Return;
+
+              if (term->in({Jump, Cond}))
+                continue;
+
+              if (!term->in({Raise, Throw}))
+              {
+                all_nonlocal = false;
+                break;
+              }
+            }
+
+            if (all_nonlocal)
+            {
+              node->replace(
+                func_ret_type,
+                Type
+                  << (TypeName
+                      << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                      << (NameElement << (Ident ^ "none") << TypeArgs)));
+            }
           }
         }
 

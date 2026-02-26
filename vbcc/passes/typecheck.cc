@@ -1630,6 +1630,25 @@ namespace vbcc
             }
           }
         }
+        else if (node == Raise)
+        {
+          // Check raised value type against the enclosing function's
+          // return type (annotated on the Raise node).
+          auto ret_type = typed(node / LocalId);
+          auto raise_ret = resolve_type(node / Type);
+
+          if (ret_type && !ir_subtype(ret_type, raise_ret))
+          {
+            type_err(
+              node,
+              std::format(
+                "raise: value type '{}' is not a subtype of enclosing "
+                "function return type '{}'",
+                type_name(ret_type),
+                type_name(raise_ret)));
+            return true;
+          }
+        }
         else if (node == Cond)
         {
           auto cond_type = typed(node / LocalId);

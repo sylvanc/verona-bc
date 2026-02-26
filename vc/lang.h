@@ -135,8 +135,8 @@ namespace vc
 
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
     wfLiteral | Char | String | RawString | Tuple | ArrayLit | Let | Var | New |
-    Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals | Hash |
-    Try | FieldRef;
+    Stack | Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals |
+    Hash | Try | FieldRef | GetRaise | SetRaise;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -197,6 +197,7 @@ namespace vc
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
     | (New <<= NewArgs)
+    | (Stack <<= Type * NewArgs)
     | (NewArgs <<= NewArg++)
     | (NewArg <<= Ident * Expr)
     | (Break <<= Expr)
@@ -204,6 +205,7 @@ namespace vc
     | (Return <<= Expr)
     | (Raise <<= Expr)
     | (Throw <<= Expr)
+    | (SetRaise <<= Expr)
     ;
   // clang-format on
 
@@ -222,7 +224,8 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprSugar = (wfExprIdent | Load | Call) - Lambda;
+  inline const auto wfExprSugar =
+    (wfExprIdent | Load | Call | GetRaise | SetRaise | Stack) - Lambda;
 
   // clang-format off
   inline const auto wfPassSugar =
@@ -232,6 +235,7 @@ namespace vc
     | (Call <<= FuncName * Args)
     | (Args <<= Expr++)
     | (Expr <<= wfExprSugar++)
+    | (Raise <<= Expr * Type)
     ;
   // clang-format on
 
@@ -279,9 +283,10 @@ namespace vc
   // clang-format on
 
   inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
-    RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | NewArray |
+    RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | Stack | NewArray |
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | Var | When |
-    wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion;
+    wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion | GetRaise |
+    SetRaise;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -302,6 +307,7 @@ namespace vc
     | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
     | (New <<= wfDst * Type * NewArgs)
+    | (Stack <<= wfDst * Type * NewArgs)
     | (NewArg <<= Ident * wfSrc)
     | (NewArray <<= wfDst * Type * wfSrc)
     | (NewArrayConst <<= wfDst * Type * wfLit)
@@ -313,9 +319,11 @@ namespace vc
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
     | (Return <<= LocalId)
-    | (Raise <<= LocalId)
+    | (Raise <<= LocalId * Type)
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
+    | (GetRaise <<= wfDst)
+    | (SetRaise <<= wfDst * wfSrc)
     | (Typetest <<= wfDst * wfSrc * Type)
     | (Jump <<= LabelId)
     | (When <<= wfDst * wfSrc * Args * Type)
@@ -444,7 +452,8 @@ namespace vc
     std::vector<AnonClassField>& fields,
     Node apply_params,
     Node apply_ret_type,
-    Node apply_body);
+    Node apply_body,
+    bool is_block = false);
 
   Parse parser();
   PassDef structure(const Parse& parse);

@@ -322,7 +322,7 @@ namespace vbcc
     | (Return <<= LocalId)
     | (GetRaise <<= wfDst)
     | (SetRaise <<= wfDst * wfSrc)
-    | (Raise <<= LocalId)
+    | (Raise <<= LocalId * (Type >>= wfType))
     | (Throw <<= LocalId)
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
     | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))

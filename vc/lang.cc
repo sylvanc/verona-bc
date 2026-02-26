@@ -253,7 +253,8 @@ namespace vc
     std::vector<AnonClassField>& fields,
     Node apply_params,
     Node apply_ret_type,
-    Node apply_body)
+    Node apply_body,
+    bool is_block)
   {
     auto enclosing_cls = context_node->parent(ClassDef);
     assert(enclosing_cls);
@@ -331,6 +332,7 @@ namespace vc
     Node create_params = Params;
     Node create_args = Args;
     Node new_args = NewArgs;
+    Node stack_new_args = NewArgs;
 
     // Prepend self param to apply_params.
     auto full_apply_params = Params
@@ -348,23 +350,46 @@ namespace vc
       new_args
         << (NewArg << (Ident ^ field.name)
                    << (Expr << (LocalId ^ field.name)));
+      // For blocks, build NewArgs with the actual creation-site expressions
+      // instead of LocalId references (since there's no create method).
+      stack_new_args
+        << (NewArg << (Ident ^ field.name) << clone(field.create_arg));
     }
 
-    Node class_def = ClassDef
-      << None << (Ident ^ id) << typeparams << Where
-      << (classbody
-          << (Function << Rhs << (Ident ^ "create") << TypeParams
-                       << create_params << self_type << Where
-                       << (Body << (Expr << (New << new_args))))
-          << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                       << full_apply_params << apply_ret_type << Where
-                       << apply_body));
+    Node class_def;
+    Node create_expr;
 
-    Node create_call = Call
-      << (FuncName << *clone(fq_tn_create)
-                   << (NameElement << (Ident ^ "create") << TypeArgs))
-      << create_args;
+    if (is_block)
+    {
+      // Blocks don't have a create method. The object is stack-allocated
+      // directly at the call site, so it never escapes.
+      class_def = ClassDef
+        << None << (Ident ^ id) << typeparams << Where
+        << (classbody
+            << (Function << Rhs << (Ident ^ "apply") << TypeParams
+                         << full_apply_params << apply_ret_type << Where
+                         << apply_body));
 
-    return {class_def, create_call};
+      create_expr = Stack << (Type << clone(fq_tn_create)) << stack_new_args;
+    }
+    else
+    {
+      class_def = ClassDef
+        << None << (Ident ^ id) << typeparams << Where
+        << (classbody
+            << (Function << Rhs << (Ident ^ "create") << TypeParams
+                         << create_params << self_type << Where
+                         << (Body << (Expr << (New << new_args))))
+            << (Function << Rhs << (Ident ^ "apply") << TypeParams
+                         << full_apply_params << apply_ret_type << Where
+                         << apply_body));
+
+      create_expr = Call
+        << (FuncName << *clone(fq_tn_create)
+                     << (NameElement << (Ident ^ "create") << TypeArgs))
+        << create_args;
+    }
+
+    return {class_def, create_expr};
   }
 }

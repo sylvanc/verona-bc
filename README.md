@@ -54,8 +54,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
     * In an RC region, can we reuse the existing object RC?
     * No way to do it in a non-RC region.
 * Types.
-  * Raise and throw signatures on functions.
-  * Function types. For function pointers, not closures.
   * Cache type check results? Would also prevent circular type checks.
   * `imm` and other memory location types?
 * Initializing global values.
@@ -67,15 +65,10 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Compatible with FFI.
   * Can't store? Or is a store a copy? How do we initialize the field?
 * Make a `[bool]` have 1-bit instead of 8-bit elements.
-* Math ops for numeric limits, by type?
 * FFI with `libffi`.
   * Can we wrap returned `struct` as objects?
   * Platform-specific FFI. Only load for the runtime platform.
   * Use `libffi` closures to create function pointers with captures.
-* Sockets.
-  * TCP/TLS server?
-  * UDP?
-  * Cloudflare `quiche` for `QUIC`?
 * Introspection.
   * Get a value's dynamic type.
   * Functions: get the argument count and types, and the return type.
@@ -87,7 +80,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Allow calling back into the interpreter.
 * Generate FFI stubs automatically from C/C++ headers.
 * Interactive debugger.
-* Build an DAP/LSP to allow debugging.
+* Build a DAP/LSP to allow debugging.
 * AST to IR output.
 * Compile to LLVM IR and/or Cranelift.
 * Hot patching running code.

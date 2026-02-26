@@ -14,8 +14,8 @@ Patterns for lambdas.
 - `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
 
 Calls.
-- Try (rename to `catch`?), sub-call.
-- Raise, throw.
+- Try (rename to `catch`?).
+- Throw.
 
 Tuples:
 - Test case for an array of tuples.

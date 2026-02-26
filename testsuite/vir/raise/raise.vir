@@ -9,7 +9,7 @@
 //   Sets the raise target and raises val.
 func @inner($val: i32, $target: u64): i32
   $prev = setraise $target
-  raise $val
+  raise $val i32
 
 // outer(raise_target): i32
 //   Calls inner with 42 and the raise target.
