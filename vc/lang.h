@@ -235,6 +235,7 @@ namespace vc
     | (Args <<= Expr++)
     | (Expr <<= wfExprSugar++)
     | (Raise <<= Expr * Type)
+    | (Ref <<= ~Expr)
     ;
   // clang-format on
 
@@ -431,6 +432,7 @@ namespace vc
     Location name;       // field / create param name
     Node type;           // Type node (cloned)
     Node create_arg;     // Expr for the create call argument
+    bool is_var = false; // true if captured from a Var (by reference)
   };
 
   // Result of make_anon_class.

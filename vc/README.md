@@ -32,6 +32,7 @@ Types.
 
 Semantics:
 - Region creation.
+- Freezing.
 - `final` functions.
 
 Packages:
