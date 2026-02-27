@@ -72,12 +72,23 @@ Union types are used extensively in iterators (returning `T | nomatch`) and in `
 
 ### Discriminating Union Types
 
-There is no general-purpose `match` statement or `if x is Type` syntax. Union type discrimination is done through the `for` loop and `else` mechanism:
+Union type discrimination is done through `match` expressions and the `for`/`else` mechanism:
 
-- **`for` loops** automatically handle `T | nomatch`: when the iterator’s `.next()` returns `nomatch`, the loop exits. The user never sees the `nomatch` case.
-- **`else` on `for` iteration**: Internally, the `for` loop desugaring uses `it.next() else { break }` — the `else` branch runs when the expression evaluates to `nomatch`.
+- **`match` expressions** test a value against type patterns and value patterns. Each arm is a case lambda — type test arms bind the value to a typed parameter, value test arms compare using `==`. See [Control Flow §6.8](06-control-flow.md) for full details.
+- **`for` loops** automatically handle `T | nomatch`: when the iterator's `.next()` returns `nomatch`, the loop exits. The user never sees the `nomatch` case.
+- **`else` on expressions**: `expr else { fallback }` handles the `nomatch` case — the `else` branch runs when the expression evaluates to `nomatch`.
 
-For functions returning `T | nomatch`, the idiomatic pattern is to use the result in a `for`-compatible way or to design APIs so that `nomatch` is handled implicitly.
+```verona
+// Type discrimination with match:
+let x: i32 | string = get_value();
+let result = (match x { (n: i32) -> n + 1; (s: string) -> s.size; }) else (0);
+
+// Iterator discrimination with for:
+for arr.values() elem ->
+{
+  // elem is T, not T | nomatch — the for loop strips nomatch
+}
+```
 
 ---
 

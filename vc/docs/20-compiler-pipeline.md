@@ -19,15 +19,15 @@ The compiler runs 14 passes in order:
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
 | 0 | `parse` | — | Tokenization and initial AST construction |
-| 1 | `structure` | top-down | Scope nesting, class/function/type structure |
-| 2 | `ident` | concurrent | Name resolution, fully qualified names, symbol tables |
-| 3 | `sugar` | top-down | Lambda desugaring, when rewriting, default args, auto-RHS, auto-create |
+| 1 | `structure` | top-down | Scope nesting, class/function/type structure, auto-create constructors |
+| 2 | `ident` | bottom-up / once | Name resolution, fully qualified names, symbol tables |
+| 3 | `sugar` | top-down | When rewriting, match desugaring, lambda desugaring, default args, auto-RHS |
 | 4 | `functype` | bottom-up | Function type (`->`) → synthetic shape conversion |
 | 5 | `dot` | top-down | Dot access, juxtaposition (application), `:::` builtin/FFI resolution |
 | 6 | `application` | top-down | Infix/prefix function/method calls, ref, hash, partial application |
 | 7 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
 | 8 | `infer` | once | Type inference and literal refinement |
-| 9 | `reify` | once | Monomorphization — generic instantiation starting from `main` |
+| 9 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
 | 10 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
 | 11 | `validids` | once | Validate identifier assignments for consistency |
 | 12 | `liveness` | once | Liveness analysis for register allocation |
@@ -84,17 +84,17 @@ This wraps the erroneous subtree in an `Error` node, exempting it from WF checks
 Tokenizes source code using regex-based rules. Produces a flat token stream grouped by `()`, `[]`, `{}`. Handles comments, string literals, numeric literals, operators, keywords, and identifiers.
 
 ### Structure (`structure`)
-Converts the flat token groups into nested AST structure: class definitions, function definitions, type expressions, control flow nodes, expressions. Enforces structural rules (e.g., shapes can't have function bodies, prototypes only in shapes).
+Converts the flat token groups into nested AST structure: class definitions, function definitions, type expressions, control flow nodes, expressions. Enforces structural rules (e.g., shapes can't have function bodies, prototypes only in shapes). In its `post()` hook, generates default `create` constructors for classes that don't define one.
 
 ### Ident (`ident`)
 Resolves all names to fully qualified paths from the top scope. Uses `NodeWorker<Resolver>` for concurrent resolution with blocking dependencies. Builds the symbol table and resolves `use` imports.
 
 ### Sugar (`sugar`)
 Desugars syntactic sugar:
+- `match` expressions → case lambda chains with `nomatch` subtraction and `TryCallDyn` for value tests
 - Lambdas → anonymous classes with `apply`
 - `when` blocks → validated cown access
 - Default arguments → wrapper functions
-- Auto-`create` → generated constructors  
 - Auto-RHS → generated value accessors for `ref` functions
 
 ### Dot (`dot`)

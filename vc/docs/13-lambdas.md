@@ -203,3 +203,50 @@ apply_fn((x) -> { x + 1 }, 5)
 ```
 
 See [Type Inference](18-type-inference.md).
+
+---
+
+## 13.9 Case Lambdas (Match Arms)
+
+Match expressions desugar to **case lambdas** — each match arm becomes a lambda that tests a value and either returns a result or `nomatch`.
+
+### Type Test Arms
+
+A type test arm is a lambda whose parameter has a type annotation:
+
+```verona
+(x: i32) -> { x + 1 }
+```
+
+This tests whether the value matches `i32`. If it does, `x` is bound to the value and the body executes. Otherwise, the arm returns `nomatch`.
+
+### Value Test Arms
+
+A value test arm is a lambda whose parameter is an expression (not a typed identifier):
+
+```verona
+(42) -> { 100 }
+```
+
+This compares the input value against `42` using `==`. If they're equal, the body executes. If `==` doesn't exist for those types or the types don't match, the arm returns `nomatch` (no runtime error).
+
+### Bare Identifier Ambiguity
+
+In lambda parameters, a bare identifier always parses as a parameter definition (with inferred type), never as a case value expression. To use a variable as a case value, wrap it in an expression that isn't an identifier:
+
+```verona
+// This defines a parameter named 'x', it does NOT compare against variable x:
+(x) -> { ... }
+
+// To compare against a specific value, use a literal or typed expression:
+(42) -> { ... }
+(i32 42) -> { ... }
+```
+
+This is a deliberate parsing choice — type-free and unambiguous.
+
+### How Case Lambdas Work
+
+Under the hood, case lambdas use `TryCallDyn` for value tests — a fallible variant of dynamic dispatch that returns `nomatch` if the method doesn't exist or argument types don't match, rather than crashing. This makes value matching safe even when the case value's type has no `==` method or when comparing across incompatible types.
+
+See [Control Flow §6.8](06-control-flow.md) for the full match expression syntax.

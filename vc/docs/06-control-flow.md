@@ -192,7 +192,7 @@ when (c1, c2) (ref1, ref2) ->
 
 ## 6.7 Else on Expressions
 
-The `else` keyword can follow an expression to handle the `nomatch` case. This is the mechanism underlying the `for` loop:
+The `else` keyword can follow an expression to handle the `nomatch` case. This is the mechanism underlying `for` loops and `match` expressions:
 
 ```verona
 // Inside the for loop desugaring:
@@ -201,4 +201,108 @@ let elem = it.next() else { break };
 
 If `it.next()` returns `nomatch`, the `else` branch executes. Otherwise, the value is bound to `elem` with the `nomatch` alternative stripped from the type.
 
-> **Note:** The `else` on expression mechanism is primarily used in the `for` loop desugaring. It is not currently a general-purpose user-facing feature for arbitrary union type discrimination. For handling `T | nomatch`, use `for` loops or design APIs around iterators.
+The `else` branch can be a block or a parenthesized expression:
+
+```verona
+let elem = it.next() else { break };     // block form
+let result = (match v { ... }) else (0);  // expression form
+```
+
+---
+
+## 6.8 Match Expressions
+
+`match` tests a value against a sequence of patterns. Each pattern is a case lambda — type test arms bind the value if it matches the type, value test arms compare the value using `==`.
+
+### Syntax
+
+```verona
+(match expr { arm1; arm2; ... }) else (default)
+```
+
+The `match` keyword is followed by an expression and a block of arms. The entire `match` expression must be wrapped in parentheses, and an `else` clause provides the fallback when no arm matches:
+
+```verona
+let result = (match x { (n: i32) -> n + 1; }) else (0);
+```
+
+### Type Test Arms
+
+A type test arm binds the matched value to a typed parameter:
+
+```verona
+(match x
+{
+  (n: i32) -> n + 1;
+  (s: string) -> s.size;
+}) else (0)
+```
+
+If `x` is an `i32`, the first arm matches and `n` is bound to the value. If `x` is a `string`, the second arm matches. If neither matches, the `else` fallback is used.
+
+### Value Test Arms
+
+A value test arm compares the matched value against an expression using `==`:
+
+```verona
+let v: i32 = 42;
+let name = (match v { (1) -> 10; (42) -> 20; (99) -> 30; }) else (0);
+// name is 20
+```
+
+Value test arms call the `==` method on the matched value's type. If the type has no `==` method, or if the argument types don't match, the arm simply fails to match (it does not cause an error).
+
+### Mixed Arms
+
+Type and value test arms can be mixed. Arms are tried in order — the first match wins:
+
+```verona
+let result = (match v
+{
+  (7) -> 100;          // value test: does v == 7?
+  (x: i32) -> x;       // type test: is v an i32?
+}) else (0)
+```
+
+### How Match Works
+
+Under the hood, `match` desugars to a chain of case lambdas with `nomatch` subtraction:
+
+1. Each arm becomes a lambda that either returns a result or `nomatch`.
+2. Type test arms use a `typetest` conditional — if the value matches the type, the arm body executes.
+3. Value test arms use `TryCallDyn` to call `==` — if the method doesn't exist or the argument types don't match, the arm returns `nomatch` rather than crashing.
+4. Arms are chained as an `else`-if sequence: each arm tries in order, and the first non-`nomatch` result is used.
+5. If all arms return `nomatch`, the `else` fallback is used.
+
+### Examples
+
+**Simple type dispatch:**
+
+```verona
+let x: i32 | string = get_value();
+let result = (match x
+{
+  (n: i32) -> n + 1;
+  (s: string) -> s.size;
+}) else (0);
+```
+
+**Value-based dispatch:**
+
+```verona
+let code: i32 = get_code();
+let msg = (match code
+{
+  (0) -> 0;
+  (1) -> 10;
+  (2) -> 20;
+}) else (99);
+```
+
+**Exhaustive type matching:**
+
+When all possible types are covered by arms, the `else` branch is unreachable but still required in practice (without it, the result type includes `nomatch`):
+
+```verona
+let result = (match x { (n: i32) -> n; }) else (0);
+```

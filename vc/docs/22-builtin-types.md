@@ -182,11 +182,15 @@ bool(true)                            // explicit
 |--------|-----------|-------------|
 | `==` | `==(self, other: bool): bool` | Equality |
 | `!=` | `!=(self, other: bool): bool` | Inequality |
+| `<`, `<=`, `>`, `>=` | Ordering | Comparison operators |
 | `&` | `&(self, other: to_bool): bool` | Short-circuit AND |
 | `\|` | `\|(self, other: to_bool): bool` | Short-circuit OR |
 | `^` | `^(self, other: bool): bool` | XOR |
 | `!` | `!(self): bool` | Logical NOT |
-| `.i32` | `i32(self): i32` | Convert to i32 (0 or 1) |
+| `min` | `min(self, other: bool): bool` | Minimum |
+| `max` | `max(self, other: bool): bool` | Maximum |
+| `apply` | `apply(self): bool` | Identity |
+| `bool` | `bool(self): bool` | Identity |
 
 ### Short-Circuit Semantics
 
@@ -219,13 +223,12 @@ String literals (`"hello"`) produce `string` values.
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `size` | `size(self): usize` | Length in bytes |
-| `apply` / `ref apply` | `apply(self, index: usize): u8` | Byte at index |
+| `ref apply` | `ref apply(self, index: usize): ref[u8]` | Ref to byte at index |
 | `values` | `values(self): arrayiter[u8]` | Byte iterator |
 | `bool` | `bool(self): bool` | Non-empty? |
 | `+` | `+(self, other: string): string` | Concatenation |
 | `==`, `!=` | Equality/inequality | Byte-by-byte comparison |
 | `<`, `<=`, `>`, `>=` | Ordering | Lexicographic comparison |
-| `.i32` | `i32(self): i32` | Parse as integer |
 
 ---
 
@@ -295,7 +298,7 @@ Sentinel type for failed pattern matches and iterator exhaustion:
 nomatch                               // calls nomatch::create()
 ```
 
-Used in the return type of iterator `.next()` methods: `T | nomatch`.
+Used in the return type of iterator `.next()` methods (`T | nomatch`) and as the sentinel returned by failed `match` arms. When a `match` type test or value test doesn't match, the arm returns `nomatch`, which chains into the next arm or the `else` fallback. See [Control Flow §6.8](06-control-flow.md).
 
 ---
 

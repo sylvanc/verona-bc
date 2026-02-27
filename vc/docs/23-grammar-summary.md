@@ -96,6 +96,7 @@ Expr          ::= Literal
                  | 'for' Expr Ident '->' '{' Body '}'
                  | 'for' Expr '(' DestrElem (',' DestrElem)* ')' '->' '{' Body '}'
                  | 'when' '(' Args ')' '(' Params ')' '->' '{' Body '}'
+                 | MatchExpr
                  | LambdaExpr
                  | 'return' Expr
                  | 'raise' Expr
@@ -104,9 +105,17 @@ Expr          ::= Literal
                  | 'ref' Expr
                  | '#' Expr
 
-LambdaExpr    ::= '(' Params ')' (':' Type)? '->' '{' Body '}'
-                 | Ident '->' '{' Body '}'
+LambdaExpr    ::= '(' Params ')' (':' Type)? '->' LambdaBody
+                 | Ident '->' LambdaBody
                  | '{' Body '}'
+
+LambdaBody    ::= '{' Body '}'
+                 | Expr
+
+MatchExpr     ::= '(' 'match' Expr '{' MatchArm (';' MatchArm)* '}' ')' ElseChain
+
+MatchArm      ::= '(' Ident ':' Type ')' '->' LambdaBody    // type test
+                 | '(' Expr ')' '->' LambdaBody              // value test
 
 ElseChain     ::= 'else' '{' Body '}'
                  | 'else' 'if' Expr '{' Body '}' ElseChain?

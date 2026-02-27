@@ -100,6 +100,15 @@ find(arr: array[i32], target: i32): i32 | nomatch
 }
 ```
 
+`nomatch` is also the sentinel for failed match arms — when a `match` expression's type test or value test arm doesn't match, it returns `nomatch`, which the `else` fallback handles:
+
+```verona
+let result = (match x { (n: i32) -> n + 1; }) else (0);
+// If x is not i32, nomatch flows to else → result is 0
+```
+
+See [Control Flow §6.8](06-control-flow.md) for the full match expression syntax.
+
 The caller handles `nomatch` through iterators or the `else` mechanism:
 
 ```verona
@@ -110,7 +119,7 @@ for arr.values() elem ->
 }
 ```
 
-See [Types §3.3](03-types.md) for union type discrimination patterns.
+See [Types §3.3](03-types.md) for union type discrimination patterns and [Control Flow §6.8](06-control-flow.md) for match expressions.
 
 ---
 

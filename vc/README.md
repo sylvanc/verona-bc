@@ -2,12 +2,6 @@
 
 ## To Do
 
-Structure.
-- What type do control structures have?
-
-Pattern matching.
-- Test that a value match of the wrong type doesn't crash, but just fails to match.
-
 Tuples.
 - Test case for an array of tuples.
 - Destructing when the tuple is too short throws an error. Should it?

@@ -318,3 +318,24 @@ let old = x = 2;                   // old is 1, x is now 2
 ```
 
 For field writes through `ref[T]`, the store also returns the old value. See [Memory Model](19-memory-model.md) for details.
+
+---
+
+## 5.14 Match Expressions
+
+`match` tests a value against a sequence of type test and value test patterns:
+
+```verona
+let result = (match x
+{
+  (n: i32) -> n + 1;
+  (s: string) -> s.size;
+}) else (0);
+```
+
+The `match` expression must be wrapped in parentheses, and an `else` clause provides the fallback when no arm matches. Arms are tried in order — the first match wins.
+
+- **Type test arms** `(x: T) -> body` bind the value if it matches the type.
+- **Value test arms** `(expr) -> body` compare using `==`.
+
+See [Control Flow §6.8](06-control-flow.md) for full syntax and examples.
