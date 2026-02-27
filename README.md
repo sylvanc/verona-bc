@@ -51,9 +51,6 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * When freezing a region with a stack RC, how do we know which SCC have those additional incoming edges?
     * In an RC region, can we reuse the existing object RC?
     * No way to do it in a non-RC region.
-* Initializing global values.
-  * How to clean them up?
-  * Immortal global values (compile-time generated) could pack their object identity into the Location field, to avoid any use of the memory address.
 * Embedded fields (objects and arrays).
   * Embed with no header, use `snmalloc::external_pointer`.
   * Need a different `ValueType` to avoid doing this for all objects/arrays.

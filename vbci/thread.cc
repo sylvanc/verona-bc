@@ -42,21 +42,6 @@ namespace vbci
     }
   };
 
-  struct GlobalRead
-  {
-    const Value& global;
-  };
-
-  struct Global
-  {
-    Value& global;
-
-    void operator=(Value&& v)
-    {
-      global = std::move(v);
-    }
-  };
-
   struct ConstantBase
   {};
   template<typename T_>
@@ -115,27 +100,6 @@ namespace vbci
       self.trace_instruction(" Local=", reg_index, " (", reg, ")");
       process<F, Args..., Register>(
         self, fun, std::forward<Args>(args)..., std::move(reg));
-    }
-
-    template<typename F, typename... Args>
-    SNMALLOC_FAST_PATH static void
-    load_global_read_param(Thread& self, F fun, Args... args)
-    {
-      size_t global_index = self.leb();
-      self.trace_instruction(" GlobalRead=", global_index);
-      GlobalRead g{self.program->global(global_index)};
-      process<F, Args..., GlobalRead>(
-        self, fun, std::forward<Args>(args)..., g);
-    }
-
-    template<typename F, typename... Args>
-    SNMALLOC_FAST_PATH static void
-    load_global_param(Thread& self, F fun, Args... args)
-    {
-      size_t global_index = self.leb();
-      self.trace_instruction(" Global=", global_index);
-      Global g{self.program->global(global_index)};
-      process<F, Args..., Global>(self, fun, std::forward<Args>(args)..., g);
     }
 
     template<typename T, typename F, typename... Args>
@@ -203,15 +167,6 @@ namespace vbci
         else if constexpr (std::is_same_v<T, Register>)
         {
           register_move<F, Args...>(self, fun, std::forward<Args>(args)...);
-        }
-        else if constexpr (std::is_same_v<T, GlobalRead>)
-        {
-          load_global_read_param<F, Args...>(
-            self, fun, std::forward<Args>(args)...);
-        }
-        else if constexpr (std::is_same_v<T, Global>)
-        {
-          load_global_param<F, Args...>(self, fun, std::forward<Args>(args)...);
         }
         else if constexpr (std::is_base_of_v<
                              ConstantBase,
@@ -586,8 +541,6 @@ namespace vbci
   {
     switch (op)
     {
-      case Op::Global:
-        return os << "Global";
       case Op::Const:
         return os << "Const";
       case Op::String:
@@ -658,6 +611,8 @@ namespace vbci
         return os << "CallStatic";
       case Op::CallDynamic:
         return os << "CallDynamic";
+      case Op::TryCallDynamic:
+        return os << "TryCallDynamic";
       case Op::FFI:
         return os << "FFI";
       case Op::WhenStatic:
@@ -807,13 +762,6 @@ namespace vbci
     trace_instruction("OP:", op);
     switch (op)
     {
-      case Op::Global:
-      {
-        process([](Register& dst, Global g)
-                  INLINE { dst = ValueBorrow(g.global); });
-        break;
-      }
-
       case Op::Const:
       {
         process([](Thread& self, Register& dst, Constant<ValueType> t) INLINE {
@@ -1239,9 +1187,9 @@ namespace vbci
               auto f = src->method(method_id);
 
               if (!f)
-                Value::error(Error::MethodNotFound);
-
-              dst = ValueImmortal(f);
+                dst = ValueImmortal(Value());
+              else
+                dst = ValueImmortal(f);
             });
         break;
       }
@@ -1279,6 +1227,14 @@ namespace vbci
       {
         process([](Constant<size_t> dst_id, const Register& func, Thread& self)
                   INLINE { self.pushframe(func->function(), dst_id); });
+        break;
+      }
+
+      case Op::TryCallDynamic:
+      {
+        process(
+          [](Constant<size_t> dst_id, const Register& func, Thread& self)
+            INLINE { self.try_pushframe(func->function(), dst_id); });
         break;
       }
 
@@ -1633,6 +1589,55 @@ namespace vbci
     frame = &frames.back();
   }
 
+  void Thread::try_pushframe(Function* func, size_t dst)
+  {
+    if (!func)
+    {
+      drop_args();
+      frame->local(dst) = ValueImmortal(Value());
+      return;
+    }
+
+    if (!try_check_args(func->param_types))
+    {
+      // try_check_args already dropped args on failure.
+      frame->local(dst) = ValueImmortal(Value());
+      return;
+    }
+
+    LOG(Trace) << "TryCall " << program->di_function(func);
+
+    Location frame_id = Location::stack();
+    size_t base = 0;
+    size_t finalize_base = 0;
+
+    if (frame)
+    {
+      frame_id = frame->frame_id.next_stack_level();
+      base = frame->base + frame->func->registers;
+      finalize_base = frame->finalize_top;
+    }
+
+    // Make sure there's enough register space.
+    auto req_stack_size = base + func->registers;
+
+    while (locals.size() < req_stack_size)
+      locals.resize(locals.size() * 2);
+
+    frames.emplace_back(
+      func,
+      frame_id,
+      stack.save(),
+      locals,
+      base,
+      finalize,
+      finalize_base,
+      func->labels.at(0),
+      dst);
+
+    frame = &frames.back();
+  }
+
   void Thread::popframe(Register ret_)
   {
     // Create temp register to keep return alive across dropping of the frame.
@@ -1844,6 +1849,27 @@ namespace vbci
     }
 
     args = 0;
+  }
+
+  bool Thread::try_check_args(std::vector<uint32_t>& types)
+  {
+    if (args != types.size())
+    {
+      drop_args();
+      return false;
+    }
+
+    for (size_t i = 0; i < types.size(); i++)
+    {
+      if (!program->subtype(arg(i)->type_id(), types.at(i)))
+      {
+        drop_args();
+        return false;
+      }
+    }
+
+    args = 0;
+    return true;
   }
 
   void Thread::check_args(std::vector<Field>& fields)

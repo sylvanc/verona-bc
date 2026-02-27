@@ -55,7 +55,6 @@ namespace vbcc
   inline const auto Cown = TokenDef("cown");
 
   // Op codes.
-  inline const auto Global = TokenDef("global");
   inline const auto Const = TokenDef("const");
   inline const auto Convert = TokenDef("convert");
   inline const auto New = TokenDef("new");
@@ -193,6 +192,7 @@ namespace vbcc
   inline const auto Body = TokenDef("body");
   inline const auto FnPointer = TokenDef("fnpointer");
   inline const auto CallDyn = TokenDef("calldyn");
+  inline const auto TryCallDyn = TokenDef("trycalldyn");
   inline const auto TailcallDyn = TokenDef("tailcalldyn");
   inline const auto WhenDyn = TokenDef("whendyn");
   inline const auto ConstStr = TokenDef("conststr");
@@ -224,13 +224,13 @@ namespace vbcc
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
-  inline const auto wfStatement = Source | Offset | Global | Const | ConstStr |
-    Convert | New | Stack | Heap | Region | NewArray | NewArrayConst |
-    StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
+  inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
+    New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
+    StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
-    FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop |
-    wfUnop | wfConst | Typetest;
+    TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
+    wfConst | Typetest;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -276,7 +276,6 @@ namespace vbcc
     | (Body <<= wfStatement++)
     | (Source <<= String)
     | (Offset <<= Int)
-    | (Global <<= wfDst * GlobalId)
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     | (ConstStr <<= wfDst * (String >>= String | RawString))
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
@@ -305,6 +304,7 @@ namespace vbcc
     | (FnPointer <<= wfDst * (Rhs >>= FunctionId | SymbolId))
     | (Call <<= wfDst * FunctionId * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
+    | (TryCallDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
     | (When <<= wfDst * FunctionId * Args * Cown)
     | (WhenDyn <<= wfDst * wfSrc * Args * Cown)

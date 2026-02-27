@@ -9,7 +9,7 @@ namespace vbci
 {
   enum class Error
   {
-    UnknownGlobal,
+    UnknownString,
     UnknownFFI,
     UnknownRegionType,
     UnknownOpcode,
@@ -49,8 +49,8 @@ namespace vbci
   {
     switch (error)
     {
-      case Error::UnknownGlobal:
-        return "unknown global";
+      case Error::UnknownString:
+        return "unknown string";
       case Error::UnknownFFI:
         return "unknown FFI";
       case Error::UnknownRegionType:

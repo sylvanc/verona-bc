@@ -12,7 +12,7 @@ namespace vc
     Colon | Vararg | Dot |
     // Keywords.
     Use | Where | Let | Var | If | Else | While | For | Break | Continue |
-    When | Return | Raise | New | Shape | Semi;
+    When | Return | Raise | New | Shape | MatchExpr | Semi;
 
   // clang-format off
   const auto wfParser =
@@ -193,6 +193,7 @@ namespace vc
         "raise\\b" >> [](auto& m) { m.add(Raise); },
         "new\\b" >> [](auto& m) { m.add(New); },
         "shape\\b" >> [](auto& m) { m.add(Shape); },
+        "match\\b" >> [](auto& m) { m.add(MatchExpr); },
 
         // Identifier.
         "[_[:alpha:]][_[:alnum:]]*\\b" >> [](auto& m) { m.add(Ident); },

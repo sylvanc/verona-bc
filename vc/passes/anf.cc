@@ -3,7 +3,6 @@
 namespace vc
 {
   // Sythetic locations.
-  inline const auto l_local = Location("local");
   inline const auto l_arraylit = Location("array");
   inline const auto l_cond = Location("cond");
   inline const auto l_body = Location("body");
@@ -21,24 +20,6 @@ namespace vc
     }
 
     return count;
-  }
-
-  Node type_nomatch()
-  {
-    return Type
-      << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                   << (NameElement << (Ident ^ "nomatch") << TypeArgs));
-  }
-
-  Node make_nomatch(Node localid)
-  {
-    assert(localid == LocalId);
-    return Call << (LocalId ^ localid) << Rhs
-                << (FuncName
-                    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                    << (NameElement << (Ident ^ "nomatch") << TypeArgs)
-                    << (NameElement << (Ident ^ "create") << TypeArgs))
-                << Args;
   }
 
   const auto CallPat = T(Call)[Call] << (T(FuncName)[FuncName] * T(Args)[Args]);
@@ -151,13 +132,7 @@ namespace vc
             auto seq = Seq
               << (Lift << Body
                        << (NewArrayConst
-                           << (LocalId ^ id)
-                           << (Type
-                               << (TypeName
-                                   << (NameElement << (Ident ^ "_builtin")
-                                                   << TypeArgs)
-                                   << (NameElement << (Ident ^ "any")
-                                                   << TypeArgs)))
+                           << (LocalId ^ id) << type_any()
                            << (Int ^ std::to_string(tuple->size()))));
 
             // Copy the elements into the array.
@@ -189,13 +164,7 @@ namespace vc
             auto seq = Seq
               << (Lift << Body
                        << (NewArrayConst
-                           << (LocalId ^ id)
-                           << (Type
-                               << (TypeName
-                                   << (NameElement << (Ident ^ "_builtin")
-                                                   << TypeArgs)
-                                   << (NameElement << (Ident ^ "any")
-                                                   << TypeArgs)))
+                           << (LocalId ^ id) << type_any()
                            << (Int ^ std::to_string(arr->size()))));
 
             // Copy the elements into the array.
@@ -658,6 +627,17 @@ namespace vc
             auto id = _.fresh(l_local);
             return Seq << (Lift << Body
                                 << (SetRaise << (LocalId ^ id) << _(LocalId)))
+                       << (LocalId ^ id);
+          },
+
+        // Typetest expression.
+        // Typetest << (LocalId * Type) produces a bool result.
+        In(Expr) * T(Typetest) << (T(LocalId)[LocalId] * T(Type)[Type]) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (Typetest << (LocalId ^ id) << _(LocalId)
+                                             << _(Type)))
                        << (LocalId ^ id);
           },
 

@@ -1242,11 +1242,6 @@ namespace vbcc
           // Typetest dst is a boolean.
           set_type(env, node / LocalId, Node(Bool));
         }
-        else if (node == Global)
-        {
-          // Globals are opaque.
-          set_type(env, node / LocalId, Node(Dyn));
-        }
         else if (node == Drop)
         {
           // Drop removes a register - nothing to check.

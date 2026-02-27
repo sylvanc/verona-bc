@@ -84,14 +84,6 @@ namespace vbci
     return complex_types.at(type_id - min_complex_type_id);
   }
 
-  Value& Program::global(size_t idx)
-  {
-    if (idx >= globals.size())
-      Value::error(Error::UnknownGlobal);
-
-    return globals.at(idx);
-  }
-
   ffi_type* Program::value_type()
   {
     return &ffi_type_value;
@@ -115,7 +107,7 @@ namespace vbci
   Array* Program::get_string(size_t idx)
   {
     if (idx >= strings.size())
-      Value::error(Error::UnknownGlobal);
+      Value::error(Error::UnknownString);
 
     auto& str = strings.at(idx);
     auto str_size = str.size() + 1;
@@ -610,7 +602,6 @@ namespace vbci
     content.clear();
     functions.clear();
     classes.clear();
-    globals.clear();
 
     libs.clear();
     symbols.clear();

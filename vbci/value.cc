@@ -292,7 +292,8 @@ namespace vbci
         return cown->get_type_id();
 
       case ValueType::RegisterRef:
-        return Program::get().ref((Thread::get_register(u64)).borrow().type_id());
+        return Program::get().ref(
+          (Thread::get_register(u64)).borrow().type_id());
 
       case ValueType::FieldRef:
         return Program::get().ref(obj->field_type_id(idx));
@@ -571,7 +572,7 @@ namespace vbci
     if (tag == ValueType::Array)
       return Value(ValueType::USize, arr->get_size());
 
-    Value::error(Error::BadOperand);
+    return Value(ValueType::USize, 1);
   }
 
   Value Value::op_ptr()
@@ -825,7 +826,8 @@ namespace vbci
   template<bool is_move>
   void Value::exchange(Register& dst, Reg<is_move> v) const
   {
-    if (readonly) {
+    if (readonly)
+    {
       Value::error(Error::BadStoreTarget);
     }
     // Currently only cowns provide read-only access.  That means it
@@ -974,7 +976,8 @@ namespace vbci
         return cown->to_string();
 
       case ValueType::RegisterRef:
-        return std::format("ref {}", Thread::get_register(u64).borrow().to_string());
+        return std::format(
+          "ref {}", Thread::get_register(u64).borrow().to_string());
 
       case ValueType::FieldRef:
         return std::format(

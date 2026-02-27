@@ -73,8 +73,7 @@ namespace vbcc
   const auto Constant = T(Const_E, Const_Pi, Const_Inf, Const_NaN);
 
   const auto Def = Unop / Binop / Constant /
-    T(Global,
-      Const,
+    T(Const,
       ConstStr,
       Convert,
       New,

@@ -28,11 +28,6 @@ namespace vbci
   // ULEB128).
   enum class Op
   {
-    // Load a global value.
-    // Arg0 = dst.
-    // Arg1 = global ID.
-    Global,
-
     // Load a primitive value.
     // Arg0 = dst.
     // Arg1 = value type.
@@ -234,6 +229,12 @@ namespace vbci
     // Arg0 = dst.
     // Arg1 = function pointer.
     CallDynamic,
+
+    // Like CallDynamic, but on null function pointer or argument type mismatch,
+    // stores Invalid in dst and drops args instead of raising an error.
+    // Arg0 = dst.
+    // Arg1 = function pointer.
+    TryCallDynamic,
 
     // Arg0 = dst.
     // Arg1 = symbol ID.

@@ -55,8 +55,7 @@ namespace vc
     return def;
   }
 
-  Node find_func_def(
-    Node top, const Node& funcname, size_t arity, Node hand)
+  Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand)
   {
     assert(funcname == FuncName);
     Node def = top;
@@ -143,6 +142,31 @@ namespace vc
     return Type << tn;
   }
 
+  Node type_any()
+  {
+    return Type
+      << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                   << (NameElement << (Ident ^ "any") << TypeArgs));
+  }
+
+  Node type_nomatch()
+  {
+    return Type
+      << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                   << (NameElement << (Ident ^ "nomatch") << TypeArgs));
+  }
+
+  Node make_nomatch(Node localid)
+  {
+    assert(localid == LocalId);
+    return Call << (LocalId ^ localid) << Rhs
+                << (FuncName
+                    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                    << (NameElement << (Ident ^ "nomatch") << TypeArgs)
+                    << (NameElement << (Ident ^ "create") << TypeArgs))
+                << Args;
+  }
+
   std::vector<FreeTP> collect_free_typeparams(Node node)
   {
     std::vector<FreeTP> free_tps;
@@ -169,8 +193,7 @@ namespace vc
 
   // Check if a TypeName is a FQ reference to one of the free type params.
   // Returns the index into free_tps, or -1.
-  static int match_free_tp(
-    const Node& tn, const std::vector<FreeTP>& free_tps)
+  static int match_free_tp(const Node& tn, const std::vector<FreeTP>& free_tps)
   {
     for (size_t i = 0; i < free_tps.size(); i++)
     {
@@ -214,8 +237,7 @@ namespace vc
       new_tn << (NameElement << clone(s / Ident) << TypeArgs);
 
     new_tn << (NameElement << (Ident ^ new_class_id) << TypeArgs);
-    new_tn
-      << (NameElement << (Ident ^ free_tps[idx].name) << TypeArgs);
+    new_tn << (NameElement << (Ident ^ free_tps[idx].name) << TypeArgs);
     return new_tn;
   }
 
@@ -304,8 +326,7 @@ namespace vc
     for (auto& s : cls_path)
     {
       if (s == enclosing_cls)
-        fq_tn
-          << (NameElement << clone(enclosing_cls / Ident) << clone(cls_ta));
+        fq_tn << (NameElement << clone(enclosing_cls / Ident) << clone(cls_ta));
       else
         fq_tn << (NameElement << clone(s / Ident) << TypeArgs);
     }
@@ -349,8 +370,7 @@ namespace vc
         << (ParamDef << (Ident ^ field.name) << clone(field.type) << Body);
       create_args << field.create_arg;
       new_args
-        << (NewArg << (Ident ^ field.name)
-                   << (Expr << (LocalId ^ field.name)));
+        << (NewArg << (Ident ^ field.name) << (Expr << (LocalId ^ field.name)));
       // For blocks, build NewArgs with the actual creation-site expressions
       // instead of LocalId references (since there's no create method).
       stack_new_args
@@ -364,31 +384,31 @@ namespace vc
     {
       // Blocks don't have a create method. The object is stack-allocated
       // directly at the call site, so it never escapes.
-      class_def = ClassDef
-        << None << (Ident ^ id) << typeparams << Where
-        << (classbody
-            << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                         << full_apply_params << apply_ret_type << Where
-                         << apply_body));
+      class_def =
+        ClassDef << None << (Ident ^ id) << typeparams << Where
+                 << (classbody
+                     << (Function << Rhs << (Ident ^ "apply") << TypeParams
+                                  << full_apply_params << apply_ret_type
+                                  << Where << apply_body));
 
       create_expr = Stack << (Type << clone(fq_tn_create)) << stack_new_args;
     }
     else
     {
-      class_def = ClassDef
-        << None << (Ident ^ id) << typeparams << Where
-        << (classbody
-            << (Function << Rhs << (Ident ^ "create") << TypeParams
-                         << create_params << self_type << Where
-                         << (Body << (Expr << (New << new_args))))
-            << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                         << full_apply_params << apply_ret_type << Where
-                         << apply_body));
+      class_def =
+        ClassDef << None << (Ident ^ id) << typeparams << Where
+                 << (classbody
+                     << (Function << Rhs << (Ident ^ "create") << TypeParams
+                                  << create_params << self_type << Where
+                                  << (Body << (Expr << (New << new_args))))
+                     << (Function << Rhs << (Ident ^ "apply") << TypeParams
+                                  << full_apply_params << apply_ret_type
+                                  << Where << apply_body));
 
-      create_expr = Call
-        << (FuncName << *clone(fq_tn_create)
-                     << (NameElement << (Ident ^ "create") << TypeArgs))
-        << create_args;
+      create_expr =
+        Call << (FuncName << *clone(fq_tn_create)
+                          << (NameElement << (Ident ^ "create") << TypeArgs))
+             << create_args;
     }
 
     return {class_def, create_expr};

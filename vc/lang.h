@@ -41,7 +41,6 @@ namespace vc
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam =
     TokenDef("typeparam", flag::lookup | flag::shadowing);
-  inline const auto ValueParam = TokenDef("valueparam");
   inline const auto TypeArgs = TokenDef("typeargs");
   inline const auto Where = TokenDef("where");
   inline const auto ClassBody = TokenDef("classbody");
@@ -82,6 +81,7 @@ namespace vc
   inline const auto For = TokenDef("for");
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
+  inline const auto MatchExpr = TokenDef("match");
 
   const auto ValuePat =
     T(True,
@@ -115,14 +115,14 @@ namespace vc
       CallDyn,
       Tuple,
       ArrayLit,
+      Typetest,
       ExprSeq);
 
   inline const auto wfType =
     TypeName | Union | Isect | TupleType | FuncType | TypeVar | TypeSelf;
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
-  inline const auto wfBody =
-    Use | Break | Continue | Return | Raise | Expr;
+  inline const auto wfBody = Use | Break | Continue | Return | Raise | Expr;
 
   inline const auto wfBinop = Add | Sub | Mul | Div | Mod | Pow | And | Or |
     Xor | Shl | Shr | Eq | Ne | Lt | Le | Gt | Ge | Min | Max | LogBase | Atan2;
@@ -136,7 +136,7 @@ namespace vc
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
     wfLiteral | Char | String | RawString | Tuple | ArrayLit | Let | Var | New |
     Stack | Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals |
-    Hash | FieldRef | GetRaise | SetRaise;
+    Hash | FieldRef | GetRaise | SetRaise | MatchExpr;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -162,11 +162,10 @@ namespace vc
         wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Body)[Ident]
     | (TypeName <<= NameElement++[1])
     | (NameElement <<= wfFuncId * TypeArgs)
-    | (TypeParams <<= (TypeParam | ValueParam)++)
+    | (TypeParams <<= TypeParam++)
     | (TypeParam <<= Ident)[Ident]
-    | (ValueParam <<= Ident * Type * Body)[Ident]
     | (TypeArgs <<= (Type | Expr)++)
-    | (Params <<= ParamDef++)
+    | (Params <<= (ParamDef | Expr)++)
     | (ParamDef <<= Ident * Type * Body)[Ident]
     | (Type <<= wfType)
     | (Union <<= wfType++[2])
@@ -186,6 +185,7 @@ namespace vc
     | (ArrayLit <<= Expr++)
     | (Lambda <<= Params * Type * Body)
     | (Block <<= Params * Type * Body)
+    | (MatchExpr <<= Expr * ExprSeq)
     | (FuncName <<= NameElement++[1])
     | (TripleColon <<= NameElement++[1])
     | (Dot <<= wfFuncId * TypeArgs)
@@ -224,7 +224,8 @@ namespace vc
   // clang-format on
 
   inline const auto wfExprSugar =
-    (wfExprIdent | Load | Call | GetRaise | SetRaise | Stack) - Lambda;
+    (wfExprIdent | Load | Call | GetRaise | SetRaise | Stack | Typetest | Unop) -
+    Lambda - MatchExpr;
 
   // clang-format off
   inline const auto wfPassSugar =
@@ -234,6 +235,8 @@ namespace vc
     | (Call <<= FuncName * Args)
     | (Args <<= Expr++)
     | (Expr <<= wfExprSugar++)
+    | (Typetest <<= Expr * Type)
+    | (Unop <<= (MethodId >>= wfUnop) * Args)
     | (Raise <<= Expr * Type)
     | (Ref <<= ~Expr)
     ;
@@ -252,7 +255,7 @@ namespace vc
   // clang-format on
 
   inline const auto wfExprDot = (wfExprSugar | CallDyn | Convert | Binop |
-                                 Unop | Nulop | FFI | NewArray | ArrayRef) -
+                                 Nulop | FFI | NewArray | ArrayRef) -
     Dot - TripleColon;
 
   // clang-format off
@@ -262,7 +265,6 @@ namespace vc
     | (Expr <<= wfExprDot++)
     | (Convert <<= (Type >>= wfPrimitiveType) * Args)
     | (Binop <<= (MethodId >>= wfBinop) * Args)
-    | (Unop <<= (MethodId >>= wfUnop) * Args)
     | (Nulop <<= (MethodId >>= wfNulop) * Args)
     | (FFI <<= SymbolId * Args)
     | (NewArray <<= Type * Args)
@@ -398,15 +400,19 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto l_local = Location("local");
+
   Node make_type(Match& _, NodeRange r = {});
   Node make_typeargs(Node typeparams);
   Nodes scope_path(Node node);
   Node find_def(Node top, const Node& name);
-  Node find_func_def(
-    Node top, const Node& funcname, size_t arity, Node hand);
+  Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand);
   Node fq_typeparam(const Nodes& path, Node tp);
   Node fq_typeargs(const Nodes& path, Node tps);
   Node make_selftype(Node node, bool fq = false);
+  Node type_any();
+  Node type_nomatch();
+  Node make_nomatch(Node localid);
 
   // Free type parameter from an enclosing scope.
   struct FreeTP
@@ -429,16 +435,16 @@ namespace vc
   // A captured field for an anonymous class.
   struct AnonClassField
   {
-    Location name;       // field / create param name
-    Node type;           // Type node (cloned)
-    Node create_arg;     // Expr for the create call argument
+    Location name; // field / create param name
+    Node type; // Type node (cloned)
+    Node create_arg; // Expr for the create call argument
     bool is_var = false; // true if captured from a Var (by reference)
   };
 
   // Result of make_anon_class.
   struct AnonClass
   {
-    Node class_def;   // ClassDef to Lift into ClassBody
+    Node class_def; // ClassDef to Lift into ClassBody
     Node create_call; // Call expression to create an instance
   };
 

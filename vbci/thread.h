@@ -94,6 +94,7 @@ namespace vbci
     Register thread_run(Function* func);
     void step();
     void pushframe(Function* func, size_t dst);
+    void try_pushframe(Function* func, size_t dst);
     void popframe(Register result);
     void raise(Register result, Location target);
     void tailcall(Function* func);
@@ -101,6 +102,7 @@ namespace vbci
     void teardown_all();
     void branch(size_t label);
     void check_args(std::vector<uint32_t>& types, bool vararg = false);
+    bool try_check_args(std::vector<uint32_t>& types);
     void check_args(std::vector<Field>& fields);
     Register& arg(size_t idx);
     void drop_args();

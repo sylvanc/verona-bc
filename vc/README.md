@@ -2,14 +2,14 @@
 
 ## To Do
 
-Patterns for lambdas.
-- If a lambda can be a pattern that returns `nomatch`, then `if` with a type-test lambda is the same as invoking the lambda with the value.
-- If a lambda can be a pattern, pattern matching becomes a series of `else`.
-- A pattern can be any object that implements `==`.
-  - Auto-wrap it in some Pattern container to get logical operators and a type test (before calling `==`) that returns `nomatch`?
-- `!`, `&`, `|` for patterns. Can do this as methods on a common Pattern structural type.
+Structure.
+- Control flow blocks should be simpler.
+- No type tests in them - use pattern matching instead.
 
-Tuples:
+Pattern matching.
+- `TryCallDyn` in case lambdas.
+
+Tuples.
 - Test case for an array of tuples.
 - Destructing when the tuple is too short throws an error. Should it?
 - Destructing when the tuple is too long ignores the extra elements. Should it?
@@ -33,6 +33,8 @@ Semantics:
 
 Packages:
 - Remove `vbci` dependency on `uv` and `openssl`, load those from packages.
+  - `openssl` 3+ no longer needs initialization.
+  - `uv` needs to be initialized (before the scheduler starts) and cleaned up (after the scheduler finishes).
 - CLI.
   - Needs a map, so do an RB tree or hash map.
   - Needs arguments, environment variables.

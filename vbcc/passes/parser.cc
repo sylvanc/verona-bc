@@ -62,7 +62,6 @@ namespace vbcc
         "tuple\\b" >> [](auto& m) { m.add(TupleType); },
 
         // Op codes.
-        "global\\b" >> [](auto& m) { m.add(Global); },
         "const\\b" >> [](auto& m) { m.add(Const); },
         "convert\\b" >> [](auto& m) { m.add(Convert); },
         "new\\b" >> [](auto& m) { m.add(New); },

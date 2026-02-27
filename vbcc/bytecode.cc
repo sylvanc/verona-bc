@@ -1001,6 +1001,11 @@ namespace vbcc
             args(stmt / Args);
             code << uleb(+Op::CallDynamic) << dst(stmt) << src(stmt);
           }
+          else if (stmt == TryCallDyn)
+          {
+            args(stmt / Args);
+            code << uleb(+Op::TryCallDynamic) << dst(stmt) << src(stmt);
+          }
           else if (stmt == FFI)
           {
             args(stmt / Args);

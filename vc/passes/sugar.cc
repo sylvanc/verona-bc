@@ -1,7 +1,5 @@
 #include "../lang.h"
 
-#include <set>
-
 namespace vc
 {
   // Sythetic locations.
@@ -27,6 +25,389 @@ namespace vc
 
     fn << (NameElement << clone(ident) << func_ta);
     return Call << fn << args;
+  }
+
+  AnonClass desugar_lambda(Match& _, Node lambda)
+  {
+    auto params = lambda / Params;
+    auto type = lambda / Type;
+    auto body = lambda / Body;
+
+    for (auto& param : *params)
+    {
+      if (param == Expr)
+        return {
+          Node{}, err(param, "Can't use a case value in a non-case lambda")};
+    }
+
+    std::map<Location, std::pair<Node, bool>> freevars;
+    bool has_raise = false;
+    bool has_var_capture = false;
+
+    lambda->traverse([&](auto node) {
+      bool ok = true;
+
+      if (node == Error)
+      {
+        ok = false;
+      }
+      else if (node == Raise)
+      {
+        has_raise = true;
+      }
+      else if (node == LocalId)
+      {
+        if (node->lookup(lambda).empty())
+        {
+          auto loc = node->location();
+
+          if (freevars.find(loc) == freevars.end())
+          {
+            // Look up the definition in the enclosing scope
+            // (no boundary) to get its type.
+            Node fv_type;
+            auto defs = node->lookup();
+
+            for (auto& def : defs)
+            {
+              if (def->in({ParamDef, Let, Var}))
+              {
+                bool fv_is_var = (def == Var);
+
+                if (fv_is_var)
+                  has_var_capture = true;
+
+                fv_type = clone(def / Type);
+                freevars.emplace(loc, std::make_pair(fv_type, fv_is_var));
+                break;
+              }
+            }
+
+            if (freevars.find(loc) == freevars.end())
+              freevars.emplace(loc, std::make_pair(Node{}, false));
+          }
+        }
+      }
+
+      return ok;
+    });
+
+    auto id = _.fresh(l_lambda);
+
+    bool is_block = has_raise || has_var_capture;
+
+    // Build scope info.
+    auto enclosing_cls = lambda->parent(ClassDef);
+    assert(enclosing_cls);
+    auto cls_path = scope_path(enclosing_cls);
+
+    // Annotate Raise nodes with the enclosing function's return
+    // type, so the type checker can verify the raised value
+    // against the function that will actually receive it.
+    // This must happen before rewrite_typeparam_refs so the
+    // type param references get rewritten correctly.
+    if (has_raise)
+    {
+      auto enclosing_func = lambda->parent(Function);
+      assert(enclosing_func);
+      auto func_ret_type = enclosing_func / Type;
+
+      lambda->traverse([&](auto node) {
+        if (node == Raise && node->size() == 1)
+          node << clone(func_ret_type);
+        return node != Error;
+      });
+    }
+
+    // Collect and rewrite free type params.
+    auto free_tps = collect_free_typeparams(lambda);
+    rewrite_typeparam_refs(lambda, free_tps, cls_path, id);
+
+    // Build fields from free variables.
+    std::vector<AnonClassField> fields;
+
+    // For block lambdas (raising or var-capturing), add a
+    // $raise_target field that captures the current raise target
+    // at creation time.
+    if (is_block)
+    {
+      auto u64_type = Type
+        << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                     << (NameElement << (Ident ^ "u64") << TypeArgs));
+      fields.push_back({Location("$raise_target"), u64_type, Expr << GetRaise});
+    }
+
+    for (auto& [freevar, fv_info] : freevars)
+    {
+      auto& [fv_type, fv_is_var] = fv_info;
+      Node fv_resolved;
+
+      if (fv_type)
+      {
+        fv_resolved = clone(fv_type);
+        rewrite_typeparam_refs(fv_resolved, free_tps, cls_path, id);
+      }
+      else
+      {
+        fv_resolved = make_type(_);
+      }
+
+      if (fv_is_var)
+      {
+        // Capture a RegisterRef to the var.
+        // Field type is ref[T] since the field holds a reference.
+        auto ref_type = Type
+          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                       << (NameElement << (Ident ^ "ref")
+                                       << (TypeArgs << clone(fv_resolved))));
+        fields.push_back(
+          {freevar,
+           ref_type,
+           Expr << (Ref << (Expr << (LocalId ^ freevar))),
+           true});
+      }
+      else
+      {
+        fields.push_back({freevar, fv_resolved, Expr << (LocalId ^ freevar)});
+      }
+    }
+
+    // Build apply body: field-loading preamble + lambda body.
+    Node apply_body = Body;
+
+    // Collect var-captured names for body rewriting.
+    // Collect names needing body rewriting (both var and let
+    // captures that use $ref_ prefixed FieldRef/RegisterRef).
+    std::set<Location> ref_captures;
+
+    for (auto& field : fields)
+    {
+      if (field.is_var)
+      {
+        // Load the RegisterRef from the field into a $ref_
+        // prefixed Let. The body will be rewritten to
+        // read/write through this ref.
+        auto ref_name = Location("$ref_" + std::string(field.name.view()));
+        apply_body
+          << (Expr
+              << (Equals
+                  << (Expr << (Let << (Ident ^ ref_name) << clone(field.type)))
+                  << (Expr
+                      << (Load
+                          << (Expr
+                              << (FieldRef << (Expr << (LocalId ^ "$self"))
+                                           << (FieldId ^ field.name)))))));
+        ref_captures.insert(field.name);
+      }
+      else if (field.name.view()[0] == '$')
+      {
+        // Internal field (e.g., $raise_target): load value
+        // directly into a Let with the same name.
+        apply_body
+          << (Expr
+              << (Equals << (Expr
+                             << (Let << (Ident ^ field.name)
+                                     << clone(field.type)))
+                         << (Expr
+                             << (Load
+                                 << (Expr
+                                     << (FieldRef
+                                         << (Expr << (LocalId ^ "$self"))
+                                         << (FieldId ^ field.name)))))));
+      }
+      else
+      {
+        // User let-capture: get a FieldRef for mutable access.
+        // The body will be rewritten to read/write through this
+        // ref, allowing stateful escaping lambdas.
+        auto ref_name = Location("$ref_" + std::string(field.name.view()));
+        auto ref_type = Type
+          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                       << (NameElement << (Ident ^ "ref")
+                                       << (TypeArgs << clone(field.type))));
+        apply_body
+          << (Expr
+              << (Equals << (Expr << (Let << (Ident ^ ref_name) << ref_type))
+                         << (Expr
+                             << (FieldRef << (Expr << (LocalId ^ "$self"))
+                                          << (FieldId ^ field.name)))));
+        ref_captures.insert(field.name);
+      }
+    }
+
+    // For block lambdas, set the raise target from the
+    // captured field before executing the lambda body.
+    if (is_block)
+    {
+      apply_body
+        << (Expr << (SetRaise << (Expr << (LocalId ^ "$raise_target"))));
+    }
+
+    apply_body << *body;
+
+    // Rewrite ref-captured references in the body.
+    // Reads become Load << (Expr << (LocalId ^ "$ref_x")).
+    // Writes (LHS of Equals) become Ref << (LocalId ^ "$ref_x").
+    if (!ref_captures.empty())
+    {
+      // Collect all LocalId nodes that match ref-captured names.
+      std::vector<Node> to_rewrite;
+      apply_body->traverse([&](auto node) {
+        if (node == LocalId && ref_captures.count(node->location()) > 0)
+        {
+          to_rewrite.push_back(node);
+        }
+        return true;
+      });
+
+      for (auto& node : to_rewrite)
+      {
+        auto ref_name =
+          Location("$ref_" + std::string(node->location().view()));
+
+        // Check if this is an l-value (LHS of Equals).
+        // Pattern: LocalId → Expr → Equals, where the Expr is
+        // the first child of Equals.
+        auto parent = node->parent();
+        bool is_lvalue = false;
+
+        if (parent && parent == Expr)
+        {
+          auto grandparent = parent->parent();
+
+          if (
+            grandparent && grandparent == Equals &&
+            grandparent->front() == parent)
+          {
+            is_lvalue = true;
+          }
+        }
+
+        if (is_lvalue)
+        {
+          // Write: replace LocalId with
+          // (Ref << (Expr << (LocalId ^ "$ref_x")))
+          parent->replace(node, Ref << (Expr << (LocalId ^ ref_name)));
+        }
+        else
+        {
+          // Read: replace LocalId with
+          // (Load << (Expr << (LocalId ^ "$ref_x")))
+          parent->replace(node, Load << (Expr << (LocalId ^ ref_name)));
+        }
+      }
+    }
+
+    return make_anon_class(
+      id, lambda, free_tps, fields, params, type, apply_body, is_block);
+  }
+
+  Node desugar_case_lambda(Match& _, Node lambda)
+  {
+    Node params = lambda / Params;
+    Node type = lambda / Type;
+    auto arity = params->size();
+
+    if (!arity)
+      return err(lambda, "Case must have at least one parameter");
+
+    Node new_params = Params
+      << (ParamDef << (Ident ^ "$arg") << type_any() << Body);
+    Node new_type;
+    Node new_body = Body;
+
+    if (type->front() != TypeVar)
+      new_type = Type << (Union << clone(type) << type_nomatch());
+    else
+      new_type = make_type(_);
+
+    // We'll use this multiple times.
+    auto nomatch_block = Block
+      << Params << make_type(_)
+      << (Body
+          << (Return
+              << (Expr
+                  << (Call
+                      << (FuncName
+                          << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                          << (NameElement << (Ident ^ "nomatch") << TypeArgs)
+                          << (NameElement << (Ident ^ "create") << TypeArgs))
+                      << Args))));
+
+    // Create the match values at the call site.
+    Node callsite = ExprSeq;
+
+    // Check arity of $arg.
+    new_body
+      << (Expr
+          << (If << (Expr << (Unop << Len
+                                   << (Args << (Expr << (LocalId ^ "$arg"))))
+                          << (MethodName << (SymbolId ^ "!=") << TypeArgs)
+                          << (Int ^ std::to_string(arity)))
+                 << clone(nomatch_block)));
+
+    // Destructure $arg into the original params.
+    Node dst = Tuple;
+    Node type_checks = Body;
+
+    for (auto& param : *params)
+    {
+      if (param == ParamDef)
+      {
+        // Destructure the param out of $arg.
+        auto id = param / Ident;
+        dst << (Expr << (Let << clone(id) << make_type(_)));
+
+        // Test against the param type.
+        type_checks
+          << (Expr
+              << (If << (Expr << (Unop << Not
+                                       << (Args
+                                           << (Expr
+                                               << (Typetest
+                                                   << (Expr << (LocalId ^ id))
+                                                   << clone(param / Type))))))
+                     << clone(nomatch_block)));
+      }
+      else
+      {
+        // Destructure the param out of $arg.
+        auto id = LocalId ^ _.fresh(l_local);
+        dst << (Expr << (Let << clone(id) << make_type(_)));
+
+        // Create the match value at the call site.
+        callsite
+          << (Expr << (Equals << (Expr << (LocalId ^ id)) << clone(param)));
+
+        // TODO: this needs to be a TryCallDyn.
+        type_checks
+          << (Expr
+              << (If << (Expr << (LocalId ^ id)
+                              << (MethodName << (SymbolId ^ "!=") << TypeArgs)
+                              << (Expr << clone(id)) << Type)
+                     << clone(nomatch_block)));
+      }
+    }
+
+    // For a single param, assign directly without Tuple wrapping.
+    if (dst->size() == 1)
+      dst = dst->front();
+    else
+      dst = Expr << dst;
+
+    // Emit the destructuring assignment.
+    new_body << (Expr << (Equals << dst << (Expr << (LocalId ^ "$arg"))));
+
+    // Emit type checks after destructuring.
+    new_body << *type_checks;
+
+    // Proceed with the original body.
+    new_body << *(lambda / Body);
+
+    // Create the new lambda. This will be fully desugared later.
+    auto new_lambda = Lambda << new_params << new_type << new_body;
+    wfPassIdent.build_st(new_lambda);
+    return callsite << (Expr << new_lambda);
   }
 
   PassDef sugar()
@@ -63,305 +444,50 @@ namespace vc
             return When << (Args << _(Lhs)) << _(Type) << _(Expr);
           },
 
-        // Turn lambdas into anonymous classes.
-        In(Expr) * T(Lambda)[Lambda]
-            << (T(Params)[Params] * T(Type)[Type] * T(Body)[Body]) >>
+        // Match.
+        In(Expr) * T(MatchExpr) << (T(Expr)[Expr] * T(ExprSeq)[ExprSeq]) >>
           [](Match& _) {
-            auto lambda = _(Lambda);
-            std::map<Location, std::pair<Node, bool>> freevars;
-            bool has_raise = false;
-            bool has_var_capture = false;
+            auto id = _.fresh(l_local);
+            Node seq = Seq;
+            Node callsite = ExprSeq;
 
-            lambda->traverse([&](auto node) {
-              bool ok = true;
+            callsite
+              << (Expr
+                  << (Equals << (Expr << (Let << (Ident ^ id) << make_type(_)))
+                             << _(Expr)));
 
-              if (node == Error)
-              {
-                ok = false;
-              }
-              else if (node == Raise)
-              {
-                has_raise = true;
-              }
-              else if (node == LocalId)
-              {
-                if (node->lookup(lambda).empty())
-                {
-                  auto loc = node->location();
+            auto arms = _(ExprSeq);
+            Node last;
 
-                  if (freevars.find(loc) == freevars.end())
-                  {
-                    // Look up the definition in the enclosing scope
-                    // (no boundary) to get its type.
-                    Node fv_type;
-                    auto defs = node->lookup();
-
-                    for (auto& def : defs)
-                    {
-                      if (def->in({ParamDef, Let, Var}))
-                      {
-                        bool fv_is_var = (def == Var);
-
-                        if (fv_is_var)
-                          has_var_capture = true;
-
-                        fv_type = clone(def / Type);
-                        freevars.emplace(loc, std::make_pair(fv_type, fv_is_var));
-                        break;
-                      }
-                    }
-
-                    if (freevars.find(loc) == freevars.end())
-                      freevars.emplace(loc, std::make_pair(Node{}, false));
-                  }
-                }
-              }
-
-              return ok;
-            });
-
-            auto id = _.fresh(l_lambda);
-
-            bool is_block = has_raise || has_var_capture;
-
-            // Build scope info.
-            auto enclosing_cls = lambda->parent(ClassDef);
-            assert(enclosing_cls);
-            auto cls_path = scope_path(enclosing_cls);
-
-            // Annotate Raise nodes with the enclosing function's return
-            // type, so the type checker can verify the raised value
-            // against the function that will actually receive it.
-            // This must happen before rewrite_typeparam_refs so the
-            // type param references get rewritten correctly.
-            if (has_raise)
+            for (auto& arm : *arms)
             {
-              auto enclosing_func = lambda->parent(Function);
-              assert(enclosing_func);
-              auto func_ret_type = enclosing_func / Type;
+              auto lambda = arm->front();
+              assert(lambda == Lambda);
+              auto call_case =
+                (Expr << desugar_case_lambda(_, lambda) << (LocalId ^ id));
 
-              lambda->traverse([&](auto node) {
-                if (node == Raise && node->size() == 1)
-                  node << clone(func_ret_type);
-                return node != Error;
-              });
-            }
-
-            // Collect and rewrite free type params.
-            auto free_tps = collect_free_typeparams(lambda);
-            rewrite_typeparam_refs(lambda, free_tps, cls_path, id);
-
-            // Build fields from free variables.
-            std::vector<AnonClassField> fields;
-
-            // For block lambdas (raising or var-capturing), add a
-            // $raise_target field that captures the current raise target
-            // at creation time.
-            if (is_block)
-            {
-              auto u64_type = Type
-                << (TypeName
-                    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                    << (NameElement << (Ident ^ "u64") << TypeArgs));
-              fields.push_back(
-                {Location("$raise_target"),
-                 u64_type,
-                 Expr << GetRaise});
-            }
-
-            for (auto& [freevar, fv_info] : freevars)
-            {
-              auto& [fv_type, fv_is_var] = fv_info;
-              Node fv_resolved;
-
-              if (fv_type)
+              if (!last)
               {
-                fv_resolved = clone(fv_type);
-                rewrite_typeparam_refs(
-                  fv_resolved, free_tps, cls_path, id);
+                // First arm is just an Expr.
+                last = call_case;
               }
               else
               {
-                fv_resolved = make_type(_);
-              }
-
-              if (fv_is_var)
-              {
-                // Capture a RegisterRef to the var.
-                // Field type is ref[T] since the field holds a reference.
-                auto ref_type = Type
-                  << (TypeName
-                      << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                      << (NameElement
-                          << (Ident ^ "ref")
-                          << (TypeArgs << clone(fv_resolved))));
-                fields.push_back(
-                  {freevar,
-                   ref_type,
-                   Expr << (Ref << (Expr << (LocalId ^ freevar))),
-                   true});
-              }
-              else
-              {
-                fields.push_back(
-                  {freevar, fv_resolved, Expr << (LocalId ^ freevar)});
+                // Build the else chain.
+                last = Expr
+                  << (Else << last
+                           << (Block << Params << make_type(_)
+                                     << (Body << call_case)));
               }
             }
 
-            // Build apply body: field-loading preamble + lambda body.
-            Node apply_body = Body;
+            return seq << (callsite << last);
+          },
 
-            // Collect var-captured names for body rewriting.
-            // Collect names needing body rewriting (both var and let
-            // captures that use $ref_ prefixed FieldRef/RegisterRef).
-            std::set<Location> ref_captures;
-
-            for (auto& field : fields)
-            {
-              if (field.is_var)
-              {
-                // Load the RegisterRef from the field into a $ref_
-                // prefixed Let. The body will be rewritten to
-                // read/write through this ref.
-                auto ref_name =
-                  Location("$ref_" + std::string(field.name.view()));
-                apply_body
-                  << (Expr
-                      << (Equals
-                          << (Expr
-                              << (Let << (Ident ^ ref_name)
-                                      << clone(field.type)))
-                          << (Expr
-                              << (Load
-                                  << (Expr
-                                      << (FieldRef
-                                          << (Expr << (LocalId ^ "$self"))
-                                          << (FieldId ^ field.name)))))));
-                ref_captures.insert(field.name);
-              }
-              else if (field.name.view()[0] == '$')
-              {
-                // Internal field (e.g., $raise_target): load value
-                // directly into a Let with the same name.
-                apply_body
-                  << (Expr
-                      << (Equals
-                          << (Expr
-                              << (Let << (Ident ^ field.name)
-                                      << clone(field.type)))
-                          << (Expr
-                              << (Load
-                                  << (Expr
-                                      << (FieldRef
-                                          << (Expr << (LocalId ^ "$self"))
-                                          << (FieldId ^ field.name)))))));
-              }
-              else
-              {
-                // User let-capture: get a FieldRef for mutable access.
-                // The body will be rewritten to read/write through this
-                // ref, allowing stateful escaping lambdas.
-                auto ref_name =
-                  Location("$ref_" + std::string(field.name.view()));
-                auto ref_type = Type
-                  << (TypeName
-                      << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                      << (NameElement
-                          << (Ident ^ "ref")
-                          << (TypeArgs << clone(field.type))));
-                apply_body
-                  << (Expr
-                      << (Equals
-                          << (Expr
-                              << (Let << (Ident ^ ref_name) << ref_type))
-                          << (Expr
-                              << (FieldRef
-                                  << (Expr << (LocalId ^ "$self"))
-                                  << (FieldId ^ field.name)))));
-                ref_captures.insert(field.name);
-              }
-            }
-
-            // For block lambdas, set the raise target from the
-            // captured field before executing the lambda body.
-            if (is_block)
-            {
-              apply_body
-                << (Expr
-                    << (SetRaise
-                        << (Expr
-                            << (LocalId ^ "$raise_target"))));
-            }
-
-            apply_body << *_(Body);
-
-            // Rewrite ref-captured references in the body.
-            // Reads become Load << (Expr << (LocalId ^ "$ref_x")).
-            // Writes (LHS of Equals) become Ref << (LocalId ^ "$ref_x").
-            if (!ref_captures.empty())
-            {
-              // Collect all LocalId nodes that match ref-captured names.
-              std::vector<Node> to_rewrite;
-              apply_body->traverse([&](auto node) {
-                if (
-                  node == LocalId &&
-                  ref_captures.count(node->location()) > 0)
-                {
-                  to_rewrite.push_back(node);
-                }
-                return true;
-              });
-
-              for (auto& node : to_rewrite)
-              {
-                auto ref_name =
-                  Location("$ref_" + std::string(node->location().view()));
-
-                // Check if this is an l-value (LHS of Equals).
-                // Pattern: LocalId → Expr → Equals, where the Expr is
-                // the first child of Equals.
-                auto parent = node->parent();
-                bool is_lvalue = false;
-
-                if (parent && parent == Expr)
-                {
-                  auto grandparent = parent->parent();
-
-                  if (
-                    grandparent && grandparent == Equals &&
-                    grandparent->front() == parent)
-                  {
-                    is_lvalue = true;
-                  }
-                }
-
-                if (is_lvalue)
-                {
-                  // Write: replace LocalId with
-                  // (Ref << (Expr << (LocalId ^ "$ref_x")))
-                  parent->replace(
-                    node, Ref << (Expr << (LocalId ^ ref_name)));
-                }
-                else
-                {
-                  // Read: replace LocalId with
-                  // (Load << (Expr << (LocalId ^ "$ref_x")))
-                  parent->replace(
-                    node, Load << (Expr << (LocalId ^ ref_name)));
-                }
-              }
-            }
-
-            auto result = make_anon_class(
-              id,
-              lambda,
-              free_tps,
-              fields,
-              _(Params),
-              _(Type),
-              apply_body,
-              is_block);
-
+        // Turn lambdas into anonymous classes.
+        In(Expr) * T(Lambda)[Lambda] >>
+          [](Match& _) {
+            auto result = desugar_lambda(_, _(Lambda));
             return Seq << (Lift << ClassBody << result.class_def)
                        << result.create_call;
           },
@@ -434,9 +560,8 @@ namespace vc
               // Compute minimum arity by excluding trailing default args.
               auto rhs_min_arity = rhs_arity;
 
-              while (
-                (rhs_min_arity > 0) &&
-                !(rhs_params->at(rhs_min_arity - 1) / Body)->empty())
+              while ((rhs_min_arity > 0) &&
+                     !(rhs_params->at(rhs_min_arity - 1) / Body)->empty())
                 rhs_min_arity--;
 
               if ((arity >= rhs_min_arity) && (arity <= rhs_arity))

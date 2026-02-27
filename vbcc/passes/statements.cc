@@ -309,10 +309,6 @@ namespace vbcc
         In(Group) * T(LocalId)[LocalId] * T(Colon) * TypePat[Type] >>
           [](Match& _) { return Param << _(LocalId) << _(Type); },
 
-        // Globals.
-        Dst * T(Global) * T(GlobalId)[GlobalId] >>
-          [](Match& _) { return Global << _(LocalId) << _(GlobalId); },
-
         // Constants.
         Dst * T(Const) * T(None) >>
           [](Match& _) { return Const << _(LocalId) << None << None; },

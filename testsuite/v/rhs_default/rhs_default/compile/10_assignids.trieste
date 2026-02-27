@@ -133,7 +133,7 @@ assignids
         (body
           (const
             (localid 7:local$3)
-            (u64)
+            (i32)
             (int 2:42))
           (lookup
             (localid 9:local$461)
@@ -162,54 +162,6 @@ assignids
                 (localid 6:offset)))))
         (ret
           (localid 9:local$850)))))
-  (primitive
-    (u64)
-    (methods
-      (method
-        (methodid 9:i32::1::0)
-        (functionid 24:_builtin::u64::i32::1::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::u64::+::2::0))))
-  (func
-    (functionid 24:_builtin::u64::i32::1::0)
-    (params
-      (param
-        (localid 4:self)
-        (u64)))
-    (i32)
-    (vars)
-    (labels
-      (label
-        (labelid 5:start)
-        (body
-          (convert
-            (localid 9:local$751)
-            (i32)
-            (localid 4:self)))
-        (ret
-          (localid 9:local$751)))))
-  (func
-    (functionid 22:_builtin::u64::+::2::0)
-    (params
-      (param
-        (localid 4:self)
-        (u64))
-      (param
-        (localid 5:other)
-        (u64)))
-    (u64)
-    (vars)
-    (labels
-      (label
-        (labelid 5:start)
-        (body
-          (add
-            (localid 9:local$376)
-            (localid 4:self)
-            (localid 5:other)))
-        (ret
-          (localid 9:local$376)))))
   (func
     (functionid 24:_builtin::i32::i32::1::0)
     (params

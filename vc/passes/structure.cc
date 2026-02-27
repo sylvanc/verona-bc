@@ -7,11 +7,10 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, TypeVar, TypeSelf};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, True,     False,    Bin,         Oct,
-    Int,     Hex,      Float,    HexFloat, String,      RawString,
-    Char,    Tuple,    ArrayLit, Let,      Var,         New,
-    Lambda,  Dot,      Ref,      FuncName, If,          While,
-    When,    Equals,   Else,     TripleColon, FieldRef};
+    ExprSeq, DontCare, True,   False,       Bin,      Oct,      Int,      Hex,
+    Float,   HexFloat, String, RawString,   Char,     Tuple,    ArrayLit, Let,
+    Var,     New,      Lambda, Dot,         Ref,      FuncName, If,       While,
+    When,    Equals,   Else,   TripleColon, FieldRef, MatchExpr};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -278,28 +277,16 @@ namespace vc
             return ParamDef << _(Ident) << make_type(_, _[Type]) << body;
           },
 
+        // If it's not a parameter, it might be a case value.
         In(Params) * T(Group)[Group] >>
-          [](Match& _) { return err(_(Group), "Expected a parameter"); },
+          [](Match& _) { return Expr << *_(Group); },
 
         // Type parameters.
         T(TypeParams) << (T(List)[List] * End) >>
           [](Match& _) { return TypeParams << *_[List]; },
 
-        In(TypeParams) * (T(Group) << (ParamPat * End)) >>
-          [](Match& _) {
-            if (!_[Type].empty())
-              return ValueParam << _(Ident) << (Type << _[Type])
-                                << (Body << (Group << _[Body]));
-
-            if (!_[Body].empty())
-              return err(
-                _(Ident), "Can't have a default value for a type parameter");
-
-            return TypeParam << _(Ident);
-          },
-
-        In(TypeParams) * T(Group)[Group] >>
-          [](Match& _) { return err(_(Group), "Expected a type parameter"); },
+        In(TypeParams) * (T(Group) << (T(Ident)[Ident] * End)) >>
+          [](Match& _) { return TypeParam << _(Ident); },
 
         // Type arguments.
         T(TypeArgs) << (T(List)[List] * End) >>
@@ -444,6 +431,13 @@ namespace vc
             return NewArg << clone(id) << (Expr << (Ident ^ id));
           },
 
+        // Match.
+        In(Expr) * T(MatchExpr) * (!T(Brace) * (!T(Brace))++)[Expr] *
+            T(Brace)[Brace] >>
+          [](Match& _) {
+            return MatchExpr << (Expr << _[Expr]) << (ExprSeq << *_(Brace));
+          },
+
         // Lambda.
         In(Expr) * ParamsPat[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
@@ -454,14 +448,11 @@ namespace vc
           },
 
         // Lambda with a single parameter.
-        In(Expr) * T(Ident)[Ident] *
-            ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
+        In(Expr) * ParamPat[Param] * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << (Params
-                              << (ParamDef << _(Ident) << make_type(_, _[Type])
-                                           << Body))
-                          << make_type(_) << lambda_body(_(Brace), _[Rhs]);
+            return Lambda << (Params << (Group << *_[Param])) << make_type(_)
+                          << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.
@@ -833,10 +824,9 @@ namespace vc
         {
           for (auto& child : *node)
           {
-            if (!child->in({TypeParam, ValueParam}))
+            if (child != TypeParam)
             {
-              node->replace(
-                child, err(child, "Expected a type or value parameter"));
+              node->replace(child, err(child, "Expected a type parameter"));
               ok = false;
             }
           }
@@ -854,9 +844,17 @@ namespace vc
         }
         else if (node == Params)
         {
+          auto parent = node->parent();
+
           for (auto& child : *node)
           {
-            if (child != ParamDef)
+            if ((child == Expr) && (parent != Lambda))
+            {
+              node->replace(
+                child, err(child, "Case values can only be used in lambdas"));
+              ok = false;
+            }
+            else if (child != ParamDef)
             {
               node->replace(child, err(child, "Expected a parameter"));
               ok = false;
@@ -865,13 +863,11 @@ namespace vc
 
           // Function parameters must have explicit type annotations.
           // Lambda parameters may omit types (inferred from call site).
-          if (node->parent(Function) && !node->parent(Lambda))
+          if (parent == Function)
           {
             for (auto& child : *node)
             {
-              if (
-                (child == ParamDef) &&
-                ((child / Type)->front() == TypeVar))
+              if ((child == ParamDef) && ((child / Type)->front() == TypeVar))
               {
                 node->replace(
                   child,
@@ -901,6 +897,25 @@ namespace vc
             node->parent()->replace(
               node, err(node, "Expected a left and right side"));
             ok = false;
+          }
+        }
+        else if (node == MatchExpr)
+        {
+          auto seq = node / ExprSeq;
+
+          if (seq->empty())
+          {
+            seq << err(node, "Match expression must have at least one case");
+            ok = false;
+          }
+
+          for (auto& child : *seq)
+          {
+            if ((child->size() != 1) || (child->front() != Lambda))
+            {
+              seq->replace(child, err(child, "Expected a match case lambda"));
+              ok = false;
+            }
           }
         }
         else if (
