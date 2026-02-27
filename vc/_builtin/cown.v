@@ -2,7 +2,6 @@ cown[T]
 {
   create(): none
   {
-    // TODO: error
     none
   }
 

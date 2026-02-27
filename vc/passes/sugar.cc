@@ -323,7 +323,6 @@ namespace vc
 
     // We'll use this multiple times.
     auto nomatch_block = Block
-      << Params << make_type(_)
       << (Body
           << (Return
               << (Expr
@@ -361,12 +360,13 @@ namespace vc
         // Test against the param type.
         type_checks
           << (Expr
-              << (If << (Expr << (Unop << Not
-                                       << (Args
-                                           << (Expr
-                                               << (Typetest
-                                                   << (Expr << (LocalId ^ id))
-                                                   << clone(param / Type))))))
+              << (If << (Expr
+                         << (Unop
+                             << Not
+                             << (Args
+                                 << (Expr
+                                     << (Typetest << (Expr << (LocalId ^ id))
+                                                  << clone(param / Type))))))
                      << clone(nomatch_block)));
       }
       else
@@ -474,10 +474,7 @@ namespace vc
               else
               {
                 // Build the else chain.
-                last = Expr
-                  << (Else << last
-                           << (Block << Params << make_type(_)
-                                     << (Body << call_case)));
+                last = Expr << (Else << last << (Block << (Body << call_case)));
               }
             }
 

@@ -76,7 +76,7 @@ namespace vc
 
   Node lambda_body(Node brace, NodeRange rhs)
   {
-    if (brace)
+    if (brace && (brace == Brace))
     {
       if (brace->empty())
         return Body << (Expr << (Ident ^ "none"));
@@ -459,7 +459,7 @@ namespace vc
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
             return Lambda << Params << make_type(_)
-                          << lambda_body(_(Brace), _[Rhs]);
+                          << lambda_body(_(Brace), {});
           },
 
         // Dot.
@@ -504,45 +504,31 @@ namespace vc
           [](Match& _) { return ArrayLit << (Expr << _(Paren)); },
 
         // If.
-        In(Expr) * (T(If) << End) * (!T(Lambda))++[Expr] * T(Lambda)[Lambda] >>
+        In(Expr) * (T(If) << End) * (!T(Brace))++[Expr] * T(Brace)[Brace] >>
           [](Match& _) {
-            return If << (Expr << _[Expr]) << (Block << *_(Lambda));
+            return If << (Expr << _[Expr])
+                      << (Block << lambda_body(_(Brace), {}));
           },
 
         // Else.
-        In(Expr) * ElseLhsPat[Lhs] * (T(Else) << End) * T(Lambda)[Lambda] >>
-          [](Match& _) {
-            if (!(_(Lambda) / Params)->empty())
-              return err(_(Lambda), "Else block can't have parameters");
-
-            return Else << (Expr << _[Lhs]) << (Block << *_(Lambda));
-          },
-
         In(Expr) * ElseLhsPat[Lhs] * (T(Else) << End) *
             (!T(Equals, Else) * (!T(Equals, Else))++)[Rhs] >>
           [](Match& _) -> Node {
-          // If the right-hand side is a brace, do nothing until it's
-          // transformed into a lambda.
-          if (_(Rhs) == Brace)
-            return NoChange;
-
           return Else << (Expr << _[Lhs])
-                      << (Block << Params << make_type(_)
-                                << (Body << (Expr << _[Rhs])));
+                      << (Block << lambda_body(_(Rhs), _[Rhs]));
         },
 
         // While.
-        In(Expr) * (T(While) << End) * (!T(Lambda))++[While] *
-            T(Lambda)[Lambda] >>
+        In(Expr) * (T(While) << End) * (!T(Brace) * (!T(Brace))++)[While] *
+            T(Brace)[Brace] >>
           [](Match& _) {
-            if (!(_(Lambda) / Params)->empty())
-              return err(_(Lambda), "While loop can't have parameters");
-
-            return While << (Expr << _[While]) << (Block << *_(Lambda));
+            return While << (Expr << _[While])
+                         << (Block << lambda_body(_(Brace), {}));
           },
 
         // For.
-        In(Expr) * T(For) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
+        In(Expr) * T(For) * (!T(Lambda) * (!T(Lambda))++)[For] *
+            T(Lambda)[Lambda] >>
           [](Match& _) {
             // for e (a, b, ...) -> { body }
             // desugars to:
@@ -570,6 +556,9 @@ namespace vc
               lhs << (Expr << (Let << (p / Ident) << (p / Type)));
             }
 
+            if (type->front() != TypeVar)
+              return err(type, "For loop can't specify a type");
+
             if (lhs->size() == 1)
               lhs = lhs->front();
             else
@@ -586,7 +575,6 @@ namespace vc
                           << (Expr << (Ident ^ id)
                                    << (Dot << (Ident ^ "next") << TypeArgs))
                           << (Block
-                              << Params << make_type(_)
                               << (Body
                                   << (Break
                                       << (Expr << (Ident ^ "none")))))))));
@@ -597,8 +585,7 @@ namespace vc
                                        << (Let << (Ident ^ id) << make_type(_)))
                                    << (Expr << _[For])))
                            << (Expr
-                               << (While << (Expr << True)
-                                         << (Block << Params << type << body)));
+                               << (While << (Expr << True) << (Block << body)));
           },
 
         // When.

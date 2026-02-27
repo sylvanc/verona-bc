@@ -184,7 +184,7 @@ namespace vc
     | (Tuple <<= Expr++)
     | (ArrayLit <<= Expr++)
     | (Lambda <<= Params * Type * Body)
-    | (Block <<= Params * Type * Body)
+    | (Block <<= Body)
     | (MatchExpr <<= Expr * ExprSeq)
     | (FuncName <<= NameElement++[1])
     | (TripleColon <<= NameElement++[1])

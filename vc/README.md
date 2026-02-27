@@ -4,7 +4,7 @@
 
 Structure.
 - Control flow blocks should be simpler.
-- No type tests in them - use pattern matching instead.
+- What type do control structures have?
 
 Pattern matching.
 - `TryCallDyn` in case lambdas.

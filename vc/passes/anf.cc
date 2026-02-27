@@ -303,13 +303,10 @@ namespace vc
           },
 
         // If body.
-        // TODO: distinguish typecond by param count
         In(Body) * T(If)
-            << (T(Expr)[Cond] *
-                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body])) *
+            << (T(Expr)[Cond] * (T(Block) << T(Body)[Body]) *
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
-            // TODO: what do we do with Type?
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
             return Seq << make_nomatch(_(LocalId))
@@ -331,11 +328,9 @@ namespace vc
 
         // While body.
         In(Body) * T(While)
-            << (T(Expr)[Cond] *
-                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body])) *
+            << (T(Expr)[Cond] * (T(Block) << T(Body)[Body]) *
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
-            // TODO: what do we do with Type?
             auto cond = _.fresh(l_cond);
             auto body = _.fresh(l_body);
             auto join = _.fresh(l_join);
@@ -372,13 +367,10 @@ namespace vc
           },
 
         // Else body.
-        // TODO: distinguish typetest by param count
         In(Body) * T(Else)
-            << (T(LocalId)[Lhs] *
-                (T(Block) << ((T(Params) << End) * T(Type) * T(Body)[Body])) *
+            << (T(LocalId)[Lhs] * (T(Block) << T(Body)[Body]) *
                 T(LocalId)[LocalId]) >>
           [](Match& _) {
-            // TODO: what do we do with Type?
             auto id = _.fresh(l_local);
             auto ok = _.fresh(l_body);
             auto else_lbl = _.fresh(l_body);
