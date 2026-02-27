@@ -994,7 +994,7 @@ namespace vc
     Node top,
     std::map<Location, Node>& lookup_stmts)
   {
-    assert(calldyn == CallDyn);
+    assert(calldyn->in({CallDyn, TryCallDyn}));
     assert(expected_prim);
     auto dst = calldyn / LocalId;
     auto src = calldyn / Rhs;
@@ -1400,7 +1400,7 @@ namespace vc
         {
           backward_refine_call(prior_call_node, expected, env, top);
         }
-        else if (prior_call_node == CallDyn)
+        else if (prior_call_node->in({CallDyn, TryCallDyn}))
         {
           auto expected_prim = extract_primitive(expected);
 
@@ -1816,7 +1816,7 @@ namespace vc
               }
             }
           }
-          else if (stmt2 == CallDyn)
+          else if (stmt2->in({CallDyn, TryCallDyn}))
           {
             auto cd_dst = stmt2 / LocalId;
             auto cd_src = stmt2 / Rhs;
@@ -2371,7 +2371,7 @@ namespace vc
 
         lookup_stmts[dst->location()] = stmt;
       }
-      else if (stmt == CallDyn)
+      else if (stmt->in({CallDyn, TryCallDyn}))
       {
         auto dst = stmt / LocalId;
         auto src = stmt / Rhs;
@@ -3469,16 +3469,14 @@ namespace vc
 
         auto ret_src = term / LocalId;
 
-        // Check global env first, then fall back to per-label exit env
-        // (Phase B may have resolved types that Phase A couldn't).
+        // Prefer per-label exit env (has typetest narrowing from Phase B)
+        // over the global env. This matches how Const finalization works:
+        // exit_envs capture the narrowed type at the return point (e.g.,
+        // after a typetest narrows x: any → x: i32), while the global
+        // env only has the un-narrowed type.
         Node ret_type_node;
-        auto it = env.find(ret_src->location());
 
-        if (it != env.end() && it->second.type->front() != TypeVar)
-        {
-          ret_type_node = it->second.type;
-        }
-        else if (has_typetest_conds && !exit_envs[i].empty())
+        if (has_typetest_conds && !exit_envs[i].empty())
         {
           auto eit = exit_envs[i].find(ret_src->location());
 
@@ -3486,6 +3484,14 @@ namespace vc
             eit != exit_envs[i].end() &&
             eit->second.type->front() != TypeVar)
             ret_type_node = eit->second.type;
+        }
+
+        if (!ret_type_node)
+        {
+          auto it = env.find(ret_src->location());
+
+          if (it != env.end() && it->second.type->front() != TypeVar)
+            ret_type_node = it->second.type;
         }
 
         if (!ret_type_node)

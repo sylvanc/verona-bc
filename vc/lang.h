@@ -113,6 +113,7 @@ namespace vc
       LocalId,
       Call,
       CallDyn,
+      TryCallDyn,
       Tuple,
       ArrayLit,
       Typetest,
@@ -224,7 +225,8 @@ namespace vc
   // clang-format on
 
   inline const auto wfExprSugar =
-    (wfExprIdent | Load | Call | GetRaise | SetRaise | Stack | Typetest | Unop) -
+    (wfExprIdent | Load | Call | GetRaise | SetRaise | Stack | Typetest | Unop |
+     TryCallDyn) -
     Lambda - MatchExpr;
 
   // clang-format off
@@ -239,6 +241,7 @@ namespace vc
     | (Unop <<= (MethodId >>= wfUnop) * Args)
     | (Raise <<= Expr * Type)
     | (Ref <<= ~Expr)
+    | (TryCallDyn <<= Expr * wfFuncId * TypeArgs * Args)
     ;
   // clang-format on
 
@@ -254,14 +257,16 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprDot = (wfExprSugar | CallDyn | Convert | Binop |
-                                 Nulop | FFI | NewArray | ArrayRef) -
+  inline const auto wfExprDot = (wfExprSugar | CallDyn | TryCallDyn |
+                                 Convert | Binop | Nulop | FFI | NewArray |
+                                 ArrayRef) -
     Dot - TripleColon;
 
   // clang-format off
   inline const auto wfPassDot =
       wfPassFuncType
     | (CallDyn <<= Expr * wfFuncId * TypeArgs * Args)
+    | (TryCallDyn <<= Expr * wfFuncId * TypeArgs * Args)
     | (Expr <<= wfExprDot++)
     | (Convert <<= (Type >>= wfPrimitiveType) * Args)
     | (Binop <<= (MethodId >>= wfBinop) * Args)
@@ -286,9 +291,9 @@ namespace vc
 
   inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
     RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | Stack | NewArray |
-    NewArrayConst | Load | Store | Lookup | Call | CallDyn | Var | When |
-    wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion | GetRaise |
-    SetRaise;
+    NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
+    When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
+    GetRaise | SetRaise;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -318,6 +323,7 @@ namespace vc
     | (Lookup <<= wfDst * wfSrc * wfFuncLhs * wfFuncId * TypeArgs * Int)
     | (Call <<= wfDst * wfFuncLhs * FuncName * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
+    | (TryCallDyn <<= wfDst * wfSrc * Args)
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
     | (Return <<= LocalId)

@@ -372,19 +372,56 @@ namespace vc
       else
       {
         // Destructure the param out of $arg.
-        auto id = LocalId ^ _.fresh(l_local);
-        dst << (Expr << (Let << clone(id) << make_type(_)));
+        auto dest_name = _.fresh(l_local);
+        dst << (Expr << (Let << (Ident ^ dest_name) << make_type(_)));
 
         // Create the match value at the call site.
+        // Type as `any` since the match comparison is dynamic dispatch.
+        auto case_name = _.fresh(l_local);
         callsite
-          << (Expr << (Equals << (Expr << (LocalId ^ id)) << clone(param)));
+          << (Expr
+              << (Equals
+                  << (Expr << (Let << (Ident ^ case_name) << type_any()))
+                  << clone(param)));
 
-        // TODO: this needs to be a TryCallDyn.
+        // Try calling == on the destructured value with the case value.
+        // If == doesn't exist or returns non-bool, we get nomatch.
+        auto eq_name = _.fresh(l_local);
         type_checks
           << (Expr
-              << (If << (Expr << (LocalId ^ id)
-                              << (MethodName << (SymbolId ^ "!=") << TypeArgs)
-                              << (Expr << clone(id)) << Type)
+              << (Equals
+                  << (Expr << (Let << (Ident ^ eq_name) << make_type(_)))
+                  << (Expr
+                      << (TryCallDyn
+                              << (Expr << (LocalId ^ dest_name))
+                              << (SymbolId ^ "==") << TypeArgs
+                              << (Args
+                                  << (Expr
+                                      << (LocalId ^ case_name)))))));
+
+        // If the result is not a bool, return nomatch.
+        auto bool_type = Type
+          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                       << (NameElement << (Ident ^ "bool") << TypeArgs));
+        type_checks
+          << (Expr
+              << (If << (Expr
+                         << (Unop
+                             << Not
+                             << (Args
+                                 << (Expr
+                                     << (Typetest
+                                             << (Expr << (LocalId ^ eq_name))
+                                             << bool_type)))))
+                     << clone(nomatch_block)));
+
+        // If the bool is false (values not equal), return nomatch.
+        type_checks
+          << (Expr
+              << (If << (Expr
+                         << (Unop << Not
+                                  << (Args
+                                      << (Expr << (LocalId ^ eq_name)))))
                      << clone(nomatch_block)));
       }
     }

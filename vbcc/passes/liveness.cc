@@ -155,7 +155,7 @@ namespace vbcc
         },
         [&](auto node) {
           // Handle these in post, because the arguments will be pushed first.
-          if (node->in({Heap, CallDyn, WhenDyn}))
+          if (node->in({Heap, CallDyn, TryCallDyn, WhenDyn}))
           {
             use(node / Rhs);
             def(node / LocalId);

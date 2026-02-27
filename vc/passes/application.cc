@@ -49,7 +49,7 @@ namespace vc
     // For CallDyn, capture the receiver as a field.
     std::vector<AnonClassField> fields;
 
-    if (call->type() == CallDyn)
+    if (call->type().in({CallDyn, TryCallDyn}))
       fields.push_back({Location("$recv"), make_type(_), clone(call / Expr)});
 
     // Split args into captured fields and apply parameters.
@@ -98,6 +98,14 @@ namespace vc
     {
       apply_body
         << (Expr << (Call << clone(call / FuncName) << new_call_args));
+    }
+    else if (call->type() == TryCallDyn)
+    {
+      apply_body
+        << (Expr
+            << (TryCallDyn << (Expr << (LocalId ^ "$recv"))
+                        << clone(call / Ident) << clone(call / TypeArgs)
+                        << new_call_args));
     }
     else
     {
@@ -198,6 +206,10 @@ namespace vc
         // Partial application of CallDyn with DontCare arguments.
         In(Expr) * T(CallDyn)[CallDyn] >>
           [](Match& _) -> Node { return partial_apply(_, _(CallDyn)); },
+
+        // Partial application of TryCallDyn with DontCare arguments.
+        In(Expr) * T(TryCallDyn)[TryCallDyn] >>
+          [](Match& _) -> Node { return partial_apply(_, _(TryCallDyn)); },
 
       }};
 

@@ -841,7 +841,7 @@ namespace vc
                 child, err(child, "Case values can only be used in lambdas"));
               ok = false;
             }
-            else if (child != ParamDef)
+            else if (!child->in({ParamDef, Expr}))
             {
               node->replace(child, err(child, "Expected a parameter"));
               ok = false;

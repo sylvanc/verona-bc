@@ -100,6 +100,7 @@ namespace vbcc
       FnPointer,
       Call,
       CallDyn,
+      TryCallDyn,
       FFI,
       When,
       WhenDyn,

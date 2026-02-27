@@ -28,6 +28,10 @@ namespace vc
     << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
         T(TypeArgs)[TypeArgs] * T(Args)[Args]);
 
+  const auto TryCallDynPat = T(TryCallDyn)[TryCallDyn]
+    << (T(LocalId)[LocalId] * T(Ident, SymbolId)[Ident] *
+        T(TypeArgs)[TypeArgs] * T(Args)[Args]);
+
   Node make_call(Match& _, bool lvalue, bool ref)
   {
     // lvalue is true if the call appears on the LHS of an assignment.
@@ -58,6 +62,23 @@ namespace vc
                             << (LocalId ^ id) << (LocalId ^ fn)
                             << (Args << (LocalId ^ _(LocalId)) << *_[Args])))
                << res;
+  }
+
+  Node make_trycalldyn(Match& _)
+  {
+    auto fn = _.fresh(l_local);
+    auto id = _.fresh(l_local);
+    auto arity = _(Args) ? _(Args)->size() + 1 : 1;
+    return Seq << (Lift << Body
+                        << (Lookup << (LocalId ^ fn) << (LocalId ^ _(LocalId))
+                                   << Rhs << _(Ident)
+                                   << _(TypeArgs)
+                                   << (Int ^ std::to_string(arity))))
+               << (Lift << Body
+                        << (TryCallDyn
+                            << (LocalId ^ id) << (LocalId ^ fn)
+                            << (Args << (LocalId ^ _(LocalId)) << *_[Args])))
+               << (LocalId ^ id);
   }
 
   PassDef anf()
@@ -550,6 +571,10 @@ namespace vc
 
         In(Lhs) * CallDynPat >>
           [](Match& _) { return make_calldyn(_, true, true); },
+
+        // Try dynamic call.
+        In(Expr) * TryCallDynPat >>
+          [](Match& _) { return make_trycalldyn(_); },
 
         // Static call.
         In(Expr) * (T(Ref) << (T(Expr) << CallPat)) >>

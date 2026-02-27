@@ -1121,7 +1121,7 @@ namespace vbcc
             set_type(env, node / LocalId, Node(Dyn));
           }
         }
-        else if (node == CallDyn)
+        else if (node->in({CallDyn, TryCallDyn}))
         {
           // Try to resolve the dynamic call through lookup info.
           auto fn_ptr_name =
