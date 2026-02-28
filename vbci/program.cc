@@ -109,6 +109,9 @@ namespace vbci
     if (idx >= strings.size())
       Value::error(Error::UnknownString);
 
+    if (idx < string_cache.size() && string_cache.at(idx) != nullptr)
+      return string_cache.at(idx);
+
     auto& str = strings.at(idx);
     auto str_size = str.size() + 1;
     auto arr = Array::create(
@@ -122,6 +125,11 @@ namespace vbci
     auto p = arr->get_pointer();
     std::memcpy(p, str.c_str(), str_size);
     arr->set_size(str_size - 1);
+
+    if (string_cache.size() <= idx)
+      string_cache.resize(idx + 1, nullptr);
+
+    string_cache[idx] = arr;
     return arr;
   }
 
