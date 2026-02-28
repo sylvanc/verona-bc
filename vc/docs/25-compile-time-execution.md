@@ -1,6 +1,6 @@
 # 25. Compile-Time Execution
 
-[← Table of Contents](README.md) | [Previous: Error Handling](24-error-handling.md)
+[← Table of Contents](README.md) | [Previous: Error Handling](24-error-handling.md) | [Next: Gotchas →](26-gotchas.md)
 
 > **Status:** Not yet implemented. The `#` operator is reserved for compile-time execution.
 

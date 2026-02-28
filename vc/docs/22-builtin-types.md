@@ -68,6 +68,20 @@ i32                                   // calls i32::create() — default value (
 | `min` | `min(self, other): T` | Minimum of two values |
 | `max` | `max(self, other): T` | Maximum of two values |
 
+### Overflow Behavior
+
+Integer arithmetic follows the behavior of the underlying platform:
+
+- **Unsigned types** (`u8`, `u16`, `u32`, `u64`, `usize`, `ulong`): overflow **wraps** using modular arithmetic. This is well-defined — `u8 255 + (u8 1)` produces `0`.
+- **Signed types** (`i8`, `i16`, `i32`, `i64`, `isize`, `ilong`): overflow is **undefined behavior** (as in C/C++). In practice on modern hardware, signed overflow typically wraps on two's complement architectures, but the compiler may optimize under the assumption that it does not occur.
+- **Floating point** (`f32`, `f64`): follows IEEE 754 rules — overflow produces `inf` or `-inf`, invalid operations produce `nan`.
+
+There are currently no checked-arithmetic or saturating-arithmetic variants. If you need overflow detection, check before the operation.
+
+### Division by Zero
+
+Integer division by zero is a runtime error. Floating-point division by zero produces `inf`, `-inf`, or `nan` per IEEE 754.
+
 ### Type Conversions
 
 Every integer type has conversion methods to every other numeric type:
@@ -238,7 +252,7 @@ String literals (`"hello"`) produce `string` values.
 
 ```verona
 array[i32]::fill(10)                 // 10 default-filled elements
-array[i32]::fill(3, from: 42)        // 3 elements, each 42
+array[i32]::fill(3, 42)              // 3 elements, each 42
 ::(i32 1, 2, 3)                      // array literal (sibling refinement)
 ```
 
@@ -298,7 +312,7 @@ Sentinel type for failed pattern matches and iterator exhaustion:
 nomatch                               // calls nomatch::create()
 ```
 
-Used in the return type of iterator `.next()` methods (`T | nomatch`) and as the sentinel returned by failed `match` arms. When a `match` type test or value test doesn't match, the arm returns `nomatch`, which chains into the next arm or the `else` fallback. See [Control Flow §6.8](06-control-flow.md).
+Used in the return type of iterator `.next()` methods (`T | nomatch`) and as the sentinel returned by failed `match` arms. When a `match` type test or value test doesn't match, the arm returns `nomatch`, which chains into the next arm or the `else` fallback. Without `else`, a non-exhaustive match returns `nomatch`. See [Control Flow §6.8](06-control-flow.md).
 
 ---
 

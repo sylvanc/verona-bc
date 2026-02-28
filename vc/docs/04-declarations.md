@@ -33,6 +33,20 @@ When a type annotation is provided, the literal on the right is inferred to matc
 >
 > See [Memory Model](19-memory-model.md) for more on binding vs object mutability.
 
+### Assignment Is Aliasing
+
+Assignment in Verona creates an **alias** — a second name for the same object. It does not copy or move the value:
+
+```verona
+let a = point(1, 2);
+let b = a;                            // b is an alias for the same object as a
+b.x = 10;                            // a.x is now also 10
+```
+
+Both `a` and `b` refer to the same underlying object. Mutating through one name is visible through the other. There is no implicit copy, no move that invalidates the source, and no borrow — just two names for the same thing.
+
+This applies to all types (classes, arrays, strings). Primitive operations like `a + b` produce new values, but assignment itself always aliases.
+
 ---
 
 ## 4.2 Var Bindings (Mutable)
@@ -61,6 +75,19 @@ x = 42;                              // assign it later
 ```
 
 The variable is uninitialized until assigned. Similarly, `let x: i32;` is valid and must be assigned exactly once before use.
+
+> **What happens if you read before assignment?** Reading an uninitialized variable does not immediately error — the variable holds an internal `Invalid` marker. However, **using** the value in any operation (arithmetic, function call, comparison, field access) produces a runtime error. The error you see depends on context: `bad type` for a function call with the wrong type, `bad operand` for arithmetic, etc. To avoid confusion, always assign before use.
+
+### Common Error: Reassigning a `let` Binding
+
+Attempting to reassign a `let` binding produces a compile error:
+
+```verona
+let x = 42;
+x = 10;                              // error: cannot reassign a let binding
+```
+
+The compiler will report an error during the structure pass. Use `var` if you need reassignment.
 
 ---
 

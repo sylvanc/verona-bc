@@ -52,6 +52,49 @@ All primitive types are defined in the `_builtin` module. See [Built-in Types Re
 | `any` | The universal shape — `shape any {}`. Satisfied by every class. Used for identity-agnostic operations like `is()` and `bits()`. |
 | `ptr` | Opaque raw pointer type. Empty class with no methods. |
 
+### No Null
+
+Verona has no `null`. If a value might be absent, use a union type with `none`:
+
+```verona
+node
+{
+  val: i32;
+  next: node | none;                  // nullable field — explicitly modeled
+}
+```
+
+This is the equivalent of `Optional<T>` in Java, `T?` in TypeScript/Kotlin, or `Option<T>` in Rust. The compiler requires you to handle the `none` case (via `match` or `else`) before using the value as the non-none type.
+
+### `none` vs `nomatch`
+
+These two types serve distinct purposes and should not be confused:
+
+**`none`** is the unit type — analogous to `void` in C/C++, `()` in Rust, or `None` in Python. It represents "no meaningful value" but is still a real value you can pass around:
+
+```verona
+log(msg: string): none
+{
+  :::printval(msg);
+  none
+}
+```
+
+**`nomatch`** is a sentinel that signals "this operation did not produce a result." It is used by:
+- **Iterators**: `next()` returns `T | nomatch` — `nomatch` means the iterator is exhausted.
+- **Match expressions**: A failed match arm returns `nomatch`, which flows to the next arm or the `else` fallback.
+- **The `else` mechanism**: `expr else { fallback }` handles the `nomatch` case.
+
+```verona
+// none: "I did something, here's the unit value"
+let x: none = log("hello");
+
+// nomatch: "I couldn't find what you asked for"
+let result: i32 | nomatch = match v { (n: i32) -> n; };
+```
+
+Key difference: `none` is a successful return with no data. `nomatch` is a signal that the operation failed to match or find something. The `for` loop depends on this distinction — it stops when `next()` returns `nomatch`, but a `none`-returning iterator would be an infinite loop of unit values.
+
 ---
 
 ## 3.3 Union Types
@@ -81,7 +124,7 @@ Union type discrimination is done through `match` expressions and the `for`/`els
 ```verona
 // Type discrimination with match:
 let x: i32 | string = get_value();
-let result = (match x { (n: i32) -> n + 1; (s: string) -> s.size; }) else (0);
+let result = match x { (n: i32) -> n + 1; (s: string) -> s.size; } else (0);
 
 // Iterator discrimination with for:
 for arr.values() elem ->
@@ -99,6 +142,23 @@ An intersection type `A & B` represents a value that satisfies both `A` and `B`:
 ```verona
 A & B           // must satisfy both A and B
 ```
+
+Intersection types are used in `where` clauses to constrain type parameters:
+
+```verona
+// T must satisfy both comparable and printable
+format[T](val: T) where T < comparable & T < printable
+```
+
+An intersection type is also formed when combining shape constraints — a value of type `A & B` has all the methods of both `A` and `B`. This is useful for requiring that a type satisfies multiple shapes simultaneously.
+
+Intersection types are left-associative:
+
+```verona
+A & B & C       // a value satisfying A, B, and C
+```
+
+See [Where Clauses §3.10](#310-where-clauses) for how intersection types work with generic constraints.
 
 ---
 

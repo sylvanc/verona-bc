@@ -3,8 +3,7 @@
 ## To Do
 
 Reviews.
-- A Verona writing skill?
-- Sub agents with the persona of a programmer used to a specific language, have them review the language design and documentation, and suggest improvements.
+- A Verona writing skill? `vc` project scaffold that adds the skill and a project-specific CLAUDE.md?
 - Can we review and improve compiler error messages?
 
 Tuples.

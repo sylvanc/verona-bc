@@ -192,10 +192,12 @@ fill(size: usize, from: T = T): array[T]
 
 ```verona
 array[i32]::fill(10)              // default-filled (T::create())
-array[i32]::fill(3, from: 42)     // filled with 42
+array[i32]::fill(3, 42)           // filled with 42
 ```
 
 Default arguments must appear at the end of the parameter list.
+
+> **Note:** Verona does not have named arguments at call sites. Arguments are matched positionally. The parameter names in function signatures (like `from`) exist only in the function definition.
 
 ---
 

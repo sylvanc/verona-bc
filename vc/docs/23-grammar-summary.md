@@ -112,7 +112,7 @@ LambdaExpr    ::= '(' Params ')' (':' Type)? '->' LambdaBody
 LambdaBody    ::= '{' Body '}'
                  | Expr
 
-MatchExpr     ::= '(' 'match' Expr '{' MatchArm (';' MatchArm)* '}' ')' ElseChain
+MatchExpr     ::= 'match' Expr '{' MatchArm (';' MatchArm)* '}' ElseChain?
 
 MatchArm      ::= '(' Ident ':' Type ')' '->' LambdaBody    // type test
                  | '(' Expr ')' '->' LambdaBody              // value test

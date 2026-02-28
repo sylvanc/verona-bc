@@ -101,3 +101,143 @@ cell
   f: i32;
 }
 ```
+
+---
+
+## 16.7 Multi-File Project Example
+
+Here is a complete example of a multi-file project demonstrating how modules interact:
+
+### Project Structure
+
+```
+calculator/
+  main.v
+  math.v
+  types.v
+```
+
+### `types.v`
+
+```verona
+result
+{
+  value: i32;
+  ok: bool;
+}
+```
+
+### `math.v`
+
+```verona
+use types
+
+add(a: i32, b: i32): result
+{
+  result(a + b, true)
+}
+
+safe_div(a: i32, b: i32): result
+{
+  if b == 0
+  {
+    result(0, false)
+  }
+  else
+  {
+    result(a / b, true)
+  }
+}
+```
+
+### `main.v`
+
+```verona
+use math
+
+main(): i32
+{
+  let sum = add(10, 20);
+  let div = safe_div(sum.value, 3);
+
+  if div.ok
+  {
+    div.value
+  }
+  else
+  {
+    99
+  }
+}
+```
+
+### Building and Running
+
+```bash
+cd build
+dist/vc/vc build ../calculator
+dist/vbci/vbci calculator.vbc
+echo $?                               # prints 10
+```
+
+Key points:
+- Each `.v` file is a module named after the file.
+- `use math` imports `math`'s declarations for unqualified use.
+- Without `use`, you can still access declarations with qualified names: `math::add(10, 20)`.
+- `use types` in `math.v` makes the `result` class available without qualifying it as `types::result`.
+
+---
+
+## 16.8 The Four Forms of `use`
+
+`use` appears in several different contexts. Here they all are in one place:
+
+| Form | Purpose | Example |
+|------|---------|--------|
+| `use Module` | Import a local class/module for unqualified lookup | `use math` |
+| `use "url"` | Import a package from a git URL | `use "https://github.com/..."` |
+| `use x = "url"` | Import a package as a named type alias | `use mylib = "https://..."` |
+| `use { name = "lib"(...): T; }` | FFI declarations (see [FFI §17](17-ffi.md)) | `use { print = "print"(any): none; }` |
+
+### `use Module` — Local Import
+
+Imports a class or module's declarations for unqualified lookup in the current scope:
+
+```verona
+use math
+add(3, 4)                             // resolves to math::add
+```
+
+This affects only `lookup()` (walking up scopes). It does **not** make the declarations visible via `lookdown()` from outside — other modules still need `math::add()`.
+
+### `use "url"` — Package Import
+
+Imports an external package from a git repository URL:
+
+```verona
+use "https://github.com/user/repo"
+```
+
+The package's top-level declarations become available for unqualified lookup, just like `use Module`.
+
+### `use x = "url"` — Named Package Alias
+
+Imports a package and binds it to a name for qualified access:
+
+```verona
+use mylib = "https://github.com/user/repo"
+mylib::some_function()
+```
+
+### `use { ... }` — FFI Declarations
+
+Declares foreign function interfaces. See [FFI](17-ffi.md) for the full syntax:
+
+```verona
+use
+{
+  print = "print"(any): none;
+}
+```
+
+The `use` keyword is overloaded but the forms are syntactically distinct — the compiler disambiguates by what follows `use` (a name, a string, an assignment, or a brace block).

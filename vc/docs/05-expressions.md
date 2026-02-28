@@ -215,20 +215,24 @@ Use parentheses to override:
 
 Note: `obj.f(args)` calls method `f` with `args` — not `apply` on field `f`. To call `apply` on a field, use `(obj.f)(args)` or `obj.f.apply(args)`. See [Chapter 1](01-getting-started.md) for more.
 
-> **Warning: Flat operator precedence.** All infix operators have **the same precedence** and are **left-associative**. There is no precedence difference between `+` and `*`. This means:
+> **⚠️ IMPORTANT: Flat operator precedence.** All infix operators have **the same precedence** and are **left-associative**. There is no precedence difference between `+` and `*`. This is the single most common source of confusion for new Verona programmers. It means:
 >
 > ```verona
 > a + b * c                    // parsed as (a + b) * c — NOT a + (b * c)
 > a * b + c                    // parsed as (a * b) + c
+> a < b & c > d                // parsed as ((a < b) & c) > d
 > ```
 >
-> Use parentheses to get the intended grouping:
+> **Always use parentheses** to get the intended grouping:
 >
 > ```verona
 > a + (b * c)                  // multiplication first
+> (a < b) & (c > d)            // comparisons first
 > ```
 >
 > This is a deliberate design choice — it avoids implicit precedence surprises for user-defined operators. Since all operators are method calls, there is no reason `*` should bind tighter than a custom `%%` operator.
+>
+> See [Gotchas §26.1](26-gotchas.md) for more on this and other common pitfalls.
 
 ---
 
@@ -326,14 +330,15 @@ For field writes through `ref[T]`, the store also returns the old value. See [Me
 `match` tests a value against a sequence of type test and value test patterns:
 
 ```verona
-let result = (match x
+let result = match x
 {
   (n: i32) -> n + 1;
   (s: string) -> s.size;
-}) else (0);
+}
+else (0);
 ```
 
-The `match` expression must be wrapped in parentheses, and an `else` clause provides the fallback when no arm matches. Arms are tried in order — the first match wins.
+The `else` clause is optional — without it, a non-exhaustive match returns `nomatch`. Arms are tried in order — the first match wins.
 
 - **Type test arms** `(x: T) -> body` bind the value if it matches the type.
 - **Value test arms** `(expr) -> body` compare using `==`.
