@@ -19,6 +19,11 @@ namespace vc
   inline const auto TripleColon = TokenDef("triplecolon");
   inline const auto Dot = TokenDef("dot");
   inline const auto DontCare = TokenDef("dontcare");
+  inline const auto SplatLet =
+    TokenDef("splatlet", flag::lookup | flag::shadowing);
+  inline const auto SplatDontCare = TokenDef("splatdc");
+  inline const auto SplatOp = TokenDef("splatop");
+  inline const auto ArrayRefFromEnd = TokenDef("arrayrefend");
   inline const auto Ident = TokenDef("ident", flag::print);
   inline const auto Use = TokenDef("use");
   inline const auto Shape = TokenDef("shape");
@@ -137,7 +142,7 @@ namespace vc
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
     wfLiteral | Char | String | RawString | Tuple | ArrayLit | Let | Var | New |
     Stack | Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals |
-    Hash | FieldRef | GetRaise | SetRaise | MatchExpr;
+    Hash | FieldRef | GetRaise | SetRaise | MatchExpr | SplatLet | SplatDontCare;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
@@ -197,6 +202,7 @@ namespace vc
     | (Equals <<= (Lhs >>= Expr) * (Rhs >>= Expr))
     | (Let <<= Ident * Type)[Ident]
     | (Var <<= Ident * Type)[Ident]
+    | (SplatLet <<= Ident)[Ident]
     | (New <<= NewArgs)
     | (Stack <<= Type * NewArgs)
     | (NewArgs <<= NewArg++)
@@ -293,7 +299,7 @@ namespace vc
     RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | Stack | NewArray |
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
     When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
-    GetRaise | SetRaise;
+    GetRaise | SetRaise | SplatOp | ArrayRefFromEnd;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -313,6 +319,8 @@ namespace vc
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
+    | (ArrayRefFromEnd <<= wfDst * Arg * wfLit)
+    | (SplatOp <<= wfDst * Arg * (Lhs >>= wfIntLiteral) * (Rhs >>= wfIntLiteral))
     | (New <<= wfDst * Type * NewArgs)
     | (Stack <<= wfDst * Type * NewArgs)
     | (NewArg <<= Ident * wfSrc)

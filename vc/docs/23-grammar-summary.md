@@ -140,7 +140,9 @@ LetDecl       ::= 'let' Ident (':' Type)? ('=' Expr)?
 VarDecl       ::= 'var' Ident (':' Type)? ('=' Expr)?
 Discard       ::= '_' '=' Expr
 TupleDestr    ::= '(' DestrElem (',' DestrElem)* ')' '=' Expr
-DestrElem     ::= LetDecl | VarDecl | Ident | '_'
+DestrElem     ::= LetDecl | VarDecl | Ident | '_' | SplatLet | SplatDC
+SplatLet      ::= 'let' Ident '...'
+SplatDC       ::= '_' '...'
 ```
 
 ---

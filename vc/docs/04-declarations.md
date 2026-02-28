@@ -75,13 +75,20 @@ _ = some_side_effect();
 `_` can also appear in tuple destructuring to ignore specific elements:
 
 ```verona
-let t = (i32 3, i32 5);
+let t = (3, 5);
 (_, let b) = t;              // b = 5, first element discarded
 (let a, _) = t;              // a = 3, second element discarded
 (_, _) = t;                  // discard everything
 ```
 
-See [Tuples and Destructuring](11-tuples.md) for more on destructuring patterns.
+Use `_...` to discard all remaining elements regardless of count:
+
+```verona
+let t = (1, 2, 3, 4, 5);
+(let a, _...) = t;           // a = 1, rest discarded
+```
+
+See [Tuples and Destructuring](11-tuples.md) for more on destructuring and splat patterns.
 
 ---
 
@@ -113,6 +120,6 @@ main(): i32
 `let` and `var` declarations are expressions that evaluate to the bound value. This allows them to appear inside tuple destructuring and other expression contexts:
 
 ```verona
-(let a, let b) = (i32 3, i32 5);     // a = 3, b = 5
-(var x, let y) = (i32 1, i32 2);     // x = 1 (mutable), y = 2
+(let a, let b) = (3, 5);              // a = 3, b = 5
+(var x, let y) = (1, 2);              // x = 1 (mutable), y = 2
 ```

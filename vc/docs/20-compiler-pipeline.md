@@ -14,7 +14,9 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 ## 20.2 Pass Pipeline
 
-The compiler runs 14 passes in order:
+The compiler runs passes in two stages. The first 10 passes are the `vc` frontend, which transforms source code into monomorphized IR. The remaining passes are provided by the `vbcc` bytecode compiler library, which transforms IR into `.vbc` bytecode.
+
+### Frontend Passes (vc)
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
@@ -28,12 +30,17 @@ The compiler runs 14 passes in order:
 | 7 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
 | 8 | `infer` | once | Type inference and literal refinement |
 | 9 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
+
+### Backend Passes (vbcc library)
+
+| # | Pass | Direction | Purpose |
+|---|------|-----------|---------|
 | 10 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
 | 11 | `validids` | once | Validate identifier assignments for consistency |
 | 12 | `liveness` | once | Liveness analysis for register allocation |
 | 13 | `typecheck` | once | Final type checking |
 
-After all passes complete, bytecode generation produces a `.vbc` file.
+After all passes complete, bytecode generation produces a `.vbc` file. In practice, `vc build` invokes both stages — the user does not need to run them separately.
 
 ---
 
@@ -130,19 +137,14 @@ This creates one `.trieste` file per pass in the dump directory, letting you ins
 
 ---
 
-## 20.8 Bytecode Compiler (vbcc)
+## 20.8 Standalone Bytecode Compiler (vbcc)
 
-After `vc` produces IR output, the `vbcc` bytecode compiler transforms it into `.vbc` bytecode. The `vbcc` pipeline adds several additional passes:
+The `vbcc` tool can also be run standalone on Trieste IR files (produced by `vc` with `-p reify`). When used standalone, `vbcc` prepends two additional passes before the shared backend passes:
 
 | # | Pass | Purpose |
 |---|------|---------|
-| 0 | `statements` | Flatten IR into statement sequences |
+| 0 | `statements` | Parse Trieste IR text into statement sequences |
 | 1 | `labels` | Resolve jump targets and label offsets |
-| 2 | `assignids` | Assign bytecode identifiers to classes, functions, methods |
-| 3 | `validids` | Validate bytecode identifier assignments |
-| 4 | `liveness` | Register liveness analysis for allocation |
-| 5 | `typecheck` | Final type consistency checks |
+| 2–5 | (shared) | `assignids` → `validids` → `liveness` → `typecheck` |
 
-After all passes complete, the `Bytecode` class emits the final `.vbc` file.
-
-These passes operate on the IR produced by `vc`'s reify pass. In practice, `vc build` invokes both `vc` and `vbcc` — the user does not need to run them separately.
+When `vc build` is used (the normal workflow), these two additional passes are not needed — `vc` passes the AST directly to the `vbcc` library's backend passes.

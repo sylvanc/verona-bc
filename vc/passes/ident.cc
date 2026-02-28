@@ -129,7 +129,7 @@ namespace vc
         for (auto& def : defs)
         {
           // Check if this is a parameter or a local variable.
-          if (def->in({ParamDef, Let, Var}) && (n == FuncName))
+          if (def->in({ParamDef, Let, Var, SplatLet}) && (n == FuncName))
           {
             if (!def->precedes(n))
             {
@@ -564,7 +564,7 @@ namespace vc
             // are collected when we process their own scope entry.
             if (node->in({Lambda, Block}))
               return false;
-            if (node->in({Let, Var}))
+            if (node->in({Let, Var, SplatLet}))
             {
               auto name = std::string((node / Ident)->location().view());
               defs_by_name[name].push_back({node, scope, name});

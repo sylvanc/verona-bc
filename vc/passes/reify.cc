@@ -505,6 +505,7 @@ namespace vc
       {
         Node body = l / Body;
         Nodes remove;
+        Nodes splat_expand;
 
         // No structural changes required: CallDyn, math ops on existing
         // values.
@@ -639,6 +640,69 @@ namespace vc
               }
             }
           }
+          else if (n == ArrayRefFromEnd)
+          {
+            // Compute element type and collect for post-traversal expansion.
+            auto arr_loc = (n / Arg / Rhs)->location();
+            auto arr_it = local_types.find(arr_loc);
+
+            if (arr_it != local_types.end() && arr_it->second == TupleType)
+            {
+              auto from_end = from_chars_sep_v<size_t>(n / Rhs);
+              auto arity = arr_it->second->size();
+
+              if (from_end >= 1 && from_end <= arity)
+              {
+                auto real_idx = arity - from_end;
+                auto elem = clone(arr_it->second->at(real_idx));
+                ensure_ref_reified(elem);
+                local_types[(n / LocalId)->location()] =
+                  Node(Ref) << elem;
+              }
+            }
+
+            splat_expand.push_back(n);
+          }
+          else if (n == SplatOp)
+          {
+            // Compute result type and collect for post-traversal expansion.
+            auto arr_loc = (n / Arg / Rhs)->location();
+            auto arr_it = local_types.find(arr_loc);
+
+            if (arr_it != local_types.end() && arr_it->second == TupleType)
+            {
+              auto before = from_chars_sep_v<size_t>(n / Lhs);
+              auto after = from_chars_sep_v<size_t>(n / Rhs);
+              auto arity = arr_it->second->size();
+
+              if (before + after <= arity)
+              {
+                auto remaining = arity - before - after;
+
+                if (remaining == 0)
+                {
+                  reify_primitive(clone(None));
+                  local_types[(n / LocalId)->location()] = clone(None);
+                }
+                else if (remaining == 1)
+                {
+                  local_types[(n / LocalId)->location()] =
+                    clone(arr_it->second->at(before));
+                }
+                else
+                {
+                  Node ttype = TupleType;
+
+                  for (size_t i = before; i < before + remaining; i++)
+                    ttype << clone(arr_it->second->at(i));
+
+                  local_types[(n / LocalId)->location()] = clone(ttype);
+                }
+              }
+            }
+
+            splat_expand.push_back(n);
+          }
           else if (n == Load)
           {
             // Load: dst = *src. Unwrap Ref to get inner type.
@@ -731,6 +795,153 @@ namespace vc
 
         for (auto& n : remove)
           n->parent()->replace(n);
+
+        // Expand ArrayRefFromEnd and SplatOp nodes.
+        for (auto& n : splat_expand)
+        {
+          if (n == ArrayRefFromEnd)
+          {
+            // Convert to ArrayRefConst with computed index.
+            auto arr_loc = (n / Arg / Rhs)->location();
+            auto arr_it = local_types.find(arr_loc);
+
+            if (arr_it != local_types.end() && arr_it->second == TupleType)
+            {
+              auto from_end = from_chars_sep_v<size_t>(n / Rhs);
+              auto arity = arr_it->second->size();
+              auto real_idx = arity - from_end;
+
+              Node replacement = ArrayRefConst
+                << clone(n / LocalId)
+                << clone(n / Arg)
+                << (Int ^ std::to_string(real_idx));
+
+              body->replace(n, replacement);
+            }
+            else
+            {
+              assert(false && "ArrayRefFromEnd source must be TupleType");
+            }
+          }
+          else if (n == SplatOp)
+          {
+            auto arr_loc = (n / Arg / Rhs)->location();
+            auto arr_it = local_types.find(arr_loc);
+
+            if (arr_it != local_types.end() && arr_it->second == TupleType)
+            {
+              auto before = from_chars_sep_v<size_t>(n / Lhs);
+              auto after = from_chars_sep_v<size_t>(n / Rhs);
+              auto arity = arr_it->second->size();
+
+              if (before + after > arity)
+              {
+                body->replace(
+                  n,
+                  err(
+                    n,
+                    "tuple has " + std::to_string(arity) +
+                      " elements, but destructuring requires at least " +
+                      std::to_string(before + after)));
+                continue;
+              }
+
+              auto remaining = arity - before - after;
+              auto dst_loc = (n / LocalId)->location();
+
+              if (remaining == 0)
+              {
+                // No remaining elements: produce a None constant.
+                Node replacement = Const
+                  << (LocalId ^ dst_loc)
+                  << clone(None)
+                  << clone(None);
+
+                body->replace(n, replacement);
+              }
+              else if (remaining == 1)
+              {
+                // One element: ArrayRefConst + Load.
+                auto ref_loc = top->fresh(Location("splat"));
+
+                Node aref = ArrayRefConst
+                  << (LocalId ^ ref_loc)
+                  << clone(n / Arg)
+                  << (Int ^ std::to_string(before));
+
+                Node load = Load
+                  << (LocalId ^ dst_loc)
+                  << (LocalId ^ ref_loc);
+
+                Nodes replacements = {aref, load};
+                auto it = body->find(n);
+                auto pos = body->erase(it, std::next(it));
+                body->insert(pos, replacements.begin(), replacements.end());
+              }
+              else
+              {
+                // Two or more elements: create a new tuple.
+                Node ttype = TupleType;
+
+                for (size_t i = before; i < before + remaining; i++)
+                  ttype << clone(arr_it->second->at(i));
+
+                Nodes replacements;
+
+                // NewArrayConst to allocate the tuple.
+                replacements.push_back(
+                  NewArrayConst
+                    << (LocalId ^ dst_loc)
+                    << clone(ttype)
+                    << (Int ^ std::to_string(remaining)));
+
+                // Copy each element from source to destination.
+                for (size_t i = 0; i < remaining; i++)
+                {
+                  auto src_ref = top->fresh(Location("splat"));
+                  auto val_loc = top->fresh(Location("splat"));
+                  auto dst_ref = top->fresh(Location("splat"));
+                  auto old_val = top->fresh(Location("splat"));
+
+                  // Get ref to source element.
+                  replacements.push_back(
+                    ArrayRefConst
+                      << (LocalId ^ src_ref)
+                      << clone(n / Arg)
+                      << (Int ^ std::to_string(before + i)));
+
+                  // Load source value.
+                  replacements.push_back(
+                    Load
+                      << (LocalId ^ val_loc)
+                      << (LocalId ^ src_ref));
+
+                  // Get ref to destination element.
+                  replacements.push_back(
+                    ArrayRefConst
+                      << (LocalId ^ dst_ref)
+                      << (Arg << ArgCopy << (LocalId ^ dst_loc))
+                      << (Int ^ std::to_string(i)));
+
+                  // Store value into destination.
+                  replacements.push_back(
+                    Store
+                      << (LocalId ^ old_val)
+                      << (LocalId ^ dst_ref)
+                      << (Arg << ArgCopy << (LocalId ^ val_loc)));
+                }
+
+                auto it = body->find(n);
+                auto pos = body->erase(it, std::next(it));
+                body->insert(pos, replacements.begin(), replacements.end());
+              }
+            }
+            else
+            {
+              assert(false && "SplatOp source must be TupleType");
+            }
+          }
+        }
 
         // Reify the Type child of Raise terminators.
         auto term = l / Return;
