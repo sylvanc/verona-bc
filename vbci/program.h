@@ -30,7 +30,6 @@ namespace vbci
     std::filesystem::path file;
     std::vector<uint8_t> content;
     std::vector<std::string> strings;
-    std::vector<Array*> string_cache;
 
     std::vector<Function> functions;
     std::vector<Class> classes;
@@ -64,12 +63,6 @@ namespace vbci
 
     // Default constructor
     Program() = default;
-
-    ~Program()
-    {
-      for (auto arr : string_cache)
-        delete[] reinterpret_cast<uint8_t*>(arr);
-    }
 
     // Move constructors
     Program(Program&&) = default;

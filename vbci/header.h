@@ -327,6 +327,14 @@ namespace vbci
     void field_drop(Value& prev)
     {
       auto ploc = prev.location();
+
+      // Immutable values are not in the region, so they need an explicit dec.
+      if (ploc.is_immutable())
+      {
+        prev.dec<false>();
+        return;
+      }
+
       auto dealloc = dec_no_dealloc<false>();
       auto region_dealloc = remove_region_reference<false>(ploc);
       if (dealloc && !region_dealloc)
