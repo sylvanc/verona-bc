@@ -16,15 +16,18 @@ int main(int argc, char** argv)
     "vc",
     {
       struc,
-      sugar(),
       ident(),
+      sugar(),
+      functype(),
+      dot(),
       application(),
-      operators(),
       anf(),
+      infer(),
       reify(),
       vbcc::assignids(state),
       vbcc::validids(state),
       vbcc::liveness(state),
+      vbcc::typecheck(state),
     },
     parse};
 
@@ -33,6 +36,7 @@ int main(int argc, char** argv)
     std::filesystem::path path;
     std::filesystem::path bytecode_file;
     bool strip = false;
+    bool build = false;
 
     void configure(CLI::App& cli) override
     {
@@ -44,8 +48,17 @@ int main(int argc, char** argv)
       cli.callback([this, &cli]() {
         path = cli.get_option("path")->as<std::filesystem::path>();
 
+        if (!path.has_filename())
+          path = path.parent_path();
+
         if (!path.empty() && bytecode_file.empty())
           bytecode_file = path.stem().replace_extension(".vbc");
+
+        auto pass = cli.get_option_no_throw("--pass");
+
+        if (!pass || pass->count() == 0 ||
+            pass->as<std::string>() == "typecheck")
+          build = true;
       });
     }
   };
@@ -60,6 +73,9 @@ int main(int argc, char** argv)
 
   if (r != 0)
     return r;
+
+  if (!opts.build)
+    return 0;
 
   if (state->error)
     return -1;

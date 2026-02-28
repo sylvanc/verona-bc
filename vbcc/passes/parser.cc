@@ -4,9 +4,9 @@ namespace vbcc
 {
   const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Vars |
     Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |
-    LBracket | RBracket | Comma | Colon | Union | Vararg | wfRegionType |
-    wfPrimitiveType | Ptr | Dyn | Ref | Cown | wfStatement | wfTerminator |
-    wfLiteral | String | RawString;
+    LBracket | RBracket | Comma | Colon | Union | TupleType | Vararg |
+    wfRegionType | wfPrimitiveType | Ptr | Dyn | Ref | Cown | wfStatement |
+    wfTerminator | wfLiteral | String | RawString;
 
   // clang-format off
   const auto wfParser =
@@ -59,9 +59,9 @@ namespace vbcc
         "usize\\b" >> [](auto& m) { m.add(USize); },
         "ptr\\b" >> [](auto& m) { m.add(Ptr); },
         "dyn\\b" >> [](auto& m) { m.add(Dyn); },
+        "tuple\\b" >> [](auto& m) { m.add(TupleType); },
 
         // Op codes.
-        "global\\b" >> [](auto& m) { m.add(Global); },
         "const\\b" >> [](auto& m) { m.add(Const); },
         "convert\\b" >> [](auto& m) { m.add(Convert); },
         "new\\b" >> [](auto& m) { m.add(New); },
@@ -76,17 +76,17 @@ namespace vbcc
         "store\\b" >> [](auto& m) { m.add(Store); },
         "lookup\\b" >> [](auto& m) { m.add(Lookup); },
         "call\\b" >> [](auto& m) { m.add(Call); },
-        "subcall\\b" >> [](auto& m) { m.add(Subcall); },
-        "try\\b" >> [](auto& m) { m.add(Try); },
+
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
         "when\\b" >> [](auto& m) { m.add(When); },
+        "getraise\\b" >> [](auto& m) { m.add(GetRaise); },
+        "setraise\\b" >> [](auto& m) { m.add(SetRaise); },
         "typetest\\b" >> [](auto& m) { m.add(Typetest); },
 
         // Terminators.
         "tailcall\\b" >> [](auto& m) { m.add(Tailcall); },
         "ret\\b" >> [](auto& m) { m.add(Return); },
         "raise\\b" >> [](auto& m) { m.add(Raise); },
-        "throw\\b" >> [](auto& m) { m.add(Throw); },
         "cond\\b" >> [](auto& m) { m.add(Cond); },
         "jump\\b" >> [](auto& m) { m.add(Jump); },
 
@@ -193,6 +193,9 @@ namespace vbcc
         // Escaped string.
         "\"((?:\\\"|[^\"])*?)\"" >> [](auto& m) { m.add(String, 1); },
 
+        // Character literal.
+        "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
+ 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},
       });

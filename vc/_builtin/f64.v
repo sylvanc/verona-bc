@@ -1,6 +1,6 @@
 f64
 {
-  create(some: f64): f64
+  create(some: f64 = 0): f64
   {
     some
   }
@@ -217,7 +217,7 @@ f64
 
   bool(self: f64): bool
   {
-    self != 0.f64
+    self != 0
   }
 
   i8(self: f64): i8

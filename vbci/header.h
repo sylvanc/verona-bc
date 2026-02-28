@@ -174,7 +174,10 @@ namespace vbci
         // This is being removed from an object/array that is frame local, and
         // will not land in register we need to remove its stack rc.
         if constexpr (!to_register)
-          return ploc.to_region()->stack_dec();
+        {
+          if (ploc.is_region())
+            return ploc.to_region()->stack_dec();
+        }
         return true;
       }
 
@@ -324,6 +327,14 @@ namespace vbci
     void field_drop(Value& prev)
     {
       auto ploc = prev.location();
+
+      // Immutable values are not in the region, so they need an explicit dec.
+      if (ploc.is_immutable())
+      {
+        prev.dec<false>();
+        return;
+      }
+
       auto dealloc = dec_no_dealloc<false>();
       auto region_dealloc = remove_region_reference<false>(ploc);
       if (dealloc && !region_dealloc)

@@ -75,16 +75,16 @@ namespace vbcc
           }
           else if (node->in({Convert,  Copy,     HeapArrayConst,
                              ArrayRef, Load,     Store,
-                             Lookup,   Typetest, Neg,
-                             Not,      Abs,      Ceil,
-                             Floor,    Exp,      Log,
-                             Sqrt,     Cbrt,     IsInf,
-                             IsNaN,    Sin,      Cos,
-                             Tan,      Asin,     Acos,
-                             Atan,     Sinh,     Cosh,
-                             Tanh,     Asinh,    Acosh,
-                             Atanh,    Bits,     Len,
-                             MakePtr,  Read}))
+                             Lookup,   Neg,      Not,
+                             Abs,      Ceil,     Floor,
+                             Exp,      Log,      Sqrt,
+                             Cbrt,     IsInf,    IsNaN,
+                             Sin,      Cos,      Tan,
+                             Asin,     Acos,     Atan,
+                             Sinh,     Cosh,     Tanh,
+                             Asinh,    Acosh,    Atanh,
+                             Bits,     Len,      MakePtr,
+                             Read,     SetRaise, Typetest}))
           {
             use(node / Rhs);
             def(node / LocalId);
@@ -103,6 +103,7 @@ namespace vbcc
                       ArrayRefConst,
                       FnPointer,
                       FFI,
+                      GetRaise,
                       Const_E,
                       Const_Pi,
                       Const_Inf,
@@ -110,7 +111,7 @@ namespace vbcc
           {
             def(node / LocalId);
           }
-          else if (node->in({Return, Raise, Throw, TailcallDyn}))
+          else if (node->in({Return, Raise, TailcallDyn}))
           {
             kill(node / LocalId);
           }
@@ -154,12 +155,12 @@ namespace vbcc
         },
         [&](auto node) {
           // Handle these in post, because the arguments will be pushed first.
-          if (node->in({Heap, CallDyn, SubcallDyn, TryDyn, WhenDyn}))
+          if (node->in({Heap, CallDyn, TryCallDyn, WhenDyn}))
           {
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({New, Stack, Region, Call, Subcall, Try, When}))
+          else if (node->in({New, Stack, Region, Call, When}))
           {
             def(node / LocalId);
           }

@@ -1,8 +1,8 @@
 i64
 {
-  create(some: u64): i64
+  create(some: i64 = 0): i64
   {
-    :::convi64(some)
+    some
   }
 
   +(self: i64, other: i64): i64
@@ -100,7 +100,7 @@ i64
     :::neg(self)
   }
 
-  !(self: i64): bool
+  !(self: i64): i64
   {
     :::not(self)
   }
@@ -112,7 +112,7 @@ i64
 
   bool(self: i64): bool
   {
-    self != 0.i64
+    self != 0
   }
 
   i8(self: i64): i8

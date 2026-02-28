@@ -55,7 +55,6 @@ namespace vbcc
   inline const auto Cown = TokenDef("cown");
 
   // Op codes.
-  inline const auto Global = TokenDef("global");
   inline const auto Const = TokenDef("const");
   inline const auto Convert = TokenDef("convert");
   inline const auto New = TokenDef("new");
@@ -81,8 +80,6 @@ namespace vbcc
   inline const auto Store = TokenDef("store");
   inline const auto Lookup = TokenDef("lookup");
   inline const auto Call = TokenDef("call");
-  inline const auto Subcall = TokenDef("subcall");
-  inline const auto Try = TokenDef("try");
   inline const auto FFI = TokenDef("ffi");
   inline const auto When = TokenDef("when");
   inline const auto Typetest = TokenDef("typetest");
@@ -91,7 +88,6 @@ namespace vbcc
   inline const auto Tailcall = TokenDef("tailcall");
   inline const auto Return = TokenDef("ret");
   inline const auto Raise = TokenDef("raise");
-  inline const auto Throw = TokenDef("throw");
   inline const auto Cond = TokenDef("cond");
   inline const auto Jump = TokenDef("jump");
 
@@ -147,6 +143,10 @@ namespace vbcc
   inline const auto MakePtr = TokenDef("makeptr");
   inline const auto Read = TokenDef("read");
 
+  // Raise target.
+  inline const auto GetRaise = TokenDef("getraise");
+  inline const auto SetRaise = TokenDef("setraise");
+
   // Constants.
   inline const auto Const_E = TokenDef("e");
   inline const auto Const_Pi = TokenDef("pi");
@@ -164,6 +164,7 @@ namespace vbcc
   inline const auto HexFloat = TokenDef("hexfloat", flag::print);
   inline const auto String = TokenDef("string", flag::print);
   inline const auto RawString = TokenDef("rawstring", flag::print);
+  inline const auto Char = TokenDef("char", flag::print);
 
   // Structure.
   inline const auto Source = TokenDef("source");
@@ -172,6 +173,7 @@ namespace vbcc
   inline const auto Symbols = TokenDef("symbols");
   inline const auto Vararg = TokenDef("vararg");
   inline const auto Union = TokenDef("union");
+  inline const auto TupleType = TokenDef("tupletype");
   inline const auto Field = TokenDef("field");
   inline const auto Fields = TokenDef("fields");
   inline const auto Method = TokenDef("method");
@@ -190,8 +192,7 @@ namespace vbcc
   inline const auto Body = TokenDef("body");
   inline const auto FnPointer = TokenDef("fnpointer");
   inline const auto CallDyn = TokenDef("calldyn");
-  inline const auto SubcallDyn = TokenDef("subcalldyn");
-  inline const auto TryDyn = TokenDef("trydyn");
+  inline const auto TryCallDyn = TokenDef("trycalldyn");
   inline const auto TailcallDyn = TokenDef("tailcalldyn");
   inline const auto WhenDyn = TokenDef("whendyn");
   inline const auto ConstStr = TokenDef("conststr");
@@ -207,9 +208,10 @@ namespace vbcc
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
   inline const auto wfBuiltinType = wfPrimitiveType | Ptr | Array | Ref | Cown;
-  inline const auto wfType = wfBuiltinType | Dyn | ClassId | TypeId | Union;
+  inline const auto wfType =
+    wfBuiltinType | Dyn | ClassId | TypeId | Union | TupleType;
 
-  inline const auto wfIntLiteral = Bin | Oct | Hex | Int;
+  inline const auto wfIntLiteral = Bin | Oct | Hex | Int | Char;
   inline const auto wfLiteral =
     None | True | False | wfIntLiteral | Float | HexFloat;
 
@@ -222,16 +224,16 @@ namespace vbcc
 
   inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
 
-  inline const auto wfStatement = Source | Offset | Global | Const | ConstStr |
-    Convert | New | Stack | Heap | Region | NewArray | NewArrayConst |
-    StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
+  inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
+    New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
+    StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
-    Subcall | SubcallDyn | Try | TryDyn | FFI | When | WhenDyn | Typetest |
-    wfBinop | wfUnop | wfConst;
+    TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
+    wfConst | Typetest;
 
   inline const auto wfTerminator =
-    Tailcall | TailcallDyn | Return | Raise | Throw | Cond | Jump;
+    Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
 
   inline const auto wfDst = (LocalId >>= LocalId);
   inline const auto wfSrc = (Rhs >>= LocalId);
@@ -251,6 +253,7 @@ namespace vbcc
     | (Ref <<= (Type >>= wfType))
     | (Cown <<= (Type >>= wfType))
     | (Union <<= wfType++)
+    | (TupleType <<= wfType++[2])
     | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
     | (Symbol <<=
@@ -273,7 +276,6 @@ namespace vbcc
     | (Body <<= wfStatement++)
     | (Source <<= String)
     | (Offset <<= Int)
-    | (Global <<= wfDst * GlobalId)
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     | (ConstStr <<= wfDst * (String >>= String | RawString))
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
@@ -302,14 +304,10 @@ namespace vbcc
     | (FnPointer <<= wfDst * (Rhs >>= FunctionId | SymbolId))
     | (Call <<= wfDst * FunctionId * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
-    | (Subcall <<= wfDst * FunctionId * Args)
-    | (SubcallDyn <<= wfDst * wfSrc * Args)
-    | (Try <<= wfDst * FunctionId * Args)
-    | (TryDyn <<= wfDst * wfSrc * Args)
+    | (TryCallDyn <<= wfDst * wfSrc * Args)
     | (FFI <<= wfDst * SymbolId * Args)
     | (When <<= wfDst * FunctionId * Args * Cown)
     | (WhenDyn <<= wfDst * wfSrc * Args * Cown)
-    | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Args <<= Arg++)
     | (Arg <<= (Type >>= (ArgMove | ArgCopy)) * wfSrc)
     | (Tailcall <<= FunctionId * MoveArgs)
@@ -317,9 +315,11 @@ namespace vbcc
     | (MoveArgs <<= MoveArg++)
     | (MoveArg <<= (Type >>= ArgMove) * wfSrc)
     | (Return <<= LocalId)
-    | (Raise <<= LocalId)
-    | (Throw <<= LocalId)
+    | (GetRaise <<= wfDst)
+    | (SetRaise <<= wfDst * wfSrc)
+    | (Raise <<= LocalId * (Type >>= wfType))
     | (Cond <<= LocalId * (Lhs >>= LabelId) * (Rhs >>= LabelId))
+    | (Typetest <<= wfDst * wfSrc * (Type >>= wfType))
     | (Jump <<= LabelId)
     | (Add <<= wfDst * wfLhs * wfRhs)
     | (Sub <<= wfDst * wfLhs * wfRhs)

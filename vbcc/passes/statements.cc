@@ -6,13 +6,13 @@ namespace vbcc
     T(I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize);
   const auto FloatType = T(F32, F64);
   const auto PrimitiveType = T(None, Bool) / IntType / FloatType;
-  const auto BuiltinType =
-    PrimitiveType / T(Ptr) / (T(Array, Ref, Cown) << Any);
-  const auto TypeNoUnion =
-    PrimitiveType / T(Ptr, Dyn, GlobalId) / (T(Array, Ref, Cown) << Any);
+  const auto BuiltinType = PrimitiveType / T(Ptr) /
+    (T(Array, Ref, Cown) << Any) / (T(TupleType) << Any);
+  const auto TypeNoUnion = PrimitiveType / T(Ptr, Dyn, GlobalId) /
+    (T(Array, Ref, Cown) << Any) / (T(TupleType) << Any);
   const auto TypePat = (TypeNoUnion / (T(Union) << Any)) * --(T(Union) << End);
 
-  const auto IntLiteral = T(Bin, Oct, Hex, Int);
+  const auto IntLiteral = T(Bin, Oct, Hex, Int, Char);
   const auto FloatLiteral = T(Float, HexFloat);
 
   const auto Dst = T(LocalId)[LocalId] * T(Equals);
@@ -154,6 +154,21 @@ namespace vbcc
         T(LBracket) * TypePat[Type] * T(RBracket) >>
           [](Match& _) { return Array << _(Type); },
 
+        // Tuple type: tuple(type, type, ...)
+        (T(TupleType) << End) * T(LParen) *
+            (TypePat * (T(Comma) * TypePat)++)[Rhs] * T(RParen) >>
+          [](Match& _) {
+            Node r = TupleType;
+
+            for (auto& child : _[Rhs])
+            {
+              if (child != Comma)
+                r << child;
+            }
+
+            return r;
+          },
+
         // Ref type.
         T(Ref) * TypePat[Type] >> [](Match& _) { return Ref << _(Type); },
 
@@ -293,10 +308,6 @@ namespace vbcc
         // Parameter.
         In(Group) * T(LocalId)[LocalId] * T(Colon) * TypePat[Type] >>
           [](Match& _) { return Param << _(LocalId) << _(Type); },
-
-        // Globals.
-        Dst * T(Global) * T(GlobalId)[GlobalId] >>
-          [](Match& _) { return Global << _(LocalId) << _(GlobalId); },
 
         // Constants.
         Dst * T(Const) * T(None) >>
@@ -483,32 +494,6 @@ namespace vbcc
             return CallDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
           },
 
-        // Static subcall.
-        Dst * T(Subcall) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
-          [](Match& _) {
-            return Subcall << _(LocalId) << (FunctionId ^ _(GlobalId))
-                           << callargs(_[Args]);
-          },
-
-        // Dynamic subcall.
-        Dst * T(Subcall) * T(LocalId)[Lhs] * CallArgs[Args] >>
-          [](Match& _) {
-            return SubcallDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
-          },
-
-        // Static try.
-        Dst * T(Try) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
-          [](Match& _) {
-            return Try << _(LocalId) << (FunctionId ^ _(GlobalId))
-                       << callargs(_[Args]);
-          },
-
-        // Dynamic try.
-        Dst * T(Try) * T(LocalId)[Lhs] * CallArgs[Args] >>
-          [](Match& _) {
-            return TryDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
-          },
-
         // FFI call.
         Dst * T(FFI) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
@@ -532,9 +517,17 @@ namespace vbcc
                            << (Cown << _(Type));
           },
 
-        // Type test.
+        // Typetest statement.
         Dst * T(Typetest) * T(LocalId)[Rhs] * TypePat[Type] >>
           [](Match& _) { return Typetest << _(LocalId) << _(Rhs) << _(Type); },
+
+        // GetRaise.
+        Dst * T(GetRaise) >>
+          [](Match& _) { return GetRaise << _(LocalId); },
+
+        // SetRaise.
+        Dst * T(SetRaise) * T(LocalId)[Rhs] >>
+          [](Match& _) { return SetRaise << _(LocalId) << _(Rhs); },
 
         // Terminators.
         (T(Tailcall) << End) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
@@ -548,11 +541,8 @@ namespace vbcc
         (T(Return) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Return << _(LocalId); },
 
-        (T(Raise) << End) * T(LocalId)[LocalId] >>
-          [](Match& _) { return Raise << _(LocalId); },
-
-        (T(Throw) << End) * T(LocalId)[LocalId] >>
-          [](Match& _) { return Throw << _(LocalId); },
+        (T(Raise) << End) * T(LocalId)[LocalId] * TypePat[Type] >>
+          [](Match& _) { return Raise << _(LocalId) << _(Type); },
 
         (T(Cond) << End) * T(LocalId)[LocalId] * T(LabelId)[Lhs] *
             T(LabelId)[Rhs] >>

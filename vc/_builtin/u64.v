@@ -1,6 +1,6 @@
 u64
 {
-  create(some: u64): u64
+  create(some: u64 = 0): u64
   {
     some
   }
@@ -100,14 +100,14 @@ u64
     :::neg(self)
   }
 
-  !(self: u64): bool
+  !(self: u64): u64
   {
     :::not(self)
   }
 
   bool(self: u64): bool
   {
-    self != 0.u64
+    self != 0
   }
 
   i8(self: u64): i8

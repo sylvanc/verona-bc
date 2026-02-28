@@ -1,0 +1,77 @@
+vbcc
+validids
+(top
+  {}
+  (func
+    (functionid 6:@inner)
+    (params
+      (param
+        (localid 4:$val)
+        (i32))
+      (param
+        (localid 7:$target)
+        (u64)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 6:^inner)
+        (body
+          (setraise
+            (localid 5:$prev)
+            (localid 7:$target)))
+        (raise
+          (localid 4:$val)
+          (i32)))))
+  (func
+    (functionid 6:@outer)
+    (params
+      (param
+        (localid 7:$target)
+        (u64)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 6:^outer)
+        (body
+          (const
+            (localid 4:$val)
+            (i32)
+            (int 2:42))
+          (call
+            (localid 7:$result)
+            (functionid 6:@inner)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:$val))
+              (arg
+                (argcopy)
+                (localid 7:$target))))
+          (const
+            (localid 4:$bad)
+            (i32)
+            (int 2:99)))
+        (ret
+          (localid 4:$bad)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (getraise
+            (localid 7:$target))
+          (call
+            (localid 7:$result)
+            (functionid 6:@outer)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$target)))))
+        (ret
+          (localid 7:$result))))))

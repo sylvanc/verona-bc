@@ -34,7 +34,6 @@ namespace vbci
     std::vector<Function> functions;
     std::vector<Class> classes;
     std::vector<ComplexType> complex_types;
-    std::vector<Value> globals;
     std::unordered_map<uint32_t, uint32_t> ref_map;
 
     std::vector<Dynlib> libs;
@@ -73,7 +72,6 @@ namespace vbci
     Function* function(size_t idx);
     Class& cls(uint32_t type_id);
     ComplexType& complex_type(uint32_t type_id);
-    Value& global(size_t idx);
     ffi_type* value_type();
 
     SNMALLOC_FAST_PATH int64_t sleb(size_t& pc)
@@ -123,6 +121,7 @@ namespace vbci
 
     bool is_complex(uint32_t type_id);
     bool is_array(uint32_t type_id);
+    bool is_tuple(uint32_t type_id);
     bool is_ref(uint32_t type_id);
     bool is_cown(uint32_t type_id);
     bool is_union(uint32_t type_id);

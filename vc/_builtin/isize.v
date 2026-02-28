@@ -1,8 +1,8 @@
 isize
 {
-  create(some: u64): isize
+  create(some: isize = 0): isize
   {
-    :::convisize(some)
+    some
   }
 
   +(self: isize, other: isize): isize
@@ -100,7 +100,7 @@ isize
     :::neg(self)
   }
 
-  !(self: isize): bool
+  !(self: isize): isize
   {
     :::not(self)
   }
@@ -112,7 +112,7 @@ isize
 
   bool(self: isize): bool
   {
-    self != 0.isize
+    self != 0
   }
 
   i8(self: isize): i8

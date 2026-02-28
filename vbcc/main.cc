@@ -15,7 +15,8 @@ int main(int argc, char** argv)
      labels(),
      assignids(state),
      validids(state),
-     liveness(state)},
+     liveness(state),
+     typecheck(state)},
     parser()};
 
   struct Options : public trieste::Options
@@ -36,8 +37,17 @@ int main(int argc, char** argv)
         build = cli.parsed();
         path = cli.get_option("path")->as<std::filesystem::path>();
 
+        if (!path.has_filename())
+          path = path.parent_path();
+
         if (!path.empty() && bytecode_file.empty())
           bytecode_file = path.stem().replace_extension(".vbc");
+
+        auto pass = cli.get_option_no_throw("--pass");
+
+        if (!pass || pass->count() == 0 ||
+            pass->as<std::string>() == "typecheck")
+          build = true;
       });
     }
   };
@@ -49,14 +59,15 @@ int main(int argc, char** argv)
   if (r != 0)
     return r;
 
+  if (!opts.build)
+    return 0;
+
   if (state->error)
     return -1;
 
-  if (opts.build)
-  {
+  if (!opts.path.empty())
     state->add_path(opts.path);
-    state->gen(opts.bytecode_file, opts.strip);
-  }
 
+  state->gen(opts.bytecode_file, opts.strip);
   return 0;
 }

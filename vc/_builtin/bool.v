@@ -1,18 +1,28 @@
+shape to_bool
+{
+  apply(self: self): bool;
+}
+
 bool
 {
-  create(some: bool): bool
+  create(some: bool = false): bool
   {
     some
   }
 
-  &(self: bool, other: bool): bool
+  apply(self: bool): bool
   {
-    :::and(self, other)
+    self
   }
 
-  |(self: bool, other: bool): bool
+  &(self: bool, other: to_bool): bool
   {
-    :::or(self, other)
+    if self { other() } else { false }
+  }
+
+  |(self: bool, other: to_bool): bool
+  {
+    if self { true } else { other() }
   }
 
   ^(self: bool, other: bool): bool
@@ -63,5 +73,10 @@ bool
   !(self: bool): bool
   {
     :::not(self)
+  }
+
+  bool(self: bool): bool
+  {
+    self
   }
 }

@@ -105,14 +105,6 @@ namespace vbcc
     return size_t(-1);
   }
 
-  template<typename T>
-  T lit(Node node)
-  {
-    T t = 0;
-    from_chars_sep(node, t);
-    return t;
-  }
-
   size_t VecHash::operator()(const std::vector<uint8_t>& v) const noexcept
   {
     auto h = size_t(14695981039346656037ull);
@@ -291,9 +283,8 @@ namespace vbcc
     functions.push_back(func_main);
     func_ids.insert({main_name, MainFuncId});
 
-    // Reserve method IDs.
+    // Reserve a method ID for `@final`.
     method_ids.insert({ST::di().string("@final"), FinalMethodId});
-    method_ids.insert({ST::di().string("@apply"), ApplyMethodId});
   }
 
   void Bytecode::add_path(const std::filesystem::path& path)
@@ -766,7 +757,7 @@ namespace vbcc
           else if (stmt == Offset)
           {
             adv_di();
-            di_offset = lit<size_t>(stmt / Int);
+            di_offset = from_chars_sep_v<size_t>(stmt / Int);
             explicit_di = true;
             di << d(DIOp::Offset, di_offset);
             continue;
@@ -797,52 +788,52 @@ namespace vbcc
             else if (t == I8)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(lit<int8_t>(v));
+                   << sleb(from_chars_sep_v<int8_t>(v));
             }
             else if (t == U8)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(lit<uint8_t>(v));
+                   << uleb(from_chars_sep_v<uint8_t>(v));
             }
             else if (t == I16)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(lit<int16_t>(v));
+                   << sleb(from_chars_sep_v<int16_t>(v));
             }
             else if (t == U16)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(lit<uint16_t>(v));
+                   << uleb(from_chars_sep_v<uint16_t>(v));
             }
             else if (t == I32)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(lit<int32_t>(v));
+                   << sleb(from_chars_sep_v<int32_t>(v));
             }
             else if (t == U32)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(lit<uint32_t>(v));
+                   << uleb(from_chars_sep_v<uint32_t>(v));
             }
             else if (t->in({I64, ILong, ISize}))
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(lit<int64_t>(v));
+                   << sleb(from_chars_sep_v<int64_t>(v));
             }
             else if (t->in({U64, ULong, USize, Ptr}))
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(lit<uint64_t>(v));
+                   << uleb(from_chars_sep_v<uint64_t>(v));
             }
             else if (t == F32)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(lit<float>(v));
+                   << sleb(from_chars_sep_v<float>(v));
             }
             else if (t == F64)
             {
               code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(lit<double>(v));
+                   << sleb(from_chars_sep_v<double>(v));
             }
           }
           else if (stmt == ConstStr)
@@ -883,7 +874,8 @@ namespace vbcc
           else if (stmt == NewArrayConst)
           {
             code << uleb(+Op::NewArrayConst) << dst(stmt)
-                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
+                 << uleb(typ(stmt / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == StackArray)
           {
@@ -893,7 +885,8 @@ namespace vbcc
           else if (stmt == StackArrayConst)
           {
             code << uleb(+Op::StackArrayConst) << dst(stmt)
-                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
+                 << uleb(typ(stmt / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == HeapArray)
           {
@@ -903,7 +896,8 @@ namespace vbcc
           else if (stmt == HeapArrayConst)
           {
             code << uleb(+Op::HeapArrayConst) << dst(stmt) << src(stmt)
-                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
+                 << uleb(typ(stmt / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == RegionArray)
           {
@@ -913,7 +907,8 @@ namespace vbcc
           else if (stmt == RegionArrayConst)
           {
             code << uleb(+Op::RegionArrayConst) << dst(stmt) << rgn(stmt)
-                 << uleb(typ(stmt / Type)) << uleb(lit<uint64_t>(stmt / Rhs));
+                 << uleb(typ(stmt / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == Copy)
           {
@@ -962,7 +957,8 @@ namespace vbcc
             else
               code << uleb(+Op::ArrayRefCopyConst);
 
-            code << dst(stmt) << src(arg) << uleb(lit<uint64_t>(stmt / Rhs));
+            code << dst(stmt) << src(arg)
+                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == Load)
           {
@@ -1005,25 +1001,10 @@ namespace vbcc
             args(stmt / Args);
             code << uleb(+Op::CallDynamic) << dst(stmt) << src(stmt);
           }
-          else if (stmt == Subcall)
+          else if (stmt == TryCallDyn)
           {
             args(stmt / Args);
-            code << uleb(+Op::SubcallStatic) << dst(stmt) << fn(stmt);
-          }
-          else if (stmt == SubcallDyn)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::SubcallDynamic) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Try)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::TryStatic) << dst(stmt) << fn(stmt);
-          }
-          else if (stmt == TryDyn)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::TryDynamic) << dst(stmt) << src(stmt);
+            code << uleb(+Op::TryCallDynamic) << dst(stmt) << src(stmt);
           }
           else if (stmt == FFI)
           {
@@ -1042,11 +1023,6 @@ namespace vbcc
             args(stmt / Args);
             code << uleb(+Op::WhenDynamic) << dst(stmt)
                  << uleb(typ(stmt / Cown)) << src(stmt);
-          }
-          else if (stmt == Typetest)
-          {
-            code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
-                 << uleb(typ(stmt / Type));
           }
           else if (stmt == Add)
           {
@@ -1256,6 +1232,19 @@ namespace vbcc
           {
             code << uleb(+Op::Const_NaN) << dst(stmt);
           }
+          else if (stmt == Typetest)
+          {
+            code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
+                 << uleb(typ(stmt / Type));
+          }
+          else if (stmt == GetRaise)
+          {
+            code << uleb(+Op::GetRaise) << dst(stmt);
+          }
+          else if (stmt == SetRaise)
+          {
+            code << uleb(+Op::SetRaise) << dst(stmt) << src(stmt);
+          }
         }
 
         Node term = label / Return;
@@ -1282,10 +1271,6 @@ namespace vbcc
         else if (term == Raise)
         {
           code << uleb(+Op::Raise) << dst(term);
-        }
-        else if (term == Throw)
-        {
-          code << uleb(+Op::Throw) << dst(term);
         }
         else if (term == Cond)
         {
@@ -1426,6 +1411,14 @@ namespace vbcc
 
       for (auto t : child_types)
         b << uleb(t);
+    }
+    else if (type == TupleType)
+    {
+      b << uleb(+TypeTag::Tuple);
+      b << uleb(type->size());
+
+      for (auto& child : *type)
+        b << uleb(typ(child));
     }
 
     // Check if we already have this type encoded.

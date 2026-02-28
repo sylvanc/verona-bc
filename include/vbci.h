@@ -21,7 +21,6 @@ namespace vbci
   inline const auto CurrentVersion = size_t(0);
   inline const auto MainFuncId = size_t(0);
   inline const auto FinalMethodId = size_t(0);
-  inline const auto ApplyMethodId = size_t(1);
   inline const auto DynId = uint32_t(-1);
 
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
@@ -29,11 +28,6 @@ namespace vbci
   // ULEB128).
   enum class Op
   {
-    // Load a global value.
-    // Arg0 = dst.
-    // Arg1 = global ID.
-    Global,
-
     // Load a primitive value.
     // Arg0 = dst.
     // Arg1 = value type.
@@ -236,21 +230,11 @@ namespace vbci
     // Arg1 = function pointer.
     CallDynamic,
 
-    // Arg0 = dst.
-    // Arg1 = function ID.
-    SubcallStatic,
-
+    // Like CallDynamic, but on null function pointer or argument type mismatch,
+    // stores Invalid in dst and drops args instead of raising an error.
     // Arg0 = dst.
     // Arg1 = function pointer.
-    SubcallDynamic,
-
-    // Arg0 = dst.
-    // Arg1 = function ID.
-    TryStatic,
-
-    // Arg0 = dst.
-    // Arg1 = function pointer.
-    TryDynamic,
+    TryCallDynamic,
 
     // Arg0 = dst.
     // Arg1 = symbol ID.
@@ -268,7 +252,8 @@ namespace vbci
     // Arg2 = function pointer.
     WhenDynamic,
 
-    // Returns true if the dynamic type of src is a subtype of the type ID.
+    // Test if the dynamic type of src is a subtype of the type ID.
+    // Stores a boolean result in dst.
     // Arg0 = dst.
     // Arg1 = src.
     // Arg2 = type ID.
@@ -282,11 +267,10 @@ namespace vbci
     // Arg0 = function pointer.
     TailcallDynamic,
 
-    // Return, raise, or throw from the current function.
+    // Return or raise from the current function.
     // Arg0 = return value.
     Return,
     Raise,
-    Throw,
 
     // Jump to a label depending on a boolean condition.
     // Arg0 = condition.
@@ -361,6 +345,15 @@ namespace vbci
     // done on cowns.
     Read,
 
+    // Get the current frame's raise target.
+    // Arg0 = dst.
+    GetRaise,
+
+    // Set the current frame's raise target. Returns the previous raise target.
+    // Arg0 = dst (previous raise target).
+    // Arg1 = src (new raise target).
+    SetRaise,
+
     // Constants.
     // Arg0 = dst.
     Const_E,
@@ -406,6 +399,7 @@ namespace vbci
     Cown,
     Ref,
     Union,
+    Tuple,
   };
 
   enum class RegionType
@@ -415,19 +409,6 @@ namespace vbci
     RegionArena
   };
 
-  enum class Condition
-  {
-    Return,
-    Raise,
-    Throw,
-  };
-
-  enum class CallType
-  {
-    Call,
-    Subcall,
-    Catch
-  };
 
   enum class DIOp
   {
@@ -454,11 +435,6 @@ namespace vbci
   inline constexpr size_t operator+(RegionType r)
   {
     return static_cast<size_t>(r);
-  }
-
-  inline constexpr size_t operator+(Condition c)
-  {
-    return static_cast<size_t>(c);
   }
 
   inline constexpr size_t operator+(DIOp c)

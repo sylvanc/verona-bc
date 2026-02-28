@@ -4,14 +4,13 @@
 namespace vc
 {
   const std::initializer_list<Token> wfTypeElement = {
-    TypeName, Union, Isect, FuncType, TupleType, TypeVar};
+    TypeName, Union, Isect, FuncType, TupleType, TypeVar, TypeSelf};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, Ident,    True,     False,     Bin,     Oct,   Int,
-    Hex,     Float,    HexFloat, String,   RawString, Tuple,   Let,   Var,
-    New,     Lambda,   QName,    If,       While,     For,     When,  Equals,
-    Else,    Try,      Op,       Infix,    Dot,       Convert, Binop, Unop,
-    Nulop,   FFI,      NewArray, ArrayRef, FieldRef,  Load};
+    ExprSeq, DontCare, True,   False,       Bin,      Oct,      Int,      Hex,
+    Float,   HexFloat, String, RawString,   Char,     Tuple,    ArrayLit, Let,
+    Var,     New,      Lambda, Dot,         Ref,      FuncName, If,       While,
+    When,    Equals,   Else,   TripleColon, FieldRef, MatchExpr};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -21,12 +20,21 @@ namespace vc
     ~(T(Equals) * Any++[Body]);
   const auto ElseLhsPat = (T(Else) << (T(Expr) * T(Block))) /
     (!T(Equals, Else) * (!T(Equals, Else))++);
+  const auto TypeArgsPat = T(Bracket) << (T(List, Group) * End);
 
   const auto NamedType =
     T(Ident) * ~TypeArgsPat * (T(DoubleColon) * T(Ident) * ~TypeArgsPat)++;
 
-  const auto SomeType = T(
-    TypeName, Union, Isect, TupleType, FuncType, NoArgType, SubType, WhereNot);
+  const auto SomeType =
+    T(TypeName,
+      Union,
+      Isect,
+      TupleType,
+      FuncType,
+      NoArgType,
+      SubType,
+      WhereNot,
+      TypeSelf);
 
   Node make_typename(NodeRange r)
   {
@@ -36,7 +44,7 @@ namespace vc
     for (auto& n : r)
     {
       if (n == Ident)
-        te = TypeElement << n << TypeArgs;
+        te = NameElement << n << TypeArgs;
       else if (n == Bracket)
         (te / TypeArgs) << *n;
       else if (n == DoubleColon)
@@ -68,7 +76,7 @@ namespace vc
 
   Node lambda_body(Node brace, NodeRange rhs)
   {
-    if (brace)
+    if (brace && (brace == Brace))
     {
       if (brace->empty())
         return Body << (Expr << (Ident ^ "none"));
@@ -86,6 +94,15 @@ namespace vc
       wfPassStructure,
       dir::topdown,
       {
+        // An else group is merged into the preceding group, but only
+        // when the preceding group contains a brace (no semicolon).
+        // The brace doesn't have to be at the end: after a prior merge,
+        // `} else if {} else` produces a group with two braces, and the
+        // second else must still merge into it.
+        (T(Group) << ((!T(Brace))++ * T(Brace)))[Lhs] *
+            (T(Group) << (T(Else) * Any++[Rhs])) >>
+          [](Match& _) { return Group << *_[Lhs] << Else << _[Rhs]; },
+
         // Treat a directory as a class.
         T(Directory)[Directory] >>
           [](Match& _) {
@@ -112,7 +129,7 @@ namespace vc
         In(ClassBody) * T(Group) << (FieldPat * End) >>
           [](Match& _) {
             auto id = _(Ident);
-            auto type = make_type(_, _[Type]);
+            auto type = make_type(_[Type]);
             auto self = make_selftype(id);
 
             return Seq << (FieldDef << id << type)
@@ -123,7 +140,7 @@ namespace vc
                                             << Body))
                            << (Type
                                << (TypeName
-                                   << (TypeElement
+                                   << (NameElement
                                        << (Ident ^ "ref")
                                        << (TypeArgs << clone(type)))))
                            << Where
@@ -163,7 +180,7 @@ namespace vc
 
             return Function << side << _(Ident)
                             << (TypeParams << *_[TypeParams])
-                            << (Params << *_[Params]) << make_type(_, _[Type])
+                            << (Params << *_[Params]) << make_type(_[Type])
                             << (Where << _[Where]) << body;
           },
 
@@ -257,27 +274,19 @@ namespace vc
             if (!_[Body].empty())
               body << (Group << _[Body]);
 
-            return ParamDef << _(Ident) << make_type(_, _[Type]) << body;
+            return ParamDef << _(Ident) << make_type(_[Type]) << body;
           },
 
+        // If it's not a parameter, it might be a case value.
         In(Params) * T(Group)[Group] >>
-          [](Match& _) { return err(_(Group), "Expected a parameter"); },
+          [](Match& _) { return Expr << *_(Group); },
 
         // Type parameters.
         T(TypeParams) << (T(List)[List] * End) >>
           [](Match& _) { return TypeParams << *_[List]; },
 
-        In(TypeParams) * (T(Group) << (ParamPat * End)) >>
-          [](Match& _) {
-            if (!_[Type].empty())
-              return ValueParam << _(Ident) << (Type << _[Type])
-                                << (Body << (Group << _[Body]));
-
-            return TypeParam << _(Ident) << make_type(_, _[Body]);
-          },
-
-        In(TypeParams) * T(Group)[Group] >>
-          [](Match& _) { return err(_(Group), "Expected a type parameter"); },
+        In(TypeParams) * (T(Group) << (T(Ident)[Ident] * End)) >>
+          [](Match& _) { return TypeParam << _(Ident); },
 
         // Type arguments.
         T(TypeArgs) << (T(List)[List] * End) >>
@@ -290,21 +299,31 @@ namespace vc
           [](Match& _) { return Expr << _[Expr]; },
 
         // Types.
+        // Self type (only valid inside shapes).
+        In(Type, Where)++ * --In(NameElement) * T(Ident, "self")[Ident] >>
+          [](Match& _) -> Node {
+          auto cls = _(Ident)->parent({ClassDef});
+
+          if (cls && ((cls / Shape) == Shape))
+            return TypeSelf;
+
+          return err(_(Ident), "`self` type is only valid in shapes");
+        },
+
         // Type name.
-        In(Type, Where)++ * --In(TypeElement) * NamedType[Type] >>
+        In(Type, Where)++ * --In(NameElement) * NamedType[Type] >>
           [](Match& _) { return make_typename(_[Type]); },
 
         // Union type.
-        In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "\\|") *
-            SomeType[Rhs] >>
+        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "\\|") * SomeType[Rhs] >>
           [](Match& _) { return merge_type(Union, _(Lhs), _(Rhs)); },
 
         // Intersection type.
-        In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
+        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
           [](Match& _) { return merge_type(Isect, _(Lhs), _(Rhs)); },
 
         // Tuple type.
-        In(Type, Where)++ * T(List)[List] >>
+        In(Type, Where)++* T(List)[List] >>
           [](Match& _) { return TupleType << *_[List]; },
 
         // Tuple type element.
@@ -355,9 +374,9 @@ namespace vc
           [](Match& _) { return WhereOr << *_(Union); },
 
         // Terminators.
-        // Break, continue, return, raise, throw.
+        // Break, continue, return, raise.
         T(Expr)[Expr]
-            << (T(Break, Continue, Return, Raise, Throw)[Break] * Any++[Rhs]) >>
+            << (T(Break, Continue, Return, Raise)[Break] * Any++[Rhs]) >>
           [](Match& _) -> Node {
           auto b = _(Break);
           auto e = Expr << (_[Rhs] || Ident ^ "none");
@@ -365,189 +384,27 @@ namespace vc
           if (_(Expr)->parent() != Body)
             return err(_(Expr), "Can't be used as an expression");
 
+          if (b == Raise)
+          {
+            auto ancestor = _(Expr)->parent({Lambda, Function});
+
+            if (!ancestor || (ancestor == Function))
+              return err(_(Expr), "Raise can only be used inside a lambda");
+          }
+
           return b << e;
-        },
-
-        // FFI and builtins.
-        In(Expr) * T(TripleColon) * T(Ident)[Ident] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) -> Node {
-          auto id = _(Ident)->location().view();
-
-          if (id == "convi8")
-            return Convert << I8 << seq_to_args(_(ExprSeq));
-          else if (id == "convi16")
-            return Convert << I16 << seq_to_args(_(ExprSeq));
-          else if (id == "convi32")
-            return Convert << I32 << seq_to_args(_(ExprSeq));
-          else if (id == "convi64")
-            return Convert << I64 << seq_to_args(_(ExprSeq));
-          else if (id == "convu8")
-            return Convert << U8 << seq_to_args(_(ExprSeq));
-          else if (id == "convu16")
-            return Convert << U16 << seq_to_args(_(ExprSeq));
-          else if (id == "convu32")
-            return Convert << U32 << seq_to_args(_(ExprSeq));
-          else if (id == "convu64")
-            return Convert << U64 << seq_to_args(_(ExprSeq));
-          else if (id == "convilong")
-            return Convert << ILong << seq_to_args(_(ExprSeq));
-          else if (id == "convulong")
-            return Convert << ULong << seq_to_args(_(ExprSeq));
-          else if (id == "convisize")
-            return Convert << ISize << seq_to_args(_(ExprSeq));
-          else if (id == "convusize")
-            return Convert << USize << seq_to_args(_(ExprSeq));
-          else if (id == "convf32")
-            return Convert << F32 << seq_to_args(_(ExprSeq));
-          else if (id == "convf64")
-            return Convert << F64 << seq_to_args(_(ExprSeq));
-          else if (id == "add")
-            return Binop << Add << seq_to_args(_(ExprSeq));
-          else if (id == "sub")
-            return Binop << Sub << seq_to_args(_(ExprSeq));
-          else if (id == "mul")
-            return Binop << Mul << seq_to_args(_(ExprSeq));
-          else if (id == "div")
-            return Binop << Div << seq_to_args(_(ExprSeq));
-          else if (id == "mod")
-            return Binop << Mod << seq_to_args(_(ExprSeq));
-          else if (id == "pow")
-            return Binop << Pow << seq_to_args(_(ExprSeq));
-          else if (id == "and")
-            return Binop << And << seq_to_args(_(ExprSeq));
-          else if (id == "or")
-            return Binop << Or << seq_to_args(_(ExprSeq));
-          else if (id == "xor")
-            return Binop << Xor << seq_to_args(_(ExprSeq));
-          else if (id == "shl")
-            return Binop << Shl << seq_to_args(_(ExprSeq));
-          else if (id == "shr")
-            return Binop << Shr << seq_to_args(_(ExprSeq));
-          else if (id == "eq")
-            return Binop << Eq << seq_to_args(_(ExprSeq));
-          else if (id == "ne")
-            return Binop << Ne << seq_to_args(_(ExprSeq));
-          else if (id == "lt")
-            return Binop << Lt << seq_to_args(_(ExprSeq));
-          else if (id == "le")
-            return Binop << Le << seq_to_args(_(ExprSeq));
-          else if (id == "gt")
-            return Binop << Gt << seq_to_args(_(ExprSeq));
-          else if (id == "ge")
-            return Binop << Ge << seq_to_args(_(ExprSeq));
-          else if (id == "min")
-            return Binop << Min << seq_to_args(_(ExprSeq));
-          else if (id == "max")
-            return Binop << Max << seq_to_args(_(ExprSeq));
-          else if (id == "logbase")
-            return Binop << LogBase << seq_to_args(_(ExprSeq));
-          else if (id == "atan2")
-            return Binop << Atan2 << seq_to_args(_(ExprSeq));
-          else if (id == "neg")
-            return Unop << Neg << seq_to_args(_(ExprSeq));
-          else if (id == "not")
-            return Unop << Not << seq_to_args(_(ExprSeq));
-          else if (id == "abs")
-            return Unop << Abs << seq_to_args(_(ExprSeq));
-          else if (id == "ceil")
-            return Unop << Ceil << seq_to_args(_(ExprSeq));
-          else if (id == "floor")
-            return Unop << Floor << seq_to_args(_(ExprSeq));
-          else if (id == "exp")
-            return Unop << Exp << seq_to_args(_(ExprSeq));
-          else if (id == "log")
-            return Unop << Log << seq_to_args(_(ExprSeq));
-          else if (id == "sqrt")
-            return Unop << Sqrt << seq_to_args(_(ExprSeq));
-          else if (id == "cbrt")
-            return Unop << Cbrt << seq_to_args(_(ExprSeq));
-          else if (id == "isinf")
-            return Unop << IsInf << seq_to_args(_(ExprSeq));
-          else if (id == "isnan")
-            return Unop << IsNaN << seq_to_args(_(ExprSeq));
-          else if (id == "sin")
-            return Unop << Sin << seq_to_args(_(ExprSeq));
-          else if (id == "cos")
-            return Unop << Cos << seq_to_args(_(ExprSeq));
-          else if (id == "tan")
-            return Unop << Tan << seq_to_args(_(ExprSeq));
-          else if (id == "asin")
-            return Unop << Asin << seq_to_args(_(ExprSeq));
-          else if (id == "acos")
-            return Unop << Acos << seq_to_args(_(ExprSeq));
-          else if (id == "atan")
-            return Unop << Atan << seq_to_args(_(ExprSeq));
-          else if (id == "sinh")
-            return Unop << Sinh << seq_to_args(_(ExprSeq));
-          else if (id == "cosh")
-            return Unop << Cosh << seq_to_args(_(ExprSeq));
-          else if (id == "tanh")
-            return Unop << Tanh << seq_to_args(_(ExprSeq));
-          else if (id == "asinh")
-            return Unop << Asinh << seq_to_args(_(ExprSeq));
-          else if (id == "acosh")
-            return Unop << Acosh << seq_to_args(_(ExprSeq));
-          else if (id == "atanh")
-            return Unop << Atanh << seq_to_args(_(ExprSeq));
-          else if (id == "len")
-            return Unop << Len << seq_to_args(_(ExprSeq));
-          else if (id == "ptr")
-            return Unop << MakePtr << seq_to_args(_(ExprSeq));
-          else if (id == "read")
-            return Unop << Read << seq_to_args(_(ExprSeq));
-          else if (id == "none")
-            return Nulop << None << seq_to_args(_(ExprSeq));
-          else if (id == "e")
-            return Nulop << Const_E << seq_to_args(_(ExprSeq));
-          else if (id == "pi")
-            return Nulop << Const_Pi << seq_to_args(_(ExprSeq));
-          else if (id == "inf")
-            return Nulop << Const_Inf << seq_to_args(_(ExprSeq));
-          else if (id == "nan")
-            return Nulop << Const_NaN << seq_to_args(_(ExprSeq));
-          else if (id == "arrayref")
-            return ArrayRef << seq_to_args(_(ExprSeq));
-
-          // Emit an ffi call.
-          return FFI << (SymbolId ^ _(Ident)) << seq_to_args(_(ExprSeq));
-        },
-
-        In(Expr) * T(TripleColon) * T(QName)[QName] * T(ExprSeq)[ExprSeq] >>
-          [](Match& _) -> Node {
-          auto qname = _(QName);
-
-          if (qname->size() != 1)
-            return err(qname, "Unknown builtin");
-
-          auto elem = qname->front();
-          auto id = (elem / Ident)->location().view();
-
-          if (id != "newarray")
-            return err(qname, "Unknown builtin");
-
-          auto ta = elem / TypeArgs;
-
-          if (ta->size() != 1)
-            return err(qname, "Expected a single type argument");
-
-          auto seq = _(ExprSeq);
-
-          if (seq->size() != 1)
-            return err(seq, "Expected a single argument");
-
-          return NewArray << (Type << *ta->front()) << seq_to_args(seq);
         },
 
         // Expressions.
         // Let.
         In(Expr) * (T(Let) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
-          [](Match& _) { return Let << _(Ident) << make_type(_, _[Type]); },
+          [](Match& _) { return Let << _(Ident) << make_type(_[Type]); },
 
         // Var.
         In(Expr) * (T(Var) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
-          [](Match& _) { return Var << _(Ident) << make_type(_, _[Type]); },
+          [](Match& _) { return Var << _(Ident) << make_type(_[Type]); },
 
         // New.
         In(Expr) * (T(New)[New] << End) *
@@ -566,62 +423,43 @@ namespace vc
             (T(Group) << (T(Ident)[Ident] * T(Equals) * Any++[Expr] * End)) >>
           [](Match& _) { return NewArg << _(Ident) << (Expr << _[Expr]); },
 
+        // Shorthand field initializer: `new { foo }` desugars to
+        // `new { foo = foo }`.
+        In(NewArgs) * (T(Group) << (T(Ident)[Ident] * End)) >>
+          [](Match& _) {
+            auto id = _(Ident);
+            return NewArg << clone(id) << (Expr << (Ident ^ id));
+          },
+
+        // Match.
+        In(Expr) * T(MatchExpr) * (!T(Brace) * (!T(Brace))++)[Expr] *
+            T(Brace)[Brace] >>
+          [](Match& _) {
+            return MatchExpr << (Expr << _[Expr]) << (ExprSeq << *_(Brace));
+          },
+
         // Lambda.
         In(Expr) * ParamsPat[Params] *
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << (Params << *_[Params]) << make_type(_, _[Type])
+            return Lambda << (Params << *_[Params]) << make_type(_[Type])
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda with a single parameter.
-        In(Expr) * T(Ident)[Ident] *
-            ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
+        In(Expr) * ParamPat[Param] * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << (Params
-                              << (ParamDef << _(Ident) << make_type(_, _[Type])
-                                           << Body))
-                          << make_type(_) << lambda_body(_(Brace), _[Rhs]);
+            return Lambda << (Params << (Group << *_[Param])) << make_type()
+                          << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
-            return Lambda << Params << make_type(_)
-                          << lambda_body(_(Brace), _[Rhs]);
-          },
-
-        // Qualified name.
-        In(Expr) *
-            (T(Ident) * ~TypeArgsPat * T(DoubleColon) * T(Ident, SymbolId) *
-             ~TypeArgsPat *
-             (T(DoubleColon) * T(Ident, SymbolId) * ~TypeArgsPat)++)[QName] >>
-          [](Match& _) {
-            Node qn = QName;
-            Node qe;
-
-            for (auto& n : _[QName])
-            {
-              if (n->in({Ident, SymbolId}))
-                qe = QElement << n << TypeArgs;
-              else if (n == Bracket)
-                (qe / TypeArgs) << *n;
-              else if (n == DoubleColon)
-                qn << qe;
-            }
-
-            qn << qe;
-            return qn;
-          },
-
-        // Unprefixed qualified name.
-        // An identifier with type arguments is a qualified name.
-        In(Expr) * T(Ident)[Ident] * TypeArgsPat[TypeArgs] >>
-          [](Match& _) {
-            return QName
-              << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs]));
+            return Lambda << Params << make_type()
+                          << lambda_body(_(Brace), {});
           },
 
         // Dot.
@@ -631,123 +469,131 @@ namespace vc
             return Dot << _(Ident) << (TypeArgs << *_[TypeArgs]);
           },
 
-        // Operator.
-        In(Expr) * T(SymbolId)[SymbolId] * ~TypeArgsPat[TypeArgs] >>
+        // Ref.
+        In(Expr) * T(Ident, "ref") >> [](Match&) -> Node { return Ref; },
+
+        // Function name.
+        In(Expr) *
+            (T(Ident, SymbolId) * ~TypeArgsPat *
+             (T(DoubleColon) * T(Ident, SymbolId) *
+              ~TypeArgsPat)++)[FuncName] >>
           [](Match& _) {
-            return Op << _(SymbolId) << (TypeArgs << *_[TypeArgs]);
+            Node name = FuncName;
+            Node elem;
+
+            for (auto& n : _[FuncName])
+            {
+              if (n->in({Ident, SymbolId}))
+                elem = NameElement << n << TypeArgs;
+              else if (n == Bracket)
+                (elem / TypeArgs) << *n;
+              else if (n == DoubleColon)
+                name << elem;
+            }
+
+            name << elem;
+            return name;
           },
 
-        // Infix.
-        In(Expr) * T(QName)[QName] * T(Colon) >>
-          [](Match& _) { return Infix << _(QName); },
+        // Builtin or FFI.
+        In(Expr) * T(TripleColon) * T(FuncName)[FuncName] >>
+          [](Match& _) { return TripleColon << *_(FuncName); },
 
-        In(Expr) * T(Ident)[Ident] * ~T(TypeArgs)[TypeArgs] * T(Colon) >>
-          [](Match& _) {
-            return Infix
-              << (QName
-                  << (QElement << _(Ident) << (TypeArgs << *_[TypeArgs])));
-          },
+        // Array literal: ::(expr, ...)
+        In(Expr) * T(DoubleColon) * T(Paren)[Paren] >>
+          [](Match& _) { return ArrayLit << (Expr << _(Paren)); },
 
         // If.
-        In(Expr) * (T(If) << End) * (!T(Lambda))++[Expr] * T(Lambda)[Lambda] >>
+        In(Expr) * (T(If) << End) * (!T(Brace))++[Expr] * T(Brace)[Brace] >>
           [](Match& _) {
-            return If << (Expr << _[Expr]) << (Block << *_(Lambda));
+            return If << (Expr << _[Expr])
+                      << (Block << lambda_body(_(Brace), {}));
           },
 
         // Else.
-        In(Expr) * ElseLhsPat[Lhs] * (T(Else) << End) * T(Lambda)[Lambda] >>
-          [](Match& _) {
-            if (!(_(Lambda) / Params)->empty())
-              return err(_(Lambda), "Else block can't have parameters");
-
-            return Else << (Expr << _[Lhs]) << (Block << *_(Lambda));
-          },
-
         In(Expr) * ElseLhsPat[Lhs] * (T(Else) << End) *
             (!T(Equals, Else) * (!T(Equals, Else))++)[Rhs] >>
           [](Match& _) -> Node {
-          // If the right-hand side is a brace, do nothing until it's
-          // transformed into a lambda.
-          if (_(Rhs) == Brace)
-            return NoChange;
-
           return Else << (Expr << _[Lhs])
-                      << (Block << Params << make_type(_)
-                                << (Body << (Expr << _[Rhs])));
+                      << (Block << lambda_body(_(Rhs), _[Rhs]));
         },
 
         // While.
-        In(Expr) * (T(While) << End) * (!T(Lambda))++[While] *
-            T(Lambda)[Lambda] >>
+        In(Expr) * (T(While) << End) * (!T(Brace) * (!T(Brace))++)[While] *
+            T(Brace)[Brace] >>
           [](Match& _) {
-            if (!(_(Lambda) / Params)->empty())
-              return err(_(Lambda), "While loop can't have parameters");
-
-            return While << (Expr << _[While]) << (Block << *_(Lambda));
+            return While << (Expr << _[While])
+                         << (Block << lambda_body(_(Brace), {}));
           },
 
         // For.
-        In(Expr) * (T(For) << End) * (!T(Lambda))++[For] * T(Lambda)[Lambda] >>
+        In(Expr) * T(For) * (!T(Lambda) * (!T(Lambda))++)[For] *
+            T(Lambda)[Lambda] >>
           [](Match& _) {
+            // for e (a, b, ...) -> { body }
+            // desugars to:
+            // let it = e;
+            // while true {
+            //   let (a, b, ...) = it.next() else { break }
+            //   body
+            // }
             auto params = _(Lambda) / Params;
             auto type = _(Lambda) / Type;
             auto body = _(Lambda) / Body;
             auto id = _.fresh(Location("it"));
 
-            if (!params->empty())
+            if (params->empty())
+              return err(_(Lambda), "For loop must have parameters");
+
+            // Unpack arguments.
+            Node lhs = Tuple;
+
+            for (auto& p : *params)
             {
-              // Unpack arguments.
-              Node lhs = Tuple;
+              if (!(p / Body)->empty())
+                return err(p, "For loop parameter can't have a default value");
 
-              for (auto& p : *params)
-              {
-                if (!(p / Body)->empty())
-                  return err(
-                    p, "For loop parameter can't have a default value");
-
-                lhs << (Expr << (Let << (p / Ident) << (p / Type)));
-              }
-
-              if (lhs->size() == 1)
-                lhs = lhs->front();
-              else
-                lhs = Expr << lhs;
-
-              // On each iteration, call `next` on the iterator and assign the
-              // result to the loop variable(s).
-              body->push_front(
-                Expr
-                << (Equals << lhs
-                           << (Expr << (Ident ^ id)
-                                    << (Dot << (Ident ^ "next") << TypeArgs))));
+              lhs << (Expr << (Let << (p / Ident) << (p / Type)));
             }
+
+            if (type->front() != TypeVar)
+              return err(type, "For loop can't specify a type");
+
+            if (lhs->size() == 1)
+              lhs = lhs->front();
+            else
+              lhs = Expr << lhs;
+
+            // On each iteration, call `next` on the iterator and assign the
+            // result to the loop variable(s). Break if it's nomatch.
+            body->push_front(
+              Expr
+              << (Equals
+                  << lhs
+                  << (Expr
+                      << (Else
+                          << (Expr << (Ident ^ id)
+                                   << (Dot << (Ident ^ "next") << TypeArgs))
+                          << (Block
+                              << (Body
+                                  << (Break
+                                      << (Expr << (Ident ^ "none")))))))));
 
             return ExprSeq << (Expr
                                << (Equals
                                    << (Expr
-                                       << (Let << (Ident ^ id) << make_type(_)))
+                                       << (Let << (Ident ^ id) << make_type()))
                                    << (Expr << _[For])))
                            << (Expr
-                               << (While
-                                   << (Expr << (Ident ^ id)
-                                            << (Dot << (Ident ^ "has_next")
-                                                    << TypeArgs))
-                                   << (Block << Params << type << body)));
+                               << (While << (Expr << True) << (Block << body)));
           },
 
         // When.
-        In(Expr) * (T(When) << End) * T(ExprSeq)[ExprSeq] * T(Lambda)[Lambda] >>
-          [](Match& _) {
-            auto lambda = _(Lambda);
-            return When << seq_to_args(_(ExprSeq)) << clone(lambda / Type)
-                        << (Expr << lambda);
-          },
-
-        In(Expr) * (T(When) << End) * (!T(Lambda))++[When] *
+        In(Expr) * (T(When) << End) * (!T(Lambda))++[Expr] *
             T(Lambda)[Lambda] >>
           [](Match& _) {
             auto lambda = _(Lambda);
-            return When << (Args << (Expr << _[When])) << clone(lambda / Type)
+            return When << (Expr << _[Expr]) << clone(lambda / Type)
                         << (Expr << lambda);
           },
 
@@ -765,8 +611,11 @@ namespace vc
             return Equals << (Expr << _[Lhs]) << (Expr << _[Rhs]);
           },
 
+        // Remove semicolon marker groups.
+        T(Group) << (T(Semi) * End) >> [](Match&) -> Node { return {}; },
+
         // Groups are expressions.
-        In(Body, Expr, ExprSeq, Tuple, Args) * T(Group)[Group] >>
+        In(Body, Expr, ExprSeq, Tuple) * T(Group)[Group] >>
           [](Match& _) { return Expr << *_[Group]; },
 
         // Parens are expression sequences.
@@ -774,11 +623,26 @@ namespace vc
           [](Match& _) { return ExprSeq << *_[Paren]; },
 
         // Lists are tuples.
-        In(Body, ExprSeq, Tuple, Args) * T(List)[List] >>
+        In(Body, ExprSeq, Tuple) * T(List)[List] >>
           [](Match& _) -> Node { return Expr << (Tuple << *_[List]); },
 
         In(Expr) * T(List)[List] >>
           [](Match& _) -> Node { return Tuple << *_[List]; },
+
+        // An ExprSeq containing an Expr that contains a Tuple is a Tuple.
+        In(Expr) * T(ExprSeq) << ((T(Expr) << (T(Tuple)[Tuple] * End)) * End) >>
+          [](Match& _) { return _(Tuple); },
+
+        // An empty ExprSeq is an empty Tuple.
+        In(Expr) * T(ExprSeq) << End >> [](Match&) -> Node { return Tuple; },
+
+        // Flatten ArrayLit: absorb Tuple children (2+ elements).
+        T(ArrayLit) << ((T(Expr) << (T(Tuple)[Tuple] * End)) * End) >>
+          [](Match& _) { return ArrayLit << *_[Tuple]; },
+
+        // Flatten ArrayLit: absorb ExprSeq children (0-1 elements).
+        T(ArrayLit) << ((T(Expr) << (T(ExprSeq)[ExprSeq] * End)) * End) >>
+          [](Match& _) { return ArrayLit << *_[ExprSeq]; },
 
         // Remove empty expressions.
         T(Expr) << End >> [](Match&) -> Node { return {}; },
@@ -847,14 +711,26 @@ namespace vc
           deps.push_back((Directory ^ dep.hash) << *p_ast);
 
           // Rewrite the Use.
-          auto tn = TypeName << (TypeElement << (Ident ^ dep.hash) << TypeArgs);
+          auto tn = TypeName << (NameElement << (Ident ^ dep.hash) << TypeArgs);
 
-          if (id)
+          if (id && (node->parent() != ClassBody))
+            id =
+              err(node, "Dependency aliases can only be declared in classes");
+          else if (id)
             id = TypeAlias << id << TypeParams << Where << (Type << tn);
           else
             id = Use << tn;
 
           node->parent()->replace(node, id);
+        }
+        else if (node == TypeAlias)
+        {
+          if (node->parent() != ClassBody)
+          {
+            node->parent()->replace(
+              node, err(node, "Type aliases can only be declared in classes"));
+            ok = false;
+          }
         }
         else if (node == Expr)
         {
@@ -935,10 +811,9 @@ namespace vc
         {
           for (auto& child : *node)
           {
-            if (!child->in({TypeParam, ValueParam}))
+            if (child != TypeParam)
             {
-              node->replace(
-                child, err(child, "Expected a type or value parameter"));
+              node->replace(child, err(child, "Expected a type parameter"));
               ok = false;
             }
           }
@@ -956,12 +831,38 @@ namespace vc
         }
         else if (node == Params)
         {
+          auto parent = node->parent();
+
           for (auto& child : *node)
           {
-            if (child != ParamDef)
+            if ((child == Expr) && (parent != Lambda))
+            {
+              node->replace(
+                child, err(child, "Case values can only be used in lambdas"));
+              ok = false;
+            }
+            else if (!child->in({ParamDef, Expr}))
             {
               node->replace(child, err(child, "Expected a parameter"));
               ok = false;
+            }
+          }
+
+          // Function parameters must have explicit type annotations.
+          // Lambda parameters may omit types (inferred from call site).
+          if (parent == Function)
+          {
+            for (auto& child : *node)
+            {
+              if ((child == ParamDef) && ((child / Type)->front() == TypeVar))
+              {
+                node->replace(
+                  child,
+                  err(
+                    child / Ident,
+                    "Function parameters must have a type annotation"));
+                ok = false;
+              }
             }
           }
         }
@@ -985,43 +886,122 @@ namespace vc
             ok = false;
           }
         }
-        else if (node == Binop)
+        else if (node == MatchExpr)
         {
-          if ((node / Args)->size() != 2)
-          {
-            node->replace(
-              node->front(), err(node->front(), "Expected two arguments"));
-            ok = false;
-          }
-        }
-        else if (node == Unop)
-        {
-          if ((node / Args)->size() != 1)
-          {
-            node->replace(
-              node->front(), err(node->front(), "Expected one argument"));
-            ok = false;
-          }
-        }
-        else if (node == Nulop)
-        {
-          if ((node / Args)->size() != 0)
-          {
-            node->replace(
-              node->front(), err(node->front(), "Expected no arguments"));
-            ok = false;
-          }
-        }
-        else if (node == When)
-        {
-          auto lambda = (node / Expr)->front();
+          auto seq = node / ExprSeq;
 
-          if ((node / Args)->size() != (lambda / Params)->size())
+          if (seq->empty())
           {
-            node->replace(
-              node->front(),
-              err(node->front(), "When argument count must match lambda"));
+            seq << err(node, "Match expression must have at least one case");
             ok = false;
+          }
+
+          for (auto& child : *seq)
+          {
+            if ((child->size() != 1) || (child->front() != Lambda))
+            {
+              seq->replace(child, err(child, "Expected a match case lambda"));
+              ok = false;
+            }
+          }
+        }
+        else if (
+          (node == ClassDef) && ((node / Shape) != Shape) &&
+          !node->get_contains_error())
+        {
+          // Auto-create: generate a default `create` function for non-shape
+          // classes that don't already have one. The create takes parameters
+          // matching the class fields and calls `new` with them.
+          auto cls_body = node / ClassBody;
+          bool has_create = false;
+
+          for (auto& child : *cls_body)
+          {
+            if (
+              (child == Function) && ((child / Lhs) == Rhs) &&
+              (child / Ident)->location().view() == "create")
+            {
+              has_create = true;
+              break;
+            }
+          }
+
+          if (!has_create)
+          {
+            Node params = Params;
+            Node new_args = NewArgs;
+
+            for (auto& child : *cls_body)
+            {
+              if (child != FieldDef)
+                continue;
+
+              auto field_ident = child / Ident;
+              auto field_type = child / Type;
+
+              params
+                << (ParamDef << clone(field_ident) << clone(field_type)
+                             << Body);
+              new_args
+                << (NewArg << clone(field_ident)
+                           << (Expr
+                               << (FuncName
+                                   << (NameElement << clone(field_ident)
+                                                   << TypeArgs))));
+            }
+
+            auto type = make_selftype(node / Ident);
+
+            cls_body
+              << (Function << Rhs << (Ident ^ "create") << TypeParams << params
+                           << type << Where
+                           << (Body << (Expr << (New << new_args))));
+          }
+        }
+        else if (node == ClassBody)
+        {
+          // Check for conflicting functions: same name, handedness, and
+          // parameter count.
+          struct FuncSig
+          {
+            Token hand;
+            std::string name;
+            size_t arity;
+          };
+
+          std::vector<std::pair<FuncSig, Node>> seen;
+
+          for (auto& child : *node)
+          {
+            if (child != Function)
+              continue;
+
+            FuncSig sig{
+              (child / Lhs)->type(),
+              std::string((child / Ident)->location().view()),
+              (child / Params)->size()};
+
+            bool conflict = false;
+
+            for (auto& [prev_sig, prev_node] : seen)
+            {
+              if (
+                (prev_sig.hand == sig.hand) && (prev_sig.name == sig.name) &&
+                (prev_sig.arity == sig.arity))
+              {
+                node->replace(
+                  child,
+                  err(child, "Conflicting function definition")
+                    << errmsg("Previous definition was here:")
+                    << errloc(prev_node));
+                conflict = true;
+                ok = false;
+                break;
+              }
+            }
+
+            if (!conflict)
+              seen.push_back({sig, child});
           }
         }
 

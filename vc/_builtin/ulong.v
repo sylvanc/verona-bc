@@ -1,8 +1,8 @@
 ulong
 {
-  create(some: u64): ulong
+  create(some: ulong = 0): ulong
   {
-    :::convulong(some)
+    some
   }
 
   +(self: ulong, other: ulong): ulong
@@ -100,14 +100,14 @@ ulong
     :::neg(self)
   }
 
-  !(self: ulong): bool
+  !(self: ulong): ulong
   {
     :::not(self)
   }
 
   bool(self: ulong): bool
   {
-    self != 0.ulong
+    self != 0
   }
 
   i8(self: ulong): i8

@@ -4,7 +4,7 @@ namespace vbcc
 {
   const auto Statement = Def / T(Drop, Arg, Source, Offset);
   const auto Terminator =
-    T(Tailcall, TailcallDyn, Return, Raise, Throw, Cond, Jump);
+    T(Tailcall, TailcallDyn, Return, Raise, Cond, Jump);
 
   PassDef labels()
   {

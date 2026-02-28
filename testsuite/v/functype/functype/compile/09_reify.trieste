@@ -1,0 +1,169 @@
+vc
+reify
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$899)
+            (functionid 20:functype::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$899)))))
+  (func
+    (functionid 20:functype::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$5)
+            (functionid 32:functype::lambda$0::create::0::0)
+            (args))
+          (copy
+            (localid 3:inc)
+            (localid 7:local$5))
+          (const
+            (localid 8:local$88)
+            (i32)
+            (int 2:41))
+          (call
+            (localid 7:local$6)
+            (functionid 24:functype::apply_fn::2::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:inc))
+              (arg
+                (argcopy)
+                (localid 8:local$88)))))
+        (ret
+          (localid 7:local$6)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (func
+    (functionid 32:functype::lambda$0::create::0::0)
+    (params)
+    (classid 21:functype::lambda$0::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$3)
+            (classid 21:functype::lambda$0::0)
+            (args)))
+        (ret
+          (localid 7:local$3)))))
+  (func
+    (functionid 24:functype::apply_fn::2::0)
+    (params
+      (param
+        (localid 1:f)
+        (dyn))
+      (param
+        (localid 1:x)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 8:local$84)
+            (localid 1:f)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 8:local$85)
+            (localid 8:local$84)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:f))
+              (arg
+                (argcopy)
+                (localid 1:x)))))
+        (ret
+          (localid 8:local$85)))))
+  (type
+    (typeid 17:functype::fn$1::0)
+    (classid 21:functype::lambda$0::0))
+  (class
+    (classid 21:functype::lambda$0::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 31:functype::lambda$0::apply::2::0))))
+  (func
+    (functionid 31:functype::lambda$0::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 21:functype::lambda$0::0))
+      (param
+        (localid 1:x)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 7:local$4)
+            (i32)
+            (int 1:1))
+          (lookup
+            (localid 8:local$86)
+            (localid 1:x)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 8:local$87)
+            (localid 8:local$86)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:x))
+              (arg
+                (argcopy)
+                (localid 7:local$4)))))
+        (ret
+          (localid 8:local$87)))))
+  (func
+    (functionid 22:_builtin::i32::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$183)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$183))))))

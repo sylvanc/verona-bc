@@ -9,11 +9,11 @@ namespace vbci
 {
   enum class Error
   {
-    UnknownGlobal,
+    UnknownString,
     UnknownFFI,
     UnknownRegionType,
     UnknownOpcode,
-    TooManyRefs,
+    BadRaiseTarget,
     BadAllocTarget,
     BadLabel,
     BadField,
@@ -49,14 +49,16 @@ namespace vbci
   {
     switch (error)
     {
-      case Error::UnknownGlobal:
-        return "unknown global";
+      case Error::UnknownString:
+        return "unknown string";
       case Error::UnknownFFI:
         return "unknown FFI";
       case Error::UnknownRegionType:
         return "unknown region type";
       case Error::UnknownOpcode:
         return "unknown opcode";
+      case Error::BadRaiseTarget:
+        return "bad raise target";
       case Error::BadAllocTarget:
         return "bad alloc target";
       case Error::BadLabel:

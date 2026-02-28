@@ -1,8 +1,8 @@
 ilong
 {
-  create(some: u64): ilong
+  create(some: ilong = 0): ilong
   {
-    :::convilong(some)
+    some
   }
 
   +(self: ilong, other: ilong): ilong
@@ -100,7 +100,7 @@ ilong
     :::neg(self)
   }
 
-  !(self: ilong): bool
+  !(self: ilong): ilong
   {
     :::not(self)
   }
@@ -108,5 +108,80 @@ ilong
   abs(self: ilong): ilong
   {
     :::abs(self)
+  }
+  
+  bool(self: ilong): bool
+  {
+    self != 0
+  }
+
+  i8(self: ilong): i8
+  {
+    :::convi8(self)
+  }
+
+  i16(self: ilong): i16
+  {
+    :::convi16(self)
+  }
+
+  i32(self: ilong): i32
+  {
+    :::convi32(self)
+  }
+
+  i64(self: ilong): i64
+  {
+    :::convi64(self)
+  }
+
+  u8(self: ilong): u8
+  {
+    :::convu8(self)
+  }
+
+  u16(self: ilong): u16
+  {
+    :::convu16(self)
+  }
+
+  u32(self: ilong): u32
+  {
+    :::convu32(self)
+  }
+
+  u64(self: ilong): u64
+  {
+    :::convu64(self)
+  }
+
+  ilong(self: ilong): ilong
+  {
+    :::convilong(self)
+  }
+
+  ulong(self: ilong): ulong
+  {
+    :::convulong(self)
+  }
+
+  isize(self: ilong): isize
+  {
+    self
+  }
+
+  usize(self: ilong): usize
+  {
+    :::convusize(self)
+  }
+
+  f32(self: ilong): f32
+  {
+    :::convf32(self)
+  }
+
+  f64(self: ilong): f64
+  {
+    :::convf64(self)
   }
 }

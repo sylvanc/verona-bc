@@ -1,8 +1,8 @@
 u16
 {
-  create(some: u64): u16
+  create(some: u16 = 0): u16
   {
-    :::convu16(some)
+    some
   }
 
   +(self: u16, other: u16): u16
@@ -100,14 +100,14 @@ u16
     :::neg(self)
   }
 
-  !(self: u16): bool
+  !(self: u16): u16
   {
     :::not(self)
   }
 
   bool(self: u16): bool
   {
-    self != 0.u16
+    self != 0
   }
 
   i8(self: u16): i8

@@ -4,17 +4,13 @@ This is an experimental byte code interpreter for the Verona operational semanti
 
 ## Non-Local Returns
 
-A function call can be made as a `call`, a `subcall`, or a `try`. Functions can return via a `return`, a `raise`, or a `throw`
+Functions return via `return` or `raise`.
 
-If you `call` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `return` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+If the function does a `return`, your destination register will have the returned value.
 
-If you `subcall` and the function does a `return`, your destination register will have the returned value. If the function does a `raise`, you will immediately `raise` the raised value. If the function does a `throw`, you will immediately `throw` the thrown value.
+A `raise` pops frames until it reaches a target frame (identified by a raise target), then converts to a `return` from that frame. Each frame has a raise target that defaults to its own frame ID. Use `getraise` to read the current frame's raise target, and `setraise` to set it (returning the previous value). This allows blocks (non-escaping closures) to implement non-local returns: the block captures the enclosing function's raise target at creation time, sets it when invoked, and uses `raise` to return from the enclosing function.
 
-If you `try`, your destination register will have the returned value regardless of whether the function does a `return`, a `raise`, or a `throw`.
-
-One way to use this is to implement Smalltalk style non-local returns. To do so, functions `call` blocks and other functions, and `return` results, whereas blocks `subcall` functions and other blocks, and either `raise` to return from the calling function (popping all blocks), or `return` to return to the calling block or function.
-
-Another way to use this is to implement exceptions. To do so, `throw` exception values. Exceptions are caught by a `try`.
+Runtime errors (type mismatches, stack escapes, etc.) are fatal to the behavior.
 
 ## Debug Info
 
@@ -55,29 +51,16 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * When freezing a region with a stack RC, how do we know which SCC have those additional incoming edges?
     * In an RC region, can we reuse the existing object RC?
     * No way to do it in a non-RC region.
-* Types.
-  * Raise and throw signatures on functions.
-  * Function types. For function pointers, not closures.
-  * Cache type check results? Would also prevent circular type checks.
-  * `imm` and other memory location types?
-* Initializing global values.
-  * How to clean them up?
-  * Immortal global values (compile-time generated) could pack their object identity into the Location field, to avoid any use of the memory address.
 * Embedded fields (objects and arrays).
   * Embed with no header, use `snmalloc::external_pointer`.
   * Need a different `ValueType` to avoid doing this for all objects/arrays.
   * Compatible with FFI.
   * Can't store? Or is a store a copy? How do we initialize the field?
 * Make a `[bool]` have 1-bit instead of 8-bit elements.
-* Math ops for numeric limits, by type?
 * FFI with `libffi`.
   * Can we wrap returned `struct` as objects?
   * Platform-specific FFI. Only load for the runtime platform.
   * Use `libffi` closures to create function pointers with captures.
-* Sockets.
-  * TCP/TLS server?
-  * UDP?
-  * Cloudflare `quiche` for `QUIC`?
 * Introspection.
   * Get a value's dynamic type.
   * Functions: get the argument count and types, and the return type.
@@ -89,7 +72,7 @@ A debug info program is a sequence of instructions encoded as ULEB128s. The low 
   * Allow calling back into the interpreter.
 * Generate FFI stubs automatically from C/C++ headers.
 * Interactive debugger.
-* Build an DAP/LSP to allow debugging.
+* Build a DAP/LSP to allow debugging.
 * AST to IR output.
 * Compile to LLVM IR and/or Cranelift.
 * Hot patching running code.

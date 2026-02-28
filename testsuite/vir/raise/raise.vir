@@ -1,0 +1,29 @@
+// Test non-local return via raise.
+//
+// main calls outer, which calls inner.
+// inner gets main's raise target (passed as an argument), sets it, and raises.
+// The raise skips inner's and outer's frames, returning directly to main.
+// main returns the raised value (42).
+
+// inner(val, raise_target): i32
+//   Sets the raise target and raises val.
+func @inner($val: i32, $target: u64): i32
+  $prev = setraise $target
+  raise $val i32
+
+// outer(raise_target): i32
+//   Calls inner with 42 and the raise target.
+//   If inner raised, we never reach the const 99 line.
+func @outer($target: u64): i32
+  $val = const i32 42
+  $result = call @inner($val, $target)
+  // This should never execute because inner raises.
+  $bad = const i32 99
+  ret $bad
+
+// main(): i32
+//   Gets its own raise target, calls outer, returns result.
+func @main(): i32
+  $target = getraise
+  $result = call @outer($target)
+  ret $result

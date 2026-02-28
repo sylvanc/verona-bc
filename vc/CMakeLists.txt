@@ -1,17 +1,17 @@
 add_executable(vc
   passes/anf.cc
   passes/application.cc
+  passes/dot.cc
+  passes/functype.cc
   passes/ident.cc
-  passes/operators.cc
+  passes/infer.cc
   passes/parser.cc
   passes/reify.cc
   passes/sugar.cc
   passes/structure.cc
   lang.cc
   main.cc
-  pathreification.cc
-  reification.cc
-  reifications.cc
+  subtype.cc
 )
 
 if(MSVC)

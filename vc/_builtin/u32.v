@@ -1,8 +1,8 @@
 u32
 {
-  create(some: u64): u32
+  create(some: u32 = 0): u32
   {
-    :::convu32(some)
+    some
   }
 
   +(self: u32, other: u32): u32
@@ -100,14 +100,14 @@ u32
     :::neg(self)
   }
 
-  !(self: u32): bool
+  !(self: u32): u32
   {
     :::not(self)
   }
 
   bool(self: u32): bool
   {
-    self != 0.u32
+    self != 0
   }
 
   i8(self: u32): i8

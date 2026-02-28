@@ -11,8 +11,8 @@ namespace vc
     Ident | SymbolId | DontCare | Equals | Hash | TripleColon | DoubleColon |
     Colon | Vararg | Dot |
     // Keywords.
-    Use | Where | Let | Var | Try | If | Else | While | For | Break | Continue |
-    When | Return | Raise | Throw | New | Shape;
+    Use | Where | Let | Var | If | Else | While | For | Break | Continue |
+    When | Return | Raise | New | Shape | MatchExpr | Semi;
 
   // clang-format off
   const auto wfParser =
@@ -77,7 +77,12 @@ namespace vc
         "[[:space:]]+" >> [](auto&) {},
 
         // Expression terminator.
-        ";" >> [](auto& m) { m.term(terminators); },
+        ";" >>
+          [](auto& m) {
+            m.term(terminators);
+            m.add(Semi);
+            m.term();
+          },
 
         // Grouping.
         "\\(" >> [](auto& m) { m.push(Paren); },
@@ -93,14 +98,6 @@ namespace vc
             m.pop(Bracket);
           },
         "\\{" >> [](auto& m) { m.push(Brace); },
-        "\\}[[:space:]]*else\\b" >>
-          [](auto& m) {
-            // TODO: what if there's a comment in between } and `else`?
-            // Braces don't terminate a group if followed by `else`.
-            m.term(terminators);
-            m.pop(Brace);
-            m.add(Else);
-          },
         "\\}" >>
           [](auto& m) {
             // Braces terminate a group, but not a list.
@@ -146,8 +143,8 @@ namespace vc
             m.mode("string");
           },
 
-        // TODO: Character literal.
-        // "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
+        // Character literal.
+        "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},
@@ -185,7 +182,6 @@ namespace vc
         "where\\b" >> [](auto& m) { m.add(Where); },
         "let\\b" >> [](auto& m) { m.add(Let); },
         "var\\b" >> [](auto& m) { m.add(Var); },
-        "try\\b" >> [](auto& m) { m.add(Try); },
         "if\\b" >> [](auto& m) { m.add(If); },
         "else\\b" >> [](auto& m) { m.add(Else); },
         "while\\b" >> [](auto& m) { m.add(While); },
@@ -195,9 +191,9 @@ namespace vc
         "continue\\b" >> [](auto& m) { m.add(Continue); },
         "return\\b" >> [](auto& m) { m.add(Return); },
         "raise\\b" >> [](auto& m) { m.add(Raise); },
-        "throw\\b" >> [](auto& m) { m.add(Throw); },
         "new\\b" >> [](auto& m) { m.add(New); },
         "shape\\b" >> [](auto& m) { m.add(Shape); },
+        "match\\b" >> [](auto& m) { m.add(MatchExpr); },
 
         // Identifier.
         "[_[:alpha:]][_[:alnum:]]*\\b" >> [](auto& m) { m.add(Ident); },

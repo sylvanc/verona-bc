@@ -23,7 +23,7 @@ namespace vbci
     size_t finalize_top;
     PC pc;
     size_t dst;
-    CallType calltype;
+    Location raise_target;
 
     Frame(
       Function* func,
@@ -34,8 +34,7 @@ namespace vbci
       std::vector<Object*>& finalize,
       size_t finalize_base,
       PC pc,
-      size_t dst,
-      CallType calltype);
+      size_t dst);
 
     Register& local(size_t idx);
     Register& arg(size_t idx);

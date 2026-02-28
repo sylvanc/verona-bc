@@ -42,21 +42,6 @@ namespace vbci
     }
   };
 
-  struct GlobalRead
-  {
-    const Value& global;
-  };
-
-  struct Global
-  {
-    Value& global;
-
-    void operator=(Value&& v)
-    {
-      global = std::move(v);
-    }
-  };
-
   struct ConstantBase
   {};
   template<typename T_>
@@ -115,27 +100,6 @@ namespace vbci
       self.trace_instruction(" Local=", reg_index, " (", reg, ")");
       process<F, Args..., Register>(
         self, fun, std::forward<Args>(args)..., std::move(reg));
-    }
-
-    template<typename F, typename... Args>
-    SNMALLOC_FAST_PATH static void
-    load_global_read_param(Thread& self, F fun, Args... args)
-    {
-      size_t global_index = self.leb();
-      self.trace_instruction(" GlobalRead=", global_index);
-      GlobalRead g{self.program->global(global_index)};
-      process<F, Args..., GlobalRead>(
-        self, fun, std::forward<Args>(args)..., g);
-    }
-
-    template<typename F, typename... Args>
-    SNMALLOC_FAST_PATH static void
-    load_global_param(Thread& self, F fun, Args... args)
-    {
-      size_t global_index = self.leb();
-      self.trace_instruction(" Global=", global_index);
-      Global g{self.program->global(global_index)};
-      process<F, Args..., Global>(self, fun, std::forward<Args>(args)..., g);
     }
 
     template<typename T, typename F, typename... Args>
@@ -203,15 +167,6 @@ namespace vbci
         else if constexpr (std::is_same_v<T, Register>)
         {
           register_move<F, Args...>(self, fun, std::forward<Args>(args)...);
-        }
-        else if constexpr (std::is_same_v<T, GlobalRead>)
-        {
-          load_global_read_param<F, Args...>(
-            self, fun, std::forward<Args>(args)...);
-        }
-        else if constexpr (std::is_same_v<T, Global>)
-        {
-          load_global_param<F, Args...>(self, fun, std::forward<Args>(args)...);
         }
         else if constexpr (std::is_base_of_v<
                              ConstantBase,
@@ -404,16 +359,16 @@ namespace vbci
       locals.at(args++) = ValueTransfer(cown, slots[i].is_read_only());
     }
 
-    auto ret = thread_run(behavior);
     try
     {
       // Store the function return value in the result cown.
-      result->exchange<true, true>(nullptr, std::move(ret));
+      result->exchange<true, true>(nullptr, thread_run(behavior));
     }
     catch (Value& error_value)
     {
-      // If we fail to store into the result cown, we need to store the error
-      // instead.  It is always valid to store the error.
+      // Runtime error is fatal to the behavior. Clean up all frames and store
+      // the error in the result cown.
+      teardown_all();
       result->exchange<true, true>(nullptr, ValueImmortal(error_value));
     }
 
@@ -431,7 +386,7 @@ namespace vbci
   Register Thread::thread_run(Function* func)
   {
     auto depth = frames.size();
-    pushframe(func, 0, CallType::Catch);
+    pushframe(func, 0);
 
     invariant();
 
@@ -553,10 +508,10 @@ namespace vbci
     for (const auto& [region, calc_stack_rc] : calc_stack_rcs)
     {
       auto actual_stack_rc = region->get_stack_rc();
-      // Due to multi-threading it is not possible to guarantee a strict equality
-      // between calculated and actual stack RCs. We would have to pause all other
-      // threads to do that, which is not feasible. Instead we check that the
-      // actual stack RC is at least the calculated stack RC.
+      // Due to multi-threading it is not possible to guarantee a strict
+      // equality between calculated and actual stack RCs. We would have to
+      // pause all other threads to do that, which is not feasible. Instead we
+      // check that the actual stack RC is at least the calculated stack RC.
 
       if (calc_stack_rc > actual_stack_rc)
       {
@@ -580,14 +535,12 @@ namespace vbci
 #else
     snmalloc::UNUSED(loc);
 #endif
-}
+  }
 
   std::ostream& operator<<(std::ostream& os, Op op)
   {
     switch (op)
     {
-      case Op::Global:
-        return os << "Global";
       case Op::Const:
         return os << "Const";
       case Op::String:
@@ -658,14 +611,8 @@ namespace vbci
         return os << "CallStatic";
       case Op::CallDynamic:
         return os << "CallDynamic";
-      case Op::SubcallStatic:
-        return os << "SubcallStatic";
-      case Op::SubcallDynamic:
-        return os << "SubcallDynamic";
-      case Op::TryStatic:
-        return os << "TryStatic";
-      case Op::TryDynamic:
-        return os << "TryDynamic";
+      case Op::TryCallDynamic:
+        return os << "TryCallDynamic";
       case Op::FFI:
         return os << "FFI";
       case Op::WhenStatic:
@@ -682,8 +629,6 @@ namespace vbci
         return os << "Return";
       case Op::Raise:
         return os << "Raise";
-      case Op::Throw:
-        return os << "Throw";
       case Op::Cond:
         return os << "Cond";
       case Op::Jump:
@@ -784,6 +729,10 @@ namespace vbci
         return os << "Ptr";
       case Op::Read:
         return os << "Read";
+      case Op::GetRaise:
+        return os << "GetRaise";
+      case Op::SetRaise:
+        return os << "SetRaise";
       case Op::Const_E:
         return os << "Const_E";
       case Op::Const_Pi:
@@ -811,178 +760,147 @@ namespace vbci
         };
 
     trace_instruction("OP:", op);
-    try
+    switch (op)
     {
-      switch (op)
+      case Op::Const:
       {
-        case Op::Global:
-        {
-          process([](Register& dst, Global g) INLINE { dst = ValueBorrow(g.global); });
-          break;
-        }
+        process([](Thread& self, Register& dst, Constant<ValueType> t) INLINE {
+          switch (t)
+          {
+            case ValueType::None:
+              dst = ValueImmortal(Value::none());
+              break;
 
-        case Op::Const:
-        {
-          process([](Thread& self, Register& dst, Constant<ValueType> t)
-                    INLINE {
-                      switch (t)
-                      {
-                        case ValueType::None:
-                          dst = ValueImmortal(Value::none());
-                          break;
+            case ValueType::Bool:
+            {
+              auto value = self.leb<bool>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::Bool:
-                        {
-                          auto value = self.leb<bool>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::I8:
+            {
+              auto value = self.leb<int8_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::I8:
-                        {
-                          auto value = self.leb<int8_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::I16:
+            {
+              auto value = self.leb<int16_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::I16:
-                        {
-                          auto value = self.leb<int16_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::I32:
+            {
+              auto value = self.leb<int32_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::I32:
-                        {
-                          auto value = self.leb<int32_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::I64:
+            {
+              auto value = self.leb<int64_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::I64:
-                        {
-                          auto value = self.leb<int64_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::U8:
+            {
+              auto value = self.leb<uint8_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::U8:
-                        {
-                          auto value = self.leb<uint8_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::U16:
+            {
+              auto value = self.leb<uint16_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::U16:
-                        {
-                          auto value = self.leb<uint16_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::U32:
+            {
+              auto value = self.leb<uint32_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::U32:
-                        {
-                          auto value = self.leb<uint32_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::U64:
+            {
+              auto value = self.leb<uint64_t>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::U64:
-                        {
-                          auto value = self.leb<uint64_t>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::ILong:
+            {
+              auto value = self.leb<int64_t>();
+              dst = Value::from_ffi(t, value);
+              break;
+            }
+            case ValueType::ISize:
+            {
+              auto value = self.leb<int64_t>();
+              dst = Value::from_ffi(t, value);
+              break;
+            }
 
-                        case ValueType::ILong:
-                        {
-                          auto value = self.leb<int64_t>();
-                          dst = Value::from_ffi(t, value);
-                          break;
-                        }
-                        case ValueType::ISize:
-                        {
-                          auto value = self.leb<int64_t>();
-                          dst = Value::from_ffi(t, value);
-                          break;
-                        }
+            case ValueType::ULong:
+            {
+              auto value = self.leb<uint64_t>();
+              dst = Value::from_ffi(t, value);
+              break;
+            }
 
-                        case ValueType::ULong:
-                        {
-                          auto value = self.leb<uint64_t>();
-                          dst = Value::from_ffi(t, value);
-                          break;
-                        }
+            case ValueType::USize:
+            {
+              auto value = self.leb<uint64_t>();
+              dst = Value::from_ffi(t, value);
+              break;
+            }
 
-                        case ValueType::USize:
-                        {
-                          auto value = self.leb<uint64_t>();
-                          dst = Value::from_ffi(t, value);
-                          break;
-                        }
+            case ValueType::F32:
+            {
+              auto value = self.leb<float>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::F32:
-                        {
-                          auto value = self.leb<float>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            case ValueType::F64:
+            {
+              auto value = self.leb<double>();
+              dst = ValueImmortal(value);
+              break;
+            }
 
-                        case ValueType::F64:
-                        {
-                          auto value = self.leb<double>();
-                          dst = ValueImmortal(value);
-                          break;
-                        }
+            default:
+              Value::error(Error::BadConversion);
+          }
+        });
+        break;
+      }
 
-                        default:
-                          Value::error(Error::BadConversion);
-                      }
-                    });
-          break;
-        }
+      case Op::String:
+      {
+        process(
+          [](Program& program, Register& dst, Constant<size_t> string_id)
+            INLINE { dst = ValueTransfer(program.get_string(string_id)); });
+        break;
+      }
 
-        case Op::String:
-        {
-          process(
-            [](Program& program, Register& dst, Constant<size_t> string_id)
-              INLINE {
-                dst = ValueTransfer(program.get_string(string_id));
-              });
-          break;
-        }
+      case Op::Convert:
+      {
+        process([](Register& dst, Constant<ValueType> t, const Register& src)
+                  INLINE { dst = ValueImmortal(src->convert(t)); });
+        break;
+      }
 
-        case Op::Convert:
-        {
-          process([](Register& dst, Constant<ValueType> t, const Register& src)
-                    INLINE { dst = ValueImmortal(src->convert(t)); });
-          break;
-        }
-
-        case Op::New:
-        {
-          process([](Register& dst, Class& cls, Thread& self, Frame& frame)
-                    INLINE {
-                      if (cls.singleton)
-                      {
-                        dst = ValueImmortal(cls.singleton);
-                        return;
-                      }
-
-                      self.check_args(cls.fields);
-                      dst = ValueTransfer(&frame.region.object(cls)->init(frame, cls));
-                    });
-          break;
-        }
-
-        case Op::Stack:
-        {
-          process([](
-                    Register& dst,
-                    Class& cls,
-                    Thread& self,
-                    Frame& frame,
-                    Stack& stack) INLINE {
+      case Op::New:
+      {
+        process(
+          [](Register& dst, Class& cls, Thread& self, Frame& frame) INLINE {
             if (cls.singleton)
             {
               dst = ValueImmortal(cls.singleton);
@@ -990,553 +908,536 @@ namespace vbci
             }
 
             self.check_args(cls.fields);
-            auto mem = stack.alloc(cls.size);
-            auto obj =
-              &Object::create(mem, cls, frame.frame_id)->init(frame, cls);
-            frame.push_finalizer(obj);
-            dst = ValueTransfer(obj);
+            dst = ValueTransfer(&frame.region.object(cls)->init(frame, cls));
           });
-          break;
-        }
+        break;
+      }
 
-        case Op::Heap:
-        {
-          process([](
-                    Register& dst,
-                    const Register& region_loc,
-                    Class& cls,
-                    Thread& self,
-                    Frame& frame) INLINE {
-            auto region = region_loc->region();
-
-            if (cls.singleton)
-            {
-              dst = ValueImmortal(cls.singleton);
-              return;
-            }
-
-            self.check_args(cls.fields);
-            dst = ValueTransfer(&region->object(cls)->init(frame, cls));
-          });
-          break;
-        }
-
-        case Op::Region:
-        {
-          process([](
-                    Register& dst,
-                    Constant<RegionType> region_type,
-                    Class& cls,
-                    Thread& self,
-                    Frame& frame) INLINE {
-            if (cls.singleton)
-            {
-              Value::error(Error::BadRegionEntryPoint);
-            }
-
-            self.check_args(cls.fields);
-            auto region = Region::create(region_type);
-            dst = ValueTransfer(&region->object(cls)->init(frame, cls));
-          });
-          break;
-        }
-
-        case Op::NewArray:
-        {
-          process([](
-                    Register& dst,
-                    const Register& size,
-                    Constant<size_t> type_id,
-                    Frame& frame) INLINE {
-            dst = ValueTransfer(frame.region.array(type_id, size->get_size()));
-          });
-          break;
-        }
-
-        case Op::NewArrayConst:
-        {
-          process([](
-                    Register& dst,
-                    Constant<size_t> type_id,
-                    Constant<size_t> size,
-                    Frame& frame) INLINE {
-            dst = ValueTransfer(frame.region.array(type_id, size));
-          });
-          break;
-        }
-
-        case Op::StackArray:
-        {
-          process([](
-                    Register& dst,
-                    Stack& stack,
-                    const Register& size,
-                    Constant<size_t> type_id,
-                    Frame& frame) INLINE {
-            dst = ValueTransfer(stack.array(frame.frame_id, type_id, size->get_size()));
-          });
-          break;
-        }
-
-        case Op::StackArrayConst:
-        {
-          process([](
-                    Register& dst,
-                    Constant<size_t> type_id,
-                    Constant<size_t> size,
-                    Stack& stack,
-                    Frame& frame) INLINE {
-            dst = ValueTransfer(stack.array(frame.frame_id, type_id, size));
-          });
-          break;
-        }
-
-        case Op::HeapArray:
-        {
-          process([](
-                    Register& dst,
-                    const Register& region_loc,
-                    const Register& size,
-                    Constant<size_t> type_id) INLINE {
-            auto region = region_loc->region();
-            dst = ValueTransfer(region->array(type_id, size->get_size()));
-          });
-          break;
-        }
-
-        case Op::HeapArrayConst:
-        {
-          process([](
-                    Register& dst,
-                    const Register& region_loc,
-                    Constant<size_t> type_id,
-                    Constant<size_t> size) INLINE {
-            auto region = region_loc->region();
-            dst = ValueTransfer(region->array(type_id, size));
-          });
-          break;
-        }
-
-        case Op::RegionArray:
-        {
-          process([](
-                    Register& dst,
-                    Constant<RegionType> region_type,
-                    const Register& size,
-                    Constant<size_t> type_id) INLINE {
-            auto region = Region::create(region_type);
-            dst = ValueTransfer(region->array(type_id, size->get_size()));
-          });
-          break;
-        }
-
-        case Op::RegionArrayConst:
-        {
-          process([](
-                    Register& dst,
-                    Constant<RegionType> region_type,
-                    Constant<size_t> type_id,
-                    Constant<size_t> size) INLINE {
-            auto region = Region::create(region_type);
-            dst = ValueTransfer(region->array(type_id, size));
-          });
-          break;
-        }
-
-        case Op::Copy:
-        {
-          process([](Register& dst, const Register& src)
-                    INLINE { dst = src; });
-          break;
-        }
-
-        case Op::Move:
-        {
-          process([](Register& dst, Register src)
-                    INLINE { dst = std::move(src); });
-          break;
-        }
-
-        case Op::Drop:
-        {
-          process([](Register) INLINE {});
-          break;
-        }
-
-        case Op::RegisterRef:
-        {
-          process([](Register& dst, Constant<size_t> idx, Frame& frame)
-                    INLINE { dst = ValueStaticLifetime(frame.base + idx, frame.frame_id); });
-          break;
-        }
-
-        case Op::FieldRefMove:
-        {
-          process([](Register& dst, Register src, Constant<size_t> field_id)
-                    INLINE { dst.from_field_ref<true>(std::move(src), field_id); });
-          break;
-        }
-
-        case Op::FieldRefCopy:
-        {
-          process([](Register& dst, Register& src, Constant<size_t> field_id)
-                    INLINE { dst.from_field_ref<false>(src, field_id); });
-          break;
-        }
-
-        case Op::ArrayRefMove:
-        {
-          process([](Register& dst, Register src, const Register& idx)
-                    INLINE { dst.from_array_ref<true>(std::move(src), idx->get_size()); });
-          break;
-        }
-
-        case Op::ArrayRefCopy:
-        {
-          process([](Register& dst, const Register& src, const Register& idx)
-                    INLINE { dst.from_array_ref<false>(src, idx->get_size()); });
-          break;
-        }
-
-        case Op::ArrayRefMoveConst:
-        {
-          process([](Register& dst, Register src, Constant<size_t> idx)
-                    INLINE { dst.from_array_ref<true>(std::move(src), idx); });
-          break;
-        }
-
-        case Op::ArrayRefCopyConst:
-        {
-          process([](Register& dst, const Register& src, Constant<size_t> idx)
-                    INLINE { dst.from_array_ref<false>(src, idx); });
-          break;
-        }
-
-        case Op::Load:
-        {
-          process([](Register& dst, const Register& src)
-                    INLINE { dst.from_load(src); });
-          break;
-        }
-
-        case Op::StoreMove:
-        {
-          process([](Register& dst, const Register& ref, Register src)
-                    INLINE { dst.from_exchange<true>(ref, std::move(src)); });
-          break;
-        }
-
-        case Op::StoreCopy:
-        {
-          process([](Register& dst, const Register& ref, const Register& src)
-                    INLINE { dst.from_exchange<false>(ref, src); });
-          break;
-        }
-
-        case Op::LookupStatic:
-        {
-          process([](Register& dst, Function* func)
-                    INLINE { dst = ValueImmortal(func); });
-          break;
-        }
-
-        case Op::LookupDynamic:
-        {
-          process(
-            [](Register& dst, const Register& src, Constant<size_t> method_id)
-              INLINE {
-                auto f = src->method(method_id);
-
-                if (!f)
-                  Value::error(Error::MethodNotFound);
-
-                dst = ValueImmortal(f);
-              });
-          break;
-        }
-
-        case Op::LookupFFI:
-        {
-          process(
-            [](Register& dst, Constant<size_t> symbol_id, Program& program)
-              INLINE { dst = ValueImmortal(program.symbol(symbol_id).raw_pointer()); });
-          break;
-        }
-
-        case Op::ArgMove:
-        {
-          process([](Register src, ArgReg dst)
-                    INLINE { dst = std::move(src); });
-          break;
-        }
-
-        case Op::ArgCopy:
-        {
-          process([](const Register& src, ArgReg dst) INLINE { dst = src; });
-          break;
-        }
-
-        case Op::CallStatic:
-        {
-          process([](Constant<size_t> dst_id, Function* func, Thread& self)
-                    INLINE { self.pushframe(func, dst_id, CallType::Call); });
-          break;
-        }
-
-        case Op::CallDynamic:
-        {
-          process(
-            [](Constant<size_t> dst_id, const Register& func, Thread& self)
-              INLINE {
-                self.pushframe(func->function(), dst_id, CallType::Call);
-              });
-          break;
-        }
-
-        case Op::SubcallStatic:
-        {
-          process(
-            [](Constant<size_t> dst_id, Function* func, Thread& self)
-              INLINE { self.pushframe(func, dst_id, CallType::Subcall); });
-          break;
-        }
-
-        case Op::SubcallDynamic:
-        {
-          process(
-            [](Constant<size_t> dst_id, const Register& func, Thread& self)
-              INLINE {
-                self.pushframe(func->function(), dst_id, CallType::Subcall);
-              });
-          break;
-        }
-
-        case Op::TryStatic:
-        {
-          process([](Constant<size_t> dst_id, Function* func, Thread& self)
-                    INLINE { self.pushframe(func, dst_id, CallType::Catch); });
-          break;
-        }
-
-        case Op::TryDynamic:
-        {
-          process(
-            [](Constant<size_t> dst_id, const Register& func, Thread& self)
-              INLINE {
-                self.pushframe(func->function(), dst_id, CallType::Catch);
-              });
-          break;
-        }
-
-        case Op::FFI:
-        {
-          process([](
-                    Register& dst,
-                    Constant<size_t> symbol_id,
-                    Thread& self,
-                    Frame& frame,
-                    Program& program) INLINE {
-            auto num_args = self.args;
-            auto& symbol = program.symbol(symbol_id);
-            auto& params = symbol.params();
-            auto& paramvals = symbol.paramvals();
-            self.check_args(params, symbol.varargs());
-
-            // A Value must be passed as a pointer, not as a struct, since it
-            // is a C++ non-trivally constructed type.
-
-            auto& ffi_arg_addrs = self.ffi_arg_addrs;
-            auto& ffi_arg_vals = self.ffi_arg_vals;
-
-            if (ffi_arg_addrs.size() < num_args)
-            {
-              ffi_arg_addrs.resize(num_args);
-              ffi_arg_vals.resize(num_args);
-            }
-
-            for (size_t i = 0; i < num_args; i++)
-            {
-              auto& arg = frame.arg(i);
-              ffi_arg_vals.at(i) = &arg;
-
-              if (i < params.size())
+      case Op::Stack:
+      {
+        process(
+          [](
+            Register& dst, Class& cls, Thread& self, Frame& frame, Stack& stack)
+            INLINE {
+              if (cls.singleton)
               {
-                if (paramvals.at(i) == ValueType::Invalid)
-                  ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
-                else
-                  ffi_arg_addrs.at(i) = arg->to_ffi();
+                dst = ValueImmortal(cls.singleton);
+                return;
               }
+
+              self.check_args(cls.fields);
+              auto mem = stack.alloc(cls.size);
+              auto obj =
+                &Object::create(mem, cls, frame.frame_id)->init(frame, cls);
+              frame.push_finalizer(obj);
+              dst = ValueTransfer(obj);
+            });
+        break;
+      }
+
+      case Op::Heap:
+      {
+        process([](
+                  Register& dst,
+                  const Register& region_loc,
+                  Class& cls,
+                  Thread& self,
+                  Frame& frame) INLINE {
+          auto region = region_loc->region();
+
+          if (cls.singleton)
+          {
+            dst = ValueImmortal(cls.singleton);
+            return;
+          }
+
+          self.check_args(cls.fields);
+          dst = ValueTransfer(&region->object(cls)->init(frame, cls));
+        });
+        break;
+      }
+
+      case Op::Region:
+      {
+        process([](
+                  Register& dst,
+                  Constant<RegionType> region_type,
+                  Class& cls,
+                  Thread& self,
+                  Frame& frame) INLINE {
+          if (cls.singleton)
+          {
+            Value::error(Error::BadRegionEntryPoint);
+          }
+
+          self.check_args(cls.fields);
+          auto region = Region::create(region_type);
+          dst = ValueTransfer(&region->object(cls)->init(frame, cls));
+        });
+        break;
+      }
+
+      case Op::NewArray:
+      {
+        process([](
+                  Register& dst,
+                  const Register& size,
+                  Constant<size_t> type_id,
+                  Frame& frame) INLINE {
+          dst = ValueTransfer(frame.region.array(type_id, size->get_size()));
+        });
+        break;
+      }
+
+      case Op::NewArrayConst:
+      {
+        process([](
+                  Register& dst,
+                  Constant<size_t> type_id,
+                  Constant<size_t> size,
+                  Frame& frame) INLINE {
+          dst = ValueTransfer(frame.region.array(type_id, size));
+        });
+        break;
+      }
+
+      case Op::StackArray:
+      {
+        process([](
+                  Register& dst,
+                  Stack& stack,
+                  const Register& size,
+                  Constant<size_t> type_id,
+                  Frame& frame) INLINE {
+          dst = ValueTransfer(
+            stack.array(frame.frame_id, type_id, size->get_size()));
+        });
+        break;
+      }
+
+      case Op::StackArrayConst:
+      {
+        process([](
+                  Register& dst,
+                  Constant<size_t> type_id,
+                  Constant<size_t> size,
+                  Stack& stack,
+                  Frame& frame) INLINE {
+          dst = ValueTransfer(stack.array(frame.frame_id, type_id, size));
+        });
+        break;
+      }
+
+      case Op::HeapArray:
+      {
+        process([](
+                  Register& dst,
+                  const Register& region_loc,
+                  const Register& size,
+                  Constant<size_t> type_id) INLINE {
+          auto region = region_loc->region();
+          dst = ValueTransfer(region->array(type_id, size->get_size()));
+        });
+        break;
+      }
+
+      case Op::HeapArrayConst:
+      {
+        process([](
+                  Register& dst,
+                  const Register& region_loc,
+                  Constant<size_t> type_id,
+                  Constant<size_t> size) INLINE {
+          auto region = region_loc->region();
+          dst = ValueTransfer(region->array(type_id, size));
+        });
+        break;
+      }
+
+      case Op::RegionArray:
+      {
+        process([](
+                  Register& dst,
+                  Constant<RegionType> region_type,
+                  const Register& size,
+                  Constant<size_t> type_id) INLINE {
+          auto region = Region::create(region_type);
+          dst = ValueTransfer(region->array(type_id, size->get_size()));
+        });
+        break;
+      }
+
+      case Op::RegionArrayConst:
+      {
+        process([](
+                  Register& dst,
+                  Constant<RegionType> region_type,
+                  Constant<size_t> type_id,
+                  Constant<size_t> size) INLINE {
+          auto region = Region::create(region_type);
+          dst = ValueTransfer(region->array(type_id, size));
+        });
+        break;
+      }
+
+      case Op::Copy:
+      {
+        process([](Register& dst, const Register& src) INLINE { dst = src; });
+        break;
+      }
+
+      case Op::Move:
+      {
+        process([](Register& dst, Register src)
+                  INLINE { dst = std::move(src); });
+        break;
+      }
+
+      case Op::Drop:
+      {
+        process([](Register) INLINE {});
+        break;
+      }
+
+      case Op::RegisterRef:
+      {
+        process([](Register& dst, Constant<size_t> idx, Frame& frame) INLINE {
+          dst = ValueStaticLifetime(frame.base + idx, frame.frame_id);
+        });
+        break;
+      }
+
+      case Op::FieldRefMove:
+      {
+        process(
+          [](Register& dst, Register src, Constant<size_t> field_id)
+            INLINE { dst.from_field_ref<true>(std::move(src), field_id); });
+        break;
+      }
+
+      case Op::FieldRefCopy:
+      {
+        process([](Register& dst, Register& src, Constant<size_t> field_id)
+                  INLINE { dst.from_field_ref<false>(src, field_id); });
+        break;
+      }
+
+      case Op::ArrayRefMove:
+      {
+        process([](Register& dst, Register src, const Register& idx) INLINE {
+          dst.from_array_ref<true>(std::move(src), idx->get_size());
+        });
+        break;
+      }
+
+      case Op::ArrayRefCopy:
+      {
+        process([](Register& dst, const Register& src, const Register& idx)
+                  INLINE { dst.from_array_ref<false>(src, idx->get_size()); });
+        break;
+      }
+
+      case Op::ArrayRefMoveConst:
+      {
+        process([](Register& dst, Register src, Constant<size_t> idx)
+                  INLINE { dst.from_array_ref<true>(std::move(src), idx); });
+        break;
+      }
+
+      case Op::ArrayRefCopyConst:
+      {
+        process([](Register& dst, const Register& src, Constant<size_t> idx)
+                  INLINE { dst.from_array_ref<false>(src, idx); });
+        break;
+      }
+
+      case Op::Load:
+      {
+        process([](Register& dst, const Register& src)
+                  INLINE { dst.from_load(src); });
+        break;
+      }
+
+      case Op::StoreMove:
+      {
+        process([](Register& dst, const Register& ref, Register src)
+                  INLINE { dst.from_exchange<true>(ref, std::move(src)); });
+        break;
+      }
+
+      case Op::StoreCopy:
+      {
+        process([](Register& dst, const Register& ref, const Register& src)
+                  INLINE { dst.from_exchange<false>(ref, src); });
+        break;
+      }
+
+      case Op::LookupStatic:
+      {
+        process([](Register& dst, Function* func)
+                  INLINE { dst = ValueImmortal(func); });
+        break;
+      }
+
+      case Op::LookupDynamic:
+      {
+        process(
+          [](Register& dst, const Register& src, Constant<size_t> method_id)
+            INLINE {
+              auto f = src->method(method_id);
+
+              if (!f)
+                dst = ValueImmortal(Value());
               else
-              {
-                auto rep = program.layout_type_id(arg->type_id());
-                symbol.varparam(rep.second);
+                dst = ValueImmortal(f);
+            });
+        break;
+      }
 
-                if (rep.first == ValueType::Invalid)
-                  ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
-                else
-                  ffi_arg_addrs.at(i) = arg->to_ffi();
-              }
+      case Op::LookupFFI:
+      {
+        process([](Register& dst, Constant<size_t> symbol_id, Program& program)
+                  INLINE {
+                    dst =
+                      ValueImmortal(program.symbol(symbol_id).raw_pointer());
+                  });
+        break;
+      }
+
+      case Op::ArgMove:
+      {
+        process([](Register src, ArgReg dst) INLINE { dst = std::move(src); });
+        break;
+      }
+
+      case Op::ArgCopy:
+      {
+        process([](const Register& src, ArgReg dst) INLINE { dst = src; });
+        break;
+      }
+
+      case Op::CallStatic:
+      {
+        process([](Constant<size_t> dst_id, Function* func, Thread& self)
+                  INLINE { self.pushframe(func, dst_id); });
+        break;
+      }
+
+      case Op::CallDynamic:
+      {
+        process([](Constant<size_t> dst_id, const Register& func, Thread& self)
+                  INLINE { self.pushframe(func->function(), dst_id); });
+        break;
+      }
+
+      case Op::TryCallDynamic:
+      {
+        process(
+          [](Constant<size_t> dst_id, const Register& func, Thread& self)
+            INLINE { self.try_pushframe(func->function(), dst_id); });
+        break;
+      }
+
+      case Op::FFI:
+      {
+        process([](
+                  Register& dst,
+                  Constant<size_t> symbol_id,
+                  Thread& self,
+                  Frame& frame,
+                  Program& program) INLINE {
+          auto num_args = self.args;
+          auto& symbol = program.symbol(symbol_id);
+          auto& params = symbol.params();
+          auto& paramvals = symbol.paramvals();
+          self.check_args(params, symbol.varargs());
+
+          // A Value must be passed as a pointer, not as a struct, since it
+          // is a C++ non-trivally constructed type.
+
+          auto& ffi_arg_addrs = self.ffi_arg_addrs;
+          auto& ffi_arg_vals = self.ffi_arg_vals;
+
+          if (ffi_arg_addrs.size() < num_args)
+          {
+            ffi_arg_addrs.resize(num_args);
+            ffi_arg_vals.resize(num_args);
+          }
+
+          for (size_t i = 0; i < num_args; i++)
+          {
+            auto& arg = frame.arg(i);
+            ffi_arg_vals.at(i) = &arg;
+
+            if (i < params.size())
+            {
+              if (paramvals.at(i) == ValueType::Invalid)
+                ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+              else
+                ffi_arg_addrs.at(i) = arg->to_ffi();
             }
-
-            auto ret = symbol.call(ffi_arg_addrs);
-
-            if (
-              !ret.is_error() && !program.subtype(ret.type_id(), symbol.ret()))
-              Value::error(Error::BadType);
-
-            // TODO: Is the FFI guaranteed to return a value that has an RC?
-            dst = ValueTransfer(ret);
-            frame.drop_args(num_args);
-          });
-          break;
-        }
-
-        case Op::WhenStatic:
-        {
-          process([](
-                    Register& dst,
-                    Constant<size_t> type_id,
-                    Constant<size_t> func_id,
-                    Thread& self,
-                    Program& program) INLINE {
-            auto func = program.function(func_id);
-            self.queue_behavior(dst, type_id, func);
-          });
-          break;
-        }
-
-        case Op::WhenDynamic:
-        {
-          process([](
-                    Register& dst,
-                    Constant<size_t> type_id,
-                    const Register& func,
-                    Thread& self) INLINE {
-            self.queue_behavior(dst, type_id, func->function());
-          });
-          break;
-        }
-
-        case Op::Typetest:
-        {
-          process([](
-                    Register& dst,
-                    const Register& src,
-                    Constant<size_t> type_id,
-                    Program& program) INLINE {
-            dst = ValueImmortal(program.subtype(src->type_id(), type_id));
-          });
-          break;
-        }
-
-        case Op::TailcallStatic:
-        {
-          process([](Constant<size_t> func_id, Program& program, Thread& self)
-                    INLINE { self.tailcall(program.function(func_id)); });
-          break;
-        }
-
-        case Op::TailcallDynamic:
-        {
-          process([](const Register& func, Thread& self)
-                    INLINE { self.tailcall(func->function()); });
-          break;
-        }
-
-        case Op::Return:
-        {
-          process([](Register ret, Thread& self) INLINE {
-            self.popframe(std::move(ret), Condition::Return);
-          });
-          break;
-        }
-
-        case Op::Raise:
-        {
-          process([](Register ret, Thread& self) INLINE {
-            self.popframe(std::move(ret), Condition::Raise);
-          });
-          break;
-        }
-
-        case Op::Throw:
-        {
-          process([](Register ret, Thread& self) INLINE {
-            self.popframe(std::move(ret), Condition::Throw);
-          });
-          break;
-        }
-
-        case Op::Cond:
-        {
-          process([](
-                    const Register& cond,
-                    Constant<size_t> on_true,
-                    Constant<size_t> on_false,
-                    Thread& self) INLINE {
-            if (cond->get_bool())
-              self.branch(on_true);
             else
-              self.branch(on_false);
-          });
-          break;
-        }
+            {
+              auto rep = program.layout_type_id(arg->type_id());
+              symbol.varparam(rep.second);
 
-        case Op::Jump:
-        {
-          process([](Constant<size_t> target, Thread& self)
-                    INLINE { self.branch(target); });
-          break;
-        }
+              if (rep.first == ValueType::Invalid)
+                ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+              else
+                ffi_arg_addrs.at(i) = arg->to_ffi();
+            }
+          }
+
+          auto ret = symbol.call(ffi_arg_addrs);
+
+          if (!ret.is_error() && !program.subtype(ret.type_id(), symbol.ret()))
+            Value::error(Error::BadType);
+
+          // TODO: Is the FFI guaranteed to return a value that has an RC?
+          dst = ValueTransfer(ret);
+          frame.drop_args(num_args);
+        });
+        break;
+      }
+
+      case Op::WhenStatic:
+      {
+        process([](
+                  Register& dst,
+                  Constant<size_t> type_id,
+                  Constant<size_t> func_id,
+                  Thread& self,
+                  Program& program) INLINE {
+          auto func = program.function(func_id);
+          self.queue_behavior(dst, type_id, func);
+        });
+        break;
+      }
+
+      case Op::WhenDynamic:
+      {
+        process([](
+                  Register& dst,
+                  Constant<size_t> type_id,
+                  const Register& func,
+                  Thread& self) INLINE {
+          self.queue_behavior(dst, type_id, func->function());
+        });
+        break;
+      }
+
+      case Op::Typetest:
+      {
+        process([](
+                  Register& dst,
+                  const Register& src,
+                  Constant<size_t> type_id,
+                  Program& program) INLINE {
+          dst = ValueImmortal(Value(program.subtype(src->type_id(), type_id)));
+        });
+        break;
+      }
+
+      case Op::TailcallStatic:
+      {
+        process([](Constant<size_t> func_id, Program& program, Thread& self)
+                  INLINE { self.tailcall(program.function(func_id)); });
+        break;
+      }
+
+      case Op::TailcallDynamic:
+      {
+        process([](const Register& func, Thread& self)
+                  INLINE { self.tailcall(func->function()); });
+        break;
+      }
+
+      case Op::Return:
+      {
+        process([](Register ret, Thread& self)
+                  INLINE { self.popframe(std::move(ret)); });
+        break;
+      }
+
+      case Op::Raise:
+      {
+        process([](Register ret, Thread& self) INLINE {
+          self.raise(std::move(ret), self.frame->raise_target);
+        });
+        break;
+      }
+
+      case Op::Cond:
+      {
+        process([](
+                  const Register& cond,
+                  Constant<size_t> on_true,
+                  Constant<size_t> on_false,
+                  Thread& self) INLINE {
+          if (cond->get_bool())
+            self.branch(on_true);
+          else
+            self.branch(on_false);
+        });
+        break;
+      }
+
+      case Op::Jump:
+      {
+        process([](Constant<size_t> target, Thread& self)
+                  INLINE { self.branch(target); });
+        break;
+      }
 
 #define do_binop(opname) \
   { \
-    process([](Register& dst, const Register& lhs, const Register& rhs) \
-              INLINE { dst = ValueImmortal(lhs->op_##opname(rhs.borrow())); }); \
+    process( \
+      [](Register& dst, const Register& lhs, const Register& rhs) \
+        INLINE { dst = ValueImmortal(lhs->op_##opname(rhs.borrow())); }); \
     break; \
   }
-        case Op::Add:
-          do_binop(add);
-        case Op::Sub:
-          do_binop(sub);
-        case Op::Mul:
-          do_binop(mul);
-        case Op::Div:
-          do_binop(div);
-        case Op::Mod:
-          do_binop(mod);
-        case Op::Pow:
-          do_binop(pow);
-        case Op::And:
-          do_binop(and);
-        case Op::Or:
-          do_binop(or);
-        case Op::Xor:
-          do_binop(xor);
-        case Op::Shl:
-          do_binop(shl);
-        case Op::Shr:
-          do_binop(shr);
-        case Op::Eq:
-          do_binop(eq);
-        case Op::Ne:
-          do_binop(ne);
-        case Op::Lt:
-          do_binop(lt);
-        case Op::Le:
-          do_binop(le);
-        case Op::Gt:
-          do_binop(gt);
-        case Op::Ge:
-          do_binop(ge);
-        case Op::Min:
-          do_binop(min);
-        case Op::Max:
-          do_binop(max);
-        case Op::LogBase:
-          do_binop(logbase);
-        case Op::Atan2:
-          do_binop(atan2);
+      case Op::Add:
+        do_binop(add);
+      case Op::Sub:
+        do_binop(sub);
+      case Op::Mul:
+        do_binop(mul);
+      case Op::Div:
+        do_binop(div);
+      case Op::Mod:
+        do_binop(mod);
+      case Op::Pow:
+        do_binop(pow);
+      case Op::And:
+        do_binop(and);
+      case Op::Or:
+        do_binop(or);
+      case Op::Xor:
+        do_binop(xor);
+      case Op::Shl:
+        do_binop(shl);
+      case Op::Shr:
+        do_binop(shr);
+      case Op::Eq:
+        do_binop(eq);
+      case Op::Ne:
+        do_binop(ne);
+      case Op::Lt:
+        do_binop(lt);
+      case Op::Le:
+        do_binop(le);
+      case Op::Gt:
+        do_binop(gt);
+      case Op::Ge:
+        do_binop(ge);
+      case Op::Min:
+        do_binop(min);
+      case Op::Max:
+        do_binop(max);
+      case Op::LogBase:
+        do_binop(logbase);
+      case Op::Atan2:
+        do_binop(atan2);
 
 #define do_unop(opname) \
   { \
@@ -1544,135 +1445,125 @@ namespace vbci
               INLINE { dst = ValueImmortal(src->op_##opname()); }); \
     break; \
   }
-        case Op::Neg:
-          do_unop(neg);
-        case Op::Not:
-          do_unop(not );
-        case Op::Abs:
-          do_unop(abs);
-        case Op::Ceil:
-          do_unop(ceil);
-        case Op::Floor:
-          do_unop(floor);
-        case Op::Exp:
-          do_unop(exp);
-        case Op::Log:
-          do_unop(log);
-        case Op::Sqrt:
-          do_unop(sqrt);
-        case Op::Cbrt:
-          do_unop(cbrt);
-        case Op::IsInf:
-          do_unop(isinf);
-        case Op::IsNaN:
-          do_unop(isnan);
-        case Op::Sin:
-          do_unop(sin);
-        case Op::Cos:
-          do_unop(cos);
-        case Op::Tan:
-          do_unop(tan);
-        case Op::Asin:
-          do_unop(asin);
-        case Op::Acos:
-          do_unop(acos);
-        case Op::Atan:
-          do_unop(atan);
-        case Op::Sinh:
-          do_unop(sinh);
-        case Op::Cosh:
-          do_unop(cosh);
-        case Op::Tanh:
-          do_unop(tanh);
-        case Op::Asinh:
-          do_unop(asinh);
-        case Op::Acosh:
-          do_unop(acosh);
-        case Op::Atanh:
-          do_unop(atanh);
-        case Op::Bits:
-          do_unop(bits);
-        case Op::Len:
-          do_unop(len);
-        case Op::Read:
+      case Op::Neg:
+        do_unop(neg);
+      case Op::Not:
+        do_unop(not);
+      case Op::Abs:
+        do_unop(abs);
+      case Op::Ceil:
+        do_unop(ceil);
+      case Op::Floor:
+        do_unop(floor);
+      case Op::Exp:
+        do_unop(exp);
+      case Op::Log:
+        do_unop(log);
+      case Op::Sqrt:
+        do_unop(sqrt);
+      case Op::Cbrt:
+        do_unop(cbrt);
+      case Op::IsInf:
+        do_unop(isinf);
+      case Op::IsNaN:
+        do_unop(isnan);
+      case Op::Sin:
+        do_unop(sin);
+      case Op::Cos:
+        do_unop(cos);
+      case Op::Tan:
+        do_unop(tan);
+      case Op::Asin:
+        do_unop(asin);
+      case Op::Acos:
+        do_unop(acos);
+      case Op::Atan:
+        do_unop(atan);
+      case Op::Sinh:
+        do_unop(sinh);
+      case Op::Cosh:
+        do_unop(cosh);
+      case Op::Tanh:
+        do_unop(tanh);
+      case Op::Asinh:
+        do_unop(asinh);
+      case Op::Acosh:
+        do_unop(acosh);
+      case Op::Atanh:
+        do_unop(atanh);
+      case Op::Bits:
+        do_unop(bits);
+      case Op::Len:
+        do_unop(len);
+      case Op::Read:
+      {
+        process([](Register& dst, const Register& src)
+                  INLINE { dst = src->op_read(); });
+        break;
+      }
+
+      case Op::Ptr:
+        // TODO unsure about this one, does it really make sense?
         {
-          process([](Register& dst, const Register& src)
-                    INLINE { dst = src->op_read(); });
+          process([](Register& dst, Register& src) INLINE {
+            // This feels insanely dangerous, and needs review.
+            dst = ValueImmortal(src.borrow().op_ptr());
+          });
           break;
         }
 
-        case Op::Ptr:
-          // TODO unsure about this one, does it really make sense?
-          {
-            process([](Register& dst, Register& src)
-                      INLINE {
-                        // This feels insanely dangerous, and needs review.
-                        dst = ValueImmortal(src.borrow().op_ptr());
-                      });
-            break;
-          }
+      case Op::GetRaise:
+      {
+        process([](Register& dst, Frame& frame) INLINE {
+          dst = ValueImmortal(Value(frame.raise_target.raw()));
+        });
+        break;
+      }
+
+      case Op::SetRaise:
+      {
+        process([](Register& dst, const Register& src, Frame& frame) INLINE {
+          dst = ValueImmortal(Value(frame.raise_target.raw()));
+          frame.raise_target = Location::from_raw(src->get_u64());
+        });
+        break;
+      }
 
 #define do_const(opname) \
   { \
-    process([](Register& dst) INLINE { dst = ValueImmortal(Value::opname()); }); \
+    process([](Register& dst) \
+              INLINE { dst = ValueImmortal(Value::opname()); }); \
     break; \
   }
-        case Op::Const_E:
-          do_const(e);
-        case Op::Const_Pi:
-          do_const(pi);
-        case Op::Const_Inf:
-          do_const(inf);
-        case Op::Const_NaN:
-          do_const(nan);
+      case Op::Const_E:
+        do_const(e);
+      case Op::Const_Pi:
+        do_const(pi);
+      case Op::Const_Inf:
+        do_const(inf);
+      case Op::Const_NaN:
+        do_const(nan);
 
-        default:
-          Value::error(Error::UnknownOpcode);
-      }
-    }
-    catch (Value& v)
-    {
-      Register ret;
-      // TODO: does the throw guarantee an RC?
-      ret = ValueTransfer(std::move(v));
-      popframe(std::move(ret), Condition::Throw);
-      invariant();
-    }
-  }
-
-  std::ostream& operator<<(std::ostream& os, CallType calltype)
-  {
-    switch (calltype)
-    {
-      case CallType::Call:
-        return os << "Call";
-      case CallType::Subcall:
-        return os << "Subcall";
-      case CallType::Catch:
-        return os << "Catch";
       default:
-        return os << "Unknown";
+        Value::error(Error::UnknownOpcode);
     }
   }
 
-  void Thread::pushframe(Function* func, size_t dst, CallType calltype)
+  void Thread::pushframe(Function* func, size_t dst)
   {
     if (!func)
       Value::error(Error::MethodNotFound);
 
-    LOG(Trace) << "Call " << program->di_function(func) << " and calltype "
-               << calltype;
+    LOG(Trace) << "Call " << program->di_function(func);
 
     check_args(func->param_types);
 
-    // Set how we will handle non-local returns in the current frame.
     Location frame_id = Location::stack();
     size_t base = 0;
     size_t finalize_base = 0;
 
     if (frame)
     {
-      frame->calltype = calltype;
       frame_id = frame->frame_id.next_stack_level();
       base = frame->base + frame->func->registers;
       finalize_base = frame->finalize_top;
@@ -1693,13 +1584,61 @@ namespace vbci
       finalize,
       finalize_base,
       func->labels.at(0),
-      dst,
-      CallType::Call);
+      dst);
 
     frame = &frames.back();
   }
 
-  void Thread::popframe(Register ret_, Condition condition)
+  void Thread::try_pushframe(Function* func, size_t dst)
+  {
+    if (!func)
+    {
+      drop_args();
+      frame->local(dst) = ValueImmortal(Value());
+      return;
+    }
+
+    if (!try_check_args(func->param_types))
+    {
+      // try_check_args already dropped args on failure.
+      frame->local(dst) = ValueImmortal(Value());
+      return;
+    }
+
+    LOG(Trace) << "TryCall " << program->di_function(func);
+
+    Location frame_id = Location::stack();
+    size_t base = 0;
+    size_t finalize_base = 0;
+
+    if (frame)
+    {
+      frame_id = frame->frame_id.next_stack_level();
+      base = frame->base + frame->func->registers;
+      finalize_base = frame->finalize_top;
+    }
+
+    // Make sure there's enough register space.
+    auto req_stack_size = base + func->registers;
+
+    while (locals.size() < req_stack_size)
+      locals.resize(locals.size() * 2);
+
+    frames.emplace_back(
+      func,
+      frame_id,
+      stack.save(),
+      locals,
+      base,
+      finalize,
+      finalize_base,
+      func->labels.at(0),
+      dst);
+
+    frame = &frames.back();
+  }
+
+  void Thread::popframe(Register ret_)
   {
     // Create temp register to keep return alive across dropping of the frame.
     Register ret{std::move(ret_)};
@@ -1716,8 +1655,7 @@ namespace vbci
     if (retloc == frame->frame_id)
     {
       // The return value can't be stack allocated in this frame.
-      ret = ValueImmortal(Error::BadStackEscape);
-      condition = Condition::Throw;
+      Value::error(Error::BadStackEscape);
     }
     else if (
       retloc.is_frame_local() &&
@@ -1732,10 +1670,7 @@ namespace vbci
           Location::frame_local(prev_frame.frame_id.stack_index());
 
         if (!drag_allocation<false>(prev_loc, ret->get_header()))
-        {
-          ret = ValueImmortal(Error::BadStackEscape);
-          condition = Condition::Throw;
-        }
+          Value::error(Error::BadStackEscape);
       }
       else
       {
@@ -1745,29 +1680,18 @@ namespace vbci
         // not count this as a move.
         if (!drag_allocation<false>(Location(r), ret->get_header()))
         {
-          ret = ValueImmortal(Error::BadStackEscape);
-          condition = Condition::Throw;
           r->free_region();
+          Value::error(Error::BadStackEscape);
         }
       }
     }
 
-    switch (condition)
+    // Check the return type.
+    if (
+      !ret->is_error() &&
+      !program->subtype(ret->type_id(), frame->func->return_type))
     {
-      case Condition::Return:
-        if (
-          !ret->is_error() &&
-          !program->subtype(ret->type_id(), frame->func->return_type))
-        {
-          ret = ValueImmortal(Error::BadType);
-          condition = Condition::Throw;
-        }
-        break;
-
-      case Condition::Raise:
-      case Condition::Throw:
-        // TODO: check against the raise type and throw type.
-        break;
+      Value::error(Error::BadType);
     }
 
     teardown();
@@ -1781,49 +1705,51 @@ namespace vbci
     }
 
     frame = &frames.back();
+    frame->local(dst) = std::move(ret);
+  }
 
-    switch (frame->calltype)
+  void Thread::raise(Register ret_, Location target)
+  {
+    Register ret{std::move(ret_)};
+
+    // Validate the target: must be a stack frame with a lower ID than the
+    // current frame (tailcalls retain frame IDs, so no gaps exist).
+    if (!target.is_stack() || target >= frame->frame_id)
+      Value::error(Error::BadRaiseTarget);
+
+    // Check if the raised value needs relocation before we tear down
+    // intermediate frames.
+    auto retloc = ret->location();
+
+    if (retloc.is_stack() && retloc > target)
     {
-      case CallType::Call:
-      {
-        // This unwraps a Raise.
-        // Return (nothing), raise (pop as return), throw (pop)
-        switch (condition)
-        {
-          case Condition::Raise:
-            popframe(std::move(ret), Condition::Return);
-            return;
-
-          case Condition::Throw:
-            popframe(std::move(ret), Condition::Throw);
-            return;
-
-          default:
-            break;
-        }
-        break;
-      }
-
-      case CallType::Subcall:
-      {
-        // This does not unwrap a Raise.
-        // Return (nothing), raise (pop), throw (pop)
-        if (condition != Condition::Return)
-        {
-          popframe(std::move(ret), condition);
-          return;
-        }
-        break;
-      }
-
-      default:
-        // Try: return (nothing), raise (nothing), throw (nothing)
-        // TODO: this will catch internal errors as well, should it?
-        break;
+      // Stack-allocated in a frame younger than the target. It will be
+      // destroyed when we tear down intermediate frames.
+      Value::error(Error::BadStackEscape);
     }
 
-    frame->local(dst) = std::move(ret);
-    frame->calltype = CallType::Call;
+    if (
+      retloc.is_frame_local() &&
+      (retloc.frame_local_index() > target.stack_index()))
+    {
+      // Frame-local in a frame younger than the target. Drag it to the
+      // target frame's region so it survives intermediate teardowns.
+      auto target_local = Location::frame_local(target.stack_index());
+      if (!drag_allocation<false>(target_local, ret->get_header()))
+        Value::error(Error::BadStackEscape);
+    }
+
+    // Tear down all intermediate frames.
+    while (frame->frame_id != target)
+    {
+      frame->drop_args(args);
+      teardown();
+      frames.pop_back();
+      frame = &frames.back();
+    }
+
+    // Target frame reached. Convert to a normal return.
+    popframe(std::move(ret));
   }
 
   void Thread::tailcall(Function* func)
@@ -1855,7 +1781,6 @@ namespace vbci
     // Set the new function and program counter.
     frame->func = func;
     frame->pc = func->labels.at(0);
-    frame->calltype = CallType::Call;
   }
 
   void Thread::teardown(bool tailcall)
@@ -1869,13 +1794,12 @@ namespace vbci
       finalize.at(i)->finalize();
 
     // Drop references held by stack allocations in the current frame.
-    stack.visit_headers(
-      frame->save, stack.top, [&](Header* h) {
-        if (Program::get().is_array(h->get_type_id()))
-          static_cast<Array*>(h)->destruct();
-        else
-          static_cast<Object*>(h)->destruct();
-      });
+    stack.visit_headers(frame->save, stack.top, [&](Header* h) {
+      if (Program::get().is_array(h->get_type_id()))
+        static_cast<Array*>(h)->destruct();
+      else
+        static_cast<Object*>(h)->destruct();
+    });
 
     // Finalize the frame-local region. A tailcall preserves the region.
     if (!tailcall)
@@ -1886,6 +1810,17 @@ namespace vbci
 
     // Pop the stack.
     stack.restore(frame->save);
+  }
+
+  void Thread::teardown_all()
+  {
+    while (frame)
+    {
+      frame->drop_args(args);
+      teardown();
+      frames.pop_back();
+      frame = frames.empty() ? nullptr : &frames.back();
+    }
   }
 
   void Thread::branch(size_t label)
@@ -1914,6 +1849,27 @@ namespace vbci
     }
 
     args = 0;
+  }
+
+  bool Thread::try_check_args(std::vector<uint32_t>& types)
+  {
+    if (args != types.size())
+    {
+      drop_args();
+      return false;
+    }
+
+    for (size_t i = 0; i < types.size(); i++)
+    {
+      if (!program->subtype(arg(i)->type_id(), types.at(i)))
+      {
+        drop_args();
+        return false;
+      }
+    }
+
+    args = 0;
+    return true;
   }
 
   void Thread::check_args(std::vector<Field>& fields)
@@ -2066,7 +2022,8 @@ namespace vbci
           }
           else
           {
-            LOG(Trace) << "Closure (" << closure.borrow() << ") region already has owner: " << r;
+            LOG(Trace) << "Closure (" << closure.borrow()
+                       << ") region already has owner: " << r;
           }
         }
       }
