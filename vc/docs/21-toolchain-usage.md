@@ -158,3 +158,95 @@ testsuite/v/hello/
 ```
 
 Tests must be self-contained — no external dependencies. Use only `_builtin` types.
+
+---
+
+## 21.5 Understanding Compiler Errors
+
+When compilation fails, `vc` prints errors with source locations and context. Here are common error patterns:
+
+### Undefined Type or Identifier
+
+```
+Errors:
+  Identifier not found
+    -- main.v:3:11
+      let p = unknown(42);
+              ^~~~~~~
+Pass ident failed with 1 error(s)!
+```
+
+**Cause:** Using a class, type, or qualified name that doesn't exist in scope. Check spelling and make sure the type is defined or imported via `use`.
+
+### Unknown Method
+
+```
+Errors:
+  unknown method ???
+    -- main.v:5:13
+      let b = a.nonexistent;
+                ^~~~~~~~~~~
+Pass typecheck failed with 1 error(s)!
+```
+
+**Cause:** Calling a method that isn't defined on the receiver type. The `???` indicates the method could not be resolved. Check the method name and that the receiver has the correct type.
+
+### Wrong Number of Arguments
+
+```
+Errors:
+  wrong number of arguments
+    -- main.v:5:11
+      let p = new { f = 42 };
+              ^~~
+Pass typecheck failed with 1 error(s)!
+```
+
+**Cause:** Calling a function or constructor with too many or too few arguments. For `new`, this usually means you're using `new` outside a class body. See [Classes §8.2](08-classes-and-objects.md).
+
+### General Tips
+
+- The error message names the **pass** that failed (`ident`, `typecheck`, etc.).
+- Source locations are `file:line:column` with a caret (`^`) underlining the problematic token.
+- Use `--dump_passes=./dump/` to inspect intermediate ASTs leading up to the failure.
+
+---
+
+## 21.6 Debugging Runtime Errors
+
+When a program compiles successfully but produces a runtime error, the interpreter prints the error type and terminates the behavior (or the whole program). Here's how to diagnose common runtime errors:
+
+### `bad type`
+
+The most common runtime error. A value's actual type doesn't match the expected type at a function call, field store, or array store.
+
+**How to diagnose:**
+1. Compile with `--dump_passes=./dump/` and inspect the `infer` pass output. Look at the types assigned to `Const` nodes — are they what you expect?
+2. Default literals (`42`, `3.14`) start as `u64`/`f64`. If inference can't determine the concrete type from context, they stay as defaults and may mismatch at runtime.
+3. **Fix:** Add explicit type annotations on literals (`i32 42`) or on variables (`var x: i32 = 42`).
+
+### `bad array index`
+
+Array index out of bounds. Check that your loop counter stays within `0..arr.size`.
+
+### `bad stack escape`
+
+A stack-allocated value is escaping its frame — typically returned from a function or stored into a heap object. This usually means a primitive was expected but an object reference was used.
+
+### `bad store`
+
+A region invariant was violated. Common causes:
+- Storing creates a cycle between regions (A references B and B references A)
+- Storing a frame-local value into a frozen or read-only region
+- Double-parenting: an object already has a region parent and you're trying to move it to another
+
+### `bad operand`
+
+An arithmetic or comparison operation received an invalid value — most often an uninitialized variable (see [Declarations §4.2](04-declarations.md)).
+
+### General Debugging Strategy
+
+1. **Check types first.** Most runtime errors trace back to a type mismatch. Use `--dump_passes` to inspect what types the compiler assigned.
+2. **Use exit codes for testing.** Since `:::printval` is the only output mechanism, use the exit code to verify intermediate values: `main(): i32 { /* ... */; suspicious_value.i32 }`.
+3. **Use `lldb-20` for crashes.** If the interpreter itself crashes (segfault), debug with `lldb-20 -- dist/vbci/vbci program.vbc`.
+4. **Reduce to a minimal case.** Strip your program down until the error disappears, then add back until it reappears. The last addition is likely the cause.

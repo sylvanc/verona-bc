@@ -6,6 +6,8 @@ Verona is a research programming language focused on concurrent ownership and me
 
 This chapter covers the minimal steps to build the toolchain, write a first program, compile it, and run it. It also describes the project layout conventions.
 
+> **Current status:** Verona is a research language under active development. The language provides primitive types, fixed-size arrays, generics, shapes (structural interfaces), cowns (concurrent ownership), and a bytecode interpreter. There is **no standard library** beyond `_builtin` — collections, I/O, string formatting, and other facilities will be provided by packages as the ecosystem develops. The only output mechanism today is `:::printval` (an FFI debug hook) and process exit codes. See [Program Structure §2.6](02-program-structure.md) for the rationale.
+
 ---
 
 ## 1.1 Hello World
@@ -66,6 +68,8 @@ This returns exit code `10`. Notable syntax:
 - `cell(7)` is sugar for `cell::create(7)` — the `7` is inferred as `i32`.
 - `let` bindings are single-assignment; `var` bindings are reassignable.
 - `a.f = 3` writes to a field of a `let`-bound object — `let` constrains the binding, not the object.
+
+> **Important: Flat operator precedence.** All infix operators (`+`, `*`, `<`, `==`, etc.) have **the same precedence**. `a + b * c` is parsed as `(a + b) * c`. Always use parentheses: `a + (b * c)`. See [Expressions §5.8](05-expressions.md) and [Gotchas §26.1](26-gotchas.md).
 
 For more on each of these features, see the linked chapters in the [Table of Contents](README.md).
 
@@ -266,7 +270,135 @@ Key features demonstrated:
 
 ---
 
-## 1.6 What's Next
+## 1.5.1 A Complete Example: Shapes and Generics
+
+This example demonstrates classes, shapes, generics, match expressions, and iteration working together. It defines a shape for values that can be "scored," creates two classes satisfying that shape, and uses a generic function to sum their scores:
+
+```verona
+shape scorable
+{
+  score(self: self): i32;
+}
+
+task
+{
+  priority: i32;
+
+  score(self: task): i32
+  {
+    self.priority
+  }
+}
+
+bonus
+{
+  base: i32;
+  multiplier: i32;
+
+  score(self: bonus): i32
+  {
+    self.base * self.multiplier
+  }
+}
+
+sum_scores[T](items: array[T]): i32 where T < scorable
+{
+  var total = 0;
+
+  for items.values() item ->
+  {
+    total = total + item.score
+  }
+
+  total
+}
+
+main(): i32
+{
+  // Create an array of tasks and sum their scores
+  let tasks = array[task]::fill(3);
+  tasks(0) = task(10);
+  tasks(1) = task(20);
+  tasks(2) = task(30);
+
+  let task_total = sum_scores(tasks);
+
+  // Create an array of bonuses and sum their scores
+  let bonuses = array[bonus]::fill(2);
+  bonuses(0) = bonus(5, 2);
+  bonuses(1) = bonus(3, 4);
+
+  let bonus_total = sum_scores(bonuses);
+
+  // task_total = 60, bonus_total = 22
+  // Return combined total as exit code
+  task_total + bonus_total
+}
+```
+
+This returns exit code `82`. Key features:
+- **Shapes**: `scorable` defines a structural interface — any class with `score(self): i32` satisfies it.
+- **No `implements`**: `task` and `bonus` satisfy `scorable` by having matching methods — no explicit declaration needed.
+- **Generic functions with constraints**: `sum_scores[T]` requires `T < scorable` — the type parameter must satisfy the shape.
+- **Constructor sugar**: `task(10)` calls `task::create(10)` (auto-generated from the field definition). `bonus(5, 2)` calls `bonus::create(5, 2)`.
+- **Type argument inference**: `sum_scores(tasks)` infers `T = task` from the argument.
+
+---
+
+## 1.6 Printing and Debugging Output
+
+Verona is a research language and does not yet have a standard `print` function. For debugging, you can use two approaches:
+
+### Exit Codes
+
+The simplest way to observe program output is through the exit code of `main()`:
+
+```bash
+dist/vbci/vbci program.vbc
+echo $?                               # prints the exit code
+```
+
+Many test programs use bitmask patterns to report multiple results through a single exit code.
+
+### FFI `printval`
+
+The interpreter provides a built-in `printval` function accessible via FFI. Declare it and call it with `:::`:
+
+```verona
+use
+{
+  printval = "printval"(any): none;
+}
+
+main(): i32
+{
+  :::printval(42);
+  :::printval("hello");
+  0
+}
+```
+
+`printval` prints the value to stdout followed by a newline. It accepts `any` type.
+
+### Dumping Compiler Passes
+
+To debug compilation issues, dump intermediate ASTs:
+
+```bash
+dist/vc/vc build ../my_project/ --dump_passes=./dump/
+```
+
+This creates one `.trieste` file per pass, letting you inspect the AST at each stage. You can also stop after a specific pass:
+
+```bash
+dist/vc/vc build ../my_project/ -p infer
+```
+
+See [Toolchain Usage](21-toolchain-usage.md) for all compiler and interpreter options.
+
+---
+
+## 1.7 What's Next
 
 | Topic | Chapter |
 |-------|---------|
@@ -276,4 +408,6 @@ Key features demonstrated:
 | Defining classes | [Classes and Objects](08-classes-and-objects.md) |
 | Writing functions | [Functions](07-functions.md) |
 | All built-in types and their methods | [Built-in Types Reference](22-builtin-types.md) |
+| Common gotchas for newcomers | [Gotchas and Pitfalls](26-gotchas.md) |
+| Idiomatic patterns and recipes | [Common Patterns](27-common-patterns.md) |
 | Compiler internals for contributors | [Compiler Pipeline](20-compiler-pipeline.md) |

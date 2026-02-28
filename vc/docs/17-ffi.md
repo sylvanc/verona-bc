@@ -88,7 +88,37 @@ Built-in operations can only appear in the `_builtin` package.
 
 When the compiler encounters `:::name(args)`:
 
-1. If `name` matches a known built-in (from the table above), it becomes a built-in operation node.
-2. Otherwise, it becomes an FFI call to the declared external symbol.
+1. If `name` matches a known built-in (from the table above) **and** the call is inside the `_builtin` package, it becomes a built-in operation node.
+2. If `name` matches a known built-in **but** the call is outside `_builtin`, the compiler produces an error: "Builtin operators can only appear in `_builtin`".
+3. Otherwise, it becomes an FFI call to the declared external symbol.
 
 FFI calls go through `libffi` at runtime.
+
+### Name Collisions
+
+You **cannot** define an FFI function with the same name as a built-in operation (like `add`, `sub`, `eq`). The compiler checks built-in names first. If the name matches, it requires the call to be inside `_builtin` — preventing user code from shadowing builtins. If you need an FFI function whose C symbol name conflicts with a builtin, use a different Verona name:
+
+```verona
+use "mylib"
+{
+  my_add = "add"(i32, i32): i32;     // Verona name: my_add, C symbol: "add"
+}
+```
+
+---
+
+## 17.5 FFI Practical Notes
+
+### Data Passing
+
+Primitive types (`i32`, `f64`, `bool`, `ptr`, `usize`, etc.) are passed directly — they correspond to their C equivalents. The `ptr` type is an opaque raw pointer (see [Built-in Types §22.11](22-builtin-types.md)).
+
+Strings and arrays are **not** directly passable as C data structures. Strings are Verona objects containing a `data: array[u8]` field; arrays are Verona objects with a header. To pass string data to C, use the `ptr` and `len` builtins from within `_builtin` to extract a raw pointer and length.
+
+### Memory Ownership
+
+Memory allocated by Verona (objects, arrays, strings) is managed by Verona's region system. Memory allocated by C code is **not** tracked by Verona. If a C function returns a pointer to allocated memory, Verona will store it as a `ptr` but will not free it — the C side is responsible for cleanup.
+
+### Thread Safety
+
+FFI calls run on scheduler threads. If two `when` blocks both call the same FFI function, they run on different threads. Verona does not add synchronization around FFI calls — the external library must be thread-safe, or accesses must be serialized through a shared cown.

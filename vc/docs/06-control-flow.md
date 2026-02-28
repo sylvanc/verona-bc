@@ -172,6 +172,7 @@ When `raise x` executes inside the lambda, control returns directly from `find_f
 - The lambda captures the raise target (the enclosing function's frame) at creation time.
 - When called, `raise` restores the captured target and returns directly to the enclosing function's caller.
 - `raise` is the only non-local control flow mechanism — there is no `try`/`throw` or exception system.
+- If a lambda containing `raise` escapes the enclosing function and is called after that function has returned, the result is a runtime error. Use `raise` only in immediately-invoked block lambdas.
 
 See [Error Handling](24-error-handling.md) for full details and examples. See [Lambdas](13-lambdas.md) for how block lambdas interact with `raise`.
 
@@ -205,7 +206,7 @@ The `else` branch can be a block or a parenthesized expression:
 
 ```verona
 let elem = it.next() else { break };     // block form
-let result = (match v { ... }) else (0);  // expression form
+let result = match v { ... } else (0);   // expression form
 ```
 
 ---
@@ -217,13 +218,47 @@ let result = (match v { ... }) else (0);  // expression form
 ### Syntax
 
 ```verona
-(match expr { arm1; arm2; ... }) else (default)
+match expr { arm1; arm2; ... }
 ```
 
-The `match` keyword is followed by an expression and a block of arms. The entire `match` expression must be wrapped in parentheses, and an `else` clause provides the fallback when no arm matches:
+The `match` keyword is followed by an expression and a block of arms:
 
 ```verona
-let result = (match x { (n: i32) -> n + 1; }) else (0);
+let result = match x { (n: i32) -> n + 1; } else (0);
+```
+
+### The `else` Clause
+
+The `else` clause is **optional**. It provides a fallback when no arm matches:
+
+```verona
+let result = match x { (n: i32) -> n + 1; } else (0);
+```
+
+Without `else`, a non-exhaustive match returns `nomatch` when no arm matches. The result type includes `nomatch`:
+
+```verona
+let result = match x { (n: i32) -> n + 1; };
+// result type: i32 | nomatch
+```
+
+You can strip `nomatch` later with `else` on the expression:
+
+```verona
+let result = match x { (n: i32) -> n + 1; } else (0);
+// result type: i32
+```
+
+> **Note:** Exhaustiveness checking is not yet implemented. Even if all types are covered by arms, the compiler does not verify this. Use `else` to ensure a clean result type.
+
+### Parentheses
+
+Match expressions do not need to be wrapped in parentheses. However, parentheses can be used for grouping when needed (e.g., inside a larger expression):
+
+```verona
+// Both are valid:
+let a = match x { (n: i32) -> n; } else (0);
+let b = (match x { (n: i32) -> n; }) else (0);
 ```
 
 ### Type Test Arms
@@ -231,14 +266,15 @@ let result = (match x { (n: i32) -> n + 1; }) else (0);
 A type test arm binds the matched value to a typed parameter:
 
 ```verona
-(match x
+match x
 {
   (n: i32) -> n + 1;
   (s: string) -> s.size;
-}) else (0)
+}
+else (0)
 ```
 
-If `x` is an `i32`, the first arm matches and `n` is bound to the value. If `x` is a `string`, the second arm matches. If neither matches, the `else` fallback is used.
+If `x` is an `i32`, the first arm matches and `n` is bound to the value. If `x` is a `string`, the second arm matches. If neither matches, the `else` fallback is used (or `nomatch` is returned if no `else`).
 
 ### Value Test Arms
 
@@ -246,7 +282,7 @@ A value test arm compares the matched value against an expression using `==`:
 
 ```verona
 let v: i32 = 42;
-let name = (match v { (1) -> 10; (42) -> 20; (99) -> 30; }) else (0);
+let name = match v { (1) -> 10; (42) -> 20; (99) -> 30; } else (0);
 // name is 20
 ```
 
@@ -257,11 +293,12 @@ Value test arms call the `==` method on the matched value's type. If the type ha
 Type and value test arms can be mixed. Arms are tried in order — the first match wins:
 
 ```verona
-let result = (match v
+let result = match v
 {
   (7) -> 100;          // value test: does v == 7?
   (x: i32) -> x;       // type test: is v an i32?
-}) else (0)
+}
+else (0)
 ```
 
 ### How Match Works
@@ -272,7 +309,7 @@ Under the hood, `match` desugars to a chain of case lambdas with `nomatch` subtr
 2. Type test arms use a `typetest` conditional — if the value matches the type, the arm body executes.
 3. Value test arms use `TryCallDyn` to call `==` — if the method doesn't exist or the argument types don't match, the arm returns `nomatch` rather than crashing.
 4. Arms are chained as an `else`-if sequence: each arm tries in order, and the first non-`nomatch` result is used.
-5. If all arms return `nomatch`, the `else` fallback is used.
+5. If all arms return `nomatch`, the `else` fallback is used. If there is no `else`, `nomatch` is returned.
 
 ### Examples
 
@@ -280,29 +317,30 @@ Under the hood, `match` desugars to a chain of case lambdas with `nomatch` subtr
 
 ```verona
 let x: i32 | string = get_value();
-let result = (match x
+let result = match x
 {
   (n: i32) -> n + 1;
   (s: string) -> s.size;
-}) else (0);
+}
+else (0);
 ```
 
 **Value-based dispatch:**
 
 ```verona
 let code: i32 = get_code();
-let msg = (match code
+let msg = match code
 {
   (0) -> 0;
   (1) -> 10;
   (2) -> 20;
-}) else (99);
+}
+else (99);
 ```
 
-**Exhaustive type matching:**
-
-When all possible types are covered by arms, the `else` branch is unreachable but still required in practice (without it, the result type includes `nomatch`):
+**Without `else` (result includes `nomatch`):**
 
 ```verona
-let result = (match x { (n: i32) -> n; }) else (0);
+let result = match x { (n: i32) -> n; };
+// result type: i32 | nomatch — use else to strip nomatch
 ```

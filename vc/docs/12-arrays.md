@@ -15,7 +15,7 @@ Arrays are created using the `fill` static method:
 let a = array[i32]::fill(10);
 
 // Value-filled: 3 elements, each initialized to 42
-let b = array[i32]::fill(3, from: 42);
+let b = array[i32]::fill(3, 42);
 ```
 
 The size argument is a `usize`. The `from` parameter is optional and defaults to `T::create()` (the type's default value).
@@ -118,3 +118,24 @@ main(): i32
 | `ref apply` | `ref apply(self: array[T], index: usize): ref[T]` | Write element at index |
 | `size` | `size(self: array[T]): usize` | Number of elements |
 | `values` | `values(self: array[T]): arrayiter[T]` | Get iterator |
+
+---
+
+## 12.8 Arrays Are Fixed-Size
+
+Arrays in Verona are **fixed-size** — the size is set at creation time and cannot change. There is no `append`, `remove`, `push`, `pop`, `slice`, or `concat` on the built-in `array[T]`.
+
+This is intentional. Verona has **no standard library** beyond `_builtin` (see [Program Structure §2.6](02-program-structure.md)). Growable lists, hash maps, sets, queues, and other collections are provided by **packages**, not built into the language. This keeps the language core minimal and suitable for environments ranging from embedded systems to application servers.
+
+The built-in `array[T]` is the primitive fixed-size contiguous array that everything else builds on. If you need a dynamic collection, import a package that provides one.
+
+### Out-of-Bounds Access
+
+Array indexing is **bounds-checked at runtime**. Accessing an index `>= size` produces a fatal `bad array index` error:
+
+```verona
+let a = array[i32]::fill(3);
+a(5) = 10;                            // runtime error: bad array index
+```
+
+See [Memory Model §19.8](19-memory-model.md) for the complete list of runtime errors.

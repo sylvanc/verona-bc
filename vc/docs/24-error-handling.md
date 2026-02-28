@@ -65,6 +65,24 @@ When `raise x` executes inside the lambda, control returns directly from `find_f
 - The raise target is captured at lambda creation time, not at call time.
 - There is no way to "catch" a raise — it always returns from the enclosing function.
 
+### Escape Semantics
+
+The raise target is the enclosing function's stack frame, captured when the lambda is created. If the lambda **escapes** the enclosing function (e.g., returned as a value or stored in a data structure) and `raise` is called after the enclosing function has already returned, the result is a **runtime error** — the raise target's frame no longer exists.
+
+```verona
+// DANGEROUS: the lambda escapes make_checker
+make_checker(target: i32): i32 -> i32
+{
+  let check = (x: i32): i32 -> {
+    if x == target { raise x };       // raise targets make_checker's frame
+    x
+  };
+  check                               // lambda escapes the function
+}
+```
+
+In practice, `raise` is designed for immediately-invoked block lambdas (like error-checking helpers called within the same function), not for lambdas that outlive their creator. The compiler does not currently prevent lambda escape — it is the programmer's responsibility to ensure the raise target is still valid when `raise` executes.
+
 ### Example: Using Raise with Iteration
 
 ```verona
@@ -103,7 +121,7 @@ find(arr: array[i32], target: i32): i32 | nomatch
 `nomatch` is also the sentinel for failed match arms — when a `match` expression's type test or value test arm doesn't match, it returns `nomatch`, which the `else` fallback handles:
 
 ```verona
-let result = (match x { (n: i32) -> n + 1; }) else (0);
+let result = match x { (n: i32) -> n + 1; } else (0);
 // If x is not i32, nomatch flows to else → result is 0
 ```
 
@@ -150,7 +168,131 @@ For synchronous code (not inside a `when` block), a runtime error terminates the
 
 ---
 
-## 24.6 Process Exit Codes
+## 24.6 Composing Error Handling: Union Types + Raise + Match
+
+Verona's error handling is built from three composable primitives — `raise`, union types, and `match`. Together they cover the same ground as exceptions or `Result<T, E>` in other languages, with different tradeoffs.
+
+### Returning Errors as Values
+
+For recoverable errors, define an error class and return a union type:
+
+```verona
+parse_error
+{
+  msg: string;
+  pos: usize;
+}
+
+parse_int(s: string): i32 | parse_error
+{
+  // ... parsing logic ...
+  // On success:
+  result
+  // On failure:
+  parse_error("invalid digit", pos)
+}
+```
+
+The caller must handle the union — the compiler won't let you use the result as a bare `i32` without discriminating:
+
+```verona
+let result = match parse_int(input)
+{
+  (n: i32) -> n;
+  (e: parse_error) -> { :::printval(e.msg); 0 };
+}
+```
+
+### Early Exit with `raise`
+
+`raise` provides non-local return — the equivalent of `throw` but without unwinding overhead or catch blocks. The raise target is the enclosing function:
+
+```verona
+process_all(items: array[string]): i32 | parse_error
+{
+  let check = (s: string) ->
+  {
+    match parse_int(s)
+    {
+      (n: i32) -> n;
+      (e: parse_error) -> { raise e };  // bail out of process_all immediately
+    }
+  };
+
+  var sum: i32 = 0;
+  for items.values() item ->
+  {
+    sum = sum + check(item)
+  }
+  sum
+}
+```
+
+When `raise e` executes, `process_all` returns immediately with the `parse_error` value. No cleanup blocks are needed — frame-local regions are freed automatically.
+
+### Chaining Fallible Operations
+
+Use `else` for one level of fallback, and `raise` for multi-step pipelines:
+
+```verona
+// Simple: one fallback
+let x = parse_int(input) else { 0 };
+
+// Pipeline: bail on first error
+process_pipeline(a: string, b: string): i32 | parse_error
+{
+  let bail = (r: i32 | parse_error) ->
+  {
+    match r { (e: parse_error) -> { raise e }; (n: i32) -> n; }
+  };
+
+  let x = bail(parse_int(a));
+  let y = bail(parse_int(b));
+  x + y
+}
+```
+
+The `bail` lambda acts like Rust's `?` operator — it unwraps the success case or raises the error case.
+
+### Error Hierarchies with Union Types
+
+For richer error models, use wider union types:
+
+```verona
+io_error { msg: string; }
+format_error { msg: string; line: usize; }
+
+read_config(path: string): config | io_error | format_error
+{
+  // ... returns whichever error applies
+}
+
+main(): i32
+{
+  match read_config("app.conf")
+  {
+    (c: config) -> { 0 };
+    (e: io_error) -> { :::printval(e.msg); 1 };
+    (e: format_error) -> { :::printval(e.msg); 2 };
+  }
+}
+```
+
+Union types are open — you can always add more error variants without changing a base class or sealed hierarchy. The tradeoff: there is no exhaustiveness checking yet, so `match` without `else` includes `nomatch` in the result type.
+
+### Summary of Error Patterns
+
+| Pattern | When to Use |
+|---------|-------------|
+| `T \| nomatch` + `else` | Simple "not found" / "no result" cases |
+| `T \| MyError` + `match` | Recoverable errors with context |
+| `raise` inside a lambda | Early exit from loops or multi-step validation |
+| `raise` + union return type | Pipeline of fallible steps — bail on first error |
+| `cown[T \| MyError]` | Error propagation in concurrent behaviors |
+
+---
+
+## 24.7 Process Exit Codes
 
 The return value of `main()` becomes the process exit code:
 

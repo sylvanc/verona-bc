@@ -192,7 +192,7 @@ print_it(p: printable)
 }
 ```
 
-At each call site, the compiler monomorphizes a specialization for the concrete type passed. There is no runtime dispatch — shapes are resolved statically.
+When the concrete type is known at compile time (through generics and monomorphization), the compiler specializes the call statically. When a shape is used as a parameter type directly (not through a type parameter), the call goes through dynamic dispatch — the runtime looks up the method on the concrete type at the call site.
 
 ---
 
@@ -216,6 +216,14 @@ main(): i32
   // empty has no val(self: empty): i32 method
 }
 ```
+
+The compiler output will include an error like:
+
+```
+error: Definition not found
+```
+
+indicating that the required method could not be found on the concrete type during reification.
 
 Shape conformance is checked at compile time — there is no runtime shape checking.
 

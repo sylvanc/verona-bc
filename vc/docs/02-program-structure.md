@@ -130,13 +130,31 @@ main(): i32
 
 ---
 
-## 2.6 Keywords
+## 2.6 No Standard Library
+
+Verona deliberately has **no standard library** beyond `_builtin`. The `_builtin` module provides only primitive types (`i32`, `bool`, `string`, `array[T]`, etc.), basic shapes (`any`, `to_bool`), and fundamental operations.
+
+Everything else — collections (hash maps, sets, growable lists), I/O, command-line argument parsing, string formatting, networking, file systems — is intended to be provided by **packages** imported via `use "url"` (see [Modules §16.8](16-modules.md)).
+
+This is a deliberate design choice for **modularity**:
+
+- **Embedded systems** can use only the primitives they need, with no unused library code.
+- **Hypervisors and kernels** can operate without I/O or OS abstractions that don't apply.
+- **Application programs** pull in exactly the packages they need from the ecosystem.
+
+The goal is that Verona is usable across the full spectrum — from bare-metal embedded to cloud applications — without carrying unnecessary dependencies at any level. Even low-level details like collections and formatting are modular rather than built in.
+
+> If you're looking for `HashMap`, `List`, `println`, or `format` — these will be package-level features, not language builtins.
+
+---
+
+## 2.7 Keywords
 
 The following words are reserved: `use`, `where`, `let`, `var`, `if`, `else`, `while`, `for`, `match`, `when`, `break`, `continue`, `return`, `raise`, `new`, `shape`, `true`, `false`.
 
 ---
 
-## 2.7 Identifiers
+## 2.8 Identifiers
 
 Identifiers start with a letter or underscore and contain letters, digits, and underscores:
 

@@ -117,7 +117,7 @@ Converts the AST to A-Normal Form: all intermediate values are named, expression
 Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation.
 
 ### Reify (`reify`)
-Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are treated as `Dyn` (dynamic dispatch). Outputs IR suitable for bytecode generation.
+Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are not monomorphized — they use dynamic dispatch directly. Outputs IR suitable for bytecode generation.
 
 ---
 

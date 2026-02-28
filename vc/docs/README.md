@@ -30,3 +30,5 @@
 23. [Grammar Summary](23-grammar-summary.md)
 24. [Error Handling](24-error-handling.md)
 25. [Compile-Time Execution](25-compile-time-execution.md) *(placeholder — not yet implemented)*
+26. [Gotchas and Pitfalls](26-gotchas.md)
+27. [Common Patterns](27-common-patterns.md)

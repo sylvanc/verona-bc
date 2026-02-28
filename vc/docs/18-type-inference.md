@@ -178,3 +178,21 @@ usize 0                              // explicitly usize
 ```
 
 This is rare in well-typed programs — inference handles most cases.
+
+---
+
+## 18.11 Explicit vs Inferred: Code Style
+
+Idiomatic Verona relies on inference — prefer bare literals when the type is clear from context:
+
+```verona
+// Preferred — let inference handle it
+add(1, 2)                            // refined to i32 from parameter types
+var count: usize = 0;                // refined to usize from annotation
+cell(42)                             // refined to i32 from field type
+
+// Only when necessary — ambiguous context
+i32 42                               // explicit when no context to infer from
+```
+
+Older test code in the repository may use explicit prefixes like `i32 0` where inference would suffice. Both styles compile correctly — the explicit form is never wrong, but the inferred form is preferred in new code.
