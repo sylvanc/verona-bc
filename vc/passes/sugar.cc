@@ -149,7 +149,7 @@ namespace vc
       }
       else
       {
-        fv_resolved = make_type(_);
+        fv_resolved = make_type();
       }
 
       if (fv_is_var)
@@ -319,7 +319,7 @@ namespace vc
     if (type->front() != TypeVar)
       new_type = Type << (Union << clone(type) << type_nomatch());
     else
-      new_type = make_type(_);
+      new_type = make_type();
 
     // We'll use this multiple times.
     auto nomatch_block = Block
@@ -355,7 +355,7 @@ namespace vc
       {
         // Destructure the param out of $arg.
         auto id = param / Ident;
-        dst << (Expr << (Let << clone(id) << make_type(_)));
+        dst << (Expr << (Let << clone(id) << make_type()));
 
         // Test against the param type.
         type_checks
@@ -373,7 +373,7 @@ namespace vc
       {
         // Destructure the param out of $arg.
         auto dest_name = _.fresh(l_local);
-        dst << (Expr << (Let << (Ident ^ dest_name) << make_type(_)));
+        dst << (Expr << (Let << (Ident ^ dest_name) << make_type()));
 
         // Create the match value at the call site.
         // Type as `any` since the match comparison is dynamic dispatch.
@@ -390,7 +390,7 @@ namespace vc
         type_checks
           << (Expr
               << (Equals
-                  << (Expr << (Let << (Ident ^ eq_name) << make_type(_)))
+                  << (Expr << (Let << (Ident ^ eq_name) << make_type()))
                   << (Expr
                       << (TryCallDyn
                               << (Expr << (LocalId ^ dest_name))
@@ -490,7 +490,7 @@ namespace vc
 
             callsite
               << (Expr
-                  << (Equals << (Expr << (Let << (Ident ^ id) << make_type(_)))
+                  << (Equals << (Expr << (Let << (Ident ^ id) << make_type()))
                              << _(Expr)));
 
             auto arms = _(ExprSeq);
@@ -612,7 +612,7 @@ namespace vc
           // Create the RHS function.
           auto rhs =
             Function << Rhs << clone(ident) << clone(_(TypeParams))
-                     << clone(_(Params)) << make_type(_) << clone(_(Where))
+                     << clone(_(Params)) << make_type() << clone(_(Where))
                      << (Body
                          << (Expr
                              << (Load

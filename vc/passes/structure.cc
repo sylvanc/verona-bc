@@ -129,7 +129,7 @@ namespace vc
         In(ClassBody) * T(Group) << (FieldPat * End) >>
           [](Match& _) {
             auto id = _(Ident);
-            auto type = make_type(_, _[Type]);
+            auto type = make_type(_[Type]);
             auto self = make_selftype(id);
 
             return Seq << (FieldDef << id << type)
@@ -180,7 +180,7 @@ namespace vc
 
             return Function << side << _(Ident)
                             << (TypeParams << *_[TypeParams])
-                            << (Params << *_[Params]) << make_type(_, _[Type])
+                            << (Params << *_[Params]) << make_type(_[Type])
                             << (Where << _[Where]) << body;
           },
 
@@ -274,7 +274,7 @@ namespace vc
             if (!_[Body].empty())
               body << (Group << _[Body]);
 
-            return ParamDef << _(Ident) << make_type(_, _[Type]) << body;
+            return ParamDef << _(Ident) << make_type(_[Type]) << body;
           },
 
         // If it's not a parameter, it might be a case value.
@@ -399,12 +399,12 @@ namespace vc
         // Let.
         In(Expr) * (T(Let) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
-          [](Match& _) { return Let << _(Ident) << make_type(_, _[Type]); },
+          [](Match& _) { return Let << _(Ident) << make_type(_[Type]); },
 
         // Var.
         In(Expr) * (T(Var) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
-          [](Match& _) { return Var << _(Ident) << make_type(_, _[Type]); },
+          [](Match& _) { return Var << _(Ident) << make_type(_[Type]); },
 
         // New.
         In(Expr) * (T(New)[New] << End) *
@@ -443,7 +443,7 @@ namespace vc
             ~(T(Colon) * (!T(SymbolId, "->"))++[Type]) * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << (Params << *_[Params]) << make_type(_, _[Type])
+            return Lambda << (Params << *_[Params]) << make_type(_[Type])
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
@@ -451,14 +451,14 @@ namespace vc
         In(Expr) * ParamPat[Param] * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << (Params << (Group << *_[Param])) << make_type(_)
+            return Lambda << (Params << (Group << *_[Param])) << make_type()
                           << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
-            return Lambda << Params << make_type(_)
+            return Lambda << Params << make_type()
                           << lambda_body(_(Brace), {});
           },
 
@@ -470,7 +470,7 @@ namespace vc
           },
 
         // Ref.
-        In(Expr) * T(Ident, "ref") >> [](Match& _) -> Node { return Ref; },
+        In(Expr) * T(Ident, "ref") >> [](Match&) -> Node { return Ref; },
 
         // Function name.
         In(Expr) *
@@ -582,7 +582,7 @@ namespace vc
             return ExprSeq << (Expr
                                << (Equals
                                    << (Expr
-                                       << (Let << (Ident ^ id) << make_type(_)))
+                                       << (Let << (Ident ^ id) << make_type()))
                                    << (Expr << _[For])))
                            << (Expr
                                << (While << (Expr << True) << (Block << body)));

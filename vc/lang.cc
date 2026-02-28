@@ -2,7 +2,7 @@
 
 namespace vc
 {
-  Node make_type(Match& _, NodeRange r)
+  Node make_type(NodeRange r)
   {
     return Type << (r || TypeVar);
   }

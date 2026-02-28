@@ -44,13 +44,13 @@ namespace vc
     auto free_tps = collect_free_typeparams(call);
 
     // All types are TypeVar; infer pass resolves them from usage context.
-    Node ret_type = make_type(_);
+    Node ret_type = make_type();
 
     // For CallDyn, capture the receiver as a field.
     std::vector<AnonClassField> fields;
 
     if (call->type().in({CallDyn, TryCallDyn}))
-      fields.push_back({Location("$recv"), make_type(_), clone(call / Expr)});
+      fields.push_back({Location("$recv"), make_type(), clone(call / Expr)});
 
     // Split args into captured fields and apply parameters.
     Node apply_params = Params;
@@ -61,7 +61,7 @@ namespace vc
     for (size_t i = 0; i < args->size(); i++)
     {
       auto& arg = args->at(i);
-      auto type = make_type(_);
+      auto type = make_type();
 
       if (is_dontcare(arg))
       {

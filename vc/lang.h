@@ -408,7 +408,7 @@ namespace vc
 
   inline const auto l_local = Location("local");
 
-  Node make_type(Match& _, NodeRange r = {});
+  Node make_type(NodeRange r = {});
   Node make_typeargs(Node typeparams);
   Nodes scope_path(Node node);
   Node find_def(Node top, const Node& name);
