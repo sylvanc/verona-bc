@@ -39,7 +39,7 @@ x -> { x + 1 }
 A block `{ expr }` in expression position is a zero-argument lambda:
 
 ```verona
-{ i32 42 }
+{ 42 }
 ```
 
 ---

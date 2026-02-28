@@ -2175,6 +2175,31 @@ namespace vc
           }
         }
       }
+      else if (stmt == ArrayRefFromEnd)
+      {
+        // Like ArrayRefConst but indexing from the end.
+        // Pre-reify, we don't know the concrete index, so type as
+        // ref[any].
+        auto dst = stmt / LocalId;
+        auto any_type = Type
+          << (TypeName
+              << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+              << (NameElement << (Ident ^ "any") << TypeArgs));
+        env[dst->location()] =
+          LocalTypeInfo::computed(ref_type(any_type));
+      }
+      else if (stmt == SplatOp)
+      {
+        // Splat extracts a sub-range of a tuple. Post-reify, the type
+        // depends on the remaining element count (none / T / TupleType).
+        // Pre-reify, type as any.
+        auto dst = stmt / LocalId;
+        auto any_type = Type
+          << (TypeName
+              << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+              << (NameElement << (Ident ^ "any") << TypeArgs));
+        env[dst->location()] = LocalTypeInfo::computed(any_type);
+      }
       else if (stmt->in({NewArray, NewArrayConst}))
       {
         auto dst = stmt / LocalId;

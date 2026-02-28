@@ -2,11 +2,14 @@
 
 ## To Do
 
+Reviews.
+- A Verona writing skill?
+- Sub agents with the persona of a programmer used to a specific language, have them review the language design and documentation, and suggest improvements.
+- Can we review and improve compiler error messages?
+
 Tuples.
-- Test case for an array of tuples.
-- Destructing when the tuple is too short throws an error. Should it?
-- Destructing when the tuple is too long ignores the extra elements. Should it?
 - Flatten a tuple into another tuple.
+- Allow a splat in a for loop lambda signature?
 
 Names.
 - Allow looking down a type parameter.

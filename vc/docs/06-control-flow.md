@@ -31,9 +31,9 @@ else { fallback }
 The `else` branch can use parentheses for a single expression:
 
 ```verona
-if false { i32 0 }
-else if false { i32 1 }
-else (i32 2)
+if false { 0 }
+else if false { 1 }
+else (2)
 ```
 
 ### As a Statement

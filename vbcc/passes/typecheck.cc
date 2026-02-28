@@ -898,7 +898,15 @@ namespace vbcc
                 node / LocalId,
                 Node(Ref) << clone(src_type->at(idx)));
             else
-              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+            {
+              type_err(
+                node,
+                std::format(
+                  "tuple index {} out of range for tuple with {} elements",
+                  idx,
+                  src_type->size()));
+              return true;
+            }
           }
           else if (src_type && src_type == Array && src_type->size() > 0)
             set_type(env, node / LocalId, Node(Ref) << clone(src_type / Type));

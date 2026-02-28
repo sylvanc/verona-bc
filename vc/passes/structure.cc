@@ -7,10 +7,12 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, TypeVar, TypeSelf};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq, DontCare, True,   False,       Bin,      Oct,      Int,      Hex,
-    Float,   HexFloat, String, RawString,   Char,     Tuple,    ArrayLit, Let,
-    Var,     New,      Lambda, Dot,         Ref,      FuncName, If,       While,
-    When,    Equals,   Else,   TripleColon, FieldRef, MatchExpr};
+    ExprSeq,  DontCare, SplatLet, SplatDontCare, True,    False,
+    Bin,      Oct,      Int,      Hex,           Float,   HexFloat,
+    String,   RawString,Char,     Tuple,         ArrayLit,Let,
+    Var,      New,      Lambda,   Dot,           Ref,     FuncName,
+    If,       While,    When,     Equals,        Else,    TripleColon,
+    FieldRef, MatchExpr};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
   const auto TypeParamsPat = T(Bracket) << (T(List, Group) * End);
@@ -396,6 +398,15 @@ namespace vc
         },
 
         // Expressions.
+        // Splat let: let name...
+        In(Expr) * (T(Let) << End) * T(Ident)[Ident] * T(Vararg) *
+            ~(T(Colon) * (!T(Equals))++[Type]) >>
+          [](Match& _) {
+            if (!_[Type].empty())
+              return err(_(Ident), "Splat let cannot have a type annotation");
+            return Node{SplatLet << _(Ident)};
+          },
+
         // Let.
         In(Expr) * (T(Let) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
@@ -405,6 +416,10 @@ namespace vc
         In(Expr) * (T(Var) << End) * T(Ident)[Ident] *
             ~(T(Colon) * (!T(Equals))++[Type]) >>
           [](Match& _) { return Var << _(Ident) << make_type(_[Type]); },
+
+        // Splat don't-care: _...
+        In(Expr) * T(DontCare) * T(Vararg) >>
+          [](Match&) -> Node { return SplatDontCare; },
 
         // New.
         In(Expr) * (T(New)[New] << End) *
@@ -759,15 +774,13 @@ namespace vc
               node->front(), err(node->front(), "Expected a single type"));
             ok = false;
           }
-          else
+
+          for (auto& child : *node)
           {
-            for (auto& child : *node)
+            if (!child->in(wfTypeElement))
             {
-              if (!child->in(wfTypeElement))
-              {
-                node->replace(child, err(child, "Expected a type"));
-                ok = false;
-              }
+              node->replace(child, err(child, "Expected a type"));
+              ok = false;
             }
           }
         }

@@ -259,39 +259,161 @@ namespace vc
 
         // Destructuring assignment.
         T(Equals)
-            << ((T(TupleLHS)[Lhs] << (T(TupleLHS, LocalId, Let, DontCare)++)) *
+            << ((T(TupleLHS)[Lhs]
+                 << (T(TupleLHS, LocalId, Let, DontCare, SplatLet,
+                      SplatDontCare)++)) *
                 T(LocalId)[Rhs]) >>
           [](Match& _) {
-            // If the RHS is too short, this will throw an error.
-            // If the RHS is too long, the extra values will be discarded.
+            auto lhs = _(Lhs);
+            auto rhs_loc = _(Rhs);
+
+            // Find splat position (if any) and validate at most one.
+            int splat_pos = -1;
+            for (size_t i = 0; i < lhs->size(); i++)
+            {
+              auto& child = lhs->at(i);
+              if (child->type() == SplatLet || child->type() == SplatDontCare)
+              {
+                if (splat_pos >= 0)
+                  return err(child, "Only one '...' allowed in destructuring");
+                splat_pos = static_cast<int>(i);
+              }
+            }
+
+            // Without a splat, require exact arity (checked post-reification
+            // when the tuple type is known). Emit the simple sequential code.
             Node seq = Seq;
             Node tuple = Tuple;
-            size_t idx = 0;
 
-            for (auto& l : *_(Lhs))
+            if (splat_pos < 0)
             {
-              auto ref = _.fresh(l_local);
-              auto val = _.fresh(l_local);
-              seq << (Lift << Body
+              size_t idx = 0;
+              for (auto& l : *lhs)
+              {
+                auto ref = _.fresh(l_local);
+                auto val = _.fresh(l_local);
+                seq
+                  << (Lift << Body
                            << (ArrayRefConst
                                << (LocalId ^ ref)
-                               << (Arg << ArgCopy << (LocalId ^ _(Rhs)))
+                               << (Arg << ArgCopy << (LocalId ^ rhs_loc))
                                << (Int ^ std::to_string(idx++))))
                   << (Lift << Body
                            << (Load << (LocalId ^ val) << (LocalId ^ ref)));
 
+                if (l->type() == DontCare)
+                {
+                  tuple << (LocalId ^ val);
+                }
+                else if (l->type() == Let)
+                {
+                  auto name = (l / Ident)->location();
+                  seq << (Lift << Body
+                               << (Copy << (LocalId ^ name)
+                                        << (LocalId ^ val)));
+                  tuple << (LocalId ^ val);
+                }
+                else
+                {
+                  tuple << (Equals << l << (LocalId ^ val));
+                }
+              }
+
+              return seq << (Expr << tuple);
+            }
+
+            // With a splat: split into before / splat / after.
+            size_t before_count = static_cast<size_t>(splat_pos);
+            size_t after_count = lhs->size() - before_count - 1;
+
+            // Before-splat elements: ArrayRefConst with concrete indices.
+            for (size_t i = 0; i < before_count; i++)
+            {
+              auto& l = lhs->at(i);
+              auto ref = _.fresh(l_local);
+              auto val = _.fresh(l_local);
+              seq
+                << (Lift << Body
+                         << (ArrayRefConst
+                             << (LocalId ^ ref)
+                             << (Arg << ArgCopy << (LocalId ^ rhs_loc))
+                             << (Int ^ std::to_string(i))))
+                << (Lift << Body
+                         << (Load << (LocalId ^ val) << (LocalId ^ ref)));
+
               if (l->type() == DontCare)
               {
-                // Discard: value is loaded but never used.
                 tuple << (LocalId ^ val);
               }
               else if (l->type() == Let)
               {
-                // Let is single-assignment: just copy the value, no swap.
                 auto name = (l / Ident)->location();
-                seq
-                  << (Lift << Body
-                           << (Copy << (LocalId ^ name) << (LocalId ^ val)));
+                seq << (Lift << Body
+                             << (Copy << (LocalId ^ name)
+                                      << (LocalId ^ val)));
+                tuple << (LocalId ^ val);
+              }
+              else
+              {
+                tuple << (Equals << l << (LocalId ^ val));
+              }
+            }
+
+            // Splat element: SplatOp creates the splat value.
+            auto& splat_node = lhs->at(splat_pos);
+            if (splat_node->type() == SplatLet)
+            {
+              auto name = (splat_node / Ident)->location();
+              seq << (Lift << Body
+                           << (SplatOp << (LocalId ^ name)
+                                       << (Arg << ArgCopy
+                                                << (LocalId ^ rhs_loc))
+                                       << (Int ^ std::to_string(before_count))
+                                       << (Int ^ std::to_string(after_count))));
+              tuple << (LocalId ^ name);
+            }
+            else
+            {
+              // SplatDontCare: still emit SplatOp so type checking
+              // can validate arity, but the result is unused.
+              auto splat_id = _.fresh(l_local);
+              seq << (Lift << Body
+                           << (SplatOp << (LocalId ^ splat_id)
+                                       << (Arg << ArgCopy
+                                                << (LocalId ^ rhs_loc))
+                                       << (Int ^ std::to_string(before_count))
+                                       << (Int ^ std::to_string(after_count))));
+              tuple << (LocalId ^ splat_id);
+            }
+
+            // After-splat elements: ArrayRefFromEnd with 1-based from-end
+            // index.
+            for (size_t i = 0; i < after_count; i++)
+            {
+              auto& l = lhs->at(before_count + 1 + i);
+              auto ref = _.fresh(l_local);
+              auto val = _.fresh(l_local);
+              // from-end index: after_count - i (last element = 1)
+              size_t from_end = after_count - i;
+              seq
+                << (Lift << Body
+                         << (ArrayRefFromEnd
+                             << (LocalId ^ ref)
+                             << (Arg << ArgCopy << (LocalId ^ rhs_loc))
+                             << (Int ^ std::to_string(from_end))))
+                << (Lift << Body
+                         << (Load << (LocalId ^ val) << (LocalId ^ ref)));
+
+              if (l->type() == DontCare)
+              {
+                tuple << (LocalId ^ val);
+              }
+              else if (l->type() == Let)
+              {
+                auto name = (l / Ident)->location();
+                seq << (Lift << Body
+                             << (Copy << (LocalId ^ name)
+                                      << (LocalId ^ val)));
                 tuple << (LocalId ^ val);
               }
               else
@@ -313,6 +435,17 @@ namespace vc
             return err(
               _(DontCare),
               "'_' can only be used on the left side of an assignment");
+          },
+
+        // Error on splat outside destructuring.
+        !In(TupleLHS) * T(SplatLet)[Lhs] >>
+          [](Match& _) {
+            return err(_(Lhs), "'...' can only be used in destructuring");
+          },
+
+        !In(TupleLHS) * T(SplatDontCare)[Lhs] >>
+          [](Match& _) {
+            return err(_(Lhs), "'...' can only be used in destructuring");
           },
 
         // If expression.
@@ -746,6 +879,14 @@ namespace vc
         // destructuring rule where it receives special handling (no swap).
         In(TupleLHS) * T(Lhs) << (T(Let)[Let] * End) >>
           [](Match& _) { return _(Let); },
+
+        // Compact SplatLet inside TupleLHS.
+        In(TupleLHS) * T(Lhs) << (T(SplatLet)[SplatLet] * End) >>
+          [](Match& _) { return _(SplatLet); },
+
+        // Compact SplatDontCare inside TupleLHS.
+        In(TupleLHS) * T(Lhs) << (T(SplatDontCare) * End) >>
+          [](Match&) -> Node { return SplatDontCare; },
 
         // Combine non-terminal LocalId with an incomplete copy.
         // This is for `if` and `else`.
