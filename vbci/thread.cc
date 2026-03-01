@@ -1564,7 +1564,7 @@ namespace vbci
             Value::error(Error::MethodNotFound);
 
           auto* cc = make_callback(src, func);
-          dst = ValueImmortal(Value(static_cast<void*>(cc)));
+          dst = ValueImmortal(Value(cc));
         });
         break;
       }
@@ -1572,8 +1572,11 @@ namespace vbci
       case Op::CallbackPtr:
       {
         process([](Register& dst, const Register& src) INLINE {
-          auto* cc = *reinterpret_cast<CallbackClosure* const*>(
-            src->to_ffi());
+          auto* cc = src->get_callback();
+
+          if (!cc)
+            Value::error(Error::BadOperand);
+
           dst = ValueImmortal(Value(callback_ptr(cc)));
         });
         break;
@@ -1582,8 +1585,11 @@ namespace vbci
       case Op::FreeCallback:
       {
         process([](Register& dst, const Register& src) INLINE {
-          auto* cc = *reinterpret_cast<CallbackClosure* const*>(
-            src->to_ffi());
+          auto* cc = src->get_callback();
+
+          if (!cc)
+            Value::error(Error::BadOperand);
+
           free_callback(cc);
           dst = ValueImmortal(Value::none());
         });

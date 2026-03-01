@@ -413,6 +413,7 @@ namespace vbci
     ArrayRef,
     CownRef,
     Function,
+    Callback,
     Error,
     Invalid,
   };

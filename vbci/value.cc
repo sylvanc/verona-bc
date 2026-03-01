@@ -1,6 +1,7 @@
 #include "value.h"
 
 #include "array.h"
+#include "callback.h"
 #include "cown.h"
 #include "object.h"
 #include "platform.h"
@@ -63,6 +64,10 @@ namespace vbci
     if (!func)
       Value::error(Error::MethodNotFound);
   }
+
+  Value::Value(CallbackClosure* callback)
+  : callback(callback), tag(ValueType::Callback)
+  {}
 
   ValueImmortal Value::none()
   {
@@ -306,6 +311,7 @@ namespace vbci
 
       // Return dyn as the type id for function pointers.
       case ValueType::Function:
+      case ValueType::Callback:
         return DynId;
 
       // Return dyn as the type id for errors.
@@ -356,6 +362,11 @@ namespace vbci
     return tag == ValueType::Function;
   }
 
+  bool Value::is_callback() const
+  {
+    return tag == ValueType::Callback;
+  }
+
   bool Value::is_sendable() const
   {
     switch (tag)
@@ -370,6 +381,7 @@ namespace vbci
         return true;
 
       case ValueType::Ptr:
+      case ValueType::Callback:
       case ValueType::RegisterRef:
       case ValueType::FieldRef:
       case ValueType::ArrayRef:
@@ -475,6 +487,14 @@ namespace vbci
     return func;
   }
 
+  CallbackClosure* Value::get_callback() const
+  {
+    if (tag != ValueType::Callback)
+      return nullptr;
+
+    return callback;
+  }
+
   size_t Value::get_size() const
   {
     if (tag != ValueType::USize)
@@ -546,6 +566,9 @@ namespace vbci
 
       case ValueType::Cown:
         return &cown;
+
+      case ValueType::Callback:
+        return &callback;
 
       default:
         return this;
@@ -996,6 +1019,9 @@ namespace vbci
 
       case ValueType::Function:
         return Program::get().di_function(func);
+
+      case ValueType::Callback:
+        return std::format("callback {}", static_cast<void*>(callback));
 
       case ValueType::Error:
       {
