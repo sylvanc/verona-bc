@@ -2757,6 +2757,9 @@ namespace vc
 
             for (auto& sym : *(child / Symbols))
             {
+              if (sym != Symbol)
+                continue;
+
               if ((sym / SymbolId)->location() == sym_name)
               {
                 auto ret_type = sym / Type;
@@ -3697,7 +3700,8 @@ namespace vc
 
       top->traverse([&](auto node) {
         if (node != Function)
-          return node == Top || node == ClassDef || node == ClassBody;
+          return node == Top || node == ClassDef || node == ClassBody ||
+            node == Lib || node == Symbols;
 
         process_function(node, top, false);
 

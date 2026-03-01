@@ -179,6 +179,8 @@ namespace vbcc
   inline const auto Offset = TokenDef("offset");
   inline const auto Symbol = TokenDef("symbol");
   inline const auto Symbols = TokenDef("symbols");
+  inline const auto InitFunc = TokenDef("initfunc");
+  inline const auto FiniFunc = TokenDef("finifunc");
   inline const auto Vararg = TokenDef("vararg");
   inline const auto Union = TokenDef("union");
   inline const auto TupleType = TokenDef("tupletype");
@@ -264,7 +266,9 @@ namespace vbcc
     | (Cown <<= (Type >>= wfType))
     | (Union <<= wfType++)
     | (TupleType <<= wfType++[2])
-    | (Lib <<= String * Symbols)
+    | (Lib <<=
+        String * Symbols * (InitFunc >>= FunctionId | None) *
+        (FiniFunc >>= FunctionId | None))
     | (Symbols <<= Symbol++)
     | (Symbol <<=
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *

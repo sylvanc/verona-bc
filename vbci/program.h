@@ -10,6 +10,7 @@
 
 #include <bit>
 #include <fstream>
+#include <optional>
 #include <vector>
 
 namespace vbci
@@ -37,6 +38,8 @@ namespace vbci
     std::unordered_map<uint32_t, uint32_t> ref_map;
 
     std::vector<Dynlib> libs;
+    std::vector<std::optional<size_t>> init_funcs;
+    std::vector<std::optional<size_t>> fini_funcs;
     std::vector<Symbol> symbols;
 
     ffi_type ffi_type_value;

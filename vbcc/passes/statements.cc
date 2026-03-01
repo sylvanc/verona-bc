@@ -237,7 +237,8 @@ namespace vbcc
         // Libraries.
         (T(Lib) << End) * ~T(String)[String] >>
           [](Match& _) {
-            return Lib << (_(String) || (String ^ "")) << Symbols;
+            return Lib << (_(String) || (String ^ "")) << Symbols << None
+                       << None;
           },
 
         T(Lib)[Lib] * T(Symbol)[Symbol] >>
@@ -522,8 +523,7 @@ namespace vbcc
           [](Match& _) { return Typetest << _(LocalId) << _(Rhs) << _(Type); },
 
         // GetRaise.
-        Dst * T(GetRaise) >>
-          [](Match& _) { return GetRaise << _(LocalId); },
+        Dst * T(GetRaise) >> [](Match& _) { return GetRaise << _(LocalId); },
 
         // SetRaise.
         Dst * T(SetRaise) * T(LocalId)[Rhs] >>

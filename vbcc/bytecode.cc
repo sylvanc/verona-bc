@@ -590,7 +590,23 @@ namespace vbcc
     hdr << uleb(libraries.size());
 
     for (auto& lib : libraries)
+    {
       hdr << uleb(ST::exec().string(lib / String));
+
+      // Encode init/fini function IDs. 0 means no function, otherwise
+      // func_id + 1.
+      auto init = lib / InitFunc;
+      if (init->type() == FunctionId)
+        hdr << uleb(*get_func_id(init) + 1);
+      else
+        hdr << uleb(0);
+
+      auto fini = lib / FiniFunc;
+      if (fini->type() == FunctionId)
+        hdr << uleb(*get_func_id(fini) + 1);
+      else
+        hdr << uleb(0);
+    }
 
     hdr << uleb(symbols.size());
 

@@ -156,6 +156,10 @@ namespace vc
       // Add reified libraries.
       for (auto& [_, lib] : libs)
         top << lib;
+
+      // Add any errors collected during reification.
+      for (auto& e : errors)
+        top << e;
     }
 
   private:
@@ -190,6 +194,8 @@ namespace vc
     std::vector<Node> map_order;
     std::vector<Reification*> worklist;
     std::map<Location, Node> libs;
+    std::set<Node> processed_initfini;
+    Nodes errors;
     std::vector<MethodInvocation> method_invocations;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
 
@@ -1676,6 +1682,52 @@ namespace vc
         methods << (Method << clone(mid_node) << funcid);
     }
 
+    // Reify init/fini functions from a source Lib onto a reified Lib.
+    // Checks for duplicate init/fini across multiple Lib definitions
+    // for the same library (by string name).
+    void reify_initfini(
+      const Node& source_lib, Node& reified_lib, Reification& r)
+    {
+      // Skip if this source Lib node has already been processed.
+      if (!processed_initfini.insert(source_lib).second)
+        return;
+
+      for (auto& child : *(source_lib / Symbols))
+      {
+        if (child != Function)
+          continue;
+
+        auto name = (child / Ident)->location().view();
+        bool is_init = (name == "init");
+        bool is_fini = (name == "fini");
+
+        if (!is_init && !is_fini)
+          continue;
+
+        auto target = is_init ? Token(InitFunc) : Token(FiniFunc);
+        auto existing = reified_lib / target;
+
+        if (existing != None)
+        {
+          // Already has an init/fini — conflict error.
+          auto msg = std::format(
+            "Conflicting '{}' for library \"{}\"",
+            name,
+            (source_lib / String)->location().view());
+
+          errors.push_back(
+            err(child / Ident, msg)
+            << errmsg("Previous declaration resolved here:")
+            << errloc(existing));
+          continue;
+        }
+
+        // Reify the init/fini function.
+        auto funcid = find_or_push(child, r.subst);
+        reified_lib->replace(existing, clone(funcid));
+      }
+    }
+
     void reify_ffi(Node& n, Reification& r)
     {
       auto sym_id = n / SymbolId;
@@ -1695,6 +1747,9 @@ namespace vc
 
           for (auto& sym : *(child / Symbols))
           {
+            if (sym != Symbol)
+              continue;
+
             if ((sym / SymbolId)->location() == sym_name)
             {
               // Found the matching symbol in this Lib.
@@ -1705,12 +1760,29 @@ namespace vc
 
               if (find == libs.end())
               {
-                reified_lib = Lib << clone(child / String) << Symbols;
+                reified_lib =
+                  Lib << clone(child / String) << Symbols << None
+                      << None;
                 libs[lib_loc] = reified_lib;
               }
               else
               {
                 reified_lib = find->second;
+              }
+
+              // Reify init/fini functions from all Lib definitions for this
+              // library in the enclosing ClassDef.
+              for (auto& lib_child : *(parent / ClassBody))
+              {
+                if (lib_child != Lib)
+                  continue;
+
+                if (
+                  (lib_child / String)->location().view() !=
+                  lib_loc.view())
+                  continue;
+
+                reify_initfini(lib_child, reified_lib, r);
               }
 
               // Reify the types in the symbol.

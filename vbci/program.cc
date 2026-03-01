@@ -135,6 +135,14 @@ namespace vbci
       return -1;
 
     setup_argv(args);
+
+    // Run library init functions.
+    for (auto& init : init_funcs)
+    {
+      if (init)
+        Thread::run_sync(&functions.at(*init));
+    }
+
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
     ValueTransfer ret =
@@ -153,6 +161,13 @@ namespace vbci
     else
     {
       exit_code = ret_val.get_i32();
+    }
+
+    // Run library fini functions.
+    for (auto& fini : fini_funcs)
+    {
+      if (fini)
+        Thread::run_sync(&functions.at(*fini));
     }
 
     return exit_code;
@@ -282,8 +297,7 @@ namespace vbci
   // Used by runtime Typetest instructions for tuple type checking.
   bool Program::is_tuple(uint32_t type_id)
   {
-    return is_complex(type_id) &&
-      (complex_type(type_id).tag == TypeTag::Tuple);
+    return is_complex(type_id) && (complex_type(type_id).tag == TypeTag::Tuple);
   }
 
   bool Program::is_ref(uint32_t type_id)
@@ -691,8 +705,20 @@ namespace vbci
     // FFI information.
     auto num_libs = uleb(pc);
     libs.reserve(num_libs);
+    init_funcs.reserve(num_libs);
+    fini_funcs.reserve(num_libs);
     for (size_t i = 0; i < num_libs; i++)
+    {
       libs.emplace_back(strings.at(uleb(pc)));
+
+      auto init_id = uleb(pc);
+      init_funcs.push_back(
+        init_id ? std::optional<size_t>(init_id - 1) : std::nullopt);
+
+      auto fini_id = uleb(pc);
+      fini_funcs.push_back(
+        fini_id ? std::optional<size_t>(fini_id - 1) : std::nullopt);
+    }
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)

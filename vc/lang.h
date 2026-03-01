@@ -157,7 +157,7 @@ namespace vc
         ClassBody)[Ident]
     | (ClassBody <<= (ClassDef | Use | TypeAlias | Lib | FieldDef | Function)++)
     | (Lib <<= String * Symbols)
-    | (Symbols <<= Symbol++)
+    | (Symbols <<= (Symbol | Function)++)
     | (Symbol <<=
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *
         (Vararg >>= Vararg | None) * FFIParams * Type)
