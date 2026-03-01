@@ -1,6 +1,6 @@
 use
 {
-  call_fn_ptr_ret_u64 = "call_fn_ptr_ret_u64"(ptr, u64): u64;
+  call_fn_ptr_ret_u64 = "call_fn_ptr_ret_u64"(ffi::ptr, u64): u64;
 }
 
 genapply[T]
@@ -14,10 +14,10 @@ genapply[T]
 run_test(): u64
 {
   var obj = genapply[u64];
-  var cb = :::make_callback(obj);
-  var fn_ptr = :::callback_ptr(cb);
+  var cb = ffi::callback(obj);
+  var fn_ptr = cb.ptr;
   var result = :::call_fn_ptr_ret_u64(fn_ptr, 42);
-  :::free_callback(cb);
+  cb.free;
   result
 }
 

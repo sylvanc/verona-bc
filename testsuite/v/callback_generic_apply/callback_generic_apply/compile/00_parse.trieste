@@ -14,6 +14,8 @@ parse
             (paren
               (list
                 (group
+                  (ident 3:ffi)
+                  (doublecolon)
                   (ident 3:ptr))
                 (group
                   (ident 3:u64))))
@@ -67,8 +69,9 @@ parse
             (var)
             (ident 2:cb)
             (=)
-            (triplecolon)
-            (ident 13:make_callback)
+            (ident 3:ffi)
+            (doublecolon)
+            (ident 8:callback)
             (paren
               (group
                 (ident 3:obj))))
@@ -78,11 +81,9 @@ parse
             (var)
             (ident 6:fn_ptr)
             (=)
-            (triplecolon)
-            (ident 12:callback_ptr)
-            (paren
-              (group
-                (ident 2:cb))))
+            (ident 2:cb)
+            (dot)
+            (ident 3:ptr))
           (group
             (semi))
           (group
@@ -100,11 +101,9 @@ parse
           (group
             (semi))
           (group
-            (triplecolon)
-            (ident 13:free_callback)
-            (paren
-              (group
-                (ident 2:cb))))
+            (ident 2:cb)
+            (dot)
+            (ident 4:free))
           (group
             (semi))
           (group
@@ -147,6 +146,66 @@ parse
           (group
             (ident 1:r))))))
   (directory
+    (directory
+      (file
+        (group
+          (ident 8:callback)
+          (brace
+            (group
+              (ident 6:create)
+              (bracket
+                (group
+                  (ident 1:T)))
+              (paren
+                (group
+                  (ident 8:callable)
+                  (:)
+                  (ident 1:T)))
+              (:)
+              (ident 8:callback)
+              (brace
+                (group
+                  (triplecolon)
+                  (ident 13:make_callback)
+                  (paren
+                    (group
+                      (ident 8:callable))))))
+            (group
+              (ident 3:ptr)
+              (paren
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 8:callback)))
+              (:)
+              (ident 3:ptr)
+              (brace
+                (group
+                  (triplecolon)
+                  (ident 12:callback_ptr)
+                  (paren
+                    (group
+                      (ident 4:self))))))
+            (group
+              (ident 4:free)
+              (paren
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 8:callback)))
+              (:)
+              (ident 4:none)
+              (brace
+                (group
+                  (triplecolon)
+                  (ident 13:free_callback)
+                  (paren
+                    (group
+                      (ident 4:self)))))))))
+      (file
+        (group
+          (ident 3:ptr)
+          (brace))))
     (file
       (group
         (shape)
@@ -7370,10 +7429,6 @@ parse
                 (triplecolon)
                 (ident 4:none)
                 (paren)))))))
-    (file
-      (group
-        (ident 3:ptr)
-        (brace)))
     (file
       (group
         (ident 3:ref)

@@ -6,7 +6,7 @@ noapply
 main(): i32
 {
   var obj = noapply(0);
-  var cb = :::make_callback(obj);
-  :::free_callback(cb);
+  var cb = ffi::callback(obj);
+  cb.free;
   0
 }

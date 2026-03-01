@@ -922,6 +922,8 @@ namespace vbci
         return os << "F64";
       case ValueType::Ptr:
         return os << "Ptr";
+      case ValueType::Callback:
+        return os << "Callback";
       case ValueType::Object:
         return os << "Object";
       case ValueType::Array:
@@ -938,8 +940,6 @@ namespace vbci
         return os << "CownRef";
       case ValueType::Function:
         return os << "Function";
-      case ValueType::Callback:
-        return os << "Callback";
       case ValueType::Error:
         return os << "Error";
       case ValueType::Invalid:

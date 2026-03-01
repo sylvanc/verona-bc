@@ -1,15 +1,15 @@
 use
 {
-  call_fn_ptr_ret_u64 = "call_fn_ptr_ret_u64"(ptr, u64): u64;
+  call_fn_ptr_ret_u64 = "call_fn_ptr_ret_u64"(ffi::ptr, u64): u64;
 }
 
 run_test(): u64
 {
   var h = (x: u64): u64 -> x + 10;
-  var cb = :::make_callback(h);
-  var fn_ptr = :::callback_ptr(cb);
+  var cb = ffi::callback(h);
+  var fn_ptr = cb.ptr;
   var result = :::call_fn_ptr_ret_u64(fn_ptr, 32);
-  :::free_callback(cb);
+  cb.free;
   result
 }
 

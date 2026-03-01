@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$915)
+            (localid 4:$921)
             (functionid 26:callback_basic::main::0::0)
             (args)))
         (ret
-          (localid 4:$915)))))
+          (localid 4:$921)))))
   (func
     (functionid 26:callback_basic::main::0::0)
     (params)
@@ -24,82 +24,82 @@ typecheck
     (vars
       (localid 1:r)
       (localid 6:result)
-      (localid 7:local$7))
+      (localid 7:local$8))
     (labels
       (label
         (labelid 5:start)
         (body
           (const
-            (localid 7:local$5)
+            (localid 7:local$6)
             (i32)
             (int 1:0))
           (move
             (localid 1:r)
-            (localid 7:local$5))
+            (localid 7:local$6))
           (call
-            (localid 7:local$6)
+            (localid 7:local$7)
             (functionid 30:callback_basic::run_test::0::0)
             (args))
           (move
             (localid 6:result)
-            (localid 7:local$6))
+            (localid 7:local$7))
           (call
-            (localid 7:local$7)
+            (localid 7:local$8)
             (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (const
-            (localid 8:local$90)
+            (localid 8:local$96)
             (u64)
             (int 2:42))
           (lookup
-            (localid 9:local$473)
+            (localid 9:local$477)
             (localid 6:result)
             (methodid 8:!=::2::0))
           (calldyn
-            (localid 9:local$474)
-            (localid 9:local$473)
+            (localid 9:local$478)
+            (localid 9:local$477)
             (args
               (arg
                 (argmove)
                 (localid 6:result))
               (arg
                 (argmove)
-                (localid 8:local$90)))))
+                (localid 8:local$96)))))
         (cond
-          (localid 9:local$474)
-          (labelid 7:body$88)
-          (labelid 7:join$89)))
+          (localid 9:local$478)
+          (labelid 7:body$94)
+          (labelid 7:join$95)))
       (label
-        (labelid 7:body$88)
+        (labelid 7:body$94)
         (body
           (const
-            (localid 8:local$91)
+            (localid 8:local$97)
             (i32)
             (int 1:1))
           (lookup
-            (localid 9:local$475)
+            (localid 9:local$479)
             (localid 1:r)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 9:local$476)
-            (localid 9:local$475)
+            (localid 9:local$480)
+            (localid 9:local$479)
             (args
               (arg
                 (argcopy)
                 (localid 1:r))
               (arg
                 (argmove)
-                (localid 8:local$91))))
+                (localid 8:local$97))))
           (move
-            (localid 9:local$862)
+            (localid 9:local$868)
             (localid 1:r))
           (move
             (localid 1:r)
-            (localid 9:local$476)))
+            (localid 9:local$480)))
         (jump
-          (labelid 7:join$89)))
+          (labelid 7:join$95)))
       (label
-        (labelid 7:join$89)
+        (labelid 7:join$95)
         (body)
         (ret
           (localid 1:r)))))
@@ -132,24 +132,36 @@ typecheck
           (move
             (localid 1:h)
             (localid 7:local$3))
-          (makecallback
-            (localid 9:local$467)
-            (localid 1:h))
+          (call
+            (localid 7:local$4)
+            (functionid 37:_builtin::ffi::callback::create::1::0)
+            (args
+              (arg
+                (argmove)
+                (localid 1:h))))
           (move
             (localid 2:cb)
-            (localid 9:local$467))
-          (callbackptr
-            (localid 9:local$468)
-            (localid 2:cb))
+            (localid 7:local$4))
+          (lookup
+            (localid 8:local$89)
+            (localid 2:cb)
+            (methodid 9:ptr::1::0))
+          (calldyn
+            (localid 8:local$90)
+            (localid 8:local$89)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:cb))))
           (move
             (localid 6:fn_ptr)
-            (localid 9:local$468))
+            (localid 8:local$90))
           (const
-            (localid 8:local$87)
+            (localid 8:local$91)
             (u64)
             (int 2:32))
           (ffi
-            (localid 7:local$4)
+            (localid 7:local$5)
             (symbolid 19:call_fn_ptr_ret_u64)
             (args
               (arg
@@ -157,13 +169,21 @@ typecheck
                 (localid 6:fn_ptr))
               (arg
                 (argmove)
-                (localid 8:local$87))))
+                (localid 8:local$91))))
           (move
             (localid 6:result)
-            (localid 7:local$4))
-          (freecallback
-            (localid 9:local$470)
-            (localid 2:cb)))
+            (localid 7:local$5))
+          (lookup
+            (localid 8:local$92)
+            (localid 2:cb)
+            (methodid 10:free::1::0))
+          (calldyn
+            (localid 8:local$93)
+            (localid 8:local$92)
+            (args
+              (arg
+                (argmove)
+                (localid 2:cb)))))
         (ret
           (localid 6:result)))))
   (func
@@ -176,11 +196,11 @@ typecheck
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$51)
+            (localid 8:local$54)
             (classid 20:_builtin::nomatch::0)
             (args)))
         (ret
-          (localid 8:local$51)))))
+          (localid 8:local$54)))))
   (primitive
     (u64)
     (methods
@@ -206,11 +226,11 @@ typecheck
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$394)
+            (localid 9:local$400)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$394)))))
+          (localid 9:local$400)))))
   (primitive
     (bool)
     (methods
@@ -233,11 +253,11 @@ typecheck
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$115)
+            (localid 9:local$121)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$115)))))
+          (localid 9:local$121)))))
   (class
     (classid 20:_builtin::nomatch::0)
     (fields)
@@ -257,9 +277,35 @@ typecheck
             (args)))
         (ret
           (localid 7:local$1)))))
+  (func
+    (functionid 37:_builtin::ffi::callback::create::1::0)
+    (params
+      (param
+        (localid 8:callable)
+        (classid 27:callback_basic::lambda$0::0)))
+    (callback)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (makecallback
+            (localid 9:local$481)
+            (localid 8:callable)))
+        (ret
+          (localid 9:local$481)))))
   (primitive
     (ptr)
     (methods))
+  (primitive
+    (callback)
+    (methods
+      (method
+        (methodid 9:ptr::1::0)
+        (functionid 34:_builtin::ffi::callback::ptr::1::0))
+      (method
+        (methodid 10:free::1::0)
+        (functionid 35:_builtin::ffi::callback::free::1::0))))
   (class
     (classid 27:callback_basic::lambda$0::0)
     (fields)
@@ -287,12 +333,12 @@ typecheck
             (u64)
             (int 2:10))
           (lookup
-            (localid 8:local$85)
+            (localid 8:local$87)
             (localid 1:x)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 8:local$86)
-            (localid 8:local$85)
+            (localid 8:local$88)
+            (localid 8:local$87)
             (args
               (arg
                 (argmove)
@@ -301,10 +347,7 @@ typecheck
                 (argmove)
                 (localid 7:local$2)))))
         (ret
-          (localid 8:local$86)))))
-  (primitive
-    (none)
-    (methods))
+          (localid 8:local$88)))))
   (func
     (functionid 22:_builtin::u64::+::2::0)
     (params
@@ -321,11 +364,48 @@ typecheck
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$383)
+            (localid 9:local$389)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$383)))))
+          (localid 9:local$389)))))
+  (func
+    (functionid 34:_builtin::ffi::callback::ptr::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (callback)))
+    (ptr)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (callbackptr
+            (localid 9:local$482)
+            (localid 4:self)))
+        (ret
+          (localid 9:local$482)))))
+  (func
+    (functionid 35:_builtin::ffi::callback::free::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (callback)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (freecallback
+            (localid 9:local$483)
+            (localid 4:self)))
+        (ret
+          (localid 9:local$483)))))
+  (primitive
+    (none)
+    (methods))
   (func
     (functionid 23:_builtin::i32::!=::2::0)
     (params
@@ -342,11 +422,11 @@ typecheck
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$197)
+            (localid 9:local$203)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$197)))))
+          (localid 9:local$203)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -363,11 +443,11 @@ typecheck
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$186)
+            (localid 9:local$192)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$186)))))
+          (localid 9:local$192)))))
   (lib
     (string 0:)
     (symbols

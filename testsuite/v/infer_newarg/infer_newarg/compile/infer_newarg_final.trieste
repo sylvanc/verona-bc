@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$895)
+            (localid 4:$899)
             (functionid 24:infer_newarg::main::0::0)
             (args)))
         (ret
-          (localid 4:$895)))))
+          (localid 4:$899)))))
   (func
     (functionid 24:infer_newarg::main::0::0)
     (params)
@@ -27,7 +27,7 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$81)
+            (localid 8:local$82)
             (i32)
             (int 1:1))
           (call
@@ -36,23 +36,23 @@ typecheck
             (args
               (arg
                 (argmove)
-                (localid 8:local$81))))
+                (localid 8:local$82))))
           (move
             (localid 1:c)
             (localid 7:local$2))
           (lookup
-            (localid 8:local$82)
+            (localid 8:local$83)
             (localid 1:c)
             (methodid 7:f::1::0))
           (calldyn
+            (localid 8:local$84)
             (localid 8:local$83)
-            (localid 8:local$82)
             (args
               (arg
                 (argmove)
                 (localid 1:c)))))
         (ret
-          (localid 8:local$83)))))
+          (localid 8:local$84)))))
   (primitive
     (i32)
     (methods))
@@ -107,10 +107,10 @@ typecheck
                 (argmove)
                 (localid 4:self))))
           (load
-            (localid 9:local$458)
+            (localid 9:local$459)
             (localid 7:local$0)))
         (ret
-          (localid 9:local$458)))))
+          (localid 9:local$459)))))
   (func
     (functionid 32:infer_newarg::cell::f::1::ref::0)
     (params
@@ -125,13 +125,13 @@ typecheck
         (labelid 5:start)
         (body
           (fieldref
-            (localid 8:local$80)
+            (localid 8:local$81)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 1:f)))
         (ret
-          (localid 8:local$80)))))
+          (localid 8:local$81)))))
   (primitive
     (ref
       (i32))

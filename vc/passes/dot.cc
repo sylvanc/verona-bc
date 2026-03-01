@@ -81,13 +81,13 @@ namespace vc
     {"nan", {0, 0, Nulop << Const_NaN}},
     {"arrayref", {0, 2, ArrayRef}},
     {"newarray", {1, 1, NewArray}},
-  };
-
-  // Global builtins: available outside _builtin (callback infrastructure).
-  const std::map<std::string_view, Builtin> global_builtins = {
     {"make_callback", {0, 1, MakeCallback}},
     {"callback_ptr", {0, 1, CallbackPtr}},
     {"free_callback", {0, 1, FreeCallback}},
+  };
+
+  // Global builtins: available outside _builtin.
+  const std::map<std::string_view, Builtin> global_builtins = {
     {"add_external", {0, 0, Nulop << AddExternal}},
     {"remove_external", {0, 0, Nulop << RemoveExternal}},
   };

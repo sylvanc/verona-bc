@@ -6,8 +6,6 @@
 namespace vc
 {
   // Map from builtin primitive name to IR token.
-  // Ptr is included for type env tracking even though it's not refinable
-  // (not in the integer or float domain).
   const std::map<std::string_view, Token> primitive_from_name = {
     {"none", None},
     {"bool", Bool},
@@ -25,7 +23,13 @@ namespace vc
     {"usize", USize},
     {"f32", F32},
     {"f64", F64},
+  };
+
+  // Map from ffi primitive name to IR token.
+  // These live under _builtin::ffi:: (3-element path).
+  const std::map<std::string_view, Token> ffi_primitive_from_name = {
     {"ptr", Ptr},
+    {"callback", Callback},
   };
 
   const std::initializer_list<Token> integer_types = {
@@ -39,6 +43,16 @@ namespace vc
   {
     return Type
       << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                   << (NameElement << (Ident ^ tok.str()) << TypeArgs));
+  }
+
+  // Build a source-level Type node for an ffi primitive (_builtin::ffi::name).
+  // Creates fresh nodes on each call.
+  Node ffi_primitive_type(const Token& tok)
+  {
+    return Type
+      << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                   << (NameElement << (Ident ^ "ffi") << TypeArgs)
                    << (NameElement << (Ident ^ tok.str()) << TypeArgs));
   }
 
@@ -572,20 +586,39 @@ namespace vc
     if (inner != TypeName)
       return {};
 
-    // Must be a two-element path: _builtin::name.
-    if (inner->size() != 2)
-      return {};
-
     auto first_ident = (inner->front() / Ident)->location().view();
-    auto second_ident = (inner->back() / Ident)->location().view();
 
     if (first_ident != "_builtin")
       return {};
 
-    auto it = primitive_from_name.find(second_ident);
+    // Two-element path: _builtin::name (flat primitives).
+    if (inner->size() == 2)
+    {
+      auto second_ident = (inner->back() / Ident)->location().view();
+      auto it = primitive_from_name.find(second_ident);
 
-    if (it != primitive_from_name.end())
-      return it->second;
+      if (it != primitive_from_name.end())
+        return it->second;
+
+      return {};
+    }
+
+    // Three-element path: _builtin::ffi::name (ffi primitives).
+    if (inner->size() == 3)
+    {
+      auto second_ident = (inner->at(1) / Ident)->location().view();
+
+      if (second_ident != "ffi")
+        return {};
+
+      auto third_ident = (inner->at(2) / Ident)->location().view();
+      auto it = ffi_primitive_from_name.find(third_ident);
+
+      if (it != ffi_primitive_from_name.end())
+        return it->second;
+
+      return {};
+    }
 
     return {};
   }
@@ -2223,7 +2256,7 @@ namespace vc
       {
         auto dst = stmt / LocalId;
         env[dst->location()] =
-          LocalTypeInfo::computed(primitive_type(Ptr));
+          LocalTypeInfo::computed(ffi_primitive_type(Ptr));
       }
       else if (stmt == TypeAssertion)
       {
@@ -2366,10 +2399,17 @@ namespace vc
         auto dst = stmt / LocalId;
         env[dst->location()] = LocalTypeInfo::computed(primitive_type(F64));
       }
-      else if (stmt->in({MakeCallback, CallbackPtr}))
+      else if (stmt == MakeCallback)
       {
         auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(Ptr));
+        env[dst->location()] =
+          LocalTypeInfo::computed(ffi_primitive_type(Callback));
+      }
+      else if (stmt == CallbackPtr)
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] =
+          LocalTypeInfo::computed(ffi_primitive_type(Ptr));
       }
       else if (stmt == FreeCallback)
       {

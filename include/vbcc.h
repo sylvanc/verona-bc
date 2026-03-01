@@ -49,6 +49,7 @@ namespace vbcc
   inline const auto ISize = TokenDef("isize");
   inline const auto USize = TokenDef("usize");
   inline const auto Ptr = TokenDef("ptr");
+  inline const auto Callback = TokenDef("callback");
   inline const auto Dyn = TokenDef("dyn");
   inline const auto Array = TokenDef("array");
   inline const auto Ref = TokenDef("ref");
@@ -214,7 +215,8 @@ namespace vbcc
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
-  inline const auto wfBuiltinType = wfPrimitiveType | Ptr | Array | Ref | Cown;
+  inline const auto wfBuiltinType =
+    wfPrimitiveType | Ptr | Callback | Array | Ref | Cown;
   inline const auto wfType =
     wfBuiltinType | Dyn | ClassId | TypeId | Union | TupleType;
 

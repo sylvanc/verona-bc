@@ -72,6 +72,8 @@ namespace vbcc
       return ValueType::USize;
     if (ptype == Ptr)
       return ValueType::Ptr;
+    if (ptype == Callback)
+      return ValueType::Callback;
 
     assert(false);
     return ValueType::Invalid;

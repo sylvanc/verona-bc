@@ -3,17 +3,11 @@
 ## To Do
 
 FFI.
-- Run code before scheduler start and after scheduler end for initialization and cleanup.
-  - Needed for `uv`, but not for `openssl` 3+.
-  - Register a termination callback? Doesn't have to be a `libffi` closure, because we can call a byte code function.
+- Can `ffi::callback` interact with reference counting better?
+- `init` and `fini` in library imports.
 - Expose a version of `add_external` and `remove_external`.
-  - `uv` needs to be able to run code on these, in order to poke the event loop.
   - Allow registering a callback for this. Keep a list of them. Also doesn't have to be a `libffi` closure.
-- Create C callbacks with `libffi`. Expose this as a core interpreter mechanism.
-  - How do we manage this memory?
-  - Can we demand callbacks are isolated regions or immutable?
 - Platform dependent code for dealing with libraries?
-- Remove `vbci` dependency on `uv` and `openssl`.
 
 Reviews.
 - A Verona writing skill? `vc` project scaffold that adds the skill and a project-specific CLAUDE.md?

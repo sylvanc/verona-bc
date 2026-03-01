@@ -311,7 +311,6 @@ namespace vbci
 
       // Return dyn as the type id for function pointers.
       case ValueType::Function:
-      case ValueType::Callback:
         return DynId;
 
       // Return dyn as the type id for errors.

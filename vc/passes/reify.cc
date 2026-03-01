@@ -26,12 +26,40 @@ namespace vc
     {"usize", USize},
     {"f32", F32},
     {"f64", F64},
+  };
+
+  // Primitive types nested under _builtin::ffi.
+  const std::map<std::string_view, Node> ffi_primitive_types = {
     {"ptr", Ptr},
+    {"callback", Callback},
   };
 
   struct Reifier
   {
     Reifier() {}
+
+    // Check if a def's name is in the primitive or ffi_primitive maps.
+    bool is_any_primitive(const Node& def) const
+    {
+      auto name = (def / Ident)->location().view();
+      return primitive_types.find(name) != primitive_types.end() ||
+        ffi_primitive_types.find(name) != ffi_primitive_types.end();
+    }
+
+    // Check if a def is transitively under the _builtin scope.
+    bool is_under_builtin(const Node& def) const
+    {
+      auto parent = def->parent(ClassDef);
+
+      while (parent)
+      {
+        if (parent == builtin)
+          return true;
+        parent = parent->parent(ClassDef);
+      }
+
+      return false;
+    }
 
     void run(Node& top_)
     {
@@ -361,12 +389,13 @@ namespace vc
       if (is_new_key)
         map_order.push_back(def);
 
-      if (def->parent(ClassDef) == builtin)
+      if (is_under_builtin(def))
       {
         auto name = (def / Ident)->location().view();
 
         if (
           primitive_types.find(name) != primitive_types.end() ||
+          ffi_primitive_types.find(name) != ffi_primitive_types.end() ||
           wrapper_types.find(name) != wrapper_types.end())
         {
           // Primitives and wrappers: make_id produces index-free structural
@@ -561,8 +590,8 @@ namespace vc
           }
           else if (n == MakeCallback)
           {
-            reify_primitive(Ptr);
-            local_types[(n / LocalId)->location()] = clone(Ptr);
+            reify_primitive(Callback);
+            local_types[(n / LocalId)->location()] = clone(Callback);
 
             // Find the lambda's type and register its @callback method.
             // First check local_types (works when source was from New).
@@ -1208,6 +1237,7 @@ namespace vc
     // deduplicates and schedules via the worklist.
     void reify_primitive(const Node& type)
     {
+      // Check flat primitives (_builtin::name).
       for (auto& [k, v] : primitive_types)
       {
         if (type->type() != v->type())
@@ -1216,9 +1246,30 @@ namespace vc
         auto defs = builtin->look(Location(std::string(k)));
         assert(defs.size() == 1);
 
-        // Build a TypeName for shape checking.
         Node prim_name = TypeName
           << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+          << (NameElement << (Ident ^ std::string(k)) << TypeArgs);
+
+        find_or_push(defs.front(), {}, prim_name);
+        return;
+      }
+
+      // Check ffi primitives (_builtin::ffi::name).
+      for (auto& [k, v] : ffi_primitive_types)
+      {
+        if (type->type() != v->type())
+          continue;
+
+        auto ffi_defs = builtin->look(Location("ffi"));
+        assert(ffi_defs.size() == 1);
+        auto ffi_def = ffi_defs.front();
+
+        auto defs = ffi_def->lookdown(Location(std::string(k)));
+        assert(defs.size() == 1);
+
+        Node prim_name = TypeName
+          << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+          << (NameElement << (Ident ^ "ffi") << TypeArgs)
           << (NameElement << (Ident ^ std::string(k)) << TypeArgs);
 
         find_or_push(defs.front(), {}, prim_name);
@@ -1945,13 +1996,20 @@ namespace vc
 
     Node make_id(const Node& def, size_t index, const NodeMap<Node>& subst)
     {
-      if (def->parent(ClassDef) == builtin)
+      if (is_under_builtin(def) && (def == ClassDef))
       {
         // Check for a bare primitive type.
         auto find = primitive_types.find((def / Ident)->location().view());
 
         if (find != primitive_types.end())
           return find->second;
+
+        // Check for an ffi primitive type.
+        auto ffi_find =
+          ffi_primitive_types.find((def / Ident)->location().view());
+
+        if (ffi_find != ffi_primitive_types.end())
+          return ffi_find->second;
 
         // Check for a wrapper type (array[T], cown[T], ref[T]).
         auto wrap_find = wrapper_types.find((def / Ident)->location().view());

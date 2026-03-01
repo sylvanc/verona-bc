@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$891)
+            (localid 4:$895)
             (functionid 22:infer_call::main::0::0)
             (args)))
         (ret
-          (localid 4:$891)))))
+          (localid 4:$895)))))
   (func
     (functionid 22:infer_call::main::0::0)
     (params)
@@ -27,11 +27,11 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$80)
+            (localid 8:local$81)
             (i32)
             (int 1:1))
           (const
-            (localid 8:local$81)
+            (localid 8:local$82)
             (i32)
             (int 1:2))
           (call
@@ -40,10 +40,10 @@ typecheck
             (args
               (arg
                 (argmove)
-                (localid 8:local$80))
+                (localid 8:local$81))
               (arg
                 (argmove)
-                (localid 8:local$81)))))
+                (localid 8:local$82)))))
         (ret
           (localid 7:local$0)))))
   (primitive
@@ -68,12 +68,12 @@ typecheck
         (labelid 5:start)
         (body
           (lookup
-            (localid 8:local$78)
+            (localid 8:local$79)
             (localid 1:a)
             (methodid 7:+::2::0))
           (calldyn
+            (localid 8:local$80)
             (localid 8:local$79)
-            (localid 8:local$78)
             (args
               (arg
                 (argmove)
@@ -82,7 +82,7 @@ typecheck
                 (argmove)
                 (localid 1:b)))))
         (ret
-          (localid 8:local$79)))))
+          (localid 8:local$80)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -99,8 +99,8 @@ typecheck
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$176)
+            (localid 9:local$177)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$176))))))
+          (localid 9:local$177))))))

@@ -166,6 +166,7 @@ ident
       create = function
       f32 = classdef
       f64 = classdef
+      ffi = classdef
       i16 = classdef
       i32 = classdef
       i64 = classdef
@@ -176,7 +177,6 @@ ident
       isnt = function
       nomatch = classdef
       none = classdef
-      ptr = classdef
       ref = classdef
       string = classdef
       to_bool = classdef
@@ -191,6 +191,207 @@ ident
     (typeparams)
     (where)
     (classbody
+      (classdef
+        {
+          callback = classdef
+          create = function
+          ptr = classdef}
+        (none)
+        (ident 3:ffi)
+        (typeparams)
+        (where)
+        (classbody
+          (classdef
+            {
+              create = function
+              free = function
+              ptr = function}
+            (none)
+            (ident 8:callback)
+            (typeparams)
+            (where)
+            (classbody
+              (function
+                {
+                  T = typeparam
+                  callable = paramdef}
+                (rhs)
+                (ident 6:create)
+                (typeparams
+                  (typeparam
+                    (ident 1:T)))
+                (params
+                  (paramdef
+                    (ident 8:callable)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:callback)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))
+                    (body)))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ffi)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:callback)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (triplecolon
+                      (nameelement
+                        (ident 13:make_callback)
+                        (typeargs)))
+                    (exprseq
+                      (expr
+                        (localid 8:callable))))))
+              (function
+                {
+                  self = paramdef}
+                (rhs)
+                (ident 3:ptr)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:callback)
+                          (typeargs))))
+                    (body)))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ffi)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ptr)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (triplecolon
+                      (nameelement
+                        (ident 12:callback_ptr)
+                        (typeargs)))
+                    (exprseq
+                      (expr
+                        (localid 4:self))))))
+              (function
+                {
+                  self = paramdef}
+                (rhs)
+                (ident 4:free)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:callback)
+                          (typeargs))))
+                    (body)))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (triplecolon
+                      (nameelement
+                        (ident 13:free_callback)
+                        (typeargs)))
+                    (exprseq
+                      (expr
+                        (localid 4:self))))))))
+          (classdef
+            {
+              create = function}
+            (none)
+            (ident 3:ptr)
+            (typeparams)
+            (where)
+            (classbody
+              (function
+                {}
+                (rhs)
+                (ident 6:create)
+                (typeparams)
+                (params)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ffi)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ptr)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (new
+                      (newargs)))))))
+          (function
+            {}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:ffi)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs)))))))
       (classdef
         {}
         (shape)
@@ -16400,33 +16601,6 @@ ident
                     (ident 4:none)
                     (typeargs)))
                 (tuple))))))
-      (classdef
-        {
-          create = function}
-        (none)
-        (ident 3:ptr)
-        (typeparams)
-        (where)
-        (classbody
-          (function
-            {}
-            (rhs)
-            (ident 6:create)
-            (typeparams)
-            (params)
-            (type
-              (typename
-                (nameelement
-                  (ident 8:_builtin)
-                  (typeargs))
-                (nameelement
-                  (ident 3:ptr)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (new
-                  (newargs)))))))
       (classdef
         {
           * = function

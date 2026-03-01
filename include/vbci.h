@@ -405,6 +405,7 @@ namespace vbci
     F32,
     F64,
     Ptr,
+    Callback,
     Object,
     Array,
     Cown,
@@ -413,7 +414,6 @@ namespace vbci
     ArrayRef,
     CownRef,
     Function,
-    Callback,
     Error,
     Invalid,
   };
@@ -467,5 +467,5 @@ namespace vbci
     return static_cast<size_t>(c);
   }
 
-  inline const auto NumPrimitiveClasses = +ValueType::Ptr + 1;
+  inline const auto NumPrimitiveClasses = +ValueType::Callback + 1;
 }
