@@ -1,4 +1,4 @@
-#include "ffi.h"
+#include "../platform.h"
 
 #include "../array.h"
 #include "../program.h"
