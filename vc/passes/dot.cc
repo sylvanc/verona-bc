@@ -83,6 +83,15 @@ namespace vc
     {"newarray", {1, 1, NewArray}},
   };
 
+  // Global builtins: available outside _builtin (callback infrastructure).
+  const std::map<std::string_view, Builtin> global_builtins = {
+    {"make_callback", {0, 1, MakeCallback}},
+    {"callback_ptr", {0, 1, CallbackPtr}},
+    {"free_callback", {0, 1, FreeCallback}},
+    {"add_external", {0, 0, Nulop << AddExternal}},
+    {"remove_external", {0, 0, Nulop << RemoveExternal}},
+  };
+
   Node resolve_triplecolon(Node name, Node args)
   {
     if (name->size() != 1)
@@ -96,6 +105,24 @@ namespace vc
     auto find = builtins.find(id);
     if (find == builtins.end())
     {
+      // Check global builtins (available outside _builtin).
+      auto gfind = global_builtins.find(id);
+      if (gfind != global_builtins.end())
+      {
+        if (gfind->second.typeargs != ta_count)
+          return err(name, "Wrong number of type arguments");
+
+        if (gfind->second.args != arg_count)
+          return err(name, "Wrong number of arguments");
+
+        auto r = clone(gfind->second.ast);
+
+        for (auto& t : *ta)
+          r << (Type << *t);
+
+        return r << args;
+      }
+
       if (ta_count != 0)
         return err(name, "FFI calls can't have type arguments");
 

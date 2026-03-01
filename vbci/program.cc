@@ -2,7 +2,6 @@
 
 #include "array.h"
 #include "cown.h"
-#include "ffi/ffi.h"
 #include "thread.h"
 
 #include <dlfcn.h>
@@ -136,13 +135,11 @@ namespace vbci
       return -1;
 
     setup_argv(args);
-    start_loop();
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
     sched.run();
-    stop_loop();
 
     auto ret_val = ret.get_cown()->load();
     ret.dec<false>();

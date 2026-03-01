@@ -84,7 +84,8 @@ namespace vbcc
                              Sinh,     Cosh,     Tanh,
                              Asinh,    Acosh,    Atanh,
                              Bits,     Len,      MakePtr,
-                             Read,     SetRaise, Typetest}))
+                             Read,     SetRaise, Typetest,
+                             MakeCallback, CallbackPtr, FreeCallback}))
           {
             use(node / Rhs);
             def(node / LocalId);
@@ -107,7 +108,9 @@ namespace vbcc
                       Const_E,
                       Const_Pi,
                       Const_Inf,
-                      Const_NaN}))
+                      Const_NaN,
+                      AddExternal,
+                      RemoveExternal}))
           {
             def(node / LocalId);
           }

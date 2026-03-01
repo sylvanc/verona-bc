@@ -2366,6 +2366,21 @@ namespace vc
         auto dst = stmt / LocalId;
         env[dst->location()] = LocalTypeInfo::computed(primitive_type(F64));
       }
+      else if (stmt->in({MakeCallback, CallbackPtr}))
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(Ptr));
+      }
+      else if (stmt == FreeCallback)
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
+      }
+      else if (stmt->in({AddExternal, RemoveExternal}))
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
+      }
       else if (stmt == Call)
       {
         infer_call(stmt, env, top, lookup_stmts);

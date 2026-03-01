@@ -4,7 +4,7 @@
 #include "program.h"
 
 #include <CLI/CLI.hpp>
-#include <uv.h>
+#include <thread>
 
 int main(int argc, char** argv)
 {
@@ -16,7 +16,7 @@ int main(int argc, char** argv)
   std::filesystem::path file;
   app.add_option("path", file, "File to execute.")->required();
 
-  size_t num_threads = uv_available_parallelism();
+  size_t num_threads = std::thread::hardware_concurrency();
   app.add_option("-t,--threads", num_threads, "Scheduler threads.");
 
   std::string log_level;
@@ -32,7 +32,6 @@ int main(int argc, char** argv)
 
   try
   {
-    argv = uv_setup_args(argc, argv);
     app.parse(argc, argv);
   }
   catch (const CLI::ParseError& e)

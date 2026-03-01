@@ -12,7 +12,8 @@ set(SNMALLOC_BUILD_TESTING OFF CACHE INTERNAL "Turn off snmalloc tests")
 set(SNMALLOC_STATIC_LIBRARY_PREFIX OFF CACHE INTERNAL "")
 set(VERONA_RT_ONLY_HEADER_LIBRARY OFF CACHE INTERNAL "Verona RT header library")
 
-include(cmake/libffi.cmake)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBFFI REQUIRED IMPORTED_TARGET libffi)
 find_package(OpenSSL REQUIRED)
 
 # Used to provide
@@ -43,14 +44,6 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
-
-FetchContent_Declare(
-  libuv
-  GIT_REPOSITORY https://github.com/libuv/libuv
-  GIT_TAG        v1.51.0
-)
-
-FetchContent_MakeAvailable_ExcludeFromAll(libuv)
 
 # This isn't detecting correctly on WSL2.
 set(GIT_USE_STAT_MTIM 1)

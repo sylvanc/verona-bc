@@ -1598,6 +1598,17 @@ namespace vbcc
           // Math constants are F64.
           set_type(env, node / LocalId, Node(F64));
         }
+        else if (
+          node->type().in({AddExternal, RemoveExternal, FreeCallback}))
+        {
+          // These produce None.
+          set_type(env, node / LocalId, Node(None));
+        }
+        else if (node->type().in({MakeCallback, CallbackPtr}))
+        {
+          // MakeCallback/CallbackPtr produce Ptr.
+          set_type(env, node / LocalId, Node(Ptr));
+        }
         else if (node == GetRaise)
         {
           // GetRaise returns a U64 (raw frame ID).

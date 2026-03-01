@@ -21,6 +21,7 @@ namespace vbci
   inline const auto CurrentVersion = size_t(0);
   inline const auto MainFuncId = size_t(0);
   inline const auto FinalMethodId = size_t(0);
+  inline const auto CallbackMethodId = size_t(1);
   inline const auto DynId = uint32_t(-1);
 
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
@@ -360,6 +361,29 @@ namespace vbci
     Const_Pi,
     Const_Inf,
     Const_NaN,
+
+    // Creates a callback closure from a sendable lambda.
+    // Arg0 = dst (callback handle, ptr).
+    // Arg1 = src (lambda object).
+    MakeCallback,
+
+    // Reads the C function pointer from a callback handle.
+    // Arg0 = dst (C function pointer, ptr).
+    // Arg1 = src (callback handle).
+    CallbackPtr,
+
+    // Frees a callback closure.
+    // Arg0 = dst (none).
+    // Arg1 = src (callback handle).
+    FreeCallback,
+
+    // Adds an external event source to keep the scheduler alive.
+    // Arg0 = dst (none).
+    AddExternal,
+
+    // Removes an external event source to allow the scheduler to exit.
+    // Arg0 = dst (none).
+    RemoveExternal,
   };
 
   enum class ValueType : uint8_t

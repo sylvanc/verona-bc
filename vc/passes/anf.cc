@@ -844,6 +844,22 @@ namespace vc
                        << (LocalId ^ id);
           },
 
+        // Callback operations (single arg, already a LocalId after earlier
+        // rules extract expressions to locals).
+        In(Expr, Lhs) *
+            T(MakeCallback, CallbackPtr, FreeCallback)[Lhs]
+            << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            auto rhs = _(Rhs);
+            auto op = _(Lhs)->type();
+            return Seq
+              << (Lift << Body
+                       << (NodeDef::create(op)
+                           << (LocalId ^ id) << rhs))
+              << (LocalId ^ id);
+          },
+
         // FFI call.
         In(Expr, Lhs) * T(FFI) << (T(SymbolId)[SymbolId] * T(Args)[Args]) >>
           [](Match& _) {

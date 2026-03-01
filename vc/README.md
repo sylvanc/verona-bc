@@ -2,6 +2,19 @@
 
 ## To Do
 
+FFI.
+- Run code before scheduler start and after scheduler end for initialization and cleanup.
+  - Needed for `uv`, but not for `openssl` 3+.
+  - Register a termination callback? Doesn't have to be a `libffi` closure, because we can call a byte code function.
+- Expose a version of `add_external` and `remove_external`.
+  - `uv` needs to be able to run code on these, in order to poke the event loop.
+  - Allow registering a callback for this. Keep a list of them. Also doesn't have to be a `libffi` closure.
+- Create C callbacks with `libffi`. Expose this as a core interpreter mechanism.
+  - How do we manage this memory?
+  - Can we demand callbacks are isolated regions or immutable?
+- Platform dependent code for dealing with libraries?
+- Remove `vbci` dependency on `uv` and `openssl`.
+
 Reviews.
 - A Verona writing skill? `vc` project scaffold that adds the skill and a project-specific CLAUDE.md?
 - Can we review and improve compiler error messages?
@@ -27,18 +40,6 @@ Semantics:
 - `final` functions.
 
 Packages:
-- Stop using `CMake_FetchContent` for `libffi`.
-```
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBFFI REQUIRED libffi)
-
-target_include_directories(myapp PRIVATE ${LIBFFI_INCLUDE_DIRS})
-target_link_libraries(myapp PRIVATE ${LIBFFI_LIBRARIES})
-```
-- Remove `vbci` dependency on `uv` and `openssl`, load those from packages.
-  - `openssl` 3+ no longer needs initialization.
-  - `uv` needs to be initialized (before the scheduler starts) and cleaned up (after the scheduler finishes).
-  - Need platform dependent code for dealing with libraries.
 - CLI.
   - Needs a map, so do an RB tree or hash map.
   - Needs arguments, environment variables.

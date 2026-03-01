@@ -106,7 +106,12 @@ namespace vbcc
       WhenDyn,
       GetRaise,
       SetRaise,
-      Typetest);
+      Typetest,
+      MakeCallback,
+      CallbackPtr,
+      FreeCallback,
+      AddExternal,
+      RemoveExternal);
 
   Parse parser();
   PassDef statements();

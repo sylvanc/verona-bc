@@ -285,6 +285,9 @@ namespace vbcc
 
     // Reserve a method ID for `@final`.
     method_ids.insert({ST::di().string("@final"), FinalMethodId});
+
+    // Reserve a method ID for `@callback`.
+    method_ids.insert({ST::di().string("@callback"), CallbackMethodId});
   }
 
   void Bytecode::add_path(const std::filesystem::path& path)
@@ -1231,6 +1234,26 @@ namespace vbcc
           else if (stmt == Const_NaN)
           {
             code << uleb(+Op::Const_NaN) << dst(stmt);
+          }
+          else if (stmt == MakeCallback)
+          {
+            code << uleb(+Op::MakeCallback) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == CallbackPtr)
+          {
+            code << uleb(+Op::CallbackPtr) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == FreeCallback)
+          {
+            code << uleb(+Op::FreeCallback) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == AddExternal)
+          {
+            code << uleb(+Op::AddExternal) << dst(stmt);
+          }
+          else if (stmt == RemoveExternal)
+          {
+            code << uleb(+Op::RemoveExternal) << dst(stmt);
           }
           else if (stmt == Typetest)
           {

@@ -241,8 +241,8 @@ namespace vc
                 // Otherwise, it's a list, add multiple types.
                 assert(params->front() == List);
 
-                for (auto& p : *params)
-                  ffiparams << (Type << *p->front());
+                for (auto& p : *params->front())
+                  ffiparams << (Type << *p);
               }
             }
 

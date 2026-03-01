@@ -415,27 +415,33 @@ namespace vc
       if ((r.def / Shape) == Shape)
         return;
 
-      if (r.id != ClassId)
+      // Skip creation if already reified (e.g., early call from
+      // reify_make_callback). Method invocation registration below
+      // still runs.
+      if (!r.reification)
       {
-        // Primitive or wrapper type.
-        r.reification = Primitive << clone(r.id) << Methods;
-      }
-      else
-      {
-        // User-defined class.
-        Node fields = Fields;
-
-        for (auto& f : *(r.def / ClassBody))
+        if (r.id != ClassId)
         {
-          if (f != FieldDef)
-            continue;
-
-          fields
-            << (Field << (FieldId ^ (f / Ident))
-                      << reify_type(f / Type, r.subst));
+          // Primitive or wrapper type.
+          r.reification = Primitive << clone(r.id) << Methods;
         }
+        else
+        {
+          // User-defined class.
+          Node fields = Fields;
 
-        r.reification = Class << r.id << fields << Methods;
+          for (auto& f : *(r.def / ClassBody))
+          {
+            if (f != FieldDef)
+              continue;
+
+            fields
+              << (Field << (FieldId ^ (f / Ident))
+                        << reify_type(f / Type, r.subst));
+          }
+
+          r.reification = Class << r.id << fields << Methods;
+        }
       }
 
       // Register existing method invocations that target this class.
@@ -552,6 +558,146 @@ namespace vc
           {
             reify_primitive(Ptr);
             local_types[(n / LocalId)->location()] = clone(Ptr);
+          }
+          else if (n == MakeCallback)
+          {
+            reify_primitive(Ptr);
+            local_types[(n / LocalId)->location()] = clone(Ptr);
+
+            // Find the lambda's type and register its @callback method.
+            // First check local_types (works when source was from New).
+            auto src_loc = (n / Rhs)->location();
+            auto src_it = local_types.find(src_loc);
+            Node class_id;
+
+            if (src_it != local_types.end() && (src_it->second == ClassId))
+            {
+              class_id = src_it->second;
+            }
+            else
+            {
+              // local_types doesn't have it (e.g., assigned via Call).
+              // Trace back through Copy/Move to find the original source.
+              auto body_node = n->parent();
+
+              // Pass 1: follow Copy/Move chain to root source.
+              auto trace_loc = src_loc;
+              bool changed = true;
+
+              while (changed)
+              {
+                changed = false;
+
+                for (auto& stmt : *body_node)
+                {
+                  if (&stmt == &n)
+                    break;
+
+                  if (
+                    stmt->in({Copy, Move}) &&
+                    ((stmt / LocalId)->location() == trace_loc))
+                  {
+                    trace_loc = (stmt / Rhs)->location();
+                    changed = true;
+                  }
+                }
+              }
+
+              // Pass 2: find the definition of the root source.
+              Node call_enc;
+
+              for (auto& stmt : *body_node)
+              {
+                if (&stmt == &n)
+                  break;
+
+                if (
+                  stmt->in({New, Stack}) &&
+                  ((stmt / LocalId)->location() == trace_loc))
+                {
+                  class_id = stmt / ClassId;
+                }
+                else if (
+                  (stmt == Call) &&
+                  ((stmt / LocalId)->location() == trace_loc))
+                {
+                  // Find the Function reification for this Call, then
+                  // trigger reification of its enclosing ClassDef.
+                  auto funcid_loc =
+                    (stmt / FunctionId)->location().view();
+                  NodeMap<Node> class_subst;
+
+                  for (auto& key : map_order)
+                  {
+                    if (key != Function)
+                      continue;
+
+                    for (auto& reif : map[key])
+                    {
+                      if (
+                        reif.id &&
+                        (reif.id->location().view() == funcid_loc))
+                      {
+                        auto enc = reif.def->parent(ClassDef);
+
+                        if (enc)
+                        {
+                          // Extract the class's TypeParam substitutions
+                          // from the function's substitution context.
+                          for (auto& tp : *(enc / TypeParams))
+                          {
+                            auto sit = reif.subst.find(tp);
+
+                            if (sit != reif.subst.end())
+                              class_subst[sit->first] =
+                                clone(sit->second);
+                          }
+
+                          call_enc = enc;
+                        }
+
+                        break;
+                      }
+                    }
+
+                    if (call_enc)
+                      break;
+                  }
+
+                  // Trigger class reification AFTER the map_order loop
+                  // to avoid iterator invalidation (find_or_push may
+                  // append to map_order).
+                  if (call_enc)
+                    class_id =
+                      find_or_push(call_enc, std::move(class_subst));
+                }
+              }
+            }
+
+            if (class_id)
+              reify_make_callback(n, class_id);
+            else
+              n->parent()->replace(
+                n,
+                err(n, "make_callback: cannot determine lambda type"));
+          }
+          else if (n->in({CallbackPtr, FreeCallback}))
+          {
+            if (n == CallbackPtr)
+            {
+              reify_primitive(Ptr);
+              local_types[(n / LocalId)->location()] = clone(Ptr);
+            }
+            else
+            {
+              reify_primitive(None);
+              local_types[(n / LocalId)->location()] = clone(None);
+            }
+          }
+          else if (n->in({AddExternal, RemoveExternal}))
+          {
+            reify_primitive(None);
+            local_types[(n / LocalId)->location()] = clone(None);
           }
           else if (n->in({Copy, Move}))
           {
@@ -1378,6 +1524,105 @@ namespace vc
         if (!already)
           methods << (Method << clone(mid_node) << funcid);
       }
+    }
+
+    void reify_make_callback(Node& n, const Node& class_id)
+    {
+      // Find the Reification for the lambda's class.
+      auto class_id_loc = class_id->location().view();
+      Reification* target_r = nullptr;
+
+      for (auto& key : map_order)
+      {
+        if (key != ClassDef)
+          continue;
+
+        for (auto& r : map[key])
+        {
+          if (r.id && (r.id->location().view() == class_id_loc))
+          {
+            target_r = &r;
+            break;
+          }
+        }
+
+        if (target_r)
+          break;
+      }
+
+      if (!target_r)
+        return;
+
+      // Ensure the class has been reified (it may have just been
+      // added to the worklist by find_or_push and not yet processed).
+      if (!target_r->reification)
+        reify_class(*target_r);
+
+      // Scan the ClassDef for a unique non-generic `apply` method.
+      Node found_func;
+      size_t match_count = 0;
+      bool has_generic = false;
+
+      for (auto& f : *(target_r->def / ClassBody))
+      {
+        if (f != Function)
+          continue;
+
+        if ((f / Ident)->location().view() != "apply")
+          continue;
+
+        if ((f / Lhs)->type() != Rhs)
+          continue;
+
+        if (!((f / TypeParams)->empty()))
+        {
+          has_generic = true;
+          continue;
+        }
+
+        found_func = f;
+        match_count++;
+      }
+
+      if (match_count == 0)
+      {
+        auto msg = has_generic ?
+          "make_callback requires a non-generic 'apply' method" :
+          "make_callback requires a type with an 'apply' method";
+        n->parent()->replace(n, err(n, msg));
+        return;
+      }
+
+      if (match_count > 1)
+      {
+        n->parent()->replace(
+          n,
+          err(n, "make_callback requires exactly one 'apply' overload"));
+        return;
+      }
+
+      // Reify the apply function with the class's substitution context.
+      auto funcid = find_or_push(found_func, target_r->subst);
+
+      // Register the @callback Method on the class.
+      auto methods = target_r->reification / Methods;
+      auto mid_node = MethodId ^ "@callback";
+      bool already = false;
+
+      for (auto& existing : *methods)
+      {
+        if (
+          ((existing / MethodId)->location().view() == "@callback") &&
+          ((existing / FunctionId)->location().view() ==
+           funcid->location().view()))
+        {
+          already = true;
+          break;
+        }
+      }
+
+      if (!already)
+        methods << (Method << clone(mid_node) << funcid);
     }
 
     void reify_ffi(Node& n, Reification& r)
