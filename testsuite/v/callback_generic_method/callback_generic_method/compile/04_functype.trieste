@@ -1,103 +1,61 @@
 vc
-sugar
+functype
 (top
   {
     _builtin = classdef
-    callback_generic_apply = classdef}
+    callback_generic_method = classdef}
   (classdef
     {
       create = function
-      genapply = classdef
-      main = function
-      run_test = function}
+      genmethod = classdef
+      main = function}
     (none)
-    (ident 22:callback_generic_apply)
+    (ident 23:callback_generic_method)
     (typeparams)
     (where)
     (classbody
-      (lib
-        (string 0:)
-        (symbols
-          (symbol
-            (symbolid 19:call_fn_ptr_ret_u64)
-            (string 19:call_fn_ptr_ret_u64)
-            (string 0:)
-            (none)
-            (ffiparams
-              (type
-                (typename
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:ptr)
-                    (typeargs))))
-              (type
-                (typename
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 3:u64)
-                    (typeargs)))))
-            (type
-              (typename
-                (nameelement
-                  (ident 8:_builtin)
-                  (typeargs))
-                (nameelement
-                  (ident 3:u64)
-                  (typeargs)))))))
       (classdef
         {
-          T = typeparam
           apply = function
           create = function}
         (none)
-        (ident 8:genapply)
-        (typeparams
-          (typeparam
-            (ident 1:T)))
+        (ident 9:genmethod)
+        (typeparams)
         (where)
         (classbody
           (function
             {
+              T = typeparam
               self = paramdef
               x = paramdef}
             (rhs)
             (ident 5:apply)
-            (typeparams)
+            (typeparams
+              (typeparam
+                (ident 1:T)))
             (params
               (paramdef
                 (ident 4:self)
                 (type
                   (typename
                     (nameelement
-                      (ident 22:callback_generic_apply)
+                      (ident 23:callback_generic_method)
                       (typeargs))
                     (nameelement
-                      (ident 8:genapply)
-                      (typeargs
-                        (type
-                          (typename
-                            (nameelement
-                              (ident 22:callback_generic_apply)
-                              (typeargs))
-                            (nameelement
-                              (ident 8:genapply)
-                              (typeargs))
-                            (nameelement
-                              (ident 1:T)
-                              (typeargs)))))))))
+                      (ident 9:genmethod)
+                      (typeargs)))))
               (paramdef
                 (ident 1:x)
                 (type
                   (typename
                     (nameelement
-                      (ident 22:callback_generic_apply)
+                      (ident 23:callback_generic_method)
                       (typeargs))
                     (nameelement
-                      (ident 8:genapply)
+                      (ident 9:genmethod)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:apply)
                       (typeargs))
                     (nameelement
                       (ident 1:T)
@@ -105,10 +63,13 @@ sugar
             (type
               (typename
                 (nameelement
-                  (ident 22:callback_generic_apply)
+                  (ident 23:callback_generic_method)
                   (typeargs))
                 (nameelement
-                  (ident 8:genapply)
+                  (ident 9:genmethod)
+                  (typeargs))
+                (nameelement
+                  (ident 5:apply)
                   (typeargs))
                 (nameelement
                   (ident 1:T)
@@ -126,22 +87,11 @@ sugar
             (type
               (typename
                 (nameelement
-                  (ident 22:callback_generic_apply)
+                  (ident 23:callback_generic_method)
                   (typeargs))
                 (nameelement
-                  (ident 8:genapply)
-                  (typeargs
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 22:callback_generic_apply)
-                          (typeargs))
-                        (nameelement
-                          (ident 8:genapply)
-                          (typeargs))
-                        (nameelement
-                          (ident 1:T)
-                          (typeargs))))))))
+                  (ident 9:genmethod)
+                  (typeargs))))
             (where)
             (body
               (expr
@@ -150,11 +100,9 @@ sugar
       (function
         {
           cb = var
-          fn_ptr = var
-          obj = var
-          result = var}
+          obj = var}
         (rhs)
-        (ident 8:run_test)
+        (ident 4:main)
         (typeparams)
         (params)
         (type
@@ -163,7 +111,7 @@ sugar
               (ident 8:_builtin)
               (typeargs))
             (nameelement
-              (ident 3:u64)
+              (ident 3:i32)
               (typeargs))))
         (where)
         (body
@@ -177,19 +125,11 @@ sugar
               (expr
                 (funcname
                   (nameelement
-                    (ident 22:callback_generic_apply)
+                    (ident 23:callback_generic_method)
                     (typeargs))
                   (nameelement
-                    (ident 8:genapply)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:u64)
-                            (typeargs))))))
+                    (ident 9:genmethod)
+                    (typeargs))
                   (nameelement
                     (ident 6:create)
                     (typeargs))))))
@@ -209,38 +149,6 @@ sugar
                   (expr
                     (localid 3:obj))))))
           (expr
-            (=
-              (expr
-                (var
-                  (ident 6:fn_ptr)
-                  (type
-                    (typevar))))
-              (expr
-                (triplecolon
-                  (nameelement
-                    (ident 12:callback_ptr)
-                    (typeargs)))
-                (exprseq
-                  (expr
-                    (localid 2:cb))))))
-          (expr
-            (=
-              (expr
-                (var
-                  (ident 6:result)
-                  (type
-                    (typevar))))
-              (expr
-                (triplecolon
-                  (nameelement
-                    (ident 19:call_fn_ptr_ret_u64)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (localid 6:fn_ptr))
-                  (expr
-                    (int 2:42))))))
-          (expr
             (triplecolon
               (nameelement
                 (ident 13:free_callback)
@@ -249,73 +157,7 @@ sugar
               (expr
                 (localid 2:cb))))
           (expr
-            (localid 6:result))))
-      (function
-        {
-          r = var
-          result = var}
-        (rhs)
-        (ident 4:main)
-        (typeparams)
-        (params)
-        (type
-          (typename
-            (nameelement
-              (ident 8:_builtin)
-              (typeargs))
-            (nameelement
-              (ident 3:i32)
-              (typeargs))))
-        (where)
-        (body
-          (expr
-            (=
-              (expr
-                (var
-                  (ident 1:r)
-                  (type
-                    (typevar))))
-              (expr
-                (int 1:0))))
-          (expr
-            (=
-              (expr
-                (var
-                  (ident 6:result)
-                  (type
-                    (typevar))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 22:callback_generic_apply)
-                    (typeargs))
-                  (nameelement
-                    (ident 8:run_test)
-                    (typeargs)))
-                (tuple))))
-          (expr
-            (if
-              (expr
-                (localid 6:result)
-                (methodname
-                  (symbolid 2:!=)
-                  (typeargs))
-                (int 2:42))
-              (block
-                {}
-                (body
-                  (expr
-                    (=
-                      (expr
-                        (localid 1:r))
-                      (expr
-                        (localid 1:r)
-                        (methodname
-                          (symbolid 1:+)
-                          (typeargs))
-                        (int 1:1))))))))
-          (expr
-            (localid 1:r))))
+            (int 1:0))))
       (function
         {}
         (rhs)
@@ -325,7 +167,7 @@ sugar
         (type
           (typename
             (nameelement
-              (ident 22:callback_generic_apply)
+              (ident 23:callback_generic_method)
               (typeargs))))
         (where)
         (body

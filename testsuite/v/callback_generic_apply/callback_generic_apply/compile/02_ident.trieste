@@ -8,12 +8,46 @@ ident
     {
       create = function
       genapply = classdef
-      main = function}
+      main = function
+      run_test = function}
     (none)
     (ident 22:callback_generic_apply)
     (typeparams)
     (where)
     (classbody
+      (lib
+        (string 0:)
+        (symbols
+          (symbol
+            (symbolid 19:call_fn_ptr_ret_u64)
+            (string 19:call_fn_ptr_ret_u64)
+            (string 0:)
+            (none)
+            (ffiparams
+              (type
+                (typename
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:ptr)
+                    (typeargs))))
+              (type
+                (typename
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:u64)
+                    (typeargs)))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:u64)
+                  (typeargs)))))))
       (classdef
         {
           T = typeparam
@@ -118,9 +152,11 @@ ident
       (function
         {
           cb = var
-          obj = var}
+          fn_ptr = var
+          obj = var
+          result = var}
         (rhs)
-        (ident 4:main)
+        (ident 8:run_test)
         (typeparams)
         (params)
         (type
@@ -129,7 +165,7 @@ ident
               (ident 8:_builtin)
               (typeargs))
             (nameelement
-              (ident 3:i32)
+              (ident 3:u64)
               (typeargs))))
         (where)
         (body
@@ -154,7 +190,7 @@ ident
                             (ident 8:_builtin)
                             (typeargs))
                           (nameelement
-                            (ident 3:i32)
+                            (ident 3:u64)
                             (typeargs))))))
                   (nameelement
                     (ident 6:create)
@@ -175,6 +211,38 @@ ident
                   (expr
                     (localid 3:obj))))))
           (expr
+            (=
+              (expr
+                (var
+                  (ident 6:fn_ptr)
+                  (type
+                    (typevar))))
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 12:callback_ptr)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (localid 2:cb))))))
+          (expr
+            (=
+              (expr
+                (var
+                  (ident 6:result)
+                  (type
+                    (typevar))))
+              (expr
+                (triplecolon
+                  (nameelement
+                    (ident 19:call_fn_ptr_ret_u64)
+                    (typeargs)))
+                (tuple
+                  (expr
+                    (localid 6:fn_ptr))
+                  (expr
+                    (int 2:42))))))
+          (expr
             (triplecolon
               (nameelement
                 (ident 13:free_callback)
@@ -183,7 +251,73 @@ ident
               (expr
                 (localid 2:cb))))
           (expr
-            (int 1:0))))
+            (localid 6:result))))
+      (function
+        {
+          r = var
+          result = var}
+        (rhs)
+        (ident 4:main)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))
+            (nameelement
+              (ident 3:i32)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (=
+              (expr
+                (var
+                  (ident 1:r)
+                  (type
+                    (typevar))))
+              (expr
+                (int 1:0))))
+          (expr
+            (=
+              (expr
+                (var
+                  (ident 6:result)
+                  (type
+                    (typevar))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 22:callback_generic_apply)
+                    (typeargs))
+                  (nameelement
+                    (ident 8:run_test)
+                    (typeargs)))
+                (tuple))))
+          (expr
+            (if
+              (expr
+                (localid 6:result)
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (int 2:42))
+              (block
+                {}
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (localid 1:r))
+                      (expr
+                        (localid 1:r)
+                        (methodname
+                          (symbolid 1:+)
+                          (typeargs))
+                        (int 1:1))))))))
+          (expr
+            (localid 1:r))))
       (function
         {}
         (rhs)

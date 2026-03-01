@@ -5,39 +5,19 @@ parse
   (directory
     (file
       (group
-        (use)
-        (brace
-          (group
-            (ident 19:call_fn_ptr_ret_u64)
-            (=)
-            (string 19:call_fn_ptr_ret_u64)
-            (paren
-              (list
-                (group
-                  (ident 3:ptr))
-                (group
-                  (ident 3:u64))))
-            (:)
-            (ident 3:u64))
-          (group
-            (semi))))
-      (group
-        (ident 8:genapply)
-        (bracket
-          (group
-            (ident 1:T)))
+        (ident 9:genmethod)
         (brace
           (group
             (ident 5:apply)
+            (bracket
+              (group
+                (ident 1:T)))
             (paren
               (list
                 (group
                   (ident 4:self)
                   (:)
-                  (ident 8:genapply)
-                  (bracket
-                    (group
-                      (ident 1:T))))
+                  (ident 9:genmethod))
                 (group
                   (ident 1:x)
                   (:)
@@ -48,19 +28,16 @@ parse
               (group
                 (ident 1:x))))))
       (group
-        (ident 8:run_test)
+        (ident 4:main)
         (paren)
         (:)
-        (ident 3:u64)
+        (ident 3:i32)
         (brace
           (group
             (var)
             (ident 3:obj)
             (=)
-            (ident 8:genapply)
-            (bracket
-              (group
-                (ident 3:u64))))
+            (ident 9:genmethod))
           (group
             (semi))
           (group
@@ -75,31 +52,6 @@ parse
           (group
             (semi))
           (group
-            (var)
-            (ident 6:fn_ptr)
-            (=)
-            (triplecolon)
-            (ident 12:callback_ptr)
-            (paren
-              (group
-                (ident 2:cb))))
-          (group
-            (semi))
-          (group
-            (var)
-            (ident 6:result)
-            (=)
-            (triplecolon)
-            (ident 19:call_fn_ptr_ret_u64)
-            (paren
-              (list
-                (group
-                  (ident 6:fn_ptr))
-                (group
-                  (int 2:42)))))
-          (group
-            (semi))
-          (group
             (triplecolon)
             (ident 13:free_callback)
             (paren
@@ -108,44 +60,7 @@ parse
           (group
             (semi))
           (group
-            (ident 6:result))))
-      (group
-        (ident 4:main)
-        (paren)
-        (:)
-        (ident 3:i32)
-        (brace
-          (group
-            (var)
-            (ident 1:r)
-            (=)
-            (int 1:0))
-          (group
-            (semi))
-          (group
-            (var)
-            (ident 6:result)
-            (=)
-            (ident 22:callback_generic_apply)
-            (doublecolon)
-            (ident 8:run_test)
-            (paren))
-          (group
-            (semi))
-          (group
-            (if)
-            (ident 6:result)
-            (symbolid 2:!=)
-            (int 2:42)
-            (brace
-              (group
-                (ident 1:r)
-                (=)
-                (ident 1:r)
-                (symbolid 1:+)
-                (int 1:1))))
-          (group
-            (ident 1:r))))))
+            (int 1:0))))))
   (directory
     (file
       (group

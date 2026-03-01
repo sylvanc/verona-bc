@@ -12,18 +12,115 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 4:$893)
+            (localid 4:$911)
             (functionid 34:callback_generic_apply::main::0::0)
             (args)))
         (ret
-          (localid 4:$893)))))
+          (localid 4:$911)))))
   (func
     (functionid 34:callback_generic_apply::main::0::0)
     (params)
     (i32)
     (vars
+      (localid 1:r)
+      (localid 6:result)
+      (localid 7:local$5))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 7:local$3)
+            (i32)
+            (int 1:0))
+          (move
+            (localid 1:r)
+            (localid 7:local$3))
+          (call
+            (localid 7:local$4)
+            (functionid 38:callback_generic_apply::run_test::0::0)
+            (args))
+          (move
+            (localid 6:result)
+            (localid 7:local$4))
+          (call
+            (localid 7:local$5)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 8:local$86)
+            (u64)
+            (int 2:42))
+          (lookup
+            (localid 9:local$469)
+            (localid 6:result)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$470)
+            (localid 9:local$469)
+            (args
+              (arg
+                (argmove)
+                (localid 6:result))
+              (arg
+                (argmove)
+                (localid 8:local$86)))))
+        (cond
+          (localid 9:local$470)
+          (labelid 7:body$84)
+          (labelid 7:join$85)))
+      (label
+        (labelid 7:body$84)
+        (body
+          (const
+            (localid 8:local$87)
+            (i32)
+            (int 1:1))
+          (lookup
+            (localid 9:local$471)
+            (localid 1:r)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$472)
+            (localid 9:local$471)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:r))
+              (arg
+                (argmove)
+                (localid 8:local$87))))
+          (move
+            (localid 9:local$858)
+            (localid 1:r))
+          (move
+            (localid 1:r)
+            (localid 9:local$472)))
+        (jump
+          (labelid 7:join$85)))
+      (label
+        (labelid 7:join$85)
+        (body)
+        (ret
+          (localid 1:r)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (func
+    (functionid 38:callback_generic_apply::run_test::0::0)
+    (params)
+    (u64)
+    (vars
       (localid 3:obj)
-      (localid 2:cb))
+      (localid 2:cb)
+      (localid 6:fn_ptr)
+      (localid 6:result))
     (labels
       (label
         (labelid 5:start)
@@ -36,22 +133,111 @@ liveness
             (localid 3:obj)
             (localid 7:local$1))
           (makecallback
-            (localid 9:local$455)
+            (localid 9:local$463)
             (localid 3:obj))
           (move
             (localid 2:cb)
-            (localid 9:local$455))
-          (freecallback
-            (localid 9:local$456)
+            (localid 9:local$463))
+          (callbackptr
+            (localid 9:local$464)
             (localid 2:cb))
+          (move
+            (localid 6:fn_ptr)
+            (localid 9:local$464))
           (const
+            (localid 8:local$83)
+            (u64)
+            (int 2:42))
+          (ffi
             (localid 7:local$2)
-            (i32)
-            (int 1:0)))
+            (symbolid 19:call_fn_ptr_ret_u64)
+            (args
+              (arg
+                (argmove)
+                (localid 6:fn_ptr))
+              (arg
+                (argmove)
+                (localid 8:local$83))))
+          (move
+            (localid 6:result)
+            (localid 7:local$2))
+          (freecallback
+            (localid 9:local$466)
+            (localid 2:cb)))
         (ret
-          (localid 7:local$2)))))
+          (localid 6:result)))))
+  (func
+    (functionid 31:_builtin::nomatch::create::0::0)
+    (params)
+    (classid 20:_builtin::nomatch::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$49)
+            (classid 20:_builtin::nomatch::0)
+            (args)))
+        (ret
+          (localid 8:local$49)))))
   (primitive
-    (i32)
+    (u64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::u64::!=::2::0))))
+  (func
+    (functionid 23:_builtin::u64::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$390)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$390)))))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0))))
+  (func
+    (functionid 24:_builtin::bool::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$111)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$111)))))
+  (class
+    (classid 20:_builtin::nomatch::0)
+    (fields)
     (methods))
   (func
     (functionid 46:callback_generic_apply::genapply::create::0::0)
@@ -86,8 +272,8 @@ liveness
         (classid 35:callback_generic_apply::genapply::0))
       (param
         (localid 1:x)
-        (i32)))
-    (i32)
+        (u64)))
+    (u64)
     (vars)
     (labels
       (label
@@ -97,4 +283,58 @@ liveness
           (localid 1:x)))))
   (primitive
     (none)
-    (methods)))
+    (methods))
+  (func
+    (functionid 23:_builtin::i32::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$193)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$193)))))
+  (func
+    (functionid 22:_builtin::i32::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$182)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$182)))))
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 19:call_fn_ptr_ret_u64)
+        (string 19:call_fn_ptr_ret_u64)
+        (string 0:)
+        (none)
+        (ffiparams
+          (ptr)
+          (u64))
+        (u64)))))
