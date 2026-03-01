@@ -145,7 +145,7 @@ typecheck
           (lookup
             (localid 8:local$85)
             (localid 2:cb)
-            (methodid 9:ptr::1::0))
+            (methodid 11:apply::1::0))
           (calldyn
             (localid 8:local$86)
             (localid 8:local$85)
@@ -233,7 +233,10 @@ typecheck
     (methods
       (method
         (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))))
+        (functionid 24:_builtin::bool::!=::2::0))
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 27:_builtin::bool::apply::1::0))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -291,6 +294,20 @@ typecheck
             (localid 8:callable)))
         (ret
           (localid 9:local$477)))))
+  (func
+    (functionid 27:_builtin::bool::apply::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:self)))))
   (primitive
     (ptr)
     (methods))
@@ -298,8 +315,8 @@ typecheck
     (callback)
     (methods
       (method
-        (methodid 9:ptr::1::0)
-        (functionid 34:_builtin::ffi::callback::ptr::1::0))
+        (methodid 11:apply::1::0)
+        (functionid 36:_builtin::ffi::callback::apply::1::0))
       (method
         (methodid 10:free::1::0)
         (functionid 35:_builtin::ffi::callback::free::1::0))))
@@ -328,7 +345,7 @@ typecheck
         (ret
           (localid 1:x)))))
   (func
-    (functionid 34:_builtin::ffi::callback::ptr::1::0)
+    (functionid 36:_builtin::ffi::callback::apply::1::0)
     (params
       (param
         (localid 4:self)

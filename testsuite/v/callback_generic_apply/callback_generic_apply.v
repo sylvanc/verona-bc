@@ -15,7 +15,7 @@ run_test(): u64
 {
   var obj = genapply[u64];
   var cb = ffi::callback(obj);
-  var fn_ptr = cb.ptr;
+  var fn_ptr = cb();
   var result = :::call_fn_ptr_ret_u64(fn_ptr, 42);
   cb.free;
   result

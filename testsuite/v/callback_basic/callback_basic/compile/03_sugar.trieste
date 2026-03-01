@@ -196,9 +196,7 @@ sugar
                     (typevar))))
               (expr
                 (localid 2:cb)
-                (dot
-                  (ident 3:ptr)
-                  (typeargs)))))
+                (tuple))))
           (expr
             (=
               (expr
@@ -353,9 +351,9 @@ sugar
         (classbody
           (classdef
             {
+              apply = function
               create = function
-              free = function
-              ptr = function}
+              free = function}
             (none)
             (ident 8:callback)
             (typeparams)
@@ -415,7 +413,7 @@ sugar
                 {
                   self = paramdef}
                 (rhs)
-                (ident 3:ptr)
+                (ident 5:apply)
                 (typeparams)
                 (params
                   (paramdef

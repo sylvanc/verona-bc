@@ -145,7 +145,7 @@ validids
           (lookup
             (localid 8:local$89)
             (localid 2:cb)
-            (methodid 9:ptr::1::0))
+            (methodid 11:apply::1::0))
           (calldyn
             (localid 8:local$90)
             (localid 8:local$89)
@@ -236,7 +236,10 @@ validids
     (methods
       (method
         (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))))
+        (functionid 24:_builtin::bool::!=::2::0))
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 27:_builtin::bool::apply::1::0))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -294,6 +297,20 @@ validids
             (localid 8:callable)))
         (ret
           (localid 9:local$481)))))
+  (func
+    (functionid 27:_builtin::bool::apply::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:self)))))
   (primitive
     (ptr)
     (methods))
@@ -301,8 +318,8 @@ validids
     (callback)
     (methods
       (method
-        (methodid 9:ptr::1::0)
-        (functionid 34:_builtin::ffi::callback::ptr::1::0))
+        (methodid 11:apply::1::0)
+        (functionid 36:_builtin::ffi::callback::apply::1::0))
       (method
         (methodid 10:free::1::0)
         (functionid 35:_builtin::ffi::callback::free::1::0))))
@@ -370,7 +387,7 @@ validids
         (ret
           (localid 9:local$389)))))
   (func
-    (functionid 34:_builtin::ffi::callback::ptr::1::0)
+    (functionid 36:_builtin::ffi::callback::apply::1::0)
     (params
       (param
         (localid 4:self)
