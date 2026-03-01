@@ -206,16 +206,22 @@ infer
                 (localid 8:local$82)
                 (i32)
                 (int 1:0))
-              (new
+              (call
                 (localid 7:local$2)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 17:callback_no_apply)
-                      (typeargs))))
-                (newargs
-                  (newarg
-                    (ident 1:x)
+                (rhs)
+                (funcname
+                  (nameelement
+                    (ident 17:callback_no_apply)
+                    (typeargs))
+                  (nameelement
+                    (ident 7:noapply)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (args
+                  (arg
+                    (argcopy)
                     (localid 8:local$82))))
               (copy
                 (localid 9:local$458)

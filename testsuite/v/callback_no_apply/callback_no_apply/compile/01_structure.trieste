@@ -132,12 +132,13 @@ structure
                   (type
                     (typevar))))
               (expr
-                (new
-                  (newargs
-                    (newarg
-                      (ident 1:x)
-                      (expr
-                        (int 1:0))))))))
+                (funcname
+                  (nameelement
+                    (ident 7:noapply)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:0))))))
           (expr
             (=
               (expr

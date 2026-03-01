@@ -135,12 +135,19 @@ ident
                   (type
                     (typevar))))
               (expr
-                (new
-                  (newargs
-                    (newarg
-                      (ident 1:x)
-                      (expr
-                        (int 1:0))))))))
+                (funcname
+                  (nameelement
+                    (ident 17:callback_no_apply)
+                    (typeargs))
+                  (nameelement
+                    (ident 7:noapply)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:0))))))
           (expr
             (=
               (expr

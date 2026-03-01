@@ -32,9 +32,9 @@ reify
             (localid 8:local$82)
             (i32)
             (int 1:0))
-          (new
+          (call
             (localid 7:local$2)
-            (classid 20:callback_no_apply::0)
+            (functionid 40:callback_no_apply::noapply::create::1::0)
             (args
               (arg
                 (argcopy)
@@ -60,12 +60,36 @@ reify
   (primitive
     (i32)
     (methods))
-  (class
-    (classid 20:callback_no_apply::0)
-    (fields)
-    (methods))
+  (func
+    (functionid 40:callback_no_apply::noapply::create::1::0)
+    (params
+      (param
+        (localid 1:x)
+        (i32)))
+    (classid 29:callback_no_apply::noapply::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$1)
+            (classid 29:callback_no_apply::noapply::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:x)))))
+        (ret
+          (localid 7:local$1)))))
   (primitive
     (ptr)
+    (methods))
+  (class
+    (classid 29:callback_no_apply::noapply::0)
+    (fields
+      (field
+        (fieldid 1:x)
+        (i32)))
     (methods))
   (primitive
     (none)
