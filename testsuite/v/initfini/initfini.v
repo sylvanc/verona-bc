@@ -1,18 +1,14 @@
-// Test that init runs before main and fini runs after main.
-// Expected stdout: 1, 2, 3 (init prints 1, main prints 2, fini prints 3).
+// Test that init runs before main and init's returned lambda runs after main.
+// Expected stdout: 1, 2, 3 (init prints 1, main prints 2, fini lambda prints 3).
 
 use
 {
-  init(): none
+  init(): any
   {
     var x: i32 = 1;
     :::printval(x);
-  }
-
-  fini(): none
-  {
-    var x: i32 = 3;
-    :::printval(x);
+    let y: i32 = 3;
+    { :::printval(y); }
   }
 
   printval = "printval"(any): none;

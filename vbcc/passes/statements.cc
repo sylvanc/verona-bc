@@ -237,8 +237,7 @@ namespace vbcc
         // Libraries.
         (T(Lib) << End) * ~T(String)[String] >>
           [](Match& _) {
-            return Lib << (_(String) || (String ^ "")) << Symbols << None
-                       << None;
+            return Lib << (_(String) || (String ^ "")) << Symbols << None;
           },
 
         T(Lib)[Lib] * T(Symbol)[Symbol] >>

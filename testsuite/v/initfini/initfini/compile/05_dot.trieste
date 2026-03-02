@@ -7,20 +7,132 @@ dot
   (classdef
     {
       create = function
-      fini = function
       init = function
+      lambda$0 = classdef
       main = function}
     (none)
     (ident 8:initfini)
     (typeparams)
     (where)
     (classbody
+      (classdef
+        {
+          apply = function
+          create = function}
+        (none)
+        (ident 8:lambda$0)
+        (typeparams)
+        (where)
+        (classbody
+          (fielddef
+            (ident 1:y)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:i32)
+                  (typeargs)))))
+          (function
+            {
+              y = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 1:y)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:initfini)
+                  (typeargs))
+                (nameelement
+                  (ident 8:lambda$0)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs
+                    (newarg
+                      (ident 1:y)
+                      (expr
+                        (localid 1:y))))))))
+          (function
+            {
+              $ref_y = let
+              $self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 5:$self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:initfini)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:lambda$0)
+                      (typeargs))))))
+            (type
+              (typevar))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 6:$ref_y)
+                      (type
+                        (typename
+                          (nameelement
+                            (ident 8:_builtin)
+                            (typeargs))
+                          (nameelement
+                            (ident 3:ref)
+                            (typeargs
+                              (type
+                                (typename
+                                  (nameelement
+                                    (ident 8:_builtin)
+                                    (typeargs))
+                                  (nameelement
+                                    (ident 3:i32)
+                                    (typeargs))))))))))
+                  (expr
+                    (fieldref
+                      (expr
+                        (localid 5:$self))
+                      (fieldid 1:y)))))
+              (expr
+                (ffi
+                  (symbolid 8:printval)
+                  (args
+                    (expr
+                      (exprseq
+                        (expr
+                          (load
+                            (expr
+                              (localid 6:$ref_y)))))))))))))
       (lib
         (string 0:)
         (symbols
           (function
             {
-              x = var}
+              x = var
+              y = let}
             (rhs)
             (ident 4:init)
             (typeparams)
@@ -31,7 +143,7 @@ dot
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:none)
+                  (ident 3:any)
                   (typeargs))))
             (where)
             (body
@@ -57,29 +169,12 @@ dot
                     (expr
                       (exprseq
                         (expr
-                          (localid 1:x)))))))))
-          (function
-            {
-              x = var}
-            (rhs)
-            (ident 4:fini)
-            (typeparams)
-            (params)
-            (type
-              (typename
-                (nameelement
-                  (ident 8:_builtin)
-                  (typeargs))
-                (nameelement
-                  (ident 4:none)
-                  (typeargs))))
-            (where)
-            (body
+                          (localid 1:x)))))))
               (expr
                 (=
                   (expr
-                    (var
-                      (ident 1:x)
+                    (let
+                      (ident 1:y)
                       (type
                         (typename
                           (nameelement
@@ -91,13 +186,20 @@ dot
                   (expr
                     (int 1:3))))
               (expr
-                (ffi
-                  (symbolid 8:printval)
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:initfini)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:lambda$0)
+                      (typeargs))
+                    (nameelement
+                      (ident 6:create)
+                      (typeargs)))
                   (args
                     (expr
-                      (exprseq
-                        (expr
-                          (localid 1:x)))))))))
+                      (localid 1:y)))))))
           (symbol
             (symbolid 8:printval)
             (string 8:printval)

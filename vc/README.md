@@ -4,9 +4,9 @@
 
 FFI.
 - Can `ffi::callback` interact with reference counting better?
-- `init` and `fini` in library imports.
-- Expose a version of `add_external` and `remove_external`.
+- `add_external` and `remove_external` need to post work, because they may be called from a non-Verona thread.
   - Allow registering a callback for this. Keep a list of them. Also doesn't have to be a `libffi` closure.
+  - Could only allow this at `init`? To avoid concurrency problems?
 - Platform dependent code for dealing with libraries?
 
 Reviews.

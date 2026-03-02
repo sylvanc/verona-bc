@@ -220,7 +220,7 @@ namespace vc
                        << (Symbols << *_[Brace]);
           },
 
-        // FFI init/fini function.
+        // FFI init function.
         In(Symbols) * T(Group)
             << (~T(Ident, "ref")[Lhs] * T(Ident, SymbolId)[Ident] *
                 ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
@@ -229,15 +229,15 @@ namespace vc
           [](Match& _) {
             auto name = _(Ident)->location().view();
 
-            if ((name != "init") && (name != "fini"))
+            if (name != "init")
             {
               return err(
                 _(Ident),
-                "Only 'init' and 'fini' functions are allowed in use blocks");
+                "Only 'init' functions are allowed in use blocks");
             }
 
             if (_(Lhs))
-              return err(_(Ident), "init/fini functions cannot be ref");
+              return err(_(Ident), "init functions cannot be ref");
 
             Node body = Body;
 

@@ -39,7 +39,7 @@ namespace vbci
 
     std::vector<Dynlib> libs;
     std::vector<std::optional<size_t>> init_funcs;
-    std::vector<std::optional<size_t>> fini_funcs;
+    std::vector<std::pair<Register, Function*>> fini_callbacks;
     std::vector<Symbol> symbols;
 
     ffi_type ffi_type_value;

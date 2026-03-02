@@ -1132,6 +1132,113 @@ namespace vc
       }
 
       r.reification = Func << r.id << params << r_type << vars << labels;
+
+      // If this is an init function, ensure the return value's class has
+      // @callback registered so the runtime can call it as fini.
+      if (
+        r.def->parent(Symbols) &&
+        ((r.def / Ident)->location().view() == "init"))
+      {
+        // Find the last Return terminator's local.
+        for (auto& l : *labels)
+        {
+          auto term = l / Return;
+
+          if (term != Return)
+            continue;
+
+          auto ret_loc = (term / LocalId)->location();
+          auto body_node = l / Body;
+
+          // Trace through Copy/Move to find the original source.
+          bool changed = true;
+
+          while (changed)
+          {
+            changed = false;
+
+            for (auto& stmt : *body_node)
+            {
+              if (
+                stmt->in({Copy, Move}) &&
+                ((stmt / LocalId)->location() == ret_loc))
+              {
+                ret_loc = (stmt / Rhs)->location();
+                changed = true;
+                break;
+              }
+            }
+          }
+
+          // Check local_types first (works for New/Stack).
+          auto it = local_types.find(ret_loc);
+
+          if (it != local_types.end() && (it->second->type() == ClassId))
+          {
+            ensure_callback_method(it->second);
+            break;
+          }
+
+          // Check if the return value comes from a Call (e.g., create).
+          for (auto& stmt : *body_node)
+          {
+            if (
+              (stmt == Call) &&
+              ((stmt / LocalId)->location() == ret_loc))
+            {
+              // Find the Function reification and its enclosing ClassDef.
+              auto funcid_loc = (stmt / FunctionId)->location().view();
+              Node call_enc;
+              NodeMap<Node> class_subst;
+
+              for (auto& key : map_order)
+              {
+                if (key != Function)
+                  continue;
+
+                for (auto& reif : map[key])
+                {
+                  if (
+                    reif.id &&
+                    (reif.id->location().view() == funcid_loc))
+                  {
+                    auto enc = reif.def->parent(ClassDef);
+
+                    if (enc)
+                    {
+                      for (auto& tp : *(enc / TypeParams))
+                      {
+                        auto sit = reif.subst.find(tp);
+
+                        if (sit != reif.subst.end())
+                          class_subst[sit->first] = clone(sit->second);
+                      }
+
+                      call_enc = enc;
+                    }
+
+                    break;
+                  }
+                }
+
+                if (call_enc)
+                  break;
+              }
+
+              if (call_enc)
+              {
+                auto class_id = find_or_push(call_enc, std::move(class_subst));
+                ensure_callback_method(class_id);
+              }
+
+              break;
+            }
+          }
+
+          break;
+        }
+      }
+
       return true;
     }
 
@@ -1583,7 +1690,14 @@ namespace vc
       }
     }
 
-    void reify_make_callback(Node& n, const Node& class_id)
+    // Core logic for registering @callback on a class. Returns true if
+    // the callback method was successfully registered, false otherwise.
+    // If match_count_out and has_generic_out are provided, they report
+    // details about the apply method search.
+    bool ensure_callback_method(
+      const Node& class_id,
+      size_t* match_count_out = nullptr,
+      bool* has_generic_out = nullptr)
     {
       // Find the Reification for the lambda's class.
       auto class_id_loc = class_id->location().view();
@@ -1608,7 +1722,7 @@ namespace vc
       }
 
       if (!target_r)
-        return;
+        return false;
 
       // Ensure the class has been reified (it may have just been
       // added to the worklist by find_or_push and not yet processed).
@@ -1641,22 +1755,13 @@ namespace vc
         match_count++;
       }
 
-      if (match_count == 0)
-      {
-        auto msg = has_generic ?
-          "make_callback requires a non-generic 'apply' method" :
-          "make_callback requires a type with an 'apply' method";
-        n->parent()->replace(n, err(n, msg));
-        return;
-      }
+      if (match_count_out)
+        *match_count_out = match_count;
+      if (has_generic_out)
+        *has_generic_out = has_generic;
 
-      if (match_count > 1)
-      {
-        n->parent()->replace(
-          n,
-          err(n, "make_callback requires exactly one 'apply' overload"));
-        return;
-      }
+      if (match_count != 1)
+        return false;
 
       // Reify the apply function with the class's substitution context.
       auto funcid = find_or_push(found_func, target_r->subst);
@@ -1680,10 +1785,38 @@ namespace vc
 
       if (!already)
         methods << (Method << clone(mid_node) << funcid);
+
+      return true;
     }
 
-    // Reify init/fini functions from a source Lib onto a reified Lib.
-    // Checks for duplicate init/fini across multiple Lib definitions
+    void reify_make_callback(Node& n, const Node& class_id)
+    {
+      size_t match_count = 0;
+      bool has_generic = false;
+
+      if (ensure_callback_method(class_id, &match_count, &has_generic))
+        return;
+
+      if (match_count == 0)
+      {
+        auto msg = has_generic ?
+          "make_callback requires a non-generic 'apply' method" :
+          "make_callback requires a type with an 'apply' method";
+        n->parent()->replace(n, err(n, msg));
+        return;
+      }
+
+      if (match_count > 1)
+      {
+        n->parent()->replace(
+          n,
+          err(n, "make_callback requires exactly one 'apply' overload"));
+        return;
+      }
+    }
+
+    // Reify init functions from a source Lib onto a reified Lib.
+    // Checks for duplicate init across multiple Lib definitions
     // for the same library (by string name).
     void reify_initfini(
       const Node& source_lib, Node& reified_lib, Reification& r)
@@ -1698,21 +1831,17 @@ namespace vc
           continue;
 
         auto name = (child / Ident)->location().view();
-        bool is_init = (name == "init");
-        bool is_fini = (name == "fini");
 
-        if (!is_init && !is_fini)
+        if (name != "init")
           continue;
 
-        auto target = is_init ? Token(InitFunc) : Token(FiniFunc);
-        auto existing = reified_lib / target;
+        auto existing = reified_lib / InitFunc;
 
         if (existing != None)
         {
-          // Already has an init/fini — conflict error.
+          // Already has an init — conflict error.
           auto msg = std::format(
-            "Conflicting '{}' for library \"{}\"",
-            name,
+            "Conflicting 'init' for library \"{}\"",
             (source_lib / String)->location().view());
 
           errors.push_back(
@@ -1722,7 +1851,7 @@ namespace vc
           continue;
         }
 
-        // Reify the init/fini function.
+        // Reify the init function.
         auto funcid = find_or_push(child, r.subst);
         reified_lib->replace(existing, clone(funcid));
       }
@@ -1761,8 +1890,7 @@ namespace vc
               if (find == libs.end())
               {
                 reified_lib =
-                  Lib << clone(child / String) << Symbols << None
-                      << None;
+                  Lib << clone(child / String) << Symbols << None;
                 libs[lib_loc] = reified_lib;
               }
               else
@@ -1770,7 +1898,7 @@ namespace vc
                 reified_lib = find->second;
               }
 
-              // Reify init/fini functions from all Lib definitions for this
+              // Reify init functions from all Lib definitions for this
               // library in the enclosing ClassDef.
               for (auto& lib_child : *(parent / ClassBody))
               {

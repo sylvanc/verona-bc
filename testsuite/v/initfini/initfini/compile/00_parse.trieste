@@ -11,7 +11,7 @@ parse
             (ident 4:init)
             (paren)
             (:)
-            (ident 4:none)
+            (ident 3:any)
             (brace
               (group
                 (var)
@@ -29,16 +29,10 @@ parse
                   (group
                     (ident 1:x))))
               (group
-                (semi))))
-          (group
-            (ident 4:fini)
-            (paren)
-            (:)
-            (ident 4:none)
-            (brace
+                (semi))
               (group
-                (var)
-                (ident 1:x)
+                (let)
+                (ident 1:y)
                 (:)
                 (ident 3:i32)
                 (=)
@@ -46,13 +40,15 @@ parse
               (group
                 (semi))
               (group
-                (triplecolon)
-                (ident 8:printval)
-                (paren
+                (brace
                   (group
-                    (ident 1:x))))
-              (group
-                (semi))))
+                    (triplecolon)
+                    (ident 8:printval)
+                    (paren
+                      (group
+                        (ident 1:y))))
+                  (group
+                    (semi))))))
           (group
             (ident 8:printval)
             (=)

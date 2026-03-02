@@ -1,15 +1,15 @@
-// Test that duplicate init/fini functions for the same library are rejected.
+// Test that duplicate init functions for the same library are rejected.
 // Both use blocks declare the same library (default) and both have init().
 
 use
 {
-  init(): none {}
+  init(): any {}
   printval = "printval"(any): none;
 }
 
 use
 {
-  init(): none {}
+  init(): any {}
   printval = "printval"(any): none;
 }
 

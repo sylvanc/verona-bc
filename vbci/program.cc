@@ -136,11 +136,22 @@ namespace vbci
 
     setup_argv(args);
 
-    // Run library init functions.
+    // Run library init functions. If an init returns a value with an apply
+    // method (@callback), store it as a fini callback to be called at shutdown.
     for (auto& init : init_funcs)
     {
-      if (init)
-        Thread::run_sync(&functions.at(*init));
+      if (!init)
+        continue;
+
+      auto result = Thread::run_callback(&functions.at(*init), 0);
+
+      if (result->is_invalid())
+        continue;
+
+      auto* apply = result->method(CallbackMethodId);
+
+      if (apply)
+        fini_callbacks.emplace_back(std::move(result), apply);
     }
 
     auto& sched = verona::rt::Scheduler::get();
@@ -163,12 +174,14 @@ namespace vbci
       exit_code = ret_val.get_i32();
     }
 
-    // Run library fini functions.
-    for (auto& fini : fini_funcs)
+    // Run fini callbacks in reverse order (last init = first fini).
+    for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
     {
-      if (fini)
-        Thread::run_sync(&functions.at(*fini));
+      Thread::set_callback_arg(0, it->first.borrow());
+      Thread::run_callback(it->second, 1);
     }
+
+    fini_callbacks.clear();
 
     return exit_code;
   }
@@ -706,7 +719,6 @@ namespace vbci
     auto num_libs = uleb(pc);
     libs.reserve(num_libs);
     init_funcs.reserve(num_libs);
-    fini_funcs.reserve(num_libs);
     for (size_t i = 0; i < num_libs; i++)
     {
       libs.emplace_back(strings.at(uleb(pc)));
@@ -714,10 +726,6 @@ namespace vbci
       auto init_id = uleb(pc);
       init_funcs.push_back(
         init_id ? std::optional<size_t>(init_id - 1) : std::nullopt);
-
-      auto fini_id = uleb(pc);
-      fini_funcs.push_back(
-        fini_id ? std::optional<size_t>(fini_id - 1) : std::nullopt);
     }
 
     auto num_symbols = uleb(pc);
