@@ -1,5 +1,6 @@
 #pragma once
 
+#include "callback.h"
 #include "classes.h"
 #include "dynlib.h"
 #include "frame.h"
@@ -40,6 +41,8 @@ namespace vbci
     std::vector<Dynlib> libs;
     std::vector<std::optional<size_t>> init_funcs;
     std::vector<std::pair<Register, Function*>> fini_callbacks;
+    std::vector<CallbackClosure*> external_notify_callbacks;
+    bool scheduler_running = false;
     std::vector<Symbol> symbols;
 
     ffi_type ffi_type_value;
@@ -76,6 +79,9 @@ namespace vbci
     Class& cls(uint32_t type_id);
     ComplexType& complex_type(uint32_t type_id);
     ffi_type* value_type();
+
+    bool is_scheduler_running() const;
+    std::vector<CallbackClosure*>& notify_callbacks();
 
     SNMALLOC_FAST_PATH int64_t sleb(size_t& pc)
     {

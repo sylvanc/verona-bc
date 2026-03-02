@@ -847,7 +847,8 @@ namespace vc
         // Callback operations (single arg, already a LocalId after earlier
         // rules extract expressions to locals).
         In(Expr, Lhs) *
-            T(MakeCallback, CallbackPtr, FreeCallback)[Lhs]
+            T(MakeCallback, CallbackPtr, FreeCallback,
+              RegisterExternalNotify)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);

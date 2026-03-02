@@ -30,6 +30,7 @@ namespace vbci
     BadArgs,
     BadType,
     BadRegionEntryPoint,
+    SchedulerAlreadyRunning,
   };
 
   using PC = size_t;
@@ -91,6 +92,8 @@ namespace vbci
         return "bad type";
       case Error::BadRegionEntryPoint:
         return "bad region entry point";
+      case Error::SchedulerAlreadyRunning:
+        return "scheduler already running";
 
       default:
         assert(false);

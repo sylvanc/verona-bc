@@ -150,6 +150,8 @@ namespace vbcc
   inline const auto FreeCallback = TokenDef("freecallback");
   inline const auto AddExternal = TokenDef("addexternal");
   inline const auto RemoveExternal = TokenDef("removeexternal");
+  inline const auto RegisterExternalNotify =
+    TokenDef("registerexternalnotify");
 
   // Raise target.
   inline const auto GetRaise = TokenDef("getraise");
@@ -241,7 +243,8 @@ namespace vbcc
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
-    wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback;
+    wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
+    RegisterExternalNotify;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -389,6 +392,7 @@ namespace vbcc
     | (MakeCallback <<= wfDst * wfSrc)
     | (CallbackPtr <<= wfDst * wfSrc)
     | (FreeCallback <<= wfDst * wfSrc)
+    | (RegisterExternalNotify <<= wfDst * wfSrc)
     ;
   // clang-format on
 }

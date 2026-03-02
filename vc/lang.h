@@ -268,7 +268,7 @@ namespace vc
   inline const auto wfExprDot = (wfExprSugar | CallDyn | TryCallDyn |
                                  Convert | Binop | Nulop | FFI | NewArray |
                                  ArrayRef | MakeCallback | CallbackPtr |
-                                 FreeCallback) -
+                                 FreeCallback | RegisterExternalNotify) -
     Dot - TripleColon;
 
   // clang-format off
@@ -283,6 +283,7 @@ namespace vc
     | (MakeCallback <<= Args)
     | (CallbackPtr <<= Args)
     | (FreeCallback <<= Args)
+    | (RegisterExternalNotify <<= Args)
     | (FFI <<= SymbolId * Args)
     | (NewArray <<= Type * Args)
     | (ArrayRef <<= Args)
@@ -306,7 +307,7 @@ namespace vc
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
     When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
     GetRaise | SetRaise | SplatOp | ArrayRefFromEnd | MakeCallback |
-    CallbackPtr | FreeCallback;
+    CallbackPtr | FreeCallback | RegisterExternalNotify;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -408,6 +409,7 @@ namespace vc
     | (MakeCallback <<= wfDst * wfSrc)
     | (CallbackPtr <<= wfDst * wfSrc)
     | (FreeCallback <<= wfDst * wfSrc)
+    | (RegisterExternalNotify <<= wfDst * wfSrc)
     ;
   // clang-format on
 

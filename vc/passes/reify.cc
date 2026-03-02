@@ -734,6 +734,11 @@ namespace vc
             reify_primitive(None);
             local_types[(n / LocalId)->location()] = clone(None);
           }
+          else if (n == RegisterExternalNotify)
+          {
+            reify_primitive(None);
+            local_types[(n / LocalId)->location()] = clone(None);
+          }
           else if (n->in({Copy, Move}))
           {
             // Propagate type from source to destination.

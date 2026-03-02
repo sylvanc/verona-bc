@@ -384,6 +384,12 @@ namespace vbci
     // Removes an external event source to allow the scheduler to exit.
     // Arg0 = dst (none).
     RemoveExternal,
+
+    // Registers a callback to be called on every add/remove external event.
+    // Must be called before the scheduler starts (e.g., from init).
+    // Arg0 = dst (none).
+    // Arg1 = src (callback handle).
+    RegisterExternalNotify,
   };
 
   enum class ValueType : uint8_t

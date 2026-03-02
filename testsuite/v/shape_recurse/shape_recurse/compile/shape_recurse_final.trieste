@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$904)
+            (localid 4:$908)
             (functionid 25:shape_recurse::main::0::0)
             (args)))
         (ret
-          (localid 4:$904)))))
+          (localid 4:$908)))))
   (func
     (functionid 25:shape_recurse::main::0::0)
     (params)
@@ -27,7 +27,7 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$89)
+            (localid 8:local$92)
             (i32)
             (int 2:42))
           (call
@@ -36,7 +36,7 @@ typecheck
             (args
               (arg
                 (argmove)
-                (localid 8:local$89))))
+                (localid 8:local$92))))
           (move
             (localid 1:b)
             (localid 7:local$4))
@@ -86,18 +86,18 @@ typecheck
         (labelid 5:start)
         (body
           (lookup
-            (localid 8:local$87)
+            (localid 8:local$90)
             (localid 1:r)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 8:local$88)
-            (localid 8:local$87)
+            (localid 8:local$91)
+            (localid 8:local$90)
             (args
               (arg
                 (argmove)
                 (localid 1:r)))))
         (ret
-          (localid 8:local$88)))))
+          (localid 8:local$91)))))
   (type
     (typeid 26:shape_recurse::returner::0)
     (classid 21:shape_recurse::box::0))
@@ -127,18 +127,18 @@ typecheck
         (labelid 5:start)
         (body
           (lookup
-            (localid 8:local$85)
+            (localid 8:local$88)
             (localid 4:self)
             (methodid 7:v::1::0))
           (calldyn
-            (localid 8:local$86)
-            (localid 8:local$85)
+            (localid 8:local$89)
+            (localid 8:local$88)
             (args
               (arg
                 (argmove)
                 (localid 4:self)))))
         (ret
-          (localid 8:local$86)))))
+          (localid 8:local$89)))))
   (func
     (functionid 27:shape_recurse::box::v::1::0)
     (params
@@ -159,10 +159,10 @@ typecheck
                 (argmove)
                 (localid 4:self))))
           (load
-            (localid 9:local$464)
+            (localid 9:local$467)
             (localid 7:local$2)))
         (ret
-          (localid 9:local$464)))))
+          (localid 9:local$467)))))
   (func
     (functionid 32:shape_recurse::box::v::1::ref::0)
     (params
@@ -177,13 +177,13 @@ typecheck
         (labelid 5:start)
         (body
           (fieldref
-            (localid 8:local$84)
+            (localid 8:local$87)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 1:v)))
         (ret
-          (localid 8:local$84)))))
+          (localid 8:local$87)))))
   (primitive
     (ref
       (i32))

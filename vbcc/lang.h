@@ -111,7 +111,8 @@ namespace vbcc
       CallbackPtr,
       FreeCallback,
       AddExternal,
-      RemoveExternal);
+      RemoveExternal,
+      RegisterExternalNotify);
 
   Parse parser();
   PassDef statements();

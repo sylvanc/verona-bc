@@ -91,6 +91,47 @@ parse
                       (ident 4:self)))))))))
       (file
         (group
+          (ident 24:register_external_notify)
+          (bracket
+            (group
+              (ident 1:T)))
+          (paren
+            (group
+              (ident 1:f)
+              (:)
+              (ident 1:T)))
+          (:)
+          (ident 4:none)
+          (brace
+            (group
+              (triplecolon)
+              (ident 24:register_external_notify)
+              (paren
+                (group
+                  (ident 8:callback)
+                  (paren
+                    (group
+                      (ident 1:f))))))))
+        (group
+          (ident 12:add_external)
+          (paren)
+          (:)
+          (ident 4:none)
+          (brace
+            (group
+              (triplecolon)
+              (ident 12:add_external))))
+        (group
+          (ident 15:remove_external)
+          (paren)
+          (:)
+          (ident 4:none)
+          (brace
+            (group
+              (triplecolon)
+              (ident 15:remove_external)))))
+      (file
+        (group
           (ident 3:ptr)
           (brace))))
     (file

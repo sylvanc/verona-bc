@@ -85,7 +85,8 @@ namespace vbcc
                              Asinh,    Acosh,    Atanh,
                              Bits,     Len,      MakePtr,
                              Read,     SetRaise, Typetest,
-                             MakeCallback, CallbackPtr, FreeCallback}))
+                             MakeCallback, CallbackPtr, FreeCallback,
+                             RegisterExternalNotify}))
           {
             use(node / Rhs);
             def(node / LocalId);

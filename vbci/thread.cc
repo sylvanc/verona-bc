@@ -752,6 +752,8 @@ namespace vbci
         return os << "AddExternal";
       case Op::RemoveExternal:
         return os << "RemoveExternal";
+      case Op::RegisterExternalNotify:
+        return os << "RegisterExternalNotify";
       default:
         return os << "Unknown";
     }
@@ -1243,9 +1245,8 @@ namespace vbci
 
       case Op::TryCallDynamic:
       {
-        process(
-          [](Constant<size_t> dst_id, const Register& func, Thread& self)
-            INLINE { self.try_pushframe(func->function(), dst_id); });
+        process([](Constant<size_t> dst_id, const Register& func, Thread& self)
+                  INLINE { self.try_pushframe(func->function(), dst_id); });
         break;
       }
 
@@ -1599,7 +1600,18 @@ namespace vbci
       case Op::AddExternal:
       {
         process([](Register& dst) INLINE {
-          verona::rt::Scheduler::add_external_event_source();
+          verona::rt::Scheduler::schedule(
+            new verona::rt::Work([](verona::rt::Work* work) {
+              verona::rt::Scheduler::add_external_event_source();
+
+              for (auto* cc : Program::get().notify_callbacks())
+              {
+                auto fn = (void (*)(void))callback_ptr(cc);
+                fn();
+              }
+
+              delete work;
+            }));
           dst = ValueImmortal(Value::none());
         });
         break;
@@ -1608,7 +1620,35 @@ namespace vbci
       case Op::RemoveExternal:
       {
         process([](Register& dst) INLINE {
-          verona::rt::Scheduler::remove_external_event_source();
+          verona::rt::Scheduler::schedule(
+            new verona::rt::Work([](verona::rt::Work* work) {
+              verona::rt::Scheduler::remove_external_event_source();
+
+              for (auto* cc : Program::get().notify_callbacks())
+              {
+                auto fn = (void (*)(void))callback_ptr(cc);
+                fn();
+              }
+
+              delete work;
+            }));
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::RegisterExternalNotify:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          if (Program::get().is_scheduler_running())
+            Value::error(Error::SchedulerAlreadyRunning);
+
+          auto* cc = src->get_callback();
+
+          if (!cc)
+            Value::error(Error::BadOperand);
+
+          Program::get().notify_callbacks().push_back(cc);
           dst = ValueImmortal(Value::none());
         });
         break;

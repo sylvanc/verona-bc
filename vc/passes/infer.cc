@@ -2421,6 +2421,11 @@ namespace vc
         auto dst = stmt / LocalId;
         env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
       }
+      else if (stmt == RegisterExternalNotify)
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
+      }
       else if (stmt == Call)
       {
         infer_call(stmt, env, top, lookup_stmts);
