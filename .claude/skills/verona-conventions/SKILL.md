@@ -44,10 +44,10 @@ user-invocable: false
 
 - Tests in `testsuite/v/` must be self-contained. No external deps, no `use "https://..."`.
 - Do NOT write `use "_builtin"` — it is always implicitly available.
-- No FFI function calls in tests.
 - Bitmask exit code pattern: `var result = 0;` then `if cond { result = result + N; }` with powers of 2. Exit 0 = all passed.
 - Compile-error tests: `exit_code.txt: 1` in `compile/`, no `run/` directory.
 - Structure: `testsuite/v/<name>/<name>.v` with golden dirs `<name>/<name>/compile/` and `<name>/<name>/run/`.
+- FFI tests must include at least one reachable FFI call from their lib to trigger init function reification.
 
 ## Verona Source Syntax
 
@@ -57,11 +57,12 @@ user-invocable: false
 - `new { field = val }` — no class name after `new`.
 - `use X` imports for unqualified lookup. `use "url"` for packages. `_builtin` is always implicit.
 - `(obj.field)(args)` to call `apply` on field access result.
-- `Type(args)` constructor sugar calls `create` method.
+- `Type(args)` constructor sugar calls `create` method (e.g., `callback(f)` → `callback::create(f)`).
 - `x.method` for zero-arg methods (no parens).
 - `!expr` for boolean negation.
 - Array literals: `::(expr, ...)`.
 - Match: `(match expr { (pattern) -> body; ... }) else (default)`.
+- FFI calls: `:::name(args)` for direct FFI, `ffi::func(args)` for `_builtin/ffi/` wrappers.
 
 ## Architecture
 
@@ -71,6 +72,22 @@ user-invocable: false
 - Backend (vbcc library, passes 10–13): assignids → validids → liveness → typecheck.
 - `assert()` liberally for invariants.
 - Errors are AST nodes, not exceptions.
+
+## Adding New Ops/Builtins
+
+Adding a new bytecode op requires updates in ~15 places across the codebase. Use this checklist:
+
+1. **Token def**: `include/vbcc.h` (token), `include/vbci.h` (Op enum)
+2. **Frontend WFs** in `vc/lang.h`: `wfExprDot`, `wfPassDot` (with `<<= Args`), `wfBodyANF`, `wfPassANF` (with `<<= wfDst * wfSrc`)
+3. **Frontend passes**: `dot.cc` (builtin reg), `anf.cc` (lowering), `infer.cc` (type tracking), `reify.cc` (IR transform)
+4. **Backend WFs** in `include/vbcc.h`: `wfStatement`, `wfIR`
+5. **`Def` pattern** in `vbcc/lang.h`: manually maintained list — MUST include if op has a dst `LocalId`
+6. **Liveness** in `vbcc/passes/liveness.cc`: manually categorized ops — add to correct use/def category
+7. **Bytecode** in `vbcc/bytecode.cc`: encoding handler
+8. **Type check** in `vbcc/passes/typecheck.cc`: if needed
+9. **Interpreter** in `vbci/thread.cc`: op handler + op name in name array
+
+Missing items 5 or 6 causes "undefined register" errors in later passes, not at the registration site.
 
 ## Debugging
 

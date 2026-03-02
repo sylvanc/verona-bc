@@ -81,6 +81,8 @@ Built-in operations can only appear in the `_builtin` package.
 | **Identity** | `eq` (pointer), `ne` (pointer), `bits` |
 | **Constants** | `none`, `e`, `pi`, `inf`, `nan` |
 | **Memory** | `len`, `ptr`, `read`, `arrayref`, `newarray` |
+| **Callback** | `make_callback`, `callback_ptr`, `free_callback` |
+| **External** | `add_external`, `remove_external`, `register_external_notify` |
 
 ---
 
@@ -122,3 +124,178 @@ Memory allocated by Verona (objects, arrays, strings) is managed by Verona's reg
 ### Thread Safety
 
 FFI calls run on scheduler threads. If two `when` blocks both call the same FFI function, they run on different threads. Verona does not add synchronization around FFI calls — the external library must be thread-safe, or accesses must be serialized through a shared cown.
+
+---
+
+## 17.6 Init Functions
+
+FFI `use` blocks can contain an `init` function with an inline body. Unlike FFI symbol declarations, `init` is a real Verona function defined directly inside the `use` block:
+
+```verona
+use
+{
+  init(): any
+  {
+    // initialization code — runs before main()
+    setup_lib();
+    // return a lambda to run at shutdown
+    { cleanup_lib(); }
+  }
+
+  setup_lib = "setup_lib"(): none;
+  cleanup_lib = "cleanup_lib"(): none;
+}
+```
+
+### Behavior
+
+- **`init`** runs once, before `main()`, on a scheduler thread.
+- The `init` function has an inline body — it is **not** an FFI symbol binding like other `use` block entries.
+- `init` returns `any`. If the return value is a callable (a lambda or an object with `apply`), the runtime calls it as a **finalizer** after `main()` and all pending `when` behaviors complete, just before process exit.
+- If `init` returns `none` or a non-callable value, no finalizer runs.
+- `init` is optional — a `use` block can have zero or one `init` function. Multiple `init` functions for the same library are a compile error.
+- **Reification requirement:** Init functions are only included in the compiled output when at least one FFI symbol from the same `use` block is called from reachable code. If no FFI call reaches the library, the init function will not run. This means a test exercising init behavior must include at least one reachable FFI call from the same `use` block.
+
+### Example: Library Lifecycle
+
+```verona
+use
+{
+  init(): any
+  {
+    var x: i32 = 1;
+    :::printval(x);                   // runs before main
+    let y: i32 = 3;
+    { :::printval(y); }               // returned lambda runs after main
+  }
+
+  printval = "printval"(any): none;
+}
+
+main(): i32
+{
+  var x: i32 = 2;
+  :::printval(x);                     // runs during main
+  0
+}
+// Output: 1, 2, 3
+```
+
+### Init Returning a Finalizer
+
+The last expression in the `init` body is returned. If it's a lambda (or any callable), the runtime registers it as the finalizer for that library. This is the only way to get shutdown behavior — there is no separate `fini` keyword.
+
+---
+
+## 17.7 Callbacks
+
+Verona supports creating C-compatible function pointer callbacks from Verona lambdas. This allows Verona code to pass callable function pointers to external C libraries.
+
+### The `callback` Type
+
+The `callback` class (defined in `_builtin/ffi/callback.v`) wraps a Verona callable in a C-compatible closure:
+
+```verona
+// Create a callback from a lambda
+let cb = callback(my_lambda);
+
+// Get the C function pointer (as ptr)
+let fptr = cb.apply;
+
+// Free the callback when done (releases the closure)
+cb.free;
+```
+
+### API
+
+| Operation | Description |
+|-----------|-------------|
+| `callback(callable)` | Create a callback wrapping `callable` (constructor sugar for `callback::create`) |
+| `cb.apply` | Get the C function pointer as `ptr` |
+| `cb.free` | Free the underlying closure resources |
+
+### Under the Hood
+
+`callback::create[T]` calls `:::make_callback(callable)`, which uses `libffi` to create a closure. The closure captures the Verona callable and presents a C-compatible function pointer that, when called from C, invokes the Verona lambda on the scheduler thread.
+
+### Example: Passing a Callback to C
+
+```verona
+use "eventlib"
+{
+  register_handler = "register_handler"(ptr): none;
+}
+
+main(): i32
+{
+  let handler = callback((): none -> { /* handle event */ });
+  :::register_handler(handler.apply);
+  // ... later:
+  handler.free;
+  0
+}
+```
+
+---
+
+## 17.8 The `_builtin/ffi` Module
+
+The `_builtin/ffi/` directory contains Verona wrapper functions for common FFI operations. These provide a higher-level interface and are accessed via the `ffi::` namespace:
+
+### Available Wrappers
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on every `add_external`/`remove_external` |
+| `ffi::add_external` | `(): none` | Add an external resource (increments the external event count) |
+| `ffi::remove_external` | `(): none` | Remove an external resource (decrements the external event count) |
+
+### External Resource Management
+
+The runtime tracks "external resources" — things outside the Verona scheduler's control (open file descriptors, active network connections, pending OS callbacks). The scheduler waits for all external resources to be removed before shutting down:
+
+- **`ffi::add_external()`** — Tells the scheduler an external resource exists. The scheduler will not shut down while external resources remain.
+- **`ffi::remove_external()`** — Tells the scheduler an external resource has been released.
+
+These are called from `when` block bodies (on scheduler threads) and run as scheduled work items.
+
+### External Notify Callbacks
+
+`ffi::register_external_notify[T](f)` registers a lambda that fires every time `add_external` or `remove_external` runs. This is useful for monitoring resource lifecycle or triggering actions when external state changes. The wrapper internally creates a `callback(f)` from the lambda and passes it to `:::register_external_notify`.
+
+**Rules:**
+- `register_external_notify` must be called **before the scheduler starts** (i.e., during `init`, not from `main` or `when` blocks). Calling it after the scheduler starts is a runtime error.
+- The callback is automatically freed when the program exits (after finalizers run).
+- Multiple notify callbacks can be registered — they all fire on each event.
+
+### Example: Monitoring External Resources
+
+```verona
+use
+{
+  init(): any
+  {
+    // Register a notify lambda during init (before scheduler starts)
+    ffi::register_external_notify((): none -> { :::printval(0) });
+    none
+  }
+
+  printval = "printval"(any): none;
+}
+
+main(): i32
+{
+  ffi::add_external;                  // notify callback fires
+  ffi::remove_external;              // notify callback fires
+  0
+}
+```
+
+### How `_builtin/ffi` Works
+
+Each `.v` file in `_builtin/ffi/` defines either a class (like `callback`) or free functions (like `register_external_notify`, `add_external`, `remove_external`). Because `_builtin` is always implicitly imported, and `_builtin/ffi/` is a nested scope, these functions are accessible via `ffi::function_name(args)`.
+
+The wrappers internally use `:::` builtins:
+- `callback::create[T]` uses `:::make_callback`
+- `register_external_notify[T]` creates a `callback(f)` and calls `:::register_external_notify`
+- `add_external` and `remove_external` call their corresponding `:::` builtins

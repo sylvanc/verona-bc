@@ -268,6 +268,16 @@ For richer errors, use a custom error class in the union: `cown[result | my_erro
 
 No. Cown contents are only accessible inside `when` blocks. This is fundamental to the concurrency model — direct access would break the serialization guarantee. If you need a value for the process exit code, have the final `when` block write to a shared state or use `:::printval` for output.
 
+### How do external resources interact with the scheduler?
+
+The scheduler tracks external resources — things outside Verona's control (file descriptors, network connections, OS callbacks). It will not shut down while external resources remain:
+
+- `ffi::add_external()` increments the count.
+- `ffi::remove_external()` decrements the count.
+- `ffi::register_external_notify(lambda)` registers a lambda that fires on each add/remove event.
+
+See [FFI §17.8](17-ffi.md) for details.
+
 ### How do I chain cowns in a pipeline?
 
 Pass result cowns as dependencies to later `when` blocks. The scheduler automatically orders them:

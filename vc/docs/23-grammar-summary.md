@@ -156,6 +156,7 @@ UseDecl       ::= 'use' Ident                        // import module
                  | 'use' String '{' FFIFuncDecl* '}'  // FFI (with lib)
 
 FFIFuncDecl   ::= Ident '=' String '(' TypeList? (',' '...')? ')' ':' Type ';'
+                 | 'init' '(' ')' ':' Type Block              // library init (inline body)
 ```
 
 ---
