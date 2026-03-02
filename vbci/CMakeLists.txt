@@ -1,6 +1,7 @@
 include(CheckLinkerFlag)
 
 add_executable(vbci
+  callback.cc
   classes.cc
   collect.cc
   dynlib.cc
@@ -14,9 +15,7 @@ add_executable(vbci
   stack.cc
   thread.cc
   value.cc
-  ffi/eyeballs.cc
   ffi/ffi.cc
-  ffi/ssl.cc
 )
 
 target_include_directories(vbci SYSTEM PRIVATE
@@ -52,10 +51,7 @@ target_link_libraries(vbci
   Threads::Threads
   snmallocshim-static
   verona_rt
-  uv_a
-  OpenSSL::Crypto
-  OpenSSL::SSL
-  ffi::ffi
+  PkgConfig::LIBFFI
   CLI11::CLI11
   vbc::include
   libzstd_static

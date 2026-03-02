@@ -69,6 +69,107 @@ parse
             (symbolid 1:+)
             (ident 1:d))))))
   (directory
+    (directory
+      (file
+        (group
+          (ident 8:callback)
+          (brace
+            (group
+              (ident 6:create)
+              (bracket
+                (group
+                  (ident 1:T)))
+              (paren
+                (group
+                  (ident 8:callable)
+                  (:)
+                  (ident 1:T)))
+              (:)
+              (ident 8:callback)
+              (brace
+                (group
+                  (triplecolon)
+                  (ident 13:make_callback)
+                  (paren
+                    (group
+                      (ident 8:callable))))))
+            (group
+              (ident 5:apply)
+              (paren
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 8:callback)))
+              (:)
+              (ident 3:ptr)
+              (brace
+                (group
+                  (triplecolon)
+                  (ident 12:callback_ptr)
+                  (paren
+                    (group
+                      (ident 4:self))))))
+            (group
+              (ident 4:free)
+              (paren
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 8:callback)))
+              (:)
+              (ident 4:none)
+              (brace
+                (group
+                  (triplecolon)
+                  (ident 13:free_callback)
+                  (paren
+                    (group
+                      (ident 4:self)))))))))
+      (file
+        (group
+          (ident 24:register_external_notify)
+          (bracket
+            (group
+              (ident 1:T)))
+          (paren
+            (group
+              (ident 1:f)
+              (:)
+              (ident 1:T)))
+          (:)
+          (ident 4:none)
+          (brace
+            (group
+              (triplecolon)
+              (ident 24:register_external_notify)
+              (paren
+                (group
+                  (ident 8:callback)
+                  (paren
+                    (group
+                      (ident 1:f))))))))
+        (group
+          (ident 12:add_external)
+          (paren)
+          (:)
+          (ident 4:none)
+          (brace
+            (group
+              (triplecolon)
+              (ident 12:add_external))))
+        (group
+          (ident 15:remove_external)
+          (paren)
+          (:)
+          (ident 4:none)
+          (brace
+            (group
+              (triplecolon)
+              (ident 15:remove_external)))))
+      (file
+        (group
+          (ident 3:ptr)
+          (brace))))
     (file
       (group
         (shape)
@@ -7292,10 +7393,6 @@ parse
                 (triplecolon)
                 (ident 4:none)
                 (paren)))))))
-    (file
-      (group
-        (ident 3:ptr)
-        (brace)))
     (file
       (group
         (ident 3:ref)

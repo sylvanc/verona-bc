@@ -199,6 +199,17 @@ Key points:
 | `use x = "url"` | Import a package as a named type alias | `use mylib = "https://..."` |
 | `use { name = "lib"(...): T; }` | FFI declarations (see [FFI §17](17-ffi.md)) | `use { print = "print"(any): none; }` |
 
+### The `ffi` Namespace
+
+The `_builtin/ffi/` directory defines wrapper functions for common FFI operations. Because `_builtin` is always imported and `ffi/` is a nested scope, these functions are accessed via `ffi::`:
+
+```verona
+ffi::add_external();                  // call add_external from _builtin/ffi/notify.v
+let cb = callback(my_lambda);         // callback from _builtin/ffi/callback.v
+```
+
+See [FFI §17.8](17-ffi.md) for the full list of `ffi::` functions.
+
 ### `use Module` — Local Import
 
 Imports a class or module's declarations for unqualified lookup in the current scope:

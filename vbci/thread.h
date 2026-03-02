@@ -52,6 +52,15 @@ namespace vbci
       get().thread_run_sync(func, std::forward<Ts>(argv)...);
     }
 
+    // Called by the callback trampoline to invoke a Verona function with
+    // pre-set arguments. Returns the result register. The caller is
+    // responsible for setting up args via set_callback_arg / set_callback_args
+    // before calling this.
+    static Register run_callback(Function* func, size_t num_args);
+
+    // Set a callback argument by borrowing a value.
+    static void set_callback_arg(size_t idx, ValueBorrow val);
+
     VBCI_KEEP static std::string debug()
     {
       auto& t = get();

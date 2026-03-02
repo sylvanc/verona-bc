@@ -137,7 +137,9 @@ namespace vc
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
     Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
 
-  inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf | Const_NaN;
+  inline const auto wfNulop =
+    None | Const_E | Const_Pi | Const_Inf | Const_NaN | AddExternal |
+    RemoveExternal;
 
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
     wfLiteral | Char | String | RawString | Tuple | ArrayLit | Let | Var | New |
@@ -155,7 +157,7 @@ namespace vc
         ClassBody)[Ident]
     | (ClassBody <<= (ClassDef | Use | TypeAlias | Lib | FieldDef | Function)++)
     | (Lib <<= String * Symbols)
-    | (Symbols <<= Symbol++)
+    | (Symbols <<= (Symbol | Function)++)
     | (Symbol <<=
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *
         (Vararg >>= Vararg | None) * FFIParams * Type)
@@ -265,7 +267,8 @@ namespace vc
 
   inline const auto wfExprDot = (wfExprSugar | CallDyn | TryCallDyn |
                                  Convert | Binop | Nulop | FFI | NewArray |
-                                 ArrayRef) -
+                                 ArrayRef | MakeCallback | CallbackPtr |
+                                 FreeCallback | RegisterExternalNotify) -
     Dot - TripleColon;
 
   // clang-format off
@@ -277,6 +280,10 @@ namespace vc
     | (Convert <<= (Type >>= wfPrimitiveType) * Args)
     | (Binop <<= (MethodId >>= wfBinop) * Args)
     | (Nulop <<= (MethodId >>= wfNulop) * Args)
+    | (MakeCallback <<= Args)
+    | (CallbackPtr <<= Args)
+    | (FreeCallback <<= Args)
+    | (RegisterExternalNotify <<= Args)
     | (FFI <<= SymbolId * Args)
     | (NewArray <<= Type * Args)
     | (ArrayRef <<= Args)
@@ -299,7 +306,8 @@ namespace vc
     RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | Stack | NewArray |
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
     When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
-    GetRaise | SetRaise | SplatOp | ArrayRefFromEnd;
+    GetRaise | SetRaise | SplatOp | ArrayRefFromEnd | MakeCallback |
+    CallbackPtr | FreeCallback | RegisterExternalNotify;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -392,10 +400,16 @@ namespace vc
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)
     | (Const_NaN <<= wfDst)
+    | (AddExternal <<= wfDst)
+    | (RemoveExternal <<= wfDst)
     | (Bits <<= wfDst * wfSrc)
     | (Len <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)
     | (FFI <<= wfDst * SymbolId * Args)
+    | (MakeCallback <<= wfDst * wfSrc)
+    | (CallbackPtr <<= wfDst * wfSrc)
+    | (FreeCallback <<= wfDst * wfSrc)
+    | (RegisterExternalNotify <<= wfDst * wfSrc)
     ;
   // clang-format on
 

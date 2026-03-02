@@ -49,6 +49,7 @@ namespace vbcc
   inline const auto ISize = TokenDef("isize");
   inline const auto USize = TokenDef("usize");
   inline const auto Ptr = TokenDef("ptr");
+  inline const auto Callback = TokenDef("callback");
   inline const auto Dyn = TokenDef("dyn");
   inline const auto Array = TokenDef("array");
   inline const auto Ref = TokenDef("ref");
@@ -143,6 +144,15 @@ namespace vbcc
   inline const auto MakePtr = TokenDef("makeptr");
   inline const auto Read = TokenDef("read");
 
+  // Callback operations.
+  inline const auto MakeCallback = TokenDef("makecallback");
+  inline const auto CallbackPtr = TokenDef("callbackptr");
+  inline const auto FreeCallback = TokenDef("freecallback");
+  inline const auto AddExternal = TokenDef("addexternal");
+  inline const auto RemoveExternal = TokenDef("removeexternal");
+  inline const auto RegisterExternalNotify =
+    TokenDef("registerexternalnotify");
+
   // Raise target.
   inline const auto GetRaise = TokenDef("getraise");
   inline const auto SetRaise = TokenDef("setraise");
@@ -171,6 +181,7 @@ namespace vbcc
   inline const auto Offset = TokenDef("offset");
   inline const auto Symbol = TokenDef("symbol");
   inline const auto Symbols = TokenDef("symbols");
+  inline const auto InitFunc = TokenDef("initfunc");
   inline const auto Vararg = TokenDef("vararg");
   inline const auto Union = TokenDef("union");
   inline const auto TupleType = TokenDef("tupletype");
@@ -207,7 +218,8 @@ namespace vbcc
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
   inline const auto wfFloatType = F32 | F64;
   inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
-  inline const auto wfBuiltinType = wfPrimitiveType | Ptr | Array | Ref | Cown;
+  inline const auto wfBuiltinType =
+    wfPrimitiveType | Ptr | Callback | Array | Ref | Cown;
   inline const auto wfType =
     wfBuiltinType | Dyn | ClassId | TypeId | Union | TupleType;
 
@@ -222,7 +234,8 @@ namespace vbcc
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
     Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
 
-  inline const auto wfConst = Const_E | Const_Pi | Const_Inf | Const_NaN;
+  inline const auto wfConst =
+    Const_E | Const_Pi | Const_Inf | Const_NaN | AddExternal | RemoveExternal;
 
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
@@ -230,7 +243,8 @@ namespace vbcc
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
-    wfConst | Typetest;
+    wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
+    RegisterExternalNotify;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -254,7 +268,7 @@ namespace vbcc
     | (Cown <<= (Type >>= wfType))
     | (Union <<= wfType++)
     | (TupleType <<= wfType++[2])
-    | (Lib <<= String * Symbols)
+    | (Lib <<= String * Symbols * (InitFunc >>= FunctionId | None))
     | (Symbols <<= Symbol++)
     | (Symbol <<=
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *
@@ -373,6 +387,12 @@ namespace vbcc
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)
     | (Const_NaN <<= wfDst)
+    | (AddExternal <<= wfDst)
+    | (RemoveExternal <<= wfDst)
+    | (MakeCallback <<= wfDst * wfSrc)
+    | (CallbackPtr <<= wfDst * wfSrc)
+    | (FreeCallback <<= wfDst * wfSrc)
+    | (RegisterExternalNotify <<= wfDst * wfSrc)
     ;
   // clang-format on
 }

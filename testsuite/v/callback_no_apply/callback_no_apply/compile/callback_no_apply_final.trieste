@@ -1,0 +1,145 @@
+vc
+reify
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$906)
+            (functionid 29:callback_no_apply::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$906)))))
+  (func
+    (functionid 29:callback_no_apply::main::0::0)
+    (params)
+    (i32)
+    (vars
+      (localid 3:obj)
+      (localid 2:cb))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 8:local$87)
+            (i32)
+            (int 1:0))
+          (call
+            (localid 7:local$2)
+            (functionid 40:callback_no_apply::noapply::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$87))))
+          (copy
+            (localid 3:obj)
+            (localid 7:local$2))
+          (call
+            (localid 7:local$3)
+            (functionid 37:_builtin::ffi::callback::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:obj))))
+          (copy
+            (localid 2:cb)
+            (localid 7:local$3))
+          (lookup
+            (localid 8:local$88)
+            (localid 2:cb)
+            (methodid 10:free::1::0))
+          (calldyn
+            (localid 8:local$89)
+            (localid 8:local$88)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:cb))))
+          (const
+            (localid 7:local$4)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 7:local$4)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 40:callback_no_apply::noapply::create::1::0)
+    (params
+      (param
+        (localid 1:x)
+        (i32)))
+    (classid 29:callback_no_apply::noapply::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$1)
+            (classid 29:callback_no_apply::noapply::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:x)))))
+        (ret
+          (localid 7:local$1)))))
+  (func
+    (functionid 37:_builtin::ffi::callback::create::1::0)
+    (params
+      (param
+        (localid 8:callable)
+        (classid 29:callback_no_apply::noapply::0)))
+    (callback)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (error
+            (errormsg 52:make_callback requires a type with an 'apply' method)
+            (makecallback)))
+        (ret
+          (localid 9:local$467)))))
+  (primitive
+    (callback)
+    (methods
+      (method
+        (methodid 10:free::1::0)
+        (functionid 35:_builtin::ffi::callback::free::1::0))))
+  (class
+    (classid 29:callback_no_apply::noapply::0)
+    (fields
+      (field
+        (fieldid 1:x)
+        (i32)))
+    (methods))
+  (func
+    (functionid 35:_builtin::ffi::callback::free::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (callback)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (freecallback
+            (localid 9:local$469)
+            (localid 4:self)))
+        (ret
+          (localid 9:local$469)))))
+  (primitive
+    (none)
+    (methods)))

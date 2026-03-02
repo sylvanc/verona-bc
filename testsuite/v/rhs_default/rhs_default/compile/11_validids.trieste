@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$903)
+            (localid 4:$911)
             (functionid 23:rhs_default::main::0::0)
             (args)))
         (ret
-          (localid 4:$903)))))
+          (localid 4:$911)))))
   (func
     (functionid 23:rhs_default::main::0::0)
     (params)
@@ -34,24 +34,27 @@ validids
             (localid 3:obj)
             (localid 7:local$4))
           (lookup
-            (localid 8:local$83)
+            (localid 8:local$87)
             (localid 3:obj)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 8:local$84)
-            (localid 8:local$83)
+            (localid 8:local$88)
+            (localid 8:local$87)
             (args
               (arg
                 (argcopy)
                 (localid 3:obj)))))
         (ret
-          (localid 8:local$84)))))
+          (localid 8:local$88)))))
   (primitive
     (i32)
     (methods
       (method
         (methodid 9:i32::1::0)
         (functionid 24:_builtin::i32::i32::1::0))
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 24:_builtin::i32::i32::1::1))
       (method
         (methodid 7:+::2::0)
         (functionid 22:_builtin::i32::+::2::0))))
@@ -90,20 +93,20 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$82)
+            (localid 8:local$86)
             (i32)
             (int 2:10))
           (lookup
-            (localid 9:local$807)
-            (localid 8:local$82)
+            (localid 9:local$814)
+            (localid 8:local$86)
             (methodid 9:i32::1::0))
           (calldyn
-            (localid 9:local$808)
-            (localid 9:local$807)
+            (localid 9:local$815)
+            (localid 9:local$814)
             (args
               (arg
                 (argcopy)
-                (localid 8:local$82))))
+                (localid 8:local$86))))
           (call
             (localid 7:local$2)
             (functionid 31:rhs_default::myclass::get::2::0)
@@ -113,7 +116,7 @@ validids
                 (localid 4:self))
               (arg
                 (argcopy)
-                (localid 9:local$808)))))
+                (localid 9:local$815)))))
         (ret
           (localid 7:local$2)))))
   (func
@@ -136,34 +139,48 @@ validids
             (i32)
             (int 2:42))
           (lookup
-            (localid 9:local$461)
+            (localid 9:local$465)
             (localid 7:local$3)
             (methodid 9:i32::1::0))
           (calldyn
-            (localid 9:local$462)
-            (localid 9:local$461)
+            (localid 9:local$466)
+            (localid 9:local$465)
             (args
               (arg
                 (argcopy)
                 (localid 7:local$3))))
           (lookup
-            (localid 9:local$849)
-            (localid 9:local$462)
+            (localid 9:local$857)
+            (localid 9:local$466)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 9:local$850)
-            (localid 9:local$849)
+            (localid 9:local$858)
+            (localid 9:local$857)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$462))
+                (localid 9:local$466))
               (arg
                 (argcopy)
                 (localid 6:offset)))))
         (ret
-          (localid 9:local$850)))))
+          (localid 9:local$858)))))
   (func
     (functionid 24:_builtin::i32::i32::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:self)))))
+  (func
+    (functionid 24:_builtin::i32::i32::1::1)
     (params
       (param
         (localid 4:self)
@@ -192,8 +209,8 @@ validids
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$179)
+            (localid 9:local$183)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$179))))))
+          (localid 9:local$183))))))

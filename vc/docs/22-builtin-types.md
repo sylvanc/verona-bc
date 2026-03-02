@@ -336,9 +336,50 @@ Opaque raw pointer type. Empty class with no methods:
 ptr {}
 ```
 
+Used to pass C function pointers and opaque handles through FFI. See [FFI §17.7](17-ffi.md) for callback usage.
+
 ---
 
-## 22.12 Identity Functions
+## 22.12 `callback`
+
+C-compatible function pointer wrapper. Defined in `_builtin/ffi/callback.v`:
+
+```verona
+callback
+{
+  create[T](callable: T): callback    // wrap a Verona callable
+  apply(self: callback): ptr          // get the C function pointer
+  free(self: callback): none          // free the closure
+}
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `create[T]` | `create(callable: T): callback` | Wrap a callable (lambda, object with `apply`) in a C closure |
+| `apply` | `apply(self): ptr` | Get the C-compatible function pointer |
+| `free` | `free(self): none` | Free the underlying `libffi` closure |
+
+Constructor sugar: `callback(my_lambda)` calls `callback::create(my_lambda)`.
+
+See [FFI §17.7](17-ffi.md) for full callback documentation.
+
+---
+
+## 22.13 FFI Module Functions
+
+Free functions in `_builtin/ffi/`:
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on each `add_external`/`remove_external` event |
+| `ffi::add_external` | `(): none` | Increment the external resource count |
+| `ffi::remove_external` | `(): none` | Decrement the external resource count |
+
+See [FFI §17.8](17-ffi.md) for external resource management details.
+
+---
+
+## 22.14 Identity Functions
 
 Free functions in `_builtin/is.v`:
 

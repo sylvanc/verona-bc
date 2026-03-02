@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$899)
+            (localid 4:$907)
             (functionid 25:infer_calldyn::main::0::0)
             (args)))
         (ret
-          (localid 4:$899)))))
+          (localid 4:$907)))))
   (func
     (functionid 25:infer_calldyn::main::0::0)
     (params)
@@ -27,7 +27,7 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$84)
+            (localid 8:local$88)
             (i32)
             (int 1:1))
           (call
@@ -36,24 +36,24 @@ validids
             (args
               (arg
                 (argcopy)
-                (localid 8:local$84))))
+                (localid 8:local$88))))
           (copy
             (localid 1:w)
             (localid 7:local$2))
           (lookup
-            (localid 8:local$85)
+            (localid 8:local$89)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 8:local$86)
-            (localid 8:local$85)
+            (localid 8:local$90)
+            (localid 8:local$89)
             (args
               (arg
                 (argcopy)
                 (localid 1:w))))
           (copy
             (localid 1:v)
-            (localid 8:local$86))
+            (localid 8:local$90))
           (call
             (localid 7:local$3)
             (functionid 29:infer_calldyn::identity::1::0)
@@ -127,18 +127,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 8:local$82)
+            (localid 8:local$86)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 8:local$83)
-            (localid 8:local$82)
+            (localid 8:local$87)
+            (localid 8:local$86)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 8:local$83)))))
+          (localid 8:local$87)))))
   (func
     (functionid 33:infer_calldyn::wrapper::val::1::0)
     (params
@@ -159,10 +159,10 @@ validids
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$461)
+            (localid 9:local$465)
             (localid 7:local$0)))
         (ret
-          (localid 9:local$461)))))
+          (localid 9:local$465)))))
   (func
     (functionid 38:infer_calldyn::wrapper::val::1::ref::0)
     (params
@@ -177,13 +177,13 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 8:local$81)
+            (localid 8:local$85)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 8:local$81)))))
+          (localid 8:local$85)))))
   (primitive
     (ref
       (i32))

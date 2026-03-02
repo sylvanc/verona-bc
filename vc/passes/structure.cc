@@ -220,6 +220,38 @@ namespace vc
                        << (Symbols << *_[Brace]);
           },
 
+        // FFI init function.
+        In(Symbols) * T(Group)
+            << (~T(Ident, "ref")[Lhs] * T(Ident, SymbolId)[Ident] *
+                ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
+                ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
+                T(Brace)[Brace]) >>
+          [](Match& _) {
+            auto name = _(Ident)->location().view();
+
+            if (name != "init")
+            {
+              return err(
+                _(Ident),
+                "Only 'init' functions are allowed in use blocks");
+            }
+
+            if (_(Lhs))
+              return err(_(Ident), "init functions cannot be ref");
+
+            Node body = Body;
+
+            if (_(Brace)->empty())
+              body << (Expr << (Ident ^ "none"));
+            else
+              body << *_[Brace];
+
+            return Function << Rhs << _(Ident)
+                            << (TypeParams << *_[TypeParams])
+                            << (Params << *_[Params]) << make_type(_[Type])
+                            << (Where << _[Where]) << body;
+          },
+
         // FFI symbol.
         In(Symbols) * T(Group)
             << (T(Ident)[Ident] * T(Equals) * T(String)[Lhs] * ~T(String)[Rhs] *
@@ -241,8 +273,8 @@ namespace vc
                 // Otherwise, it's a list, add multiple types.
                 assert(params->front() == List);
 
-                for (auto& p : *params)
-                  ffiparams << (Type << *p->front());
+                for (auto& p : *params->front())
+                  ffiparams << (Type << *p);
               }
             }
 

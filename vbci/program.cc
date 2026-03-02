@@ -2,7 +2,6 @@
 
 #include "array.h"
 #include "cown.h"
-#include "ffi/ffi.h"
 #include "thread.h"
 
 #include <dlfcn.h>
@@ -89,6 +88,16 @@ namespace vbci
     return &ffi_type_value;
   }
 
+  bool Program::is_scheduler_running() const
+  {
+    return scheduler_running;
+  }
+
+  std::vector<CallbackClosure*>& Program::notify_callbacks()
+  {
+    return external_notify_callbacks;
+  }
+
   uint32_t Program::get_typeid_arg()
   {
     return typeid_arg;
@@ -136,13 +145,32 @@ namespace vbci
       return -1;
 
     setup_argv(args);
-    start_loop();
+
+    // Run library init functions. If an init returns a value with an apply
+    // method (@callback), store it as a fini callback to be called at shutdown.
+    for (auto& init : init_funcs)
+    {
+      if (!init)
+        continue;
+
+      auto result = Thread::run_callback(&functions.at(*init), 0);
+
+      if (result->is_invalid())
+        continue;
+
+      auto* apply = result->method(CallbackMethodId);
+
+      if (apply)
+        fini_callbacks.emplace_back(std::move(result), apply);
+    }
+
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
+    scheduler_running = true;
     sched.run();
-    stop_loop();
+    scheduler_running = false;
 
     auto ret_val = ret.get_cown()->load();
     ret.dec<false>();
@@ -157,6 +185,20 @@ namespace vbci
     {
       exit_code = ret_val.get_i32();
     }
+
+    // Run fini callbacks in reverse order (last init = first fini).
+    for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
+    {
+      Thread::set_callback_arg(0, it->first.borrow());
+      Thread::run_callback(it->second, 1);
+    }
+
+    fini_callbacks.clear();
+
+    for (auto* cc : external_notify_callbacks)
+      free_callback(cc);
+
+    external_notify_callbacks.clear();
 
     return exit_code;
   }
@@ -285,8 +327,7 @@ namespace vbci
   // Used by runtime Typetest instructions for tuple type checking.
   bool Program::is_tuple(uint32_t type_id)
   {
-    return is_complex(type_id) &&
-      (complex_type(type_id).tag == TypeTag::Tuple);
+    return is_complex(type_id) && (complex_type(type_id).tag == TypeTag::Tuple);
   }
 
   bool Program::is_ref(uint32_t type_id)
@@ -694,8 +735,15 @@ namespace vbci
     // FFI information.
     auto num_libs = uleb(pc);
     libs.reserve(num_libs);
+    init_funcs.reserve(num_libs);
     for (size_t i = 0; i < num_libs; i++)
+    {
       libs.emplace_back(strings.at(uleb(pc)));
+
+      auto init_id = uleb(pc);
+      init_funcs.push_back(
+        init_id ? std::optional<size_t>(init_id - 1) : std::nullopt);
+    }
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)

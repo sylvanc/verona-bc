@@ -54,7 +54,8 @@ namespace vbcc
        USize,
        F32,
        F64,
-       Ptr});
+       Ptr,
+       Callback});
   }
 
   static bool is_numeric(const Node& t)
@@ -1597,6 +1598,22 @@ namespace vbcc
         {
           // Math constants are F64.
           set_type(env, node / LocalId, Node(F64));
+        }
+        else if (
+          node->type().in({AddExternal, RemoveExternal, FreeCallback}))
+        {
+          // These produce None.
+          set_type(env, node / LocalId, Node(None));
+        }
+        else if (node->type().in({MakeCallback}))
+        {
+          // MakeCallback produces Callback.
+          set_type(env, node / LocalId, Node(Callback));
+        }
+        else if (node->type().in({CallbackPtr}))
+        {
+          // CallbackPtr produces Ptr.
+          set_type(env, node / LocalId, Node(Ptr));
         }
         else if (node == GetRaise)
         {

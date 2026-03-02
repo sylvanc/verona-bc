@@ -14,6 +14,7 @@
 
 namespace vbci
 {
+  struct CallbackClosure;
   struct Register;
   struct ValueBorrow;
   struct ValueImmortal;
@@ -60,6 +61,7 @@ namespace vbci
       Cown* cown;
       Err err;
       Function* func;
+      CallbackClosure* callback;
     };
 
     uint64_t idx : 56;
@@ -96,6 +98,7 @@ namespace vbci
     explicit Value(Cown* cown, bool ro);
     explicit Value(Error error);
     explicit Value(Function* func);
+    explicit Value(CallbackClosure* callback);
 
     template<typename T>
     explicit Value(ValueType t, T v) : tag(t)
@@ -133,6 +136,7 @@ namespace vbci
     bool is_object() const;
     bool is_array() const;
     bool is_function() const;
+    bool is_callback() const;
     bool is_sendable() const;
     bool is_cown() const;
     bool is_error() const;
@@ -144,6 +148,7 @@ namespace vbci
     Object* get_object() const;
     Array* get_array() const;
     Function* function() const;
+    CallbackClosure* get_callback() const;
     size_t get_size() const;
     Register& get_register() const;
 
@@ -917,6 +922,8 @@ namespace vbci
         return os << "F64";
       case ValueType::Ptr:
         return os << "Ptr";
+      case ValueType::Callback:
+        return os << "Callback";
       case ValueType::Object:
         return os << "Object";
       case ValueType::Array:

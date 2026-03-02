@@ -285,6 +285,9 @@ namespace vbcc
 
     // Reserve a method ID for `@final`.
     method_ids.insert({ST::di().string("@final"), FinalMethodId});
+
+    // Reserve a method ID for `@callback`.
+    method_ids.insert({ST::di().string("@callback"), CallbackMethodId});
   }
 
   void Bytecode::add_path(const std::filesystem::path& path)
@@ -587,7 +590,17 @@ namespace vbcc
     hdr << uleb(libraries.size());
 
     for (auto& lib : libraries)
+    {
       hdr << uleb(ST::exec().string(lib / String));
+
+      // Encode init function ID. 0 means no function, otherwise
+      // func_id + 1.
+      auto init = lib / InitFunc;
+      if (init->type() == FunctionId)
+        hdr << uleb(*get_func_id(init) + 1);
+      else
+        hdr << uleb(0);
+    }
 
     hdr << uleb(symbols.size());
 
@@ -1232,6 +1245,31 @@ namespace vbcc
           {
             code << uleb(+Op::Const_NaN) << dst(stmt);
           }
+          else if (stmt == MakeCallback)
+          {
+            code << uleb(+Op::MakeCallback) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == CallbackPtr)
+          {
+            code << uleb(+Op::CallbackPtr) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == FreeCallback)
+          {
+            code << uleb(+Op::FreeCallback) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == AddExternal)
+          {
+            code << uleb(+Op::AddExternal) << dst(stmt);
+          }
+          else if (stmt == RemoveExternal)
+          {
+            code << uleb(+Op::RemoveExternal) << dst(stmt);
+          }
+          else if (stmt == RegisterExternalNotify)
+          {
+            code << uleb(+Op::RegisterExternalNotify) << dst(stmt)
+                 << src(stmt);
+          }
           else if (stmt == Typetest)
           {
             code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
@@ -1370,7 +1408,8 @@ namespace vbcc
                 USize,
                 F32,
                 F64,
-                Ptr}))
+                Ptr,
+                Callback}))
     {
       return +val(type);
     }

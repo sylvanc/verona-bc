@@ -1,6 +1,7 @@
 #include "thread.h"
 
 #include "array.h"
+#include "callback.h"
 #include "cown.h"
 #include "function_signature.h"
 #include "object.h"
@@ -741,6 +742,18 @@ namespace vbci
         return os << "Const_Inf";
       case Op::Const_NaN:
         return os << "Const_NaN";
+      case Op::MakeCallback:
+        return os << "MakeCallback";
+      case Op::CallbackPtr:
+        return os << "CallbackPtr";
+      case Op::FreeCallback:
+        return os << "FreeCallback";
+      case Op::AddExternal:
+        return os << "AddExternal";
+      case Op::RemoveExternal:
+        return os << "RemoveExternal";
+      case Op::RegisterExternalNotify:
+        return os << "RegisterExternalNotify";
       default:
         return os << "Unknown";
     }
@@ -1232,9 +1245,8 @@ namespace vbci
 
       case Op::TryCallDynamic:
       {
-        process(
-          [](Constant<size_t> dst_id, const Register& func, Thread& self)
-            INLINE { self.try_pushframe(func->function(), dst_id); });
+        process([](Constant<size_t> dst_id, const Register& func, Thread& self)
+                  INLINE { self.try_pushframe(func->function(), dst_id); });
         break;
       }
 
@@ -1543,6 +1555,104 @@ namespace vbci
         do_const(inf);
       case Op::Const_NaN:
         do_const(nan);
+
+      case Op::MakeCallback:
+      {
+        process([](Register& dst, Register& src) INLINE {
+          auto* func = src->method(CallbackMethodId);
+
+          if (!func)
+            Value::error(Error::MethodNotFound);
+
+          auto* cc = make_callback(src, func);
+          dst = ValueImmortal(Value(cc));
+        });
+        break;
+      }
+
+      case Op::CallbackPtr:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          auto* cc = src->get_callback();
+
+          if (!cc)
+            Value::error(Error::BadOperand);
+
+          dst = ValueImmortal(Value(callback_ptr(cc)));
+        });
+        break;
+      }
+
+      case Op::FreeCallback:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          auto* cc = src->get_callback();
+
+          if (!cc)
+            Value::error(Error::BadOperand);
+
+          free_callback(cc);
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::AddExternal:
+      {
+        process([](Register& dst) INLINE {
+          verona::rt::Scheduler::schedule(
+            new verona::rt::Work([](verona::rt::Work* work) {
+              verona::rt::Scheduler::add_external_event_source();
+
+              for (auto* cc : Program::get().notify_callbacks())
+              {
+                auto fn = (void (*)(void))callback_ptr(cc);
+                fn();
+              }
+
+              delete work;
+            }));
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::RemoveExternal:
+      {
+        process([](Register& dst) INLINE {
+          verona::rt::Scheduler::schedule(
+            new verona::rt::Work([](verona::rt::Work* work) {
+              verona::rt::Scheduler::remove_external_event_source();
+
+              for (auto* cc : Program::get().notify_callbacks())
+              {
+                auto fn = (void (*)(void))callback_ptr(cc);
+                fn();
+              }
+
+              delete work;
+            }));
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::RegisterExternalNotify:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          if (Program::get().is_scheduler_running())
+            Value::error(Error::SchedulerAlreadyRunning);
+
+          auto* cc = src->get_callback();
+
+          if (!cc)
+            Value::error(Error::BadOperand);
+
+          Program::get().notify_callbacks().push_back(cc);
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
 
       default:
         Value::error(Error::UnknownOpcode);
@@ -2038,5 +2148,46 @@ namespace vbci
   {
     auto& thread = Thread::get();
     return thread.locals.at(idx);
+  }
+
+  Register Thread::run_callback(Function* func, size_t num_args)
+  {
+    auto& self = get();
+    assert(self.args == 0);
+    self.args = num_args;
+
+    auto depth = self.frames.size();
+
+    // When called during an active FFI call, parent frames exist on the stack.
+    // popframe with dst=0 writes the return value to the parent frame's
+    // local[0], so we must save and restore it.
+    Register saved;
+    if (self.frame)
+      saved = std::move(self.frame->local(0));
+
+    self.pushframe(func, 0);
+    self.invariant();
+
+    while (depth != self.frames.size())
+      self.step();
+
+    if (self.frame)
+    {
+      // Retrieve the callback result from where popframe placed it.
+      Register result = std::move(self.frame->local(0));
+
+      // Restore the parent frame's original register.
+      self.frame->local(0) = std::move(saved);
+
+      return result;
+    }
+
+    // No parent frame — result is at the bottom of the locals vector.
+    return std::move(self.locals.at(0));
+  }
+
+  void Thread::set_callback_arg(size_t idx, ValueBorrow val)
+  {
+    get().arg(idx) = val;
   }
 }
