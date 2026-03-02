@@ -7,11 +7,11 @@ namespace vc
     TypeName, Union, Isect, FuncType, TupleType, TypeVar, TypeSelf};
 
   const std::initializer_list<Token> wfExprElement = {
-    ExprSeq,  DontCare, SplatLet, SplatDontCare, True,    False,
-    Bin,      Oct,      Int,      Hex,           Float,   HexFloat,
-    String,   RawString,Char,     Tuple,         ArrayLit,Let,
-    Var,      New,      Lambda,   Dot,           Ref,     FuncName,
-    If,       While,    When,     Equals,        Else,    TripleColon,
+    ExprSeq,  DontCare,  SplatLet, SplatDontCare, True,     False,
+    Bin,      Oct,       Int,      Hex,           Float,    HexFloat,
+    String,   RawString, Char,     Tuple,         ArrayLit, Let,
+    Var,      New,       Lambda,   Dot,           Ref,      FuncName,
+    If,       While,     When,     Equals,        Else,     TripleColon,
     FieldRef, MatchExpr};
 
   const auto FieldPat = T(Ident)[Ident] * ~(T(Colon) * Any++[Type]);
@@ -189,14 +189,14 @@ namespace vc
         // Dependency alias.
         T(Group)
             << (T(Use) * T(Ident)[Ident] * T(Equals) * T(String)[Lhs] *
-                T(String)[Rhs] * ~T(String)[Directory]) >>
+                ~T(String)[Rhs] * ~T(String)[Directory]) >>
           [](Match& _) {
             return Use << _(Ident) << _(Lhs) << _(Rhs) << _(Directory);
           },
 
         // Dependency import.
         T(Group)
-            << (T(Use) * T(String)[Lhs] * T(String)[Rhs] *
+            << (T(Use) * T(String)[Lhs] * ~T(String)[Rhs] *
                 ~T(String)[Directory]) >>
           [](Match& _) { return Use << _(Lhs) << _(Rhs) << _(Directory); },
 
@@ -232,8 +232,7 @@ namespace vc
             if (name != "init")
             {
               return err(
-                _(Ident),
-                "Only 'init' functions are allowed in use blocks");
+                _(Ident), "Only 'init' functions are allowed in use blocks");
             }
 
             if (_(Lhs))
@@ -246,8 +245,7 @@ namespace vc
             else
               body << *_[Brace];
 
-            return Function << Rhs << _(Ident)
-                            << (TypeParams << *_[TypeParams])
+            return Function << Rhs << _(Ident) << (TypeParams << *_[TypeParams])
                             << (Params << *_[Params]) << make_type(_[Type])
                             << (Where << _[Where]) << body;
           },
@@ -505,8 +503,7 @@ namespace vc
         // Lambda without parameters.
         In(Expr) * T(Brace)[Brace] >>
           [](Match& _) {
-            return Lambda << Params << make_type()
-                          << lambda_body(_(Brace), {});
+            return Lambda << Params << make_type() << lambda_body(_(Brace), {});
           },
 
         // Dot.
@@ -727,7 +724,7 @@ namespace vc
           else
             url = std::move(id);
 
-          auto tag = node->at(i++);
+          auto tag = node->size() > i ? node->at(i++) : Node();
           auto dir = node->size() > i ? node->at(i) : Node();
 
           // Clone or update the dependency.

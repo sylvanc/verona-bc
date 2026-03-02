@@ -1926,54 +1926,13 @@ namespace vc
 
               auto ret_type = reify_type(sym / Type, r.subst);
 
-              // Check if this symbol has already been added.
+              // Add the reified symbol. Duplicate detection and type
+              // compatibility checking is done in the vbcc assignids pass.
               auto reified_symbols = reified_lib / Symbols;
-              bool already_added = false;
-
-              for (auto& existing : *reified_symbols)
-              {
-                if ((existing / SymbolId)->location() != sym_name)
-                  continue;
-
-                already_added = true;
-
-                // Verify the existing declaration is consistent.
-                auto lhs_a = (existing / Lhs)->location().view();
-                auto lhs_b = (sym / Lhs)->location().view();
-                auto rhs_a = (existing / Rhs)->location().view();
-                auto rhs_b = (sym / Rhs)->location().view();
-                auto existing_params = existing / FFIParams;
-                Node existing_ret = existing->back();
-
-                if (
-                  (lhs_a != lhs_b) || (rhs_a != rhs_b) ||
-                  !Subtype.invariant(top, existing_ret, ret_type) ||
-                  !std::equal(
-                    existing_params->begin(),
-                    existing_params->end(),
-                    ffi_params->begin(),
-                    ffi_params->end(),
-                    [&](auto& ep, auto& np) {
-                      return Subtype.invariant(top, ep, np);
-                    }))
-                {
-                  n->parent()->replace(
-                    n,
-                    err(sym_id, "Conflicting FFI declarations")
-                      << errmsg("Here:") << errloc(existing / SymbolId)
-                      << errmsg("And here:") << errloc(sym_id));
-                  return;
-                }
-                break;
-              }
-
-              if (!already_added)
-              {
-                reified_symbols
-                  << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)
-                             << clone(sym / Rhs) << clone(sym / Vararg)
-                             << ffi_params << ret_type);
-              }
+              reified_symbols
+                << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)
+                           << clone(sym / Rhs) << clone(sym / Vararg)
+                           << ffi_params << ret_type);
 
               return;
             }

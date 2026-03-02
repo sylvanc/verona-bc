@@ -2,6 +2,17 @@
 
 ## To Do
 
+Change `vbcc typecheck` to use `IRSubtype`.
+
+`raise_infer` has an error in the `typecheck.trieste` golden file, but still seems to have compiled and executed.
+
+Review `iowise`.
+- Move to `io::out::print`, `io::err::print`.
+
+Type inference on FFI arguments.
+
+Add/remove external can race, causing remove to be run before add.
+
 FFI.
 - Can `ffi::callback` interact with reference counting better?
 - Platform dependent code for dealing with libraries?

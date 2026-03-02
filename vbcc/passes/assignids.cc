@@ -1,3 +1,4 @@
+#include "../irsubtype.h"
 #include "../lang.h"
 
 namespace vbcc
@@ -19,8 +20,41 @@ namespace vbcc
         T(Symbol)[Symbol] >> [state](Match& _) -> Node {
           if (!state->add_symbol(_(Symbol)))
           {
-            state->error = true;
-            return err(_(Symbol), "duplicate symbol");
+            // Duplicate name. Check type compatibility.
+            auto existing = state->get_symbol(_(Symbol) / SymbolId);
+            assert(existing);
+
+            auto ep = existing / FFIParams;
+            auto np = _(Symbol) / FFIParams;
+            auto er = existing / Return;
+            auto nr = _(Symbol) / Return;
+
+            bool compatible =
+              ((existing / Lhs)->location().view() ==
+               (_(Symbol) / Lhs)->location().view()) &&
+              ((existing / Rhs)->location().view() ==
+               (_(Symbol) / Rhs)->location().view()) &&
+              IRSubtype.invariant(state->top, er, nr) &&
+              std::equal(
+                ep->begin(),
+                ep->end(),
+                np->begin(),
+                np->end(),
+                [&](auto& a, auto& b) {
+                  return IRSubtype.invariant(state->top, a, b);
+                });
+
+            if (!compatible)
+            {
+              state->error = true;
+              return err(
+                _(Symbol) / SymbolId,
+                "incompatible FFI symbol redefinition")
+                << errmsg("previous definition here:")
+                << errloc(existing / SymbolId);
+            }
+
+            return NoChange;
           }
 
           return NoChange;

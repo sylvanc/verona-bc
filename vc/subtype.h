@@ -1,7 +1,8 @@
 #pragma once
 
 #include "lang.h"
-#include "sequent.h"
+
+#include <vbcc/sequent.h>
 
 namespace vc
 {

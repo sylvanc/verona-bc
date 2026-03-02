@@ -33,7 +33,7 @@ namespace vbci
     size_t args;
 
     std::vector<const void*> ffi_arg_addrs;
-    std::vector<Register*> ffi_arg_vals;
+    std::vector<const void*> ffi_arg_vals;
 #ifndef NDEBUG
     logging::Trace instruction_log;
 #endif

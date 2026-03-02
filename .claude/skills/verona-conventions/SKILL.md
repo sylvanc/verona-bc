@@ -63,6 +63,8 @@ user-invocable: false
 - Array literals: `::(expr, ...)`.
 - Match: `(match expr { (pattern) -> body; ... }) else (default)`.
 - FFI calls: `:::name(args)` for direct FFI, `ffi::func(args)` for `_builtin/ffi/` wrappers.
+- FFI data passing: arrays pass as pointers to their data (e.g., `array[u8]` → `uint8_t*`), objects pass as pointers to their fields (like a C struct). No wrapper types cross the FFI boundary.
+- Packages: `use "url" "tag"` imports from a git repo. `use "~/dev/pkg" "main"` works for local repos.
 
 ## Architecture
 

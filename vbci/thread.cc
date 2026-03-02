@@ -1279,24 +1279,40 @@ namespace vbci
           for (size_t i = 0; i < num_args; i++)
           {
             auto& arg = frame.arg(i);
-            ffi_arg_vals.at(i) = &arg;
+            ValueType vt;
 
             if (i < params.size())
             {
-              if (paramvals.at(i) == ValueType::Invalid)
-                ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
-              else
-                ffi_arg_addrs.at(i) = arg->to_ffi();
+              vt = paramvals.at(i);
             }
             else
             {
               auto rep = program.layout_type_id(arg->type_id());
               symbol.varparam(rep.second);
+              vt = rep.first;
+            }
 
-              if (rep.first == ValueType::Invalid)
-                ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
-              else
-                ffi_arg_addrs.at(i) = arg->to_ffi();
+            if (vt == ValueType::Invalid)
+            {
+              // Dynamic type: pass a pointer to the Value.
+              ffi_arg_vals.at(i) = &arg;
+              ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+            }
+            else if (vt == ValueType::Object)
+            {
+              // Object: pass a pointer to the fields (past the header).
+              ffi_arg_vals.at(i) = arg->get_object()->get_pointer();
+              ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+            }
+            else if (vt == ValueType::Array)
+            {
+              // Array: pass a pointer to the elements (past the header).
+              ffi_arg_vals.at(i) = arg->get_array()->get_pointer();
+              ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+            }
+            else
+            {
+              ffi_arg_addrs.at(i) = arg->to_ffi();
             }
           }
 

@@ -456,6 +456,17 @@ namespace vbcc
     return find->second;
   }
 
+  Node Bytecode::get_symbol(Node id)
+  {
+    auto name = ST::noemit().string(id);
+    auto find = symbol_ids.find(name);
+
+    if (find == symbol_ids.end())
+      return {};
+
+    return symbols[find->second];
+  }
+
   bool Bytecode::add_symbol(Node symbol)
   {
     auto name = ST::noemit().string(symbol / SymbolId);
