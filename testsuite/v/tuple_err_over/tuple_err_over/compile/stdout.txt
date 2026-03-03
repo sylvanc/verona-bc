@@ -4,5 +4,11 @@ tuple index 2 out of range for tuple with 2 elements
   (let a, let b, let c) = t;
   ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Pass typecheck failed with 1 error!
+----------------
+call: argument type 'dyn' is not a subtype of parameter type 'i32'
+-- tuple_err_over.v:7:11
+  a + b + c
+          ~
+
+Pass typecheck failed with 2 errors!
 

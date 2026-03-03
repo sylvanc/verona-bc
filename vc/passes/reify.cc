@@ -208,7 +208,9 @@ namespace vc
     // ClassId/primitive, returns just that type.
     Nodes extract_receivers(const Node& reified_type)
     {
-      if (!reified_type || (reified_type == Dyn))
+      // Dyn means "all classes". TypeId means a shape type whose concrete
+      // implementations aren't resolved yet (post-worklist), so treat as all.
+      if (!reified_type || (reified_type == Dyn) || (reified_type == TypeId))
         return {};
 
       if (reified_type == Union)
@@ -2151,8 +2153,7 @@ namespace vc
           ((def / Ident)->location().view() == "any"))
           return Dyn;
 
-        find_or_push(def, std::move(r.subst), resolved_name);
-        return Dyn;
+        return find_or_push(def, std::move(r.subst), resolved_name);
       }
 
       return find_or_push(def, std::move(r.subst), resolved_name);

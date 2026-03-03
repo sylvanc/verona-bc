@@ -3109,6 +3109,19 @@ namespace vc
           try_refine(env, ret_src->location(), ret_prim);
         }
       }
+      else if (term == Raise)
+      {
+        // Raise carries the enclosing function's return type as its Type
+        // child. Refine the raised value's literal against this type.
+        auto raise_ret = term / Type;
+        auto ret_prim = extract_primitive(raise_ret);
+
+        if (ret_prim)
+        {
+          auto ret_src = term / LocalId;
+          try_refine(env, ret_src->location(), ret_prim);
+        }
+      }
     }
 
     // ---------- Phase A.5: Pre-Phase B cascade ----------

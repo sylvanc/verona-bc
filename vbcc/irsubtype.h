@@ -88,7 +88,7 @@ namespace vbcc
                    r->begin(),
                    r->end(),
                    [&](auto& t, auto& u) {
-                     return IRSubtype.invariant(ctx, t, u);
+                     return IRSubtype(ctx, t, u);
                    });
         },
 

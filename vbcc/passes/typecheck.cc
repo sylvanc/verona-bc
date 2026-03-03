@@ -1,3 +1,4 @@
+#include "../irsubtype.h"
 #include "../lang.h"
 
 #include <map>
@@ -191,111 +192,6 @@ namespace vbcc
     return t->type() == expected;
   }
 
-  // Check if sub is a subtype of super in the IR type system.
-  // This mirrors the interpreter's Program::subtype() logic:
-  //   - Dyn is top (everything is a subtype of Dyn)
-  //   - Dyn is bottom for runtime purposes (Dyn could be anything)
-  //   - Union: all members of sub must be subtypes of super
-  //   - Array/Cown/Ref: invariant in their element type
-  //   - Same primitive/ClassId: equal
-  static bool ir_subtype(const Node& sub, const Node& super)
-  {
-    if (!sub || !super)
-      return true; // Unknown type - be conservative
-
-    // Everything is a subtype of Dyn.
-    if (super == Dyn)
-      return true;
-
-    // Dyn is a subtype of nothing (conservatively - it could be anything).
-    // In static checking, we treat Dyn as compatible to avoid false positives.
-    if (sub == Dyn)
-      return true;
-
-    // TypeId should be resolved before calling ir_subtype.
-    // If one still appears, conservatively allow it.
-    if (sub == TypeId || super == TypeId)
-      return true;
-
-    // Same token type for primitives.
-    if (is_primitive(sub) && is_primitive(super))
-      return sub->type() == super->type();
-
-    // ClassId: same string value.
-    if (sub == ClassId && super == ClassId)
-      return sub->location() == super->location();
-
-    // Union sub: all members must be subtypes of super.
-    if (sub == Union)
-    {
-      for (auto& child : *sub)
-      {
-        if (!ir_subtype(child, super))
-          return false;
-      }
-      return true;
-    }
-
-    // Union super: sub must be a subtype of at least one member.
-    if (super == Union)
-    {
-      for (auto& child : *super)
-      {
-        if (ir_subtype(sub, child))
-          return true;
-      }
-      return false;
-    }
-
-    // Array/Cown/Ref: invariant.
-    if (sub == Array && super == Array)
-      return ir_subtype(sub / Type, super / Type) &&
-        ir_subtype(super / Type, sub / Type);
-
-    if (sub == Cown && super == Cown)
-      return ir_subtype(sub / Type, super / Type) &&
-        ir_subtype(super / Type, sub / Type);
-
-    if (sub == Ref && super == Ref)
-      return ir_subtype(sub / Type, super / Type) &&
-        ir_subtype(super / Type, sub / Type);
-
-    // TupleType vs TupleType: covariant element-wise, same arity.
-    if (sub == TupleType && super == TupleType)
-    {
-      if (sub->size() != super->size())
-        return false;
-
-      for (size_t i = 0; i < sub->size(); i++)
-      {
-        if (!ir_subtype(sub->at(i), super->at(i)))
-          return false;
-      }
-
-      return true;
-    }
-
-    // TupleType <: Array(T) if all elements <: T.
-    if (sub == TupleType && super == Array && super->size() > 0)
-    {
-      auto elem_type = super->front();
-
-      for (auto& child : *sub)
-      {
-        if (!ir_subtype(child, elem_type))
-          return false;
-      }
-
-      return true;
-    }
-
-    // ClassId is a subtype of a Union containing that ClassId.
-    // (Handled by the Union super case above.)
-
-    // Primitive vs ClassId, or different complex types: not subtypes.
-    return false;
-  }
-
   // Get the type of a register from the type environment.
   // Returns null Node if the register type is unknown.
   static Node
@@ -383,7 +279,8 @@ namespace vbcc
 
   // Subtract a type from a (possibly union) type.
   // Returns the type with `to_remove` components stripped out.
-  static Node type_subtract(const Node& type, const Node& to_remove)
+  static Node
+  type_subtract(const Node& top, const Node& type, const Node& to_remove)
   {
     if (!type || type == Dyn)
       return type ? clone(type) : Node(Dyn);
@@ -394,25 +291,25 @@ namespace vbcc
       for (auto& child : *type)
       {
         // Keep members that don't match to_remove.
-        if (!ir_subtype(child, to_remove) || !ir_subtype(to_remove, child))
+        if (!IRSubtype.invariant(top, child, to_remove))
           result << clone(child);
       }
 
       if (result->size() == 0)
-        return Node(Dyn);
+        return Node(Union);
       if (result->size() == 1)
         return clone(result->front());
       return result;
     }
 
-    // Non-union: if it equals to_remove, nothing left.
-    if (ir_subtype(type, to_remove) && ir_subtype(to_remove, type))
-      return Node(Dyn);
+    // Non-union: if it equals to_remove, nothing left (bottom type).
+    if (IRSubtype.invariant(top, type, to_remove))
+      return Node(Union);
     return clone(type);
   }
 
   // Merge (union) two types at a control flow join point.
-  static Node type_merge(const Node& a, const Node& b)
+  static Node type_merge(const Node& top, const Node& a, const Node& b)
   {
     if (!a || a == Dyn)
       return Node(Dyn);
@@ -420,7 +317,7 @@ namespace vbcc
       return Node(Dyn);
 
     // If equal, keep one.
-    if (ir_subtype(a, b) && ir_subtype(b, a))
+    if (IRSubtype.invariant(top, a, b))
       return clone(a);
 
     // Build union from both sides.
@@ -446,7 +343,7 @@ namespace vbcc
       bool found = false;
       for (auto& u : unique)
       {
-        if (ir_subtype(m, u) && ir_subtype(u, m))
+        if (IRSubtype.invariant(top, m, u))
         {
           found = true;
           break;
@@ -532,9 +429,9 @@ namespace vbcc
               flat_children.push_back(resolved);
             }
           }
-          // Normalize: empty -> Dyn, single -> unwrap, otherwise Union.
+          // Normalize: empty union is bottom type, single -> unwrap.
           if (flat_children.empty())
-            return Node(Dyn);
+            return Node(Union);
           if (flat_children.size() == 1)
             return clone(flat_children[0]);
           if (!changed)
@@ -767,7 +664,7 @@ namespace vbcc
               auto field_type = resolve_type((*f_it) / Type);
               auto arg_type = typed((*a_it) / Rhs);
 
-              if (arg_type && !ir_subtype(arg_type, field_type))
+              if (arg_type && !IRSubtype(top, arg_type, field_type))
               {
                 type_err(
                   *a_it,
@@ -993,7 +890,7 @@ namespace vbcc
           if (ref_type && ref_type == Ref && ref_type->size() > 0 && val_type)
           {
             auto content_type = ref_type / Type;
-            if (!ir_subtype(val_type, content_type))
+            if (!IRSubtype(top, val_type, content_type))
             {
               type_err(
                 node,
@@ -1013,7 +910,7 @@ namespace vbcc
               if (member != Ref || member->size() == 0)
                 continue;
               auto content_type = member / Type;
-              if (!ir_subtype(val_type, content_type))
+              if (!IRSubtype(top, val_type, content_type))
               {
                 type_err(
                   node,
@@ -1106,7 +1003,7 @@ namespace vbcc
               auto param_type = resolve_type((*p_it) / Type);
               auto arg_type = typed((*a_it) / Rhs);
 
-              if (arg_type && !ir_subtype(arg_type, param_type))
+              if (arg_type && !IRSubtype(top, arg_type, param_type))
               {
                 type_err(
                   *a_it,
@@ -1174,18 +1071,94 @@ namespace vbcc
               return {};
             };
 
-            // For unions, all members must resolve to the same function.
+            // For unions, resolve each member, check args against all
+            // resolved param types, and union the return types.
             if (info.src_type && info.src_type == Union)
             {
+              Node ret_union = Union;
+              std::vector<Node> resolved_funcs;
+
+              auto add_unique = [&](Node t) {
+                for (auto& existing : *ret_union)
+                {
+                  if (existing->equals(t))
+                    return;
+                }
+                ret_union << clone(t);
+              };
+
               for (auto& member : *info.src_type)
               {
                 auto f = resolve_one(member);
+
                 if (f)
                 {
-                  target_func = f;
-                  break;
+                  resolved_funcs.push_back(f);
+                  auto rt = resolve_type(f / Type);
+
+                  if (rt == Union)
+                  {
+                    for (auto& child : *rt)
+                      add_unique(child);
+                  }
+                  else
+                    add_unique(rt);
                 }
               }
+
+              // Check that EVERY resolved function accepts the args.
+              // Dynamic dispatch selects the function based on the
+              // receiver's runtime type. For each possible dispatch
+              // target, all non-self args must match that target's
+              // params. Self (arg 0) is the dispatch receiver and is
+              // always the correct type at runtime.
+              if (!resolved_funcs.empty())
+              {
+                auto args = node / Args;
+
+                for (auto& f : resolved_funcs)
+                {
+                  auto params = f / Params;
+                  auto p_it = params->begin();
+                  auto a_it = args->begin();
+
+                  // Skip self (first param/arg) - it's the dispatch
+                  // receiver.
+                  if (p_it != params->end())
+                    ++p_it;
+                  if (a_it != args->end())
+                    ++a_it;
+
+                  while (p_it != params->end() && a_it != args->end())
+                  {
+                    auto param_type = resolve_type((*p_it) / Type);
+                    auto arg_type = typed((*a_it) / Rhs);
+
+                    if (arg_type && !IRSubtype(top, arg_type, param_type))
+                    {
+                      type_err(
+                        *a_it,
+                        std::format(
+                          "call: argument type '{}' is not a subtype of "
+                          "parameter type '{}'",
+                          type_name(arg_type),
+                          type_name(param_type)));
+                      return true;
+                    }
+
+                    ++p_it;
+                    ++a_it;
+                  }
+                }
+              }
+
+              if (ret_union->empty())
+                set_type(env, node / LocalId, Node(Dyn));
+              else if (ret_union->size() == 1)
+                set_type(
+                  env, node / LocalId, clone(ret_union->front()));
+              else
+                set_type(env, node / LocalId, ret_union);
             }
             else if (info.src_type)
             {
@@ -1205,7 +1178,7 @@ namespace vbcc
                 auto param_type = resolve_type((*p_it) / Type);
                 auto arg_type = typed((*a_it) / Rhs);
 
-                if (arg_type && !ir_subtype(arg_type, param_type))
+                if (arg_type && !IRSubtype(top, arg_type, param_type))
                 {
                   type_err(
                     *a_it,
@@ -1225,7 +1198,7 @@ namespace vbcc
               set_type(
                 env, node / LocalId, resolve_type(target_func / Type));
             }
-            else
+            else if (!(info.src_type && info.src_type == Union))
             {
               set_type(env, node / LocalId, Node(Dyn));
             }
@@ -1637,7 +1610,7 @@ namespace vbcc
             auto ret_type = typed(node / LocalId);
             auto func_ret = resolve_type(cur_func / Type);
 
-            if (ret_type && !ir_subtype(ret_type, func_ret))
+            if (ret_type && !IRSubtype(top, ret_type, func_ret))
             {
               type_err(
                 node,
@@ -1657,7 +1630,7 @@ namespace vbcc
           auto ret_type = typed(node / LocalId);
           auto raise_ret = resolve_type(node / Type);
 
-          if (ret_type && !ir_subtype(ret_type, raise_ret))
+          if (ret_type && !IRSubtype(top, ret_type, raise_ret))
           {
             type_err(
               node,
@@ -1794,7 +1767,7 @@ namespace vbcc
               if (eit == env.end())
                 env[key] = clone(type);
               else
-                eit->second = type_merge(eit->second, type);
+                eit->second = type_merge(top, eit->second, type);
             }
           }
 
@@ -1814,37 +1787,67 @@ namespace vbcc
           {
             auto cond_var = term / LocalId;
 
-            // Check if the last body statement is a Typetest whose dst
-            // matches the Cond operand.
+            // Check if the last body statement is a Typetest (or
+            // Not(Typetest)) whose dst matches the Cond operand.
             if (body->size() > 0)
             {
               auto last_stmt = body->back();
+              bool negated = false;
+              Node typetest_stmt;
+
               if (
                 last_stmt == Typetest &&
                 (last_stmt / LocalId)->location() == cond_var->location())
               {
+                typetest_stmt = last_stmt;
+              }
+              else if (
+                last_stmt == Not &&
+                (last_stmt / LocalId)->location() == cond_var->location() &&
+                body->size() > 1)
+              {
+                // Not(Typetest): check second-to-last statement.
+                auto prev_stmt = body->at(body->size() - 2);
+                if (
+                  prev_stmt == Typetest &&
+                  (prev_stmt / LocalId)->location() ==
+                    (last_stmt / Rhs)->location())
+                {
+                  typetest_stmt = prev_stmt;
+                  negated = true;
+                }
+              }
+
+              if (typetest_stmt)
+              {
                 auto src_name =
-                  std::string((last_stmt / Rhs)->location().view());
+                  std::string((typetest_stmt / Rhs)->location().view());
                 auto src_type =
-                  resolve_type(get_type(env, last_stmt / Rhs));
-                auto tested_type = resolve_type(last_stmt / Type);
+                  resolve_type(get_type(env, typetest_stmt / Rhs));
+                auto tested_type = resolve_type(typetest_stmt / Type);
 
                 auto true_name =
                   std::string((term / Lhs)->location().view());
                 auto false_name =
                   std::string((term / Rhs)->location().view());
 
-                // True branch: src narrowed TO the tested type.
-                TypeEnv true_env = env;
-                true_env[src_name] = clone(tested_type);
-                branch_exits[idx][true_name] = std::move(true_env);
+                // When negated, true means NOT the type, false means IS
+                // the type.
+                auto& narrow_name = negated ? false_name : true_name;
+                auto& subtract_name = negated ? true_name : false_name;
 
-                // False branch: src narrowed to type MINUS the tested type.
-                TypeEnv false_env = env;
+                // Narrow branch: src narrowed TO the tested type.
+                TypeEnv narrow_env = env;
+                narrow_env[src_name] = clone(tested_type);
+                branch_exits[idx][narrow_name] = std::move(narrow_env);
+
+                // Subtract branch: src narrowed to type MINUS the tested
+                // type.
+                TypeEnv subtract_env = env;
                 if (src_type)
-                  false_env[src_name] =
-                    type_subtract(src_type, tested_type);
-                branch_exits[idx][false_name] = std::move(false_env);
+                  subtract_env[src_name] =
+                    type_subtract(top, src_type, tested_type);
+                branch_exits[idx][subtract_name] = std::move(subtract_env);
               }
             }
           }
@@ -1895,7 +1898,7 @@ namespace vbcc
               if (eit == env.end())
                 env[key] = clone(type);
               else
-                eit->second = type_merge(eit->second, type);
+                eit->second = type_merge(top, eit->second, type);
             }
           }
 

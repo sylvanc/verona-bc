@@ -128,6 +128,13 @@ namespace vc
       TypeSelf >> AxiomEq,
     },
     {
+      // TypeSelf is always bound through implications (TypeSelf <: T and
+      // T <: TypeSelf). It should never trigger contradiction detection
+      // because the implications may not yet be decomposed when the atom
+      // is checked.
+      TypeSelf >>
+        [](const SequentCtx&, Node&, Node&) { return false; },
+
       TypeName >>
         [](const SequentCtx& ctx, Node& l, Node& r) {
           // Type variables (TypeParam) and unexpanded aliases (TypeAlias)
