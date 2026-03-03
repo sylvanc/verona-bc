@@ -68,7 +68,11 @@ namespace vc
 
     Dependency(Node url, Node tag, Node dir) : url(url), tag(tag), dir(dir)
     {
-      hash = (SHA256() << url << tag).str();
+      if (tag)
+        hash = (SHA256() << url << tag).str();
+      else
+        hash = (SHA256() << url).str();
+
       repo_path = std::filesystem::path("_vdeps") / hash;
       src_path = repo_path;
 
@@ -84,8 +88,82 @@ namespace vc
       git_repository_free(repo);
     }
 
+    bool is_url() const
+    {
+      auto str = std::string(url->location().view());
+      return str.find("://") != std::string::npos;
+    }
+
     bool fetch()
     {
+      if (is_url())
+        return fetch_git();
+
+      return fetch_local();
+    }
+
+    bool fetch_local()
+    {
+      // Resolve the local path.
+      auto str_path = std::string(url->location().view());
+
+      // Expand ~ to home directory.
+      if (!str_path.empty() && str_path[0] == '~')
+      {
+        auto home = std::getenv("HOME");
+
+        if (home)
+          str_path = std::string(home) + str_path.substr(1);
+      }
+
+      auto local_path = std::filesystem::path(str_path);
+
+      if (!std::filesystem::is_directory(local_path))
+      {
+        url->parent()->replace(
+          url, err(url, "Local dependency is not a directory"));
+        return false;
+      }
+
+      // Always re-copy: remove old copy and copy fresh.
+      std::error_code ec;
+      std::filesystem::remove_all(repo_path, ec);
+      std::filesystem::create_directories(repo_path, ec);
+      std::filesystem::copy(
+        local_path,
+        repo_path,
+        std::filesystem::copy_options::recursive |
+          std::filesystem::copy_options::overwrite_existing,
+        ec);
+
+      if (ec)
+      {
+        url->parent()->replace(
+          url,
+          err(
+            url,
+            std::format("Failed to copy local dependency: {}", ec.message())));
+        return false;
+      }
+
+      if (!std::filesystem::is_directory(src_path))
+      {
+        url->parent()->replace(url, err(url, "Dependency is not a directory"));
+        return false;
+      }
+
+      return true;
+    }
+
+    bool fetch_git()
+    {
+      if (!tag)
+      {
+        url->parent()->replace(
+          url, err(url, "URL dependencies require a version tag"));
+        return false;
+      }
+
       // Make a consistent path to this repo.
       auto str_url = std::string(url->location().view());
       auto str_tag = std::string(tag->location().view());

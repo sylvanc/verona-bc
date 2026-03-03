@@ -2773,6 +2773,27 @@ namespace vc
                   env[dst->location()] =
                     LocalTypeInfo::computed(clone(ret_type));
 
+                // Refine FFI arguments against declared parameter types.
+                auto ffi_params = sym / FFIParams;
+                auto args = stmt / Args;
+                auto fp_it = ffi_params->begin();
+                auto ar_it = args->begin();
+
+                while (
+                  fp_it != ffi_params->end() && ar_it != args->end())
+                {
+                  auto expected_prim = extract_primitive(*fp_it);
+
+                  if (expected_prim)
+                  {
+                    auto arg_src = *ar_it;
+                    try_refine(env, arg_src->location(), expected_prim);
+                  }
+
+                  ++fp_it;
+                  ++ar_it;
+                }
+
                 found = true;
                 break;
               }
@@ -3102,6 +3123,19 @@ namespace vc
       {
         auto func_ret = node / Type;
         auto ret_prim = extract_primitive(func_ret);
+
+        if (ret_prim)
+        {
+          auto ret_src = term / LocalId;
+          try_refine(env, ret_src->location(), ret_prim);
+        }
+      }
+      else if (term == Raise)
+      {
+        // Raise carries the enclosing function's return type as its Type
+        // child. Refine the raised value's literal against this type.
+        auto raise_ret = term / Type;
+        auto ret_prim = extract_primitive(raise_ret);
 
         if (ret_prim)
         {

@@ -208,7 +208,9 @@ namespace vc
     // ClassId/primitive, returns just that type.
     Nodes extract_receivers(const Node& reified_type)
     {
-      if (!reified_type || (reified_type == Dyn))
+      // Dyn means "all classes". TypeId means a shape type whose concrete
+      // implementations aren't resolved yet (post-worklist), so treat as all.
+      if (!reified_type || (reified_type == Dyn) || (reified_type == TypeId))
         return {};
 
       if (reified_type == Union)
@@ -1926,54 +1928,13 @@ namespace vc
 
               auto ret_type = reify_type(sym / Type, r.subst);
 
-              // Check if this symbol has already been added.
+              // Add the reified symbol. Duplicate detection and type
+              // compatibility checking is done in the vbcc assignids pass.
               auto reified_symbols = reified_lib / Symbols;
-              bool already_added = false;
-
-              for (auto& existing : *reified_symbols)
-              {
-                if ((existing / SymbolId)->location() != sym_name)
-                  continue;
-
-                already_added = true;
-
-                // Verify the existing declaration is consistent.
-                auto lhs_a = (existing / Lhs)->location().view();
-                auto lhs_b = (sym / Lhs)->location().view();
-                auto rhs_a = (existing / Rhs)->location().view();
-                auto rhs_b = (sym / Rhs)->location().view();
-                auto existing_params = existing / FFIParams;
-                Node existing_ret = existing->back();
-
-                if (
-                  (lhs_a != lhs_b) || (rhs_a != rhs_b) ||
-                  !Subtype.invariant(top, existing_ret, ret_type) ||
-                  !std::equal(
-                    existing_params->begin(),
-                    existing_params->end(),
-                    ffi_params->begin(),
-                    ffi_params->end(),
-                    [&](auto& ep, auto& np) {
-                      return Subtype.invariant(top, ep, np);
-                    }))
-                {
-                  n->parent()->replace(
-                    n,
-                    err(sym_id, "Conflicting FFI declarations")
-                      << errmsg("Here:") << errloc(existing / SymbolId)
-                      << errmsg("And here:") << errloc(sym_id));
-                  return;
-                }
-                break;
-              }
-
-              if (!already_added)
-              {
-                reified_symbols
-                  << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)
-                             << clone(sym / Rhs) << clone(sym / Vararg)
-                             << ffi_params << ret_type);
-              }
+              reified_symbols
+                << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)
+                           << clone(sym / Rhs) << clone(sym / Vararg)
+                           << ffi_params << ret_type);
 
               return;
             }
@@ -2192,8 +2153,7 @@ namespace vc
           ((def / Ident)->location().view() == "any"))
           return Dyn;
 
-        find_or_push(def, std::move(r.subst), resolved_name);
-        return Dyn;
+        return find_or_push(def, std::move(r.subst), resolved_name);
       }
 
       return find_or_push(def, std::move(r.subst), resolved_name);

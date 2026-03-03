@@ -104,6 +104,7 @@ namespace vbcc
     FuncState& add_func(Node func);
 
     std::optional<size_t> get_symbol_id(Node id);
+    Node get_symbol(Node id);
     bool add_symbol(Node symbol);
 
     std::optional<size_t> get_library_id(Node id);

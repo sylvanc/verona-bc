@@ -1342,11 +1342,11 @@ typecheck
         (body
           (const
             (localid 9:local$126)
-            (u64)
+            (i32)
             (int 1:1)))
-        (error
-          (errormsg 80:raise: value type 'u64' is not a subtype of enclosing function return type 'i32')
-          (raise)))
+        (raise
+          (localid 9:local$126)
+          (i32)))
       (label
         (labelid 8:join$122)
         (body
@@ -1371,11 +1371,11 @@ typecheck
         (body
           (const
             (localid 8:local$10)
-            (u64)
+            (i32)
             (int 1:2)))
-        (error
-          (errormsg 80:raise: value type 'u64' is not a subtype of enclosing function return type 'i32')
-          (raise)))
+        (raise
+          (localid 8:local$10)
+          (i32)))
       (label
         (labelid 8:join$966)
         (body)
@@ -1453,11 +1453,11 @@ typecheck
         (body
           (const
             (localid 9:local$117)
-            (u64)
+            (i32)
             (int 1:0)))
-        (error
-          (errormsg 80:raise: value type 'u64' is not a subtype of enclosing function return type 'i32')
-          (raise)))
+        (raise
+          (localid 9:local$117)
+          (i32)))
       (label
         (labelid 8:join$113)
         (body)
