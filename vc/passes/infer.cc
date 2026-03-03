@@ -2773,6 +2773,27 @@ namespace vc
                   env[dst->location()] =
                     LocalTypeInfo::computed(clone(ret_type));
 
+                // Refine FFI arguments against declared parameter types.
+                auto ffi_params = sym / FFIParams;
+                auto args = stmt / Args;
+                auto fp_it = ffi_params->begin();
+                auto ar_it = args->begin();
+
+                while (
+                  fp_it != ffi_params->end() && ar_it != args->end())
+                {
+                  auto expected_prim = extract_primitive(*fp_it);
+
+                  if (expected_prim)
+                  {
+                    auto arg_src = *ar_it;
+                    try_refine(env, arg_src->location(), expected_prim);
+                  }
+
+                  ++fp_it;
+                  ++ar_it;
+                }
+
                 found = true;
                 break;
               }

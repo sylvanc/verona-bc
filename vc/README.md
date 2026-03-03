@@ -5,8 +5,6 @@
 Review `iowise`.
 - Move to `io::out::print`, `io::err::print`.
 
-Type inference on FFI arguments.
-
 Add/remove external can race, causing remove to be run before add.
 - `notify_basic` test is non-deterministic.
 - Can we extract just the bits of `verona-rt` that we use?
