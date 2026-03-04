@@ -44,28 +44,29 @@ A program with a class, construction, field access, and mutation:
 cell
 {
   f: i32;
+  g: i32;
 
-  create(f: i32 = 0): cell
+  create(f: i32 = 0, g: i32 = 0): cell
   {
-    new {f = f}
+    new {f = f; g = g}
   }
 }
 
 main(): i32
 {
   let a = cell;
-  var b = cell(7);
+  var b = cell(3, 7);
   a.f = 3;
-  a.f + b.f
+  a.f + b.g
 }
 ```
 
 This returns exit code `10`. Notable syntax:
 - Classes are declared with a bare name — no `class` keyword.
-- Fields end with `;`.
-- `new { field = value }` constructs an object.
-- `cell` (no arguments) calls `create` with the default `0` (inferred as `i32` from the parameter type).
-- `cell(7)` is sugar for `cell::create(7)` — the `7` is inferred as `i32`.
+- Fields end with `;`. In `new { ... }`, fields are also separated by `;`.
+- `new { f = f; g = g }` constructs an object with named field assignments.
+- `cell` (no arguments) calls `create` with defaults — `cell::create` is called because `Type(args)` is sugar for `Type::create(args)`. The name `create` is not magical; it's simply the convention. Juxtaposition on a type name calls its `create` method.
+- `cell(3, 7)` is sugar for `cell::create(3, 7)`.
 - `let` bindings are single-assignment; `var` bindings are reassignable.
 - `a.f = 3` writes to a field of a `let`-bound object — `let` constrains the binding, not the object.
 
@@ -82,8 +83,8 @@ For more on each of these features, see the linked chapters in the [Table of Con
 - CMake 3.14+
 - Ninja (recommended) or Make
 - A C++23 compiler (GCC 13+ or Clang 17+)
-- OpenSSL development headers
-- libffi development headers
+- OpenSSL development headers (3.0+ recommended)
+- libffi development headers (3.4+)
 
 ### Build Steps
 
@@ -163,10 +164,10 @@ The interpreter runs `main()` and uses its `i32` return value as the process exi
 
 ### Interpreter Options
 
-| Flag | Description |
-|------|-------------|
-| `-t <N>` | Set the number of scheduler threads |
-| `-l <level>` | Set log level (`Trace`, `Debug`, `Info`, `Warning`, `Output`, `Error`, `None`) |
+| Flag | Description | Default |
+|------|-------------|--------|
+| `-t <N>` | Set the number of scheduler threads | Number of CPU cores |
+| `-l <level>` | Set log level (`Trace`, `Debug`, `Info`, `Warning`, `Output`, `Error`, `None`) | `Error` |
 
 ---
 
@@ -183,7 +184,7 @@ my_project/
   types.v         # additional module (optional)
 ```
 
-Each `.v` file defines a module named after the file (without the extension). Modules can reference each other's declarations using qualified names (`ModuleName::item`) or by importing with `use ModuleName`. See [Modules and Imports](16-modules.md).
+Each `.v` file defines a module named after the file (without the extension). Modules can reference each other's declarations using qualified names (`ModuleName::item`) or by importing with `use ModuleName`. Subdirectories are supported — they create nested module scopes (e.g., `ffi/callback.v` is accessible as `ffi::callback`). See [Modules and Imports](16-modules.md).
 
 ### The `_builtin` Standard Library
 
@@ -221,7 +222,7 @@ _builtin/
   usize.v         usize — pointer-width unsigned integer
 ```
 
-The `_builtin` module is implicitly available — its types can be used without an explicit `use` declaration.
+The `_builtin` module is implicitly available — its types can be used without an explicit `use` declaration. For details on each type's methods, see [Built-in Types Reference](22-builtin-types.md).
 
 ### Bytecode Output
 
@@ -229,6 +230,12 @@ The compiler produces a single `.vbc` file. By default, its name is derived from
 
 ```
 vc build my_project/    →    my_project.vbc
+```
+
+Use `-b <filename>` to override the output name:
+
+```bash
+vc build my_project/ -b output.vbc
 ```
 
 The `.vbc` file is a self-contained bytecode bundle that can be executed on any machine with the `vbci` interpreter.
@@ -267,10 +274,10 @@ This returns exit code `45` (the sum 0 + 1 + 2 + ... + 9).
 Key features demonstrated:
 - **Generic types**: `array[i32]::fill(10)` creates a 10-element array of `i32`, default-filled.
 - **Type inference**: `var index = 0` — the literal `0` is inferred as `usize` from context (used with `arr.size` and as an array index).
-- **Indexing**: `arr(index)` reads or writes via juxtaposition (calls `apply`/`ref apply`). See [Expressions](05-expressions.md).
+- **Indexing**: `arr(index)` reads or writes via juxtaposition — this calls `arr.apply(index)` (or `arr.ref apply(index)` for writes). Verona uses juxtaposition instead of `[ ]` brackets for indexing. See [Expressions](05-expressions.md).
 - **Type conversion**: `index.i32` converts `usize` to `i32`. See [Types](03-types.md).
-- **Iterators**: `arr.values()` returns an `arrayiter[T]`. The `for` loop calls `.next()` on it, binding each element to `i`. See [Arrays](12-arrays.md) and [Control Flow](06-control-flow.md).
-- **No semicolons after `}`**: Control flow blocks (`while`, `for`) do not need trailing semicolons.
+- **Iterators and `->` blocks**: `for arr.values() i -> { ... }` calls `.next()` on the iterator, binding each element to `i`. The `->` introduces a lambda body — `i` is the parameter, and the `{ ... }` is the body. See [Arrays](12-arrays.md), [Lambdas](13-lambdas.md), and [Control Flow](06-control-flow.md).
+- **Semicolons**: Required between sequential statements (`let arr = ...;` before `var index = 0;`), and after field definitions. Not required after the last expression in a block, or after closing `}` of control flow. See [Program Structure §2.5](02-program-structure.md).
 
 ---
 
@@ -279,6 +286,7 @@ Key features demonstrated:
 This example demonstrates classes, shapes, generics, match expressions, and iteration working together. It defines a shape for values that can be "scored," creates two classes satisfying that shape, and uses a generic function to sum their scores:
 
 ```verona
+// Structural interface — any class with score(self): i32 satisfies this
 shape scorable
 {
   score(self: self): i32;
@@ -288,7 +296,7 @@ task
 {
   priority: i32;
 
-  score(self: task): i32
+  score(self: task): i32        // satisfies scorable — no declaration needed
   {
     self.priority
   }
@@ -299,12 +307,13 @@ bonus
   base: i32;
   multiplier: i32;
 
-  score(self: bonus): i32
+  score(self: bonus): i32       // also satisfies scorable
   {
     self.base * self.multiplier
   }
 }
 
+// T < scorable means T must satisfy the scorable shape (subtype constraint)
 sum_scores[T](items: array[T]): i32 where T < scorable
 {
   var total = 0;
@@ -366,7 +375,7 @@ Many test programs use bitmask patterns to report multiple results through a sin
 
 ### FFI `printval`
 
-The interpreter provides a built-in `printval` function accessible via FFI. Declare it and call it with `:::`:
+The interpreter provides a built-in `printval` function accessible via FFI. Declare it in a `use { ... }` block and call it with `:::` (the triple-colon operator, which invokes FFI functions and builtins):
 
 ```verona
 use

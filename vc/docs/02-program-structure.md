@@ -19,6 +19,8 @@ main(): i32
 
 The return value of `main` becomes the process exit code. This is the only required element — everything else is optional.
 
+> **Command-line arguments**: There is currently no built-in mechanism for accessing `argc`/`argv`. Command-line argument support is planned as a future feature. For now, programs communicate results through exit codes and `:::printval`.
+
 ---
 
 ## 2.2 Top-Level Declarations
@@ -104,6 +106,8 @@ add(a: i32, b: i32): i32
   a + b          // no semicolon — this is the return value
 }
 ```
+
+> **What about a trailing semicolon?** Writing `{ a + b; }` inserts an implicit `none` expression after the semicolon (since `;` separates statements). The block's value becomes `none`, not `a + b`. This would cause a type error if the function expects `i32`.
 
 **Not required after closing braces of control flow:**
 
