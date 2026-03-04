@@ -7,7 +7,7 @@ wrapper[T]
 
   create(val: T): wrapper[T]
   {
-    new { val = val }
+    new {val}
   }
 
   get(self: wrapper[T]): T
@@ -18,7 +18,7 @@ wrapper[T]
 
 wrap_copy[T](val: T): wrapper[T]
 {
-  let f = (x) -> { let y = x; wrapper[T](y) };
+  let f = (x) -> { let y = x; wrapper[T](y) }
   f(val)
 }
 

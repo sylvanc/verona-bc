@@ -74,6 +74,8 @@ WhereExpr     ::= Type '<' Type
                  | '!' WhereExpr
 ```
 
+> **Note:** `where` clauses are parsed, but not yet enforced. However, you will get compiler error during monomorphization if a type argument fails to satisfy its constraints. See [Chapter 10](10-generics.md) for more on generics and constraints.
+
 ---
 
 ## 23.5 Expressions
@@ -153,6 +155,8 @@ SplatDC       ::= '_' '...'
 ```
 UseDecl       ::= 'use' Ident                        // import module
                  | 'use' Ident '=' Type               // type alias
+                 | 'use' String String? String?        // package import (url, tag, dir)
+                 | 'use' Ident '=' String String? String?  // named package alias
                  | 'use' '{' FFIFuncDecl* '}'         // FFI (no lib)
                  | 'use' String '{' FFIFuncDecl* '}'  // FFI (with lib)
 

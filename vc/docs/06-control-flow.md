@@ -11,7 +11,7 @@ This chapter covers conditional expressions, loops, and early exit.
 `if` is an expression — it evaluates to a value:
 
 ```verona
-let x = if condition { 1 } else { 0 };
+let x = if condition { 1 } else { 0 }
 ```
 
 ### Basic Forms
@@ -103,7 +103,7 @@ is equivalent to:
   let it = iter;
   while true
   {
-    let elem = it.next() else { break };
+    let elem = it.next() else { break }
     body
   }
 }
@@ -136,7 +136,7 @@ while true
 while i < 10
 {
   i = i + 1;
-  if skip_condition { continue };
+  if skip_condition { continue }
   process(i)
 }
 ```
@@ -157,7 +157,7 @@ find_first(a: i32, b: i32, target: i32): i32
     {
       raise x
     }
-  };
+  }
   check(a);
   check(b);
   0
@@ -197,16 +197,16 @@ The `else` keyword can follow an expression to handle the `nomatch` case. This i
 
 ```verona
 // Inside the for loop desugaring:
-let elem = it.next() else { break };
+let elem = it.next() else { break }
 ```
 
 If `it.next()` returns `nomatch`, the `else` branch executes. Otherwise, the value is bound to `elem` with the `nomatch` alternative stripped from the type.
 
-The `else` branch can be a block or a parenthesized expression:
+The `else` branch can be a block or an expression:
 
 ```verona
-let elem = it.next() else { break };     // block form
-let result = match v { ... } else (0);   // expression form
+let elem = it.next() else { break }     // block form
+let result = match v { ... } else 0;   // expression form
 ```
 
 ---
@@ -238,7 +238,7 @@ let result = match x { (n: i32) -> n + 1; } else (0);
 Without `else`, a non-exhaustive match returns `nomatch` when no arm matches. The result type includes `nomatch`:
 
 ```verona
-let result = match x { (n: i32) -> n + 1; };
+let result = match x { (n: i32) -> n + 1; }
 // result type: i32 | nomatch
 ```
 
@@ -341,6 +341,6 @@ else (99);
 **Without `else` (result includes `nomatch`):**
 
 ```verona
-let result = match x { (n: i32) -> n; };
+let result = match x { (n: i32) -> n; }
 // result type: i32 | nomatch — use else to strip nomatch
 ```

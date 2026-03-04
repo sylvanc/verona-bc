@@ -8,7 +8,7 @@ box
 
   create(x: i32 = i32 0): box
   {
-    new {x = x}
+    new {x}
   }
 }
 

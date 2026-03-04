@@ -20,7 +20,7 @@ parse
             (ident 6:create)
             (paren
               (group
-                (ident 1:v)
+                (ident 5:value)
                 (:)
                 (ident 1:T)))
             (:)
@@ -33,9 +33,7 @@ parse
                 (new)
                 (brace
                   (group
-                    (ident 5:value)
-                    (=)
-                    (ident 1:v))))))
+                    (ident 5:value))))))
           (group
             (ident 3:get)
             (paren
@@ -961,8 +959,6 @@ parse
               (group
                 (when)
                 (paren)
-                (paren)
-                (symbolid 2:->)
                 (brace
                   (group
                     (ident 4:some))))))

@@ -63,7 +63,7 @@ Objects are heap-allocated with the `new` keyword:
 ```verona
 create(x: i32, y: i32): point
 {
-  new { x = x, y = y }
+  new {x, y}
 }
 ```
 
@@ -216,4 +216,4 @@ double_val[T](v: T): i32 where T < valued
 
 ## 8.8 Classes as Modules
 
-Because each `.v` file is a class scope and each directory is an implicit class, classes serve as the module system. Top-level declarations in `utils.v` are accessed as `utils::name`. See [Modules and Imports](16-modules.md).
+Each directory is an implicit class scope (a module). Files within a directory contribute their declarations to the module — the file's name is not semantically significant. Because classes and modules are the same construct, top-level declarations in a project directory are accessed as `module::name`. See [Modules and Imports](16-modules.md).

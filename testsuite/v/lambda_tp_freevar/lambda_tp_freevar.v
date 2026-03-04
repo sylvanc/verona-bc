@@ -5,9 +5,9 @@ wrapper[T]
 {
   value: T;
 
-  create(v: T): wrapper[T]
+  create(value: T): wrapper[T]
   {
-    new { value = v }
+    new {value}
   }
 
   get(self: wrapper[T]): T

@@ -229,7 +229,7 @@ See [Program Structure §2.5](02-program-structure.md).
 A `match` expression without an `else` clause includes `nomatch` in its result type:
 
 ```verona
-let result = match x { (n: i32) -> n; };
+let result = match x { (n: i32) -> n; }
 // result type: i32 | nomatch
 ```
 

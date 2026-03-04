@@ -17,7 +17,7 @@ box
 {
   val: i32;
 
-  create(val: i32): box { new { val = val } }
+  create(val: i32): box { new {val} }
   add(self: box, b: i32): i32 { self.val + b }
   combine(self: box, a: i32, b: i32): i32 { self.val + a + b }
 }

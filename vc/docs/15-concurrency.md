@@ -38,12 +38,12 @@ Key properties:
 Cowns are created by `when` blocks. A `when` block is an **asynchronous behavior** — it schedules work that runs later and returns a `cown` holding the eventual result. The returned cown becomes "available" (usable by another `when`) once the behavior completes:
 
 ```verona
-let c = when () () -> { 42 };
+let c = when () { 42 }
 ```
 
-This creates a new `cown[i32]` holding the value `42`. A `when` block with no cown arguments (`()`) runs immediately (it has no dependencies to wait for) and wraps its result in a cown.
+This creates a new `cown[i32]` holding the value `42`. A `when` block with no cown arguments (`()`) is schedulable immediately (no dependencies) — but the behavior still runs asynchronously on a scheduler thread.
 
-You only need a new cown when you use `when` — that's how cowns are created. There is no `cown::create()` function.
+A convenience wrapper `cown[T]::create(val)` also exists for creating a cown directly from a value without writing a `when` block.
 
 ---
 
@@ -75,13 +75,13 @@ when (cown1, cown2, ...) (ref1, ref2, ...) ->
 
 ### Scheduling
 
-A `when` block is an **asynchronous behavior** — a unit of work that runs independently. The `when` expression returns immediately with a result cown; the behavior runs later when its dependencies are satisfied. The runtime scheduler:
+A `when` block is an **asynchronous behavior** — a unit of work that runs independently. The `when` expression returns a result cown immediately; the behavior body always runs later on a scheduler thread, even for `when` blocks with no dependencies. The runtime scheduler:
 
 1. Waits until **all** requested cowns are available (not held by another behavior).
 2. Acquires exclusive access to all requested cowns atomically.
 3. Runs the behavior body on a scheduler thread.
-4. Releases all cowns when the body completes.
-5. Populates the result cown with the body's return value.
+4. Populates the result cown with the body's return value.
+5. Releases all cowns when the body completes.
 
 Behaviors are non-blocking from the caller's perspective — `when` returns immediately. The behavior runs concurrently when its cowns become available.
 
@@ -90,8 +90,8 @@ Behaviors are non-blocking from the caller's perspective — `when` returns imme
 Every `when` block returns a new `cown` wrapping the result of the body. This is how cowns are created — the only way to get a new cown is through `when`:
 
 ```verona
-let a = when () () -> { cell(10) };            // cown[cell] — created immediately
-let b = when () () -> { cell(20) };            // cown[cell] — created immediately
+let a = when () { cell(10) }            // cown[cell] — created immediately
+let b = when () { cell(20) }            // cown[cell] — created immediately
 
 // Combine two cowns — result is cown[cell]
 let c = when (a, b) (x, y) ->
@@ -133,7 +133,7 @@ Multiple readers can access a cown simultaneously, but read access is exclusive 
 ### Example
 
 ```verona
-let c = when () () -> { cell(42) }
+let c = when () { cell(42) }
 
 // Read-only access — multiple readers can run concurrently
 let r = when (c.read) (x) ->
@@ -186,8 +186,8 @@ cell
 main(): i32
 {
   // Create cowns
-  let a = when () () -> { cell(10) }
-  let b = when () () -> { cell(20) }
+  let a = when () { cell(10) }
+  let b = when () { cell(20) }
 
   // Combine cowns
   let c = when (a, b) (x, y) ->
@@ -231,8 +231,8 @@ The interpreter waits for all pending behaviors to complete before exiting. This
 ```verona
 main(): i32
 {
-  let c = when () () -> { cell(42) };
-  let d = when (c) (x) -> { (*x).f };
+  let c = when () { cell(42) }
+  let d = when (c) (x) -> { (*x).f }
   0                                    // returns immediately, but behaviors run to completion
 }
 ```
@@ -253,13 +253,13 @@ let result = when (input) (x) ->
   {
     none::create()                    // signal failure as a value
   }
-};
+}
 
 // Downstream behavior handles the union
 let final = when (result) (r) ->
 {
   match *r { (n: i32) -> n; } else (0)
-};
+}
 ```
 
 For richer errors, use a custom error class in the union: `cown[result | my_error]`. The behavior returns whichever variant applies, and downstream `when` blocks discriminate with `match`.
@@ -288,25 +288,25 @@ cell { f: i32; }
 main(): i32
 {
   // Step 1: produce initial data
-  let step1 = when () () -> { cell(10) };
+  let step1 = when () { cell(10) }
 
   // Step 2: depends on step1 — doubles the value
   let step2 = when (step1) (x) ->
   {
     cell((*x).f + (*x).f)
-  };
+  }
 
   // Step 3: depends on step2 — adds 2
   let step3 = when (step2) (y) ->
   {
     cell((*y).f + 2)
-  };
+  }
 
   // Step 4: combine step1 and step3
   let final = when (step1, step3) (a, b) ->
   {
     cell((*a).f + (*b).f)
-  };
+  }
 
   0
 }
@@ -320,12 +320,12 @@ Create multiple independent cowns (fan-out), then combine them in a single `when
 
 ```verona
 // Fan out: a and b run concurrently (no shared dependencies)
-let a = when () () -> { cell(compute_a()) };
-let b = when () () -> { cell(compute_b()) };
+let a = when () { cell(compute_a()) }
+let b = when () { cell(compute_b()) }
 
 // Fan in: waits for both a and b
 let result = when (a, b) (x, y) ->
 {
   cell((*x).f + (*y).f)
-};
+}
 ```

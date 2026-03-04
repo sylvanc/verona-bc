@@ -10,6 +10,6 @@ apply_fn(f: i32 -> i32, x: i32): i32
 
 main(): i32
 {
-  let inc = (x: i32): i32 -> { x + 1 };
+  let inc = (x: i32): i32 -> { x + 1 }
   functype::apply_fn(inc, 41)
 }

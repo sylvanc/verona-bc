@@ -120,7 +120,7 @@ apply_fn(f: i32 -> i32, x: i32): i32
 }
 
 // A lambda satisfies i32 -> i32:
-let f = (x: i32): i32 -> { x + 1 };
+let f = (x: i32): i32 -> { x + 1 }
 apply_fn(f, 5)            // returns 6
 
 // Any class with apply(self, i32): i32 also works

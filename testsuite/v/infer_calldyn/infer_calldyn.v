@@ -9,7 +9,7 @@ wrapper[T]
 
   create(val: T): wrapper[T]
   {
-    new {val = val}
+    new {val}
   }
 
   get(self: wrapper[T]): T

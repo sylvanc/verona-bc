@@ -137,16 +137,19 @@ There is no runtime generic dispatch — all generics are fully resolved before 
 
 ## 10.5 Shape Bounds
 
-Type parameters can be constrained by shapes using `where` clauses:
+Type parameters are checked against shapes at monomorphization time. When a generic function or class is instantiated with concrete type arguments, the compiler verifies that the concrete type has the methods required by any shape used in parameter positions. If a type doesn't have the required methods, the compiler reports an error at the call site.
 
 ```verona
-sort[T](arr: array[T]) where T < comparable
+extract[T](g: getter[T]): T
 {
-  // T must satisfy the comparable shape
+  g.get                               // T must have a get method
 }
+
+extract(my_box)                       // OK if my_box's type satisfies getter
+extract(my_int)                       // error if i32 doesn't satisfy getter
 ```
 
-The `where` clause uses `<` for subtype constraints, with `&` (and), `|` (or), and `!` (not) for combining constraints. See [Types](03-types.md).
+Explicit `where` clause syntax is parsed by the compiler but not yet fully enforced. See [Types §3.10](03-types.md) for the current status of `where` clauses.
 
 ---
 

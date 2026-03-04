@@ -15,12 +15,12 @@ counter
 
   create(val: bool): counter
   {
-    new {val = val, count = 0.i32}
+    new {val, count = 0}
   }
 
   apply(self: counter): bool
   {
-    self.count = self.count + 1.i32;
+    self.count = self.count + 1;
     self.val
   }
 }
@@ -52,15 +52,15 @@ main(): i32
   // Encode boolean results as a bitmask: abcdefgh
   // Expected: a=1 b=0 c=0 d=0 e=1 f=1 g=1 h=0
   // = 0b10001110 = 142
-  var result = 0.i32;
-  if a { result = result + 128.i32 }
-  if b { result = result + 64.i32 }
-  if c { result = result + 32.i32 }
-  if d { result = result + 16.i32 }
-  if e { result = result + 8.i32 }
-  if f { result = result + 4.i32 }
-  if g { result = result + 2.i32 }
-  if h { result = result + 1.i32 }
+  var result = 0;
+  if a { result = result + 128 }
+  if b { result = result + 64 }
+  if c { result = result + 32 }
+  if d { result = result + 16 }
+  if e { result = result + 8 }
+  if f { result = result + 4 }
+  if g { result = result + 2 }
+  if h { result = result + 1 }
 
   :::printval(result);
 
@@ -72,5 +72,5 @@ main(): i32
 
   // Expected: tt=1 tf=1 ft=0 ff=0 ot=0 of=0 pt=1 pf=1 -> total=4
   :::printval(counts);
-  0.i32
+  0
 }

@@ -118,7 +118,7 @@ find(arr: array[i32], target: i32): i32
 {
   let check = (x: i32) -> {
     if x == target { raise x }
-  };
+  }
 
   for arr.values() elem ->
   {
@@ -151,7 +151,7 @@ find_positive(arr: array[i32]): i32 | nomatch
 The caller handles the `nomatch` case:
 
 ```verona
-let result = find_positive(data) else { 0 };
+let result = find_positive(data) else { 0 }
 // result is i32 — nomatch stripped by else
 ```
 
@@ -296,7 +296,7 @@ Use external resources to keep the scheduler alive while waiting for external ev
 ```verona
 main(): i32
 {
-  let work = when () () ->
+  let work = when ()
   {
     ffi::external.add;                // keep scheduler alive
 
@@ -304,7 +304,7 @@ main(): i32
 
     ffi::external.remove;             // allow scheduler to shut down
     0
-  };
+  }
 
   0
 }

@@ -2,14 +2,13 @@
 
 ## To Do
 
-Does `f().g` parse?
-
 Review `iowise`.
-- Move to `io::out.print`, `io::err.print`.
+- Ring buffer copying?
+- Notice board for log level checking?
 
-Add/remove external can race, causing remove to be run before add.
-- `notify_basic` test is non-deterministic.
-- Can we extract just the bits of `verona-rt` that we use?
+Can we extract just the bits of `verona-rt` that we use?
+
+Require `else` to take `{ ... }`?
 
 FFI.
 - Can `ffi::callback` interact with reference counting better?

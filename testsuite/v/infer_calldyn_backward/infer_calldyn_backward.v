@@ -9,7 +9,7 @@ wrapper
 
   create(val: i32): wrapper
   {
-    new {val = val}
+    new {val}
   }
 }
 

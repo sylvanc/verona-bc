@@ -19,6 +19,8 @@ main(): i32
 
 The return value of `main` becomes the process exit code. This is the only required element — everything else is optional.
 
+> **Command-line arguments**: There is currently no built-in mechanism for accessing `argc`/`argv`. Command-line argument support is planned as a future feature. For now, programs communicate results through exit codes and `:::printval`.
+
 ---
 
 ## 2.2 Top-Level Declarations
@@ -42,15 +44,17 @@ Classes, shapes, and functions are covered in detail in their respective chapter
 
 ## 2.3 Modules and Files
 
-Each `.v` file defines a module named after the file (without the extension). A directory of `.v` files is treated as an implicit class scope — its files are members.
+A project directory is a module. Each `.v` file inside it defines declarations that become part of that module — the file name does not create a separate module scope. Subdirectories create nested module scopes.
 
 ```
 my_project/
-  main.v       → module "main"
-  utils.v      → module "utils"
+  main.v       → declarations in the "my_project" module
+  utils.v      → declarations in the "my_project" module
+  helpers/
+    format.v   → declarations in the "helpers" nested module
 ```
 
-Declarations in one module can reference declarations in another using qualified names (`utils::helper()`) or by importing with `use utils`. See [Modules and Imports](16-modules.md).
+Declarations across all `.v` files in the same directory share one scope. Declarations in a nested directory are accessed using qualified names (`helpers::format_data()`) or by importing with `use helpers`. See [Modules and Imports](16-modules.md).
 
 ---
 
@@ -104,6 +108,8 @@ add(a: i32, b: i32): i32
   a + b          // no semicolon — this is the return value
 }
 ```
+
+> **What about a trailing semicolon?** Writing `{ a + b; }` is the same as `{ a + b }`. Unnecessary semicolons are ignored.
 
 **Not required after closing braces of control flow:**
 

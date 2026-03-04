@@ -6,7 +6,7 @@
 read_var(n: i32): i32
 {
   var x: i32 = n;
-  let f = (y: i32): i32 -> { x + y };
+  let f = (y: i32): i32 -> { x + y }
   f(0)
 }
 
@@ -14,7 +14,7 @@ read_var(n: i32): i32
 write_var(): i32
 {
   var x: i32 = 0;
-  let f = (): i32 -> { x = 42 };
+  let f = (): i32 -> { x = 42 }
   f();
   x
 }
@@ -25,7 +25,7 @@ var_and_raise(n: i32, target: i32): i32
   var x: i32 = n;
   let check = (t: i32) -> {
     if x == t { raise x }
-  };
+  }
   check(target);
   0
 }

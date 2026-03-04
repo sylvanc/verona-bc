@@ -86,43 +86,45 @@ The number of leading single-quotes must match the trailing ones. Escape sequenc
 
 ---
 
-## 5.2 Arithmetic Operators
+## 5.2 Arithmetic Methods
 
-All arithmetic operators are method calls on the receiver type:
+> **Verona has no built-in operators** — arithmetic, bitwise, comparison, and logical operations are all **methods** defined on types. Any method or function can be used in infix position. The `+`, `-`, `*`, etc. notation is syntactic sugar for method calls like `a.+(b)` or `a +(b)`.
 
-| Operator | Meaning | Example |
+All arithmetic methods are defined on the receiver type:
+
+| Method | Usual Meaning | Example |
 |----------|---------|---------|
 | `+` | Addition | `a + b` |
 | `-` | Subtraction | `a - b` |
 | `*` | Multiplication | `a * b` |
 | `/` | Division | `a / b` |
 | `%` | Modulo | `a % b` |
-| `**` | Power (`f64` only) | `a ** b` |
+| `**` | Power | `a ** b` |
 
 Unary negation: `-a` (prefix `-`).
 
-Since operators are methods, `a + b` is equivalent to calling the `+` method on `a` with argument `b`. This is how operator overloading works — define a method named `+` on your class. See [Functions](07-functions.md).
+Since all operations are method calls, `a + b` is equivalent to calling the `+` method on `a` with argument `b`. To define a custom `+` for your class, simply define a method named `+`. See [Functions](07-functions.md).
 
 ---
 
-## 5.3 Bitwise Operators
+## 5.3 Bitwise Methods
 
-| Operator | Meaning | Example |
+| Method | Usual Meaning | Example |
 |----------|---------|---------|
 | `&` | Bitwise AND | `a & b` |
 | `\|` | Bitwise OR | `a \| b` |
 | `^` | Bitwise XOR | `a ^ b` |
 | `<<` | Left shift | `a << b` |
 | `>>` | Right shift | `a >> b` |
-| `!` | Bitwise NOT (prefix) | `!a` |
+| `!` | NOT (prefix) | `!a` |
 
-These are defined on integer types. Note that `&` and `|` on `bool` have different (short-circuit) semantics — see [Logical Operators](#55-logical-operators).
+These are methods defined on integer types. On integers, `!` calls the `not` method (bitwise complement). On `bool`, `!` also calls `not` (logical negation) — these are separate methods on different types, not overloads of a single operator. Note that `&` and `|` on `bool` have different (short-circuit) semantics — see [Logical Methods](#55-logical-methods).
 
 ---
 
-## 5.4 Comparison Operators
+## 5.4 Comparison Methods
 
-| Operator | Meaning |
+| Method | Usual Meaning |
 |----------|---------|
 | `==` | Equal |
 | `!=` | Not equal |
@@ -131,11 +133,11 @@ These are defined on integer types. Note that `&` and `|` on `bool` have differe
 | `>` | Greater than |
 | `>=` | Greater than or equal |
 
-All comparison operators return `bool`.
+All comparison methods return `bool`.
 
 ---
 
-## 5.5 Logical Operators
+## 5.5 Logical Methods
 
 On `bool`, `&` and `|` use **short-circuit evaluation**:
 
@@ -155,7 +157,7 @@ shape to_bool
 
 This means the RHS is lazily evaluated — it is called only if needed. Any object with an `apply` method returning `bool` can appear as the RHS.
 
-Boolean negation uses the `!` prefix operator:
+Boolean negation uses the `!` prefix method:
 
 ```verona
 !(self == other)              // logical NOT
@@ -231,10 +233,11 @@ obj.field + 1                 // parsed as: (obj.field) + 1
 Use parentheses to override:
 
 ```verona
-(obj.field)(args)             // call apply on the result of a field access
+obj.field()(args)             // call apply on the result of a field access
+(obj.field)(args)             // another way to do the same thing
 ```
 
-Note: `obj.f(args)` calls method `f` with `args` — not `apply` on field `f`. To call `apply` on a field, use `(obj.f)(args)` or `obj.f.apply(args)`. See [Chapter 1](01-getting-started.md) for more.
+Note: `obj.f(args)` calls method `f` with `args` — not `apply` on field `f`. To call `apply` on a field, use `obj.f()(args)` or `obj.f.apply(args)`. See [Chapter 1](01-getting-started.md) for more.
 
 > **⚠️ IMPORTANT: Flat operator precedence.** All infix operators have **the same precedence** and are **left-associative**. There is no precedence difference between `+` and `*`. This is the single most common source of confusion for new Verona programmers. It means:
 >
@@ -265,6 +268,13 @@ Placing arguments next to a type name calls the `create` constructor:
 cell(7)                       // sugar for cell::create(7)
 wrapper[i32](42)              // sugar for wrapper[i32]::create(42)
 string(data)                  // sugar for string::create(data)
+```
+
+A bare type name with no arguments and no parentheses also calls `create`:
+
+```verona
+cell                          // sugar for cell::create()
+none                          // sugar for none::create()
 ```
 
 ---
@@ -308,9 +318,9 @@ when (c) (x) ->
   var i = 0;
   while i < self.size
   {
-    if i == other.size { return false };
-    if (self.data)(i) < (other.data)(i) { return true };
-    if (self.data)(i) > (other.data)(i) { return false };
+    if i == other.size { return false }
+    if (self.data)(i) < (other.data)(i) { return true }
+    if (self.data)(i) > (other.data)(i) { return false }
     i = i + 1
   }
   self.size < other.size

@@ -4,7 +4,7 @@ cell
 
   create(f: i32): cell
   {
-    new {f = f}
+    new {f}
   }
 }
 
