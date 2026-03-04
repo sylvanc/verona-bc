@@ -48,15 +48,11 @@ parse
                 (brace
                   (list
                     (group
-                      (ident 3:val)
-                      (=)
                       (ident 3:val))
                     (group
                       (ident 5:count)
                       (=)
-                      (int 1:0)
-                      (dot)
-                      (ident 3:i32)))))))
+                      (int 1:0)))))))
           (group
             (ident 5:apply)
             (paren
@@ -76,9 +72,7 @@ parse
                 (dot)
                 (ident 5:count)
                 (symbolid 1:+)
-                (int 1:1)
-                (dot)
-                (ident 3:i32))
+                (int 1:1))
               (group
                 (semi))
               (group
@@ -247,9 +241,7 @@ parse
             (var)
             (ident 6:result)
             (=)
-            (int 1:0)
-            (dot)
-            (ident 3:i32))
+            (int 1:0))
           (group
             (semi))
           (group
@@ -261,9 +253,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 3:128)
-                (dot)
-                (ident 3:i32))))
+                (int 3:128))))
           (group
             (if)
             (ident 1:b)
@@ -273,9 +263,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 2:64)
-                (dot)
-                (ident 3:i32))))
+                (int 2:64))))
           (group
             (if)
             (ident 1:c)
@@ -285,9 +273,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 2:32)
-                (dot)
-                (ident 3:i32))))
+                (int 2:32))))
           (group
             (if)
             (ident 1:d)
@@ -297,9 +283,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 2:16)
-                (dot)
-                (ident 3:i32))))
+                (int 2:16))))
           (group
             (if)
             (ident 1:e)
@@ -309,9 +293,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 1:8)
-                (dot)
-                (ident 3:i32))))
+                (int 1:8))))
           (group
             (if)
             (ident 1:f)
@@ -321,9 +303,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 1:4)
-                (dot)
-                (ident 3:i32))))
+                (int 1:4))))
           (group
             (if)
             (ident 1:g)
@@ -333,9 +313,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 1:2)
-                (dot)
-                (ident 3:i32))))
+                (int 1:2))))
           (group
             (if)
             (ident 1:h)
@@ -345,9 +323,7 @@ parse
                 (=)
                 (ident 6:result)
                 (symbolid 1:+)
-                (int 1:1)
-                (dot)
-                (ident 3:i32))))
+                (int 1:1))))
           (group
             (triplecolon)
             (ident 8:printval)
@@ -402,9 +378,7 @@ parse
           (group
             (semi))
           (group
-            (int 1:0)
-            (dot)
-            (ident 3:i32))))))
+            (int 1:0))))))
   (directory
     (directory
       (file
@@ -1235,8 +1209,6 @@ parse
               (group
                 (when)
                 (paren)
-                (paren)
-                (symbolid 2:->)
                 (brace
                   (group
                     (ident 4:some))))))

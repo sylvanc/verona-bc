@@ -188,27 +188,25 @@ Key points:
 
 ---
 
-## 16.8 The Four Forms of `use`
+## 16.8 The Various Forms of `use`
 
 `use` appears in several different contexts. Here they all are in one place:
 
 | Form | Purpose | Example |
 |------|---------|--------|
 | `use Module` | Import a local class/module for unqualified lookup | `use math` |
-| `use "url"` | Import a package from a git URL | `use "https://github.com/..."` |
-| `use "url" "tag"` | Import a package at a specific git ref | `use "https://..." "v1.0"` |
-| `use "url" "tag" "dir"` | Import a subdirectory of a package | `use "https://..." "main" "src"` |
-| `use x = "url"` | Import a package as a named type alias | `use mylib = "https://..."` |
-| `use x = "url" "tag"` | Named alias at a specific git ref | `use mylib = "https://..." "v1.0"` |
-| `use { name = "lib"(...): T; }` | FFI declarations (see [FFI §17](17-ffi.md)) | `use { print = "print"(any): none; }` |
+| `use x = Module` | Import a local class/module with an alias | `use m = math` |
+| `use "url" "tag" "dir"` | Import a package from a git URL at a specific git ref (the subdirectory is optional) | `use "https://..." "v1.0"` |
+| `use x = "url" "tag" "dir"` | Named alias at a specific git ref | `use mylib = "https://..." "v1.0"` |
+| `use "library" { name = "lib"(...): T; }` | FFI declarations (see [FFI §17](17-ffi.md)) | `use { print = "print"(any): none; }` |
 
 ### The `ffi` Namespace
 
 The `_builtin/ffi/` directory defines wrapper functions for common FFI operations. Because `_builtin` is always imported and `ffi/` is a nested scope, these functions are accessed via `ffi::`:
 
 ```verona
-ffi::add_external();                  // call add_external from _builtin/ffi/notify.v
-let cb = callback(my_lambda);         // callback from _builtin/ffi/callback.v
+ffi::external.add;                    // call add_external from _builtin/ffi/notify.v
+let cb = ffi::callback(my_lambda);    // callback from _builtin/ffi/callback.v
 ```
 
 See [FFI §17.8](17-ffi.md) for the full list of `ffi::` functions.
@@ -222,19 +220,19 @@ use math
 add(3, 4)                             // resolves to math::add
 ```
 
-This affects only `lookup()` (walking up scopes). It does **not** make the declarations visible via `lookdown()` from outside — other modules still need `math::add()`.
+This affects only `lookup` (walking up scopes). It does **not** make the declarations visible via `lookdown` from outside — other modules still need `math::add()`.
 
-### `use "url"` — Package Import
+### `use "url" "tag"` — Package Import
 
 Imports an external package from a git repository URL:
 
 ```verona
-use "https://github.com/user/repo"
+use "https://github.com/user/repo" "tag"
 ```
 
 The package's top-level declarations become available for unqualified lookup, just like `use Module`.
 
-An optional second string specifies a **git ref** (branch, tag, or commit hash):
+The second string specifies a **git ref** (branch, tag, or commit hash):
 
 ```verona
 use "https://github.com/user/repo" "v1.0"      // specific tag
@@ -247,20 +245,21 @@ An optional third string specifies a **subdirectory** within the repository:
 use "https://github.com/user/repo" "main" "src" // import the src/ subdirectory
 ```
 
-For local development, you can use a local git repository path:
+The dependency system uses `git fetch`/`checkout`, so changes must be committed and pushed to the repo before the consuming project can see them.
+
+For local development, you can use a local directory path, which skips git and copies directly from the file system:
 
 ```verona
-use "~/dev/my-package" "main"                   // local git repo
+use "~/dev/my-package"                   // local directory
 ```
 
-The dependency system uses `git fetch`/`checkout`, so changes must be committed to the local repo before the consuming project can see them.
+This is useful for testing changes to a package without pushing to a remote repo. The path can be absolute or relative to the current project.
 
-### `use x = "url"` — Named Package Alias
+### `use x = "url" "tag"` — Named Package Alias
 
 Imports a package and binds it to a name for qualified access:
 
 ```verona
-use mylib = "https://github.com/user/repo"
 use mylib = "https://github.com/user/repo" "v1.0"
 mylib::some_function()
 ```
@@ -276,4 +275,4 @@ use
 }
 ```
 
-The `use` keyword is overloaded but the forms are syntactically distinct — the compiler disambiguates by what follows `use` (a name, a string, an assignment, or a brace block).
+The `use` keyword is overloaded, but the forms are syntactically distinct — the compiler disambiguates by what follows `use` (a name, a string, an assignment, or a brace block).

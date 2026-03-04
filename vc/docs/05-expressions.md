@@ -92,14 +92,14 @@ The number of leading single-quotes must match the trailing ones. Escape sequenc
 
 All arithmetic methods are defined on the receiver type:
 
-| Method | Meaning | Example |
+| Method | Usual Meaning | Example |
 |----------|---------|---------|
 | `+` | Addition | `a + b` |
 | `-` | Subtraction | `a - b` |
 | `*` | Multiplication | `a * b` |
 | `/` | Division | `a / b` |
 | `%` | Modulo | `a % b` |
-| `**` | Power (`f64` only) | `a ** b` |
+| `**` | Power | `a ** b` |
 
 Unary negation: `-a` (prefix `-`).
 
@@ -109,7 +109,7 @@ Since all operations are method calls, `a + b` is equivalent to calling the `+` 
 
 ## 5.3 Bitwise Methods
 
-| Method | Meaning | Example |
+| Method | Usual Meaning | Example |
 |----------|---------|---------|
 | `&` | Bitwise AND | `a & b` |
 | `\|` | Bitwise OR | `a \| b` |
@@ -124,7 +124,7 @@ These are methods defined on integer types. On integers, `!` calls the `not` met
 
 ## 5.4 Comparison Methods
 
-| Method | Meaning |
+| Method | Usual Meaning |
 |----------|---------|
 | `==` | Equal |
 | `!=` | Not equal |
@@ -233,10 +233,11 @@ obj.field + 1                 // parsed as: (obj.field) + 1
 Use parentheses to override:
 
 ```verona
-(obj.field)(args)             // call apply on the result of a field access
+obj.field()(args)             // call apply on the result of a field access
+(obj.field)(args)             // another way to do the same thing
 ```
 
-Note: `obj.f(args)` calls method `f` with `args` — not `apply` on field `f`. To call `apply` on a field, use `(obj.f)(args)` or `obj.f.apply(args)`. See [Chapter 1](01-getting-started.md) for more.
+Note: `obj.f(args)` calls method `f` with `args` — not `apply` on field `f`. To call `apply` on a field, use `obj.f()(args)` or `obj.f.apply(args)`. See [Chapter 1](01-getting-started.md) for more.
 
 > **⚠️ IMPORTANT: Flat operator precedence.** All infix operators have **the same precedence** and are **left-associative**. There is no precedence difference between `+` and `*`. This is the single most common source of confusion for new Verona programmers. It means:
 >
@@ -317,9 +318,9 @@ when (c) (x) ->
   var i = 0;
   while i < self.size
   {
-    if i == other.size { return false };
-    if (self.data)(i) < (other.data)(i) { return true };
-    if (self.data)(i) > (other.data)(i) { return false };
+    if i == other.size { return false }
+    if (self.data)(i) < (other.data)(i) { return true }
+    if (self.data)(i) > (other.data)(i) { return false }
     i = i + 1
   }
   self.size < other.size

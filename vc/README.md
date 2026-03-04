@@ -8,6 +8,8 @@ Review `iowise`.
 
 Can we extract just the bits of `verona-rt` that we use?
 
+Require `else` to take `{ ... }`?
+
 FFI.
 - Can `ffi::callback` interact with reference counting better?
 - Platform dependent code for dealing with libraries?

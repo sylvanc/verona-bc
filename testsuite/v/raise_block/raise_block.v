@@ -11,7 +11,7 @@ find_first(a: i32, b: i32, target: i32): i32
     {
       raise x
     }
-  };
+  }
   check(a);
   check(b);
   // If neither matched, return 0.

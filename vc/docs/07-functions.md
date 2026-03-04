@@ -173,7 +173,7 @@ Parameters can have default values:
 ```verona
 create(f: i32 = 0): cell
 {
-  new {f = f}
+  new {f}
 }
 ```
 

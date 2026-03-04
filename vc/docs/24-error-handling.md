@@ -37,7 +37,7 @@ find_first(a: i32, b: i32, target: i32): i32
     {
       raise x
     }
-  };
+  }
   check(a);
   check(b);
   0
@@ -74,10 +74,10 @@ The raise target is the enclosing function's stack frame, captured when the lamb
 make_checker(target: i32): i32 -> i32
 {
   let check = (x: i32): i32 -> {
-    if x == target { raise x };       // raise targets make_checker's frame
+    if x == target { raise x }       // raise targets make_checker's frame
     x
-  };
-  check                               // lambda escapes the function
+  }
+  check                              // lambda escapes the function
 }
 ```
 
@@ -90,7 +90,7 @@ find_in_array(arr: array[i32], target: i32): i32
 {
   let check = (x: i32) -> {
     if x == target { raise x }
-  };
+  }
 
   for arr.values() elem ->
   {
@@ -146,7 +146,7 @@ See [Types §3.3](03-types.md) for union type discrimination patterns and [Contr
 The `else` keyword after an expression handles the `nomatch` case:
 
 ```verona
-let elem = it.next() else { break };
+let elem = it.next() else { break }
 ```
 
 If `it.next()` returns `nomatch`, the `else` branch executes. Otherwise, the value is bound with `nomatch` stripped from the type. This is the mechanism underlying `for` loop desugaring.
@@ -199,7 +199,7 @@ The caller must handle the union — the compiler won't let you use the result a
 let result = match parse_int(input)
 {
   (n: i32) -> n;
-  (e: parse_error) -> { :::printval(e.msg); 0 };
+  (e: parse_error) -> { :::printval(e.msg); 0 }
 }
 ```
 
@@ -215,9 +215,9 @@ process_all(items: array[string]): i32 | parse_error
     match parse_int(s)
     {
       (n: i32) -> n;
-      (e: parse_error) -> { raise e };  // bail out of process_all immediately
+      (e: parse_error) -> { raise e }  // bail out of process_all immediately
     }
-  };
+  }
 
   var sum: i32 = 0;
   for items.values() item ->
@@ -236,15 +236,19 @@ Use `else` for one level of fallback, and `raise` for multi-step pipelines:
 
 ```verona
 // Simple: one fallback
-let x = parse_int(input) else { 0 };
+let x = parse_int(input) else { 0 }
 
 // Pipeline: bail on first error
 process_pipeline(a: string, b: string): i32 | parse_error
 {
   let bail = (r: i32 | parse_error) ->
   {
-    match r { (e: parse_error) -> { raise e }; (n: i32) -> n; }
-  };
+    match r
+    {
+      (e: parse_error) -> { raise e }
+      (n: i32) -> n;
+    }
+  }
 
   let x = bail(parse_int(a));
   let y = bail(parse_int(b));
@@ -271,9 +275,9 @@ main(): i32
 {
   match read_config("app.conf")
   {
-    (c: config) -> { 0 };
-    (e: io_error) -> { :::printval(e.msg); 1 };
-    (e: format_error) -> { :::printval(e.msg); 2 };
+    (c: config) -> { 0 }
+    (e: io_error) -> { :::printval(e.msg); 1 }
+    (e: format_error) -> { :::printval(e.msg); 2 }
   }
 }
 ```

@@ -13,7 +13,7 @@ box[T]
 
   create(val: T): box[T]
   {
-    new {val = val}
+    new {val}
   }
 
   get(self: box[T]): T

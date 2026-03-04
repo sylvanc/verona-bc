@@ -90,7 +90,7 @@ log(msg: string): none
 let x: none = log("hello");
 
 // nomatch: "I couldn't find what you asked for"
-let result: i32 | nomatch = match v { (n: i32) -> n; };
+let result: i32 | nomatch = match v { (n: i32) -> n; }
 ```
 
 Key difference: `none` is a successful return with no data. `nomatch` is a signal that the operation failed to match or find something. The `for` loop depends on this distinction — it stops when `next()` returns `nomatch`, but a `none`-returning iterator would be an infinite loop of unit values.

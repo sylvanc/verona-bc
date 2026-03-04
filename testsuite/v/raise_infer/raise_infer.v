@@ -17,7 +17,7 @@ raise_literal(flag: i32): i32
     {
       raise 0
     }
-  };
+  }
   f(flag);
   42
 }
@@ -35,7 +35,7 @@ raise_branches(flag: i32): i32
     {
       raise 2
     }
-  };
+  }
   f(flag);
   0
 }
@@ -47,7 +47,7 @@ always_raises(val: i32): i32
 {
   let f = (x: i32) -> {
     raise x
-  };
+  }
   f(val);
   0
 }
@@ -56,9 +56,7 @@ always_raises(val: i32): i32
 // `a + b` are default-typed; the raise should infer them as i32.
 raise_computed(a: i32, b: i32): i32
 {
-  let f = () -> {
-    raise a + b
-  };
+  let f = { raise a + b }
   f();
   0
 }
@@ -72,7 +70,7 @@ raise_generic[T](val: T, zero: T): T
     {
       raise zero
     }
-  };
+  }
   f(val);
   val
 }
@@ -84,7 +82,7 @@ raise_via_var(flag: i32): i32
   let f = (x: i32) -> {
     var result: i32 = x + 1;
     raise result
-  };
+  }
   f(flag);
   0
 }

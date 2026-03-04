@@ -4,7 +4,7 @@ wrapper[T]
 
   create(val: T): wrapper[T]
   {
-    new {val = val}
+    new {val}
   }
 }
 

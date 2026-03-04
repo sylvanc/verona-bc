@@ -197,7 +197,7 @@ Pass typecheck failed with 1 error(s)!
 Errors:
   wrong number of arguments
     -- main.v:5:11
-      let p = new { f = 42 };
+      let p = new { f = 42 }
               ^~~
 Pass typecheck failed with 1 error(s)!
 ```

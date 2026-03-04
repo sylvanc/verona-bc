@@ -63,7 +63,7 @@ Objects are heap-allocated with the `new` keyword:
 ```verona
 create(x: i32, y: i32): point
 {
-  new { x = x, y = y }
+  new {x, y}
 }
 ```
 

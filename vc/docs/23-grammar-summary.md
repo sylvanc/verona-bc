@@ -74,7 +74,7 @@ WhereExpr     ::= Type '<' Type
                  | '!' WhereExpr
 ```
 
-> **Note:** `where` clauses are parsed but enforcement is partial. The `<` subtype constraint is checked at monomorphization time via shape matching. The `&`, `|`, and `!` connectives are parsed but not yet fully enforced.
+> **Note:** `where` clauses are parsed, but not yet enforced. However, you will get compiler error during monomorphization if a type argument fails to satisfy its constraints. See [Chapter 10](10-generics.md) for more on generics and constraints.
 
 ---
 

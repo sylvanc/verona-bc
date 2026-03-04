@@ -21,8 +21,8 @@ make_accumulator(): i32 -> i32
 independent_state(): i32
 {
   let x: i32 = 0;
-  let a = (): i32 -> { x = x + 1; x };
-  let b = (): i32 -> { x = x + 10; x };
+  let a = (): i32 -> { x = x + 1; x }
+  let b = (): i32 -> { x = x + 10; x }
   // a's x: 0 → 1 → 2
   a();
   let a2 = a();
