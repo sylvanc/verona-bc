@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 4:$906)
+            (localid 4:$936)
             (functionid 29:callback_no_apply::main::0::0)
             (args)))
         (ret
-          (localid 4:$906)))))
+          (localid 4:$936)))))
   (func
     (functionid 29:callback_no_apply::main::0::0)
     (params)
@@ -29,21 +29,21 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$87)
+            (localid 9:local$100)
             (i32)
             (int 1:0))
           (call
-            (localid 7:local$2)
+            (localid 7:local$5)
             (functionid 40:callback_no_apply::noapply::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 8:local$87))))
+                (localid 9:local$100))))
           (copy
             (localid 3:obj)
-            (localid 7:local$2))
+            (localid 7:local$5))
           (call
-            (localid 7:local$3)
+            (localid 7:local$6)
             (functionid 37:_builtin::ffi::callback::create::1::0)
             (args
               (arg
@@ -51,24 +51,24 @@ reify
                 (localid 3:obj))))
           (copy
             (localid 2:cb)
-            (localid 7:local$3))
+            (localid 7:local$6))
           (lookup
-            (localid 8:local$88)
+            (localid 9:local$101)
             (localid 2:cb)
             (methodid 10:free::1::0))
           (calldyn
-            (localid 8:local$89)
-            (localid 8:local$88)
+            (localid 9:local$102)
+            (localid 9:local$101)
             (args
               (arg
                 (argcopy)
                 (localid 2:cb))))
           (const
-            (localid 7:local$4)
+            (localid 7:local$7)
             (i32)
             (int 1:0)))
         (ret
-          (localid 7:local$4)))))
+          (localid 7:local$7)))))
   (primitive
     (i32)
     (methods))
@@ -85,14 +85,14 @@ reify
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$1)
+            (localid 7:local$4)
             (classid 29:callback_no_apply::noapply::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:x)))))
         (ret
-          (localid 7:local$1)))))
+          (localid 7:local$4)))))
   (func
     (functionid 37:_builtin::ffi::callback::create::1::0)
     (params
@@ -109,7 +109,7 @@ reify
             (errormsg 52:make_callback requires a type with an 'apply' method)
             (makecallback)))
         (ret
-          (localid 9:local$467)))))
+          (localid 9:local$488)))))
   (primitive
     (callback)
     (methods
@@ -136,10 +136,10 @@ reify
         (labelid 5:start)
         (body
           (freecallback
-            (localid 9:local$469)
+            (localid 9:local$490)
             (localid 4:self)))
         (ret
-          (localid 9:local$469)))))
+          (localid 9:local$490)))))
   (primitive
     (none)
     (methods)))

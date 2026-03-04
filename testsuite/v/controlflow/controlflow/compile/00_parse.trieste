@@ -112,23 +112,86 @@ parse
                     (group
                       (ident 1:f))))))))
         (group
-          (ident 12:add_external)
-          (paren)
-          (:)
-          (ident 4:none)
+          (ident 8:external)
           (brace
             (group
-              (triplecolon)
-              (ident 12:add_external))))
-        (group
-          (ident 15:remove_external)
-          (paren)
-          (:)
-          (ident 4:none)
-          (brace
+              (ident 1:c)
+              (:)
+              (ident 4:cown)
+              (bracket
+                (group
+                  (ident 4:none))))
             (group
-              (triplecolon)
-              (ident 15:remove_external)))))
+              (semi))
+            (group
+              (ident 4:once)
+              (ident 6:create)
+              (paren)
+              (:)
+              (ident 8:external)
+              (brace
+                (group
+                  (new)
+                  (brace
+                    (group
+                      (ident 1:c)
+                      (=)
+                      (ident 4:cown)
+                      (ident 4:none))))))
+            (group
+              (ident 3:add)
+              (paren
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 8:external)))
+              (:)
+              (ident 4:none)
+              (brace
+                (group
+                  (when)
+                  (paren
+                    (group
+                      (ident 4:self)
+                      (dot)
+                      (ident 1:c)))
+                  (paren
+                    (group
+                      (ident 1:c)))
+                  (symbolid 2:->)
+                  (brace
+                    (group
+                      (triplecolon)
+                      (ident 12:add_external))))
+                (group
+                  (ident 4:none))))
+            (group
+              (ident 6:remove)
+              (paren
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 8:external)))
+              (:)
+              (ident 4:none)
+              (brace
+                (group
+                  (when)
+                  (paren
+                    (group
+                      (ident 4:self)
+                      (dot)
+                      (ident 1:c)))
+                  (paren
+                    (group
+                      (ident 1:c)))
+                  (symbolid 2:->)
+                  (brace
+                    (group
+                      (triplecolon)
+                      (ident 15:remove_external))))
+                (group
+                  (ident 4:none)))))))
       (file
         (group
           (ident 3:ptr)
@@ -784,12 +847,25 @@ parse
         (brace
           (group
             (ident 6:create)
-            (paren)
+            (paren
+              (group
+                (ident 4:some)
+                (:)
+                (ident 1:T)))
             (:)
-            (ident 4:none)
+            (ident 4:cown)
+            (bracket
+              (group
+                (ident 1:T)))
             (brace
               (group
-                (ident 4:none))))
+                (when)
+                (paren)
+                (paren)
+                (symbolid 2:->)
+                (brace
+                  (group
+                    (ident 4:some))))))
           (group
             (ident 4:read)
             (paren

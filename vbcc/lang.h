@@ -112,11 +112,13 @@ namespace vbcc
       FreeCallback,
       AddExternal,
       RemoveExternal,
-      RegisterExternalNotify);
+      RegisterExternalNotify,
+      MemoSlot);
 
   Parse parser();
   PassDef statements();
   PassDef labels();
+  PassDef memo();
   PassDef assignids(std::shared_ptr<Bytecode> state);
   PassDef validids(std::shared_ptr<Bytecode> state);
   PassDef liveness(std::shared_ptr<Bytecode> state);

@@ -15,8 +15,8 @@ use
 
 main(): i32
 {
-  ffi::add_external;
-  ffi::remove_external;
+  ffi::external.add;
+  ffi::external.remove;
   var x: i32 = 0;
   :::printval(x);
   0

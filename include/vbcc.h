@@ -13,7 +13,10 @@ namespace vbcc
   inline const auto Primitive = TokenDef("primitive");
   inline const auto Class = TokenDef("class");
   inline const auto Func = TokenDef("func");
+  inline const auto FuncOnce = TokenDef("funconce");
   inline const auto Vars = TokenDef("vars");
+  inline const auto MemoInit = TokenDef("memoinit");
+  inline const auto MemoSlot = TokenDef("memoslot");
 
   // Identifiers.
   inline const auto SymbolId = TokenDef("symbolid", flag::print);
@@ -150,8 +153,7 @@ namespace vbcc
   inline const auto FreeCallback = TokenDef("freecallback");
   inline const auto AddExternal = TokenDef("addexternal");
   inline const auto RemoveExternal = TokenDef("removeexternal");
-  inline const auto RegisterExternalNotify =
-    TokenDef("registerexternalnotify");
+  inline const auto RegisterExternalNotify = TokenDef("registerexternalnotify");
 
   // Raise target.
   inline const auto GetRaise = TokenDef("getraise");
@@ -211,6 +213,7 @@ namespace vbcc
   // Convenient names.
   inline const auto Lhs = TokenDef("lhs");
   inline const auto Rhs = TokenDef("rhs");
+  inline const auto Once = TokenDef("once");
 
   inline const auto wfRegionType = RegionRC | RegionGC | RegionArena;
 
@@ -244,7 +247,7 @@ namespace vbcc
     ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
     wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
-    RegisterExternalNotify;
+    RegisterExternalNotify | MemoSlot;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -262,7 +265,7 @@ namespace vbcc
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Type | Func | Lib)++)
+      (Top <<= (Primitive | Class | Type | Func | FuncOnce | Lib | MemoInit)++)
     | (Array <<= (Type >>= wfType))
     | (Ref <<= (Type >>= wfType))
     | (Cown <<= (Type >>= wfType))
@@ -282,6 +285,9 @@ namespace vbcc
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
     | (Func <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)
+    | (FuncOnce <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)
+    | (MemoInit <<= FunctionId++)
+    | (MemoSlot <<= wfDst * FunctionId)
     | (Params <<= Param++)
     | (Param <<= LocalId * (Type >>= wfType))
     | (Vars <<= LocalId++)

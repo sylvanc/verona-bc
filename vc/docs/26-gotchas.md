@@ -293,3 +293,9 @@ The `use` keyword is overloaded — it means different things depending on what 
 | `use { ... }` | FFI declarations |
 
 The forms are syntactically distinct, so there's no ambiguity — but seeing `use` in four different roles can be surprising. See [Modules §16.8](16-modules.md) for details.
+
+---
+
+## 26.14 `once` Values Are Immortal
+
+The return value of a `once` function is cached for the program's entire lifetime — it is never garbage collected. This is by design for the primary use case (global singleton cowns), but it means you should not use `once` for large temporary data structures. See [Functions §7.9](07-functions.md).

@@ -3,12 +3,32 @@ register_external_notify[T](f: T): none
   :::register_external_notify(callback(f))
 }
 
-add_external(): none
+external
 {
-  :::add_external
-}
+  c: cown[none];
 
-remove_external(): none
-{
-  :::remove_external
+  once create(): external
+  {
+    new {c = cown none}
+  }
+
+  add(self: external): none
+  {
+    when (self.c) (c) ->
+    {
+      :::add_external
+    }
+
+    none
+  }
+
+  remove(self: external): none
+  {
+    when (self.c) (c) ->
+    {
+      :::remove_external
+    }
+
+    none
+  }
 }

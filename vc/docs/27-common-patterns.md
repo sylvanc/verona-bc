@@ -298,11 +298,11 @@ main(): i32
 {
   let work = when () () ->
   {
-    ffi::add_external();              // keep scheduler alive
+    ffi::external.add;                // keep scheduler alive
 
     // ... do async work, wait for external event ...
 
-    ffi::remove_external();           // allow scheduler to shut down
+    ffi::external.remove;             // allow scheduler to shut down
     0
   };
 
@@ -311,3 +311,30 @@ main(): i32
 ```
 
 The scheduler will not exit while external resources remain. See [FFI §17.8](17-ffi.md).
+
+---
+
+## 27.15 Global Singleton with `once`
+
+Use `once` to create a global singleton that is initialized before `main()`:
+
+```verona
+global_state
+{
+  counter: i32;
+
+  once create(): global_state
+  {
+    new {counter = 0}
+  }
+}
+
+main(): i32
+{
+  let gs = global_state;              // always returns the same instance
+  let gs2 = global_state;             // same instance as gs
+  0
+}
+```
+
+This pattern is commonly used in `_builtin/ffi/` for managing external resource state (e.g., the `external` class in `notify.v`). See [Functions §7.9](07-functions.md).

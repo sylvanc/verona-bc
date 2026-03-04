@@ -150,12 +150,11 @@ application
     (classbody
       (classdef
         {
-          add_external = function
           callback = classdef
           create = function
+          external = classdef
           ptr = classdef
-          register_external_notify = function
-          remove_external = function}
+          register_external_notify = function}
         (none)
         (ident 3:ffi)
         (typeparams)
@@ -358,46 +357,525 @@ application
                                 (exprseq
                                   (expr
                                     (localid 1:f))))))))))))))
-          (function
-            {}
-            (rhs)
-            (ident 12:add_external)
+          (classdef
+            {
+              add = function
+              c =
+                function
+                function
+              create =
+                function
+                function
+              lambda$0 = classdef
+              lambda$1 = classdef
+              remove = function}
+            (none)
+            (ident 8:external)
             (typeparams)
-            (params)
-            (type
-              (typename
-                (nameelement
-                  (ident 8:_builtin)
-                  (typeargs))
-                (nameelement
-                  (ident 4:none)
-                  (typeargs))))
             (where)
-            (body
-              (expr
-                (nulop
-                  (addexternal)
-                  (args)))))
-          (function
-            {}
-            (rhs)
-            (ident 15:remove_external)
-            (typeparams)
-            (params)
-            (type
-              (typename
-                (nameelement
-                  (ident 8:_builtin)
-                  (typeargs))
-                (nameelement
-                  (ident 4:none)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (nulop
-                  (removeexternal)
-                  (args)))))
+            (classbody
+              (fielddef
+                (ident 1:c)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cown)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:none)
+                              (typeargs)))))))))
+              (function
+                {
+                  self = paramdef}
+                (lhs)
+                (ident 1:c)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:external)
+                          (typeargs))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ref)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cown)
+                              (typeargs
+                                (type
+                                  (typename
+                                    (nameelement
+                                      (ident 8:_builtin)
+                                      (typeargs))
+                                    (nameelement
+                                      (ident 4:none)
+                                      (typeargs))))))))))))
+                (where)
+                (body
+                  (expr
+                    (fieldref
+                      (expr
+                        (localid 4:self))
+                      (fieldid 1:c)))))
+              (function
+                {
+                  self = paramdef}
+                (rhs)
+                (ident 1:c)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:external)
+                          (typeargs))))))
+                (type
+                  (typevar))
+                (where)
+                (body
+                  (expr
+                    (load
+                      (expr
+                        (ref
+                          (expr
+                            (call
+                              (funcname
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 3:ffi)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 8:external)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:c)
+                                  (typeargs)))
+                              (args
+                                (expr
+                                  (localid 4:self)))))))))))
+              (function
+                {}
+                (once)
+                (ident 6:create)
+                (typeparams)
+                (params)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ffi)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:external)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (new
+                      (newargs
+                        (newarg
+                          (ident 1:c)
+                          (expr
+                            (call
+                              (funcname
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 6:create)
+                                  (typeargs)))
+                              (args
+                                (expr
+                                  (call
+                                    (funcname
+                                      (nameelement
+                                        (ident 8:_builtin)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 4:none)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 6:create)
+                                        (typeargs)))
+                                    (args))))))))))))
+              (classdef
+                {
+                  apply = function
+                  create = function}
+                (none)
+                (ident 8:lambda$0)
+                (typeparams)
+                (where)
+                (classbody
+                  (function
+                    {}
+                    (rhs)
+                    (ident 6:create)
+                    (typeparams)
+                    (params)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:external)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:lambda$0)
+                          (typeargs))))
+                    (where)
+                    (body
+                      (expr
+                        (new
+                          (newargs)))))
+                  (function
+                    {
+                      $self = paramdef
+                      c = paramdef}
+                    (rhs)
+                    (ident 5:apply)
+                    (typeparams)
+                    (params
+                      (paramdef
+                        (ident 5:$self)
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:ffi)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:external)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:lambda$0)
+                              (typeargs)))))
+                      (paramdef
+                        (ident 1:c)
+                        (type
+                          (typevar))))
+                    (type
+                      (typevar))
+                    (where)
+                    (body
+                      (expr
+                        (nulop
+                          (addexternal)
+                          (args)))))))
+              (function
+                {
+                  self = paramdef}
+                (rhs)
+                (ident 3:add)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:external)
+                          (typeargs))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (when
+                      (args
+                        (expr
+                          (exprseq
+                            (expr
+                              (calldyn
+                                (expr
+                                  (localid 4:self))
+                                (ident 1:c)
+                                (typeargs)
+                                (args))))))
+                      (type
+                        (typevar))
+                      (expr
+                        (call
+                          (funcname
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:ffi)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:external)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:lambda$0)
+                              (typeargs))
+                            (nameelement
+                              (ident 6:create)
+                              (typeargs)))
+                          (args)))))
+                  (expr
+                    (call
+                      (funcname
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:none)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (args)))))
+              (classdef
+                {
+                  apply = function
+                  create = function}
+                (none)
+                (ident 8:lambda$1)
+                (typeparams)
+                (where)
+                (classbody
+                  (function
+                    {}
+                    (rhs)
+                    (ident 6:create)
+                    (typeparams)
+                    (params)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:external)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:lambda$1)
+                          (typeargs))))
+                    (where)
+                    (body
+                      (expr
+                        (new
+                          (newargs)))))
+                  (function
+                    {
+                      $self = paramdef
+                      c = paramdef}
+                    (rhs)
+                    (ident 5:apply)
+                    (typeparams)
+                    (params
+                      (paramdef
+                        (ident 5:$self)
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:ffi)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:external)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:lambda$1)
+                              (typeargs)))))
+                      (paramdef
+                        (ident 1:c)
+                        (type
+                          (typevar))))
+                    (type
+                      (typevar))
+                    (where)
+                    (body
+                      (expr
+                        (nulop
+                          (removeexternal)
+                          (args)))))))
+              (function
+                {
+                  self = paramdef}
+                (rhs)
+                (ident 6:remove)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:ffi)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:external)
+                          (typeargs))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (when
+                      (args
+                        (expr
+                          (exprseq
+                            (expr
+                              (calldyn
+                                (expr
+                                  (localid 4:self))
+                                (ident 1:c)
+                                (typeargs)
+                                (args))))))
+                      (type
+                        (typevar))
+                      (expr
+                        (call
+                          (funcname
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:ffi)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:external)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:lambda$1)
+                              (typeargs))
+                            (nameelement
+                              (ident 6:create)
+                              (typeargs)))
+                          (args)))))
+                  (expr
+                    (call
+                      (funcname
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:none)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (args)))))
+              (function
+                {
+                  c = paramdef}
+                (rhs)
+                (ident 6:create)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 1:c)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:none)
+                                  (typeargs))))))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:ffi)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:external)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (new
+                      (newargs
+                        (newarg
+                          (ident 1:c)
+                          (expr
+                            (localid 1:c))))))))))
           (classdef
             {
               create = function}
@@ -2310,6 +2788,7 @@ application
         {
           T = typeparam
           create = function
+          lambda$2 = classdef
           read = function}
         (none)
         (ident 4:cown)
@@ -2318,35 +2797,274 @@ application
             (ident 1:T)))
         (where)
         (classbody
+          (classdef
+            {
+              T = typeparam
+              apply = function
+              create = function}
+            (none)
+            (ident 8:lambda$2)
+            (typeparams
+              (typeparam
+                (ident 1:T)))
+            (where)
+            (classbody
+              (fielddef
+                (ident 4:some)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cown)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:lambda$2)
+                      (typeargs))
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs)))))
+              (function
+                {
+                  some = paramdef}
+                (rhs)
+                (ident 6:create)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:some)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:lambda$2)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cown)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cown)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 8:lambda$2)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cown)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:lambda$2)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))
+                (where)
+                (body
+                  (expr
+                    (new
+                      (newargs
+                        (newarg
+                          (ident 4:some)
+                          (expr
+                            (localid 4:some))))))))
+              (function
+                {
+                  $ref_some = let
+                  $self = paramdef}
+                (rhs)
+                (ident 5:apply)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 5:$self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))
+                        (nameelement
+                          (ident 8:lambda$2)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 8:lambda$2)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))))))
+                (type
+                  (typevar))
+                (where)
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (let
+                          (ident 9:$ref_some)
+                          (type
+                            (typename
+                              (nameelement
+                                (ident 8:_builtin)
+                                (typeargs))
+                              (nameelement
+                                (ident 3:ref)
+                                (typeargs
+                                  (type
+                                    (typename
+                                      (nameelement
+                                        (ident 8:_builtin)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 4:cown)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 8:lambda$2)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 1:T)
+                                        (typeargs))))))))))
+                      (expr
+                        (fieldref
+                          (expr
+                            (localid 5:$self))
+                          (fieldid 4:some)))))
+                  (expr
+                    (load
+                      (expr
+                        (localid 9:$ref_some))))))))
           (function
-            {}
+            {
+              some = paramdef}
             (rhs)
             (ident 6:create)
             (typeparams)
-            (params)
+            (params
+              (paramdef
+                (ident 4:some)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cown)
+                      (typeargs))
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs))))))
             (type
               (typename
                 (nameelement
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:none)
-                  (typeargs))))
+                  (ident 4:cown)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
             (where)
             (body
               (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:none)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args)))))
+                (when
+                  (args)
+                  (type
+                    (typevar))
+                  (expr
+                    (call
+                      (funcname
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))
+                        (nameelement
+                          (ident 8:lambda$2)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (args
+                        (expr
+                          (localid 4:some)))))))))
           (function
             {
               self = paramdef}

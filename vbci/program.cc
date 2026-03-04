@@ -98,6 +98,11 @@ namespace vbci
     return external_notify_callbacks;
   }
 
+  Register& Program::memo_slot(size_t index)
+  {
+    return memo_slots.at(index);
+  }
+
   uint32_t Program::get_typeid_arg()
   {
     return typeid_arg;
@@ -166,6 +171,15 @@ namespace vbci
 
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
+
+    // Run memo (once) function initializers in dependency order.
+    // This must happen after sched.init() because once functions may create
+    // cowns (via `when`), which requires the scheduler's core pool to be
+    // initialized for behavior queuing.
+    memo_slots.resize(memo_func_ids.size());
+    for (size_t i = 0; i < memo_func_ids.size(); i++)
+      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
+
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
     scheduler_running = true;
@@ -194,6 +208,11 @@ namespace vbci
     }
 
     fini_callbacks.clear();
+
+    // Drop memo slot values, releasing their reference counts.
+    for (auto& slot : memo_slots)
+      slot = ValueTransfer(Value());
+    memo_slots.clear();
 
     for (auto* cc : external_notify_callbacks)
       free_callback(cc);
@@ -839,6 +858,11 @@ namespace vbci
 
     // Function label locations are relative to the code section. Make them
     // absolute.
+    auto memo_count = uleb(pc);
+    memo_func_ids.resize(memo_count);
+    for (size_t i = 0; i < memo_count; i++)
+      memo_func_ids[i] = uleb(pc);
+
     auto code_size = uleb(pc);
 
     for (auto& func : functions)

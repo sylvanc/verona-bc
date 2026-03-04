@@ -2,8 +2,10 @@
 
 ## To Do
 
+Does `f().g` parse?
+
 Review `iowise`.
-- Move to `io::out::print`, `io::err::print`.
+- Move to `io::out.print`, `io::err.print`.
 
 Add/remove external can race, causing remove to be run before add.
 - `notify_basic` test is non-deterministic.
@@ -38,14 +40,14 @@ Semantics:
 - `final` functions.
 
 Packages:
+- `stdin`, `stdout`, `stderr`.
+- Hash map, hash set, ordered map, ordered set, list, deque, vector, span.
 - CLI.
   - Needs a map, so do an RB tree or hash map.
-  - Needs arguments, environment variables.
   - Needs console I/O to print usage and errors.
-- `stdin`, `stdout`, `stderr`.
+  - Needs arguments, environment variables.
 - File system.
 - Network.
-- Hash map, hash set, ordered map, ordered set, list, deque, vector, span.
 - Persistent collections.
 - Sort.
 

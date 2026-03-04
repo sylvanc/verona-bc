@@ -1,0 +1,216 @@
+vc
+validids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$941)
+            (functionid 23:rhs_default::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$941)))))
+  (func
+    (functionid 23:rhs_default::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$7)
+            (functionid 34:rhs_default::myclass::create::0::0)
+            (args))
+          (copy
+            (localid 3:obj)
+            (localid 7:local$7))
+          (lookup
+            (localid 9:local$100)
+            (localid 3:obj)
+            (methodid 9:get::1::0))
+          (calldyn
+            (localid 9:local$101)
+            (localid 9:local$100)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:obj)))))
+        (ret
+          (localid 9:local$101)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 24:_builtin::i32::i32::1::0))
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 24:_builtin::i32::i32::1::1))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (func
+    (functionid 34:rhs_default::myclass::create::0::0)
+    (params)
+    (classid 23:rhs_default::myclass::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$3)
+            (classid 23:rhs_default::myclass::0)
+            (args)))
+        (ret
+          (localid 7:local$3)))))
+  (class
+    (classid 23:rhs_default::myclass::0)
+    (fields)
+    (methods
+      (method
+        (methodid 9:get::1::0)
+        (functionid 31:rhs_default::myclass::get::1::0))))
+  (func
+    (functionid 31:rhs_default::myclass::get::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 23:rhs_default::myclass::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 8:local$99)
+            (i32)
+            (int 2:10))
+          (lookup
+            (localid 9:local$843)
+            (localid 8:local$99)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 9:local$844)
+            (localid 9:local$843)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$99))))
+          (call
+            (localid 7:local$5)
+            (functionid 31:rhs_default::myclass::get::2::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 9:local$844)))))
+        (ret
+          (localid 7:local$5)))))
+  (func
+    (functionid 31:rhs_default::myclass::get::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 23:rhs_default::myclass::0))
+      (param
+        (localid 6:offset)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 7:local$6)
+            (i32)
+            (int 2:42))
+          (lookup
+            (localid 9:local$486)
+            (localid 7:local$6)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 9:local$487)
+            (localid 9:local$486)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:local$6))))
+          (lookup
+            (localid 9:local$887)
+            (localid 9:local$487)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$888)
+            (localid 9:local$887)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$487))
+              (arg
+                (argcopy)
+                (localid 6:offset)))))
+        (ret
+          (localid 9:local$888)))))
+  (func
+    (functionid 24:_builtin::i32::i32::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:self)))))
+  (func
+    (functionid 24:_builtin::i32::i32::1::1)
+    (params
+      (param
+        (localid 4:self)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:self)))))
+  (func
+    (functionid 22:_builtin::i32::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$204)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$204))))))

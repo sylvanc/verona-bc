@@ -222,6 +222,7 @@ namespace vbcc
       }};
 
     p.post([state](auto top) {
+      state->top = top;
       if (!state->functions.at(MainFuncId).func)
       {
         state->error = true;

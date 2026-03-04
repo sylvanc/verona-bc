@@ -43,6 +43,7 @@ FunctionDef   ::= HandPrefix? Ident TypeParams? '(' Params? ')' WhereClause? (':
 FunctionProto ::= HandPrefix? Ident TypeParams? '(' Params? ')' WhereClause? (':' Type)? ';'
 
 HandPrefix    ::= 'ref'
+                 | 'once'
 
 Params        ::= Param (',' Param)*
 Param         ::= Ident ':' Type ('=' Expr)?

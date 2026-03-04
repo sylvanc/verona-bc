@@ -154,12 +154,20 @@ namespace vc
 
         // Function.
         In(ClassBody) * T(Group)
-            << (~T(Ident, "ref")[Lhs] * T(Ident, SymbolId)[Ident] *
+            << (~(T(Ident, "ref") / T(Ident, "once"))[Lhs] *
+                T(Ident, SymbolId)[Ident] *
                 ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
                 ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
                 ~T(Brace)[Brace]) >>
           [](Match& _) {
-            Node side = _(Lhs) ? Lhs : Rhs;
+            Node side;
+            if (!_(Lhs))
+              side = Rhs;
+            else if (_(Lhs)->location().view() == "once")
+              side = Once;
+            else
+              side = Lhs;
+
             Node body = Body;
             auto brace = _(Brace);
             auto shape = (_(Ident)->parent(ClassDef) / Shape) == Shape;
@@ -175,6 +183,13 @@ namespace vc
                 _(Ident), "Function prototypes are only allowed in shapes");
             }
 
+            auto params = Params << *_[Params];
+            if ((side == Once) && !params->empty())
+            {
+              return err(
+                _(Ident), "once functions must have no parameters");
+            }
+
             if (!brace || brace->empty())
               body << (Expr << (Ident ^ "none"));
             else
@@ -182,7 +197,7 @@ namespace vc
 
             return Function << side << _(Ident)
                             << (TypeParams << *_[TypeParams])
-                            << (Params << *_[Params]) << make_type(_[Type])
+                            << params << make_type(_[Type])
                             << (Where << _[Where]) << body;
           },
 

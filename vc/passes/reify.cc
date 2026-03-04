@@ -428,13 +428,42 @@ namespace vc
       }
 
       // All other defs: dedup using substitution map equality.
+      // Only compare entries for TypeParams owned by this def — external
+      // entries from enclosing scopes don't influence the reification
+      // (they're already resolved) and can vary between call paths.
+      auto own_tps = def / TypeParams;
+
       for (auto& existing : r_vec)
       {
-        if (subst_equal(existing.subst, subst))
+        bool match = true;
+
+        for (auto& tp : *own_tps)
+        {
+          auto a_it = existing.subst.find(tp);
+          auto b_it = subst.find(tp);
+
+          if (a_it == existing.subst.end() && b_it == subst.end())
+            continue;
+
+          if (a_it == existing.subst.end() || b_it == subst.end())
+          {
+            match = false;
+            break;
+          }
+
+          if (!Subtype.invariant(top, a_it->second, b_it->second))
+          {
+            match = false;
+            break;
+          }
+        }
+
+        if (match)
           return clone(existing.id);
       }
 
       auto id = make_id(def, r_vec.size(), subst);
+
       r_vec.push_back(
         {def,
          std::move(subst),
@@ -1138,7 +1167,15 @@ namespace vc
           term / Type = reify_type(term / Type, r.subst);
       }
 
-      r.reification = Func << r.id << params << r_type << vars << labels;
+      if ((r.def / Lhs) == Once)
+      {
+        r.reification =
+          FuncOnce << r.id << params << r_type << vars << labels;
+      }
+      else
+      {
+        r.reification = Func << r.id << params << r_type << vars << labels;
+      }
 
       // If this is an init function, ensure the return value's class has
       // @callback registered so the runtime can call it as fini.
@@ -1487,7 +1524,8 @@ namespace vc
 
       auto funcid = get_reification(call / FuncName, subst, [&](auto& def) {
         return (def == Function) && ((def / Params)->size() == arity) &&
-          ((def / Lhs) == hand);
+          (((def / Lhs) == hand) ||
+           ((def / Lhs) == Once && hand == Rhs));
       });
 
       if (!funcid || (funcid == Dyn))

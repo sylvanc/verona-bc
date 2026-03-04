@@ -254,3 +254,82 @@ There is no overloading by parameter type alone — only name and arity matter f
 - **Qualified functions**: `Module::func(args)` — looked up directly in the specified module.
 - **Unqualified names**: If a name cannot be resolved as a local variable, class, or type alias by walking up scopes, it becomes a dynamic method dispatch (`CallDyn`).
 - **Free functions are NOT resolved by walking up scopes** — this is intentional. It prevents a free function like `!=` in an outer scope from shadowing `!=` on a type in an inner scope. Use `use` or qualified names for free functions.
+
+---
+
+## 7.9 Once Functions (Memoized)
+
+A function prefixed with `once` is memoized — it is evaluated exactly once at program startup (before `main()`), and all subsequent calls return the cached result:
+
+```verona
+once answer(): i32
+{
+  i32 42
+}
+
+main(): i32
+{
+  let a = my_module::answer();
+  let b = my_module::answer();       // returns the same cached value
+  a + b                               // 84
+}
+```
+
+### Rules
+
+- **Zero arguments only**: `once` functions cannot have parameters. A `once` function with parameters is a compile error.
+- **No methods**: Because Verona methods always have at least one parameter (`self`), the zero-parameter rule naturally prevents `once` on methods.
+- **Mutually exclusive with `ref`**: `once` and `ref` occupy the same grammar slot — you cannot combine them.
+- **Eager evaluation**: `once` functions run before `main()`, in dependency order. If `once f()` calls `once g()`, then `g` is evaluated first.
+- **Cycle detection**: Circular dependencies between `once` functions (including through non-once intermediaries) are detected at compile time and reported as errors.
+- **Immortal results**: The cached return value is held for the program's entire lifetime and never collected. This is appropriate for the primary use case (global cowns and configuration).
+
+### Dependencies
+
+`once` functions can call other `once` functions. The compiler performs a topological sort to determine evaluation order:
+
+```verona
+once base(): i32
+{
+  i32 10
+}
+
+once derived(): i32
+{
+  my_module::base() + i32 32
+}
+
+main(): i32
+{
+  my_module::derived()                // returns 42
+}
+```
+
+### Compile Errors
+
+```verona
+// ERROR: once functions must have no parameters
+once bad(x: i32): i32 { x }
+
+// ERROR: circular dependency
+once f(): i32 { my_module::g() }
+once g(): i32 { my_module::f() }
+```
+
+### Primary Use Case: Global Singletons
+
+`once` is designed for creating global singleton objects initialized before `main()`:
+
+```verona
+external
+{
+  c: cown[none];
+
+  once create(): external
+  {
+    new {c = cown none}
+  }
+}
+```
+
+This pattern (from `_builtin/ffi/notify.v`) creates a single shared instance with a cown field. All callers of `ffi::external()` get the same instance.
