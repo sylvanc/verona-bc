@@ -12,11 +12,11 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 4:$929)
+            (localid 4:$966)
             (functionid 22:infer_call::main::0::0)
             (args)))
         (ret
-          (localid 4:$929)))))
+          (localid 4:$966)))))
   (func
     (functionid 22:infer_call::main::0::0)
     (params)
@@ -27,25 +27,25 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$97)
+            (localid 9:local$103)
             (i32)
             (int 1:1))
           (const
-            (localid 8:local$98)
+            (localid 9:local$104)
             (i32)
             (int 1:2))
           (call
-            (localid 7:local$3)
+            (localid 7:local$5)
             (functionid 21:infer_call::add::2::0)
             (args
               (arg
                 (argmove)
-                (localid 8:local$97))
+                (localid 9:local$103))
               (arg
                 (argmove)
-                (localid 8:local$98)))))
+                (localid 9:local$104)))))
         (ret
-          (localid 7:local$3)))))
+          (localid 7:local$5)))))
   (primitive
     (i32)
     (methods
@@ -68,12 +68,12 @@ liveness
         (labelid 5:start)
         (body
           (lookup
-            (localid 8:local$95)
+            (localid 9:local$101)
             (localid 1:a)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 8:local$96)
-            (localid 8:local$95)
+            (localid 9:local$102)
+            (localid 9:local$101)
             (args
               (arg
                 (argmove)
@@ -82,7 +82,7 @@ liveness
                 (argmove)
                 (localid 1:b)))))
         (ret
-          (localid 8:local$96)))))
+          (localid 9:local$102)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -99,8 +99,8 @@ liveness
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$201)
+            (localid 9:local$214)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$201))))))
+          (localid 9:local$214))))))

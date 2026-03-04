@@ -126,7 +126,22 @@ This matters when a field holds a callable value (a lambda or an object with `ap
 
 ---
 
-## 26.6 For Loops Need `->`
+## 26.6 Single-Parameter Lambdas Need Bare Identifiers
+
+The parenthesis-free lambda shorthand `x -> { ... }` only works with a bare identifier. To specify a type annotation, default value, or return type, you must use parentheses:
+
+```verona
+x -> { x + 1 }                       // OK: bare identifier
+(x: i32) -> { x + 1 }                // OK: typed parameter in parens
+(x: i32): i32 -> { x + 1 }           // OK: typed parameter + return type
+// x: i32 -> { x + 1 }               // ERROR: can't annotate without parens
+```
+
+Usually you don't need annotations — lambda parameter types are inferred from the calling context (see [Lambdas §13.9](13-lambdas.md)).
+
+---
+
+## 26.7 For Loops Need `->`
 
 The `for` loop requires the arrow `->` after the element binding:
 
@@ -141,7 +156,7 @@ Forgetting `->` is a common syntax error. The arrow separates the lambda paramet
 
 ---
 
-## 26.7 Free Functions Must Be Qualified or Imported
+## 26.8 Free Functions Must Be Qualified or Imported
 
 Free functions are **not** resolved by walking up scopes. You must either qualify them or import with `use`:
 
@@ -173,7 +188,7 @@ This prevents a free function like `!=` from accidentally shadowing a method of 
 
 ---
 
-## 26.8 Integer Literals Default to `u64`
+## 26.9 Integer Literals Default to `u64`
 
 Unadorned integer literals are `u64`, not `i32` or `int`. Float literals are `f64`:
 
@@ -199,7 +214,7 @@ See [Type Inference](18-type-inference.md).
 
 ---
 
-## 26.9 No Semicolons After `}`
+## 26.10 No Semicolons After `}`
 
 Control flow blocks (`if`, `while`, `for`, `match`, `when`) do **not** need a semicolon after the closing brace:
 
@@ -224,7 +239,7 @@ See [Program Structure §2.5](02-program-structure.md).
 
 ---
 
-## 26.10 Match Without `else` Returns `nomatch`
+## 26.11 Match Without `else` Returns `nomatch`
 
 A `match` expression without an `else` clause includes `nomatch` in its result type:
 
@@ -246,15 +261,15 @@ See [Control Flow §6.8](06-control-flow.md).
 
 ---
 
-## 26.11 `_builtin` Is Always Available
+## 26.12 `_builtin` Is Always Available
 
-You never need to write `use "_builtin"`. The `_builtin` module (containing all primitive types like `i32`, `string`, `bool`, etc.) is implicitly imported by the compiler.
+You never need to write `use _builtin`. The `_builtin` module (containing all primitive types like `i32`, `string`, `bool`, etc.) is implicitly imported by the compiler.
 
 See [Modules §16.4](16-modules.md).
 
 ---
 
-## 26.12 Recursive Types Need Union with `none`
+## 26.13 Recursive Types Need Union with `none`
 
 Recursive data structures require a union type to terminate the recursion:
 
@@ -271,7 +286,7 @@ Without the `| none`, the type would be infinitely recursive. The `none` type (f
 ```verona
 main(): i32
 {
-  let b = node(2, none::create());
+  let b = node(2, none);
   let a = node(1, b);
   a.val
 }
@@ -281,21 +296,22 @@ See [Union Types §3.3](03-types.md) and [Special Types §3.2](03-types.md).
 
 ---
 
-## 26.13 The Four Faces of `use`
+## 26.14 The Faces of `use`
 
 The `use` keyword is overloaded — it means different things depending on what follows it:
 
 | Syntax | Meaning |
 |--------|---------|
 | `use math` | Import a module for unqualified lookup |
-| `use "url"` | Import a remote package |
-| `use x = "url"` | Import a package with a name |
+| `use x = math` | Import a module with a name |
+| `use "url" "tag"` | Import a remote package |
+| `use x = "url" "tag"` | Import a remote package with a name |
 | `use { ... }` | FFI declarations |
 
 The forms are syntactically distinct, so there's no ambiguity — but seeing `use` in four different roles can be surprising. See [Modules §16.8](16-modules.md) for details.
 
 ---
 
-## 26.14 `once` Values Are Immortal
+## 26.15 `once` Values Are Immortal
 
-The return value of a `once` function is cached for the program's entire lifetime — it is never garbage collected. This is by design for the primary use case (global singleton cowns), but it means you should not use `once` for large temporary data structures. See [Functions §7.9](07-functions.md).
+The return value of a `once` function is cached for the program's entire lifetime — it is never garbage collected. This is by design for the primary use case (global singleton cowns), but it means you should not use `once` for large temporary data structures. See [Functions §7.10](07-functions.md).

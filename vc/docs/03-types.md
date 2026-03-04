@@ -75,8 +75,7 @@ These two types serve distinct purposes and should not be confused:
 ```verona
 log(msg: string): none
 {
-  :::printval(msg);
-  none
+  :::printval(msg)
 }
 ```
 

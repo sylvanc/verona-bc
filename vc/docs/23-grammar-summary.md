@@ -109,11 +109,14 @@ Expr          ::= Literal
                  | '#' Expr
 
 LambdaExpr    ::= '(' Params ')' (':' Type)? '->' LambdaBody
-                 | Ident '->' LambdaBody
+                 | Ident '->' LambdaBody              // single param, bare ident only
                  | '{' Body '}'
 
 LambdaBody    ::= '{' Body '}'
                  | Expr
+```
+
+> **Note:** The `Ident '->' LambdaBody` shorthand requires a bare identifier — no type annotation, default value, or return type. To specify any of these, use parentheses: `(x: i32) -> { ... }` or `(x: i32): i32 -> { ... }`.
 
 MatchExpr     ::= 'match' Expr '{' MatchArm (';' MatchArm)* '}' ElseChain?
 

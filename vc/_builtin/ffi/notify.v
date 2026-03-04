@@ -18,8 +18,6 @@ external
     {
       :::add_external
     }
-
-    none
   }
 
   remove(self: external): none
@@ -28,7 +26,5 @@ external
     {
       :::remove_external
     }
-
-    none
   }
 }

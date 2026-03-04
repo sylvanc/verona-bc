@@ -1,0 +1,134 @@
+lambda_stateful.v:9:16: unexpected expr, expected a none, e, pi, inf, nan, addexternal, removeexternal, neg, not, abs, ceil, floor, exp, log, sqrt, cbrt, isinf, isnan, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, bits, len, makeptr, read, add, sub, mul, div, mod, pow, and, or, xor, shl, shr, eq, ne, lt, le, gt, ge, min, max, logbase, atan2, const, conststr, convert, copy, move, registerref, fieldref, arrayref, arrayrefconst, new, stack, newarray, newarrayconst, load, store, lookup, call, calldyn, trycalldyn, var, when, ffi, typetest, typeassertion, getraise, setraise, splatop, arrayrefend, makecallback, callbackptr, freecallback or registerexternalnotify
+  (): i32 -> { count = count + 1; count }
+               ~~~~~~~~~~~~~~~~~
+(expr
+  (=
+    (lhs
+      (load
+        (localid 9:local$132)))
+    (localid 10:local$1078)))
+
+
+lambda_stateful.v:9:16: unexpected lhs, expected a expr, 
+  (): i32 -> { count = count + 1; count }
+               ~~~~~~~~~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$132)))
+
+
+: unexpected localid, expected a expr, 
+local$1078
+~~~~~~~~~~
+(localid 10:local$1078)
+
+
+lambda_stateful.v:9:16: expected 0 children, found 1
+  (): i32 -> { count = count + 1; count }
+               ~~~~~~~~~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$132)))
+
+
+lambda_stateful.v:16:22: unexpected expr, expected a none, e, pi, inf, nan, addexternal, removeexternal, neg, not, abs, ceil, floor, exp, log, sqrt, cbrt, isinf, isnan, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, bits, len, makeptr, read, add, sub, mul, div, mod, pow, and, or, xor, shl, shr, eq, ne, lt, le, gt, ge, min, max, logbase, atan2, const, conststr, convert, copy, move, registerref, fieldref, arrayref, arrayrefconst, new, stack, newarray, newarrayconst, load, store, lookup, call, calldyn, trycalldyn, var, when, ffi, typetest, typeassertion, getraise, setraise, splatop, arrayrefend, makecallback, callbackptr, freecallback or registerexternalnotify
+  (n: i32): i32 -> { total = total + n; total }
+                     ~~~~~~~~~~~~~~~~~
+(expr
+  (=
+    (lhs
+      (load
+        (localid 9:local$135)))
+    (localid 10:local$1080)))
+
+
+lambda_stateful.v:16:22: unexpected lhs, expected a expr, 
+  (n: i32): i32 -> { total = total + n; total }
+                     ~~~~~~~~~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$135)))
+
+
+: unexpected localid, expected a expr, 
+local$1080
+~~~~~~~~~~
+(localid 10:local$1080)
+
+
+lambda_stateful.v:16:22: expected 0 children, found 1
+  (n: i32): i32 -> { total = total + n; total }
+                     ~~~~~~~~~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$135)))
+
+
+lambda_stateful.v:24:24: unexpected expr, expected a none, e, pi, inf, nan, addexternal, removeexternal, neg, not, abs, ceil, floor, exp, log, sqrt, cbrt, isinf, isnan, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, bits, len, makeptr, read, add, sub, mul, div, mod, pow, and, or, xor, shl, shr, eq, ne, lt, le, gt, ge, min, max, logbase, atan2, const, conststr, convert, copy, move, registerref, fieldref, arrayref, arrayrefconst, new, stack, newarray, newarrayconst, load, store, lookup, call, calldyn, trycalldyn, var, when, ffi, typetest, typeassertion, getraise, setraise, splatop, arrayrefend, makecallback, callbackptr, freecallback or registerexternalnotify
+  let a = (): i32 -> { x = x + 1; x }
+                       ~~~~~~~~~
+(expr
+  (=
+    (lhs
+      (load
+        (localid 9:local$138)))
+    (localid 10:local$1082)))
+
+
+lambda_stateful.v:24:24: unexpected lhs, expected a expr, 
+  let a = (): i32 -> { x = x + 1; x }
+                       ~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$138)))
+
+
+: unexpected localid, expected a expr, 
+local$1082
+~~~~~~~~~~
+(localid 10:local$1082)
+
+
+lambda_stateful.v:24:24: expected 0 children, found 1
+  let a = (): i32 -> { x = x + 1; x }
+                       ~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$138)))
+
+
+lambda_stateful.v:25:24: unexpected expr, expected a none, e, pi, inf, nan, addexternal, removeexternal, neg, not, abs, ceil, floor, exp, log, sqrt, cbrt, isinf, isnan, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, bits, len, makeptr, read, add, sub, mul, div, mod, pow, and, or, xor, shl, shr, eq, ne, lt, le, gt, ge, min, max, logbase, atan2, const, conststr, convert, copy, move, registerref, fieldref, arrayref, arrayrefconst, new, stack, newarray, newarrayconst, load, store, lookup, call, calldyn, trycalldyn, var, when, ffi, typetest, typeassertion, getraise, setraise, splatop, arrayrefend, makecallback, callbackptr, freecallback or registerexternalnotify
+  let b = (): i32 -> { x = x + 10; x }
+                       ~~~~~~~~~~
+(expr
+  (=
+    (lhs
+      (load
+        (localid 9:local$141)))
+    (localid 10:local$1084)))
+
+
+lambda_stateful.v:25:24: unexpected lhs, expected a expr, 
+  let b = (): i32 -> { x = x + 10; x }
+                       ~~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$141)))
+
+
+: unexpected localid, expected a expr, 
+local$1084
+~~~~~~~~~~
+(localid 10:local$1084)
+
+
+lambda_stateful.v:25:24: expected 0 children, found 1
+  let b = (): i32 -> { x = x + 10; x }
+                       ~~~~~~~~~~
+(lhs
+  (load
+    (localid 9:local$141)))
+
+
+Errors:Pass anf failed with 0 error!
+

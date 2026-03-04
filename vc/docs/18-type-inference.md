@@ -163,11 +163,46 @@ var x: i32 = 0;                      // 0 → i32
 let y = x + 1;                       // 1 → i32 (from x's type)
 ```
 
-The infer pass tracks type information per variable and propagates refinements through Copy, Move, and Lookup operations.
+The infer pass tracks type information per variable and propagates refinements through Copy, Move, Lookup, RegisterRef, and New/Stack operations. When a literal changes type (e.g., `u64` → `i32` due to return type refinement), the cascade updates all downstream uses, including reference types (`ref[u64]` → `ref[i32]`) and anonymous class field types.
 
 ---
 
-## 18.10 When Inference Is Not Enough
+## 18.10 Lambda Parameter Inference
+
+When a lambda is passed to a higher-order function, the compiler infers the lambda's parameter and return types from the expected function type.
+
+### From Shape Types
+
+Function types like `T -> none` desugar to shape classes with an `apply` method. When a lambda is passed where such a shape is expected, the compiler propagates the shape's `apply` signature to the lambda:
+
+```verona
+each(self: array[T], f: T -> none): none { ... }
+
+let arr = array[i32]::fill(10);
+arr.each i -> { process(i) }   // i: i32, inferred from T -> none
+```
+
+### Captured Variable Refinement
+
+Captured `var` bindings create reference fields in the lambda class (e.g., `ref[TypeVar]`). The compiler propagates concrete types through the capture chain:
+
+1. Return-type refinement resolves the `var`'s literal type in the enclosing scope
+2. Cascade propagation updates the RegisterRef and the lambda's field type
+3. The lambda's `apply` method is re-processed with the corrected field type
+
+```verona
+main(): i32
+{
+  var sum = 0;                        // default u64, refined to i32 by return type
+  let arr = array[i32]::fill(10);
+  arr.each i -> { sum = sum + i; none }  // sum: i32 inside lambda
+  sum
+}
+```
+
+---
+
+## 18.11 When Inference Is Not Enough
 
 If the compiler cannot infer a literal's type, prefix it explicitly:
 
@@ -181,7 +216,7 @@ This is rare in well-typed programs — inference handles most cases.
 
 ---
 
-## 18.11 Explicit vs Inferred: Code Style
+## 18.12 Explicit vs Inferred: Code Style
 
 Idiomatic Verona relies on inference — prefer bare literals when the type is clear from context:
 

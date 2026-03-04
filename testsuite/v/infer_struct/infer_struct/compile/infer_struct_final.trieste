@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$934)
+            (localid 4:$971)
             (functionid 24:infer_struct::main::0::0)
             (args)))
         (ret
-          (localid 4:$934)))))
+          (localid 4:$971)))))
   (func
     (functionid 24:infer_struct::main::0::0)
     (params)
@@ -27,28 +27,28 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$101)
+            (localid 9:local$107)
             (i32)
             (int 1:1))
           (call
-            (localid 7:local$5)
+            (localid 7:local$7)
             (functionid 35:infer_struct::wrapper::create::1::0)
             (args
               (arg
                 (argmove)
-                (localid 9:local$101))))
+                (localid 9:local$107))))
           (move
             (localid 1:w)
-            (localid 7:local$5))
+            (localid 7:local$7))
           (call
-            (localid 7:local$6)
+            (localid 7:local$8)
             (functionid 26:infer_struct::unwrap::1::0)
             (args
               (arg
                 (argmove)
                 (localid 1:w)))))
         (ret
-          (localid 7:local$6)))))
+          (localid 7:local$8)))))
   (primitive
     (i32)
     (methods))
@@ -65,14 +65,14 @@ typecheck
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$4)
+            (localid 7:local$6)
             (classid 24:infer_struct::wrapper::0)
             (args
               (arg
                 (argmove)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$4)))))
+          (localid 7:local$6)))))
   (func
     (functionid 26:infer_struct::unwrap::1::0)
     (params
@@ -86,18 +86,18 @@ typecheck
         (labelid 5:start)
         (body
           (lookup
-            (localid 8:local$99)
+            (localid 9:local$105)
             (localid 1:w)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$100)
-            (localid 8:local$99)
+            (localid 9:local$106)
+            (localid 9:local$105)
             (args
               (arg
                 (argmove)
                 (localid 1:w)))))
         (ret
-          (localid 9:local$100)))))
+          (localid 9:local$106)))))
   (class
     (classid 24:infer_struct::wrapper::0)
     (fields
@@ -121,17 +121,17 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$3)
+            (localid 7:local$5)
             (functionid 37:infer_struct::wrapper::val::1::ref::0)
             (args
               (arg
                 (argmove)
                 (localid 4:self))))
           (load
-            (localid 9:local$484)
-            (localid 7:local$3)))
+            (localid 9:local$497)
+            (localid 7:local$5)))
         (ret
-          (localid 9:local$484)))))
+          (localid 9:local$497)))))
   (func
     (functionid 37:infer_struct::wrapper::val::1::ref::0)
     (params
@@ -146,13 +146,13 @@ typecheck
         (labelid 5:start)
         (body
           (fieldref
-            (localid 8:local$98)
+            (localid 9:local$104)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 8:local$98)))))
+          (localid 9:local$104)))))
   (primitive
     (ref
       (i32))

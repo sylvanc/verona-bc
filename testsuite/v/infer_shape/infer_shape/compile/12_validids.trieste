@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$937)
+            (localid 4:$974)
             (functionid 23:infer_shape::main::0::0)
             (args)))
         (ret
-          (localid 4:$937)))))
+          (localid 4:$974)))))
   (func
     (functionid 23:infer_shape::main::0::0)
     (params)
@@ -27,28 +27,28 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$104)
+            (localid 9:local$110)
             (i32)
             (int 2:42))
           (call
-            (localid 7:local$6)
+            (localid 7:local$8)
             (functionid 30:infer_shape::box::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$104))))
+                (localid 9:local$110))))
           (copy
             (localid 1:b)
-            (localid 7:local$6))
+            (localid 7:local$8))
           (call
-            (localid 7:local$7)
+            (localid 7:local$9)
             (functionid 26:infer_shape::extract::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:b)))))
         (ret
-          (localid 7:local$7)))))
+          (localid 7:local$9)))))
   (primitive
     (i32)
     (methods))
@@ -65,14 +65,14 @@ validids
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$5)
+            (localid 7:local$7)
             (classid 19:infer_shape::box::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$5)))))
+          (localid 7:local$7)))))
   (func
     (functionid 26:infer_shape::extract::1::0)
     (params
@@ -86,18 +86,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$102)
+            (localid 9:local$108)
             (localid 1:g)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 9:local$103)
-            (localid 9:local$102)
+            (localid 9:local$109)
+            (localid 9:local$108)
             (args
               (arg
                 (argcopy)
                 (localid 1:g)))))
         (ret
-          (localid 9:local$103)))))
+          (localid 9:local$109)))))
   (type
     (typeid 22:infer_shape::getter::0)
     (classid 19:infer_shape::box::0))
@@ -127,18 +127,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$100)
+            (localid 9:local$106)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$101)
-            (localid 9:local$100)
+            (localid 9:local$107)
+            (localid 9:local$106)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 9:local$101)))))
+          (localid 9:local$107)))))
   (func
     (functionid 27:infer_shape::box::val::1::0)
     (params
@@ -152,17 +152,17 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$4)
+            (localid 7:local$6)
             (functionid 32:infer_shape::box::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$487)
-            (localid 7:local$4)))
+            (localid 9:local$500)
+            (localid 7:local$6)))
         (ret
-          (localid 9:local$487)))))
+          (localid 9:local$500)))))
   (func
     (functionid 32:infer_shape::box::val::1::ref::0)
     (params
@@ -177,13 +177,13 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 8:local$99)
+            (localid 9:local$105)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 8:local$99)))))
+          (localid 9:local$105)))))
   (primitive
     (ref
       (i32))

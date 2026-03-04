@@ -57,6 +57,24 @@ The index is a `usize`.
 
 ## 12.4 Iteration
 
+### Higher-Order Methods
+
+The `each` and `pairs` methods iterate over elements using a lambda callback:
+
+```verona
+let arr = array[i32]::fill(10);
+
+// each: calls f(element) for each element
+arr.each i -> { process(i); none }
+
+// pairs: calls f(index, element) for each element
+arr.pairs (i, v) -> { arr(i) = i.i32; none }
+```
+
+Lambda parameter types are inferred from the method signature — no type annotations needed. See [Lambdas §13.2](13-lambdas.md) for trailing lambda syntax.
+
+### Iterator-Based (`for` loop)
+
 The `values()` method returns an `arrayiter[T]` iterator:
 
 ```verona
@@ -87,18 +105,17 @@ main(): i32
 {
   // Create and fill an array
   let arr = array[i32]::fill(10);
-  var index = 0;
 
-  while index < arr.size
+  // Set each element to its index
+  arr.pairs (i, v) ->
   {
-    arr(index) = index.i32;
-    index = index + 1
+    arr(i) = i.i32
   }
 
   // Sum all elements
   var sum = 0;
 
-  for arr.values() i ->
+  arr.each i ->
   {
     sum = sum + i
   }
@@ -117,6 +134,8 @@ main(): i32
 | `apply` | `apply(self: array[T], index: usize): T` | Read element at index |
 | `ref apply` | `ref apply(self: array[T], index: usize): ref[T]` | Write element at index |
 | `size` | `size(self: array[T]): usize` | Number of elements |
+| `each` | `each(self: array[T], f: T -> none): none` | Call `f` on each element |
+| `pairs` | `pairs(self: array[T], f: (usize, T) -> none): none` | Call `f` with index and element |
 | `values` | `values(self: array[T]): arrayiter[T]` | Get iterator |
 
 ---

@@ -18,8 +18,18 @@ Lambdas are anonymous functions written with the `->` arrow:
 
 ### Single Parameter (no parens needed)
 
+When a lambda has a single parameter with no type annotation, no default value, and no return type, you can omit the parentheses:
+
 ```verona
 x -> { x + 1 }
+```
+
+If you need to specify a parameter type, a default value, or a lambda return type, use parentheses:
+
+```verona
+(x: i32) -> { x + 1 }                // typed parameter needs parens
+(x: i32): i32 -> { x + 1 }           // typed parameter + return type
+(x = 0) -> { x + 1 }                 // default value needs parens
 ```
 
 ### With Type Annotations
@@ -44,7 +54,35 @@ A block `{ expr }` in expression position is a zero-argument lambda:
 
 ---
 
-## 13.2 Using Lambdas
+## 13.2 Trailing Lambda Syntax
+
+When the argument to a method call is a lambda, you can omit parentheses on the call, just like for any single argument call:
+
+```verona
+// These are equivalent:
+arr.each((x: i32) -> { process(x) })
+arr.each (x: i32) -> { process(x) }
+arr.each x -> { process(x) }
+```
+
+Since `each` expects a function argument, the lambda is passed as that argument.
+
+This is especially useful for higher-order methods like `each` and `pairs`:
+
+```verona
+let arr = array[i32]::fill(10);
+
+// Using pairs with trailing lambda (two parameters need parens):
+arr.pairs (i, v) -> { arr(i) = i.i32 }
+
+// Using each with trailing lambda (single parameter, no parens):
+var sum = 0;
+arr.each i -> { sum = sum + i }
+```
+
+---
+
+## 13.3 Using Lambdas
 
 Lambdas are values that can be bound to variables and passed as arguments:
 
@@ -63,7 +101,7 @@ apply_fn((x: i32): i32 -> { x * 2 }, 5)   // 10
 
 ---
 
-## 13.3 Closures (Capturing Variables)
+## 13.4 Closures (Capturing Variables)
 
 Lambdas capture variables from the enclosing scope:
 
@@ -85,6 +123,24 @@ let f = (x: i32): i32 -> { x * scale + offset }
 f(3)                                 // 16
 ```
 
+### Capturing `let` vs `var` Bindings
+
+The capture mechanism differs for `let` and `var` bindings:
+
+- **`let` captures** copy the value into a field of the lambda class. Inside the lambda body, accesses become field reads and writes on `self`.
+- **`var` captures** capture a **reference** (`ref[T]`) to the variable. Inside the lambda body, reads become loads through the reference and writes become stores, so changes are visible in the enclosing scope.
+
+```verona
+main(): i32
+{
+  let arr = array[i32]::fill(3);     // let-capture: copied into lambda
+  var sum = 0;                        // var-capture: captured by reference
+
+  arr.each i -> { sum = sum + i }
+  sum                                 // visible changes from lambda body
+}
+```
+
 ### Capturing Type Parameters
 
 Lambdas inside generic functions can capture type parameters:
@@ -101,7 +157,7 @@ The type parameter `T` is automatically captured. Internally, it becomes a type 
 
 ---
 
-## 13.4 How Lambdas Desugar
+## 13.5 How Lambdas Desugar
 
 Lambdas desugar to anonymous classes with an `apply` method. For example:
 
@@ -130,7 +186,7 @@ Captured variables become fields. Captured type parameters become type parameter
 
 ---
 
-## 13.5 Lambdas and Function Types
+## 13.6 Lambdas and Function Types
 
 A lambda satisfies any function type (`A -> B`) if its signature matches:
 
@@ -143,7 +199,7 @@ This works because function types desugar to shapes (see [Shapes](09-shapes.md))
 
 ---
 
-## 13.6 Shadowing in Lambdas
+## 13.7 Shadowing in Lambdas
 
 Lambda parameters can shadow outer variables:
 
@@ -155,7 +211,7 @@ f(5)                                // 6, not 11
 
 ---
 
-## 13.7 Block Lambdas and `raise`
+## 13.8 Block Lambdas and `raise`
 
 A **block lambda** is a lambda that contains a `raise` expression. `raise` performs a non-local return — it exits not just the lambda, but the enclosing function that created it:
 
@@ -192,9 +248,24 @@ See [Error Handling](24-error-handling.md) for more examples and the full error 
 
 ---
 
-## 13.8 Type Inference for Lambdas
+## 13.9 Type Inference for Lambdas
 
-Lambda parameter and return types can be inferred from context:
+Lambda parameter and return types can often be inferred from context.
+
+### From Higher-Order Function Signatures
+
+When a lambda is passed to a function that expects a specific function type, the compiler propagates the expected parameter and return types to the lambda:
+
+```verona
+each(self: array[T], f: T -> none): none { ... }
+
+let arr = array[i32]::fill(10);
+arr.each i -> { process(i) }   // i inferred as i32 from T -> none
+```
+
+This works because the `each` method's `f` parameter has type `T -> none`, which desugars to a shape with `apply(self: self, a0: T): none`. When `T` is `i32`, the compiler propagates `i32` to the lambda's parameter.
+
+### From Call Context
 
 ```verona
 // When passed to a function expecting i32 -> i32:
@@ -202,11 +273,26 @@ apply_fn((x) -> { x + 1 }, 5)
 // x is inferred as i32, return type inferred as i32
 ```
 
-See [Type Inference](18-type-inference.md).
+### Captured Variable Types
+
+Captured `var` bindings have their types propagated through the lambda's anonymous class fields. If the enclosing function's return type constrains the `var`'s type (via cascade propagation), the lambda body sees the refined type:
+
+```verona
+main(): i32
+{
+  var sum = 0;                        // 0 defaults to u64, but...
+  // return type i32 refines sum to i32
+  // cascade propagates through ref capture to lambda
+  arr.each i -> { sum = sum + i }
+  sum                                 // i32
+}
+```
+
+See [Type Inference](18-type-inference.md) for the full inference picture.
 
 ---
 
-## 13.9 Case Lambdas (Match Arms)
+## 13.10 Case Lambdas (Match Arms)
 
 Match expressions desugar to **case lambdas** — each match arm becomes a lambda that tests a value and either returns a result or `nomatch`.
 

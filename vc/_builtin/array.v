@@ -29,6 +29,28 @@ array[T]
     :::arrayref(self, index)
   }
 
+  each(self: array[T], f: T -> none): none
+  {
+    var i = 0;
+
+    while i < self.size
+    {
+      f(self(i));
+      i = i + 1
+    }
+  }
+
+  pairs(self: array[T], f: (usize, T) -> none): none
+  {
+    var i = 0;
+
+    while i < self.size
+    {
+      f(i, self(i));
+      i = i + 1
+    }
+  }
+
   values(self: array[T]): arrayiter[T]
   {
     arrayiter[T](self)

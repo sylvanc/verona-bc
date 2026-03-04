@@ -110,6 +110,7 @@ namespace vc
       FieldRef,
       Load,
       New,
+      Stack,
       If,
       Else,
       While,

@@ -264,6 +264,8 @@ array[i32]::fill(3, 42)              // 3 elements, each 42
 | `apply` | `apply(self, index: usize): T` | Read element |
 | `ref apply` | `ref apply(self, index: usize): ref[T]` | Write element |
 | `size` | `size(self): usize` | Number of elements |
+| `each` | `each(self, f: T -> none): none` | Call `f` on each element |
+| `pairs` | `pairs(self, f: (usize, T) -> none): none` | Call `f` with index and element |
 | `values` | `values(self): arrayiter[T]` | Get iterator |
 
 ### `arrayiter[T]`
