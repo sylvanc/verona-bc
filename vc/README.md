@@ -2,13 +2,19 @@
 
 ## To Do
 
+Auto-none at the end of a function that returns `none`.
+- Not if there's a `return` or a `raise` at the end.
+- No change needed for explicit return or raise branches.
+
 Review `iowise`.
-- Ring buffer copying?
-- Notice board for log level checking?
+- Test it?
+
+Semantics:
+- Region creation.
+- Freezing.
+- `final` functions.
 
 Can we extract just the bits of `verona-rt` that we use?
-
-Require `else` to take `{ ... }`?
 
 FFI.
 - Can `ffi::callback` interact with reference counting better?
@@ -32,11 +38,6 @@ Types.
 - Check recursion on type alias.
   - Does `alias[alias[A]]` cause both `A` and `alias[A]` to be bound to the same type parameter?
 - Can type parameters take type arguments?
-
-Semantics:
-- Region creation.
-- Freezing.
-- `final` functions.
 
 Packages:
 - `stdin`, `stdout`, `stderr`.

@@ -175,10 +175,11 @@ namespace vc
     // Build apply body: field-loading preamble + lambda body.
     Node apply_body = Body;
 
-    // Collect var-captured names for body rewriting.
-    // Collect names needing body rewriting (both var and let
-    // captures that use $ref_ prefixed FieldRef/RegisterRef).
+    // Collect names needing body rewriting.
+    // var captures: rewritten through Load/Ref via $ref_ locals.
+    // let captures: rewritten to FieldRef on $self.
     std::set<Location> ref_captures;
+    std::set<Location> let_captures;
 
     for (auto& field : fields)
     {
@@ -217,21 +218,10 @@ namespace vc
       }
       else
       {
-        // User let-capture: get a FieldRef for mutable access.
-        // The body will be rewritten to read/write through this
-        // ref, allowing stateful escaping lambdas.
-        auto ref_name = Location("$ref_" + std::string(field.name.view()));
-        auto ref_type = Type
-          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                       << (NameElement << (Ident ^ "ref")
-                                       << (TypeArgs << clone(field.type))));
-        apply_body
-          << (Expr
-              << (Equals << (Expr << (Let << (Ident ^ ref_name) << ref_type))
-                         << (Expr
-                             << (FieldRef << (Expr << (LocalId ^ "$self"))
-                                          << (FieldId ^ field.name)))));
-        ref_captures.insert(field.name);
+        // User let-capture: no preamble needed.
+        // The body will be rewritten to access self.field
+        // directly via FieldRef.
+        let_captures.insert(field.name);
       }
     }
 
@@ -245,18 +235,38 @@ namespace vc
 
     apply_body << *body;
 
-    // Rewrite ref-captured references in the body.
+    // Rewrite let-captured references in the body.
+    // All uses become FieldRef << (Expr << (LocalId ^ "$self")) << FieldId.
+    // ANF handles read/write semantics based on position.
+    if (!let_captures.empty())
+    {
+      std::vector<Node> to_rewrite;
+      apply_body->traverse([&](auto node) {
+        if (node == LocalId && let_captures.count(node->location()) > 0)
+          to_rewrite.push_back(node);
+        return true;
+      });
+
+      for (auto& node : to_rewrite)
+      {
+        auto parent = node->parent();
+        parent->replace(
+          node,
+          Load << (Expr
+                   << (FieldRef << (Expr << (LocalId ^ "$self"))
+                                << (FieldId ^ node->location()))));
+      }
+    }
+
+    // Rewrite var-captured (ref) references in the body.
     // Reads become Load << (Expr << (LocalId ^ "$ref_x")).
-    // Writes (LHS of Equals) become Ref << (LocalId ^ "$ref_x").
+    // Writes (bare LHS of Equals) become Ref << (LocalId ^ "$ref_x").
     if (!ref_captures.empty())
     {
-      // Collect all LocalId nodes that match ref-captured names.
       std::vector<Node> to_rewrite;
       apply_body->traverse([&](auto node) {
         if (node == LocalId && ref_captures.count(node->location()) > 0)
-        {
           to_rewrite.push_back(node);
-        }
         return true;
       });
 
@@ -266,12 +276,13 @@ namespace vc
           Location("$ref_" + std::string(node->location().view()));
 
         // Check if this is an l-value (LHS of Equals).
-        // Pattern: LocalId → Expr → Equals, where the Expr is
-        // the first child of Equals.
+        // Only bare assignments (LocalId is the sole child of the
+        // LHS Expr) are l-values. Compound expressions like
+        // var(i) = val are reads (the indexing produces the ref).
         auto parent = node->parent();
         bool is_lvalue = false;
 
-        if (parent && parent == Expr)
+        if (parent && parent == Expr && parent->size() == 1)
         {
           auto grandparent = parent->parent();
 

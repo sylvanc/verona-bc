@@ -155,10 +155,9 @@ namespace vc
         // Function.
         In(ClassBody) * T(Group)
             << (~(T(Ident, "ref") / T(Ident, "once"))[Lhs] *
-                T(Ident, SymbolId)[Ident] *
-                ~TypeParamsPat[TypeParams] * ParamsPat[Params] *
-                ~(T(Colon) * (!T(Where, Brace))++[Type]) * ~WherePat *
-                ~T(Brace)[Brace]) >>
+                T(Ident, SymbolId)[Ident] * ~TypeParamsPat[TypeParams] *
+                ParamsPat[Params] * ~(T(Colon) * (!T(Where, Brace))++[Type]) *
+                ~WherePat * ~T(Brace)[Brace]) >>
           [](Match& _) {
             Node side;
             if (!_(Lhs))
@@ -186,8 +185,7 @@ namespace vc
             auto params = Params << *_[Params];
             if ((side == Once) && !params->empty())
             {
-              return err(
-                _(Ident), "once functions must have no parameters");
+              return err(_(Ident), "once functions must have no parameters");
             }
 
             if (!brace || brace->empty())
@@ -195,10 +193,9 @@ namespace vc
             else
               body << *_[Brace];
 
-            return Function << side << _(Ident)
-                            << (TypeParams << *_[TypeParams])
-                            << params << make_type(_[Type])
-                            << (Where << _[Where]) << body;
+            return Function
+              << side << _(Ident) << (TypeParams << *_[TypeParams]) << params
+              << make_type(_[Type]) << (Where << _[Where]) << body;
           },
 
         // Dependency alias.
@@ -508,11 +505,12 @@ namespace vc
           },
 
         // Lambda with a single parameter.
-        In(Expr) * ParamPat[Param] * T(SymbolId, "->") *
+        In(Expr) * T(Ident)[Ident] * T(SymbolId, "->") *
             (T(Brace)[Brace] / Any++[Rhs]) >>
           [](Match& _) {
-            return Lambda << (Params << (Group << *_[Param])) << make_type()
-                          << lambda_body(_(Brace), _[Rhs]);
+            return Lambda << (Params
+                              << (ParamDef << _(Ident) << make_type() << Body))
+                          << make_type() << lambda_body(_(Brace), _[Rhs]);
           },
 
         // Lambda without parameters.

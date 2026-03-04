@@ -447,6 +447,106 @@ namespace vc
     return clone(type_node);
   }
 
+  // Propagate method signatures from a shape type to a lambda class.
+  // When a formal param has shape type (e.g., fn$5[i32]) and the actual
+  // arg is a lambda class (e.g., lambda$0), propagate the shape's method
+  // param types and return type to the lambda's matching methods.
+  // This enables type inference for lambda parameters when the lambda is
+  // passed to a higher-order function like `each` or `pairs`.
+  void propagate_shape_to_lambda(
+    Node top, const Node& shape_type, const Node& actual_type)
+  {
+    if (shape_type != Type || actual_type != Type)
+      return;
+
+    auto shape_inner = shape_type->front();
+    auto actual_inner = actual_type->front();
+
+    if (shape_inner != TypeName || actual_inner != TypeName)
+      return;
+
+    auto shape_def = find_def(top, shape_inner);
+    auto actual_def = find_def(top, actual_inner);
+
+    if (!shape_def || !actual_def)
+      return;
+
+    if (shape_def != ClassDef || actual_def != ClassDef)
+      return;
+
+    if ((shape_def / Shape) != Shape)
+      return;
+
+    auto shape_subst = build_class_subst(shape_def, shape_inner);
+    auto actual_subst = build_class_subst(actual_def, actual_inner);
+    auto shape_body = shape_def / ClassBody;
+    auto actual_body = actual_def / ClassBody;
+
+    for (auto& shape_func : *shape_body)
+    {
+      if (shape_func != Function)
+        continue;
+
+      auto method_name = (shape_func / Ident)->location().view();
+      auto hand = (shape_func / Lhs)->type();
+      auto shape_params = shape_func / Params;
+      auto shape_ret = shape_func / Type;
+
+      for (auto& actual_func : *actual_body)
+      {
+        if (actual_func != Function)
+          continue;
+
+        if ((actual_func / Ident)->location().view() != method_name)
+          continue;
+
+        if ((actual_func / Lhs)->type() != hand)
+          continue;
+
+        if ((actual_func / Params)->size() != shape_params->size())
+          continue;
+
+        // Found matching method. Propagate param types.
+        auto actual_params = actual_func / Params;
+
+        for (size_t j = 0; j < shape_params->size(); j++)
+        {
+          auto actual_param = actual_params->at(j);
+          auto actual_param_type = actual_param / Type;
+
+          if (actual_param_type->front() != TypeVar)
+            continue;
+
+          auto shape_param_type =
+            apply_subst(top, shape_params->at(j) / Type, shape_subst);
+
+          if (!shape_param_type || shape_param_type->front() == TypeVar)
+            continue;
+
+          // Skip TypeSelf — the shape's self param type is not useful.
+          if (shape_param_type->front() == TypeSelf)
+            continue;
+
+          actual_param->replace(actual_param_type, clone(shape_param_type));
+        }
+
+        // Propagate return type.
+        auto actual_ret = actual_func / Type;
+
+        if (actual_ret->front() == TypeVar)
+        {
+          auto shape_ret_subst =
+            apply_subst(top, shape_ret, shape_subst);
+
+          if (shape_ret_subst && shape_ret_subst->front() != TypeVar)
+            actual_func->replace(actual_ret, clone(shape_ret_subst));
+        }
+
+        break;
+      }
+    }
+  }
+
   // Resolve the return type of a method on a receiver type.
   // Given a receiver type (e.g., wrapper[i32]), a method name, hand,
   // arity, and method-level TypeArgs, find the method definition
@@ -642,7 +742,7 @@ namespace vc
     if (ia->type() != ib->type())
       return false;
 
-    // Both are TypeName: compare the fully-qualified name.
+    // Both are TypeName: compare the fully-qualified name + TypeArgs.
     if (ia == TypeName && ib == TypeName)
     {
       if (ia->size() != ib->size())
@@ -655,6 +755,18 @@ namespace vc
 
         if (ea->location().view() != eb->location().view())
           return false;
+
+        auto ta_a = ia->at(i) / TypeArgs;
+        auto ta_b = ib->at(i) / TypeArgs;
+
+        if (ta_a->size() != ta_b->size())
+          return false;
+
+        for (size_t j = 0; j < ta_a->size(); j++)
+        {
+          if (!types_equal(ta_a->at(j), ta_b->at(j)))
+            return false;
+        }
       }
 
       return true;
@@ -1096,6 +1208,28 @@ namespace vc
     }
   }
 
+  // Check if a Type node contains TypeVar anywhere (including nested
+  // inside ref[TypeVar], cown[TypeVar], etc.).
+  static bool contains_typevar(const Node& type_node)
+  {
+    if (!type_node)
+      return false;
+
+    bool found = false;
+
+    type_node->traverse([&](auto node) {
+      if (node == TypeVar)
+      {
+        found = true;
+        return false;
+      }
+
+      return !found;
+    });
+
+    return found;
+  }
+
   // Try to infer TypeArgs and refine Const types at a Call site.
   void infer_call(
     Node call,
@@ -1297,7 +1431,7 @@ namespace vc
         auto param = params->at(i);
         auto formal_type = param / Type;
 
-        if (formal_type->front() != TypeVar)
+        if (!contains_typevar(formal_type))
           continue;
 
         // Check if a matching FieldDef already has a concrete type.
@@ -1317,7 +1451,7 @@ namespace vc
 
             auto ft = child / Type;
 
-            if (ft->front() != TypeVar)
+            if (!contains_typevar(ft))
               resolved_type = ft;
 
             break;
@@ -1336,7 +1470,7 @@ namespace vc
           auto it = env.find(arg_src->location());
 
           if (
-            it == env.end() || it->second.type->front() == TypeVar ||
+            it == env.end() || contains_typevar(it->second.type) ||
             it->second.is_default)
             continue;
 
@@ -1371,13 +1505,33 @@ namespace vc
 
             auto field_type = child / Type;
 
-            if (field_type->front() == TypeVar)
+            if (contains_typevar(field_type))
               child->replace(field_type, clone(resolved_type));
 
             break;
           }
         }
       }
+    }
+
+    // Shape-to-lambda propagation: when a formal param has shape type
+    // and the actual arg is a lambda class, propagate the shape's method
+    // signatures to the lambda.
+    for (size_t i = 0; i < params->size(); i++)
+    {
+      auto param = params->at(i);
+      auto formal_type = param / Type;
+      auto param_type = apply_subst(top, formal_type, subst);
+
+      if (!param_type || param_type->front() == TypeVar)
+        continue;
+
+      auto arg_node = args->at(i);
+      auto arg_src = arg_node / Rhs;
+      auto arg_it = env.find(arg_src->location());
+
+      if (arg_it != env.end())
+        propagate_shape_to_lambda(top, param_type, arg_it->second.type);
     }
 
     // Record the call's result type in the env, with all TypeParam
@@ -1471,9 +1625,9 @@ namespace vc
     if ((func / Type)->front() == TypeVar)
       return true;
 
-    // Also check FieldDefs in the parent class: if any field is still
-    // TypeVar, the function body may reference it via FieldRef/Load
-    // and needs re-processing once the field type is resolved.
+    // Also check FieldDefs in the parent class: if any field contains
+    // TypeVar (possibly nested, e.g., ref[TypeVar]), the function body
+    // may reference it and needs re-processing.
     auto parent_cls = func->parent(ClassDef);
 
     if (parent_cls)
@@ -1483,7 +1637,7 @@ namespace vc
         if (child != FieldDef)
           continue;
 
-        if ((child / Type)->front() == TypeVar)
+        if (contains_typevar(child / Type))
           return true;
       }
     }
@@ -1763,7 +1917,9 @@ namespace vc
       if (
         p && p->type() == expected_prim->type() && !info.is_default &&
         !info.is_fixed)
+      {
         cascade_changed.insert(loc);
+      }
     }
 
     // Cascade: re-iterate all statements in all labels to
@@ -1945,6 +2101,95 @@ namespace vc
                   cascade_changed.insert(cd_dst->location());
                   changed = true;
                 }
+              }
+            }
+          }
+          else if (stmt2 == RegisterRef)
+          {
+            // When the source of a RegisterRef is refined, update the
+            // ref's type to ref[new_type].
+            auto rr_dst = stmt2 / LocalId;
+            auto rr_src = stmt2 / Rhs;
+            auto rr_src_loc = rr_src->location();
+
+            if (
+              cascade_changed.find(rr_src_loc) ==
+              cascade_changed.end())
+              continue;
+
+            auto src_it = env.find(rr_src_loc);
+
+            if (src_it != env.end())
+            {
+              auto new_ref_type = ref_type(clone(src_it->second.type));
+              auto dst_it = env.find(rr_dst->location());
+
+              if (
+                dst_it == env.end() ||
+                !types_equal(dst_it->second.type, new_ref_type))
+              {
+                env[rr_dst->location()] =
+                  LocalTypeInfo::computed(new_ref_type);
+                cascade_changed.insert(rr_dst->location());
+                changed = true;
+              }
+            }
+          }
+          else if (stmt2->in({New, Stack}))
+          {
+            // When a NewArg's source is refined, update the matching
+            // FieldDef in the class.
+            auto new_type = stmt2 / Type;
+            auto inner = new_type->front();
+
+            if (inner != TypeName)
+              continue;
+
+            auto class_def = find_def(top, inner);
+
+            if (!class_def || class_def != ClassDef)
+              continue;
+
+            auto class_body = class_def / ClassBody;
+
+            for (auto& new_arg : *(stmt2 / NewArgs))
+            {
+              auto arg_src = new_arg / Rhs;
+              auto arg_loc = arg_src->location();
+              bool in_changed =
+                cascade_changed.find(arg_loc) != cascade_changed.end();
+
+              if (!in_changed)
+                continue;
+
+              auto arg_it = env.find(arg_loc);
+
+              if (arg_it == env.end())
+                continue;
+
+              auto field_ident = new_arg / Ident;
+
+              for (auto& child : *class_body)
+              {
+                if (child != FieldDef)
+                  continue;
+
+                if (
+                  (child / Ident)->location().view() !=
+                  field_ident->location().view())
+                  continue;
+
+                auto ft = child / Type;
+
+                if (
+                  contains_typevar(ft) ||
+                  !types_equal(ft, arg_it->second.type))
+                {
+                  child->replace(ft, clone(arg_it->second.type));
+                  changed = true;
+                }
+
+                break;
               }
             }
           }
@@ -2330,6 +2575,16 @@ namespace vc
                 if (expected_prim)
                   try_refine(env, arg_src->location(), expected_prim);
 
+                // Reverse propagation: when the FieldDef contains
+                // TypeVar (possibly nested, e.g., ref[TypeVar]) and
+                // the arg has a concrete type, update the FieldDef.
+                if (
+                  contains_typevar(child / Type) &&
+                  !contains_typevar(it->second.type))
+                {
+                  child->replace(child / Type, clone(it->second.type));
+                }
+
                 break;
               }
             }
@@ -2557,7 +2812,7 @@ namespace vc
                 auto param = params->at(i);
                 auto formal_type = param / Type;
 
-                if (formal_type->front() == TypeVar)
+                if (contains_typevar(formal_type))
                 {
                   Node resolved_type;
 
@@ -2576,7 +2831,7 @@ namespace vc
 
                       auto ft = child / Type;
 
-                      if (ft->front() != TypeVar)
+                      if (!contains_typevar(ft))
                         resolved_type = ft;
 
                       break;
@@ -2590,7 +2845,7 @@ namespace vc
 
                     if (
                       arg_it != env.end() &&
-                      arg_it->second.type->front() != TypeVar &&
+                      !contains_typevar(arg_it->second.type) &&
                       !arg_it->second.is_default)
                     {
                       resolved_type = arg_it->second.type;
@@ -2624,13 +2879,39 @@ namespace vc
 
                         auto ft = child / Type;
 
-                        if (ft->front() == TypeVar)
+                        if (contains_typevar(ft))
                           child->replace(ft, clone(resolved_type));
 
                         break;
                       }
                     }
                   }
+                }
+
+                i++;
+              }
+
+              // Shape-to-lambda propagation: when a formal param
+              // has shape type and the actual arg is a lambda class,
+              // propagate the shape's method signatures to the lambda.
+              i = 0;
+
+              for (auto& arg_node : *args)
+              {
+                if (i >= params->size())
+                  break;
+
+                auto param_type =
+                  apply_subst(top, params->at(i) / Type, info.subst);
+
+                if (param_type && param_type->front() != TypeVar)
+                {
+                  auto arg_src = arg_node / Rhs;
+                  auto arg_it = env.find(arg_src->location());
+
+                  if (arg_it != env.end())
+                    propagate_shape_to_lambda(
+                      top, param_type, arg_it->second.type);
                 }
 
                 i++;
@@ -3540,7 +3821,7 @@ namespace vc
 
           auto ft = child / Type;
 
-          if (ft->front() == TypeVar)
+          if (contains_typevar(ft))
             child->replace(ft, clone(it->second.type));
 
           break;

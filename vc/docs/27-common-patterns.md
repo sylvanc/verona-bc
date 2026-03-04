@@ -95,15 +95,32 @@ main(): i32
 
 ## 27.5 Iterating with Index
 
-The `for` loop doesn't provide an index directly. Track it with a `var`:
+Use the `pairs` method to iterate with both index and value:
 
 ```verona
-var index = 0;
+arr.pairs (i, v) ->
+{
+  process(i, v);
+  none
+}
+```
+
+For simple element iteration, use `each`:
+
+```verona
+arr.each elem ->
+{
+  process(elem);
+  none
+}
+```
+
+If you need the iterator directly (e.g., for `for` loops), use `values()`:
+
+```verona
 for arr.values() elem ->
 {
-  // use index and elem
-  process(index, elem);
-  index = index + 1
+  // break/continue work here
 }
 ```
 

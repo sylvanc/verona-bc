@@ -462,6 +462,120 @@ parse
                     (group
                       (ident 5:index)))))))
           (group
+            (ident 4:each)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 5:array)
+                  (bracket
+                    (group
+                      (ident 1:T))))
+                (group
+                  (ident 1:f)
+                  (:)
+                  (ident 1:T)
+                  (symbolid 2:->)
+                  (ident 4:none))))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (var)
+                (ident 1:i)
+                (=)
+                (int 1:0))
+              (group
+                (semi))
+              (group
+                (while)
+                (ident 1:i)
+                (symbolid 1:<)
+                (ident 4:self)
+                (dot)
+                (ident 4:size)
+                (brace
+                  (group
+                    (ident 1:f)
+                    (paren
+                      (group
+                        (ident 4:self)
+                        (paren
+                          (group
+                            (ident 1:i))))))
+                  (group
+                    (semi))
+                  (group
+                    (ident 1:i)
+                    (=)
+                    (ident 1:i)
+                    (symbolid 1:+)
+                    (int 1:1))))
+              (group
+                (ident 4:none))))
+          (group
+            (ident 5:pairs)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 5:array)
+                  (bracket
+                    (group
+                      (ident 1:T))))
+                (group
+                  (ident 1:f)
+                  (:)
+                  (paren
+                    (list
+                      (group
+                        (ident 5:usize))
+                      (group
+                        (ident 1:T))))
+                  (symbolid 2:->)
+                  (ident 4:none))))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (var)
+                (ident 1:i)
+                (=)
+                (int 1:0))
+              (group
+                (semi))
+              (group
+                (while)
+                (ident 1:i)
+                (symbolid 1:<)
+                (ident 4:self)
+                (dot)
+                (ident 4:size)
+                (brace
+                  (group
+                    (ident 1:f)
+                    (paren
+                      (list
+                        (group
+                          (ident 1:i))
+                        (group
+                          (ident 4:self)
+                          (paren
+                            (group
+                              (ident 1:i)))))))
+                  (group
+                    (semi))
+                  (group
+                    (ident 1:i)
+                    (=)
+                    (ident 1:i)
+                    (symbolid 1:+)
+                    (int 1:1))))
+              (group
+                (ident 4:none))))
+          (group
             (ident 6:values)
             (paren
               (group

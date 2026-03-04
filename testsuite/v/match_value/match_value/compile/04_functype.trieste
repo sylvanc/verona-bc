@@ -68,7 +68,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$2 = let
               $self = paramdef
               local$1 = let
               local$3 = let}
@@ -100,26 +99,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 12:$ref_local$2)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 7:local$2)))))
               (expr
                 (if
                   (expr
@@ -175,7 +154,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 12:$ref_local$2)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 7:local$2))))))))))
               (expr
                 (if
                   (expr
@@ -292,7 +274,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$7 = let
               $self = paramdef
               local$6 = let
               local$8 = let}
@@ -324,26 +305,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 12:$ref_local$7)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 7:local$7)))))
               (expr
                 (if
                   (expr
@@ -399,7 +360,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 12:$ref_local$7)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 7:local$7))))))))))
               (expr
                 (if
                   (expr
@@ -516,7 +480,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$12 = let
               $self = paramdef
               local$11 = let
               local$13 = let}
@@ -548,26 +511,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 13:$ref_local$12)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 8:local$12)))))
               (expr
                 (if
                   (expr
@@ -623,7 +566,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 13:$ref_local$12)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 8:local$12))))))))))
               (expr
                 (if
                   (expr
@@ -876,7 +822,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$18 = let
               $self = paramdef
               local$17 = let
               local$19 = let}
@@ -908,26 +853,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 13:$ref_local$18)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 8:local$18)))))
               (expr
                 (if
                   (expr
@@ -983,7 +908,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 13:$ref_local$18)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 8:local$18))))))))))
               (expr
                 (if
                   (expr
@@ -1236,7 +1164,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$24 = let
               $self = paramdef
               local$23 = let
               local$25 = let}
@@ -1268,26 +1195,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 13:$ref_local$24)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 8:local$24)))))
               (expr
                 (if
                   (expr
@@ -1343,7 +1250,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 13:$ref_local$24)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 8:local$24))))))))))
               (expr
                 (if
                   (expr
@@ -1460,7 +1370,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$27 = let
               $self = paramdef
               local$26 = let
               local$28 = let}
@@ -1492,26 +1401,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 13:$ref_local$27)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 8:local$27)))))
               (expr
                 (if
                   (expr
@@ -1567,7 +1456,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 13:$ref_local$27)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 8:local$27))))))))))
               (expr
                 (if
                   (expr
@@ -1684,7 +1576,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$30 = let
               $self = paramdef
               local$29 = let
               local$31 = let}
@@ -1716,26 +1607,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 13:$ref_local$30)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 8:local$30)))))
               (expr
                 (if
                   (expr
@@ -1791,7 +1662,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 13:$ref_local$30)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 8:local$30))))))))))
               (expr
                 (if
                   (expr
@@ -1908,7 +1782,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$37 = let
               $self = paramdef
               local$36 = let
               local$38 = let}
@@ -1940,26 +1813,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 13:$ref_local$37)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 8:local$37)))))
               (expr
                 (if
                   (expr
@@ -2015,7 +1868,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 13:$ref_local$37)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 8:local$37))))))))))
               (expr
                 (if
                   (expr
@@ -2132,7 +1988,6 @@ functype
           (function
             {
               $arg = paramdef
-              $ref_local$40 = let
               $self = paramdef
               local$39 = let
               local$41 = let}
@@ -2164,26 +2019,6 @@ functype
               (typevar))
             (where)
             (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 13:$ref_local$40)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:ref)
-                            (typeargs
-                              (type
-                                (typevar))))))))
-                  (expr
-                    (fieldref
-                      (expr
-                        (localid 5:$self))
-                      (fieldid 8:local$40)))))
               (expr
                 (if
                   (expr
@@ -2239,7 +2074,10 @@ functype
                         (expr
                           (load
                             (expr
-                              (localid 13:$ref_local$40)))))))))
+                              (fieldref
+                                (expr
+                                  (localid 5:$self))
+                                (fieldid 8:local$40))))))))))
               (expr
                 (if
                   (expr
@@ -4123,9 +3961,13 @@ functype
             function
             function
           create = function
+          each = function
           fill =
             function
             function
+          fn$47 = classdef
+          fn$48 = classdef
+          pairs = function
           size = function
           values = function}
         (none)
@@ -4577,6 +4419,393 @@ functype
                           (localid 4:self))
                         (expr
                           (localid 5:index)))))))))
+          (classdef
+            {
+              T = typeparam
+              apply = function}
+            (shape)
+            (ident 5:fn$47)
+            (typeparams
+              (typeparam
+                (ident 1:T)))
+            (where)
+            (classbody
+              (function
+                {
+                  a0 = paramdef
+                  self = paramdef}
+                (rhs)
+                (ident 5:apply)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typeself)))
+                  (paramdef
+                    (ident 2:a0)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:fn$47)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 8:_builtin)
+                        (typeargs))
+                      (nameelement
+                        (ident 4:none)
+                        (typeargs))
+                      (nameelement
+                        (ident 6:create)
+                        (typeargs))))))))
+          (function
+            {
+              f = paramdef
+              i = var
+              self = paramdef}
+            (rhs)
+            (ident 4:each)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs)))))))))
+              (paramdef
+                (ident 1:f)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 5:fn$47)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:none)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:i)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 4:self)
+                    (dot
+                      (ident 4:size)
+                      (typeargs)))
+                  (block
+                    {}
+                    (body
+                      (expr
+                        (localid 1:f)
+                        (exprseq
+                          (expr
+                            (localid 4:self)
+                            (exprseq
+                              (expr
+                                (localid 1:i))))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 4:none)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs))))))
+          (classdef
+            {
+              T = typeparam
+              apply = function}
+            (shape)
+            (ident 5:fn$48)
+            (typeparams
+              (typeparam
+                (ident 1:T)))
+            (where)
+            (classbody
+              (function
+                {
+                  a0 = paramdef
+                  a1 = paramdef
+                  self = paramdef}
+                (rhs)
+                (ident 5:apply)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:self)
+                    (type
+                      (typeself)))
+                  (paramdef
+                    (ident 2:a0)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs)))))
+                  (paramdef
+                    (ident 2:a1)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:fn$48)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))))
+                (where)
+                (body
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 8:_builtin)
+                        (typeargs))
+                      (nameelement
+                        (ident 4:none)
+                        (typeargs))
+                      (nameelement
+                        (ident 6:create)
+                        (typeargs))))))))
+          (function
+            {
+              f = paramdef
+              i = var
+              self = paramdef}
+            (rhs)
+            (ident 5:pairs)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs)))))))))
+              (paramdef
+                (ident 1:f)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 5:fn$48)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:none)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (var
+                      (ident 1:i)
+                      (type
+                        (typevar))))
+                  (expr
+                    (int 1:0))))
+              (expr
+                (while
+                  (expr
+                    (localid 1:i)
+                    (methodname
+                      (symbolid 1:<)
+                      (typeargs))
+                    (localid 4:self)
+                    (dot
+                      (ident 4:size)
+                      (typeargs)))
+                  (block
+                    {}
+                    (body
+                      (expr
+                        (localid 1:f)
+                        (tuple
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 4:self)
+                            (exprseq
+                              (expr
+                                (localid 1:i))))))
+                      (expr
+                        (=
+                          (expr
+                            (localid 1:i))
+                          (expr
+                            (localid 1:i)
+                            (methodname
+                              (symbolid 1:+)
+                              (typeargs))
+                            (int 1:1))))))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 4:none)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs))))))
           (function
             {
               self = paramdef}
@@ -6041,7 +6270,6 @@ functype
                             (localid 4:some))))))))
               (function
                 {
-                  $ref_some = let
                   $self = paramdef}
                 (rhs)
                 (ident 5:apply)
@@ -6090,41 +6318,12 @@ functype
                 (where)
                 (body
                   (expr
-                    (=
-                      (expr
-                        (let
-                          (ident 9:$ref_some)
-                          (type
-                            (typename
-                              (nameelement
-                                (ident 8:_builtin)
-                                (typeargs))
-                              (nameelement
-                                (ident 3:ref)
-                                (typeargs
-                                  (type
-                                    (typename
-                                      (nameelement
-                                        (ident 8:_builtin)
-                                        (typeargs))
-                                      (nameelement
-                                        (ident 4:cown)
-                                        (typeargs))
-                                      (nameelement
-                                        (ident 9:lambda$46)
-                                        (typeargs))
-                                      (nameelement
-                                        (ident 1:T)
-                                        (typeargs))))))))))
+                    (load
                       (expr
                         (fieldref
                           (expr
                             (localid 5:$self))
-                          (fieldid 4:some)))))
-                  (expr
-                    (load
-                      (expr
-                        (localid 9:$ref_some))))))))
+                          (fieldid 4:some)))))))))
           (function
             {
               some = paramdef}
