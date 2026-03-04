@@ -834,12 +834,25 @@ parse
         (brace
           (group
             (ident 6:create)
-            (paren)
+            (paren
+              (group
+                (ident 4:some)
+                (:)
+                (ident 1:T)))
             (:)
-            (ident 4:none)
+            (ident 4:cown)
+            (bracket
+              (group
+                (ident 1:T)))
             (brace
               (group
-                (ident 4:none))))
+                (when)
+                (paren)
+                (paren)
+                (symbolid 2:->)
+                (brace
+                  (group
+                    (ident 4:some))))))
           (group
             (ident 4:read)
             (paren

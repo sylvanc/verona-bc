@@ -1027,6 +1027,19 @@ namespace vbcc
             set_type(env, node / LocalId, Node(Dyn));
           }
         }
+        else if (node == MemoSlot)
+        {
+          // MemoSlot loads the result of a once-function init.
+          // The type is the return type of the init function.
+          auto func_id = node / FunctionId;
+          auto target_func = find_func(func_id);
+
+          if (target_func)
+            set_type(
+              env, node / LocalId, resolve_type(target_func / Type));
+          else
+            set_type(env, node / LocalId, Node(Dyn));
+        }
         else if (node->in({CallDyn, TryCallDyn}))
         {
           // Try to resolve the dynamic call through lookup info.

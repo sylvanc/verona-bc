@@ -1,0 +1,67 @@
+vc
+reify
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$904)
+            (functionid 22:memo_cycle::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$904)))))
+  (func
+    (functionid 22:memo_cycle::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$3)
+            (functionid 19:memo_cycle::f::0::0)
+            (args)))
+        (ret
+          (localid 7:local$3)))))
+  (primitive
+    (i32)
+    (methods))
+  (funconce
+    (functionid 19:memo_cycle::f::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$1)
+            (functionid 19:memo_cycle::g::0::0)
+            (args)))
+        (ret
+          (localid 7:local$1)))))
+  (funconce
+    (functionid 19:memo_cycle::g::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$2)
+            (functionid 19:memo_cycle::f::0::0)
+            (args)))
+        (ret
+          (localid 7:local$2))))))

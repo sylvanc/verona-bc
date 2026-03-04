@@ -42,6 +42,8 @@ namespace vbci
     std::vector<std::optional<size_t>> init_funcs;
     std::vector<std::pair<Register, Function*>> fini_callbacks;
     std::vector<CallbackClosure*> external_notify_callbacks;
+    std::vector<Register> memo_slots;
+    std::vector<size_t> memo_func_ids;
     bool scheduler_running = false;
     std::vector<Symbol> symbols;
 
@@ -82,6 +84,7 @@ namespace vbci
 
     bool is_scheduler_running() const;
     std::vector<CallbackClosure*>& notify_callbacks();
+    Register& memo_slot(size_t index);
 
     SNMALLOC_FAST_PATH int64_t sleb(size_t& pc)
     {

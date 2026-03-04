@@ -1,0 +1,138 @@
+vc
+memo
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$910)
+            (functionid 24:infer_newarg::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$910)))))
+  (func
+    (functionid 24:infer_newarg::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 8:local$87)
+            (i32)
+            (int 1:1))
+          (call
+            (localid 7:local$3)
+            (functionid 32:infer_newarg::cell::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$87))))
+          (copy
+            (localid 1:c)
+            (localid 7:local$3))
+          (lookup
+            (localid 8:local$88)
+            (localid 1:c)
+            (methodid 7:f::1::0))
+          (calldyn
+            (localid 8:local$89)
+            (localid 8:local$88)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c)))))
+        (ret
+          (localid 8:local$89)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 32:infer_newarg::cell::create::1::0)
+    (params
+      (param
+        (localid 1:f)
+        (i32)))
+    (classid 21:infer_newarg::cell::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$2)
+            (classid 21:infer_newarg::cell::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:f)))))
+        (ret
+          (localid 7:local$2)))))
+  (class
+    (classid 21:infer_newarg::cell::0)
+    (fields
+      (field
+        (fieldid 1:f)
+        (i32)))
+    (methods
+      (method
+        (methodid 7:f::1::0)
+        (functionid 27:infer_newarg::cell::f::1::0))))
+  (func
+    (functionid 27:infer_newarg::cell::f::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 21:infer_newarg::cell::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$1)
+            (functionid 32:infer_newarg::cell::f::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 9:local$466)
+            (localid 7:local$1)))
+        (ret
+          (localid 9:local$466)))))
+  (func
+    (functionid 32:infer_newarg::cell::f::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 21:infer_newarg::cell::0)))
+    (ref
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 8:local$86)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 1:f)))
+        (ret
+          (localid 8:local$86)))))
+  (primitive
+    (ref
+      (i32))
+    (methods)))

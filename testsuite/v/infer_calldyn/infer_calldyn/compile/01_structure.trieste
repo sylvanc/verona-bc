@@ -1957,23 +1957,50 @@ structure
         (where)
         (classbody
           (function
-            {}
+            {
+              some = paramdef}
             (rhs)
             (ident 6:create)
             (typeparams)
-            (params)
+            (params
+              (paramdef
+                (ident 4:some)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs))))
+                (body)))
             (type
               (typename
                 (nameelement
-                  (ident 4:none)
-                  (typeargs))))
+                  (ident 4:cown)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
             (where)
             (body
               (expr
-                (funcname
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs))))))
+                (when
+                  (expr
+                    (tuple))
+                  (type
+                    (typevar))
+                  (expr
+                    (lambda
+                      {}
+                      (params)
+                      (type
+                        (typevar))
+                      (body
+                        (expr
+                          (funcname
+                            (nameelement
+                              (ident 4:some)
+                              (typeargs)))))))))))
           (function
             {
               self = paramdef}

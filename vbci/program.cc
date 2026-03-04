@@ -98,6 +98,11 @@ namespace vbci
     return external_notify_callbacks;
   }
 
+  Register& Program::memo_slot(size_t index)
+  {
+    return memo_slots.at(index);
+  }
+
   uint32_t Program::get_typeid_arg()
   {
     return typeid_arg;
@@ -162,6 +167,13 @@ namespace vbci
 
       if (apply)
         fini_callbacks.emplace_back(std::move(result), apply);
+    }
+
+    // Run memo (once) function initializers in dependency order.
+    memo_slots.resize(memo_func_ids.size());
+    for (size_t i = 0; i < memo_func_ids.size(); i++)
+    {
+      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
     }
 
     auto& sched = verona::rt::Scheduler::get();
@@ -839,6 +851,11 @@ namespace vbci
 
     // Function label locations are relative to the code section. Make them
     // absolute.
+    auto memo_count = uleb(pc);
+    memo_func_ids.resize(memo_count);
+    for (size_t i = 0; i < memo_count; i++)
+      memo_func_ids[i] = uleb(pc);
+
     auto code_size = uleb(pc);
 
     for (auto& func : functions)

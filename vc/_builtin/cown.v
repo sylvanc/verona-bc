@@ -1,8 +1,11 @@
 cown[T]
 {
-  create(): none
+  create(some: T): cown[T]
   {
-    none
+    when () () ->
+    {
+      some
+    }
   }
 
   read(self: cown[T]): cown[T]

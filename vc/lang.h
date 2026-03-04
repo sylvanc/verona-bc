@@ -137,16 +137,17 @@ namespace vc
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
     Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
 
-  inline const auto wfNulop =
-    None | Const_E | Const_Pi | Const_Inf | Const_NaN | AddExternal |
-    RemoveExternal;
+  inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf |
+    Const_NaN | AddExternal | RemoveExternal;
 
   inline const auto wfExprStructure = ExprSeq | DontCare | TripleColon |
     wfLiteral | Char | String | RawString | Tuple | ArrayLit | Let | Var | New |
     Stack | Lambda | Ref | FuncName | Dot | If | Else | While | When | Equals |
-    Hash | FieldRef | GetRaise | SetRaise | MatchExpr | SplatLet | SplatDontCare;
+    Hash | FieldRef | GetRaise | SetRaise | MatchExpr | SplatLet |
+    SplatDontCare;
 
   inline const auto wfFuncLhs = Lhs >>= Lhs | Rhs;
+  inline const auto wfFuncDefLhs = Lhs >>= Lhs | Rhs | Once;
   inline const auto wfFuncId = Ident >>= Ident | SymbolId;
 
   // clang-format off
@@ -167,7 +168,7 @@ namespace vc
     | (Where <<= ~wfWhere)
     | (FieldDef <<= Ident * Type)
     | (Function <<=
-        wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Body)[Ident]
+        wfFuncDefLhs * wfFuncId * TypeParams * Params * Type * Where * Body)[Ident]
     | (TypeName <<= NameElement++[1])
     | (NameElement <<= wfFuncId * TypeArgs)
     | (TypeParams <<= TypeParam++)
@@ -265,10 +266,10 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfExprDot = (wfExprSugar | CallDyn | TryCallDyn |
-                                 Convert | Binop | Nulop | FFI | NewArray |
-                                 ArrayRef | MakeCallback | CallbackPtr |
-                                 FreeCallback | RegisterExternalNotify) -
+  inline const auto wfExprDot =
+    (wfExprSugar | CallDyn | TryCallDyn | Convert | Binop | Nulop | FFI |
+     NewArray | ArrayRef | MakeCallback | CallbackPtr | FreeCallback |
+     RegisterExternalNotify) -
     Dot - TripleColon;
 
   // clang-format off
@@ -313,7 +314,7 @@ namespace vc
   inline const auto wfPassANF =
       wfPassApplication
     | (Function <<=
-        wfFuncLhs * wfFuncId * TypeParams * Params * Type * Where * Labels)
+        wfFuncDefLhs * wfFuncId * TypeParams * Params * Type * Where * Labels)
         [Ident]
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
@@ -328,7 +329,8 @@ namespace vc
     | (ArrayRef <<= wfDst * Arg * wfSrc)
     | (ArrayRefConst <<= wfDst * Arg * wfLit)
     | (ArrayRefFromEnd <<= wfDst * Arg * wfLit)
-    | (SplatOp <<= wfDst * Arg * (Lhs >>= wfIntLiteral) * (Rhs >>= wfIntLiteral))
+    | (SplatOp <<=
+        wfDst * Arg * (Lhs >>= wfIntLiteral) * (Rhs >>= wfIntLiteral))
     | (New <<= wfDst * Type * NewArgs)
     | (Stack <<= wfDst * Type * NewArgs)
     | (NewArg <<= Ident * wfSrc)

@@ -517,6 +517,23 @@ namespace vbcc
     std::vector<uint8_t> code;
     std::map<ST::Index, trieste::Source> di_source;
 
+    // Build memo slot mapping: init FunctionId string → 0-based index.
+    std::unordered_map<std::string, size_t> memo_slot_map;
+    Node memo_init_node;
+    for (auto& child : *top)
+    {
+      if (child == MemoInit)
+      {
+        memo_init_node = child;
+        size_t idx = 0;
+        for (auto& fid : *child)
+        {
+          memo_slot_map[std::string(fid->location().view())] = idx++;
+        }
+        break;
+      }
+    }
+
     hdr << uleb(MagicNumber);
     hdr << uleb(CurrentVersion);
 
@@ -1020,6 +1037,15 @@ namespace vbcc
             args(stmt / Args);
             code << uleb(+Op::CallStatic) << dst(stmt) << fn(stmt);
           }
+          else if (stmt == MemoSlot)
+          {
+            auto fid_str =
+              std::string((stmt / FunctionId)->location().view());
+            auto slot_it = memo_slot_map.find(fid_str);
+            assert(slot_it != memo_slot_map.end());
+            code << uleb(+Op::MemoLoad) << dst(stmt)
+                 << uleb(slot_it->second);
+          }
           else if (stmt == CallDyn)
           {
             args(stmt / Args);
@@ -1340,6 +1366,18 @@ namespace vbcc
 
     for (auto& type : types)
       hdr.insert(hdr.end(), type.begin(), type.end());
+
+    // Memo init list.
+    if (memo_init_node)
+    {
+      hdr << uleb(memo_init_node->size());
+      for (auto& fid : *memo_init_node)
+        hdr << uleb(*get_func_id(fid));
+    }
+    else
+    {
+      hdr << uleb(0);
+    }
 
     // Code size.
     hdr << uleb(code.size());

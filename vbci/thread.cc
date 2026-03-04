@@ -754,6 +754,8 @@ namespace vbci
         return os << "RemoveExternal";
       case Op::RegisterExternalNotify:
         return os << "RegisterExternalNotify";
+      case Op::MemoLoad:
+        return os << "MemoLoad";
       default:
         return os << "Unknown";
     }
@@ -1666,6 +1668,15 @@ namespace vbci
 
           Program::get().notify_callbacks().push_back(cc);
           dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::MemoLoad:
+      {
+        process([](Register& dst, Constant<size_t> slot) INLINE {
+          auto& val = Program::get().memo_slot(slot);
+          dst = val.borrow();
         });
         break;
       }

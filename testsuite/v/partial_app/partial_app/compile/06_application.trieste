@@ -10,7 +10,6 @@ application
       box = classdef
       create = function
       main = function
-      partial$0 = classdef
       partial$1 = classdef
       partial$2 = classdef
       partial$3 = classdef
@@ -18,6 +17,7 @@ application
       partial$5 = classdef
       partial$6 = classdef
       partial$7 = classdef
+      partial$8 = classdef
       sub = function
       three_args = function}
     (none)
@@ -448,102 +448,6 @@ application
           apply = function
           create = function}
         (none)
-        (ident 9:partial$0)
-        (typeparams)
-        (where)
-        (classbody
-          (fielddef
-            (ident 5:$cap0)
-            (type
-              (typevar)))
-          (function
-            {
-              $cap0 = paramdef}
-            (rhs)
-            (ident 6:create)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 5:$cap0)
-                (type
-                  (typevar))))
-            (type
-              (typename
-                (nameelement
-                  (ident 11:partial_app)
-                  (typeargs))
-                (nameelement
-                  (ident 9:partial$0)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (new
-                  (newargs
-                    (newarg
-                      (ident 5:$cap0)
-                      (expr
-                        (localid 5:$cap0))))))))
-          (function
-            {
-              $cap0 = let
-              $p0 = paramdef
-              $self = paramdef}
-            (rhs)
-            (ident 5:apply)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 5:$self)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 11:partial_app)
-                      (typeargs))
-                    (nameelement
-                      (ident 9:partial$0)
-                      (typeargs)))))
-              (paramdef
-                (ident 3:$p0)
-                (type
-                  (typevar))))
-            (type
-              (typevar))
-            (where)
-            (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 5:$cap0)
-                      (type
-                        (typevar))))
-                  (expr
-                    (load
-                      (expr
-                        (fieldref
-                          (expr
-                            (localid 5:$self))
-                          (fieldid 5:$cap0)))))))
-              (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 11:partial_app)
-                      (typeargs))
-                    (nameelement
-                      (ident 3:add)
-                      (typeargs)))
-                  (args
-                    (expr
-                      (localid 5:$cap0))
-                    (expr
-                      (localid 3:$p0)))))))))
-      (classdef
-        {
-          apply = function
-          create = function}
-        (none)
         (ident 9:partial$1)
         (typeparams)
         (where)
@@ -628,13 +532,13 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 3:sub)
+                      (ident 3:add)
                       (typeargs)))
                   (args
                     (expr
-                      (localid 3:$p0))
+                      (localid 5:$cap0))
                     (expr
-                      (localid 5:$cap0)))))))))
+                      (localid 3:$p0)))))))))
       (classdef
         {
           apply = function
@@ -680,7 +584,6 @@ application
             {
               $cap0 = let
               $p0 = paramdef
-              $p1 = paramdef
               $self = paramdef}
             (rhs)
             (ident 5:apply)
@@ -695,6 +598,103 @@ application
                       (typeargs))
                     (nameelement
                       (ident 9:partial$2)
+                      (typeargs)))))
+              (paramdef
+                (ident 3:$p0)
+                (type
+                  (typevar))))
+            (type
+              (typevar))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 5:$cap0)
+                      (type
+                        (typevar))))
+                  (expr
+                    (load
+                      (expr
+                        (fieldref
+                          (expr
+                            (localid 5:$self))
+                          (fieldid 5:$cap0)))))))
+              (expr
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 11:partial_app)
+                      (typeargs))
+                    (nameelement
+                      (ident 3:sub)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (localid 3:$p0))
+                    (expr
+                      (localid 5:$cap0)))))))))
+      (classdef
+        {
+          apply = function
+          create = function}
+        (none)
+        (ident 9:partial$3)
+        (typeparams)
+        (where)
+        (classbody
+          (fielddef
+            (ident 5:$cap0)
+            (type
+              (typevar)))
+          (function
+            {
+              $cap0 = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 5:$cap0)
+                (type
+                  (typevar))))
+            (type
+              (typename
+                (nameelement
+                  (ident 11:partial_app)
+                  (typeargs))
+                (nameelement
+                  (ident 9:partial$3)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs
+                    (newarg
+                      (ident 5:$cap0)
+                      (expr
+                        (localid 5:$cap0))))))))
+          (function
+            {
+              $cap0 = let
+              $p0 = paramdef
+              $p1 = paramdef
+              $self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 5:$self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 11:partial_app)
+                      (typeargs))
+                    (nameelement
+                      (ident 9:partial$3)
                       (typeargs)))))
               (paramdef
                 (ident 3:$p0)
@@ -743,7 +743,7 @@ application
           apply = function
           create = function}
         (none)
-        (ident 9:partial$3)
+        (ident 9:partial$4)
         (typeparams)
         (where)
         (classbody
@@ -759,7 +759,7 @@ application
                   (ident 11:partial_app)
                   (typeargs))
                 (nameelement
-                  (ident 9:partial$3)
+                  (ident 9:partial$4)
                   (typeargs))))
             (where)
             (body
@@ -783,7 +783,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$3)
+                      (ident 9:partial$4)
                       (typeargs)))))
               (paramdef
                 (ident 3:$p0)
@@ -816,97 +816,6 @@ application
           apply = function
           create = function}
         (none)
-        (ident 9:partial$4)
-        (typeparams)
-        (where)
-        (classbody
-          (fielddef
-            (ident 5:$recv)
-            (type
-              (typevar)))
-          (function
-            {
-              $recv = paramdef}
-            (rhs)
-            (ident 6:create)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 5:$recv)
-                (type
-                  (typevar))))
-            (type
-              (typename
-                (nameelement
-                  (ident 11:partial_app)
-                  (typeargs))
-                (nameelement
-                  (ident 9:partial$4)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (new
-                  (newargs
-                    (newarg
-                      (ident 5:$recv)
-                      (expr
-                        (localid 5:$recv))))))))
-          (function
-            {
-              $p0 = paramdef
-              $recv = let
-              $self = paramdef}
-            (rhs)
-            (ident 5:apply)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 5:$self)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 11:partial_app)
-                      (typeargs))
-                    (nameelement
-                      (ident 9:partial$4)
-                      (typeargs)))))
-              (paramdef
-                (ident 3:$p0)
-                (type
-                  (typevar))))
-            (type
-              (typevar))
-            (where)
-            (body
-              (expr
-                (=
-                  (expr
-                    (let
-                      (ident 5:$recv)
-                      (type
-                        (typevar))))
-                  (expr
-                    (load
-                      (expr
-                        (fieldref
-                          (expr
-                            (localid 5:$self))
-                          (fieldid 5:$recv)))))))
-              (expr
-                (calldyn
-                  (expr
-                    (localid 5:$recv))
-                  (ident 3:add)
-                  (typeargs)
-                  (args
-                    (expr
-                      (localid 3:$p0)))))))))
-      (classdef
-        {
-          apply = function
-          create = function}
-        (none)
         (ident 9:partial$5)
         (typeparams)
         (where)
@@ -915,13 +824,8 @@ application
             (ident 5:$recv)
             (type
               (typevar)))
-          (fielddef
-            (ident 5:$cap0)
-            (type
-              (typevar)))
           (function
             {
-              $cap0 = paramdef
               $recv = paramdef}
             (rhs)
             (ident 6:create)
@@ -929,10 +833,6 @@ application
             (params
               (paramdef
                 (ident 5:$recv)
-                (type
-                  (typevar)))
-              (paramdef
-                (ident 5:$cap0)
                 (type
                   (typevar))))
             (type
@@ -951,14 +851,9 @@ application
                     (newarg
                       (ident 5:$recv)
                       (expr
-                        (localid 5:$recv)))
-                    (newarg
-                      (ident 5:$cap0)
-                      (expr
-                        (localid 5:$cap0))))))))
+                        (localid 5:$recv))))))))
           (function
             {
-              $cap0 = let
               $p0 = paramdef
               $recv = let
               $self = paramdef}
@@ -999,28 +894,12 @@ application
                             (localid 5:$self))
                           (fieldid 5:$recv)))))))
               (expr
-                (=
-                  (expr
-                    (let
-                      (ident 5:$cap0)
-                      (type
-                        (typevar))))
-                  (expr
-                    (load
-                      (expr
-                        (fieldref
-                          (expr
-                            (localid 5:$self))
-                          (fieldid 5:$cap0)))))))
-              (expr
                 (calldyn
                   (expr
                     (localid 5:$recv))
-                  (ident 7:combine)
+                  (ident 3:add)
                   (typeargs)
                   (args
-                    (expr
-                      (localid 5:$cap0))
                     (expr
                       (localid 3:$p0)))))))))
       (classdef
@@ -1141,6 +1020,127 @@ application
                   (typeargs)
                   (args
                     (expr
+                      (localid 5:$cap0))
+                    (expr
+                      (localid 3:$p0)))))))))
+      (classdef
+        {
+          apply = function
+          create = function}
+        (none)
+        (ident 9:partial$7)
+        (typeparams)
+        (where)
+        (classbody
+          (fielddef
+            (ident 5:$recv)
+            (type
+              (typevar)))
+          (fielddef
+            (ident 5:$cap0)
+            (type
+              (typevar)))
+          (function
+            {
+              $cap0 = paramdef
+              $recv = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 5:$recv)
+                (type
+                  (typevar)))
+              (paramdef
+                (ident 5:$cap0)
+                (type
+                  (typevar))))
+            (type
+              (typename
+                (nameelement
+                  (ident 11:partial_app)
+                  (typeargs))
+                (nameelement
+                  (ident 9:partial$7)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs
+                    (newarg
+                      (ident 5:$recv)
+                      (expr
+                        (localid 5:$recv)))
+                    (newarg
+                      (ident 5:$cap0)
+                      (expr
+                        (localid 5:$cap0))))))))
+          (function
+            {
+              $cap0 = let
+              $p0 = paramdef
+              $recv = let
+              $self = paramdef}
+            (rhs)
+            (ident 5:apply)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 5:$self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 11:partial_app)
+                      (typeargs))
+                    (nameelement
+                      (ident 9:partial$7)
+                      (typeargs)))))
+              (paramdef
+                (ident 3:$p0)
+                (type
+                  (typevar))))
+            (type
+              (typevar))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 5:$recv)
+                      (type
+                        (typevar))))
+                  (expr
+                    (load
+                      (expr
+                        (fieldref
+                          (expr
+                            (localid 5:$self))
+                          (fieldid 5:$recv)))))))
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 5:$cap0)
+                      (type
+                        (typevar))))
+                  (expr
+                    (load
+                      (expr
+                        (fieldref
+                          (expr
+                            (localid 5:$self))
+                          (fieldid 5:$cap0)))))))
+              (expr
+                (calldyn
+                  (expr
+                    (localid 5:$recv))
+                  (ident 7:combine)
+                  (typeargs)
+                  (args
+                    (expr
                       (localid 3:$p0))
                     (expr
                       (localid 5:$cap0)))))))))
@@ -1149,7 +1149,7 @@ application
           apply = function
           create = function}
         (none)
-        (ident 9:partial$7)
+        (ident 9:partial$8)
         (typeparams)
         (where)
         (classbody
@@ -1174,7 +1174,7 @@ application
                   (ident 11:partial_app)
                   (typeargs))
                 (nameelement
-                  (ident 9:partial$7)
+                  (ident 9:partial$8)
                   (typeargs))))
             (where)
             (body
@@ -1203,7 +1203,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$7)
+                      (ident 9:partial$8)
                       (typeargs)))))
               (paramdef
                 (ident 3:$p0)
@@ -1291,7 +1291,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$0)
+                      (ident 9:partial$1)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -1349,7 +1349,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$1)
+                      (ident 9:partial$2)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -1407,7 +1407,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$2)
+                      (ident 9:partial$3)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -1465,7 +1465,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$3)
+                      (ident 9:partial$4)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -1545,7 +1545,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$4)
+                      (ident 9:partial$5)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -1603,7 +1603,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$5)
+                      (ident 9:partial$6)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -1663,7 +1663,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$6)
+                      (ident 9:partial$7)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -1723,7 +1723,7 @@ application
                       (ident 11:partial_app)
                       (typeargs))
                     (nameelement
-                      (ident 9:partial$7)
+                      (ident 9:partial$8)
                       (typeargs))
                     (nameelement
                       (ident 6:create)
@@ -3983,6 +3983,7 @@ application
         {
           T = typeparam
           create = function
+          lambda$0 = classdef
           read = function}
         (none)
         (ident 4:cown)
@@ -3991,35 +3992,274 @@ application
             (ident 1:T)))
         (where)
         (classbody
+          (classdef
+            {
+              T = typeparam
+              apply = function
+              create = function}
+            (none)
+            (ident 8:lambda$0)
+            (typeparams
+              (typeparam
+                (ident 1:T)))
+            (where)
+            (classbody
+              (fielddef
+                (ident 4:some)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cown)
+                      (typeargs))
+                    (nameelement
+                      (ident 8:lambda$0)
+                      (typeargs))
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs)))))
+              (function
+                {
+                  some = paramdef}
+                (rhs)
+                (ident 6:create)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 4:some)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs))
+                        (nameelement
+                          (ident 8:lambda$0)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cown)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cown)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 8:lambda$0)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 4:cown)
+                              (typeargs))
+                            (nameelement
+                              (ident 8:lambda$0)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))
+                (where)
+                (body
+                  (expr
+                    (new
+                      (newargs
+                        (newarg
+                          (ident 4:some)
+                          (expr
+                            (localid 4:some))))))))
+              (function
+                {
+                  $ref_some = let
+                  $self = paramdef}
+                (rhs)
+                (ident 5:apply)
+                (typeparams)
+                (params
+                  (paramdef
+                    (ident 5:$self)
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))
+                        (nameelement
+                          (ident 8:lambda$0)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 8:lambda$0)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))))))
+                (type
+                  (typevar))
+                (where)
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (let
+                          (ident 9:$ref_some)
+                          (type
+                            (typename
+                              (nameelement
+                                (ident 8:_builtin)
+                                (typeargs))
+                              (nameelement
+                                (ident 3:ref)
+                                (typeargs
+                                  (type
+                                    (typename
+                                      (nameelement
+                                        (ident 8:_builtin)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 4:cown)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 8:lambda$0)
+                                        (typeargs))
+                                      (nameelement
+                                        (ident 1:T)
+                                        (typeargs))))))))))
+                      (expr
+                        (fieldref
+                          (expr
+                            (localid 5:$self))
+                          (fieldid 4:some)))))
+                  (expr
+                    (load
+                      (expr
+                        (localid 9:$ref_some))))))))
           (function
-            {}
+            {
+              some = paramdef}
             (rhs)
             (ident 6:create)
             (typeparams)
-            (params)
+            (params
+              (paramdef
+                (ident 4:some)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:cown)
+                      (typeargs))
+                    (nameelement
+                      (ident 1:T)
+                      (typeargs))))))
             (type
               (typename
                 (nameelement
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:none)
-                  (typeargs))))
+                  (ident 4:cown)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
             (where)
             (body
               (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:none)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args)))))
+                (when
+                  (args)
+                  (type
+                    (typevar))
+                  (expr
+                    (call
+                      (funcname
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:cown)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))
+                        (nameelement
+                          (ident 8:lambda$0)
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 8:_builtin)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 4:cown)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:T)
+                                  (typeargs))))))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (args
+                        (expr
+                          (localid 4:some)))))))))
           (function
             {
               self = paramdef}

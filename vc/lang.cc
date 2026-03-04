@@ -78,7 +78,9 @@ namespace vc
           if (d != Function)
             continue;
 
-          if (hand && (d / Lhs)->type() != hand->type())
+          auto def_hand = (d / Lhs)->type();
+          if (hand && def_hand != hand->type() &&
+              !(def_hand == Once && hand->type() == Rhs))
             continue;
 
           if ((d / Params)->size() != arity)

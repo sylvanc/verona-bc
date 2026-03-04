@@ -1,0 +1,76 @@
+vc
+validids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$909)
+            (functionid 26:infer_newfield::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$909)))))
+  (func
+    (functionid 26:infer_newfield::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$3)
+            (functionid 37:infer_newfield::counter::create::0::0)
+            (args))
+          (copy
+            (localid 1:c)
+            (localid 7:local$3))
+          (const
+            (localid 7:local$4)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 7:local$4)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 37:infer_newfield::counter::create::0::0)
+    (params)
+    (classid 26:infer_newfield::counter::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 8:local$88)
+            (usize)
+            (int 1:0))
+          (new
+            (localid 7:local$2)
+            (classid 26:infer_newfield::counter::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$88)))))
+        (ret
+          (localid 7:local$2)))))
+  (class
+    (classid 26:infer_newfield::counter::0)
+    (fields
+      (field
+        (fieldid 5:count)
+        (usize)))
+    (methods))
+  (primitive
+    (usize)
+    (methods)))

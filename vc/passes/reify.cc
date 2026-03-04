@@ -1138,7 +1138,15 @@ namespace vc
           term / Type = reify_type(term / Type, r.subst);
       }
 
-      r.reification = Func << r.id << params << r_type << vars << labels;
+      if ((r.def / Lhs) == Once)
+      {
+        r.reification =
+          FuncOnce << r.id << params << r_type << vars << labels;
+      }
+      else
+      {
+        r.reification = Func << r.id << params << r_type << vars << labels;
+      }
 
       // If this is an init function, ensure the return value's class has
       // @callback registered so the runtime can call it as fini.
@@ -1487,7 +1495,8 @@ namespace vc
 
       auto funcid = get_reification(call / FuncName, subst, [&](auto& def) {
         return (def == Function) && ((def / Params)->size() == arity) &&
-          ((def / Lhs) == hand);
+          (((def / Lhs) == hand) ||
+           ((def / Lhs) == Once && hand == Rhs));
       });
 
       if (!funcid || (funcid == Dyn))
