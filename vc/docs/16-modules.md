@@ -8,17 +8,17 @@ This chapter covers the module system, imports, and name resolution.
 
 ## 16.1 Module Structure
 
-Each `.v` file defines a module named after the file (without the extension). A directory of `.v` files is treated as an implicit class scope:
+A project directory is a module. Each `.v` file inside it defines declarations that become part of that module — the file name does not create a separate module scope. Subdirectories create nested module scopes:
 
 ```
 my_project/
-  main.v           → module "main"
-  math.v           → module "math"
+  main.v           → declarations in the "my_project" module
+  math.v           → declarations in the "my_project" module
   utils/
-    helpers.v      → module "utils::helpers"
+    helpers.v      → declarations in the "utils" nested module
 ```
 
-All top-level declarations in a file are members of that module.
+All top-level declarations across `.v` files in the same directory share one scope.
 
 ---
 
@@ -181,7 +181,7 @@ echo $?                               # prints 10
 ```
 
 Key points:
-- Each `.v` file is a module named after the file.
+- All `.v` files in a directory contribute to the same module scope.
 - `use math` imports `math`'s declarations for unqualified use.
 - Without `use`, you can still access declarations with qualified names: `math::add(10, 20)`.
 - `use types` in `math.v` makes the `result` class available without qualifying it as `types::result`.
@@ -196,7 +196,10 @@ Key points:
 |------|---------|--------|
 | `use Module` | Import a local class/module for unqualified lookup | `use math` |
 | `use "url"` | Import a package from a git URL | `use "https://github.com/..."` |
+| `use "url" "tag"` | Import a package at a specific git ref | `use "https://..." "v1.0"` |
+| `use "url" "tag" "dir"` | Import a subdirectory of a package | `use "https://..." "main" "src"` |
 | `use x = "url"` | Import a package as a named type alias | `use mylib = "https://..."` |
+| `use x = "url" "tag"` | Named alias at a specific git ref | `use mylib = "https://..." "v1.0"` |
 | `use { name = "lib"(...): T; }` | FFI declarations (see [FFI §17](17-ffi.md)) | `use { print = "print"(any): none; }` |
 
 ### The `ffi` Namespace
@@ -231,12 +234,34 @@ use "https://github.com/user/repo"
 
 The package's top-level declarations become available for unqualified lookup, just like `use Module`.
 
+An optional second string specifies a **git ref** (branch, tag, or commit hash):
+
+```verona
+use "https://github.com/user/repo" "v1.0"      // specific tag
+use "https://github.com/user/repo" "main"      // branch name
+```
+
+An optional third string specifies a **subdirectory** within the repository:
+
+```verona
+use "https://github.com/user/repo" "main" "src" // import the src/ subdirectory
+```
+
+For local development, you can use a local git repository path:
+
+```verona
+use "~/dev/my-package" "main"                   // local git repo
+```
+
+The dependency system uses `git fetch`/`checkout`, so changes must be committed to the local repo before the consuming project can see them.
+
 ### `use x = "url"` — Named Package Alias
 
 Imports a package and binds it to a name for qualified access:
 
 ```verona
 use mylib = "https://github.com/user/repo"
+use mylib = "https://github.com/user/repo" "v1.0"
 mylib::some_function()
 ```
 

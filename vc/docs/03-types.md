@@ -210,7 +210,7 @@ my_module
 }
 ```
 
-Type aliases can be generic (with type parameters) and can have `where` clauses.
+Type aliases can be generic (with type parameters). Type aliases can appear in any class scope, including at the top level of a module (since a module directory is itself a class scope).
 
 ---
 
@@ -245,6 +245,8 @@ When `i32` satisfies `comparable`, `self` is `i32`. The `self` type is only vali
 
 ## 3.10 Where Clauses
 
+> **Note:** `where` clauses are parsed by the compiler but not yet fully enforced. The `<` subtype constraint has partial support (checked at monomorphization time via shape matching). The `&`, `|`, and `!` connectives are parsed but their enforcement is a planned feature.
+
 `where` clauses constrain type parameters:
 
 ```verona
@@ -253,7 +255,7 @@ sort[T](arr: array[T]) where T < comparable
 
 The `<` operator in a `where` clause means **structural subtyping** — `T < comparable` requires that `T` satisfies the shape `comparable` (i.e., `T` has all the methods that `comparable` declares).
 
-Supports logical connectives:
+The syntax supports logical connectives:
 
 | Connective | Meaning | Example |
 |------------|---------|--------|
@@ -286,4 +288,4 @@ Each type parameter can have its own constraints:
 transform[A, B](input: A, mapper: mapper[A, B]) where A < printable & B < printable
 ```
 
-Where clauses are checked during monomorphization — when a generic function or class is instantiated with concrete type arguments, the compiler verifies that the constraints are satisfied.
+In practice, type parameters are currently checked at monomorphization time — when a generic function or class is instantiated with concrete type arguments, the compiler verifies that the concrete type has the required methods. Explicit constraint enforcement from `where` clauses is planned.

@@ -74,6 +74,8 @@ WhereExpr     ::= Type '<' Type
                  | '!' WhereExpr
 ```
 
+> **Note:** `where` clauses are parsed but enforcement is partial. The `<` subtype constraint is checked at monomorphization time via shape matching. The `&`, `|`, and `!` connectives are parsed but not yet fully enforced.
+
 ---
 
 ## 23.5 Expressions
@@ -153,6 +155,8 @@ SplatDC       ::= '_' '...'
 ```
 UseDecl       ::= 'use' Ident                        // import module
                  | 'use' Ident '=' Type               // type alias
+                 | 'use' String String? String?        // package import (url, tag, dir)
+                 | 'use' Ident '=' String String? String?  // named package alias
                  | 'use' '{' FFIFuncDecl* '}'         // FFI (no lib)
                  | 'use' String '{' FFIFuncDecl* '}'  // FFI (with lib)
 

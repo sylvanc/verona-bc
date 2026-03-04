@@ -250,3 +250,9 @@ An arithmetic or comparison operation received an invalid value — most often a
 2. **Use exit codes for testing.** Since `:::printval` is the only output mechanism, use the exit code to verify intermediate values: `main(): i32 { /* ... */; suspicious_value.i32 }`.
 3. **Use `lldb-20` for crashes.** If the interpreter itself crashes (segfault), debug with `lldb-20 -- dist/vbci/vbci program.vbc`.
 4. **Reduce to a minimal case.** Strip your program down until the error disappears, then add back until it reappears. The last addition is likely the cause.
+
+---
+
+## 21.7 Internal Subcommands
+
+The `vc` compiler also provides `vc check` and `vc test` subcommands. These are internal debugging tools used during compiler development and are not intended for general use. They may change or be removed without notice.

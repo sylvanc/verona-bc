@@ -41,9 +41,9 @@ Cowns are created by `when` blocks. A `when` block is an **asynchronous behavior
 let c = when () () -> { 42 };
 ```
 
-This creates a new `cown[i32]` holding the value `42`. A `when` block with no cown arguments (`()`) runs immediately (it has no dependencies to wait for) and wraps its result in a cown.
+This creates a new `cown[i32]` holding the value `42`. A `when` block with no cown arguments (`()`) is schedulable immediately (no dependencies) — but the behavior still runs asynchronously on a scheduler thread.
 
-You only need a new cown when you use `when` — that's how cowns are created. There is no `cown::create()` function.
+A convenience wrapper `cown[T]::create(val)` also exists for creating a cown directly from a value without writing a `when` block.
 
 ---
 
@@ -75,7 +75,7 @@ when (cown1, cown2, ...) (ref1, ref2, ...) ->
 
 ### Scheduling
 
-A `when` block is an **asynchronous behavior** — a unit of work that runs independently. The `when` expression returns immediately with a result cown; the behavior runs later when its dependencies are satisfied. The runtime scheduler:
+A `when` block is an **asynchronous behavior** — a unit of work that runs independently. The `when` expression returns a result cown immediately; the behavior body always runs later on a scheduler thread, even for `when` blocks with no dependencies. The runtime scheduler:
 
 1. Waits until **all** requested cowns are available (not held by another behavior).
 2. Acquires exclusive access to all requested cowns atomically.

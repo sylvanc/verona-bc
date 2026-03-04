@@ -3,7 +3,8 @@
 ## To Do
 
 Review `iowise`.
-- Move to `io::out.print`, `io::err.print`.
+- Ring buffer copying?
+- Notice board for log level checking?
 
 Can we extract just the bits of `verona-rt` that we use?
 

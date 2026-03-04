@@ -46,9 +46,10 @@ cell
   f: i32;
   g: i32;
 
-  create(f: i32 = 0, g: i32 = 0): cell
+  create(f: i32 = 0, h: i32 = 0): cell
   {
-    new {f = f; g = g}
+    // If the field name is the same, you don't need to specify it.
+    new {f, g = h}
   }
 }
 
@@ -63,10 +64,12 @@ main(): i32
 
 This returns exit code `10`. Notable syntax:
 - Classes are declared with a bare name — no `class` keyword.
-- Fields end with `;`. In `new { ... }`, fields are also separated by `;`.
+- Fields end with `;`. In `new { ... }`, fields are separated by `,`.
 - `new { f = f; g = g }` constructs an object with named field assignments.
+- `new {f, g = h}` is shorthand for `new { f = f; g = h }` — if the field name matches the variable name, you can omit the `=`.
 - `cell` (no arguments) calls `create` with defaults — `cell::create` is called because `Type(args)` is sugar for `Type::create(args)`. The name `create` is not magical; it's simply the convention. Juxtaposition on a type name calls its `create` method.
 - `cell(3, 7)` is sugar for `cell::create(3, 7)`.
+- `cell 3` uses juxtaposition to call `create` with a single argument — this is sugar for `cell::create(3)`, which uses the default for `h`.
 - `let` bindings are single-assignment; `var` bindings are reassignable.
 - `a.f = 3` writes to a field of a `let`-bound object — `let` constrains the binding, not the object.
 
@@ -83,8 +86,7 @@ For more on each of these features, see the linked chapters in the [Table of Con
 - CMake 3.14+
 - Ninja (recommended) or Make
 - A C++23 compiler (GCC 13+ or Clang 17+)
-- OpenSSL development headers (3.0+ recommended)
-- libffi development headers (3.4+)
+- `libffi` development headers (3.4+)
 
 ### Build Steps
 
@@ -184,7 +186,7 @@ my_project/
   types.v         # additional module (optional)
 ```
 
-Each `.v` file defines a module named after the file (without the extension). Modules can reference each other's declarations using qualified names (`ModuleName::item`) or by importing with `use ModuleName`. Subdirectories are supported — they create nested module scopes (e.g., `ffi/callback.v` is accessible as `ffi::callback`). See [Modules and Imports](16-modules.md).
+Each directory defines a module named after the directory. Files within a directory aren't semantically significant — their contents are just part of the module. Modules can reference each other's declarations using qualified names (`ModuleName::item`), by importing with `use ModuleName`, or by importing them with a name with `use m = ModuleName`. Subdirectories are supported — they create nested module scopes (e.g., `module1/module2/` is accessible as `module1::module2`). See [Modules and Imports](16-modules.md).
 
 ### The `_builtin` Standard Library
 
@@ -313,13 +315,13 @@ bonus
   }
 }
 
-// T < scorable means T must satisfy the scorable shape (subtype constraint)
-sum_scores[T](items: array[T]): i32 where T < scorable
+sum_scores[T](items: array[T]): i32
 {
   var total = 0;
 
   for items.values() item ->
   {
+    // You will get a compile error if T doesn't satisfy scorable (i.e., doesn't have score(self): i32)
     total = total + item.score
   }
 
@@ -352,7 +354,7 @@ main(): i32
 This returns exit code `82`. Key features:
 - **Shapes**: `scorable` defines a structural interface — any class with `score(self): i32` satisfies it.
 - **No `implements`**: `task` and `bonus` satisfy `scorable` by having matching methods — no explicit declaration needed.
-- **Generic functions with constraints**: `sum_scores[T]` requires `T < scorable` — the type parameter must satisfy the shape.
+- **Generic functions**: `sum_scores[T]` works with any type that has a `score(self): i32` method. If a type doesn't have the required method, the compiler reports an error during monomorphization.
 - **Constructor sugar**: `task(10)` calls `task::create(10)` (auto-generated from the field definition). `bonus(5, 2)` calls `bonus::create(5, 2)`.
 - **Type argument inference**: `sum_scores(tasks)` infers `T = task` from the argument.
 
@@ -374,6 +376,8 @@ echo $?                               # prints the exit code
 Many test programs use bitmask patterns to report multiple results through a single exit code.
 
 ### FFI `printval`
+
+> **Note:** The interpreter provides a built-in `printval` function accessible via FFI. This is intended as a temporary debugging aid until a proper I/O library is developed. See [Gotchas §26.5](26-gotchas.md) for how to call it.
 
 The interpreter provides a built-in `printval` function accessible via FFI. Declare it in a `use { ... }` block and call it with `:::` (the triple-colon operator, which invokes FFI functions and builtins):
 

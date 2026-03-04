@@ -371,9 +371,11 @@ Free functions in `_builtin/ffi/`:
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on each `add_external`/`remove_external` event |
-| `ffi::add_external` | `(): none` | Increment the external resource count |
-| `ffi::remove_external` | `(): none` | Decrement the external resource count |
+| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on each external add/remove event |
+| `ffi::external.add` | `(self: external): none` | Increment the external resource count |
+| `ffi::external.remove` | `(self: external): none` | Decrement the external resource count |
+
+The `external` singleton is accessed as `ffi::external` (calls `external::create()`), and its methods are called via dot syntax: `ffi::external.add`, `ffi::external.remove`.
 
 See [FFI §17.8](17-ffi.md) for external resource management details.
 
