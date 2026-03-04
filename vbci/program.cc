@@ -209,6 +209,11 @@ namespace vbci
 
     fini_callbacks.clear();
 
+    // Drop memo slot values, releasing their reference counts.
+    for (auto& slot : memo_slots)
+      slot = ValueTransfer(Value());
+    memo_slots.clear();
+
     for (auto* cc : external_notify_callbacks)
       free_callback(cc);
 

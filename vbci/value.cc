@@ -186,6 +186,12 @@ namespace vbci
           value.arr--;
         break;
 
+      case ValueType::Cown:
+        value.cown = *reinterpret_cast<Cown**>(v);
+        if (value.cown == nullptr)
+          value.tag = ValueType::Invalid;
+        break;
+
       default:
         std::memcpy(static_cast<void*>(&value), v, sizeof(Value));
         break;
@@ -275,6 +281,10 @@ namespace vbci
         // Array pointers are stored as one past the array, pointing to the
         // elements, for FFI compatibility.
         *reinterpret_cast<Array**>(v) = (arr + 1);
+        break;
+
+      case ValueType::Cown:
+        *reinterpret_cast<Cown**>(v) = cown;
         break;
 
       default:

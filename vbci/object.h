@@ -179,6 +179,13 @@ namespace vbci
             break;
           }
 
+          case ValueType::Cown:
+          {
+            auto prev = load(i);
+            prev.dec<false>();
+            break;
+          }
+
           default:
             break;
         }
@@ -200,6 +207,13 @@ namespace vbci
           {
             auto prev = load(i);
             field_drop(prev);
+            break;
+          }
+
+          case ValueType::Cown:
+          {
+            auto prev = load(i);
+            prev.dec<false>();
             break;
           }
 
