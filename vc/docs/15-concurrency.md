@@ -272,8 +272,8 @@ No. Cown contents are only accessible inside `when` blocks. This is fundamental 
 
 The scheduler tracks external resources — things outside Verona's control (file descriptors, network connections, OS callbacks). It will not shut down while external resources remain:
 
-- `ffi::add_external()` increments the count.
-- `ffi::remove_external()` decrements the count.
+- `ffi::external.add` increments the count (method on the `external` singleton).
+- `ffi::external.remove` decrements the count.
 - `ffi::register_external_notify(lambda)` registers a lambda that fires on each add/remove event.
 
 See [FFI §17.8](17-ffi.md) for details.

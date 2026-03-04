@@ -35,10 +35,11 @@ The compiler runs passes in two stages. The first 10 passes are the `vc` fronten
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
-| 10 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
-| 11 | `validids` | once | Validate identifier assignments for consistency |
-| 12 | `liveness` | once | Liveness analysis for register allocation |
-| 13 | `typecheck` | once | Final type checking |
+| 10 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
+| 11 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
+| 12 | `validids` | once | Validate identifier assignments for consistency |
+| 13 | `liveness` | once | Liveness analysis for register allocation |
+| 14 | `typecheck` | once | Final type checking |
 
 After all passes complete, bytecode generation produces a `.vbc` file. In practice, `vc build` invokes both stages — the user does not need to run them separately.
 

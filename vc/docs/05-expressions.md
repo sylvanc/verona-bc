@@ -176,6 +176,27 @@ obj.method                    // call a zero-argument method (no parens needed)
 
 Methods are functions whose first parameter is `self`. When called via dot syntax, the receiver becomes the `self` argument. See [Functions](07-functions.md).
 
+### Qualified Calls and Dot Chaining
+
+Qualified function calls can be chained with dot access:
+
+```verona
+module::func(args).method             // call func, then call method on the result
+module::func.method                   // call zero-arg func, then call method on result
+```
+
+When a qualified name (`Ns::f`) is immediately followed by `.method`, the compiler auto-generates a zero-argument call to `f` and then applies the dot:
+
+```verona
+ffi::external.add                     // equivalent to: (ffi::external()).add
+```
+
+When a qualified name is followed by arguments *and* a dot, the arguments are consumed first:
+
+```verona
+module::func(x, y).result             // calls func(x, y), then .result on the return value
+```
+
 ---
 
 ## 5.7 Indexing (Juxtaposition / Apply)

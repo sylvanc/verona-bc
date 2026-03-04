@@ -246,18 +246,18 @@ The `_builtin/ffi/` directory contains Verona wrapper functions for common FFI o
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on every `add_external`/`remove_external` |
-| `ffi::add_external` | `(): none` | Add an external resource (increments the external event count) |
-| `ffi::remove_external` | `(): none` | Remove an external resource (decrements the external event count) |
+| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on every `add`/`remove` |
+| `ffi::external.add` | `(self: external): none` | Add an external resource (increments the external event count) |
+| `ffi::external.remove` | `(self: external): none` | Remove an external resource (decrements the external event count) |
 
 ### External Resource Management
 
 The runtime tracks "external resources" — things outside the Verona scheduler's control (open file descriptors, active network connections, pending OS callbacks). The scheduler waits for all external resources to be removed before shutting down:
 
-- **`ffi::add_external()`** — Tells the scheduler an external resource exists. The scheduler will not shut down while external resources remain.
-- **`ffi::remove_external()`** — Tells the scheduler an external resource has been released.
+- **`ffi::external.add`** — Tells the scheduler an external resource exists. The scheduler will not shut down while external resources remain.
+- **`ffi::external.remove`** — Tells the scheduler an external resource has been released.
 
-These are called from `when` block bodies (on scheduler threads) and run as scheduled work items.
+The `external` class is a singleton (using `once create()`) that serializes add/remove operations through an internal cown. The dot syntax `ffi::external.add` auto-calls `create()` to get the singleton and then dispatches `.add` on it. See [Functions §7.9](07-functions.md) for more on `once` functions.
 
 ### External Notify Callbacks
 
@@ -285,17 +285,18 @@ use
 
 main(): i32
 {
-  ffi::add_external;                  // notify callback fires
-  ffi::remove_external;              // notify callback fires
+  ffi::external.add;                  // notify callback fires
+  ffi::external.remove;               // notify callback fires
   0
 }
 ```
 
 ### How `_builtin/ffi` Works
 
-Each `.v` file in `_builtin/ffi/` defines either a class (like `callback`) or free functions (like `register_external_notify`, `add_external`, `remove_external`). Because `_builtin` is always implicitly imported, and `_builtin/ffi/` is a nested scope, these functions are accessible via `ffi::function_name(args)`.
+Each `.v` file in `_builtin/ffi/` defines either a class (like `callback`, `external`) or free functions (like `register_external_notify`). Because `_builtin` is always implicitly imported, and `_builtin/ffi/` is a nested scope, these are accessible via `ffi::function_name(args)` or `ffi::class_name.method`.
 
 The wrappers internally use `:::` builtins:
 - `callback::create[T]` uses `:::make_callback`
 - `register_external_notify[T]` creates a `callback(f)` and calls `:::register_external_notify`
+- `external` uses `once create()` for singleton initialization and serializes `:::add_external`/`:::remove_external` through an internal cown
 - `add_external` and `remove_external` call their corresponding `:::` builtins
