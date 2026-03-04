@@ -12,326 +12,326 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 5:$1016)
+            (localid 5:$1039)
             (functionid 30:lambda_var_capture::main::0::0)
             (args)))
         (ret
-          (localid 5:$1016)))))
+          (localid 5:$1039)))))
   (func
     (functionid 30:lambda_var_capture::main::0::0)
     (params)
     (i32)
     (vars
       (localid 6:result)
-      (localid 8:local$14)
       (localid 8:local$16)
       (localid 8:local$18)
-      (localid 8:local$20))
+      (localid 8:local$20)
+      (localid 8:local$22))
     (labels
       (label
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$12)
+            (localid 8:local$14)
             (i32)
             (int 1:0))
           (copy
             (localid 6:result)
-            (localid 8:local$12))
+            (localid 8:local$14))
           (const
-            (localid 9:local$126)
+            (localid 9:local$137)
             (i32)
             (int 2:10))
           (call
-            (localid 8:local$13)
+            (localid 8:local$15)
             (functionid 34:lambda_var_capture::read_var::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$126))))
+                (localid 9:local$137))))
           (copy
             (localid 1:a)
-            (localid 8:local$13))
-          (call
-            (localid 8:local$14)
-            (functionid 31:_builtin::nomatch::create::0::0)
-            (args))
-          (const
-            (localid 9:local$127)
-            (i32)
-            (int 2:10))
-          (lookup
-            (localid 9:local$535)
-            (localid 1:a)
-            (methodid 8:!=::2::0))
-          (calldyn
-            (localid 9:local$536)
-            (localid 9:local$535)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:a))
-              (arg
-                (argcopy)
-                (localid 9:local$127)))))
-        (cond
-          (localid 9:local$536)
-          (labelid 8:body$124)
-          (labelid 8:join$125)))
-      (label
-        (labelid 8:body$124)
-        (body
-          (const
-            (localid 9:local$128)
-            (i32)
-            (int 1:1))
-          (lookup
-            (localid 9:local$537)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
-            (localid 9:local$538)
-            (localid 9:local$537)
-            (args
-              (arg
-                (argcopy)
-                (localid 6:result))
-              (arg
-                (argcopy)
-                (localid 9:local$128))))
-          (copy
-            (localid 9:local$954)
-            (localid 6:result))
-          (copy
-            (localid 6:result)
-            (localid 9:local$538)))
-        (jump
-          (labelid 8:join$125)))
-      (label
-        (labelid 8:join$125)
-        (body
-          (call
-            (localid 8:local$15)
-            (functionid 35:lambda_var_capture::write_var::0::0)
-            (args))
-          (copy
-            (localid 1:b)
             (localid 8:local$15))
           (call
             (localid 8:local$16)
             (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (const
-            (localid 9:local$131)
-            (i32)
-            (int 2:42))
-          (lookup
-            (localid 9:local$540)
-            (localid 1:b)
-            (methodid 8:!=::2::0))
-          (calldyn
-            (localid 9:local$541)
-            (localid 9:local$540)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:b))
-              (arg
-                (argcopy)
-                (localid 9:local$131)))))
-        (cond
-          (localid 9:local$541)
-          (labelid 8:body$129)
-          (labelid 8:join$130)))
-      (label
-        (labelid 8:body$129)
-        (body
-          (const
-            (localid 9:local$132)
-            (i32)
-            (int 1:2))
-          (lookup
-            (localid 9:local$542)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
-            (localid 9:local$543)
-            (localid 9:local$542)
-            (args
-              (arg
-                (argcopy)
-                (localid 6:result))
-              (arg
-                (argcopy)
-                (localid 9:local$132))))
-          (copy
-            (localid 9:local$955)
-            (localid 6:result))
-          (copy
-            (localid 6:result)
-            (localid 9:local$543)))
-        (jump
-          (labelid 8:join$130)))
-      (label
-        (labelid 8:join$130)
-        (body
-          (const
-            (localid 9:local$135)
-            (i32)
-            (int 2:42))
-          (const
-            (localid 9:local$136)
-            (i32)
-            (int 2:42))
-          (call
-            (localid 8:local$17)
-            (functionid 39:lambda_var_capture::var_and_raise::2::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 9:local$135))
-              (arg
-                (argcopy)
-                (localid 9:local$136))))
-          (copy
-            (localid 1:c)
-            (localid 8:local$17))
-          (call
-            (localid 8:local$18)
-            (functionid 31:_builtin::nomatch::create::0::0)
-            (args))
-          (const
-            (localid 9:local$137)
-            (i32)
-            (int 2:42))
-          (lookup
-            (localid 9:local$545)
-            (localid 1:c)
-            (methodid 8:!=::2::0))
-          (calldyn
-            (localid 9:local$546)
-            (localid 9:local$545)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:c))
-              (arg
-                (argcopy)
-                (localid 9:local$137)))))
-        (cond
-          (localid 9:local$546)
-          (labelid 8:body$133)
-          (labelid 8:join$134)))
-      (label
-        (labelid 8:body$133)
-        (body
-          (const
             (localid 9:local$138)
             (i32)
-            (int 1:4))
-          (lookup
-            (localid 9:local$547)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
-            (localid 9:local$548)
-            (localid 9:local$547)
-            (args
-              (arg
-                (argcopy)
-                (localid 6:result))
-              (arg
-                (argcopy)
-                (localid 9:local$138))))
-          (copy
-            (localid 9:local$956)
-            (localid 6:result))
-          (copy
-            (localid 6:result)
-            (localid 9:local$548)))
-        (jump
-          (labelid 8:join$134)))
-      (label
-        (labelid 8:join$134)
-        (body
-          (const
-            (localid 9:local$141)
-            (i32)
-            (int 2:42))
-          (const
-            (localid 9:local$142)
-            (i32)
-            (int 2:99))
-          (call
-            (localid 8:local$19)
-            (functionid 39:lambda_var_capture::var_and_raise::2::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 9:local$141))
-              (arg
-                (argcopy)
-                (localid 9:local$142))))
-          (copy
-            (localid 1:d)
-            (localid 8:local$19))
-          (call
-            (localid 8:local$20)
-            (functionid 31:_builtin::nomatch::create::0::0)
-            (args))
-          (const
-            (localid 9:local$143)
-            (i32)
-            (int 1:0))
-          (lookup
-            (localid 9:local$550)
-            (localid 1:d)
-            (methodid 8:!=::2::0))
-          (calldyn
-            (localid 9:local$551)
-            (localid 9:local$550)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:d))
-              (arg
-                (argcopy)
-                (localid 9:local$143)))))
-        (cond
-          (localid 9:local$551)
-          (labelid 8:body$139)
-          (labelid 8:join$140)))
-      (label
-        (labelid 8:body$139)
-        (body
-          (const
-            (localid 9:local$144)
-            (i32)
-            (int 1:8))
+            (int 2:10))
           (lookup
             (localid 9:local$552)
-            (localid 6:result)
-            (methodid 7:+::2::0))
+            (localid 1:a)
+            (methodid 8:!=::2::0))
           (calldyn
             (localid 9:local$553)
             (localid 9:local$552)
             (args
               (arg
                 (argcopy)
+                (localid 1:a))
+              (arg
+                (argcopy)
+                (localid 9:local$138)))))
+        (cond
+          (localid 9:local$553)
+          (labelid 8:body$135)
+          (labelid 8:join$136)))
+      (label
+        (labelid 8:body$135)
+        (body
+          (const
+            (localid 9:local$139)
+            (i32)
+            (int 1:1))
+          (lookup
+            (localid 9:local$554)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$555)
+            (localid 9:local$554)
+            (args
+              (arg
+                (argcopy)
                 (localid 6:result))
               (arg
                 (argcopy)
-                (localid 9:local$144))))
+                (localid 9:local$139))))
           (copy
-            (localid 9:local$957)
+            (localid 9:local$977)
             (localid 6:result))
           (copy
             (localid 6:result)
-            (localid 9:local$553)))
+            (localid 9:local$555)))
         (jump
-          (labelid 8:join$140)))
+          (labelid 8:join$136)))
       (label
-        (labelid 8:join$140)
+        (labelid 8:join$136)
+        (body
+          (call
+            (localid 8:local$17)
+            (functionid 35:lambda_var_capture::write_var::0::0)
+            (args))
+          (copy
+            (localid 1:b)
+            (localid 8:local$17))
+          (call
+            (localid 8:local$18)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$142)
+            (i32)
+            (int 2:42))
+          (lookup
+            (localid 9:local$557)
+            (localid 1:b)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$558)
+            (localid 9:local$557)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b))
+              (arg
+                (argcopy)
+                (localid 9:local$142)))))
+        (cond
+          (localid 9:local$558)
+          (labelid 8:body$140)
+          (labelid 8:join$141)))
+      (label
+        (labelid 8:body$140)
+        (body
+          (const
+            (localid 9:local$143)
+            (i32)
+            (int 1:2))
+          (lookup
+            (localid 9:local$559)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$560)
+            (localid 9:local$559)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$143))))
+          (copy
+            (localid 9:local$978)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$560)))
+        (jump
+          (labelid 8:join$141)))
+      (label
+        (labelid 8:join$141)
+        (body
+          (const
+            (localid 9:local$146)
+            (i32)
+            (int 2:42))
+          (const
+            (localid 9:local$147)
+            (i32)
+            (int 2:42))
+          (call
+            (localid 8:local$19)
+            (functionid 39:lambda_var_capture::var_and_raise::2::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$146))
+              (arg
+                (argcopy)
+                (localid 9:local$147))))
+          (copy
+            (localid 1:c)
+            (localid 8:local$19))
+          (call
+            (localid 8:local$20)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$148)
+            (i32)
+            (int 2:42))
+          (lookup
+            (localid 9:local$562)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$563)
+            (localid 9:local$562)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 9:local$148)))))
+        (cond
+          (localid 9:local$563)
+          (labelid 8:body$144)
+          (labelid 8:join$145)))
+      (label
+        (labelid 8:body$144)
+        (body
+          (const
+            (localid 9:local$149)
+            (i32)
+            (int 1:4))
+          (lookup
+            (localid 9:local$564)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$565)
+            (localid 9:local$564)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$149))))
+          (copy
+            (localid 9:local$979)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$565)))
+        (jump
+          (labelid 8:join$145)))
+      (label
+        (labelid 8:join$145)
+        (body
+          (const
+            (localid 9:local$152)
+            (i32)
+            (int 2:42))
+          (const
+            (localid 9:local$153)
+            (i32)
+            (int 2:99))
+          (call
+            (localid 8:local$21)
+            (functionid 39:lambda_var_capture::var_and_raise::2::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$152))
+              (arg
+                (argcopy)
+                (localid 9:local$153))))
+          (copy
+            (localid 1:d)
+            (localid 8:local$21))
+          (call
+            (localid 8:local$22)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$154)
+            (i32)
+            (int 1:0))
+          (lookup
+            (localid 9:local$567)
+            (localid 1:d)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$568)
+            (localid 9:local$567)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:d))
+              (arg
+                (argcopy)
+                (localid 9:local$154)))))
+        (cond
+          (localid 9:local$568)
+          (labelid 8:body$150)
+          (labelid 8:join$151)))
+      (label
+        (labelid 8:body$150)
+        (body
+          (const
+            (localid 9:local$155)
+            (i32)
+            (int 1:8))
+          (lookup
+            (localid 9:local$569)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$570)
+            (localid 9:local$569)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$155))))
+          (copy
+            (localid 9:local$980)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$570)))
+        (jump
+          (labelid 8:join$151)))
+      (label
+        (labelid 8:join$151)
         (body)
         (ret
           (localid 6:result)))))
@@ -364,43 +364,43 @@ reify
             (localid 1:x)
             (localid 1:n))
           (getraise
-            (localid 9:local$107))
+            (localid 9:local$118))
           (registerref
-            (localid 9:local$522)
+            (localid 9:local$539)
             (localid 1:x))
           (stack
-            (localid 7:local$4)
+            (localid 7:local$6)
             (classid 31:lambda_var_capture::lambda$0::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$107))
+                (localid 9:local$118))
               (arg
                 (argcopy)
-                (localid 9:local$522))))
+                (localid 9:local$539))))
           (copy
             (localid 1:f)
-            (localid 7:local$4))
+            (localid 7:local$6))
           (const
-            (localid 7:local$5)
+            (localid 7:local$7)
             (i32)
             (int 1:0))
           (lookup
-            (localid 9:local$108)
+            (localid 9:local$119)
             (localid 1:f)
             (methodid 11:apply::2::0))
           (calldyn
-            (localid 9:local$109)
-            (localid 9:local$108)
+            (localid 9:local$120)
+            (localid 9:local$119)
             (args
               (arg
                 (argcopy)
                 (localid 1:f))
               (arg
                 (argcopy)
-                (localid 7:local$5)))))
+                (localid 7:local$7)))))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$120)))))
   (func
     (functionid 31:_builtin::nomatch::create::0::0)
     (params)
@@ -411,11 +411,11 @@ reify
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$70)
+            (localid 8:local$81)
             (classid 20:_builtin::nomatch::0)
             (args)))
         (ret
-          (localid 8:local$70)))))
+          (localid 8:local$81)))))
   (func
     (functionid 35:lambda_var_capture::write_var::0::0)
     (params)
@@ -427,37 +427,37 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 7:local$7)
+            (localid 7:local$9)
             (i32)
             (int 1:0))
           (copy
             (localid 1:x)
-            (localid 7:local$7))
+            (localid 7:local$9))
           (getraise
-            (localid 9:local$113))
+            (localid 9:local$124))
           (registerref
-            (localid 9:local$526)
+            (localid 9:local$543)
             (localid 1:x))
           (stack
-            (localid 7:local$8)
+            (localid 8:local$10)
             (classid 31:lambda_var_capture::lambda$1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$113))
+                (localid 9:local$124))
               (arg
                 (argcopy)
-                (localid 9:local$526))))
+                (localid 9:local$543))))
           (copy
             (localid 1:f)
-            (localid 7:local$8))
+            (localid 8:local$10))
           (lookup
-            (localid 9:local$114)
+            (localid 9:local$125)
             (localid 1:f)
             (methodid 11:apply::1::0))
           (calldyn
-            (localid 9:local$115)
-            (localid 9:local$114)
+            (localid 9:local$126)
+            (localid 9:local$125)
             (args
               (arg
                 (argcopy)
@@ -484,30 +484,30 @@ reify
             (localid 1:x)
             (localid 1:n))
           (getraise
-            (localid 9:local$121))
+            (localid 9:local$132))
           (registerref
-            (localid 9:local$531)
+            (localid 9:local$548)
             (localid 1:x))
           (stack
-            (localid 8:local$10)
+            (localid 8:local$12)
             (classid 31:lambda_var_capture::lambda$2::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$121))
+                (localid 9:local$132))
               (arg
                 (argcopy)
-                (localid 9:local$531))))
+                (localid 9:local$548))))
           (copy
             (localid 5:check)
-            (localid 8:local$10))
+            (localid 8:local$12))
           (lookup
-            (localid 9:local$122)
+            (localid 9:local$133)
             (localid 5:check)
             (methodid 11:apply::2::0))
           (calldyn
-            (localid 9:local$123)
-            (localid 9:local$122)
+            (localid 9:local$134)
+            (localid 9:local$133)
             (args
               (arg
                 (argcopy)
@@ -516,11 +516,11 @@ reify
                 (argcopy)
                 (localid 6:target))))
           (const
-            (localid 8:local$11)
+            (localid 8:local$13)
             (i32)
             (int 1:0)))
         (ret
-          (localid 8:local$11)))))
+          (localid 8:local$13)))))
   (primitive
     (ref
       (i32))
@@ -565,77 +565,77 @@ reify
         (i32)))
     (classid 20:_builtin::nomatch::0)
     (vars
-      (localid 7:local$9))
+      (localid 8:local$11))
     (labels
       (label
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$118)
+            (localid 9:local$129)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 13:$raise_target))
           (load
-            (localid 9:local$908)
-            (localid 9:local$118))
+            (localid 9:local$931)
+            (localid 9:local$129))
           (copy
             (localid 13:$raise_target)
-            (localid 9:local$908))
+            (localid 9:local$931))
           (fieldref
-            (localid 9:local$119)
+            (localid 9:local$130)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 1:x))
           (load
-            (localid 9:local$909)
-            (localid 9:local$119))
+            (localid 9:local$932)
+            (localid 9:local$130))
           (copy
             (localid 6:$ref_x)
-            (localid 9:local$909))
+            (localid 9:local$932))
           (setraise
-            (localid 9:local$120)
+            (localid 9:local$131)
             (localid 13:$raise_target))
           (call
-            (localid 7:local$9)
+            (localid 8:local$11)
             (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (load
-            (localid 9:local$528)
+            (localid 9:local$545)
             (localid 6:$ref_x))
           (lookup
-            (localid 9:local$952)
-            (localid 9:local$528)
+            (localid 9:local$975)
+            (localid 9:local$545)
             (methodid 8:==::2::0))
           (calldyn
-            (localid 9:local$953)
-            (localid 9:local$952)
+            (localid 9:local$976)
+            (localid 9:local$975)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$528))
+                (localid 9:local$545))
               (arg
                 (argcopy)
                 (localid 1:t)))))
         (cond
-          (localid 9:local$953)
-          (labelid 8:body$116)
-          (labelid 8:join$117)))
+          (localid 9:local$976)
+          (labelid 8:body$127)
+          (labelid 8:join$128)))
       (label
-        (labelid 8:body$116)
+        (labelid 8:body$127)
         (body
           (load
-            (localid 9:local$529)
+            (localid 9:local$546)
             (localid 6:$ref_x)))
         (raise
-          (localid 9:local$529)
+          (localid 9:local$546)
           (i32)))
       (label
-        (labelid 8:join$117)
+        (labelid 8:join$128)
         (body)
         (ret
-          (localid 7:local$9)))))
+          (localid 8:local$11)))))
   (class
     (classid 20:_builtin::nomatch::0)
     (fields)
@@ -656,11 +656,11 @@ reify
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$449)
+            (localid 9:local$466)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$449)))))
+          (localid 9:local$466)))))
   (primitive
     (bool)
     (methods
@@ -683,11 +683,11 @@ reify
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$168)
+            (localid 9:local$185)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$168)))))
+          (localid 9:local$185)))))
   (class
     (classid 31:lambda_var_capture::lambda$1::0)
     (fields
@@ -715,44 +715,44 @@ reify
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$110)
+            (localid 9:local$121)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 13:$raise_target))
           (load
-            (localid 9:local$906)
-            (localid 9:local$110))
+            (localid 9:local$929)
+            (localid 9:local$121))
           (copy
             (localid 13:$raise_target)
-            (localid 9:local$906))
+            (localid 9:local$929))
           (fieldref
-            (localid 9:local$111)
+            (localid 9:local$122)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 1:x))
           (load
-            (localid 9:local$907)
-            (localid 9:local$111))
+            (localid 9:local$930)
+            (localid 9:local$122))
           (copy
             (localid 6:$ref_x)
-            (localid 9:local$907))
+            (localid 9:local$930))
           (setraise
-            (localid 9:local$112)
+            (localid 9:local$123)
             (localid 13:$raise_target))
           (const
-            (localid 7:local$6)
+            (localid 7:local$8)
             (i32)
             (int 2:42))
           (store
-            (localid 9:local$524)
+            (localid 9:local$541)
             (localid 6:$ref_x)
             (arg
               (argcopy)
-              (localid 7:local$6))))
+              (localid 7:local$8))))
         (ret
-          (localid 9:local$524)))))
+          (localid 9:local$541)))))
   (class
     (classid 31:lambda_var_capture::lambda$0::0)
     (fields
@@ -783,51 +783,51 @@ reify
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$103)
+            (localid 9:local$114)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 13:$raise_target))
           (load
-            (localid 9:local$902)
-            (localid 9:local$103))
+            (localid 9:local$925)
+            (localid 9:local$114))
           (copy
             (localid 13:$raise_target)
-            (localid 9:local$902))
+            (localid 9:local$925))
           (fieldref
-            (localid 9:local$104)
+            (localid 9:local$115)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 1:x))
           (load
-            (localid 9:local$903)
-            (localid 9:local$104))
+            (localid 9:local$926)
+            (localid 9:local$115))
           (copy
             (localid 6:$ref_x)
-            (localid 9:local$903))
+            (localid 9:local$926))
           (setraise
-            (localid 9:local$105)
+            (localid 9:local$116)
             (localid 13:$raise_target))
           (load
-            (localid 9:local$106)
+            (localid 9:local$117)
             (localid 6:$ref_x))
           (lookup
-            (localid 9:local$904)
-            (localid 9:local$106)
+            (localid 9:local$927)
+            (localid 9:local$117)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 9:local$905)
-            (localid 9:local$904)
+            (localid 9:local$928)
+            (localid 9:local$927)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$106))
+                (localid 9:local$117))
               (arg
                 (argcopy)
                 (localid 1:y)))))
         (ret
-          (localid 9:local$905)))))
+          (localid 9:local$928)))))
   (func
     (functionid 23:_builtin::i32::!=::2::0)
     (params
@@ -844,11 +844,11 @@ reify
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$252)
+            (localid 9:local$269)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$252)))))
+          (localid 9:local$269)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -865,11 +865,11 @@ reify
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$241)
+            (localid 9:local$258)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$241)))))
+          (localid 9:local$258)))))
   (func
     (functionid 23:_builtin::i32::==::2::0)
     (params
@@ -886,8 +886,8 @@ reify
         (labelid 5:start)
         (body
           (eq
-            (localid 9:local$251)
+            (localid 9:local$268)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$251))))))
+          (localid 9:local$268))))))

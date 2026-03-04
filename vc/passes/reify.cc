@@ -428,13 +428,42 @@ namespace vc
       }
 
       // All other defs: dedup using substitution map equality.
+      // Only compare entries for TypeParams owned by this def — external
+      // entries from enclosing scopes don't influence the reification
+      // (they're already resolved) and can vary between call paths.
+      auto own_tps = def / TypeParams;
+
       for (auto& existing : r_vec)
       {
-        if (subst_equal(existing.subst, subst))
+        bool match = true;
+
+        for (auto& tp : *own_tps)
+        {
+          auto a_it = existing.subst.find(tp);
+          auto b_it = subst.find(tp);
+
+          if (a_it == existing.subst.end() && b_it == subst.end())
+            continue;
+
+          if (a_it == existing.subst.end() || b_it == subst.end())
+          {
+            match = false;
+            break;
+          }
+
+          if (!Subtype.invariant(top, a_it->second, b_it->second))
+          {
+            match = false;
+            break;
+          }
+        }
+
+        if (match)
           return clone(existing.id);
       }
 
       auto id = make_id(def, r_vec.size(), subst);
+
       r_vec.push_back(
         {def,
          std::move(subst),

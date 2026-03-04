@@ -167,6 +167,20 @@ namespace vc
       wfPassDot,
       dir::topdown,
       {
+        // Qualified function call followed by dot: Ns::f(args).method
+        // Convert to Call before the dot rules consume it.
+        In(Expr) * T(FuncName)[FuncName] * T(Tuple)[Tuple] * T(Dot) >>
+          [](Match& _) {
+            return Seq << (Call << _(FuncName) << (Args << *_(Tuple)))
+                       << _(Dot);
+          },
+
+        // Qualified zero-arg function call followed by dot: Ns::f.method
+        In(Expr) * T(FuncName)[FuncName] * T(Dot)[Dot] >>
+          [](Match& _) {
+            return Seq << (Call << _(FuncName) << Args) << _(Dot);
+          },
+
         // Dot with RHS tuple.
         In(Expr) * ValuePat[Lhs] * T(Dot)[Dot] * T(Tuple)[Tuple] >>
           [](Match& _) {

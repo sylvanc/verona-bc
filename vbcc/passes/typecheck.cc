@@ -1229,8 +1229,9 @@ namespace vbcc
         }
         else if (node->in({When, WhenDyn}))
         {
-          // When produces a cown.
-          set_type(env, node / LocalId, Node(Dyn));
+          // When produces a cown wrapping the behavior's result type.
+          // The Cown child already contains the inner type.
+          set_type(env, node / LocalId, clone(node / Cown));
         }
         else if (node == Typetest)
         {

@@ -2,7 +2,7 @@
 
 ## To Do
 
-Check if `when` is inferring a type.
+Does `f().g` parse?
 
 Review `iowise`.
 - Move to `io::out.print`, `io::err.print`.

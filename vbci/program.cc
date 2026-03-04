@@ -169,15 +169,17 @@ namespace vbci
         fini_callbacks.emplace_back(std::move(result), apply);
     }
 
-    // Run memo (once) function initializers in dependency order.
-    memo_slots.resize(memo_func_ids.size());
-    for (size_t i = 0; i < memo_func_ids.size(); i++)
-    {
-      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
-    }
-
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
+
+    // Run memo (once) function initializers in dependency order.
+    // This must happen after sched.init() because once functions may create
+    // cowns (via `when`), which requires the scheduler's core pool to be
+    // initialized for behavior queuing.
+    memo_slots.resize(memo_func_ids.size());
+    for (size_t i = 0; i < memo_func_ids.size(); i++)
+      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
+
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
     scheduler_running = true;

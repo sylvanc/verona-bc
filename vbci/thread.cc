@@ -1618,18 +1618,14 @@ namespace vbci
       case Op::AddExternal:
       {
         process([](Register& dst) INLINE {
-          verona::rt::Scheduler::schedule(
-            new verona::rt::Work([](verona::rt::Work* work) {
-              verona::rt::Scheduler::add_external_event_source();
+          verona::rt::Scheduler::add_external_event_source();
 
-              for (auto* cc : Program::get().notify_callbacks())
-              {
-                auto fn = (void (*)(void))callback_ptr(cc);
-                fn();
-              }
+          for (auto* cc : Program::get().notify_callbacks())
+          {
+            auto fn = (void (*)(void))callback_ptr(cc);
+            fn();
+          }
 
-              delete work;
-            }));
           dst = ValueImmortal(Value::none());
         });
         break;
@@ -1638,18 +1634,14 @@ namespace vbci
       case Op::RemoveExternal:
       {
         process([](Register& dst) INLINE {
-          verona::rt::Scheduler::schedule(
-            new verona::rt::Work([](verona::rt::Work* work) {
-              verona::rt::Scheduler::remove_external_event_source();
+          verona::rt::Scheduler::remove_external_event_source();
 
-              for (auto* cc : Program::get().notify_callbacks())
-              {
-                auto fn = (void (*)(void))callback_ptr(cc);
-                fn();
-              }
+          for (auto* cc : Program::get().notify_callbacks())
+          {
+            auto fn = (void (*)(void))callback_ptr(cc);
+            fn();
+          }
 
-              delete work;
-            }));
           dst = ValueImmortal(Value::none());
         });
         break;
