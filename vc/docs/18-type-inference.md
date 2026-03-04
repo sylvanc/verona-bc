@@ -179,7 +179,7 @@ Function types like `T -> none` desugar to shape classes with an `apply` method.
 each(self: array[T], f: T -> none): none { ... }
 
 let arr = array[i32]::fill(10);
-arr.each i -> { process(i); none }   // i: i32, inferred from T -> none
+arr.each i -> { process(i) }   // i: i32, inferred from T -> none
 ```
 
 ### Captured Variable Refinement

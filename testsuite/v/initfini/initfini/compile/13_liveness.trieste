@@ -12,11 +12,11 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 4:$980)
+            (localid 4:$976)
             (functionid 20:initfini::main::0::0)
             (args)))
         (ret
-          (localid 4:$980)))))
+          (localid 4:$976)))))
   (func
     (functionid 20:initfini::main::0::0)
     (params)
@@ -137,23 +137,27 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$503)
+            (localid 9:local$499)
             (arg
               (argmove)
               (localid 5:$self))
             (fieldid 1:y))
           (load
-            (localid 9:local$925)
-            (localid 9:local$503))
+            (localid 9:local$921)
+            (localid 9:local$499))
           (ffi
             (localid 7:local$7)
             (symbolid 8:printval)
             (args
               (arg
                 (argmove)
-                (localid 9:local$925)))))
+                (localid 9:local$921))))
+          (const
+            (localid 8:none$977)
+            (none)
+            (none)))
         (ret
-          (localid 7:local$7)))))
+          (localid 8:none$977)))))
   (primitive
     (ref
       (i32))

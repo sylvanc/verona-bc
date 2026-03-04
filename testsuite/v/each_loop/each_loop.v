@@ -4,16 +4,14 @@ main(): i32
 
   arr.pairs (i, v) ->
   {
-    arr(i) = i.i32;
-    none
+    arr(i) = i.i32
   }
 
   var sum = 0;
 
   arr.each i ->
   {
-    sum = sum + i;
-    none
+    sum = sum + i
   }
 
   sum

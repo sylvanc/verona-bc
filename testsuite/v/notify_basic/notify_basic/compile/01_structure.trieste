@@ -44,30 +44,20 @@ structure
                   (nameelement
                     (ident 24:register_external_notify)
                     (typeargs)))
-                (exprseq
-                  (expr
-                    (lambda
-                      {}
-                      (params)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 4:none)
-                            (typeargs))))
-                      (body
+                (lambda
+                  {}
+                  (params)
+                  (type
+                    (typevar))
+                  (body
+                    (expr
+                      (triplecolon
+                        (nameelement
+                          (ident 8:printval)
+                          (typeargs)))
+                      (exprseq
                         (expr
-                          (triplecolon
-                            (nameelement
-                              (ident 8:printval)
-                              (typeargs)))
-                          (exprseq
-                            (expr
-                              (int 1:0)))))))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs))))))
+                          (int 1:0)))))))))
           (symbol
             (symbolid 8:printval)
             (string 8:printval)
@@ -526,12 +516,7 @@ structure
                               (triplecolon
                                 (nameelement
                                   (ident 12:add_external)
-                                  (typeargs)))))))))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:none)
-                        (typeargs))))))
+                                  (typeargs)))))))))))
               (function
                 {
                   self = paramdef}
@@ -585,12 +570,7 @@ structure
                               (triplecolon
                                 (nameelement
                                   (ident 15:remove_external)
-                                  (typeargs)))))))))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 4:none)
-                        (typeargs))))))
+                                  (typeargs)))))))))))
               (function
                 {
                   c = paramdef}
@@ -1077,12 +1057,7 @@ structure
                               (nameelement
                                 (symbolid 1:+)
                                 (typeargs)))
-                            (int 1:1))))))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs))))))
+                            (int 1:1))))))))))
           (function
             {
               f = paramdef
@@ -1198,12 +1173,7 @@ structure
                               (nameelement
                                 (symbolid 1:+)
                                 (typeargs)))
-                            (int 1:1))))))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs))))))
+                            (int 1:1))))))))))
           (function
             {
               self = paramdef}

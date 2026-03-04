@@ -257,7 +257,7 @@ The runtime tracks "external resources" — things outside the Verona scheduler'
 - **`ffi::external.add`** — Tells the scheduler an external resource exists. The scheduler will not shut down while external resources remain.
 - **`ffi::external.remove`** — Tells the scheduler an external resource has been released.
 
-The `external` class is a singleton (using `once create()`) that serializes add/remove operations through an internal cown. The dot syntax `ffi::external.add` auto-calls `create()` to get the singleton and then dispatches `.add` on it. See [Functions §7.9](07-functions.md) for more on `once` functions.
+The `external` class is a singleton (using `once create()`) that serializes add/remove operations through an internal cown. The dot syntax `ffi::external.add` auto-calls `create()` to get the singleton and then dispatches `.add` on it. See [Functions §7.10](07-functions.md) for more on `once` functions.
 
 ### External Notify Callbacks
 
@@ -276,8 +276,7 @@ use
   init(): any
   {
     // Register a notify lambda during init (before scheduler starts)
-    ffi::register_external_notify((): none -> { :::printval(0) });
-    none
+    ffi::register_external_notify((): none -> { :::printval(0) })
   }
 
   printval = "printval"(any): none;

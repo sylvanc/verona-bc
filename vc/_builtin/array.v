@@ -38,8 +38,6 @@ array[T]
       f(self(i));
       i = i + 1
     }
-
-    none
   }
 
   pairs(self: array[T], f: (usize, T) -> none): none
@@ -51,8 +49,6 @@ array[T]
       f(i, self(i));
       i = i + 1
     }
-
-    none
   }
 
   values(self: array[T]): arrayiter[T]

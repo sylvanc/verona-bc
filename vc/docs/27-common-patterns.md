@@ -100,8 +100,7 @@ Use the `pairs` method to iterate with both index and value:
 ```verona
 arr.pairs (i, v) ->
 {
-  process(i, v);
-  none
+  process(i, v)
 }
 ```
 
@@ -110,8 +109,7 @@ For simple element iteration, use `each`:
 ```verona
 arr.each elem ->
 {
-  process(elem);
-  none
+  process(elem)
 }
 ```
 
@@ -354,4 +352,4 @@ main(): i32
 }
 ```
 
-This pattern is commonly used in `_builtin/ffi/` for managing external resource state (e.g., the `external` class in `notify.v`). See [Functions §7.9](07-functions.md).
+This pattern is commonly used in `_builtin/ffi/` for managing external resource state (e.g., the `external` class in `notify.v`). See [Functions §7.10](07-functions.md).

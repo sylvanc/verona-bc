@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 4:$977)
+            (localid 4:$973)
             (functionid 29:callback_no_apply::main::0::0)
             (args)))
         (ret
-          (localid 4:$977)))))
+          (localid 4:$973)))))
   (func
     (functionid 29:callback_no_apply::main::0::0)
     (params)
@@ -29,7 +29,7 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$110)
+            (localid 9:local$106)
             (i32)
             (int 1:0))
           (call
@@ -38,7 +38,7 @@ reify
             (args
               (arg
                 (argcopy)
-                (localid 9:local$110))))
+                (localid 9:local$106))))
           (copy
             (localid 3:obj)
             (localid 7:local$7))
@@ -53,12 +53,12 @@ reify
             (localid 2:cb)
             (localid 7:local$8))
           (lookup
-            (localid 9:local$111)
+            (localid 9:local$107)
             (localid 2:cb)
             (methodid 10:free::1::0))
           (calldyn
-            (localid 9:local$112)
-            (localid 9:local$111)
+            (localid 9:local$108)
+            (localid 9:local$107)
             (args
               (arg
                 (argcopy)
@@ -109,7 +109,7 @@ reify
             (errormsg 52:make_callback requires a type with an 'apply' method)
             (makecallback)))
         (ret
-          (localid 9:local$505)))))
+          (localid 9:local$501)))))
   (primitive
     (callback)
     (methods
@@ -136,10 +136,14 @@ reify
         (labelid 5:start)
         (body
           (freecallback
-            (localid 9:local$507)
-            (localid 4:self)))
+            (localid 9:local$503)
+            (localid 4:self))
+          (const
+            (localid 8:none$974)
+            (none)
+            (none)))
         (ret
-          (localid 9:local$507)))))
+          (localid 8:none$974)))))
   (primitive
     (none)
     (methods)))

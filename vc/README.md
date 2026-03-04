@@ -2,10 +2,6 @@
 
 ## To Do
 
-Auto-none at the end of a function that returns `none`.
-- Not if there's a `return` or a `raise` at the end.
-- No change needed for explicit return or raise branches.
-
 Review `iowise`.
 - Test it?
 

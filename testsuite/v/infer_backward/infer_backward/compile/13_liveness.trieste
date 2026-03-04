@@ -12,11 +12,11 @@ liveness
         (labelid 5:start)
         (body
           (call
-            (localid 4:$978)
+            (localid 4:$974)
             (functionid 26:infer_backward::main::0::0)
             (args)))
         (ret
-          (localid 4:$978)))))
+          (localid 4:$974)))))
   (func
     (functionid 26:infer_backward::main::0::0)
     (params)
@@ -27,7 +27,7 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$114)
+            (localid 9:local$110)
             (i32)
             (int 2:42))
           (call
@@ -36,7 +36,7 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$114))))
+                (localid 9:local$110))))
           (move
             (localid 1:w)
             (localid 7:local$8))
@@ -86,18 +86,18 @@ liveness
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$112)
+            (localid 9:local$108)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 9:local$113)
-            (localid 9:local$112)
+            (localid 9:local$109)
+            (localid 9:local$108)
             (args
               (arg
                 (argmove)
                 (localid 1:w)))))
         (ret
-          (localid 9:local$113)))))
+          (localid 9:local$109)))))
   (class
     (classid 26:infer_backward::wrapper::0)
     (fields
@@ -124,18 +124,18 @@ liveness
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$110)
+            (localid 9:local$106)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$111)
-            (localid 9:local$110)
+            (localid 9:local$107)
+            (localid 9:local$106)
             (args
               (arg
                 (argmove)
                 (localid 4:self)))))
         (ret
-          (localid 9:local$111)))))
+          (localid 9:local$107)))))
   (func
     (functionid 34:infer_backward::wrapper::val::1::0)
     (params
@@ -156,10 +156,10 @@ liveness
                 (argmove)
                 (localid 4:self))))
           (load
-            (localid 9:local$504)
+            (localid 9:local$500)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$504)))))
+          (localid 9:local$500)))))
   (func
     (functionid 39:infer_backward::wrapper::val::1::ref::0)
     (params
@@ -174,13 +174,13 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$109)
+            (localid 9:local$105)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$105)))))
   (primitive
     (ref
       (i32))

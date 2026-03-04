@@ -6,8 +6,7 @@ use
 {
   init(): any
   {
-    ffi::register_external_notify((): none -> { :::printval(0) });
-    none
+    ffi::register_external_notify () -> { :::printval(0) }
   }
 
   printval = "printval"(any): none;

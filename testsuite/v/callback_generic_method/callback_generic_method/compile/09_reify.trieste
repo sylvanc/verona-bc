@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 4:$973)
+            (localid 4:$969)
             (functionid 35:callback_generic_method::main::0::0)
             (args)))
         (ret
-          (localid 4:$973)))))
+          (localid 4:$969)))))
   (func
     (functionid 35:callback_generic_method::main::0::0)
     (params)
@@ -46,12 +46,12 @@ reify
             (localid 2:cb)
             (localid 7:local$7))
           (lookup
-            (localid 9:local$108)
+            (localid 9:local$104)
             (localid 2:cb)
             (methodid 10:free::1::0))
           (calldyn
-            (localid 9:local$109)
-            (localid 9:local$108)
+            (localid 9:local$105)
+            (localid 9:local$104)
             (args
               (arg
                 (argcopy)
@@ -96,7 +96,7 @@ reify
             (errormsg 51:make_callback requires a non-generic 'apply' method)
             (makecallback)))
         (ret
-          (localid 9:local$501)))))
+          (localid 9:local$497)))))
   (primitive
     (callback)
     (methods
@@ -120,10 +120,14 @@ reify
         (labelid 5:start)
         (body
           (freecallback
-            (localid 9:local$503)
-            (localid 4:self)))
+            (localid 9:local$499)
+            (localid 4:self))
+          (const
+            (localid 8:none$970)
+            (none)
+            (none)))
         (ret
-          (localid 9:local$503)))))
+          (localid 8:none$970)))))
   (primitive
     (none)
     (methods)))

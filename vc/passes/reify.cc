@@ -1167,6 +1167,26 @@ namespace vc
           term / Type = reify_type(term / Type, r.subst);
       }
 
+      // Implicit none return: when a function returns none, append a
+      // none constant and use it as the return value for any Return
+      // terminator. This lets users omit the trailing `none` in
+      // functions and lambdas that return none.
+      if (r_type->type() == None)
+      {
+        for (auto& l : *labels)
+        {
+          auto term = l / Return;
+
+          if (term != Return)
+            continue;
+
+          auto none_loc = top->fresh(Location("none"));
+          auto body = l / Body;
+          body << (Const << (LocalId ^ none_loc) << clone(None) << clone(None));
+          term->replace(term->front(), LocalId ^ none_loc);
+        }
+      }
+
       if ((r.def / Lhs) == Once)
       {
         r.reification =

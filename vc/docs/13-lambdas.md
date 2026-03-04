@@ -60,9 +60,9 @@ When the argument to a method call is a lambda, you can omit parentheses on the 
 
 ```verona
 // These are equivalent:
-arr.each((x: i32) -> { process(x); none })
-arr.each (x: i32) -> { process(x); none }
-arr.each x -> { process(x); none }
+arr.each((x: i32) -> { process(x) })
+arr.each (x: i32) -> { process(x) }
+arr.each x -> { process(x) }
 ```
 
 Since `each` expects a function argument, the lambda is passed as that argument.
@@ -73,11 +73,11 @@ This is especially useful for higher-order methods like `each` and `pairs`:
 let arr = array[i32]::fill(10);
 
 // Using pairs with trailing lambda (two parameters need parens):
-arr.pairs (i, v) -> { arr(i) = i.i32; none }
+arr.pairs (i, v) -> { arr(i) = i.i32 }
 
 // Using each with trailing lambda (single parameter, no parens):
 var sum = 0;
-arr.each i -> { sum = sum + i; none }
+arr.each i -> { sum = sum + i }
 ```
 
 ---
@@ -136,7 +136,7 @@ main(): i32
   let arr = array[i32]::fill(3);     // let-capture: copied into lambda
   var sum = 0;                        // var-capture: captured by reference
 
-  arr.each i -> { sum = sum + i; none }
+  arr.each i -> { sum = sum + i }
   sum                                 // visible changes from lambda body
 }
 ```
@@ -260,7 +260,7 @@ When a lambda is passed to a function that expects a specific function type, the
 each(self: array[T], f: T -> none): none { ... }
 
 let arr = array[i32]::fill(10);
-arr.each i -> { process(i); none }   // i inferred as i32 from T -> none
+arr.each i -> { process(i) }   // i inferred as i32 from T -> none
 ```
 
 This works because the `each` method's `f` parameter has type `T -> none`, which desugars to a shape with `apply(self: self, a0: T): none`. When `T` is `i32`, the compiler propagates `i32` to the lambda's parameter.
@@ -283,7 +283,7 @@ main(): i32
   var sum = 0;                        // 0 defaults to u64, but...
   // return type i32 refines sum to i32
   // cascade propagates through ref capture to lambda
-  arr.each i -> { sum = sum + i; none }
+  arr.each i -> { sum = sum + i }
   sum                                 // i32
 }
 ```

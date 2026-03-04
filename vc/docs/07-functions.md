@@ -213,7 +213,26 @@ The [infer pass](18-type-inference.md) resolves unspecified return types from th
 
 ---
 
-## 7.7 Auto-Generated `create`
+## 7.7 Implicit `none` Return
+
+Functions and lambdas that return `none` do not need an explicit `none` at the end of their body. The compiler automatically inserts one:
+
+```verona
+log(msg: string): none
+{
+  :::printval(msg)
+  // implicit none inserted here
+}
+
+// Lambdas too:
+arr.each i -> { process(i) }          // no trailing none needed
+```
+
+This applies to all functions and lambdas whose return type is `none`, whether the type is explicit or inferred from a shape (e.g., `T -> none`). The implicit `none` is inserted during monomorphization, so it works even when the return type comes from generic type inference.
+
+---
+
+## 7.8 Auto-Generated `create`
 
 If a class has no explicit `create` function, one is auto-generated from its fields:
 
@@ -238,7 +257,7 @@ If the class defines any `create` function, no auto-generation occurs.
 
 ---
 
-## 7.8 Overload Resolution
+## 7.9 Overload Resolution
 
 Functions are resolved by:
 
@@ -257,7 +276,7 @@ There is no overloading by parameter type alone — only name and arity matter f
 
 ---
 
-## 7.9 Once Functions (Memoized)
+## 7.10 Once Functions (Memoized)
 
 A function prefixed with `once` is memoized — it is evaluated exactly once at program startup (before `main()`), and all subsequent calls return the cached result:
 

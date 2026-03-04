@@ -44,39 +44,20 @@ ident
                   (nameelement
                     (ident 24:register_external_notify)
                     (typeargs)))
-                (exprseq
-                  (expr
-                    (lambda
-                      {}
-                      (params)
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 4:none)
-                            (typeargs))))
-                      (body
+                (lambda
+                  {}
+                  (params)
+                  (type
+                    (typevar))
+                  (body
+                    (expr
+                      (triplecolon
+                        (nameelement
+                          (ident 8:printval)
+                          (typeargs)))
+                      (exprseq
                         (expr
-                          (triplecolon
-                            (nameelement
-                              (ident 8:printval)
-                              (typeargs)))
-                          (exprseq
-                            (expr
-                              (int 1:0)))))))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs))
-                  (nameelement
-                    (ident 6:create)
-                    (typeargs))))))
+                          (int 1:0)))))))))
           (symbol
             (symbolid 8:printval)
             (string 8:printval)
@@ -628,18 +609,7 @@ ident
                               (triplecolon
                                 (nameelement
                                   (ident 12:add_external)
-                                  (typeargs)))))))))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 8:_builtin)
-                        (typeargs))
-                      (nameelement
-                        (ident 4:none)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs))))))
+                                  (typeargs)))))))))))
               (function
                 {
                   self = paramdef}
@@ -699,18 +669,7 @@ ident
                               (triplecolon
                                 (nameelement
                                   (ident 15:remove_external)
-                                  (typeargs)))))))))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 8:_builtin)
-                        (typeargs))
-                      (nameelement
-                        (ident 4:none)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs))))))
+                                  (typeargs)))))))))))
               (function
                 {
                   c = paramdef}
@@ -1241,18 +1200,7 @@ ident
                             (methodname
                               (symbolid 1:+)
                               (typeargs))
-                            (int 1:1))))))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs))
-                  (nameelement
-                    (ident 6:create)
-                    (typeargs))))))
+                            (int 1:1))))))))))
           (function
             {
               f = paramdef
@@ -1366,18 +1314,7 @@ ident
                             (methodname
                               (symbolid 1:+)
                               (typeargs))
-                            (int 1:1))))))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs))
-                  (nameelement
-                    (ident 6:create)
-                    (typeargs))))))
+                            (int 1:1))))))))))
           (function
             {
               self = paramdef}

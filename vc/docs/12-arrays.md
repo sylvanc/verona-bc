@@ -109,8 +109,7 @@ main(): i32
   // Set each element to its index
   arr.pairs (i, v) ->
   {
-    arr(i) = i.i32;
-    none
+    arr(i) = i.i32
   }
 
   // Sum all elements
@@ -118,8 +117,7 @@ main(): i32
 
   arr.each i ->
   {
-    sum = sum + i;
-    none
+    sum = sum + i
   }
 
   sum                                 // 45 (0 + 1 + ... + 9)
