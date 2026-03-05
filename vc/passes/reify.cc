@@ -83,6 +83,8 @@ namespace vc
       // Iteratively reify classes/aliases/functions. Method registrations
       // happen inline: reify_class registers all existing MIs on the new
       // class, and reify_lookup registers the new MI on all existing classes.
+      std::vector<Reification*> deferred_typevar;
+
       while (!worklist.empty())
       {
         auto r = worklist.back();
@@ -93,9 +95,134 @@ namespace vc
         else if (r->def == TypeAlias)
           reify_typealias(*r);
         else if (r->def == Function)
+        {
           reify_function(*r);
+
+          // If the function had a TypeVar return and we fell back to Dyn,
+          // defer it for a second pass when all callees are reified.
+          if (
+            r->reification &&
+            (r->def / Type)->front() == TypeVar &&
+            (r->reification / Type)->type() == Dyn)
+          {
+            deferred_typevar.push_back(r);
+          }
+        }
         else
           assert(false);
+      }
+
+      // Second pass: re-resolve return types for functions whose TypeVar
+      // return fell back to Dyn. Now all callees are reified, so method
+      // return types are available. We rebuild local_types from the
+      // already-reified body without re-running mutations.
+      for (auto r : deferred_typevar)
+      {
+        auto func = r->reification;
+        auto labels = func / Labels;
+
+        // Rebuild local_types by scanning the reified body.
+        local_types.clear();
+        lookup_info.clear();
+
+        // Track param types.
+        for (auto& p : *(func / Params))
+          local_types[(p / LocalId)->location()] = clone(p / Type);
+
+        for (auto& lbl : *labels)
+        {
+          for (auto& stmt : *(lbl / Body))
+          {
+            if (stmt->in({Const, Convert}))
+            {
+              local_types[(stmt / LocalId)->location()] = clone(stmt / Type);
+            }
+            else if (stmt == ConstStr)
+            {
+              local_types[(stmt / LocalId)->location()] = Array << clone(U8);
+            }
+            else if (stmt->in({Copy, Move}))
+            {
+              auto src_it = local_types.find((stmt / Rhs)->location());
+              if (src_it != local_types.end())
+                local_types[(stmt / LocalId)->location()] =
+                  clone(src_it->second);
+            }
+            else if (stmt->in({New, Stack}))
+            {
+              local_types[(stmt / LocalId)->location()] =
+                clone(stmt / ClassId);
+            }
+            else if (stmt == Lookup)
+            {
+              auto mid = (stmt / MethodId)->location().view();
+              lookup_info[(stmt / LocalId)->location()] =
+                {std::string(mid), (stmt / Rhs)->location()};
+            }
+            else if (stmt == Call)
+            {
+              auto ret = find_func_return_type(stmt / FunctionId);
+              if (ret)
+                local_types[(stmt / LocalId)->location()] = ret;
+            }
+            else if (stmt->in({CallDyn, TryCallDyn}))
+            {
+              auto src_loc = (stmt / Rhs)->location();
+              auto li = lookup_info.find(src_loc);
+              if (li != lookup_info.end())
+              {
+                auto recv_it = local_types.find(li->second.recv_loc);
+                if (recv_it != local_types.end())
+                {
+                  auto ret = find_method_return_type(
+                    recv_it->second, li->second.method_id);
+                  if (ret)
+                    local_types[(stmt / LocalId)->location()] = ret;
+                }
+              }
+            }
+            else if (stmt == Load)
+            {
+              auto src_it = local_types.find((stmt / Rhs)->location());
+              if (src_it != local_types.end() && (src_it->second == Ref))
+                local_types[(stmt / LocalId)->location()] =
+                  clone(src_it->second->front());
+            }
+            else if (stmt == WhenDyn)
+            {
+              auto cown_type = stmt / Cown;
+              local_types[(stmt / LocalId)->location()] = clone(cown_type);
+            }
+          }
+        }
+
+        // Now try to infer the return type from Return locals.
+        Node new_ret;
+
+        for (auto& lbl : *labels)
+        {
+          auto term = lbl / Return;
+          if (term != Return)
+            continue;
+
+          auto ret_loc = (term / LocalId)->location();
+          auto it = local_types.find(ret_loc);
+          if (it != local_types.end())
+          {
+            new_ret = clone(it->second);
+            break;
+          }
+        }
+
+        if (new_ret && new_ret->type() != Dyn)
+        {
+          // Replace the Dyn return type with the resolved type.
+          auto old_type = func / Type;
+          func->replace(old_type, new_ret);
+
+          // Also update the WhenDyn Cown types in calling functions
+          // that reference this function's return type.
+        }
       }
 
       // Resolve shapes: each shape becomes a Type node mapping its TypeId
@@ -202,6 +329,16 @@ namespace vc
     // Per-function local type map: LocalId location -> reified type.
     // Populated during reify_function, used by reify_lookup.
     std::map<Location, Node> local_types;
+
+    // Per-function lookup info: maps Lookup dst location to
+    // {MethodId string, receiver location}. Used to resolve CallDyn and
+    // When return types.
+    struct LookupInfo
+    {
+      std::string method_id;
+      Location recv_loc;
+    };
+    std::map<Location, LookupInfo> lookup_info;
 
     // Extract individual type ids from a reified type. For Union, extracts
     // each member. For Dyn, returns empty (meaning all classes). For
@@ -413,7 +550,28 @@ namespace vc
           for (auto& existing : r_vec)
           {
             if (existing.id->equals(id))
+            {
+              // If the existing entry has an empty subst but the new call
+              // has a non-empty one, update the existing entry's subst.
+              // This happens when ensure_ref_reified creates a wrapper with
+              // empty subst, and get_reification later provides proper subst.
+              if (existing.subst.empty() && !subst.empty())
+              {
+                existing.subst = subst;
+
+                // Re-register methods now that subst is available.
+                if (existing.reification)
+                {
+                  for (auto& mi : method_invocations)
+                  {
+                    if (mi_targets(mi, existing.id))
+                      register_method(mi, existing);
+                  }
+                }
+              }
+
               return clone(existing.id);
+            }
           }
 
           r_vec.push_back(
@@ -428,33 +586,52 @@ namespace vc
       }
 
       // All other defs: dedup using substitution map equality.
-      // Only compare entries for TypeParams owned by this def — external
-      // entries from enclosing scopes don't influence the reification
-      // (they're already resolved) and can vary between call paths.
+      // Compare entries for TypeParams owned by this def AND by the
+      // enclosing class (if the def is a Function). Functions like
+      // ref::* reference the class's TypeParam T in their signature,
+      // so different T bindings must produce different reifications.
       auto own_tps = def / TypeParams;
+      auto parent_cls = def->parent(ClassDef);
+      auto parent_tps =
+        (parent_cls && def == Function) ? parent_cls / TypeParams : Node{};
 
       for (auto& existing : r_vec)
       {
         bool match = true;
 
-        for (auto& tp : *own_tps)
-        {
+        auto check_tp = [&](const Node& tp) {
           auto a_it = existing.subst.find(tp);
           auto b_it = subst.find(tp);
 
           if (a_it == existing.subst.end() && b_it == subst.end())
-            continue;
+            return;
 
           if (a_it == existing.subst.end() || b_it == subst.end())
           {
             match = false;
-            break;
+            return;
           }
 
           if (!Subtype.invariant(top, a_it->second, b_it->second))
           {
             match = false;
+          }
+        };
+
+        for (auto& tp : *own_tps)
+        {
+          check_tp(tp);
+          if (!match)
             break;
+        }
+
+        if (match && parent_tps)
+        {
+          for (auto& tp : *parent_tps)
+          {
+            check_tp(tp);
+            if (!match)
+              break;
           }
         }
 
@@ -546,13 +723,85 @@ namespace vc
       r.reification = Type << r.id << reify_type(r.def / Type, r.subst);
     }
 
+    // Find a function reification by FunctionId and return its reified
+    // return type. Returns empty Node if not found or not yet reified.
+    Node find_func_return_type(const Node& funcid)
+    {
+      auto funcid_loc = funcid->location().view();
+
+      for (auto& key : map_order)
+      {
+        if (key != Function)
+          continue;
+
+        for (auto& reif : map[key])
+        {
+          if (reif.id && (reif.id->location().view() == funcid_loc))
+          {
+            if (reif.reification)
+              return clone(reif.reification / Type);
+
+            // Not yet reified — return empty. The deferred second pass
+            // will resolve this after all functions are reified.
+            return {};
+          }
+        }
+      }
+
+      return {};
+    }
+
+    // Given a reified receiver type (ClassId or primitive) and a MethodId
+    // string, find the method's function return type by searching the
+    // class's registered Methods.
+    Node find_method_return_type(
+      Node recv_type, const std::string& method_id)
+    {
+      // Find the class reification matching the receiver type.
+      for (auto& key : map_order)
+      {
+        if (key != ClassDef)
+          continue;
+
+        for (auto& r : map[key])
+        {
+          if (!r.reification || !r.id)
+            continue;
+
+          if (!r.id->equals(recv_type))
+            continue;
+
+          // Search the Methods for the matching MethodId.
+          auto methods = r.reification / Methods;
+
+          for (auto& m : *methods)
+          {
+            if ((m / MethodId)->location().view() == method_id)
+              return find_func_return_type(m / FunctionId);
+          }
+
+          return {};
+        }
+      }
+
+      return {};
+    }
+
     bool reify_function(Reification& r)
     {
       // Clear per-function local type tracking.
       local_types.clear();
+      lookup_info.clear();
 
       // Reify the function signature.
-      auto r_type = reify_type(r.def / Type, r.subst);
+      auto def_type = r.def / Type;
+      bool typevar_return = (def_type->front() == TypeVar);
+      Node r_type;
+
+      if (!typevar_return)
+        r_type = reify_type(def_type, r.subst);
+      else
+        r_type = {}; // Will be inferred from Return terminals after body.
       Node params = Params;
 
       for (auto& p : *(r.def / Params))
@@ -964,11 +1213,39 @@ namespace vc
           }
           else if (n == Lookup)
           {
+            // Save receiver location before reify_lookup transforms the node.
+            auto recv_loc = (n / Rhs)->location();
             reify_lookup(n, r.subst);
+            // After reify_lookup: Lookup << dst << src << MethodId.
+            auto mid = (n / MethodId)->location().view();
+            lookup_info[(n / LocalId)->location()] =
+              {std::string(mid), recv_loc};
           }
           else if (n == Call)
           {
             reify_call(n, r.subst);
+            // Track Call return type from the function reification.
+            auto ret = find_func_return_type(n / FunctionId);
+            if (ret)
+              local_types[(n / LocalId)->location()] = ret;
+          }
+          else if (n->in({CallDyn, TryCallDyn}))
+          {
+            // Track CallDyn return type by resolving the method on
+            // the receiver's reified class.
+            auto src_loc = (n / Rhs)->location();
+            auto li = lookup_info.find(src_loc);
+            if (li != lookup_info.end())
+            {
+              auto recv_it = local_types.find(li->second.recv_loc);
+              if (recv_it != local_types.end())
+              {
+                auto ret = find_method_return_type(
+                  recv_it->second, li->second.method_id);
+                if (ret)
+                  local_types[(n / LocalId)->location()] = ret;
+              }
+            }
           }
           else if (n == NewArray)
           {
@@ -1163,6 +1440,60 @@ namespace vc
           term / Type = reify_type(term / Type, r.subst);
       }
 
+      // Infer TypeVar return type from Return terminals after body
+      // processing. By now, local_types has been populated for all
+      // statements in the body.
+      if (typevar_return)
+      {
+        for (auto& l : *labels)
+        {
+          auto term = l / Return;
+
+          if (term != Return)
+            continue;
+
+          auto ret_loc = (term / LocalId)->location();
+          auto it = local_types.find(ret_loc);
+
+          if (it != local_types.end())
+          {
+            r_type = clone(it->second);
+            break;
+          }
+        }
+
+        // If we still don't have a type, check if all exits are
+        // Raise/Jump — the function never returns normally.
+        if (!r_type)
+        {
+          bool all_nonlocal = true;
+
+          for (auto& l : *labels)
+          {
+            auto term = l / Return;
+
+            if (term->in({Jump, Cond}))
+              continue;
+
+            if (term != Raise)
+            {
+              all_nonlocal = false;
+              break;
+            }
+          }
+
+          if (all_nonlocal)
+          {
+            reify_primitive(clone(None));
+            r_type = clone(None);
+          }
+        }
+
+        // Last resort: mark as Dyn and report error later.
+        if (!r_type)
+          r_type = Dyn;
+      }
+
       // Implicit none return: when a function returns none, append a
       // none constant and use it as the return value for any Return
       // terminator. This lets users omit the trailing `none` in
@@ -1307,6 +1638,12 @@ namespace vc
       // Already-reified IR type (e.g., from Dyn fallback for missing
       // TypeArgs). Return as-is.
       if (type == Dyn)
+        return Dyn;
+
+      // TypeVar that wasn't resolved during inference (e.g., in a generic
+      // context). Return Dyn as a fallback — the caller should handle this
+      // or the second pass will resolve it.
+      if (type == TypeVar)
         return Dyn;
 
       // Preserve TupleType with reified element types.
@@ -1683,6 +2020,15 @@ namespace vc
     {
       assert(r.def == ClassDef);
 
+      // Skip method registration if the class has TypeParams but the
+      // subst doesn't include them (e.g., wrapper classes created by
+      // ensure_ref_reified with empty subst). Methods will be registered
+      // when the subst is updated via find_or_push.
+      auto class_tps = r.def / TypeParams;
+
+      if (!class_tps->empty() && r.subst.empty())
+        return;
+
       auto mid_node = MethodId ^ mi.method_id;
 
       for (auto& f : *(r.def / ClassBody))
@@ -1991,8 +2337,47 @@ namespace vc
 
     Node reify_when(Node& n, Reification& r)
     {
-      return WhenDyn << (n / LocalId) << (n / Rhs) << (n / Args)
-                     << (Cown << reify_type(n / Type, r.subst));
+      auto when_type = n / Type;
+      Node inner_type;
+
+      if (when_type->front() != TypeVar)
+      {
+        inner_type = reify_type(when_type, r.subst);
+      }
+      else
+      {
+        // TypeVar return: try to resolve from the lambda apply's
+        // registered method reification. The When's Rhs is the Lookup
+        // result for 'apply' on the lambda.
+        auto src_loc = (n / Rhs)->location();
+        auto li = lookup_info.find(src_loc);
+
+        if (li != lookup_info.end())
+        {
+          auto recv_it = local_types.find(li->second.recv_loc);
+
+          if (recv_it != local_types.end())
+          {
+            auto ret = find_method_return_type(
+              recv_it->second, li->second.method_id);
+
+            if (ret)
+              inner_type = ret;
+          }
+        }
+
+        // Fallback: emit Dyn if we couldn't resolve.
+        if (!inner_type)
+          inner_type = Dyn;
+      }
+
+      auto dst_loc = (n / LocalId)->location();
+      auto result = WhenDyn << (n / LocalId) << (n / Rhs) << (n / Args)
+                            << (Cown << inner_type);
+
+      // Track the When result as Cown << inner_type.
+      local_types[dst_loc] = Cown << clone(inner_type);
+      return result;
     }
 
     // Given a TypeName or FuncName and a substitution map, find or create a
