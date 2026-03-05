@@ -535,8 +535,7 @@ namespace vc
 
         if (actual_ret->front() == TypeVar)
         {
-          auto shape_ret_subst =
-            apply_subst(top, shape_ret, shape_subst);
+          auto shape_ret_subst = apply_subst(top, shape_ret, shape_subst);
 
           if (shape_ret_subst && shape_ret_subst->front() != TypeVar)
             actual_func->replace(actual_ret, clone(shape_ret_subst));
@@ -915,8 +914,7 @@ namespace vc
     assert(call == Call);
     auto funcname = call / FuncName;
     auto args = call / Args;
-    auto func_def =
-      find_func_def(top, funcname, args->size(), call / Lhs);
+    auto func_def = find_func_def(top, funcname, args->size(), call / Lhs);
 
     if (!func_def)
       return {};
@@ -1044,7 +1042,7 @@ namespace vc
       return;
 
     LOG(Trace) << "backward_refine_call: refining TypeArgs for "
-               << Node(prior_call / FuncName) << std::endl;
+               << (prior_call / FuncName)->location().view() << std::endl;
 
     // Update TypeArgs in the prior call's FuncName.
     for (auto& scope : scopes)
@@ -1187,12 +1185,7 @@ namespace vc
     if (recv_it != env.end())
     {
       auto ret_type = resolve_method_return_type(
-        top,
-        recv_it->second.type,
-        method_ident,
-        hand,
-        arity,
-        method_ta);
+        top, recv_it->second.type, method_ident, hand, arity, method_ta);
 
       if (ret_type)
         env[lookup_dst->location()] = LocalTypeInfo::computed(ret_type);
@@ -1232,10 +1225,7 @@ namespace vc
 
   // Try to infer TypeArgs and refine Const types at a Call site.
   void infer_call(
-    Node call,
-    TypeEnv& env,
-    Node top,
-    std::map<Location, Node>& lookup_stmts)
+    Node call, TypeEnv& env, Node top, std::map<Location, Node>& lookup_stmts)
   {
     std::vector<ScopeInfo> scopes;
     auto func_def = navigate_call(call, top, scopes);
@@ -1649,8 +1639,7 @@ namespace vc
   // If the new type is a subtype of any existing member, returns the
   // existing union unchanged. If any existing member is a subtype of the
   // new type, removes it and adds the new type.
-  static Node
-  merge_type(const Node& existing, const Node& incoming, Node top)
+  static Node merge_type(const Node& existing, const Node& incoming, Node top)
   {
     if (!existing || existing->front() == TypeVar)
       return clone(incoming);
@@ -1940,8 +1929,7 @@ namespace vc
             auto cp_src = stmt2 / Rhs;
 
             if (
-              cascade_changed.find(cp_src->location()) ==
-              cascade_changed.end())
+              cascade_changed.find(cp_src->location()) == cascade_changed.end())
               continue;
 
             auto dst_it = env.find(cp_dst->location());
@@ -1969,8 +1957,7 @@ namespace vc
             auto lk_src = stmt2 / Rhs;
 
             if (
-              cascade_changed.find(lk_src->location()) ==
-              cascade_changed.end())
+              cascade_changed.find(lk_src->location()) == cascade_changed.end())
               continue;
 
             auto lk_hand = (stmt2 / Lhs)->type();
@@ -1982,23 +1969,16 @@ namespace vc
             if (src_it != env.end())
             {
               auto rt = resolve_method_return_type(
-                top,
-                src_it->second.type,
-                lk_ident,
-                lk_hand,
-                lk_ar,
-                lk_ta);
+                top, src_it->second.type, lk_ident, lk_hand, lk_ar, lk_ta);
 
               if (rt)
               {
                 auto dst_it = env.find(lk_dst->location());
 
                 if (
-                  dst_it == env.end() ||
-                  !types_equal(dst_it->second.type, rt))
+                  dst_it == env.end() || !types_equal(dst_it->second.type, rt))
                 {
-                  env[lk_dst->location()] =
-                    LocalTypeInfo::computed(rt);
+                  env[lk_dst->location()] = LocalTypeInfo::computed(rt);
                   cascade_changed.insert(lk_dst->location());
                   changed = true;
                 }
@@ -2012,17 +1992,14 @@ namespace vc
             auto cd_args = stmt2 / Args;
 
             bool src_changed =
-              cascade_changed.find(cd_src->location()) !=
-              cascade_changed.end();
+              cascade_changed.find(cd_src->location()) != cascade_changed.end();
             bool arg_changed = false;
 
             for (auto& arg_node : *cd_args)
             {
               auto as = arg_node / Rhs;
 
-              if (
-                cascade_changed.find(as->location()) !=
-                cascade_changed.end())
+              if (cascade_changed.find(as->location()) != cascade_changed.end())
               {
                 arg_changed = true;
                 break;
@@ -2060,8 +2037,8 @@ namespace vc
                     if (idx >= mparams->size())
                       break;
 
-                    auto pt = apply_subst(
-                      top, mparams->at(idx) / Type, minfo.subst);
+                    auto pt =
+                      apply_subst(top, mparams->at(idx) / Type, minfo.subst);
                     auto pp = extract_callable_primitive(pt);
 
                     if (pp)
@@ -2092,12 +2069,10 @@ namespace vc
 
                 if (
                   dst_it == env.end() ||
-                  !types_equal(
-                    dst_it->second.type, src_it->second.type))
+                  !types_equal(dst_it->second.type, src_it->second.type))
                 {
                   env[cd_dst->location()] =
-                    LocalTypeInfo::computed(
-                      clone(src_it->second.type));
+                    LocalTypeInfo::computed(clone(src_it->second.type));
                   cascade_changed.insert(cd_dst->location());
                   changed = true;
                 }
@@ -2112,9 +2087,7 @@ namespace vc
             auto rr_src = stmt2 / Rhs;
             auto rr_src_loc = rr_src->location();
 
-            if (
-              cascade_changed.find(rr_src_loc) ==
-              cascade_changed.end())
+            if (cascade_changed.find(rr_src_loc) == cascade_changed.end())
               continue;
 
             auto src_it = env.find(rr_src_loc);
@@ -2128,8 +2101,7 @@ namespace vc
                 dst_it == env.end() ||
                 !types_equal(dst_it->second.type, new_ref_type))
               {
-                env[rr_dst->location()] =
-                  LocalTypeInfo::computed(new_ref_type);
+                env[rr_dst->location()] = LocalTypeInfo::computed(new_ref_type);
                 cascade_changed.insert(rr_dst->location());
                 changed = true;
               }
@@ -2182,8 +2154,7 @@ namespace vc
                 auto ft = child / Type;
 
                 if (
-                  contains_typevar(ft) ||
-                  !types_equal(ft, arg_it->second.type))
+                  contains_typevar(ft) || !types_equal(ft, arg_it->second.type))
                 {
                   child->replace(ft, clone(arg_it->second.type));
                   changed = true;
@@ -2267,8 +2238,7 @@ namespace vc
         auto src_it = env.find(src->location());
 
         if (
-          dst_it != env.end() && dst_it->second.is_fixed &&
-          src_it != env.end())
+          dst_it != env.end() && dst_it->second.is_fixed && src_it != env.end())
         {
           // dst has a fixed type (type assertion).
           // If src is a refinable Const, refine to match dst.
@@ -2330,8 +2300,7 @@ namespace vc
                   continue;
 
                 auto ft = apply_subst(top, child / Type, field_subst);
-                env[dst->location()] =
-                  LocalTypeInfo::computed(ref_type(ft));
+                env[dst->location()] = LocalTypeInfo::computed(ref_type(ft));
                 break;
               }
             }
@@ -2386,8 +2355,7 @@ namespace vc
           auto& [tup_loc, elem_idx] = ref_it->second;
           auto tup_it = tuple_locals.find(tup_loc);
 
-          if (
-            tup_it != tuple_locals.end() && elem_idx < tup_it->second.size)
+          if (tup_it != tuple_locals.end() && elem_idx < tup_it->second.size)
           {
             auto arg = stmt / Arg;
             auto val_src = arg / Rhs;
@@ -2424,12 +2392,11 @@ namespace vc
             if (idx < inner->size())
             {
               auto elem = Type << clone(inner->at(idx));
-              env[dst->location()] =
-                LocalTypeInfo::computed(ref_type(elem));
+              env[dst->location()] = LocalTypeInfo::computed(ref_type(elem));
             }
             else
             {
-              auto dyn_type = Type << Node(Dyn);
+              auto dyn_type = Type << Dyn;
               env[dst->location()] =
                 LocalTypeInfo::computed(ref_type(dyn_type));
             }
@@ -2460,11 +2427,9 @@ namespace vc
         // ref[any].
         auto dst = stmt / LocalId;
         auto any_type = Type
-          << (TypeName
-              << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-              << (NameElement << (Ident ^ "any") << TypeArgs));
-        env[dst->location()] =
-          LocalTypeInfo::computed(ref_type(any_type));
+          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                       << (NameElement << (Ident ^ "any") << TypeArgs));
+        env[dst->location()] = LocalTypeInfo::computed(ref_type(any_type));
       }
       else if (stmt == SplatOp)
       {
@@ -2473,9 +2438,8 @@ namespace vc
         // Pre-reify, type as any.
         auto dst = stmt / LocalId;
         auto any_type = Type
-          << (TypeName
-              << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-              << (NameElement << (Ident ^ "any") << TypeArgs));
+          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                       << (NameElement << (Ident ^ "any") << TypeArgs));
         env[dst->location()] = LocalTypeInfo::computed(any_type);
       }
       else if (stmt->in({NewArray, NewArrayConst}))
@@ -2500,26 +2464,22 @@ namespace vc
       else if (stmt == MakePtr)
       {
         auto dst = stmt / LocalId;
-        env[dst->location()] =
-          LocalTypeInfo::computed(ffi_primitive_type(Ptr));
+        env[dst->location()] = LocalTypeInfo::computed(ffi_primitive_type(Ptr));
       }
       else if (stmt == TypeAssertion)
       {
         auto local_id = stmt / LocalId;
-        env[local_id->location()] =
-          LocalTypeInfo::fixed(clone(stmt / Type));
+        env[local_id->location()] = LocalTypeInfo::fixed(clone(stmt / Type));
       }
       else if (stmt == GetRaise)
       {
         auto dst = stmt / LocalId;
-        env[dst->location()] =
-          LocalTypeInfo::computed(primitive_type(U64));
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
       }
       else if (stmt == SetRaise)
       {
         auto dst = stmt / LocalId;
-        env[dst->location()] =
-          LocalTypeInfo::computed(primitive_type(U64));
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
       }
       else if (stmt->in({New, Stack}))
       {
@@ -2621,10 +2581,9 @@ namespace vc
         auto dst = stmt / LocalId;
         env[dst->location()] = LocalTypeInfo::computed(primitive_type(Bool));
       }
-      else if (stmt->in(
-                 {Neg,  Abs,  Ceil, Floor, Exp,   Log,   Sqrt,
-                  Cbrt, Sin,  Cos,  Tan,   Asin,  Acos,  Atan,
-                  Sinh, Cosh, Tanh, Asinh, Acosh, Atanh, Read}))
+      else if (stmt->in({Neg,  Abs,  Ceil, Floor, Exp,   Log,   Sqrt,
+                         Cbrt, Sin,  Cos,  Tan,   Asin,  Acos,  Atan,
+                         Sinh, Cosh, Tanh, Asinh, Acosh, Atanh, Read}))
       {
         auto dst = stmt / LocalId;
         auto src = stmt / Rhs;
@@ -2663,8 +2622,7 @@ namespace vc
       else if (stmt == CallbackPtr)
       {
         auto dst = stmt / LocalId;
-        env[dst->location()] =
-          LocalTypeInfo::computed(ffi_primitive_type(Ptr));
+        env[dst->location()] = LocalTypeInfo::computed(ffi_primitive_type(Ptr));
       }
       else if (stmt == FreeCallback)
       {
@@ -2698,12 +2656,7 @@ namespace vc
         if (src_it != env.end())
         {
           auto ret_type = resolve_method_return_type(
-            top,
-            src_it->second.type,
-            method_ident,
-            hand,
-            arity,
-            method_ta);
+            top, src_it->second.type, method_ident, hand, arity, method_ta);
 
           if (ret_type)
             env[dst->location()] = LocalTypeInfo::computed(ret_type);
@@ -2735,12 +2688,7 @@ namespace vc
             auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
 
             auto info = resolve_method(
-              top,
-              recv_it->second.type,
-              method_ident,
-              hand,
-              arity,
-              method_ta);
+              top, recv_it->second.type, method_ident, hand, arity, method_ta);
 
             if (info.func)
             {
@@ -2767,11 +2715,9 @@ namespace vc
                   {
                     auto arg_it = env.find(arg_src->location());
 
-                    if (
-                      arg_it != env.end() && arg_it->second.is_default)
+                    if (arg_it != env.end() && arg_it->second.is_default)
                     {
-                      auto arg_prim =
-                        extract_primitive(arg_it->second.type);
+                      auto arg_prim = extract_primitive(arg_it->second.type);
 
                       if (arg_prim && arg_prim->type() == prim->type())
                       {
@@ -2825,8 +2771,7 @@ namespace vc
                       if (child != FieldDef)
                         continue;
 
-                      if (
-                        (child / Ident)->location().view() != pname)
+                      if ((child / Ident)->location().view() != pname)
                         continue;
 
                       auto ft = child / Type;
@@ -2873,8 +2818,7 @@ namespace vc
                         if (child != FieldDef)
                           continue;
 
-                        if (
-                          (child / Ident)->location().view() != pname)
+                        if ((child / Ident)->location().view() != pname)
                           continue;
 
                         auto ft = child / Type;
@@ -2953,8 +2897,7 @@ namespace vc
 
             if (recv_it != env.end() && !recv_it->second.is_default)
             {
-              auto prim =
-                extract_callable_primitive(recv_it->second.type);
+              auto prim = extract_callable_primitive(recv_it->second.type);
 
               if (!prim)
                 prim = extract_wrapper_primitive(recv_it->second.type);
@@ -2991,16 +2934,10 @@ namespace vc
           if (recv_it != env.end())
           {
             auto ret_type = resolve_method_return_type(
-              top,
-              recv_it->second.type,
-              method_ident,
-              hand,
-              arity,
-              method_ta);
+              top, recv_it->second.type, method_ident, hand, arity, method_ta);
 
             if (ret_type)
-              env[lookup_dst->location()] =
-                LocalTypeInfo::computed(ret_type);
+              env[lookup_dst->location()] = LocalTypeInfo::computed(ret_type);
           }
         }
 
@@ -3060,16 +2997,12 @@ namespace vc
                 auto fp_it = ffi_params->begin();
                 auto ar_it = args->begin();
 
-                while (
-                  fp_it != ffi_params->end() && ar_it != args->end())
+                while (fp_it != ffi_params->end() && ar_it != args->end())
                 {
                   auto expected_prim = extract_primitive(*fp_it);
 
                   if (expected_prim)
-                  {
-                    auto arg_src = *ar_it;
-                    try_refine(env, arg_src->location(), expected_prim);
-                  }
+                    try_refine(env, (*ar_it)->location(), expected_prim);
 
                   ++fp_it;
                   ++ar_it;
@@ -3100,8 +3033,7 @@ namespace vc
           auto old_type = stmt / Type;
           stmt->replace(old_type, clone(apply_ret));
 
-          env[dst->location()] =
-            LocalTypeInfo::computed(cown_type(apply_ret));
+          env[dst->location()] = LocalTypeInfo::computed(cown_type(apply_ret));
         }
 
         auto lookup_it = lookup_stmts.find(src->location());
@@ -3141,8 +3073,7 @@ namespace vc
                   auto params = apply_func / Params;
                   auto args = stmt / Args;
 
-                  for (size_t i = 1;
-                       i < args->size() && i < params->size();
+                  for (size_t i = 1; i < args->size() && i < params->size();
                        ++i)
                   {
                     auto param = params->at(i);
@@ -3157,8 +3088,7 @@ namespace vc
                     if (arg_it == env.end())
                       continue;
 
-                    auto cown_inner =
-                      extract_cown_inner(arg_it->second.type);
+                    auto cown_inner = extract_cown_inner(arg_it->second.type);
 
                     if (!cown_inner)
                       continue;
@@ -3262,8 +3192,7 @@ namespace vc
           if (!common_type)
             common_type = clone(it->second.type);
           else if (
-            it->second.type->front()->type() !=
-            common_type->front()->type())
+            it->second.type->front()->type() != common_type->front()->type())
           {
             all_same = false;
             break;
@@ -3290,15 +3219,23 @@ namespace vc
 
         if (all_typed && tracking.size > 0)
         {
-          Node tuple_type = TupleType;
-
-          for (size_t i = 0; i < tracking.size; i++)
+          if (tracking.size == 1)
           {
-            auto& elem = tracking.element_types[i];
-            tuple_type << clone(elem->front());
+            auto& elem = tracking.element_types[0];
+            env[loc] = LocalTypeInfo::computed(Type << clone(elem->front()));
           }
+          else
+          {
+            Node tuple_type = TupleType;
 
-          env[loc] = LocalTypeInfo::computed(Type << clone(tuple_type));
+            for (size_t i = 0; i < tracking.size; i++)
+            {
+              auto& elem = tracking.element_types[i];
+              tuple_type << clone(elem->front());
+            }
+
+            env[loc] = LocalTypeInfo::computed(Type << clone(tuple_type));
+          }
         }
       }
     }
@@ -3321,8 +3258,7 @@ namespace vc
 
     for (size_t i = 0; i < n_labels; i++)
     {
-      auto name =
-        std::string((labels->at(i) / LabelId)->location().view());
+      auto name = std::string((labels->at(i) / LabelId)->location().view());
       label_index[name] = i;
     }
 
@@ -3336,10 +3272,8 @@ namespace vc
 
       if (term == Cond)
       {
-        auto true_name =
-          std::string((term / Lhs)->location().view());
-        auto false_name =
-          std::string((term / Rhs)->location().view());
+        auto true_name = std::string((term / Lhs)->location().view());
+        auto false_name = std::string((term / Rhs)->location().view());
         auto t_it = label_index.find(true_name);
         auto f_it = label_index.find(false_name);
 
@@ -3351,8 +3285,7 @@ namespace vc
       }
       else if (term == Jump)
       {
-        auto target =
-          std::string((term / LabelId)->location().view());
+        auto target = std::string((term / LabelId)->location().view());
         auto it = label_index.find(target);
 
         if (it != label_index.end())
@@ -3382,9 +3315,8 @@ namespace vc
       auto ident = pd / Ident;
       auto type = pd / Type;
       bool is_fixed = type->front() != TypeVar;
-      env[ident->location()] = is_fixed ?
-        LocalTypeInfo::fixed(clone(type)) :
-        LocalTypeInfo::computed(clone(type));
+      env[ident->location()] = is_fixed ? LocalTypeInfo::fixed(clone(type)) :
+                                          LocalTypeInfo::computed(clone(type));
     }
 
     // Shared state across labels.
@@ -3505,8 +3437,7 @@ namespace vc
 
           for (auto p_idx : pred[idx])
           {
-            auto label_name =
-              std::string((lbl / LabelId)->location().view());
+            auto label_name = std::string((lbl / LabelId)->location().view());
             auto& be = branch_exits[p_idx];
             auto be_it = be.find(label_name);
 
@@ -3567,10 +3498,8 @@ namespace vc
             if (trace)
             {
               auto src_loc = trace->src->location();
-              auto true_name =
-                std::string((term / Lhs)->location().view());
-              auto false_name =
-                std::string((term / Rhs)->location().view());
+              auto true_name = std::string((term / Lhs)->location().view());
+              auto false_name = std::string((term / Rhs)->location().view());
 
               auto narrowed_type = clone(trace->type);
 
@@ -3640,8 +3569,7 @@ namespace vc
     for (size_t lbl_idx = 0; lbl_idx < n_labels; lbl_idx++)
     {
       auto& lbl = labels->at(lbl_idx);
-      bool have_label_env =
-        has_typetest_conds && !exit_envs[lbl_idx].empty();
+      bool have_label_env = has_typetest_conds && !exit_envs[lbl_idx].empty();
 
       for (auto& stmt : *(lbl / Body))
       {
@@ -3667,7 +3595,6 @@ namespace vc
             if (p)
               final_type = p;
           }
-
         }
 
         // If per-label didn't refine, check global env.
@@ -3691,7 +3618,7 @@ namespace vc
             auto old_type = stmt->at(1);
 
             if (old_type->type() != final_type->type())
-              stmt->replace(old_type, Node(final_type->type()));
+              stmt->replace(old_type, final_type->type());
           }
         }
         else if (stmt->size() == 2)
@@ -3700,7 +3627,7 @@ namespace vc
           Node type_token;
 
           if (final_type)
-            type_token = Node(final_type->type());
+            type_token = final_type->type();
           else
             type_token = default_literal_type(lit);
 
@@ -3883,9 +3810,7 @@ namespace vc
         {
           auto eit = exit_envs[i].find(ret_src->location());
 
-          if (
-            eit != exit_envs[i].end() &&
-            eit->second.type->front() != TypeVar)
+          if (eit != exit_envs[i].end() && eit->second.type->front() != TypeVar)
             ret_type_node = eit->second.type;
         }
 
@@ -3951,9 +3876,8 @@ namespace vc
           node->replace(
             func_ret_type,
             Type
-              << (TypeName
-                  << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                  << (NameElement << (Ident ^ "none") << TypeArgs)));
+              << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                           << (NameElement << (Ident ^ "none") << TypeArgs)));
         }
       }
     }
@@ -4006,7 +3930,6 @@ namespace vc
 
     return true;
   }
-
 
   PassDef infer()
   {

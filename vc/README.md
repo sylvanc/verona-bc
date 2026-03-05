@@ -2,14 +2,18 @@
 
 ## To Do
 
+Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
+
+String literals should be immortal, not fresh allocations.
+
+Can we remove all uses of `Dyn` from `typecheck`?
+
 Review `iowise`.
 - Test it?
 
 Semantics:
 - Region creation.
 - Freezing.
-
-Can we extract just the bits of `verona-rt` that we use?
 
 FFI.
 - Can `ffi::callback` interact with reference counting better?

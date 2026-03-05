@@ -283,7 +283,7 @@ namespace vbcc
   type_subtract(const Node& top, const Node& type, const Node& to_remove)
   {
     if (!type || type == Dyn)
-      return type ? clone(type) : Node(Dyn);
+      return type ? clone(type) : Dyn;
 
     if (type == Union)
     {
@@ -296,15 +296,17 @@ namespace vbcc
       }
 
       if (result->size() == 0)
-        return Node(Union);
+        return Union;
       if (result->size() == 1)
         return clone(result->front());
+
       return result;
     }
 
     // Non-union: if it equals to_remove, nothing left (bottom type).
     if (IRSubtype.invariant(top, type, to_remove))
-      return Node(Union);
+      return Union;
+
     return clone(type);
   }
 
@@ -312,9 +314,10 @@ namespace vbcc
   static Node type_merge(const Node& top, const Node& a, const Node& b)
   {
     if (!a || a == Dyn)
-      return Node(Dyn);
+      return Dyn;
+
     if (!b || b == Dyn)
-      return Node(Dyn);
+      return Dyn;
 
     // If equal, keep one.
     if (IRSubtype.invariant(top, a, b))
@@ -431,12 +434,12 @@ namespace vbcc
           }
           // Normalize: empty union is bottom type, single -> unwrap.
           if (flat_children.empty())
-            return Node(Union);
+            return Union;
           if (flat_children.size() == 1)
             return clone(flat_children[0]);
           if (!changed)
             return t;
-          auto result = Node(Union);
+          Node result = Union;
           for (auto& rc : flat_children)
             result << clone(rc);
           return result;
@@ -447,7 +450,7 @@ namespace vbcc
           auto resolved = resolve_type(inner);
           if (resolved.get() != inner.get())
           {
-            auto result = Node(t->type());
+            Node result = t->type();
             result << clone(resolved);
             return result;
           }
@@ -468,7 +471,7 @@ namespace vbcc
 
           if (changed)
           {
-            auto result = Node(TupleType);
+            Node result = TupleType;
 
             for (auto& rc : resolved_children)
               result << clone(rc);
@@ -565,8 +568,10 @@ namespace vbcc
             if (!has_method(child, method_id))
               return false;
           }
+
           return true;
         }
+
         return has_method(type_node, method_id);
       };
 
@@ -574,6 +579,7 @@ namespace vbcc
       auto get_field_type =
         [&](const Node& class_id, const Node& field_id) -> Node {
         auto cls = find_class(class_id);
+
         if (!cls)
           return {};
 
@@ -582,6 +588,7 @@ namespace vbcc
           if ((field / FieldId)->location() == field_id->location())
             return field / Type;
         }
+
         return {};
       };
 
@@ -591,13 +598,15 @@ namespace vbcc
         {
           if (child != Lib)
             continue;
+
           for (auto& sym : *(child / Symbols))
           {
             if ((sym / SymbolId)->location() == symbol_id->location())
               return sym / Return;
           }
         }
-        return Node(Dyn);
+
+        return Dyn;
       };
 
       // Lambda to process a single instruction or terminator node.
@@ -615,7 +624,7 @@ namespace vbcc
         else if (node == ConstStr)
         {
           // Strings are arrays of u8.
-          auto str_type = Node(Array) << Node(U8);
+          Node str_type = Array << U8;
           set_type(env, node / LocalId, str_type);
         }
         else if (node == Convert)
@@ -644,7 +653,7 @@ namespace vbcc
           if (src_type)
             set_type(env, node / LocalId, src_type);
           else
-            set_type(env, node / LocalId, Node(Dyn));
+            set_type(env, node / LocalId, Dyn);
         }
         else if (node->in({New, Stack}))
         {
@@ -708,9 +717,9 @@ namespace vbcc
         {
           auto src_type = typed(node / Rhs);
           if (src_type)
-            set_type(env, node / LocalId, Node(Ref) << clone(src_type));
+            set_type(env, node / LocalId, Ref << clone(src_type));
           else
-            set_type(env, node / LocalId, Node(Ref) << Dyn);
+            set_type(env, node / LocalId, Ref << Dyn);
         }
         else if (node == FieldRef)
         {
@@ -732,9 +741,9 @@ namespace vbcc
             auto field_type =
               resolve_type(get_field_type(src_type, node / FieldId));
             if (field_type)
-              set_type(env, node / LocalId, Node(Ref) << clone(field_type));
+              set_type(env, node / LocalId, Ref << clone(field_type));
             else
-              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+              set_type(env, node / LocalId, Ref << Dyn);
           }
           else if (src_type && src_type == Union)
           {
@@ -750,7 +759,7 @@ namespace vbcc
               }
               auto ft = resolve_type(get_field_type(member, node / FieldId));
               if (ft)
-                union_type << (Node(Ref) << clone(ft));
+                union_type << (Ref << clone(ft));
               else
               {
                 all_ok = false;
@@ -762,11 +771,11 @@ namespace vbcc
             else if (all_ok && union_type->size() > 1)
               set_type(env, node / LocalId, union_type);
             else
-              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+              set_type(env, node / LocalId, Ref << Dyn);
           }
           else
           {
-            set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+            set_type(env, node / LocalId, Ref << Dyn);
           }
         }
         else if (node->in({ArrayRef, ArrayRefConst}))
@@ -792,9 +801,7 @@ namespace vbcc
             auto idx = from_chars_sep_v<size_t>(idx_node);
             if (idx < src_type->size())
               set_type(
-                env,
-                node / LocalId,
-                Node(Ref) << clone(src_type->at(idx)));
+                env, node / LocalId, Ref << clone(src_type->at(idx)));
             else
             {
               type_err(
@@ -807,7 +814,7 @@ namespace vbcc
             }
           }
           else if (src_type && src_type == Array && src_type->size() > 0)
-            set_type(env, node / LocalId, Node(Ref) << clone(src_type / Type));
+            set_type(env, node / LocalId, Ref << clone(src_type / Type));
           else if (src_type && src_type == Union)
           {
             // Union of Arrays: build union of Ref(element_type).
@@ -818,11 +825,11 @@ namespace vbcc
               if (member == TupleType)
               {
                 // TupleType in a union: element type unknown at runtime.
-                union_type << (Node(Ref) << Node(Dyn));
+                union_type << (Ref << Dyn);
               }
               else if (member == Array && member->size() > 0)
               {
-                union_type << (Node(Ref) << clone(member / Type));
+                union_type << (Ref << clone(member / Type));
               }
               else
               {
@@ -835,10 +842,10 @@ namespace vbcc
             else if (all_ok && union_type->size() > 1)
               set_type(env, node / LocalId, union_type);
             else
-              set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+              set_type(env, node / LocalId, Ref << Dyn);
           }
           else
-            set_type(env, node / LocalId, Node(Ref) << Node(Dyn));
+            set_type(env, node / LocalId, Ref << Dyn);
         }
         else if (node == Load)
         {
@@ -876,10 +883,10 @@ namespace vbcc
             else if (all_ok && union_type->size() > 1)
               set_type(env, node / LocalId, union_type);
             else
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
           }
           else
-            set_type(env, node / LocalId, Node(Dyn));
+            set_type(env, node / LocalId, Dyn);
         }
         else if (node == Store)
         {
@@ -946,10 +953,10 @@ namespace vbcc
             else if (all_ok && union_type->size() > 1)
               set_type(env, node / LocalId, union_type);
             else
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
           }
           else
-            set_type(env, node / LocalId, Node(Dyn));
+            set_type(env, node / LocalId, Dyn);
         }
         else if (node == Lookup)
         {
@@ -973,17 +980,16 @@ namespace vbcc
           }
 
           // Track lookup result for CallDyn resolution.
-          auto dst_name =
-            std::string(node->front()->location().view());
+          auto dst_name = std::string(node->front()->location().view());
           lookup_info[dst_name] = {src_type, method_id};
 
           // Lookup produces a function pointer (opaque).
-          set_type(env, node / LocalId, Node(Dyn));
+          set_type(env, node / LocalId, Dyn);
         }
         else if (node == FnPointer)
         {
           // Function pointer is opaque.
-          set_type(env, node / LocalId, Node(Dyn));
+          set_type(env, node / LocalId, Dyn);
         }
         else if (node == Call)
         {
@@ -1024,7 +1030,7 @@ namespace vbcc
           }
           else
           {
-            set_type(env, node / LocalId, Node(Dyn));
+            set_type(env, node / LocalId, Dyn);
           }
         }
         else if (node == MemoSlot)
@@ -1035,16 +1041,14 @@ namespace vbcc
           auto target_func = find_func(func_id);
 
           if (target_func)
-            set_type(
-              env, node / LocalId, resolve_type(target_func / Type));
+            set_type(env, node / LocalId, resolve_type(target_func / Type));
           else
-            set_type(env, node / LocalId, Node(Dyn));
+            set_type(env, node / LocalId, Dyn);
         }
         else if (node->in({CallDyn, TryCallDyn}))
         {
           // Try to resolve the dynamic call through lookup info.
-          auto fn_ptr_name =
-            std::string((node / Rhs)->location().view());
+          auto fn_ptr_name = std::string((node / Rhs)->location().view());
           auto it = lookup_info.find(fn_ptr_name);
 
           if (it != lookup_info.end())
@@ -1063,9 +1067,7 @@ namespace vbcc
               {
                 for (auto& child : *top)
                 {
-                  if (
-                    child == Primitive &&
-                    (child / Type)->type() == t->type())
+                  if (child == Primitive && (child / Type)->type() == t->type())
                   {
                     cls = child;
                     break;
@@ -1077,8 +1079,7 @@ namespace vbcc
               for (auto& method : *(cls / Methods))
               {
                 if (
-                  (method / MethodId)->location() ==
-                  info.method_id->location())
+                  (method / MethodId)->location() == info.method_id->location())
                   return find_func(method / FunctionId);
               }
               return {};
@@ -1166,10 +1167,9 @@ namespace vbcc
               }
 
               if (ret_union->empty())
-                set_type(env, node / LocalId, Node(Dyn));
+                set_type(env, node / LocalId, Dyn);
               else if (ret_union->size() == 1)
-                set_type(
-                  env, node / LocalId, clone(ret_union->front()));
+                set_type(env, node / LocalId, clone(ret_union->front()));
               else
                 set_type(env, node / LocalId, ret_union);
             }
@@ -1208,18 +1208,17 @@ namespace vbcc
               }
 
               // dst gets the function's return type.
-              set_type(
-                env, node / LocalId, resolve_type(target_func / Type));
+              set_type(env, node / LocalId, resolve_type(target_func / Type));
             }
             else if (!(info.src_type && info.src_type == Union))
             {
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
             }
           }
           else
           {
             // No lookup info - truly dynamic.
-            set_type(env, node / LocalId, Node(Dyn));
+            set_type(env, node / LocalId, Dyn);
           }
         }
         else if (node == FFI)
@@ -1236,7 +1235,7 @@ namespace vbcc
         else if (node == Typetest)
         {
           // Typetest dst is a boolean.
-          set_type(env, node / LocalId, Node(Bool));
+          set_type(env, node / LocalId, Bool);
         }
         else if (node == Drop)
         {
@@ -1301,7 +1300,7 @@ namespace vbcc
             if (first)
               set_type(env, node / LocalId, clone(first));
             else
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
           }
         }
         else if (node->type().in({Pow, LogBase, Atan2}))
@@ -1361,7 +1360,7 @@ namespace vbcc
             if (first)
               set_type(env, node / LocalId, clone(first));
             else
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
           }
         }
         else if (node->type().in({Eq, Ne, Lt, Le, Gt, Ge}))
@@ -1414,7 +1413,7 @@ namespace vbcc
             }
           }
 
-          set_type(env, node / LocalId, Node(Bool));
+          set_type(env, node / LocalId, Bool);
         }
         else if (node->type().in({Neg, Abs}))
         {
@@ -1437,7 +1436,7 @@ namespace vbcc
             if (first && all_leaves_are(src_type, first->type()))
               set_type(env, node / LocalId, clone(first));
             else
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
           }
         }
         else if (node == Not)
@@ -1459,7 +1458,7 @@ namespace vbcc
             if (first && all_leaves_are(src_type, first->type()))
               set_type(env, node / LocalId, clone(first));
             else
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
           }
         }
         else if (node->type().in(
@@ -1501,7 +1500,7 @@ namespace vbcc
             if (first && all_leaves_are(src_type, first->type()))
               set_type(env, node / LocalId, clone(first));
             else
-              set_type(env, node / LocalId, Node(Dyn));
+              set_type(env, node / LocalId, Dyn);
           }
         }
         else if (node->type().in({IsInf, IsNaN}))
@@ -1520,7 +1519,7 @@ namespace vbcc
             return true;
           }
 
-          set_type(env, node / LocalId, Node(Bool));
+          set_type(env, node / LocalId, Bool);
         }
         else if (node == Bits)
         {
@@ -1536,7 +1535,7 @@ namespace vbcc
             return true;
           }
 
-          set_type(env, node / LocalId, Node(U64));
+          set_type(env, node / LocalId, U64);
         }
         else if (node == Len)
         {
@@ -1553,12 +1552,12 @@ namespace vbcc
             return true;
           }
 
-          set_type(env, node / LocalId, Node(USize));
+          set_type(env, node / LocalId, USize);
         }
         else if (node == MakePtr)
         {
           // MakePtr: anything -> Ptr.
-          set_type(env, node / LocalId, Node(Ptr));
+          set_type(env, node / LocalId, Ptr);
         }
         else if (node == Read)
         {
@@ -1579,38 +1578,37 @@ namespace vbcc
           if (src_type)
             set_type(env, node / LocalId, clone(src_type));
           else
-            set_type(env, node / LocalId, Node(Dyn));
+            set_type(env, node / LocalId, Dyn);
         }
         else if (node->type().in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
         {
           // Math constants are F64.
-          set_type(env, node / LocalId, Node(F64));
+          set_type(env, node / LocalId, F64);
         }
-        else if (
-          node->type().in({AddExternal, RemoveExternal, FreeCallback}))
+        else if (node->type().in({AddExternal, RemoveExternal, FreeCallback}))
         {
           // These produce None.
-          set_type(env, node / LocalId, Node(None));
+          set_type(env, node / LocalId, None);
         }
         else if (node->type().in({MakeCallback}))
         {
           // MakeCallback produces Callback.
-          set_type(env, node / LocalId, Node(Callback));
+          set_type(env, node / LocalId, Callback);
         }
         else if (node->type().in({CallbackPtr}))
         {
           // CallbackPtr produces Ptr.
-          set_type(env, node / LocalId, Node(Ptr));
+          set_type(env, node / LocalId, Ptr);
         }
         else if (node == GetRaise)
         {
           // GetRaise returns a U64 (raw frame ID).
-          set_type(env, node / LocalId, Node(U64));
+          set_type(env, node / LocalId, U64);
         }
         else if (node == SetRaise)
         {
           // SetRaise returns previous raise target as U64.
-          set_type(env, node / LocalId, Node(U64));
+          set_type(env, node / LocalId, U64);
         }
         else if (node == Source || node == Offset)
         {
@@ -1703,8 +1701,7 @@ namespace vbcc
           if (params->size() != 1)
           {
             type_err(
-              method,
-              "final method must take exactly 1 parameter (self)");
+              method, "final method must take exactly 1 parameter (self)");
             continue;
           }
 
@@ -1778,7 +1775,7 @@ namespace vbcc
         for (auto& var : *(func_node / Vars))
         {
           auto key = std::string(var->location().view());
-          init_env[key] = Node(Dyn);
+          init_env[key] = Dyn;
         }
 
         // Environment fingerprint for convergence detection.
@@ -1819,8 +1816,8 @@ namespace vbcc
           auto& ls = func_state.labels.at(idx);
           for (auto pred_idx : ls.pred)
           {
-            auto this_name = std::string(
-              (label_vec[idx] / LabelId)->location().view());
+            auto this_name =
+              std::string((label_vec[idx] / LabelId)->location().view());
             auto& be = branch_exits[pred_idx];
             auto it = be.find(this_name);
             TypeEnv* pred_exit =
@@ -1891,10 +1888,8 @@ namespace vbcc
                   resolve_type(get_type(env, typetest_stmt / Rhs));
                 auto tested_type = resolve_type(typetest_stmt / Type);
 
-                auto true_name =
-                  std::string((term / Lhs)->location().view());
-                auto false_name =
-                  std::string((term / Rhs)->location().view());
+                auto true_name = std::string((term / Lhs)->location().view());
+                auto false_name = std::string((term / Rhs)->location().view());
 
                 // When negated, true means NOT the type, false means IS
                 // the type.
@@ -1950,8 +1945,8 @@ namespace vbcc
           auto& ls2 = func_state.labels.at(idx);
           for (auto pred_idx : ls2.pred)
           {
-            auto this_name = std::string(
-              (label_vec[idx] / LabelId)->location().view());
+            auto this_name =
+              std::string((label_vec[idx] / LabelId)->location().view());
             auto& be = branch_exits[pred_idx];
             auto it = be.find(this_name);
             TypeEnv* pred_exit =

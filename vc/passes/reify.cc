@@ -387,8 +387,8 @@ namespace vc
     // (make_id fully resolves element types without using the index). For all
     // other defs, dedup uses substitution map equality (the index embedded in
     // generic ClassId strings would vary per call, breaking id comparison).
-    Node find_or_push(
-      const Node& def, NodeMap<Node> subst, Node resolved_name = {})
+    Node
+    find_or_push(const Node& def, NodeMap<Node> subst, Node resolved_name = {})
     {
       auto it = map.find(def);
       bool is_new_key = (it == map.end());
@@ -465,11 +465,7 @@ namespace vc
       auto id = make_id(def, r_vec.size(), subst);
 
       r_vec.push_back(
-        {def,
-         std::move(subst),
-         std::move(id),
-         {},
-         std::move(resolved_name)});
+        {def, std::move(subst), std::move(id), {}, std::move(resolved_name)});
       worklist.push_back(&r_vec.back());
       return clone(r_vec.back().id);
     }
@@ -545,8 +541,9 @@ namespace vc
 
     void reify_typealias(Reification& r)
     {
-      // Store the reified type alias.
-      r.reification = TypeAlias << r.id << reify_type(r.def / Type, r.subst);
+      // Store the reified type alias as a Type entry (TypeAlias is
+      // resolved during reification; the IR uses Type for lookups).
+      r.reification = Type << r.id << reify_type(r.def / Type, r.subst);
     }
 
     bool reify_function(Reification& r)
@@ -709,13 +706,11 @@ namespace vc
                   class_id = stmt / ClassId;
                 }
                 else if (
-                  (stmt == Call) &&
-                  ((stmt / LocalId)->location() == trace_loc))
+                  (stmt == Call) && ((stmt / LocalId)->location() == trace_loc))
                 {
                   // Find the Function reification for this Call, then
                   // trigger reification of its enclosing ClassDef.
-                  auto funcid_loc =
-                    (stmt / FunctionId)->location().view();
+                  auto funcid_loc = (stmt / FunctionId)->location().view();
                   NodeMap<Node> class_subst;
 
                   for (auto& key : map_order)
@@ -725,9 +720,7 @@ namespace vc
 
                     for (auto& reif : map[key])
                     {
-                      if (
-                        reif.id &&
-                        (reif.id->location().view() == funcid_loc))
+                      if (reif.id && (reif.id->location().view() == funcid_loc))
                       {
                         auto enc = reif.def->parent(ClassDef);
 
@@ -740,8 +733,7 @@ namespace vc
                             auto sit = reif.subst.find(tp);
 
                             if (sit != reif.subst.end())
-                              class_subst[sit->first] =
-                                clone(sit->second);
+                              class_subst[sit->first] = clone(sit->second);
                           }
 
                           call_enc = enc;
@@ -759,8 +751,7 @@ namespace vc
                   // to avoid iterator invalidation (find_or_push may
                   // append to map_order).
                   if (call_enc)
-                    class_id =
-                      find_or_push(call_enc, std::move(class_subst));
+                    class_id = find_or_push(call_enc, std::move(class_subst));
                 }
               }
             }
@@ -769,8 +760,7 @@ namespace vc
               reify_make_callback(n, class_id);
             else
               n->parent()->replace(
-                n,
-                err(n, "make_callback: cannot determine lambda type"));
+                n, err(n, "make_callback: cannot determine lambda type"));
           }
           else if (n->in({CallbackPtr, FreeCallback}))
           {
@@ -801,8 +791,7 @@ namespace vc
             auto src_it = local_types.find((n / Rhs)->location());
 
             if (src_it != local_types.end())
-              local_types[(n / LocalId)->location()] =
-                clone(src_it->second);
+              local_types[(n / LocalId)->location()] = clone(src_it->second);
 
             // Elide dead Copies.
             if (
@@ -818,8 +807,8 @@ namespace vc
             if (src_it != local_types.end())
             {
               ensure_ref_reified(src_it->second);
-              local_types[(n / LocalId)->location()] =
-                Node(Ref) << clone(src_it->second);
+              local_types[(n / LocalId)->location()] = Ref
+                << clone(src_it->second);
             }
           }
           else if (n == FieldRef)
@@ -836,8 +825,7 @@ namespace vc
               if (ft)
               {
                 ensure_ref_reified(ft);
-                local_types[(n / LocalId)->location()] =
-                  Node(Ref) << ft;
+                local_types[(n / LocalId)->location()] = Ref << ft;
               }
             }
           }
@@ -877,8 +865,7 @@ namespace vc
               if (elem)
               {
                 ensure_ref_reified(elem);
-                local_types[(n / LocalId)->location()] =
-                  Node(Ref) << elem;
+                local_types[(n / LocalId)->location()] = Ref << elem;
               }
             }
           }
@@ -898,8 +885,7 @@ namespace vc
                 auto real_idx = arity - from_end;
                 auto elem = clone(arr_it->second->at(real_idx));
                 ensure_ref_reified(elem);
-                local_types[(n / LocalId)->location()] =
-                  Node(Ref) << elem;
+                local_types[(n / LocalId)->location()] = Ref << elem;
               }
             }
 
@@ -1054,8 +1040,7 @@ namespace vc
               auto real_idx = arity - from_end;
 
               Node replacement = ArrayRefConst
-                << clone(n / LocalId)
-                << clone(n / Arg)
+                << clone(n / LocalId) << clone(n / Arg)
                 << (Int ^ std::to_string(real_idx));
 
               body->replace(n, replacement);
@@ -1094,10 +1079,8 @@ namespace vc
               if (remaining == 0)
               {
                 // No remaining elements: produce a None constant.
-                Node replacement = Const
-                  << (LocalId ^ dst_loc)
-                  << clone(None)
-                  << clone(None);
+                Node replacement = Const << (LocalId ^ dst_loc) << clone(None)
+                                         << clone(None);
 
                 body->replace(n, replacement);
               }
@@ -1106,14 +1089,11 @@ namespace vc
                 // One element: ArrayRefConst + Load.
                 auto ref_loc = top->fresh(Location("splat"));
 
-                Node aref = ArrayRefConst
-                  << (LocalId ^ ref_loc)
-                  << clone(n / Arg)
-                  << (Int ^ std::to_string(before));
+                Node aref = ArrayRefConst << (LocalId ^ ref_loc)
+                                          << clone(n / Arg)
+                                          << (Int ^ std::to_string(before));
 
-                Node load = Load
-                  << (LocalId ^ dst_loc)
-                  << (LocalId ^ ref_loc);
+                Node load = Load << (LocalId ^ dst_loc) << (LocalId ^ ref_loc);
 
                 Nodes replacements = {aref, load};
                 auto it = body->find(n);
@@ -1132,10 +1112,8 @@ namespace vc
 
                 // NewArrayConst to allocate the tuple.
                 replacements.push_back(
-                  NewArrayConst
-                    << (LocalId ^ dst_loc)
-                    << clone(ttype)
-                    << (Int ^ std::to_string(remaining)));
+                  NewArrayConst << (LocalId ^ dst_loc) << clone(ttype)
+                                << (Int ^ std::to_string(remaining)));
 
                 // Copy each element from source to destination.
                 for (size_t i = 0; i < remaining; i++)
@@ -1147,30 +1125,23 @@ namespace vc
 
                   // Get ref to source element.
                   replacements.push_back(
-                    ArrayRefConst
-                      << (LocalId ^ src_ref)
-                      << clone(n / Arg)
-                      << (Int ^ std::to_string(before + i)));
+                    ArrayRefConst << (LocalId ^ src_ref) << clone(n / Arg)
+                                  << (Int ^ std::to_string(before + i)));
 
                   // Load source value.
                   replacements.push_back(
-                    Load
-                      << (LocalId ^ val_loc)
-                      << (LocalId ^ src_ref));
+                    Load << (LocalId ^ val_loc) << (LocalId ^ src_ref));
 
                   // Get ref to destination element.
                   replacements.push_back(
-                    ArrayRefConst
-                      << (LocalId ^ dst_ref)
-                      << (Arg << ArgCopy << (LocalId ^ dst_loc))
-                      << (Int ^ std::to_string(i)));
+                    ArrayRefConst << (LocalId ^ dst_ref)
+                                  << (Arg << ArgCopy << (LocalId ^ dst_loc))
+                                  << (Int ^ std::to_string(i)));
 
                   // Store value into destination.
                   replacements.push_back(
-                    Store
-                      << (LocalId ^ old_val)
-                      << (LocalId ^ dst_ref)
-                      << (Arg << ArgCopy << (LocalId ^ val_loc)));
+                    Store << (LocalId ^ old_val) << (LocalId ^ dst_ref)
+                          << (Arg << ArgCopy << (LocalId ^ val_loc)));
                 }
 
                 auto it = body->find(n);
@@ -1214,8 +1185,7 @@ namespace vc
 
       if ((r.def / Lhs) == Once)
       {
-        r.reification =
-          FuncOnce << r.id << params << r_type << vars << labels;
+        r.reification = FuncOnce << r.id << params << r_type << vars << labels;
       }
       else
       {
@@ -1271,9 +1241,7 @@ namespace vc
           // Check if the return value comes from a Call (e.g., create).
           for (auto& stmt : *body_node)
           {
-            if (
-              (stmt == Call) &&
-              ((stmt / LocalId)->location() == ret_loc))
+            if ((stmt == Call) && ((stmt / LocalId)->location() == ret_loc))
             {
               // Find the Function reification and its enclosing ClassDef.
               auto funcid_loc = (stmt / FunctionId)->location().view();
@@ -1287,9 +1255,7 @@ namespace vc
 
                 for (auto& reif : map[key])
                 {
-                  if (
-                    reif.id &&
-                    (reif.id->location().view() == funcid_loc))
+                  if (reif.id && (reif.id->location().view() == funcid_loc))
                   {
                     auto enc = reif.def->parent(ClassDef);
 
@@ -1522,7 +1488,7 @@ namespace vc
       auto ref_defs = builtin->look(Location("ref"));
       assert(!ref_defs.empty());
       auto ref_def = ref_defs.front();
-      Node expected_id = Node(Ref) << clone(inner_ir_type);
+      Node expected_id = Ref << clone(inner_ir_type);
 
       auto it = map.find(ref_def);
       bool is_new_key = (it == map.end());
@@ -1569,8 +1535,7 @@ namespace vc
 
       auto funcid = get_reification(call / FuncName, subst, [&](auto& def) {
         return (def == Function) && ((def / Params)->size() == arity) &&
-          (((def / Lhs) == hand) ||
-           ((def / Lhs) == Once && hand == Rhs));
+          (((def / Lhs) == hand) || ((def / Lhs) == Once && hand == Rhs));
       });
 
       if (!funcid || (funcid == Dyn))
@@ -1899,8 +1864,7 @@ namespace vc
       if (match_count > 1)
       {
         n->parent()->replace(
-          n,
-          err(n, "make_callback requires exactly one 'apply' overload"));
+          n, err(n, "make_callback requires exactly one 'apply' overload"));
         return;
       }
     }
@@ -1908,8 +1872,8 @@ namespace vc
     // Reify init functions from a source Lib onto a reified Lib.
     // Checks for duplicate init across multiple Lib definitions
     // for the same library (by string name).
-    void reify_initfini(
-      const Node& source_lib, Node& reified_lib, Reification& r)
+    void
+    reify_initfini(const Node& source_lib, Node& reified_lib, Reification& r)
     {
       // Skip if this source Lib node has already been processed.
       if (!processed_initfini.insert(source_lib).second)
@@ -1979,8 +1943,7 @@ namespace vc
 
               if (find == libs.end())
               {
-                reified_lib =
-                  Lib << clone(child / String) << Symbols << None;
+                reified_lib = Lib << clone(child / String) << Symbols << None;
                 libs[lib_loc] = reified_lib;
               }
               else
@@ -1995,9 +1958,7 @@ namespace vc
                 if (lib_child != Lib)
                   continue;
 
-                if (
-                  (lib_child / String)->location().view() !=
-                  lib_loc.view())
+                if ((lib_child / String)->location().view() != lib_loc.view())
                   continue;
 
                 reify_initfini(lib_child, reified_lib, r);
@@ -2206,7 +2167,21 @@ namespace vc
             resolve_subst[tps->at(i)] = resolved;
           }
         }
+        else if (!tps->empty())
+        {
+          // No TypeArgs but the def has TypeParams (e.g., bare class name
+          // as return type from within a generic class). Inherit any
+          // existing substitutions from the resolution context.
+          for (auto& tp : *tps)
+          {
+            auto find = resolve_subst.find(tp);
 
+            if (find != resolve_subst.end())
+            {
+              r.subst[tp] = find->second;
+            }
+          }
+        }
       }
 
       // Build a resolved TypeName with all TypeParam refs substituted.
@@ -2221,8 +2196,7 @@ namespace vc
         for (auto& a : *(elem / TypeArgs))
           new_ta << clone(resolve_typearg(a, resolve_subst));
 
-        resolved_name
-          << (NameElement << clone(elem / Ident) << new_ta);
+        resolved_name << (NameElement << clone(elem / Ident) << new_ta);
       }
 
       // Shapes produce Dyn in function bodies (preserving method dispatch
@@ -2269,7 +2243,7 @@ namespace vc
           auto tp_find = subst.find(tps->at(0));
           Node elem_type =
             (tp_find != subst.end()) ? reify_type(tp_find->second, subst) : Dyn;
-          return Node(wrap_find->second) << elem_type;
+          return wrap_find->second << elem_type;
         }
       }
 
