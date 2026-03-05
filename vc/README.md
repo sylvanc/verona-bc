@@ -8,7 +8,6 @@ Review `iowise`.
 Semantics:
 - Region creation.
 - Freezing.
-- `final` functions.
 
 Can we extract just the bits of `verona-rt` that we use?
 

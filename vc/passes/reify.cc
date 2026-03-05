@@ -516,6 +516,31 @@ namespace vc
         if (mi_targets(mi, r.id))
           register_method(mi, r);
       }
+
+      // Register @final method if the class has a `final` function.
+      for (auto& f : *(r.def / ClassBody))
+      {
+        if (f != Function)
+          continue;
+
+        if ((f / Ident)->location().view() != "final")
+          continue;
+
+        if ((f / Lhs)->type() != Rhs)
+          continue;
+
+        if (!((f / TypeParams)->empty()))
+          continue;
+
+        if ((f / Params)->size() != 1)
+          continue;
+
+        // Reify the final function and register as @final.
+        auto funcid = find_or_push(f, r.subst);
+        auto methods = r.reification / Methods;
+        methods << (Method << (MethodId ^ "@final") << funcid);
+        break;
+      }
     }
 
     void reify_typealias(Reification& r)

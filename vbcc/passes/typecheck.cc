@@ -1679,6 +1679,57 @@ namespace vbcc
       // source variable's type on the non-match branch.
       using TypeEnv = std::unordered_map<std::string, Node>;
 
+      // Validate @final methods: must take exactly 1 param of the class
+      // type and return none.
+      for (auto& cls_node : *top)
+      {
+        if (cls_node != Class)
+          continue;
+
+        auto class_id = cls_node / ClassId;
+
+        for (auto& method : *(cls_node / Methods))
+        {
+          if ((method / MethodId)->location().view() != "@final")
+            continue;
+
+          auto func = find_func(method / FunctionId);
+
+          if (!func)
+            continue;
+
+          auto params = func / Params;
+
+          if (params->size() != 1)
+          {
+            type_err(
+              method,
+              "final method must take exactly 1 parameter (self)");
+            continue;
+          }
+
+          // Check param type matches the class.
+          auto param_type = params->front() / Type;
+
+          if (
+            param_type != ClassId ||
+            param_type->location() != class_id->location())
+          {
+            type_err(
+              method,
+              "final method parameter must be an instance of the class");
+          }
+
+          // Check return type is none.
+          auto ret_type = func / Type;
+
+          if (ret_type->type() != None)
+          {
+            type_err(method, "final method must return none");
+          }
+        }
+      }
+
       for (auto& func_node : *top)
       {
         if (func_node != Func)
