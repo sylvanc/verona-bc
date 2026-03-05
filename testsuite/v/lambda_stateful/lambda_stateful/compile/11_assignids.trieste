@@ -1,5 +1,5 @@
 vc
-typecheck
+assignids
 (top
   {}
   (func
@@ -34,14 +34,14 @@ typecheck
             (localid 8:local$27)
             (i32)
             (int 1:0))
-          (move
+          (copy
             (localid 6:result)
             (localid 8:local$27))
           (call
             (localid 8:local$28)
             (functionid 35:lambda_stateful::make_counter::0::0)
             (args))
-          (move
+          (copy
             (localid 1:c)
             (localid 8:local$28))
           (lookup
@@ -55,7 +55,7 @@ typecheck
               (arg
                 (argcopy)
                 (localid 1:c))))
-          (move
+          (copy
             (localid 2:c1)
             (localid 9:local$157))
           (lookup
@@ -69,7 +69,7 @@ typecheck
               (arg
                 (argcopy)
                 (localid 1:c))))
-          (move
+          (copy
             (localid 2:c2)
             (localid 9:local$159))
           (lookup
@@ -81,9 +81,9 @@ typecheck
             (localid 9:local$160)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:c))))
-          (move
+          (copy
             (localid 2:c3)
             (localid 9:local$161))
           (call
@@ -111,10 +111,10 @@ typecheck
             (localid 9:local$578)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:c1))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$162))))
           (lookup
             (localid 9:local$580)
@@ -125,10 +125,10 @@ typecheck
             (localid 9:local$580)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:c2))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$163))))
           (lookup
             (localid 9:local$582)
@@ -139,10 +139,10 @@ typecheck
             (localid 9:local$582)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:c3))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$164))))
           (lookup
             (localid 10:local$1085)
@@ -153,10 +153,10 @@ typecheck
             (localid 10:local$1085)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$579))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$581))))
           (lookup
             (localid 10:local$1105)
@@ -167,10 +167,10 @@ typecheck
             (localid 10:local$1105)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 10:local$1086))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$583)))))
         (cond
           (localid 10:local$1106)
@@ -195,12 +195,12 @@ typecheck
                 (argcopy)
                 (localid 6:result))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$165))))
-          (move
+          (copy
             (localid 10:local$1034)
             (localid 6:result))
-          (move
+          (copy
             (localid 6:result)
             (localid 9:local$585)))
         (jump
@@ -212,7 +212,7 @@ typecheck
             (localid 8:local$30)
             (functionid 39:lambda_stateful::make_accumulator::0::0)
             (args))
-          (move
+          (copy
             (localid 1:a)
             (localid 8:local$30))
           (const
@@ -231,9 +231,9 @@ typecheck
                 (argcopy)
                 (localid 1:a))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$31))))
-          (move
+          (copy
             (localid 2:a1)
             (localid 9:local$169))
           (const
@@ -252,9 +252,9 @@ typecheck
                 (argcopy)
                 (localid 1:a))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$32))))
-          (move
+          (copy
             (localid 2:a2)
             (localid 9:local$171))
           (const
@@ -270,12 +270,12 @@ typecheck
             (localid 9:local$172)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:a))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$33))))
-          (move
+          (copy
             (localid 2:a3)
             (localid 9:local$173))
           (call
@@ -303,10 +303,10 @@ typecheck
             (localid 9:local$587)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:a1))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$174))))
           (lookup
             (localid 9:local$589)
@@ -317,10 +317,10 @@ typecheck
             (localid 9:local$589)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:a2))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$175))))
           (lookup
             (localid 9:local$591)
@@ -331,10 +331,10 @@ typecheck
             (localid 9:local$591)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:a3))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$176))))
           (lookup
             (localid 10:local$1087)
@@ -345,10 +345,10 @@ typecheck
             (localid 10:local$1087)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$588))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$590))))
           (lookup
             (localid 10:local$1107)
@@ -359,10 +359,10 @@ typecheck
             (localid 10:local$1107)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 10:local$1088))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$592)))))
         (cond
           (localid 10:local$1108)
@@ -387,12 +387,12 @@ typecheck
                 (argcopy)
                 (localid 6:result))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$177))))
-          (move
+          (copy
             (localid 10:local$1035)
             (localid 6:result))
-          (move
+          (copy
             (localid 6:result)
             (localid 9:local$594)))
         (jump
@@ -404,7 +404,7 @@ typecheck
             (localid 8:local$35)
             (functionid 40:lambda_stateful::independent_state::0::0)
             (args))
-          (move
+          (copy
             (localid 1:s)
             (localid 8:local$35))
           (call
@@ -424,10 +424,10 @@ typecheck
             (localid 9:local$596)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:s))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$180)))))
         (cond
           (localid 9:local$597)
@@ -452,12 +452,12 @@ typecheck
                 (argcopy)
                 (localid 6:result))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$181))))
-          (move
+          (copy
             (localid 10:local$1036)
             (localid 6:result))
-          (move
+          (copy
             (localid 6:result)
             (localid 9:local$599)))
         (jump
@@ -492,7 +492,7 @@ typecheck
             (localid 8:local$14)
             (i32)
             (int 1:0))
-          (move
+          (copy
             (localid 5:count)
             (localid 8:local$14))
           (call
@@ -500,7 +500,7 @@ typecheck
             (functionid 39:lambda_stateful::lambda$0::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 5:count)))))
         (ret
           (localid 8:local$15)))))
@@ -532,7 +532,7 @@ typecheck
             (localid 8:local$18)
             (i32)
             (int 1:0))
-          (move
+          (copy
             (localid 5:total)
             (localid 8:local$18))
           (call
@@ -540,7 +540,7 @@ typecheck
             (functionid 39:lambda_stateful::lambda$1::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 5:total)))))
         (ret
           (localid 8:local$19)))))
@@ -557,7 +557,7 @@ typecheck
             (localid 8:local$24)
             (i32)
             (int 1:0))
-          (move
+          (copy
             (localid 1:x)
             (localid 8:local$24))
           (call
@@ -567,7 +567,7 @@ typecheck
               (arg
                 (argcopy)
                 (localid 1:x))))
-          (move
+          (copy
             (localid 1:a)
             (localid 8:local$25))
           (call
@@ -575,9 +575,9 @@ typecheck
             (functionid 39:lambda_stateful::lambda$3::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:x))))
-          (move
+          (copy
             (localid 1:b)
             (localid 8:local$26))
           (lookup
@@ -600,9 +600,9 @@ typecheck
             (localid 9:local$146)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:a))))
-          (move
+          (copy
             (localid 2:a2)
             (localid 9:local$147))
           (lookup
@@ -625,9 +625,9 @@ typecheck
             (localid 9:local$150)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:b))))
-          (move
+          (copy
             (localid 2:b2)
             (localid 9:local$151))
           (lookup
@@ -639,10 +639,10 @@ typecheck
             (localid 9:local$152)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:a2))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:b2)))))
         (ret
           (localid 9:local$153)))))
@@ -663,7 +663,7 @@ typecheck
             (classid 28:lambda_stateful::lambda$2::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:x)))))
         (ret
           (localid 8:local$20)))))
@@ -684,7 +684,7 @@ typecheck
             (classid 28:lambda_stateful::lambda$3::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:x)))))
         (ret
           (localid 8:local$22)))))
@@ -738,21 +738,21 @@ typecheck
             (localid 10:local$1083)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$974))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$23))))
           (store
             (localid 10:local$1104)
             (localid 9:local$141)
             (arg
-              (argmove)
+              (argcopy)
               (localid 10:local$1084)))
           (fieldref
             (localid 9:local$143)
             (arg
-              (argmove)
+              (argcopy)
               (localid 5:$self))
             (fieldid 1:x))
           (load
@@ -814,21 +814,21 @@ typecheck
             (localid 10:local$1081)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$972))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$21))))
           (store
             (localid 10:local$1103)
             (localid 9:local$138)
             (arg
-              (argmove)
+              (argcopy)
               (localid 10:local$1082)))
           (fieldref
             (localid 9:local$140)
             (arg
-              (argmove)
+              (argcopy)
               (localid 5:$self))
             (fieldid 1:x))
           (load
@@ -856,7 +856,7 @@ typecheck
             (classid 28:lambda_stateful::lambda$1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 5:total)))))
         (ret
           (localid 8:local$16)))))
@@ -909,21 +909,21 @@ typecheck
             (localid 10:local$1079)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$970))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:n))))
           (store
             (localid 10:local$1102)
             (localid 9:local$135)
             (arg
-              (argmove)
+              (argcopy)
               (localid 10:local$1080)))
           (fieldref
             (localid 9:local$137)
             (arg
-              (argmove)
+              (argcopy)
               (localid 5:$self))
             (fieldid 5:total))
           (load
@@ -958,7 +958,7 @@ typecheck
             (classid 28:lambda_stateful::lambda$0::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 5:count)))))
         (ret
           (localid 8:local$11)))))
@@ -1012,21 +1012,21 @@ typecheck
             (localid 10:local$1077)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$968))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 8:local$12))))
           (store
             (localid 10:local$1101)
             (localid 9:local$132)
             (arg
-              (argmove)
+              (argcopy)
               (localid 10:local$1078)))
           (fieldref
             (localid 9:local$134)
             (arg
-              (argmove)
+              (argcopy)
               (localid 5:$self))
             (fieldid 5:count))
           (load
@@ -1176,7 +1176,7 @@ typecheck
             (localid 9:local$214)
             (bool)
             (true))
-          (move
+          (copy
             (localid 8:local$72)
             (localid 9:local$214)))
         (jump
@@ -1195,7 +1195,7 @@ typecheck
       (label
         (labelid 9:body$1005)
         (body
-          (move
+          (copy
             (localid 9:local$651)
             (localid 8:local$72)))
         (jump
@@ -1212,9 +1212,9 @@ typecheck
             (localid 9:local$215)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 5:other))))
-          (move
+          (copy
             (localid 9:local$651)
             (localid 9:local$216)))
         (jump

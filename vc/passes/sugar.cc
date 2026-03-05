@@ -236,7 +236,8 @@ namespace vc
     apply_body << *body;
 
     // Rewrite let-captured references in the body.
-    // All uses become FieldRef << (Expr << (LocalId ^ "$self")) << FieldId.
+    // Reads become Load << (Expr << FieldRef($self, field)).
+    // Writes (bare LHS of Equals) become FieldRef($self, field).
     // ANF handles read/write semantics based on position.
     if (!let_captures.empty())
     {
@@ -250,11 +251,40 @@ namespace vc
       for (auto& node : to_rewrite)
       {
         auto parent = node->parent();
-        parent->replace(
-          node,
-          Load << (Expr
-                   << (FieldRef << (Expr << (LocalId ^ "$self"))
-                                << (FieldId ^ node->location()))));
+
+        // Check if this is an l-value (bare LHS of Equals).
+        bool is_lvalue = false;
+
+        if (parent && parent == Expr && parent->size() == 1)
+        {
+          auto grandparent = parent->parent();
+
+          if (
+            grandparent && grandparent == Equals &&
+            grandparent->front() == parent)
+          {
+            is_lvalue = true;
+          }
+        }
+
+        if (is_lvalue)
+        {
+          // Write: replace with Ref(Expr(FieldRef)) — ANF handles Store.
+          parent->replace(
+            node,
+            Ref << (Expr
+                    << (FieldRef << (Expr << (LocalId ^ "$self"))
+                                 << (FieldId ^ node->location()))));
+        }
+        else
+        {
+          // Read: replace with Load(FieldRef).
+          parent->replace(
+            node,
+            Load << (Expr
+                     << (FieldRef << (Expr << (LocalId ^ "$self"))
+                                  << (FieldId ^ node->location()))));
+        }
       }
     }
 
