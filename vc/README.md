@@ -36,7 +36,7 @@ Types.
 - Can type parameters take type arguments?
 
 Packages:
-- `stdin`, `stdout`, `stderr`.
+- Asynchronous `stdin`.
 - Hash map, hash set, ordered map, ordered set, list, deque, vector, span.
 - CLI.
   - Needs a map, so do an RB tree or hash map.

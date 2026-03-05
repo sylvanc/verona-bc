@@ -152,11 +152,11 @@ anf
                       (arg
                         (argcopy)
                         (localid 8:local$12))))
-                  (expr
-                    (=
-                      (lhs
-                        (load
-                          (localid 9:local$132)))
+                  (store
+                    (localid 10:local$1101)
+                    (localid 9:local$132)
+                    (arg
+                      (argcopy)
                       (localid 10:local$1078)))
                   (fieldref
                     (localid 9:local$134)
@@ -412,11 +412,11 @@ anf
                       (arg
                         (argcopy)
                         (localid 1:n))))
-                  (expr
-                    (=
-                      (lhs
-                        (load
-                          (localid 9:local$135)))
+                  (store
+                    (localid 10:local$1102)
+                    (localid 9:local$135)
+                    (arg
+                      (argcopy)
                       (localid 10:local$1080)))
                   (fieldref
                     (localid 9:local$137)
@@ -675,11 +675,11 @@ anf
                       (arg
                         (argcopy)
                         (localid 8:local$21))))
-                  (expr
-                    (=
-                      (lhs
-                        (load
-                          (localid 9:local$138)))
+                  (store
+                    (localid 10:local$1103)
+                    (localid 9:local$138)
+                    (arg
+                      (argcopy)
                       (localid 10:local$1082)))
                   (fieldref
                     (localid 9:local$140)
@@ -822,11 +822,11 @@ anf
                       (arg
                         (argcopy)
                         (localid 8:local$23))))
-                  (expr
-                    (=
-                      (lhs
-                        (load
-                          (localid 9:local$141)))
+                  (store
+                    (localid 10:local$1104)
+                    (localid 9:local$141)
+                    (arg
+                      (argcopy)
                       (localid 10:local$1084)))
                   (fieldref
                     (localid 9:local$143)
@@ -1213,15 +1213,15 @@ anf
                     (argcopy)
                     (localid 9:local$581))))
               (lookup
-                (localid 10:local$1101)
+                (localid 10:local$1105)
                 (localid 10:local$1086)
                 (rhs)
                 (symbolid 1:|)
                 (typeargs)
                 (int 1:2))
               (calldyn
-                (localid 10:local$1102)
-                (localid 10:local$1101)
+                (localid 10:local$1106)
+                (localid 10:local$1105)
                 (args
                   (arg
                     (argcopy)
@@ -1230,7 +1230,7 @@ anf
                     (argcopy)
                     (localid 9:local$583)))))
             (cond
-              (localid 10:local$1102)
+              (localid 10:local$1106)
               (labelid 8:body$154)
               (labelid 8:join$155)))
           (label
@@ -1459,15 +1459,15 @@ anf
                     (argcopy)
                     (localid 9:local$590))))
               (lookup
-                (localid 10:local$1103)
+                (localid 10:local$1107)
                 (localid 10:local$1088)
                 (rhs)
                 (symbolid 1:|)
                 (typeargs)
                 (int 1:2))
               (calldyn
-                (localid 10:local$1104)
-                (localid 10:local$1103)
+                (localid 10:local$1108)
+                (localid 10:local$1107)
                 (args
                   (arg
                     (argcopy)
@@ -1476,7 +1476,7 @@ anf
                     (argcopy)
                     (localid 9:local$592)))))
             (cond
-              (localid 10:local$1104)
+              (localid 10:local$1108)
               (labelid 8:body$166)
               (labelid 8:join$167)))
           (label
@@ -21500,15 +21500,15 @@ anf
                         (argcopy)
                         (localid 1:i))))
                   (lookup
-                    (localid 10:local$1105)
+                    (localid 10:local$1109)
                     (localid 10:local$1092)
                     (rhs)
                     (symbolid 2:!=)
                     (typeargs)
                     (int 1:2))
                   (calldyn
-                    (localid 10:local$1106)
-                    (localid 10:local$1105)
+                    (localid 10:local$1110)
+                    (localid 10:local$1109)
                     (args
                       (arg
                         (argcopy)
@@ -21517,7 +21517,7 @@ anf
                         (argcopy)
                         (localid 10:local$1094)))))
                 (cond
-                  (localid 10:local$1106)
+                  (localid 10:local$1110)
                   (labelid 8:body$833)
                   (labelid 8:join$834)))
               (label
