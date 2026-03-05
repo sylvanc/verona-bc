@@ -98,12 +98,13 @@ namespace vc
         {
           reify_function(*r);
 
-          // If the function had a TypeVar return and we fell back to Dyn,
-          // defer it for a second pass when all callees are reified.
+          // If the function had a TypeVar return in the def, defer it
+          // for a second pass when all callees are reified. The first
+          // pass may have produced a partial return type (e.g., nomatch
+          // from match arms when the main arm's CallDyn wasn't tracked).
           if (
             r->reification &&
-            (r->def / Type)->front() == TypeVar &&
-            (r->reification / Type)->type() == Dyn)
+            (r->def / Type)->front() == TypeVar)
           {
             deferred_typevar.push_back(r);
           }
@@ -153,6 +154,17 @@ namespace vc
               local_types[(stmt / LocalId)->location()] =
                 clone(stmt / ClassId);
             }
+            else if (stmt == FieldRef)
+            {
+              auto obj_loc = (stmt / Arg / Rhs)->location();
+              auto obj_it = local_types.find(obj_loc);
+              if (obj_it != local_types.end() && (obj_it->second == ClassId))
+              {
+                auto ft = find_field_type(obj_it->second, stmt / FieldId);
+                if (ft)
+                  local_types[(stmt / LocalId)->location()] = Ref << ft;
+              }
+            }
             else if (stmt == Lookup)
             {
               auto mid = (stmt / MethodId)->location().view();
@@ -176,6 +188,14 @@ namespace vc
                 {
                   auto ret = find_method_return_type(
                     recv_it->second, li->second.method_id);
+
+                  if (!ret && recv_it->second == Ref)
+                  {
+                    auto& mid = li->second.method_id;
+                    if (mid.starts_with("*::"))
+                      ret = clone(recv_it->second->front());
+                  }
+
                   if (ret)
                     local_types[(stmt / LocalId)->location()] = ret;
                 }
@@ -197,7 +217,8 @@ namespace vc
         }
 
         // Now try to infer the return type from Return locals.
-        Node new_ret;
+        // Collect all distinct return types to build a union if needed.
+        Nodes ret_types;
 
         for (auto& lbl : *labels)
         {
@@ -207,11 +228,36 @@ namespace vc
 
           auto ret_loc = (term / LocalId)->location();
           auto it = local_types.find(ret_loc);
-          if (it != local_types.end())
+          if (it == local_types.end())
+            continue;
+
+          bool dup = false;
+
+          for (auto& existing : ret_types)
           {
-            new_ret = clone(it->second);
-            break;
+            if (existing->equals(it->second))
+            {
+              dup = true;
+              break;
+            }
           }
+
+          if (!dup)
+            ret_types.push_back(clone(it->second));
+        }
+
+        Node new_ret;
+
+        if (ret_types.size() == 1)
+          new_ret = ret_types.front();
+        else if (ret_types.size() > 1)
+        {
+          Node union_node = Union;
+
+          for (auto& rt : ret_types)
+            union_node << clone(rt);
+
+          new_ret = union_node;
         }
 
         if (new_ret && new_ret->type() != Dyn)
@@ -1242,6 +1288,18 @@ namespace vc
               {
                 auto ret = find_method_return_type(
                   recv_it->second, li->second.method_id);
+
+                // Structural fallback for ref deref: ref[X].*(ref[X])
+                // returns X. This handles cases where ensure_ref_reified
+                // created the ref wrapper without proper subst for method
+                // registration.
+                if (!ret && recv_it->second == Ref)
+                {
+                  auto& mid = li->second.method_id;
+                  if (mid.starts_with("*::"))
+                    ret = clone(recv_it->second->front());
+                }
+
                 if (ret)
                   local_types[(n / LocalId)->location()] = ret;
               }
@@ -1442,9 +1500,12 @@ namespace vc
 
       // Infer TypeVar return type from Return terminals after body
       // processing. By now, local_types has been populated for all
-      // statements in the body.
+      // statements in the body. Collect all distinct return types and
+      // build a union if there are multiple.
       if (typevar_return)
       {
+        Nodes ret_types;
+
         for (auto& l : *labels)
         {
           auto term = l / Return;
@@ -1455,11 +1516,37 @@ namespace vc
           auto ret_loc = (term / LocalId)->location();
           auto it = local_types.find(ret_loc);
 
-          if (it != local_types.end())
+          if (it == local_types.end())
+            continue;
+
+          // Check if this type is already covered.
+          bool dup = false;
+
+          for (auto& existing : ret_types)
           {
-            r_type = clone(it->second);
-            break;
+            if (existing->equals(it->second))
+            {
+              dup = true;
+              break;
+            }
           }
+
+          if (!dup)
+            ret_types.push_back(clone(it->second));
+        }
+
+        if (ret_types.size() == 1)
+        {
+          r_type = ret_types.front();
+        }
+        else if (ret_types.size() > 1)
+        {
+          Node union_node = Union;
+
+          for (auto& rt : ret_types)
+            union_node << clone(rt);
+
+          r_type = union_node;
         }
 
         // If we still don't have a type, check if all exits are

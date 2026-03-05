@@ -1615,21 +1615,33 @@ namespace vc
     if ((func / Type)->front() == TypeVar)
       return true;
 
-    // Also check FieldDefs in the parent class: if any field contains
-    // TypeVar (possibly nested, e.g., ref[TypeVar]), the function body
-    // may reference it and needs re-processing.
+    // Also check FieldDefs in the parent class and any nested ClassDefs:
+    // if any field contains TypeVar (possibly nested, e.g., ref[TypeVar]),
+    // the function body may reference it and needs re-processing. Nested
+    // classes capture variables from the enclosing scope via fields, so
+    // TypeVar in a nested class's fields means the enclosing function
+    // needs to propagate types into the nested class's create call.
     auto parent_cls = func->parent(ClassDef);
 
     if (parent_cls)
     {
-      for (auto& child : *(parent_cls / ClassBody))
-      {
-        if (child != FieldDef)
-          continue;
+      bool found = false;
 
-        if (contains_typevar(child / Type))
-          return true;
-      }
+      parent_cls->traverse([&](auto node) {
+        if (found)
+          return false;
+
+        if (node == FieldDef && contains_typevar(node / Type))
+        {
+          found = true;
+          return false;
+        }
+
+        return node == parent_cls || node == ClassBody || node == ClassDef;
+      });
+
+      if (found)
+        return true;
     }
 
     return false;
@@ -3783,12 +3795,17 @@ namespace vc
 
     // ---------- Post-convergence: return type inference ----------
 
+    bool in_generic_context = (node / TypeParams)->size() > 0 ||
+      ((node->parent({ClassDef}) != nullptr) &&
+       (node->parent({ClassDef}) / TypeParams)->size() > 0);
+
     auto func_ret_type = node / Type;
 
     if (func_ret_type->front() == TypeVar)
     {
       SequentCtx ctx{top, {}, {}};
       Nodes ret_types;
+      bool has_unresolved_return = false;
 
       for (size_t i = 0; i < n_labels; i++)
       {
@@ -3823,7 +3840,15 @@ namespace vc
         }
 
         if (!ret_type_node)
+        {
+          // In a generic context, unresolved return types mean the
+          // method calls on type parameters couldn't be resolved.
+          // Leave the return type as TypeVar for the reify pass.
+          if (in_generic_context)
+            has_unresolved_return = true;
+
           continue;
+        }
 
         bool already_covered = false;
 
@@ -3840,7 +3865,15 @@ namespace vc
           ret_types.push_back(clone(ret_type_node));
       }
 
-      if (ret_types.size() == 1)
+      // In a generic context, if any return path has an unresolved type
+      // (e.g., a method call on a type parameter), leave the return type
+      // as TypeVar. The reify pass will determine the concrete type after
+      // monomorphization.
+      if (has_unresolved_return)
+      {
+        // Don't set the return type — leave as TypeVar.
+      }
+      else if (ret_types.size() == 1)
       {
         node->replace(func_ret_type, ret_types.front());
       }
@@ -3883,10 +3916,6 @@ namespace vc
     }
 
     // ---------- Post-convergence: error checking ----------
-
-    bool in_generic_context = (node / TypeParams)->size() > 0 ||
-      ((node->parent({ClassDef}) != nullptr) &&
-       (node->parent({ClassDef}) / TypeParams)->size() > 0);
 
     if (check_errors && !in_generic_context)
     {
@@ -3960,22 +3989,40 @@ namespace vc
       // types that allow sibling methods to resolve in the next
       // iteration (e.g., apply resolves field types from the callee's
       // signature, then create resolves its params from FieldDefs).
-      bool progress = true;
+      // We reset return types to TypeVar before each re-process so
+      // that return type inference runs fresh with updated env data.
+      //
+      // Progress is tracked by counting how many functions still have
+      // unresolved TypeVar types (params, fields, or return). The loop
+      // terminates when no further resolution occurs or after at most
+      // N iterations (bounded by the deferred list size).
+      size_t prev_tv_count = deferred.size();
 
-      while (progress)
+      for (size_t iter = 0; iter < deferred.size(); iter++)
       {
-        progress = false;
+        for (auto& func : deferred)
+        {
+          // Reset the return type to TypeVar so inference re-runs
+          // with the latest FieldDef/param types.
+          auto old_ret = func / Type;
+          func->replace(old_ret, make_type());
+
+          process_function(func, top, false);
+        }
+
+        // Count functions that still have unresolved TypeVars.
+        size_t tv_count = 0;
 
         for (auto& func : deferred)
         {
-          if (!has_typevar(func))
-            continue;
-
-          process_function(func, top, false);
-
-          if (!has_typevar(func))
-            progress = true;
+          if (has_typevar(func))
+            tv_count++;
         }
+
+        if (tv_count == 0 || tv_count >= prev_tv_count)
+          break;
+
+        prev_tv_count = tv_count;
       }
 
       // Final check: error on any remaining unresolved TypeVars.
