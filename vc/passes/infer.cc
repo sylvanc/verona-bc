@@ -3807,6 +3807,34 @@ namespace vc
       Nodes ret_types;
       bool has_unresolved_return = false;
 
+      // In a generic context, check if any CallDyn result is missing
+      // from env. This indicates a method call on a type parameter that
+      // couldn't be resolved. If so, downstream variables (including
+      // the return value) may have partial types, and we should leave
+      // the return type as TypeVar for the reify pass to handle.
+      if (in_generic_context)
+      {
+        for (auto& lbl : *labels)
+        {
+          for (auto& stmt : *(lbl / Body))
+          {
+            if (stmt->in({CallDyn, TryCallDyn}))
+            {
+              auto dst = stmt / LocalId;
+
+              if (env.find(dst->location()) == env.end())
+              {
+                has_unresolved_return = true;
+                break;
+              }
+            }
+          }
+
+          if (has_unresolved_return)
+            break;
+        }
+      }
+
       for (size_t i = 0; i < n_labels; i++)
       {
         auto term = labels->at(i) / Return;

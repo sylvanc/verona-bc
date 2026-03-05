@@ -1191,7 +1191,8 @@ namespace vbcc
                 auto param_type = resolve_type((*p_it) / Type);
                 auto arg_type = typed((*a_it) / Rhs);
 
-                if (arg_type && !IRSubtype(top, arg_type, param_type))
+                if (
+                  arg_type && !IRSubtype(top, arg_type, param_type))
                 {
                   type_err(
                     *a_it,
@@ -1212,7 +1213,16 @@ namespace vbcc
             }
             else if (!(info.src_type && info.src_type == Union))
             {
-              set_type(env, node / LocalId, Dyn);
+              // If the source type resolves to an empty Union (shape
+              // with no implementors), use empty Union (bottom type)
+              // instead of Dyn. The code path is unreachable since no
+              // value of this type can exist at runtime.
+              auto resolved_src = resolve_type(info.src_type);
+
+              if (resolved_src == Union && resolved_src->empty())
+                set_type(env, node / LocalId, Union);
+              else
+                set_type(env, node / LocalId, Dyn);
             }
           }
           else
@@ -1791,6 +1801,71 @@ namespace vbcc
 
         // Worklist: process labels until type environments stabilize.
         std::vector<bool> in_wl(n_fs_labels, true);
+
+        // Pre-compute unreachable labels: labels that are the narrow
+        // target of a Cond where the typetest type resolves to an empty
+        // Union (shape with no implementors). Code in those labels is
+        // unreachable at runtime.
+        std::set<std::string> unreachable_labels;
+
+        for (size_t i = 0; i < n_fs_labels; i++)
+        {
+          if (!label_vec[i])
+            continue;
+
+          auto term_node = label_vec[i]->back();
+
+          if (term_node != Cond)
+            continue;
+
+          auto body_node = label_vec[i] / Body;
+
+          if (body_node->empty())
+            continue;
+
+          auto last = body_node->back();
+          bool negated = false;
+          Node typetest_stmt;
+
+          if (
+            last == Typetest &&
+            (last / LocalId)->location() == (term_node / LocalId)->location())
+          {
+            typetest_stmt = last;
+          }
+          else if (
+            last == Not &&
+            (last / LocalId)->location() ==
+              (term_node / LocalId)->location() &&
+            body_node->size() > 1)
+          {
+            auto prev = body_node->at(body_node->size() - 2);
+
+            if (
+              prev == Typetest &&
+              (prev / LocalId)->location() == (last / Rhs)->location())
+            {
+              typetest_stmt = prev;
+              negated = true;
+            }
+          }
+
+          if (typetest_stmt)
+          {
+            auto tested_type = resolve_type(typetest_stmt / Type);
+
+            if (tested_type == Union && tested_type->empty())
+            {
+              auto true_name =
+                std::string((term_node / Lhs)->location().view());
+              auto false_name =
+                std::string((term_node / Rhs)->location().view());
+              auto& narrow_name = negated ? false_name : true_name;
+              unreachable_labels.insert(narrow_name);
+            }
+          }
+        }
+
         std::queue<size_t> wl;
         for (size_t i = 0; i < n_fs_labels; i++)
           wl.push(i);
@@ -1833,14 +1908,26 @@ namespace vbcc
             }
           }
 
-          // Process body instructions.
+          // Process body instructions. Skip type checking in unreachable
+          // labels (narrowed to an empty shape type).
+          auto this_label_name =
+            std::string((label_vec[idx] / LabelId)->location().view());
+          bool is_unreachable =
+            unreachable_labels.count(this_label_name) > 0;
+
           auto body = label_vec[idx] / Body;
-          for (auto& inst : *body)
-            process_node(inst);
+
+          if (!is_unreachable)
+          {
+            for (auto& inst : *body)
+              process_node(inst);
+          }
 
           // Process terminator.
           auto term = label_vec[idx]->back();
-          process_node(term);
+
+          if (!is_unreachable)
+            process_node(term);
 
           // For Cond preceded by Typetest, create branch-specific exit envs
           // that narrow the source variable's type on each branch.
@@ -1963,6 +2050,13 @@ namespace vbcc
           }
 
           // Process body instructions and terminator for errors.
+          // Skip unreachable labels (narrowed to an empty shape type).
+          auto this_name2 =
+            std::string((label_vec[idx] / LabelId)->location().view());
+
+          if (unreachable_labels.count(this_name2) > 0)
+            continue;
+
           auto body2 = label_vec[idx] / Body;
           for (auto& inst : *body2)
             process_node(inst);

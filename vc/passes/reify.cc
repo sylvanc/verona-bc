@@ -301,7 +301,13 @@ namespace vc
             }
 
             if (union_node->empty())
-              r.reification = Type << clone(r.id) << Dyn;
+            {
+              // No concrete classes implement this shape. Emit an empty
+              // Type entry so TypeId references are valid. The typetest
+              // for this shape will always fail at runtime (no value of
+              // this type can exist), making the code path unreachable.
+              r.reification = Type << clone(r.id) << Union;
+            }
             else if (union_node->size() == 1)
               r.reification = Type << clone(r.id) << union_node->front();
             else
@@ -324,7 +330,8 @@ namespace vc
       // Iterate in insertion order (not pointer order) for determinism.
       for (auto& key : map_order)
         for (auto& r : map[key])
-          top << r.reification;
+          if (r.reification)
+            top << r.reification;
 
       // Add reified libraries.
       for (auto& [_, lib] : libs)
@@ -1753,14 +1760,47 @@ namespace vc
           auto rt = reify_type(t, subst);
 
           // A union that contains a dynamic type is just dynamic. A union that
-          // contains a union is flattened.
+          // contains a union is flattened. TypeId entries for shapes with no
+          // implementors are dropped (the code paths requiring them are
+          // unreachable).
           if (rt == Dyn)
             return Dyn;
           else if (rt == Union)
             r << *rt;
+          else if (rt == TypeId)
+          {
+            // Check if this TypeId corresponds to a shape with no
+            // implementors. If so, drop it from the union.
+            bool has_impl = false;
+
+            for (auto& key : map_order)
+            {
+              for (auto& cr : map[key])
+              {
+                if (cr.id && cr.id->equals(rt) && cr.reification)
+                {
+                  has_impl = true;
+                  break;
+                }
+              }
+
+              if (has_impl)
+                break;
+            }
+
+            if (has_impl)
+              r << rt;
+            // else: drop this arm (shape with no implementors)
+          }
           else
             r << rt;
         }
+
+        if (r->empty())
+          return Dyn;
+
+        if (r->size() == 1)
+          return r->front();
 
         return r;
       }
