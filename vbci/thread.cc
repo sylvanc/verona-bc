@@ -1918,11 +1918,21 @@ namespace vbci
     // Drop all frame registers.
     frame->drop();
 
-    // Finalize the stack.
-    for (size_t i = frame->finalize_base; i < frame->finalize_top; i++)
-      finalize.at(i)->finalize();
+    // Phase 1: Run finalizers on ALL stack objects that have them.
+    // This must happen before any destruct, because a finalizer may
+    // reference other stack-allocated objects that are still live.
+    stack.visit_headers(frame->save, stack.top, [&](Header* h) {
+      if (Program::get().is_array(h->get_type_id()))
+        return;
 
-    // Drop references held by stack allocations in the current frame.
+      auto* obj = static_cast<Object*>(h);
+      auto fin = obj->cls().finalizer();
+
+      if (fin)
+        Thread::run_sync(fin, ValueTransfer(obj, true));
+    });
+
+    // Phase 2: Drop references held by stack allocations.
     stack.visit_headers(frame->save, stack.top, [&](Header* h) {
       if (Program::get().is_array(h->get_type_id()))
         static_cast<Array*>(h)->destruct();

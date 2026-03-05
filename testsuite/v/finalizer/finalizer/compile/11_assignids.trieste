@@ -1,0 +1,203 @@
+vc
+assignids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$976)
+            (functionid 21:finalizer::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$976)))))
+  (func
+    (functionid 21:finalizer::main::0::0)
+    (params)
+    (i32)
+    (vars
+      (localid 6:result))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 7:local$8)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 6:result)
+            (localid 7:local$8))
+          (const
+            (localid 9:local$107)
+            (i32)
+            (int 2:10))
+          (call
+            (localid 7:local$9)
+            (functionid 33:finalizer::resource::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$107))))
+          (copy
+            (localid 1:a)
+            (localid 7:local$9))
+          (const
+            (localid 9:local$108)
+            (i32)
+            (int 2:20))
+          (call
+            (localid 8:local$10)
+            (functionid 33:finalizer::resource::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$108))))
+          (copy
+            (localid 1:b)
+            (localid 8:local$10)))
+        (ret
+          (localid 6:result)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 33:finalizer::resource::create::1::0)
+    (params
+      (param
+        (localid 3:val)
+        (i32)))
+    (classid 22:finalizer::resource::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$7)
+            (classid 22:finalizer::resource::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:val)))))
+        (ret
+          (localid 7:local$7)))))
+  (class
+    (classid 22:finalizer::resource::0)
+    (fields
+      (field
+        (fieldid 3:val)
+        (i32)))
+    (methods
+      (method
+        (methodid 6:@final)
+        (functionid 32:finalizer::resource::final::1::0))
+      (method
+        (methodid 9:val::1::0)
+        (functionid 30:finalizer::resource::val::1::0))))
+  (func
+    (functionid 32:finalizer::resource::final::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 22:finalizer::resource::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$499)
+            (localid 4:self)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 9:local$500)
+            (localid 9:local$499)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (ffi
+            (localid 7:local$6)
+            (symbolid 8:printval)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$500))))
+          (const
+            (localid 8:none$977)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$977)))))
+  (primitive
+    (none)
+    (methods))
+  (func
+    (functionid 30:finalizer::resource::val::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 22:finalizer::resource::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$5)
+            (functionid 35:finalizer::resource::val::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 9:local$498)
+            (localid 7:local$5)))
+        (ret
+          (localid 9:local$498)))))
+  (func
+    (functionid 35:finalizer::resource::val::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 22:finalizer::resource::0)))
+    (ref
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$106)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val)))
+        (ret
+          (localid 9:local$106)))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 8:printval)
+        (string 8:printval)
+        (string 0:)
+        (none)
+        (ffiparams
+          (dyn))
+        (none)))
+    (none)))
