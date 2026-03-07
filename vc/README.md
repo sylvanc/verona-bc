@@ -9,7 +9,8 @@ String literals should be immortal, not fresh allocations.
 Can we remove all uses of `Dyn` from `typecheck`?
 
 Review `iowise`.
-- Test it?
+- Buffer final can't call flush, that relies on mutation.
+- Dispose pattern?
 
 Semantics:
 - Region creation.

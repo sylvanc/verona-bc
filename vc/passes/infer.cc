@@ -2185,6 +2185,7 @@ namespace vc
     const Node& body,
     TypeEnv& env,
     Node top,
+    const Node& enclosing_func,
     std::map<Location, Node>& lookup_stmts,
     std::vector<std::pair<Location, Location>>& typevar_aliases,
     std::map<Location, std::pair<Location, size_t>>& ref_to_tuple)
@@ -3108,6 +3109,19 @@ namespace vc
                     auto new_type = ref_type(cown_inner);
                     param->replace(param_type, new_type);
                   }
+
+                  // Propagate return type: if the lambda's apply has
+                  // TypeVar return and the enclosing function has a
+                  // concrete return type, use that.
+                  auto apply_ret = apply_func / Type;
+
+                  if (apply_ret->front() == TypeVar)
+                  {
+                    auto enclosing_ret = enclosing_func / Type;
+
+                    if (enclosing_ret->front() != TypeVar)
+                      apply_func->replace(apply_ret, clone(enclosing_ret));
+                  }
                 }
               }
             }
@@ -3339,7 +3353,7 @@ namespace vc
     for (auto& lbl : *labels)
     {
       process_label_body(
-        lbl / Body, env, top, lookup_stmts, typevar_aliases, ref_to_tuple);
+        lbl / Body, env, top, node, lookup_stmts, typevar_aliases, ref_to_tuple);
 
       // Refine return values against the function's declared return type.
       auto term = lbl / Return;
@@ -3494,6 +3508,7 @@ namespace vc
             lbl / Body,
             label_env,
             top,
+            node,
             lookup_stmts,
             typevar_aliases,
             ref_to_tuple);
@@ -4031,9 +4046,12 @@ namespace vc
         for (auto& func : deferred)
         {
           // Reset the return type to TypeVar so inference re-runs
-          // with the latest FieldDef/param types.
+          // with the latest FieldDef/param types. But don't reset
+          // if the return type was already resolved (e.g., by shape
+          // propagation) — that's the declared contract.
           auto old_ret = func / Type;
-          func->replace(old_ret, make_type());
+          if (old_ret->front() == TypeVar)
+            func->replace(old_ret, make_type());
 
           process_function(func, top, false);
         }

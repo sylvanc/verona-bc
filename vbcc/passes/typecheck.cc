@@ -538,7 +538,8 @@ namespace vbcc
             if (child != Primitive)
               continue;
             auto ptype = child / Type;
-            if (ptype->type() == type_node->type())
+            auto tn_copy = type_node;
+            if (ptype->equals(tn_copy))
             {
               cls = child;
               break;
@@ -1219,7 +1220,9 @@ namespace vbcc
               // value of this type can exist at runtime.
               auto resolved_src = resolve_type(info.src_type);
 
-              if (resolved_src == Union && resolved_src->empty())
+              if (
+                resolved_src && resolved_src == Union &&
+                resolved_src->empty())
                 set_type(env, node / LocalId, Union);
               else
                 set_type(env, node / LocalId, Dyn);

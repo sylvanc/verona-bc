@@ -282,10 +282,6 @@ liveness
     (cown
       (classid 21:generic_when::cell::0))
     (methods))
-  (primitive
-    (cown
-      (dyn))
-    (methods))
   (func
     (functionid 38:_builtin::cown::lambda$4::create::1::0)
     (params
@@ -380,8 +376,7 @@ liveness
       (param
         (localid 4:self)
         (classid 20:generic_when::box::0)))
-    (cown
-      (dyn))
+    (none)
     (vars)
     (labels
       (label
@@ -417,9 +412,13 @@ liveness
                 (argmove)
                 (localid 9:local$127)))
             (cown
-              (dyn))))
+              (none)))
+          (const
+            (localid 9:none$1036)
+            (none)
+            (none)))
         (ret
-          (localid 9:local$535)))))
+          (localid 9:none$1036)))))
   (func
     (functionid 29:generic_when::box::doit::2::0)
     (params
@@ -429,8 +428,7 @@ liveness
       (param
         (localid 1:s)
         (classid 19:_builtin::string::0)))
-    (cown
-      (dyn))
+    (none)
     (vars)
     (labels
       (label
@@ -469,9 +467,16 @@ liveness
                 (argmove)
                 (localid 9:local$137)))
             (cown
-              (dyn))))
+              (none)))
+          (const
+            (localid 9:none$1032)
+            (none)
+            (none)))
         (ret
-          (localid 9:local$541)))))
+          (localid 9:none$1032)))))
+  (primitive
+    (none)
+    (methods))
   (func
     (functionid 41:generic_when::box::lambda$1::create::1::0)
     (params
@@ -742,7 +747,7 @@ liveness
         (localid 1:w)
         (ref
           (classid 21:generic_when::cell::0))))
-    (dyn)
+    (none)
     (vars)
     (labels
       (label
@@ -780,9 +785,13 @@ liveness
                 (localid 8:local$20))
               (arg
                 (argmove)
-                (localid 7:local$5)))))
+                (localid 7:local$5))))
+          (const
+            (localid 9:none$1033)
+            (none)
+            (none)))
         (ret
-          (localid 9:local$914)))))
+          (localid 9:none$1033)))))
   (func
     (functionid 51:generic_when::box::lambda$1::lambda$6::create::1::0)
     (params
@@ -1023,14 +1032,11 @@ liveness
             (functionid 28:_builtin::none::create::0::0)
             (args))
           (const
-            (localid 9:none$1032)
+            (localid 9:none$1034)
             (none)
             (none)))
         (ret
-          (localid 9:none$1032)))))
-  (primitive
-    (none)
-    (methods))
+          (localid 9:none$1034)))))
   (func
     (functionid 28:_builtin::none::create::0::0)
     (params)
@@ -1045,11 +1051,11 @@ liveness
             (none)
             (none))
           (const
-            (localid 9:none$1033)
+            (localid 9:none$1035)
             (none)
             (none)))
         (ret
-          (localid 9:none$1033)))))
+          (localid 9:none$1035)))))
   (func
     (functionid 27:_builtin::ref::*::1::ref::0)
     (params
@@ -1122,7 +1128,7 @@ liveness
         (localid 1:w)
         (ref
           (classid 21:generic_when::cell::0))))
-    (i32)
+    (none)
     (vars)
     (labels
       (label
@@ -1149,9 +1155,13 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$125)))))
+                (localid 9:local$125))))
+          (const
+            (localid 9:none$1037)
+            (none)
+            (none)))
         (ret
-          (localid 9:local$967)))))
+          (localid 9:none$1037)))))
   (func
     (functionid 27:generic_when::cell::f::1::0)
     (params

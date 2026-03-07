@@ -686,7 +686,13 @@ infer
                                   (ident 1:A)
                                   (typeargs))))))))))
                 (type
-                  (typevar))
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))))
                 (where)
                 (labels
                   (label
@@ -745,10 +751,8 @@ infer
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:cown)
-                  (typeargs
-                    (type
-                      (typevar))))))
+                  (ident 4:none)
+                  (typeargs))))
             (where)
             (labels
               (label
@@ -825,7 +829,13 @@ infer
                         (argcopy)
                         (localid 9:local$127)))
                     (type
-                      (typevar))))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:none)
+                          (typeargs))))))
                 (ret
                   (localid 9:local$535)))))
           (classdef
@@ -875,7 +885,18 @@ infer
                       (typeargs))
                     (nameelement
                       (ident 3:box)
-                      (typeargs))
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 12:generic_when)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:box)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:A)
+                              (typeargs))))))
                     (nameelement
                       (ident 8:lambda$1)
                       (typeargs
@@ -1002,7 +1023,21 @@ infer
                           (typeargs))
                         (nameelement
                           (ident 8:lambda$1)
-                          (typeargs))
+                          (typeargs
+                            (type
+                              (typename
+                                (nameelement
+                                  (ident 12:generic_when)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 3:box)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 8:lambda$1)
+                                  (typeargs))
+                                (nameelement
+                                  (ident 1:A)
+                                  (typeargs))))))
                         (nameelement
                           (ident 8:lambda$6)
                           (typeargs
@@ -1379,7 +1414,13 @@ infer
                                   (ident 1:A)
                                   (typeargs))))))))))
                 (type
-                  (typevar))
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:none)
+                      (typeargs))))
                 (where)
                 (labels
                   (label
@@ -1515,10 +1556,8 @@ infer
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:cown)
-                  (typeargs
-                    (type
-                      (typevar))))))
+                  (ident 4:none)
+                  (typeargs))))
             (where)
             (labels
               (label
@@ -1598,7 +1637,13 @@ infer
                         (argcopy)
                         (localid 9:local$137)))
                     (type
-                      (typevar))))
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:none)
+                          (typeargs))))))
                 (ret
                   (localid 9:local$541)))))))
       (function
