@@ -363,14 +363,14 @@ namespace vbci
     try
     {
       // Store the function return value in the result cown.
-      result->exchange<true, true>(nullptr, thread_run(behavior));
+      Register r = result->exchange<true>(thread_run(behavior));
     }
     catch (Value& error_value)
     {
       // Runtime error is fatal to the behavior. Clean up all frames and store
       // the error in the result cown.
       teardown_all();
-      result->exchange<true, true>(nullptr, ValueImmortal(error_value));
+      Register r = result->exchange<true>(ValueImmortal(error_value));
     }
 
 #ifndef NDEBUG

@@ -2,6 +2,7 @@
 
 #include "header.h"
 #include "program.h"
+#include "writebarrier.h"
 
 #include <format>
 
@@ -81,14 +82,14 @@ namespace vbci
     }
 
     template<bool is_move>
-    void exchange(Register& dst, size_t idx, Reg<is_move> v)
+    ValueTransfer exchange(size_t idx, Reg<is_move> v)
     {
       if (!Program::get().subtype(v->type_id(), content_type_id()))
         Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
-
-      Header::exchange<is_move>(&dst, addr, value_type, std::forward<Reg<is_move>>(v));
+      return writebarrier::exchange<is_move>(
+        location(), addr, value_type, std::forward<Reg<is_move>>(v));
     }
 
     /**
@@ -170,8 +171,7 @@ namespace vbci
           {
             void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * i);
             auto prev = Value::from_addr(value_type, addr);
-
-            field_drop(prev);
+            writebarrier::drop(location(), prev);
           }
           break;
         }
@@ -194,8 +194,7 @@ namespace vbci
           {
             void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * i);
             auto prev = Value::from_addr(value_type, addr);
-
-            field_drop(prev);
+            writebarrier::drop(location(), prev);
           }
           break;
         }

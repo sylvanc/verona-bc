@@ -157,7 +157,7 @@ namespace vbci
     void immortalize();
 
     template<bool is_move>
-    void exchange(Register& dst, Reg<is_move> v) const;
+    ValueTransfer exchange(Reg<is_move> v) const;
     ValueBorrow load_reference() const;
 
     Function* method(size_t w) const;

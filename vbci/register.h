@@ -202,7 +202,8 @@ namespace vbci
     template<bool is_move>
     void from_exchange(const Register& reference, Reg<is_move> new_value)
     {
-      reference.exchange<is_move>(*this, std::forward<Reg<is_move>>(new_value));
+      *this =
+        reference.exchange<is_move>(std::forward<Reg<is_move>>(new_value));
     }
 
     template<bool is_move>
@@ -214,7 +215,6 @@ namespace vbci
         {
           auto obj = src.get_object();
           auto f = obj->field(field_id);
-
           auto readonly = src.is_readonly();
 
           replace_unsafe([&]() {
@@ -222,15 +222,16 @@ namespace vbci
               src.clear_unsafe();
             else
               src.template inc<true>();
+
             return Value(obj, f, readonly);
           });
           return;
         }
+
         case ValueType::Cown:
         {
           auto cown = src.get_cown();
           snmalloc::UNUSED(field_id);
-
           auto readonly = src.is_readonly();
 
           replace_unsafe([&]() {
@@ -238,10 +239,12 @@ namespace vbci
               src.clear_unsafe();
             else
               src.template inc<false>();
+
             return Value(cown, readonly);
           });
           return;
         }
+
         default:
           Value::error(Error::BadRefTarget);
       }

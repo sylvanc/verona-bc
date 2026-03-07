@@ -116,6 +116,11 @@ namespace vbci
       return (tag == 0) || (tag == FrameLocal);
     }
 
+    bool is_immortal() const
+    {
+      return (value & Mask) == Immortal;
+    }
+
     bool is_immutable() const
     {
       return (value & Mask) == Immutable;
@@ -127,12 +132,6 @@ namespace vbci
     }
 
     Region* to_region() const;
-
-    Header* to_scc() const
-    {
-      assert(is_immutable());
-      return reinterpret_cast<Header*>(value & ~Immutable);
-    }
 
     Location pending() const
     {

@@ -649,9 +649,8 @@ namespace vbci
 
       // TODO Register use here is pointless, and we should optimise.
       // Create a exchange that doesn't use reference counting.
-      Register dst; // There is no old value, add an array with no dst.
       Register val = ValueTransfer(arg);
-      argv->template exchange<true>(dst, i, std::move(val));
+      Register dst = argv->exchange<true>(i, std::move(val));
     }
 
     argv->immortalize();

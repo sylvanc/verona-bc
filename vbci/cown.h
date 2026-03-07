@@ -156,8 +156,8 @@ namespace vbci
       return true;
     }
 
-    template<bool is_move, bool no_dst = false>
-    void exchange(Register* dst, Reg<is_move> next)
+    template<bool is_move>
+    ValueTransfer exchange(Reg<is_move> next)
     {
       if (
         !next->is_error() &&
@@ -174,30 +174,18 @@ namespace vbci
         if constexpr (is_move)
         {
           content = next.extract();
-          // We are effectively doing:
-          //  prev.stack_inc();
-          //  next.stack_dec();
-          // But since they are the same region we can elide.
-          // However, if there is no_dst then we do need to dec next.
-          if constexpr (no_dst)
-            content.stack_dec();
         }
         else
         {
           next->template inc<false>();
           content = next.borrow();
-
-
-          if (!no_dst)
-            prev.stack_inc();
+          prev.stack_inc();
         }
 
-        if (!no_dst)
-          *dst = ValueTransfer(prev);
-        return;
+        return ValueTransfer(prev);
       }
 
-      if (!no_dst && prev_loc.is_region())
+      if (prev_loc.is_region())
       {
         auto pr = prev_loc.to_region();
         LOG(Trace) << "Removing region: " << pr << " from cown " << this;
@@ -212,18 +200,18 @@ namespace vbci
       {
         // Failed to add references, need to reestablish region invariant for
         // previous.
-        if (!no_dst && prev_loc.is_region())
+        if (prev_loc.is_region())
         {
           auto pr = prev_loc.to_region();
           LOG(Trace) << "Restoring region: " << pr << " to cown " << this;
           pr->set_cown_owner();
           pr->stack_dec();
         }
+
         Value::error(Error::BadStore);
       }
 
-      if constexpr (!no_dst)
-        *dst = ValueTransfer(prev);
+      return ValueTransfer(prev);
     }
 
     std::string to_string()

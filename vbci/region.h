@@ -4,11 +4,11 @@
 #include "collect.h"
 #include "ident.h"
 #include "location.h"
+#include "logging.h"
 
 #include <cstdint>
 #include <iostream>
 #include <vbci.h>
-#include "logging.h"
 
 namespace vbci
 {
@@ -35,7 +35,6 @@ namespace vbci
     static constexpr uintptr_t parent_tag_cown = 0x1;
     static constexpr uintptr_t parent_tag_frame_local = 0x2;
 
-
   protected:
     Region() : parent(0), stack_rc(0) {}
     virtual ~Region() = default;
@@ -58,14 +57,17 @@ namespace vbci
       // If we transition from 0 to 1, we need to increment the parent RC.
       if (stack_rc == 0)
       {
-        if (has_parent()) {
-          LOG(Trace) << "Region @" << this << " incrementing parent region stack_rc due to stack_rc transitioning from 0 to 1";
+        if (has_parent())
+        {
+          LOG(Trace) << "Region @" << this
+                     << " incrementing parent region stack_rc due to stack_rc "
+                        "transitioning from 0 to 1";
           get_parent()->stack_inc();
         }
       }
 
       LOG(Trace) << "Region @" << this << " stack_rc incremented from "
-                << stack_rc << " to " << (stack_rc + inc);
+                 << stack_rc << " to " << (stack_rc + inc);
 
       stack_rc += inc;
     }
@@ -76,9 +78,9 @@ namespace vbci
         return true;
 
       assert(stack_rc > 0);
-
       LOG(Trace) << "Region @" << this << " stack_rc decremented from "
-                << stack_rc << " to " << (stack_rc - 1);
+                 << stack_rc << " to " << (stack_rc - 1);
+
       if (--stack_rc == 0)
       {
         if (!has_owner())
@@ -91,7 +93,9 @@ namespace vbci
         // If we transition from 1 to 0, we need to decrement the parent RC.
         if (has_parent())
         {
-          LOG(Trace) << "Region @" << this << " decrementing parent region stack_rc due to stack_rc reaching 0";
+          LOG(Trace) << "Region @" << this
+                     << " decrementing parent region stack_rc due to stack_rc "
+                        "reaching 0";
           return get_parent()->stack_dec();
         }
       }
@@ -149,8 +153,11 @@ namespace vbci
       assert((raw & parent_tag_mask) == 0);
       parent = raw;
 
-      if (stack_rc > 0) {
-        LOG(Trace) << "Region @" << this << " incrementing parent region stack_rc due to existing stack_rc";
+      if (stack_rc > 0)
+      {
+        LOG(Trace)
+          << "Region @" << this
+          << " incrementing parent region stack_rc due to existing stack_rc";
         r->stack_inc();
       }
     }
@@ -169,21 +176,17 @@ namespace vbci
 
     /**
      * Clear the parent of this region.
-     *
-     * If the region's stack RC is zero, returns true, indicating that the
-     * region should be freed. Otherwise, returns false.
      */
-    bool clear_parent()
+    void clear_parent()
     {
       auto p = get_parent();
       assert(p != nullptr);
+      parent = 0;
 
       if (stack_rc > 0)
         p->stack_dec();
-
-      parent = 0;
-      // TODO: Should this just deallocate the region directly?
-      return stack_rc == 0;
+      else
+        free_region();
     }
 
     bool clear_cown_owner()

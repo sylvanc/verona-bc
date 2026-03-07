@@ -856,14 +856,13 @@ namespace vbci
   }
 
   template<bool is_move>
-  void Value::exchange(Register& dst, Reg<is_move> v) const
+  ValueTransfer Value::exchange(Reg<is_move> v) const
   {
     if (readonly)
-    {
       Value::error(Error::BadStoreTarget);
-    }
-    // Currently only cowns provide read-only access.  That means it
-    // is never valid to store a read-only reference any where.
+
+    // Currently only cowns provide read-only access. That means it is never
+    // valid to store a read-only reference any where.
     if (v->readonly)
       Value::error(Error::BadStore);
 
@@ -889,31 +888,24 @@ namespace vbci
         }
 
         Register& reg = Thread::get_register(u64);
-        dst = std::move(reg);
+        ValueTransfer prev = reg.extract();
 
         if constexpr (is_move)
-        {
-          reg = std::move(v);
-        }
+          reg = ValueTransfer(v.extract());
         else
-        {
-          reg = v;
-        }
+          reg = ValueBorrow(v.borrow());
 
-        return;
+        return prev;
       }
 
       case ValueType::FieldRef:
-        obj->exchange<is_move>(&dst, idx, std::forward<Reg<is_move>>(v));
-        return;
+        return obj->exchange<is_move>(idx, std::forward<Reg<is_move>>(v));
 
       case ValueType::ArrayRef:
-        arr->exchange<is_move>(dst, idx, std::forward<Reg<is_move>>(v));
-        return;
+        return arr->exchange<is_move>(idx, std::forward<Reg<is_move>>(v));
 
       case ValueType::CownRef:
-        cown->exchange<is_move>(&dst, std::forward<Reg<is_move>>(v));
-        return;
+        return cown->exchange<is_move>(std::forward<Reg<is_move>>(v));
 
       default:
         Value::error(Error::BadStoreTarget);
@@ -921,8 +913,8 @@ namespace vbci
   }
 
   // Create instances of templated store
-  template void Value::exchange<true>(Register& old, Reg<true> v) const;
-  template void Value::exchange<false>(Register& old, Reg<false> v) const;
+  template ValueTransfer Value::exchange<true>(Reg<true> v) const;
+  template ValueTransfer Value::exchange<false>(Reg<false> v) const;
 
   Function* Value::method(size_t w) const
   {

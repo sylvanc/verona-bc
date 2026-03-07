@@ -6,7 +6,6 @@ add_executable(vbci
   collect.cc
   dynlib.cc
   frame.cc
-  freeze.cc
   location.cc
   main.cc
   program.cc
