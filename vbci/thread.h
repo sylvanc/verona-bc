@@ -88,13 +88,23 @@ namespace vbci
       assert(args == 0);
       ((arg(args++) = std::forward<Ts>(argv)), ...);
 
+      auto depth = frames.size();
+
       try
       {
         thread_run(func);
       }
       catch (Value& error_value)
       {
-        teardown_all();
+        // Only tear down frames we created, not our caller's frames.
+        while (frames.size() > depth)
+        {
+          frame->drop_args(args);
+          teardown();
+          frames.pop_back();
+          frame = frames.empty() ? nullptr : &frames.back();
+        }
+
         LOG(Error) << error_value.to_string();
       }
     }

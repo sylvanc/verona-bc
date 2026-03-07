@@ -23,7 +23,6 @@ namespace vbci
 
     auto r = dest_loc.to_region();
     bool frame_local = dest_loc.is_frame_local();
-
     auto& program = Program::get();
 
     std::vector<Header*> wl;

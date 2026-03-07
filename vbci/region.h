@@ -47,7 +47,7 @@ namespace vbci
     virtual void rfree(Header* h) = 0;
     virtual void insert(Header* h) = 0;
     virtual void remove(Header* h) = 0;
-    virtual bool enable_rc() = 0;
+    virtual bool is_finalizing() = 0;
 
     void stack_inc(RC inc = 1)
     {

@@ -14,9 +14,9 @@ namespace vbci
       LOG(Trace) << "Created RegionArena @" << this;
     }
 
-    bool enable_rc()
+    bool is_finalizing()
     {
-      return false;
+      return true;
     }
   };
 }

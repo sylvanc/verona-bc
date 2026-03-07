@@ -46,9 +46,9 @@ namespace vbci
     headers.erase(h);
   }
 
-  bool RegionRC::enable_rc()
+  bool RegionRC::is_finalizing()
   {
-    return !finalizing;
+    return finalizing;
   }
 
   void RegionRC::free_contents()
@@ -74,16 +74,13 @@ namespace vbci
   void RegionRC::trace(std::vector<Header*>& list) const
   {
     auto& program = Program::get();
+
     for (auto h : headers)
     {
       if (program.is_array(h->get_type_id()))
-      {
         static_cast<Array*>(h)->trace(list);
-      }
       else
-      {
         static_cast<Object*>(h)->trace(list);
-      }
     }
   }
 }

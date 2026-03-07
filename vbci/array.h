@@ -92,21 +92,6 @@ namespace vbci
         location(), addr, value_type, std::forward<Reg<is_move>>(v));
     }
 
-    /**
-     * Finalises and deallocates the array, this should not be
-     * called directly due to issues with re-entrancy.
-     * Instead, use collect(Array*), or dec(..).
-     */
-    void deallocate()
-    {
-      finalize();
-
-      if (location().is_immutable())
-        delete[] reinterpret_cast<uint8_t*>(this);
-      else
-        region()->rfree(this);
-    }
-
     void trace(std::vector<Header*>& list)
     {
       switch (value_type)
@@ -160,29 +145,6 @@ namespace vbci
     }
 
     void finalize()
-    {
-      switch (value_type)
-      {
-        case ValueType::Object:
-        case ValueType::Array:
-        case ValueType::Invalid:
-        {
-          for (size_t i = 0; i < size; i++)
-          {
-            void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * i);
-            auto prev = Value::from_addr(value_type, addr);
-            writebarrier::drop(location(), prev);
-          }
-          break;
-        }
-
-        default:
-          break;
-      }
-    }
-
-    // Drop all reference-holding elements without additional finalization.
-    void destruct()
     {
       switch (value_type)
       {

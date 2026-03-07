@@ -128,7 +128,7 @@ namespace vbci
 
       auto r = loc.to_region();
 
-      if (r->enable_rc())
+      if (!r->is_finalizing())
         rc++;
     }
 
@@ -143,12 +143,13 @@ namespace vbci
       {
         if (--arc == 0)
           collect(this);
+
         return;
       }
 
       auto r = loc.to_region();
 
-      if (r->enable_rc() && (--rc == 0))
+      if (!r->is_finalizing() && (--rc == 0))
         collect(this);
     }
   };

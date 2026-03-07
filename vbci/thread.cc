@@ -500,6 +500,7 @@ namespace vbci
       {
         if (val == nullptr)
           continue;
+
         if (val->location().is_region())
           visit_region(val->location().to_region());
       }
@@ -1918,26 +1919,12 @@ namespace vbci
     // Drop all frame registers.
     frame->drop();
 
-    // Phase 1: Run finalizers on ALL stack objects that have them.
-    // This must happen before any destruct, because a finalizer may
-    // reference other stack-allocated objects that are still live.
+    // Finalize all stack objects (run finalizers and drop field references).
     stack.visit_headers(frame->save, stack.top, [&](Header* h) {
       if (Program::get().is_array(h->get_type_id()))
-        return;
-
-      auto* obj = static_cast<Object*>(h);
-      auto fin = obj->cls().finalizer();
-
-      if (fin)
-        Thread::run_sync(fin, ValueTransfer(obj, true));
-    });
-
-    // Phase 2: Drop references held by stack allocations.
-    stack.visit_headers(frame->save, stack.top, [&](Header* h) {
-      if (Program::get().is_array(h->get_type_id()))
-        static_cast<Array*>(h)->destruct();
+        static_cast<Array*>(h)->finalize();
       else
-        static_cast<Object*>(h)->destruct();
+        static_cast<Object*>(h)->finalize();
     });
 
     // Finalize the frame-local region. A tailcall preserves the region.

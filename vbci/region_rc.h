@@ -28,7 +28,7 @@ namespace vbci
     void rfree(Header* h);
     void insert(Header* h);
     void remove(Header* h);
-    bool enable_rc();
+    bool is_finalizing();
     void free_contents();
 
     ~RegionRC() {

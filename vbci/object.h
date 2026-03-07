@@ -96,21 +96,46 @@ namespace vbci
     }
 
     /**
-     * Deallocate this object.
-     *
-     * This should not be called directly, but rather by the collector
-     * to correctly handle re-entrancy.
+     * Run the finalizer and drop field references.
+     * Does not free memory — collect handles that separately.
      */
-    void deallocate()
+    void finalize()
     {
-      // This object isn't in a cycle. It can be immediately finalized and then
-      // freed.
-      finalize();
+      LOG(Trace) << "Finalizing fields of object of class " << cls().type_id
+                 << "@" << this;
 
-      if (location().is_immutable())
-        delete this;
-      else
-        region()->rfree(this);
+      auto& c = cls();
+      auto& f = c.fields;
+      auto fin = c.finalizer();
+
+      // Pass a read-only reference to the object.
+      if (fin)
+        Thread::run_sync(fin, ValueTransfer(this, true));
+
+      for (size_t i = 0; i < f.size(); i++)
+      {
+        switch (f.at(i).value_type)
+        {
+          case ValueType::Object:
+          case ValueType::Array:
+          case ValueType::Invalid:
+          {
+            auto prev = load(i);
+            writebarrier::drop(location(), prev);
+            break;
+          }
+
+          case ValueType::Cown:
+          {
+            auto prev = load(i);
+            prev.field_dec();
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
     }
 
     void trace(std::vector<Header*>& list)
@@ -161,76 +186,6 @@ namespace vbci
           case ValueType::Invalid:
             load(i).immortalize();
             break;
-
-          default:
-            break;
-        }
-      }
-    }
-
-    void finalize()
-    {
-      LOG(Trace) << "Finalizing fields of object of class " << cls().type_id
-                 << "@" << this;
-
-      auto& c = cls();
-      auto& f = c.fields;
-      auto fin = c.finalizer();
-
-      // Pass a read-only reference to the object.
-      if (fin)
-        Thread::run_sync(fin, ValueTransfer(this, true));
-
-      for (size_t i = 0; i < f.size(); i++)
-      {
-        switch (f.at(i).value_type)
-        {
-          case ValueType::Object:
-          case ValueType::Array:
-          case ValueType::Invalid:
-          {
-            auto prev = load(i);
-            writebarrier::drop(location(), prev);
-            break;
-          }
-
-          case ValueType::Cown:
-          {
-            auto prev = load(i);
-            prev.field_dec();
-            break;
-          }
-
-          default:
-            break;
-        }
-      }
-    }
-
-    // Drop all reference-holding fields without invoking a finalizer.
-    void destruct()
-    {
-      auto& f = cls().fields;
-
-      for (size_t i = 0; i < f.size(); i++)
-      {
-        switch (f.at(i).value_type)
-        {
-          case ValueType::Object:
-          case ValueType::Array:
-          case ValueType::Invalid:
-          {
-            auto prev = load(i);
-            writebarrier::drop(location(), prev);
-            break;
-          }
-
-          case ValueType::Cown:
-          {
-            auto prev = load(i);
-            prev.field_dec();
-            break;
-          }
 
           default:
             break;
