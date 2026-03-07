@@ -43,7 +43,7 @@ namespace vbci
         prev_region->stack_inc();
       }
 
-      content.dec<false>();
+      content.field_dec();
       content = Value();
 
       if (prev_region != nullptr)
@@ -93,7 +93,7 @@ namespace vbci
       if (!next_loc.is_region_or_frame_local())
       {
         if constexpr (!is_move)
-          next->template inc<false>();
+          next->field_inc();
 
         content = next.borrow();
         return true;
@@ -119,7 +119,7 @@ namespace vbci
         }
         else
         {
-          next->template inc<false>();
+          next->field_inc();
           content = next.borrow();
         }
 
@@ -149,7 +149,7 @@ namespace vbci
       }
       else
       {
-        next->template inc<false>();
+        next->field_inc();
         content = next.borrow();
       }
 
@@ -177,9 +177,11 @@ namespace vbci
         }
         else
         {
-          next->template inc<false>();
+          next->field_inc();
           content = next.borrow();
-          prev.stack_inc();
+
+          if (prev_loc.is_region())
+            prev_loc.to_region()->stack_inc();
         }
 
         return ValueTransfer(prev);

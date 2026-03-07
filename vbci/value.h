@@ -554,16 +554,23 @@ namespace vbci
       return Value(std::numeric_limits<double>::quiet_NaN());
     }
 
-    template<bool needs_stack_rc>
-    void inc() const;
+    // Increment RC for a reference held in a register context.
+    // Adjusts both object RC and region stack_rc.
+    void reg_inc() const;
 
-    template<bool needs_stack_rc>
-    void dec() const;
+    // Decrement RC for a reference held in a register context.
+    // Adjusts both object RC and region stack_rc. Collects if RC hits 0.
+    void reg_dec() const;
 
-    void stack_inc() const;
-    void stack_dec() const;
+    // Increment RC for a reference held in a field context.
+    // Adjusts object RC only — no stack_rc change.
+    void field_inc() const;
 
-  private:
+    // Decrement RC for a reference held in a field context.
+    // Adjusts object RC only — no stack_rc change. Collects if RC hits 0.
+    void field_dec() const;
+
+  public:
     struct nounop
     {
       template<typename T>

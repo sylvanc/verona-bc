@@ -197,7 +197,7 @@ namespace vbci
           case ValueType::Cown:
           {
             auto prev = load(i);
-            prev.dec<false>();
+            prev.field_dec();
             break;
           }
 
@@ -228,7 +228,7 @@ namespace vbci
           case ValueType::Cown:
           {
             auto prev = load(i);
-            prev.dec<false>();
+            prev.field_dec();
             break;
           }
 

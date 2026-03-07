@@ -125,6 +125,15 @@ Cowns (`verona::rt::VCown`) own a value and optionally a region:
 - `exchange()`: swaps the cown's content, handling region re-parenting with rollback on failure
 - Cown-owned regions have `parent = parent_tag_cown`
 
+## Readonly Values
+
+Readonly values always come from a readonly cown (via `Read` op or behavior cown args with read-only slots). Key properties:
+- **Cannot be mutated**: stores through readonly refs raise `BadStoreTarget`
+- **Cannot have new field references**: no object/array can create a new field pointing to a readonly value
+- **No object/array RC**: `reg_inc`/`reg_dec` skip object RC and stack_rc for readonly objects/arrays
+- **Cowns still need RC**: readonly cown values (`ValueType::Cown`) still need `cown->inc()`/`cown->dec()` — the cown itself is ref-counted independently of its content's readonly status
+- **CownRef needs no RC**: `CownRef` values exist only as behavior arguments and are alive for the behavior's lifetime — no RC needed
+
 ## Finalization
 
 Objects with a `final` method have their finalizer run during collection/teardown:

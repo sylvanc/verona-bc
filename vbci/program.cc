@@ -187,7 +187,7 @@ namespace vbci
     scheduler_running = false;
 
     auto ret_val = ret.get_cown()->load();
-    ret.dec<false>();
+    ret.field_dec();
     int exit_code;
 
     if (ret_val.is_error())

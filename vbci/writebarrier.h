@@ -195,7 +195,7 @@ namespace vbci::writebarrier
 
         // Increment the incoming value RC.
         if (need_in_inc)
-          in->template inc<false>();
+          in->field_inc();
       }
 
       // Change the region stack RC.
@@ -222,15 +222,15 @@ namespace vbci::writebarrier
       assert(ok);
 
       if (need_out_dec)
-        out.dec<false>();
+        out.field_dec();
 
       assert(need_out_stack_inc >= -1);
       assert(need_out_stack_inc <= 1);
 
       if (need_out_stack_inc == 1)
-        out.stack_inc();
+        out_loc.to_region()->stack_inc();
       else if (need_out_stack_inc == -1)
-        out.stack_dec();
+        out_loc.to_region()->stack_dec();
 
       if (need_out_clear_parent)
         out.location().to_region()->clear_parent();
@@ -349,7 +349,7 @@ namespace vbci::writebarrier
     // RC dec, no region operation.
     if (loc.is_immutable() || loc.is_frame_local())
     {
-      v.dec<false>();
+      v.field_dec();
       return;
     }
 

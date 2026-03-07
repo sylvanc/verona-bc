@@ -31,29 +31,6 @@ namespace vbci
     Header(Location loc, uint32_t type_id) : loc(loc), rc(1), type_id(type_id)
     {}
 
-    // Returns true if the object needs deallocating.
-    template<bool needs_stack_rc>
-    bool dec_no_dealloc()
-    {
-      // Returns false if the allocation should be freed.
-      if (loc.no_rc())
-        return false;
-
-      if (loc.is_immutable())
-        return --arc == 0;
-
-      auto r = loc.to_region();
-      bool ret = false;
-
-      if (r->enable_rc())
-        ret = --rc == 0;
-
-      if (!needs_stack_rc)
-        return ret;
-
-      return r->stack_dec() && ret;
-    }
-
     void mark_immortal()
     {
       loc = Location::immortal();
@@ -114,8 +91,31 @@ namespace vbci
       return true;
     }
 
-    template<bool needs_stack_rc>
-    void inc()
+    // Increment RC for a reference held in a register or frame-local context.
+    // Adjusts both object RC and region stack_rc.
+    void reg_inc()
+    {
+      field_inc();
+
+      if (loc.is_region())
+        loc.to_region()->stack_inc();
+    }
+
+    // Decrement RC for a reference held in a register or frame-local context.
+    // Adjusts both object RC and region stack_rc. Collects if RC hits 0.
+    void reg_dec()
+    {
+      // If stack_dec returns false, the region has been freed, so we can
+      // return early without doing anything else.
+      if (loc.is_region() && !loc.to_region()->stack_dec())
+        return;
+
+      field_dec();
+    }
+
+    // Increment RC for a reference held in an object/array field.
+    // Adjusts object RC only — no stack_rc change.
+    void field_inc()
     {
       if (loc.no_rc())
         return;
@@ -128,33 +128,28 @@ namespace vbci
 
       auto r = loc.to_region();
 
-      // If this RC inc comes from a register or frame local object,
-      // increment the region stack RC.
-      if (needs_stack_rc)
-        r->stack_inc();
-
       if (r->enable_rc())
         rc++;
     }
 
-    template<bool needs_stack_rc>
-    void dec()
+    // Decrement RC for a reference held in an object/array field.
+    // Adjusts object RC only — no stack_rc change. Collects if RC hits 0.
+    void field_dec()
     {
-      if (dec_no_dealloc<needs_stack_rc>())
-        // Queue object/array for deallocation
+      if (loc.no_rc())
+        return;
+
+      if (loc.is_immutable())
+      {
+        if (--arc == 0)
+          collect(this);
+        return;
+      }
+
+      auto r = loc.to_region();
+
+      if (r->enable_rc() && (--rc == 0))
         collect(this);
-    }
-
-    void stack_inc()
-    {
-      if (loc.is_region())
-        loc.to_region()->stack_inc();
-    }
-
-    void stack_dec()
-    {
-      if (loc.is_region())
-        loc.to_region()->stack_dec();
     }
   };
 }

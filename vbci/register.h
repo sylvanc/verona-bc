@@ -72,7 +72,7 @@ namespace vbci
     Register(ValueBorrow v)
     {
       set_raw_unsafe(v);
-      v.inc<true>();
+      v.reg_inc();
     };
 
     Register(ValueImmortal v)
@@ -127,7 +127,7 @@ namespace vbci
       Value old = *this;
       Value new_value = fun();
       set_raw_unsafe(new_value);
-      old.dec<true>();
+      old.reg_dec();
     }
 
     void operator=(ValueTransfer v)
@@ -138,7 +138,7 @@ namespace vbci
     void operator=(ValueBorrow v)
     {
       replace_unsafe([&]() {
-        v.inc<true>();
+        v.reg_inc();
         return v;
       });
     }
@@ -179,7 +179,7 @@ namespace vbci
     void operator=(const Register& v)
     {
       replace_unsafe([&]() -> Value {
-        v.inc<true>();
+        v.reg_inc();
         return v;
       });
     }
@@ -194,7 +194,7 @@ namespace vbci
     {
       replace_unsafe([&]() {
         ValueBorrow v = src.load_reference();
-        v.inc<true>();
+        v.reg_inc();
         return v;
       });
     }
@@ -221,7 +221,7 @@ namespace vbci
             if constexpr (is_move)
               src.clear_unsafe();
             else
-              src.template inc<true>();
+              src.reg_inc();
 
             return Value(obj, f, readonly);
           });
@@ -238,7 +238,7 @@ namespace vbci
             if constexpr (is_move)
               src.clear_unsafe();
             else
-              src.template inc<false>();
+              src.field_inc();
 
             return Value(cown, readonly);
           });
@@ -266,7 +266,7 @@ namespace vbci
       if constexpr (is_move)
         src.clear_unsafe();
       else
-        src.template inc<true>();
+        src.reg_inc();
 
       replace_unsafe([&]() { return Value(arr, index, readonly); });
     }

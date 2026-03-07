@@ -672,27 +672,82 @@ namespace vbci
     Value::error(Error::BadOperand);
   }
 
-  template<bool needs_stack_rc>
-  void Value::inc() const
+  void Value::reg_inc() const
   {
+    if (readonly)
+    {
+      if (tag == ValueType::Cown)
+        cown->inc();
+      return;
+    }
+
+    field_inc();
+
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::FieldRef:
-        if (!readonly)
-          obj->inc<needs_stack_rc>();
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+      {
+        auto loc = location();
+        if (loc.is_region())
+          loc.to_region()->stack_inc();
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  void Value::reg_dec() const
+  {
+    if (readonly)
+    {
+      if (tag == ValueType::Cown)
+        cown->dec();
+      return;
+    }
+
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::FieldRef:
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+      {
+        auto loc = location();
+        if (loc.is_region() && !loc.to_region()->stack_dec())
+          return;
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    field_dec();
+  }
+
+  void Value::field_inc() const
+  {
+    assert(!readonly);
+
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::FieldRef:
+        obj->field_inc();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        if (!readonly)
-          arr->inc<needs_stack_rc>();
+        arr->field_inc();
         break;
 
       case ValueType::Cown:
       case ValueType::CownRef:
-        // Cowns do not have a stack RC, so doesn't mater if it is
-        // a stack RC or not.
         cown->inc();
         break;
 
@@ -701,46 +756,24 @@ namespace vbci
     }
   }
 
-  template void Value::inc<true>() const;
-  template void Value::inc<false>() const;
-
-  void Value::stack_inc() const
+  void Value::field_dec() const
   {
-    if (location().is_region())
-    {
-      location().to_region()->stack_inc();
-    }
-  }
+    assert(!readonly);
 
-  void Value::stack_dec() const
-  {
-    if (location().is_region())
-    {
-      location().to_region()->stack_dec();
-    }
-  }
-
-  template<bool needs_stack_rc>
-  void Value::dec() const
-  {
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::FieldRef:
-        if (!readonly)
-          obj->dec<needs_stack_rc>();
+        obj->field_dec();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        if (!readonly)
-          arr->dec<needs_stack_rc>();
+        arr->field_dec();
         break;
 
       case ValueType::Cown:
       case ValueType::CownRef:
-        // Cowns do not have a stack RC, so doesn't mater if it is
-        // a stack RC or not.
         cown->dec();
         break;
 
@@ -748,9 +781,6 @@ namespace vbci
         break;
     }
   }
-
-  template void Value::dec<true>() const;
-  template void Value::dec<false>() const;
 
   Location Value::location() const
   {
@@ -851,6 +881,7 @@ namespace vbci
       default:
         Value::error(Error::BadLoadTarget);
     }
+
     v.readonly = readonly;
     return v;
   }
