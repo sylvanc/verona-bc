@@ -201,15 +201,15 @@ namespace vbci::writebarrier
       assert(need_in_stack_inc <= 1);
 
       if (need_in_stack_inc == 1)
-        in->location().to_region()->stack_inc();
+        in_loc.to_region()->stack_inc();
       else if (need_in_stack_inc == -1)
-        in->location().to_region()->stack_dec();
+        in_loc.to_region()->stack_dec();
 
       // Reparent the region.
       if (need_in_parent)
       {
         assert(!need_in_drag);
-        in->location().to_region()->set_parent(in_parent_value);
+        in_loc.to_region()->set_parent(in_parent_value);
       }
 
       return true;
@@ -357,6 +357,10 @@ namespace vbci::writebarrier
       loc.to_region()->stack_dec();
       return;
     }
+
+    // Internal edge within the same region — no parent to clear.
+    if (store_loc == loc)
+      return;
 
     loc.to_region()->clear_parent();
   }
