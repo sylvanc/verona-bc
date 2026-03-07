@@ -28,6 +28,7 @@ namespace vbci::writebarrier
     bool need_out_dec = false;
     int8_t need_out_stack_inc = 0;
     bool need_out_clear_parent = false;
+    Region* out_clear_parent_region = nullptr;
 
     write_ops& prepare_store(Location loc)
     {
@@ -165,7 +166,8 @@ namespace vbci::writebarrier
       {
         assert(!need_in_parent);
 
-        if (!drag_allocation<is_move>(in_drag_value, in->get_header()))
+        if (!drag_allocation<is_move>(
+              in_drag_value, in->get_header(), out_clear_parent_region))
           return false;
       }
 
@@ -299,6 +301,7 @@ namespace vbci::writebarrier
     write_ops& out_clear_parent()
     {
       need_out_clear_parent = true;
+      out_clear_parent_region = out_loc.to_region();
       return *this;
     }
   };
@@ -362,6 +365,10 @@ namespace vbci::writebarrier
     if (store_loc == loc)
       return;
 
-    loc.to_region()->clear_parent();
+    // Only clear parent if the region actually has one.
+    auto r = loc.to_region();
+
+    if (r->has_owner())
+      r->clear_parent();
   }
 }

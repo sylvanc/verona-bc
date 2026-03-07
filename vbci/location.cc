@@ -17,7 +17,7 @@ namespace vbci
   }
 
   template <bool is_move>
-  bool drag_allocation(Location dest_loc, Header* h)
+  bool drag_allocation(Location dest_loc, Header* h, Region* ignore_parent)
   {
     assert(dest_loc.is_region_or_frame_local());
 
@@ -92,8 +92,16 @@ namespace vbci
 
         // If r is not frame-local, it can't point to a region that already has
         // a parent, even if that parent is r (to preserve single entry point).
+        // Exception: if the parent is being cleared by the outgoing exchange
+        // (ignore_parent), treat it as unowned.
         if (!frame_local && hr->has_owner())
+        {
+          if (
+            ignore_parent && hr->has_parent() &&
+            hr->get_parent() == ignore_parent)
+            continue;
           return false;
+        }
 
         // If hr is already an ancestor of r, we can't drag the allocation, or
         // we'll create a region cycle.
@@ -150,6 +158,8 @@ namespace vbci
 
   }
 
-  template bool drag_allocation<false>(Location dest_loc, Header* h);
-  template bool drag_allocation<true>(Location dest_loc, Header* h);
+  template bool drag_allocation<false>(
+    Location dest_loc, Header* h, Region* ignore_parent);
+  template bool drag_allocation<true>(
+    Location dest_loc, Header* h, Region* ignore_parent);
 }
