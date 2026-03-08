@@ -908,14 +908,24 @@ namespace vbci
         if (vloc.is_stack() && (vloc.stack_index() > ref_loc.stack_index()))
           Value::error(Error::BadStoreTarget);
 
-        // Should also check for frame local?
-        if (vloc.is_frame_local())
+        // If the value is in a frame-local region that is younger than the
+        // register's frame, drag it to the register's frame region.
+        if (vloc.is_region())
         {
-          if (vloc.frame_local_index() > ref_loc.stack_index())
-            // TODO This should perform a drag rather than failing.
-            // We need to move the frame local region to the frame local
-            // region associated with the register ref.
-            Value::error(Error::BadStoreTarget);
+          auto vr = vloc.to_region();
+
+          if (
+            vr->is_frame_local() &&
+            (vr->get_frame_depth() > (ref_loc.stack_index() + 1)))
+          {
+            // Find the target frame's region by matching stack index.
+            auto target_region =
+              Thread::frame_region_for_stack(ref_loc);
+
+            if (!target_region ||
+                !drag_allocation<is_move>(target_region, v->get_header()))
+              Value::error(Error::BadStoreTarget);
+          }
         }
 
         Register& reg = Thread::get_register(u64);

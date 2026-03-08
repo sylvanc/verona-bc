@@ -80,8 +80,11 @@ namespace vbci
         }
 
         case CollectorType::Region:
-          // Regions are finalized via free_contents, then deleted here.
+        {
+          auto r = static_cast<Region*>(n.header);
+          r->finalize_contents();
           break;
+        }
       }
 
       to_delete.push_back(n);
@@ -106,8 +109,11 @@ namespace vbci
         }
 
         case CollectorType::Region:
-          static_cast<Region*>(n.header)->deallocate();
+        {
+          auto r = static_cast<Region*>(n.header);
+          r->release_dead_objects();
           break;
+        }
       }
     }
 

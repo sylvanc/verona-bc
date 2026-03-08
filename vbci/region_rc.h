@@ -3,8 +3,8 @@
 #include "region.h"
 
 #include <cstdlib>
-#include <unordered_set>
 #include <iostream>
+#include <unordered_set>
 
 namespace vbci
 {
@@ -15,26 +15,30 @@ namespace vbci
   private:
     std::unordered_set<Header*> headers;
     bool finalizing;
+    bool releasing;
 
   public:
-    RegionRC() : Region(), finalizing(false)
+    RegionRC(size_t frame_depth = 0)
+    : Region(frame_depth), finalizing(false), releasing(false)
     {
       LOG(Trace) << "Created RegionRC @" << this;
     }
 
-    Object* object(Class& cls);
-    Array* array(uint32_t type_id, size_t size);
+    Object* object(Class& cls) override;
+    Array* array(uint32_t type_id, size_t size) override;
 
-    void rfree(Header* h);
-    void insert(Header* h);
-    void remove(Header* h);
-    bool is_finalizing();
-    void free_contents();
+    void rfree(Header* h) override;
+    void insert(Header* h) override;
+    void remove(Header* h) override;
+    bool is_finalizing() override;
+    void finalize_contents() override;
+    void release_dead_objects() override;
 
-    ~RegionRC() {
+    ~RegionRC()
+    {
       LOG(Trace) << "Destroyed RegionRC @" << this;
     }
 
-    void trace(std::vector<Header*>& list) const;
+    void trace(std::vector<Header*>& list) const override;
   };
 }

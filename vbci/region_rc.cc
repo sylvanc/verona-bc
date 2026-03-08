@@ -2,14 +2,13 @@
 
 #include "array.h"
 #include "object.h"
-#include "thread.h"
 
 namespace vbci
 {
   Object* RegionRC::object(Class& cls)
   {
     auto mem = new uint8_t[cls.size];
-    auto loc = Thread::region_location(this);
+    auto loc = Location(this);
     auto obj = Object::create(mem, cls, loc);
     headers.emplace(obj);
     stack_inc();
@@ -21,7 +20,7 @@ namespace vbci
     auto content_type_id = Program::get().unarray(type_id);
     auto rep = Program::get().layout_type_id(content_type_id);
     auto mem = new uint8_t[Array::size_of(size, rep.second->size)];
-    auto loc = Thread::region_location(this);
+    auto loc = Location(this);
     auto arr =
       Array::create(mem, loc, type_id, rep.first, size, rep.second->size);
     headers.emplace(arr);
@@ -33,6 +32,11 @@ namespace vbci
   {
     headers.erase(h);
     delete[] reinterpret_cast<uint8_t*>(h);
+
+    // If we're releasing a former frame-local region and the last object
+    // was just freed, delete the region itself.
+    if (releasing && headers.empty())
+      delete this;
   }
 
   void RegionRC::insert(Header* h)
@@ -51,7 +55,7 @@ namespace vbci
     return finalizing;
   }
 
-  void RegionRC::free_contents()
+  void RegionRC::finalize_contents()
   {
     auto& program = Program::get();
     finalizing = true;
@@ -63,11 +67,28 @@ namespace vbci
       else
         static_cast<Object*>(h)->finalize();
     }
+  }
+
+  void RegionRC::release_dead_objects()
+  {
+    std::unordered_set<Header*> survivors;
 
     for (auto h : headers)
     {
-      LOG(Trace) << "Deallocating header @" << h;
-      delete[] reinterpret_cast<uint8_t*>(h);
+      if (h->get_rc() == 0)
+        delete[] reinterpret_cast<uint8_t*>(h);
+      else
+        survivors.insert(h);
+    }
+
+    if (!survivors.empty())
+    {
+      headers = std::move(survivors);
+      releasing = true;
+    }
+    else
+    {
+      delete this;
     }
   }
 

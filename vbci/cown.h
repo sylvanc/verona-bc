@@ -93,26 +93,30 @@ namespace vbci
       if (next_loc.is_stack())
         return false;
 
-      // Frame-local: drag to a fresh region first.
       Region* r = nullptr;
 
-      if (next_loc.is_frame_local())
-      {
-        r = Region::create(RegionType::RegionRC);
-        LOG(Trace) << "Dragging frame-local allocation to new region: " << r;
-
-        if (!drag_allocation<is_move>(Location(r), next->get_header()))
-        {
-          r->free_region();
-          return false;
-        }
-      }
-      else if (next_loc.is_region())
+      if (next_loc.is_region())
       {
         r = next_loc.to_region();
 
-        if (r->has_owner())
+        if (r->is_frame_local())
+        {
+          // Frame-local: drag to a fresh region first.
+          auto nr = Region::create(RegionType::RegionRC);
+          LOG(Trace) << "Dragging frame-local allocation to new region: " << nr;
+
+          if (!drag_allocation<is_move>(nr, next->get_header()))
+          {
+            nr->free_region();
+            return false;
+          }
+
+          r = nr;
+        }
+        else if (r->has_owner())
+        {
           return false;
+        }
       }
 
       // Store the value.
@@ -129,12 +133,12 @@ namespace vbci
       {
         r->set_cown_owner();
 
-        // For regions (not frame-local drags), remove the register's stack
-        // reference — the cown now owns the region. For frame-local drags,
-        // the drag already adjusted the stack RC.
+        // For non-dragged regions, remove the register's stack reference —
+        // the cown now owns the region. For frame-local drags, the drag
+        // already adjusted the stack RC.
         if constexpr (is_move)
         {
-          if (next_loc.is_region())
+          if (next_loc.is_region() && !next_loc.to_region()->is_frame_local())
             r->stack_dec();
         }
       }

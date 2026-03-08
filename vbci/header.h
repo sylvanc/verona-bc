@@ -54,18 +54,16 @@ namespace vbci
 
     Region* region()
     {
-      if (!loc.is_region_or_frame_local() || loc.no_rc())
+      if (!loc.is_region())
         return nullptr;
 
       return loc.to_region();
     }
 
-    void move_region(Location to_loc, Region* to)
+    void move_region(Region* to)
     {
-      assert(to_loc.is_region_or_frame_local());
-
       loc.to_region()->remove(this);
-      loc = to_loc;
+      loc = Location(to);
       to->insert(this);
     }
 
@@ -74,19 +72,23 @@ namespace vbci
       if (loc.is_stack())
         return false;
 
-      if (loc.is_frame_local())
-      {
-        // Drag a frame-local allocation to a region.
-        auto nr = Region::create(RegionType::RegionRC);
-
-        if (!drag_allocation<false>(Location(nr), this))
-          return false;
-
-        return nr->sendable();
-      }
-
       if (loc.is_region())
-        return loc.to_region()->sendable();
+      {
+        auto r = loc.to_region();
+
+        if (r->is_frame_local())
+        {
+          // Drag a frame-local allocation to a fresh region.
+          auto nr = Region::create(RegionType::RegionRC);
+
+          if (!drag_allocation<false>(nr, this))
+            return false;
+
+          return nr->sendable();
+        }
+
+        return r->sendable();
+      }
 
       return true;
     }

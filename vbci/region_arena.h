@@ -9,7 +9,7 @@ namespace vbci
     friend struct Region;
 
   protected:
-    RegionArena() : RegionRC()
+    RegionArena(size_t frame_depth = 0) : RegionRC(frame_depth)
     {
       LOG(Trace) << "Created RegionArena @" << this;
     }

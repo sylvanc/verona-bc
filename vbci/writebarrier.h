@@ -3,6 +3,7 @@
 #include "location.h"
 #include "region.h"
 #include "register.h"
+#include "thread.h"
 
 namespace vbci::writebarrier
 {
@@ -17,7 +18,7 @@ namespace vbci::writebarrier
 
     // Operations on the incoming value.
     bool need_in_drag = false;
-    Location in_drag_value = Location::immortal();
+    Region* in_drag_value = nullptr;
     bool need_in_inc = false;
     bool need_in_clear = false;
     int8_t need_in_stack_inc = 0;
@@ -50,8 +51,9 @@ namespace vbci::writebarrier
 
       if (out_loc.is_region())
       {
-        // If storage wasn't in the stack, add a stack RC.
-        if (!store_loc.is_stack() && !store_loc.is_frame_local())
+        // If storage wasn't in the stack or a frame-local region, add a stack RC.
+        if (!store_loc.is_stack() &&
+            !(store_loc.is_region() && store_loc.to_region()->is_frame_local()))
           out_stack_inc();
 
         // If out was in a different region, unparent it.
@@ -97,36 +99,51 @@ namespace vbci::writebarrier
       if (in_loc.is_immutable())
         return *this;
 
-      if (in_loc.is_frame_local())
+      assert(in_loc.is_region());
+      auto in_r = in_loc.to_region();
+
+      if (in_r->is_frame_local())
       {
-        if (
-          store_loc.is_stack() &&
-          (store_loc.stack_index() < in_loc.frame_local_index()))
+        if (store_loc.is_stack())
         {
-          // Drag if the incoming location doesn't outlive the storage
-          // location.
-          in_drag(Location::frame_local(store_loc.stack_index()));
+          // Frame-local stored to stack: drag if the frame is younger
+          // than the stack location.
+          if (store_loc.stack_index() < in_r->get_frame_depth())
+            in_drag(Thread::frame_region_for_stack(store_loc));
+
+          return *this;
         }
-        else if (
-          store_loc.is_region() ||
-          (store_loc.is_frame_local() &&
-           (store_loc.frame_local_index() < in_loc.frame_local_index())))
+
+        assert(store_loc.is_region());
+        auto store_r = store_loc.to_region();
+
+        if (store_r->is_frame_local())
         {
-          // Drag the frame local incoming to the storage.
-          in_drag(store_loc);
+          // Frame-local to frame-local: drag if incoming is younger.
+          if (store_r->get_frame_depth() < in_r->get_frame_depth())
+            in_drag(store_r);
+        }
+        else
+        {
+          // Frame-local to heap region: drag to the storage region.
+          in_drag(store_r);
         }
 
         return *this;
       }
 
-      assert(in_loc.is_region());
+      // Non-frame-local region.
 
       // If we're moving into a region, remove a stack RC.
       if constexpr (is_move)
         in_stack_dec();
 
-      // If we're putting this into a stack location, add a stack RC.
-      if (store_loc.is_stack() || store_loc.is_frame_local())
+      // If we're putting this into a stack or frame-local location,
+      // add a stack RC.
+      if (store_loc.is_stack())
+        return in_stack_inc();
+
+      if (store_loc.is_region() && store_loc.to_region()->is_frame_local())
         return in_stack_inc();
 
       assert(store_loc.is_region());
@@ -136,8 +153,6 @@ namespace vbci::writebarrier
         return *this;
 
       // Regions can only have a single entry point.
-      auto in_r = in_loc.to_region();
-
       if (in_r->has_owner())
       {
         // If in and out are in the same sub-region, it's fine.
@@ -148,7 +163,7 @@ namespace vbci::writebarrier
       }
 
       // Regions can't form cycles.
-      auto storage_r = loc.to_region();
+      auto storage_r = store_loc.to_region();
 
       if (in_r->is_ancestor_of(storage_r))
         return fail();
@@ -266,10 +281,10 @@ namespace vbci::writebarrier
       return *this;
     }
 
-    write_ops& in_drag(Location loc)
+    write_ops& in_drag(Region* r)
     {
       need_in_drag = true;
-      in_drag_value = loc;
+      in_drag_value = r;
       return *this;
     }
 
@@ -347,17 +362,31 @@ namespace vbci::writebarrier
       return;
 
     // RC dec, no region operation.
-    if (loc.is_immutable() || loc.is_frame_local())
+    if (loc.is_immutable())
     {
       v.field_dec();
       return;
     }
 
     assert(loc.is_region());
+    auto r = loc.to_region();
 
-    if (store_loc.is_stack() || store_loc.is_frame_local())
+    // Frame-local regions skip stack RC accounting.
+    if (r->is_frame_local())
     {
-      loc.to_region()->stack_dec();
+      v.field_dec();
+      return;
+    }
+
+    if (store_loc.is_stack())
+    {
+      r->stack_dec();
+      return;
+    }
+
+    if (store_loc.is_region() && store_loc.to_region()->is_frame_local())
+    {
+      r->stack_dec();
       return;
     }
 
@@ -366,8 +395,6 @@ namespace vbci::writebarrier
       return;
 
     // Only clear parent if the region actually has one.
-    auto r = loc.to_region();
-
     if (r->has_owner())
       r->clear_parent();
   }

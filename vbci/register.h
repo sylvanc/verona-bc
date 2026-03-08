@@ -45,7 +45,7 @@ namespace vbci
 
     ValueStaticLifetime(const Value& v) : Value(v)
     {
-      assert(v.location().is_stack() || v.location().is_frame_local());
+      assert(v.location().is_stack());
     }
   };
 
@@ -83,7 +83,7 @@ namespace vbci
 
     Register(ValueStaticLifetime v)
     {
-      assert(v.location().is_stack() || v.location().is_frame_local());
+      assert(v.location().is_stack());
       set_raw_unsafe(v);
     };
 
