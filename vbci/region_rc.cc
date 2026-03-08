@@ -32,11 +32,6 @@ namespace vbci
   {
     headers.erase(h);
     delete[] reinterpret_cast<uint8_t*>(h);
-
-    // If we're releasing a former frame-local region and the last object
-    // was just freed, delete the region itself.
-    if (releasing && headers.empty())
-      delete this;
   }
 
   void RegionRC::insert(Header* h)
@@ -71,25 +66,10 @@ namespace vbci
 
   void RegionRC::release_dead_objects()
   {
-    std::unordered_set<Header*> survivors;
-
     for (auto h : headers)
-    {
-      if (h->get_rc() == 0)
-        delete[] reinterpret_cast<uint8_t*>(h);
-      else
-        survivors.insert(h);
-    }
+      delete[] reinterpret_cast<uint8_t*>(h);
 
-    if (!survivors.empty())
-    {
-      headers = std::move(survivors);
-      releasing = true;
-    }
-    else
-    {
-      delete this;
-    }
+    delete this;
   }
 
   void RegionRC::trace(std::vector<Header*>& list) const

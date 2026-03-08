@@ -15,11 +15,10 @@ namespace vbci
   private:
     std::unordered_set<Header*> headers;
     bool finalizing;
-    bool releasing;
 
   public:
     RegionRC(size_t frame_depth = 0)
-    : Region(frame_depth), finalizing(false), releasing(false)
+    : Region(frame_depth), finalizing(false)
     {
       LOG(Trace) << "Created RegionRC @" << this;
     }
