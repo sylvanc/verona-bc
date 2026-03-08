@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <vector>
 #include <vbci.h>
 
 namespace vbci
@@ -29,9 +30,9 @@ namespace vbci
     Region(size_t frame_depth = 0)
     : parent(nullptr), cown_owned(false), stack_rc(0), frame_depth(frame_depth)
     {}
-    virtual ~Region() = default;
 
   public:
+    virtual ~Region() = default;
     static Region* create(RegionType type, size_t frame_depth = 0);
 
     virtual Object* object(Class& cls) = 0;
@@ -43,6 +44,7 @@ namespace vbci
     virtual void trace(std::vector<Header*>& list) const = 0;
     virtual void finalize_contents() = 0;
     virtual void release_dead_objects() = 0;
+    virtual std::vector<Header*> get_headers() const = 0;
 
     void stack_inc(RC inc = 1)
     {

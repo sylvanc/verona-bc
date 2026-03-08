@@ -121,6 +121,31 @@ namespace vbci
       }
     }
 
+    void trace_all(std::vector<Header*>& list)
+    {
+      switch (value_type)
+      {
+        case ValueType::Object:
+        case ValueType::Array:
+        case ValueType::Invalid:
+        {
+          for (size_t i = 0; i < size; i++)
+          {
+            auto v = load(i);
+
+            if (!v.is_header())
+              return;
+
+            list.push_back(v.get_header());
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    }
+
     void immortalize()
     {
       if (location() == Location::immortal())

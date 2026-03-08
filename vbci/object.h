@@ -169,6 +169,35 @@ namespace vbci
       }
     }
 
+    // Trace all header-valued fields, including immutable and SCC members.
+    // Used by freeze and dispose.
+    void trace_all(std::vector<Header*>& list)
+    {
+      auto& f = cls().fields;
+
+      for (size_t i = 0; i < f.size(); i++)
+      {
+        switch (f.at(i).value_type)
+        {
+          case ValueType::Object:
+          case ValueType::Array:
+          case ValueType::Invalid:
+          {
+            auto v = load(i);
+
+            if (!v.is_header())
+              return;
+
+            list.push_back(v.get_header());
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
+    }
+
     void immortalize()
     {
       if (location() == Location::immortal())

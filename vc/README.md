@@ -2,6 +2,13 @@
 
 ## To Do
 
+Freezing.
+- `collect_scc` seems complex, can we do the work in collect?
+- `all_headers` is stupidly expensive.
+- Can we freeze an object instead of a region, extracting from the region as we go?
+- Do we need both `trace` and `trace_all`?
+  - Instead of a vector, can we pass a lambda to `trace`?
+
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 
 String literals should be immortal, not fresh allocations.
@@ -14,7 +21,6 @@ Review `iowise`.
 
 Semantics:
 - Region creation.
-- Freezing.
 
 FFI.
 - Can `ffi::callback` interact with reference counting better?

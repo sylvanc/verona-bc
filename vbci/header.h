@@ -47,9 +47,56 @@ namespace vbci
       return rc;
     }
 
+    void set_rc(RC v)
+    {
+      rc = v;
+    }
+
+    void set_arc(RC v)
+    {
+      arc.store(v);
+    }
+
+    void inc_arc()
+    {
+      arc++;
+    }
+
+    ARC get_arc() const
+    {
+      return arc.load();
+    }
+
+    void dec_arc()
+    {
+      arc--;
+    }
+
     Location location() const
     {
       return loc;
+    }
+
+    void set_location(Location l)
+    {
+      loc = l;
+    }
+
+    // Union-find representative lookup with path compression.
+    // Used by frozen SCC objects to find their SCC root.
+    static Header* find(Header* h)
+    {
+      if (!h->loc.is_scc_ptr())
+        return h;
+
+      auto target = h->loc.scc_target();
+      auto root = find(target);
+
+      // Path compression: point directly to root.
+      if (root != target)
+        h->loc = Location::scc_ptr(root);
+
+      return root;
     }
 
     Region* region()
@@ -97,6 +144,12 @@ namespace vbci
     // Adjusts both object RC and region stack_rc.
     void reg_inc()
     {
+      if (loc.is_scc_ptr())
+      {
+        find(this)->reg_inc();
+        return;
+      }
+
       field_inc();
 
       if (loc.is_region())
@@ -107,6 +160,12 @@ namespace vbci
     // Adjusts both object RC and region stack_rc. Collects if RC hits 0.
     void reg_dec()
     {
+      if (loc.is_scc_ptr())
+      {
+        find(this)->reg_dec();
+        return;
+      }
+
       // If stack_dec returns false, the region has been freed, so we can
       // return early without doing anything else.
       if (loc.is_region() && !loc.to_region()->stack_dec())
@@ -119,6 +178,12 @@ namespace vbci
     // Adjusts object RC only — no stack_rc change.
     void field_inc()
     {
+      if (loc.is_scc_ptr())
+      {
+        find(this)->field_inc();
+        return;
+      }
+
       if (loc.no_rc())
         return;
 
@@ -138,13 +203,19 @@ namespace vbci
     // Adjusts object RC only — no stack_rc change. Collects if RC hits 0.
     void field_dec()
     {
+      if (loc.is_scc_ptr())
+      {
+        find(this)->field_dec();
+        return;
+      }
+
       if (loc.no_rc())
         return;
 
       if (loc.is_immutable())
       {
         if (--arc == 0)
-          collect(this);
+          collect_scc(this);
 
         return;
       }

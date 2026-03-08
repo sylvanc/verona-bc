@@ -12,6 +12,7 @@
  */
 
 #include "array.h"
+#include "header.h"
 #include "object.h"
 #include "region.h"
 
@@ -101,7 +102,7 @@ namespace vbci
         {
           auto h = static_cast<Header*>(n.header);
 
-          if (h->location().is_immutable())
+          if (h->location().is_immutable() || h->location().is_pending())
             delete[] reinterpret_cast<uint8_t*>(h);
           else
             h->region()->rfree(h);
@@ -132,4 +133,60 @@ namespace vbci
 
   template void collect<Header>(Header* h);
   template void collect<Region>(Region* h);
+
+  // Collect a frozen SCC: walk all members via SCC_PTR chains,
+  // mark each as pending (processing sentinel), and push onto the
+  // collector worklist. The two-phase collector handles finalization
+  // (Phase 1) and deallocation (Phase 2), including cascading decrefs
+  // from field drops.
+  void collect_scc(Header* root)
+  {
+    assert(root->location().is_immutable());
+
+    // Walk the SCC members by tracing fields and following SCC_PTR.
+    std::vector<Header*> work;
+    work.push_back(root);
+    root->set_location(Location::from_raw(Location::Pending));
+
+    auto& program = Program::get();
+
+    while (!work.empty())
+    {
+      auto x = work.back();
+      work.pop_back();
+
+      // Push this member into the collector worklist (don't drain yet).
+      worklist.emplace(Tag<Header>::value, x);
+
+      // Trace fields to find other SCC members.
+      std::vector<Header*> refs;
+
+      if (program.is_array(x->get_type_id()))
+        static_cast<Array*>(x)->trace_all(refs);
+      else
+        static_cast<Object*>(x)->trace_all(refs);
+
+      for (auto child : refs)
+      {
+        if (!child)
+          continue;
+
+        // If the child is an SCC_PTR member of this SCC and not yet
+        // marked for processing, add it.
+        if (child->location().is_scc_ptr())
+        {
+          auto rep = Header::find(child);
+          if (rep == root || rep->location().is_pending())
+          {
+            child->set_location(Location::from_raw(Location::Pending));
+            work.push_back(child);
+          }
+        }
+      }
+    }
+
+    // If we're not already inside a collection, drain now.
+    if (!in_collection)
+      drain_work_list();
+  }
 } // namespace vbci

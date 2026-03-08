@@ -13,6 +13,7 @@ namespace vbci
     static constexpr auto Immutable = uintptr_t(0x2);
     static constexpr auto Pending = uintptr_t(0x3);
     static constexpr auto Immortal = uintptr_t(0x4);
+    static constexpr auto SccPtr = uintptr_t(0x5);
     static constexpr auto Mask = uintptr_t(0x7);
     static constexpr auto FrameInc = uintptr_t(0x8);
 
@@ -109,6 +110,11 @@ namespace vbci
       return (value & Mask) == Immutable;
     }
 
+    bool is_scc_ptr() const
+    {
+      return (value & Mask) == SccPtr;
+    }
+
     bool is_pending() const
     {
       return (value & Mask) == Pending;
@@ -138,6 +144,17 @@ namespace vbci
     {
       assert(is_stack());
       return (value - Stack) / FrameInc;
+    }
+
+    static Location scc_ptr(Header* h)
+    {
+      return Location(SccPtr | reinterpret_cast<uintptr_t>(h));
+    }
+
+    Header* scc_target() const
+    {
+      assert(is_scc_ptr());
+      return reinterpret_cast<Header*>(value & ~Mask);
     }
   };
 

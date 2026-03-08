@@ -2,6 +2,7 @@
 
 #include "array.h"
 #include "cown.h"
+#include "freeze.h"
 #include "thread.h"
 
 #include <dlfcn.h>
@@ -178,7 +179,21 @@ namespace vbci
     // initialized for behavior queuing.
     memo_slots.resize(memo_func_ids.size());
     for (size_t i = 0; i < memo_func_ids.size(); i++)
+    {
       memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
+
+      // Freeze the memo slot value: once-function results are ambiently
+      // accessible and must be immutable. Freezing calculates SCCs and
+      // converts all reachable objects to immutable with union-find RC.
+      auto& slot = memo_slots[i];
+      if (slot->is_header())
+      {
+        auto h = slot->get_header();
+        auto r = h->region();
+        if (r)
+          freeze(r, h);
+      }
+    }
 
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
