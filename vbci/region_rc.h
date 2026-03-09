@@ -1,6 +1,7 @@
 #pragma once
 
 #include "region.h"
+#include "program.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -17,8 +18,8 @@ namespace vbci
     bool finalizing;
 
   public:
-    RegionRC(size_t frame_depth = 0)
-    : Region(frame_depth), finalizing(false)
+    RegionRC(RegionType type, size_t frame_depth = 0)
+    : Region(type, frame_depth), finalizing(false)
     {
       LOG(Trace) << "Created RegionRC @" << this;
     }
@@ -43,6 +44,6 @@ namespace vbci
       LOG(Trace) << "Destroyed RegionRC @" << this;
     }
 
-    void trace(std::vector<Header*>& list) const override;
+    void trace_fn(auto&& fn) const;
   };
 }

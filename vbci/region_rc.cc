@@ -71,17 +71,4 @@ namespace vbci
 
     delete this;
   }
-
-  void RegionRC::trace(std::vector<Header*>& list) const
-  {
-    auto& program = Program::get();
-
-    for (auto h : headers)
-    {
-      if (program.is_array(h->get_type_id()))
-        static_cast<Array*>(h)->trace(list);
-      else
-        static_cast<Object*>(h)->trace(list);
-    }
-  }
 }

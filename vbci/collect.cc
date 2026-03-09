@@ -17,8 +17,8 @@
 #include "region.h"
 
 #include <queue>
-#include <vector>
 #include <vbci.h>
+#include <vector>
 
 namespace vbci
 {
@@ -150,6 +150,21 @@ namespace vbci
 
     auto& program = Program::get();
 
+    auto fn = [&](Header* h) {
+      // If this is an SCC_PTR member of this SCC and not yet marked for
+      // processing, add it.
+      if (h->location().is_scc_ptr())
+      {
+        auto rep = Header::find(h);
+
+        if ((rep == root) || rep->location().is_pending())
+        {
+          h->set_location(Location::from_raw(Location::Pending));
+          work.push_back(h);
+        }
+      }
+    };
+
     while (!work.empty())
     {
       auto x = work.back();
@@ -159,34 +174,14 @@ namespace vbci
       worklist.emplace(Tag<Header>::value, x);
 
       // Trace fields to find other SCC members.
-      std::vector<Header*> refs;
-
       if (program.is_array(x->get_type_id()))
-        static_cast<Array*>(x)->trace_all(refs);
+        static_cast<Array*>(x)->trace_fn(fn);
       else
-        static_cast<Object*>(x)->trace_all(refs);
-
-      for (auto child : refs)
-      {
-        if (!child)
-          continue;
-
-        // If the child is an SCC_PTR member of this SCC and not yet
-        // marked for processing, add it.
-        if (child->location().is_scc_ptr())
-        {
-          auto rep = Header::find(child);
-          if (rep == root || rep->location().is_pending())
-          {
-            child->set_location(Location::from_raw(Location::Pending));
-            work.push_back(child);
-          }
-        }
-      }
+        static_cast<Object*>(x)->trace_fn(fn);
     }
 
     // If we're not already inside a collection, drain now.
     if (!in_collection)
       drain_work_list();
   }
-} // namespace vbci
+}

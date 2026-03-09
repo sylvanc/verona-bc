@@ -6,6 +6,7 @@
 #include "function_signature.h"
 #include "object.h"
 #include "program.h"
+#include "region_ext.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -408,6 +409,7 @@ namespace vbci
         calc_stack_rcs[region] = 1;
         region = region->get_parent();
       }
+
       calc_stack_rcs[region] += 1;
     };
 
@@ -436,41 +438,32 @@ namespace vbci
       visit_value(reg);
     }
 
+    auto visit_header = [&](Header* h)
+    {
+      if (!h->location().is_region())
+        return;
+
+      auto r = h->location().to_region();
+
+      if (!r->is_frame_local() && !r->has_cown_owner())
+        visit_region(r);
+    };
+
     for (auto& frame : frames)
     {
-      const auto& frame_local_region = frame.get_frame_local_region();
-      std::vector<Header*> nodes;
-      frame_local_region.trace(nodes);
-      for (auto header : nodes)
-      {
-        if (header->region()->is_frame_local())
-          continue;
-        if (header->region()->has_cown_owner())
-          continue;
-        visit_region(header->region());
-      }
+      frame.get_frame_local_region().trace_fn(visit_header);
     }
 
     stack.visit_headers({}, stack.top, [&](Header* h) {
-      std::vector<Header*> refs;
       if (program->is_array(h->get_type_id()))
       {
         auto arr = static_cast<Array*>(h);
-        arr->trace(refs);
+        arr->trace_fn(visit_header);
       }
       else
       {
         auto obj = static_cast<Object*>(h);
-        obj->trace(refs);
-      }
-
-      for (auto val : refs)
-      {
-        if (val == nullptr)
-          continue;
-
-        if (val->location().is_region())
-          visit_region(val->location().to_region());
+        obj->trace_fn(visit_header);
       }
     });
 
@@ -493,6 +486,7 @@ namespace vbci
 
         print_stack(log);
       }
+
       assert(calc_stack_rc <= actual_stack_rc && "Stack RC invariant violated");
     }
   }

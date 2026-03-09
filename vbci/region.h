@@ -17,8 +17,9 @@ namespace vbci
   {
   private:
     Region* parent;
-    bool cown_owned;
     RC stack_rc;
+    RegionType type;
+    bool cown_owned;
 
     /**
      * Frame-local depth: 0 = not frame-local (heap region),
@@ -27,8 +28,8 @@ namespace vbci
     size_t frame_depth;
 
   protected:
-    Region(size_t frame_depth = 0)
-    : parent(nullptr), cown_owned(false), stack_rc(0), frame_depth(frame_depth)
+    Region(RegionType type, size_t frame_depth = 0)
+    : parent(nullptr), stack_rc(0), type(type), cown_owned(false), frame_depth(frame_depth)
     {}
 
   public:
@@ -41,10 +42,11 @@ namespace vbci
     virtual void insert(Header* h) = 0;
     virtual void remove(Header* h) = 0;
     virtual bool is_finalizing() = 0;
-    virtual void trace(std::vector<Header*>& list) const = 0;
     virtual void finalize_contents() = 0;
     virtual void release_dead_objects() = 0;
     virtual std::vector<Header*> get_headers() const = 0;
+
+    void trace_fn(auto&& fn) const;
 
     void stack_inc(RC inc = 1)
     {

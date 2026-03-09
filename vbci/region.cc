@@ -15,16 +15,16 @@ namespace vbci
     switch (type)
     {
       case RegionType::RegionArena:
-        {
-          auto result = new RegionArena(frame_depth);
-          return result;
-        }
+      {
+        auto result = new RegionArena(type, frame_depth);
+        return result;
+      }
 
       case RegionType::RegionRC:
-        {
-          auto result = new RegionRC(frame_depth);
-          return result;
-        }
+      {
+        auto result = new RegionRC(type, frame_depth);
+        return result;
+      }
 
       default:
         Value::error(Error::UnknownRegionType);

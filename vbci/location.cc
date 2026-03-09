@@ -18,13 +18,18 @@ namespace vbci
   {
     bool frame_local = r->is_frame_local();
     auto& program = Program::get();
+    size_t stack_rc_decs = 0;
 
     std::vector<Header*> wl;
     std::unordered_map<Header*, RC> rc_map;
     std::unordered_set<Region*> regions;
     wl.push_back(h);
 
-    size_t stack_rc_decs = 0;
+    auto fn = [&](Header* h) {
+      // Only add mutable, heap allocated objects and arrays to the list.
+      if (h->location().is_region())
+        wl.push_back(h);
+    };
 
     while (!wl.empty())
     {
@@ -58,17 +63,18 @@ namespace vbci
       }
 
       // Frame-local dest: older frame-local regions outlive this one, skip.
-      if (frame_local && hr->is_frame_local() &&
-          r->get_frame_depth() >= hr->get_frame_depth())
+      if (
+        frame_local && hr->is_frame_local() &&
+        r->get_frame_depth() >= hr->get_frame_depth())
         continue;
 
       // Add to the move set and trace fields.
       rc_map[next_h] = 1;
 
       if (program.is_array(next_h->get_type_id()))
-        static_cast<Array*>(next_h)->trace(wl);
+        static_cast<Array*>(next_h)->trace_fn(fn);
       else
-        static_cast<Object*>(next_h)->trace(wl);
+        static_cast<Object*>(next_h)->trace_fn(fn);
 
       // Frame-local dest: no sub-region tracking needed.
       if (frame_local)
@@ -83,8 +89,8 @@ namespace vbci
         continue;
 
       // Sub-region's parent is about to be cleared by the exchange.
-      if (ignore_parent && hr->has_parent() &&
-          hr->get_parent() == ignore_parent)
+      if (
+        ignore_parent && hr->has_parent() && hr->get_parent() == ignore_parent)
         continue;
 
       // Sub-region has an owner we can't clear — single entry violated.

@@ -438,15 +438,14 @@ namespace vbci
     Tuple,
   };
 
-  enum class RegionType
+  enum class RegionType : uint8_t
   {
     RegionRC,
-    RegionGC,
     RegionArena
   };
 
 
-  enum class DIOp
+  enum class DIOp : uint8_t
   {
     File,
     Offset,

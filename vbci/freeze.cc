@@ -62,42 +62,37 @@ namespace vbci
     Header* h, std::vector<Header*>& dfs, Region* source_region)
   {
     auto& program = Program::get();
-    std::vector<Header*> refs;
-
-    if (program.is_array(h->get_type_id()))
-      static_cast<Array*>(h)->trace_all(refs);
-    else
-      static_cast<Object*>(h)->trace_all(refs);
-
-    for (auto child : refs)
+    auto fn = [&](Header* h)
     {
-      if (!child)
-        continue;
-
-      auto child_loc = child->location();
+      auto loc = h->location();
 
       // Already immutable or immortal — skip.
-      if (child_loc.is_immutable() || child_loc.is_immortal())
-        continue;
+      if (loc.is_immutable() || loc.is_immortal())
+        return;
 
       // SCC_PTR — already part of a (potentially incomplete) SCC.
       // Treat as same-region: push to DFS.
-      if (child_loc.is_scc_ptr() || child_loc.is_pending())
+      if (loc.is_scc_ptr() || loc.is_pending())
       {
-        dfs.push_back(child);
-        continue;
+        dfs.push_back(h);
+        return;
       }
 
       // In the source region — process via DFS.
-      if (child_loc.is_region() && child_loc.to_region() == source_region)
+      if (loc.is_region() && loc.to_region() == source_region)
       {
-        dfs.push_back(child);
-        continue;
+        dfs.push_back(h);
+        return;
       }
 
       // External region object — this shouldn't happen for isolated regions.
       // For now, skip (the freeze caller must ensure isolation).
-    }
+    };
+
+    if (program.is_array(h->get_type_id()))
+      static_cast<Array*>(h)->trace_fn(fn);
+    else
+      static_cast<Object*>(h)->trace_fn(fn);
   }
 
   void freeze(Region* region, Header* root)

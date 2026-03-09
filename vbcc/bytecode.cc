@@ -96,8 +96,6 @@ namespace vbcc
 
     if (region == RegionRC)
       return +RegionType::RegionRC;
-    else if (region == RegionGC)
-      return +RegionType::RegionGC;
     else if (region == RegionArena)
       return +RegionType::RegionArena;
 

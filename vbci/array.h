@@ -92,7 +92,7 @@ namespace vbci
         location(), addr, value_type, std::forward<Reg<is_move>>(v));
     }
 
-    void trace(std::vector<Header*>& list)
+    void trace_fn(auto&& fn)
     {
       switch (value_type)
       {
@@ -104,39 +104,8 @@ namespace vbci
           {
             auto v = load(i);
 
-            if (!v.is_header())
-              return;
-
-            auto h = v.get_header();
-
-            // Only add mutable, heap allocated objects and arrays to the list.
-            if (h->region())
-              list.push_back(h);
-          }
-          break;
-        }
-
-        default:
-          break;
-      }
-    }
-
-    void trace_all(std::vector<Header*>& list)
-    {
-      switch (value_type)
-      {
-        case ValueType::Object:
-        case ValueType::Array:
-        case ValueType::Invalid:
-        {
-          for (size_t i = 0; i < size; i++)
-          {
-            auto v = load(i);
-
-            if (!v.is_header())
-              return;
-
-            list.push_back(v.get_header());
+            if (v.is_header())
+              fn(v.get_header());
           }
           break;
         }

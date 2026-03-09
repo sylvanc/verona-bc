@@ -31,7 +31,6 @@ namespace vbcc
 
   // Region types.
   inline const auto RegionRC = TokenDef("rc");
-  inline const auto RegionGC = TokenDef("gc");
   inline const auto RegionArena = TokenDef("arena");
 
   // Types.
@@ -215,7 +214,7 @@ namespace vbcc
   inline const auto Rhs = TokenDef("rhs");
   inline const auto Once = TokenDef("once");
 
-  inline const auto wfRegionType = RegionRC | RegionGC | RegionArena;
+  inline const auto wfRegionType = RegionRC | RegionArena;
 
   inline const auto wfIntType =
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
