@@ -68,19 +68,35 @@ namespace vbci
         r->get_frame_depth() >= hr->get_frame_depth())
         continue;
 
-      // Add to the move set and trace fields.
-      rc_map[next_h] = 1;
+      if (hr->is_frame_local())
+      {
+        // Object is in a frame-local region — drag it to the destination.
+        rc_map[next_h] = 1;
 
-      if (program.is_array(next_h->get_type_id()))
-        static_cast<Array*>(next_h)->trace_fn(fn);
+        if (program.is_array(next_h->get_type_id()))
+          static_cast<Array*>(next_h)->trace_fn(fn);
+        else
+          static_cast<Object*>(next_h)->trace_fn(fn);
+
+        // Frame-local dest: no sub-region tracking needed.
+        if (frame_local)
+          continue;
+      }
       else
-        static_cast<Object*>(next_h)->trace_fn(fn);
+      {
+        // Object is in a different heap region — don't drag it, but
+        // trace its fields to discover sub-sub-regions.
+        if (program.is_array(next_h->get_type_id()))
+          static_cast<Array*>(next_h)->trace_fn(fn);
+        else
+          static_cast<Object*>(next_h)->trace_fn(fn);
+      }
 
-      // Frame-local dest: no sub-region tracking needed.
+      // Sub-region tracking for heap regions.
       if (frame_local)
         continue;
 
-      // Frame-local source regions manage their own lifecycle.
+      // Frame-local source objects are dragged, not sub-region tracked.
       if (hr->is_frame_local())
         continue;
 
