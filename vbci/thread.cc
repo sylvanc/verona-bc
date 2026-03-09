@@ -314,15 +314,17 @@ namespace vbci
     for (size_t i = 1; i < num_cowns; i++)
     {
       auto cown = static_cast<Cown*>(slots[i].cown());
-      // TODO: The locals needs an RC here, we should look how we can remove
-      // that.  The verona runtime "behaviour" keeps this alive, but the
-      // Register would only receive a borrow, rather than a move. The current
-      // implementation considers all registers to have an RC associated. if we
-      // don't perform this inc, then the register invalidation code would break
-      // this.
-      // Perhaps needs a dynamic borrowed register reference?
-      cown->inc();
-      locals.at(args++) = ValueTransfer(cown, slots[i].is_read_only());
+      auto is_readonly = slots[i].is_read_only();
+
+      // Writable cowns need an extra RC for the local register since
+      // set_move will release the slot's RC separately.
+      // Readonly cowns already carry an RC from the read instruction's
+      // cown->inc() — don't add another or it will leak (the readonly
+      // slot release path doesn't release the move RC with successors).
+      if (!is_readonly)
+        cown->inc();
+
+      locals.at(args++) = ValueTransfer(cown, is_readonly);
     }
 
     try

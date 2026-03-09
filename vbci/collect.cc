@@ -119,6 +119,15 @@ namespace vbci
     }
 
     to_delete.clear();
+
+    // Phase 2 may have enqueued new items (e.g., freeing a region's objects
+    // causes a parent region's stack_rc to hit 0). Loop back to process them.
+    if (!worklist.empty())
+    {
+      drain_work_list();
+      return;
+    }
+
     in_collection = false;
   }
 
