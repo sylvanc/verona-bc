@@ -394,8 +394,14 @@ namespace vbci::writebarrier
     if (store_loc == loc)
       return;
 
-    // Only clear parent if the region actually has one.
-    if (r->has_owner())
+    // Clear parent if the region has one (sub-region relationship).
+    if (r->has_parent())
+    {
       r->clear_parent();
+      return;
+    }
+
+    // Different region, no parent — just decrement the value's RC.
+    v.field_dec();
   }
 }
