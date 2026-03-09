@@ -51,9 +51,11 @@ namespace vbci::writebarrier
 
       if (out_loc.is_region())
       {
-        // If storage wasn't in the stack or a frame-local region, add a stack RC.
-        if (!store_loc.is_stack() &&
-            !(store_loc.is_region() && store_loc.to_region()->is_frame_local()))
+        // If storage wasn't in the stack or a frame-local region, add a stack
+        // RC.
+        if (
+          !store_loc.is_stack() &&
+          !(store_loc.is_region() && store_loc.to_region()->is_frame_local()))
           out_stack_inc();
 
         // If out was in a different region, unparent it.
@@ -182,8 +184,13 @@ namespace vbci::writebarrier
         assert(!need_in_parent);
 
         if (!drag_allocation<is_move>(
-              in_drag_value, in->get_header(), out_clear_parent_region))
+              in_drag_value, in->get_header(), &out_clear_parent_region))
           return false;
+
+        // If we drag a sub-region reference to the same region as the outgoing
+        // value, we won't need to clear the out parent.
+        if (!out_clear_parent_region)
+          need_out_clear_parent = false;
       }
 
       // Write to the target address.

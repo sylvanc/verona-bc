@@ -158,7 +158,6 @@ namespace vbci
     }
   };
 
-  template <bool is_move>
-  bool drag_allocation(
-    Region* dest, Header* h, Region* ignore_parent = nullptr);
+  template<bool is_move>
+  bool drag_allocation(Region* dest, Header* h, Region** pr = nullptr);
 }

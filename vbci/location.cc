@@ -14,7 +14,7 @@ namespace vbci
   }
 
   template<bool is_move>
-  bool drag_allocation(Region* r, Header* h, Region* ignore_parent)
+  bool drag_allocation(Region* r, Header* h, Region** pr)
   {
     bool frame_local = r->is_frame_local();
     auto& program = Program::get();
@@ -100,13 +100,16 @@ namespace vbci
       if (hr->is_frame_local())
         continue;
 
-      // Sub-region already parented to the destination — no new entry.
-      if (hr->has_parent() && hr->get_parent() == r)
+      // If the sub-region is the previous region in a write-barrier exchange,
+      // don't clear the region parent.
+      if (pr && (*pr == hr))
+      {
+        *pr = nullptr;
         continue;
+      }
 
-      // Sub-region's parent is about to be cleared by the exchange.
-      if (
-        ignore_parent && hr->has_parent() && hr->get_parent() == ignore_parent)
+      // Sub-region already parented to the destination — no new entry.
+      if (hr->has_parent() && (hr->get_parent() == r))
         continue;
 
       // Sub-region has an owner we can't clear — single entry violated.
@@ -152,8 +155,6 @@ namespace vbci
     return true;
   }
 
-  template bool
-  drag_allocation<false>(Region* dest, Header* h, Region* ignore_parent);
-  template bool
-  drag_allocation<true>(Region* dest, Header* h, Region* ignore_parent);
+  template bool drag_allocation<false>(Region* dest, Header* h, Region** pr);
+  template bool drag_allocation<true>(Region* dest, Header* h, Region** pr);
 }
