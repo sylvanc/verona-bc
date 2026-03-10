@@ -11,6 +11,8 @@
  * preventing use-after-free when finalizers reference sibling objects.
  */
 
+#include "collect.h"
+
 #include "array.h"
 #include "header.h"
 #include "object.h"
