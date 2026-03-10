@@ -44,7 +44,7 @@ namespace vbci
     virtual bool is_finalizing() = 0;
     virtual void finalize_contents() = 0;
     virtual void release_dead_objects() = 0;
-    virtual std::vector<Header*> get_headers() const = 0;
+    void for_each_header(auto&& fn) const;
 
     void trace_fn(auto&& fn) const;
 

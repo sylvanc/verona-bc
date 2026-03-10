@@ -34,16 +34,12 @@ namespace vbci
     void finalize_contents() override;
     void release_dead_objects() override;
 
-    std::vector<Header*> get_headers() const override
-    {
-      return std::vector<Header*>(headers.begin(), headers.end());
-    }
-
     ~RegionRC()
     {
       LOG(Trace) << "Destroyed RegionRC @" << this;
     }
 
     void trace_fn(auto&& fn) const;
+    void for_each_header(auto&& fn) const;
   };
 }

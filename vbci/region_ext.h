@@ -23,6 +23,20 @@ namespace vbci
     }
   }
 
+  void Region::for_each_header(auto&& fn) const
+  {
+    switch (type)
+    {
+      case RegionType::RegionRC:
+        static_cast<const RegionRC*>(this)->for_each_header(fn);
+        break;
+
+      case RegionType::RegionArena:
+        static_cast<const RegionArena*>(this)->for_each_header(fn);
+        break;
+    }
+  }
+
   void RegionRC::trace_fn(auto&& fn) const
   {
     auto& program = Program::get();
@@ -34,5 +48,11 @@ namespace vbci
       else
         static_cast<Object*>(h)->trace_fn(fn);
     }
+  }
+
+  void RegionRC::for_each_header(auto&& fn) const
+  {
+    for (auto h : headers)
+      fn(h);
   }
 }

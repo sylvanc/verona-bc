@@ -4,7 +4,7 @@
 #include "header.h"
 #include "object.h"
 #include "program.h"
-#include "region.h"
+#include "region_ext.h"
 
 #include <vector>
 
@@ -18,7 +18,8 @@ namespace vbci
 
   static Header* remove_post_order_mark(Header* h)
   {
-    return reinterpret_cast<Header*>(reinterpret_cast<uintptr_t>(h) & ~uintptr_t(1));
+    return reinterpret_cast<Header*>(
+      reinterpret_cast<uintptr_t>(h) & ~uintptr_t(1));
   }
 
   static bool is_post_order(Header* h)
@@ -58,12 +59,11 @@ namespace vbci
 
   // Trace a header's fields, pushing region-object children onto the DFS stack.
   // Returns external references (cowns, immutables) that need incref.
-  static void trace_fields(
-    Header* h, std::vector<Header*>& dfs, Region* source_region)
+  static void
+  trace_fields(Header* h, std::vector<Header*>& dfs, Region* source_region)
   {
     auto& program = Program::get();
-    auto fn = [&](Header* h)
-    {
+    auto fn = [&](Header* h) {
       auto loc = h->location();
 
       // Already immutable or immortal — skip.
@@ -98,8 +98,6 @@ namespace vbci
   void freeze(Region* region, Header* root)
   {
     assert(root);
-    auto all_headers = region->get_headers();
-
     std::vector<Header*> dfs;
     std::vector<Header*> pending;
 
@@ -134,8 +132,7 @@ namespace vbci
       if (rep_loc.is_pending())
       {
         // Back edge: collapse everything on the path to this SCC.
-        while (!pending.empty() &&
-               Header::find(pending.back()) != rep)
+        while (!pending.empty() && Header::find(pending.back()) != rep)
         {
           scc_union(pending.back(), rep);
           pending.pop_back();
@@ -164,8 +161,7 @@ namespace vbci
     // Sweep: finalize and free unreachable objects.
     auto& program = Program::get();
 
-    for (auto h : all_headers)
-    {
+    region->for_each_header([&](Header* h) {
       auto loc = h->location();
 
       if (loc.is_region() && loc.to_region() == region)
@@ -178,7 +174,7 @@ namespace vbci
 
         delete[] reinterpret_cast<uint8_t*>(h);
       }
-    }
+    });
 
     // Delete the region (all surviving objects are now frozen).
     delete region;
