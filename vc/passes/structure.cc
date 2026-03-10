@@ -63,17 +63,14 @@ namespace vc
     {
       if (rhs == t)
         return lhs << *rhs;
-      else
-        return lhs << rhs;
+
+      return lhs << rhs;
     }
-    else if (rhs == t)
-    {
+
+    if (rhs == t)
       return t << lhs << *rhs;
-    }
-    else
-    {
-      return t << lhs << rhs;
-    }
+
+    return t << lhs << rhs;
   }
 
   Node lambda_body(Node brace, NodeRange rhs)
@@ -82,8 +79,8 @@ namespace vc
     {
       if (brace->empty())
         return Body << (Expr << (Ident ^ "none"));
-      else
-        return Body << *brace;
+
+      return Body << *brace;
     }
 
     return Body << (Expr << rhs);
@@ -176,7 +173,8 @@ namespace vc
               return err(
                 _(Ident), "Function implementations are not allowed in shapes");
             }
-            else if (!brace && !shape)
+
+            if (!brace && !shape)
             {
               return err(
                 _(Ident), "Function prototypes are only allowed in shapes");
@@ -359,11 +357,13 @@ namespace vc
           [](Match& _) { return make_typename(_[Type]); },
 
         // Union type.
-        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "\\|") * SomeType[Rhs] >>
+        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "\\|") * SomeType[Rhs] *
+            --T(SymbolId, "->") >>
           [](Match& _) { return merge_type(Union, _(Lhs), _(Rhs)); },
 
         // Intersection type.
-        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] >>
+        In(Type, Where)++* SomeType[Lhs] * T(SymbolId, "&") * SomeType[Rhs] *
+            --T(SymbolId, "->") >>
           [](Match& _) { return merge_type(Isect, _(Lhs), _(Rhs)); },
 
         // Tuple type.
@@ -375,8 +375,7 @@ namespace vc
           [](Match& _) { return _(Type); },
 
         // Function types are right associative.
-        In(Type, Where)++ * (SomeType / T(Paren))[Lhs] * T(SymbolId, "->") *
-            SomeType[Rhs] >>
+        In(Type, Where)++ * SomeType[Lhs] * T(SymbolId, "->") * SomeType[Rhs] >>
           [](Match& _) {
             if (_(Lhs) == FuncType)
             {
@@ -489,7 +488,7 @@ namespace vc
           },
 
         // Match.
-        In(Expr) * T(MatchExpr) * (!T(Brace) * (!T(Brace))++)[Expr] *
+        In(Expr) * (T(MatchExpr) << End) * (!T(Brace) * (!T(Brace))++)[Expr] *
             T(Brace)[Brace] >>
           [](Match& _) {
             return MatchExpr << (Expr << _[Expr]) << (ExprSeq << *_(Brace));

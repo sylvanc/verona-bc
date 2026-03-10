@@ -1,10 +1,11 @@
 #pragma once
 
 #include "region.h"
+#include "program.h"
 
 #include <cstdlib>
-#include <unordered_set>
 #include <iostream>
+#include <unordered_set>
 
 namespace vbci
 {
@@ -17,24 +18,28 @@ namespace vbci
     bool finalizing;
 
   public:
-    RegionRC() : Region(), finalizing(false)
+    RegionRC(RegionType type, size_t frame_depth = 0)
+    : Region(type, frame_depth), finalizing(false)
     {
       LOG(Trace) << "Created RegionRC @" << this;
     }
 
-    Object* object(Class& cls);
-    Array* array(uint32_t type_id, size_t size);
+    Object* object(Class& cls) override;
+    Array* array(uint32_t type_id, size_t size) override;
 
-    void rfree(Header* h);
-    void insert(Header* h);
-    void remove(Header* h);
-    bool enable_rc();
-    void free_contents();
+    void rfree(Header* h) override;
+    void insert(Header* h) override;
+    void remove(Header* h) override;
+    bool is_finalizing() override;
+    void finalize_contents() override;
+    void release_dead_objects() override;
 
-    ~RegionRC() {
+    ~RegionRC()
+    {
       LOG(Trace) << "Destroyed RegionRC @" << this;
     }
 
-    void trace(std::vector<Header*>& list) const;
+    void trace_fn(auto&& fn) const;
+    void for_each_header(auto&& fn) const;
   };
 }

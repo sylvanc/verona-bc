@@ -37,7 +37,6 @@ namespace vbcc
 
         // Region types.
         "rc\\b" >> [](auto& m) { m.add(RegionRC); },
-        "gc\\b" >> [](auto& m) { m.add(RegionGC); },
         "arena\\b" >> [](auto& m) { m.add(RegionArena); },
 
         // Types.

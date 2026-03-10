@@ -100,9 +100,11 @@ namespace vc
         "\\{" >> [](auto& m) { m.push(Brace); },
         "\\}" >>
           [](auto& m) {
-            // Braces terminate a group, but not a list.
+            // Terminate the group and any list inside the braces.
             m.term(terminators);
             m.pop(Brace);
+
+            // Braces terminate a group, but not a list.
             m.term();
           },
 

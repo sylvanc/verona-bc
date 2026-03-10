@@ -2,14 +2,24 @@
 
 ## To Do
 
+Freezing.
+- Need freeze syntax and a freeze `vbci` operation.
+- `collect_scc` seems complex, can we do the work in collect?
+- `all_headers` is stupidly expensive.
+- Can we freeze an object instead of a region, extracting from the region as we go?
+
+Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
+
+String literals should be immortal, not fresh allocations.
+
+Can we remove all uses of `Dyn` from `typecheck`?
+
 Review `iowise`.
-- Test it?
+- Buffer final can't call flush, that relies on mutation.
+- Dispose pattern?
 
 Semantics:
 - Region creation.
-- Freezing.
-
-Can we extract just the bits of `verona-rt` that we use?
 
 FFI.
 - Can `ffi::callback` interact with reference counting better?

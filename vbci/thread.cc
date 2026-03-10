@@ -6,6 +6,7 @@
 #include "function_signature.h"
 #include "object.h"
 #include "program.h"
+#include "region_ext.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -262,49 +263,13 @@ namespace vbci
     locals.resize(1024);
   }
 
-  Region* Thread::frame_local_region(size_t index)
+  Region* Thread::frame_region_for_stack(Location stack_loc)
   {
+    assert(stack_loc.is_stack());
     auto& t = get();
-    assert(index < t.frames.size());
-    return &t.frames.at(index).region;
-  }
-
-  bool Thread::is_frame_local_region(Region* region)
-  {
-    auto& t = get();
-
-    for (auto& frame : t.frames)
-    {
-      if (&frame.region == region)
-        return region->has_frame_local_owner();
-    }
-
-    return false;
-  }
-
-  size_t Thread::frame_local_index(Region* region)
-  {
-    auto& t = get();
-
-    for (size_t i = 0; i < t.frames.size(); i++)
-    {
-      if (&t.frames[i].region == region)
-      {
-        assert(region->has_frame_local_owner());
-        return i;
-      }
-    }
-
-    LOG(Error) << "Region " << region << " is not frame-local";
-    abort();
-  }
-
-  Location Thread::region_location(Region* region)
-  {
-    if (is_frame_local_region(region))
-      return Location::frame_local(frame_local_index(region));
-
-    return Location(region);
+    auto idx = stack_loc.stack_index();
+    assert(idx < t.frames.size());
+    return t.frames.at(idx).region;
   }
 
   Thread& Thread::get()
@@ -349,28 +314,30 @@ namespace vbci
     for (size_t i = 1; i < num_cowns; i++)
     {
       auto cown = static_cast<Cown*>(slots[i].cown());
-      // TODO: The locals needs an RC here, we should look how we can remove
-      // that.  The verona runtime "behaviour" keeps this alive, but the
-      // Register would only receive a borrow, rather than a move. The current
-      // implementation considers all registers to have an RC associated. if we
-      // don't perform this inc, then the register invalidation code would break
-      // this.
-      // Perhaps needs a dynamic borrowed register reference?
-      cown->inc();
-      locals.at(args++) = ValueTransfer(cown, slots[i].is_read_only());
+      auto is_readonly = slots[i].is_read_only();
+
+      // Writable cowns need an extra RC for the local register since
+      // set_move will release the slot's RC separately.
+      // Readonly cowns already carry an RC from the read instruction's
+      // cown->inc() — don't add another or it will leak (the readonly
+      // slot release path doesn't release the move RC with successors).
+      if (!is_readonly)
+        cown->inc();
+
+      locals.at(args++) = ValueTransfer(cown, is_readonly);
     }
 
     try
     {
       // Store the function return value in the result cown.
-      result->exchange<true, true>(nullptr, thread_run(behavior));
+      Register r = result->exchange<true>(thread_run(behavior));
     }
     catch (Value& error_value)
     {
       // Runtime error is fatal to the behavior. Clean up all frames and store
       // the error in the result cown.
       teardown_all();
-      result->exchange<true, true>(nullptr, ValueImmortal(error_value));
+      Register r = result->exchange<true>(ValueImmortal(error_value));
     }
 
 #ifndef NDEBUG
@@ -444,6 +411,7 @@ namespace vbci
         calc_stack_rcs[region] = 1;
         region = region->get_parent();
       }
+
       calc_stack_rcs[region] += 1;
     };
 
@@ -459,6 +427,10 @@ namespace vbci
 
       auto region = loc.to_region();
 
+      // Frame-local regions skip stack RC accounting.
+      if (region->is_frame_local())
+        return;
+
       visit_region(region);
     };
 
@@ -468,40 +440,32 @@ namespace vbci
       visit_value(reg);
     }
 
+    auto visit_header = [&](Header* h)
+    {
+      if (!h->location().is_region())
+        return;
+
+      auto r = h->location().to_region();
+
+      if (!r->is_frame_local() && !r->has_cown_owner())
+        visit_region(r);
+    };
+
     for (auto& frame : frames)
     {
-      const auto& frame_local_region = frame.get_frame_local_region();
-      std::vector<Header*> nodes;
-      frame_local_region.trace(nodes);
-      for (auto header : nodes)
-      {
-        if (header->region()->has_frame_local_owner())
-          continue;
-        if (header->region()->has_cown_owner())
-          continue;
-        visit_region(header->region());
-      }
+      frame.get_frame_local_region().trace_fn(visit_header);
     }
 
     stack.visit_headers({}, stack.top, [&](Header* h) {
-      std::vector<Header*> refs;
       if (program->is_array(h->get_type_id()))
       {
         auto arr = static_cast<Array*>(h);
-        arr->trace(refs);
+        arr->trace_fn(visit_header);
       }
       else
       {
         auto obj = static_cast<Object*>(h);
-        obj->trace(refs);
-      }
-
-      for (auto val : refs)
-      {
-        if (val == nullptr)
-          continue;
-        if (val->location().is_region())
-          visit_region(val->location().to_region());
+        obj->trace_fn(visit_header);
       }
     });
 
@@ -524,6 +488,7 @@ namespace vbci
 
         print_stack(log);
       }
+
       assert(calc_stack_rc <= actual_stack_rc && "Stack RC invariant violated");
     }
   }
@@ -923,7 +888,7 @@ namespace vbci
             }
 
             self.check_args(cls.fields);
-            dst = ValueTransfer(&frame.region.object(cls)->init(frame, cls));
+            dst = ValueTransfer(&frame.region->object(cls)->init(frame, cls));
           });
         break;
       }
@@ -999,7 +964,7 @@ namespace vbci
                   const Register& size,
                   Constant<size_t> type_id,
                   Frame& frame) INLINE {
-          dst = ValueTransfer(frame.region.array(type_id, size->get_size()));
+          dst = ValueTransfer(frame.region->array(type_id, size->get_size()));
         });
         break;
       }
@@ -1011,7 +976,7 @@ namespace vbci
                   Constant<size_t> type_id,
                   Constant<size_t> size,
                   Frame& frame) INLINE {
-          dst = ValueTransfer(frame.region.array(type_id, size));
+          dst = ValueTransfer(frame.region->array(type_id, size));
         });
         break;
       }
@@ -1787,18 +1752,15 @@ namespace vbci
       Value::error(Error::BadStackEscape);
     }
     else if (
-      retloc.is_frame_local() &&
-      (retloc.frame_local_index() == frame->frame_id.stack_index()))
+      retloc.is_region() &&
+      retloc.to_region() == frame->region)
     {
       if (frames.size() > 1)
       {
-        // Drag the frame-local allocation to the previous frame.
+        // Drag the frame-local allocation to the previous frame's region.
         auto& prev_frame = frames.at(frames.size() - 2);
 
-        auto prev_loc =
-          Location::frame_local(prev_frame.frame_id.stack_index());
-
-        if (!drag_allocation<false>(prev_loc, ret->get_header()))
+        if (!drag_allocation<false>(prev_frame.region, ret->get_header()))
           Value::error(Error::BadStackEscape);
       }
       else
@@ -1807,7 +1769,7 @@ namespace vbci
         auto r = Region::create(RegionType::RegionRC);
         // This is a fresh region, so we need the stack rc from the entry, so do
         // not count this as a move.
-        if (!drag_allocation<false>(Location(r), ret->get_header()))
+        if (!drag_allocation<false>(r, ret->get_header()))
         {
           r->free_region();
           Value::error(Error::BadStackEscape);
@@ -1858,13 +1820,15 @@ namespace vbci
     }
 
     if (
-      retloc.is_frame_local() &&
-      (retloc.frame_local_index() > target.stack_index()))
+      retloc.is_region() &&
+      retloc.to_region()->is_frame_local() &&
+      (retloc.to_region()->get_frame_depth() > (target.stack_index() + 1)))
     {
       // Frame-local in a frame younger than the target. Drag it to the
       // target frame's region so it survives intermediate teardowns.
-      auto target_local = Location::frame_local(target.stack_index());
-      if (!drag_allocation<false>(target_local, ret->get_header()))
+      auto target_region = frame_region_for_stack(target);
+
+      if (!drag_allocation<false>(target_region, ret->get_header()))
         Value::error(Error::BadStackEscape);
     }
 
@@ -1918,33 +1882,19 @@ namespace vbci
     // Drop all frame registers.
     frame->drop();
 
-    // Phase 1: Run finalizers on ALL stack objects that have them.
-    // This must happen before any destruct, because a finalizer may
-    // reference other stack-allocated objects that are still live.
+    // Finalize all stack objects (run finalizers and drop field references).
     stack.visit_headers(frame->save, stack.top, [&](Header* h) {
       if (Program::get().is_array(h->get_type_id()))
-        return;
-
-      auto* obj = static_cast<Object*>(h);
-      auto fin = obj->cls().finalizer();
-
-      if (fin)
-        Thread::run_sync(fin, ValueTransfer(obj, true));
-    });
-
-    // Phase 2: Drop references held by stack allocations.
-    stack.visit_headers(frame->save, stack.top, [&](Header* h) {
-      if (Program::get().is_array(h->get_type_id()))
-        static_cast<Array*>(h)->destruct();
+        static_cast<Array*>(h)->finalize();
       else
-        static_cast<Object*>(h)->destruct();
+        static_cast<Object*>(h)->finalize();
     });
 
     // Finalize the frame-local region. A tailcall preserves the region.
     if (!tailcall)
     {
-      assert(frame->region.has_frame_local_owner());
-      frame->region.free_contents();
+      assert(frame->region->is_frame_local());
+      collect(frame->region);
     }
 
     // Pop the stack.

@@ -73,10 +73,9 @@
 
   size_t Stack::size_bytes(Header* h)
   {
-    auto& program = Program::get();
-    if (program.is_array(h->get_type_id()))
+    if (Program::get().is_array(h->get_type_id()))
       return static_cast<Array*>(h)->allocation_size_bytes();
+
     return static_cast<Object*>(h)->allocation_size_bytes();
   }
-
 }

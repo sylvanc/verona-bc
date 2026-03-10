@@ -13,7 +13,7 @@ namespace vbci
     static constexpr auto Immutable = uintptr_t(0x2);
     static constexpr auto Pending = uintptr_t(0x3);
     static constexpr auto Immortal = uintptr_t(0x4);
-    static constexpr auto FrameLocal = uintptr_t(0x5);
+    static constexpr auto SccPtr = uintptr_t(0x5);
     static constexpr auto Mask = uintptr_t(0x7);
     static constexpr auto FrameInc = uintptr_t(0x8);
 
@@ -36,11 +36,6 @@ namespace vbci
     static constexpr Location stack()
     {
       return Location(Stack);
-    };
-
-    static constexpr Location frame_local(size_t index)
-    {
-      return Location(FrameLocal | (index * FrameInc));
     };
 
     static constexpr Location immutable()
@@ -105,20 +100,19 @@ namespace vbci
       return (value & Mask) == Stack;
     }
 
-    bool is_frame_local() const
+    bool is_immortal() const
     {
-      return (value & Mask) == FrameLocal;
-    }
-
-    bool is_region_or_frame_local() const
-    {
-      auto tag = value & Mask;
-      return (tag == 0) || (tag == FrameLocal);
+      return (value & Mask) == Immortal;
     }
 
     bool is_immutable() const
     {
       return (value & Mask) == Immutable;
+    }
+
+    bool is_scc_ptr() const
+    {
+      return (value & Mask) == SccPtr;
     }
 
     bool is_pending() const
@@ -127,12 +121,6 @@ namespace vbci
     }
 
     Region* to_region() const;
-
-    Header* to_scc() const
-    {
-      assert(is_immutable());
-      return reinterpret_cast<Header*>(value & ~Immutable);
-    }
 
     Location pending() const
     {
@@ -158,13 +146,18 @@ namespace vbci
       return (value - Stack) / FrameInc;
     }
 
-    size_t frame_local_index() const
+    static Location scc_ptr(Header* h)
     {
-      assert(is_frame_local());
-      return (value - FrameLocal) / FrameInc;
+      return Location(SccPtr | reinterpret_cast<uintptr_t>(h));
+    }
+
+    Header* scc_target() const
+    {
+      assert(is_scc_ptr());
+      return reinterpret_cast<Header*>(value & ~Mask);
     }
   };
 
-  template <bool is_move>
-  bool drag_allocation(Location dest_loc, Header* h);
+  template<bool is_move>
+  bool drag_allocation(Region* dest, Header* h, Region** pr = nullptr);
 }

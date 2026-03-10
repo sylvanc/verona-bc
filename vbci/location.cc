@@ -9,40 +9,36 @@ namespace vbci
 {
   Region* Location::to_region() const
   {
-    if (is_frame_local())
-      return Thread::frame_local_region(frame_local_index());
-
     assert(is_region());
     return reinterpret_cast<Region*>(value);
   }
 
-  template <bool is_move>
-  bool drag_allocation(Location dest_loc, Header* h)
+  template<bool is_move>
+  bool drag_allocation(Region* r, Header* h, Region** pr)
   {
-    assert(dest_loc.is_region_or_frame_local());
-
-    auto r = dest_loc.to_region();
-    bool frame_local = dest_loc.is_frame_local();
-
+    bool frame_local = r->is_frame_local();
     auto& program = Program::get();
+    size_t stack_rc_decs = 0;
 
     std::vector<Header*> wl;
     std::unordered_map<Header*, RC> rc_map;
     std::unordered_set<Region*> regions;
     wl.push_back(h);
 
-    // Track any borrows to dest_loc, that have now been made internal.
-    size_t stack_rc_decs = 0;
+    auto fn = [&](Header* h) {
+      // Only add mutable, heap allocated objects and arrays to the list.
+      if (h->location().is_region())
+        wl.push_back(h);
+    };
 
     while (!wl.empty())
     {
       Header* next_h = wl.back();
       wl.pop_back();
-      auto find = rc_map.find(next_h);
 
+      auto find = rc_map.find(next_h);
       if (find != rc_map.end())
       {
-        // If we're already tracked, increase the internal RC.
         find->second++;
         continue;
       }
@@ -52,104 +48,117 @@ namespace vbci
       if (loc.is_immutable())
         continue;
 
-      // No region, even a frame-local one, can point to the stack.
       if (loc.is_stack())
         return false;
 
-      if (loc.is_frame_local())
+      assert(loc.is_region());
+      auto hr = loc.to_region();
+
+      // Already in the destination region — just track the internal borrow.
+      if (hr == r)
       {
-        // Younger frames can point to older frames.
-        // Older frames and non-frame-local regions drag the object.
-        if (frame_local)
-        {
-          assert(dest_loc.is_frame_local());
+        if (!frame_local)
+          stack_rc_decs++;
+        continue;
+      }
 
-          if (dest_loc.frame_local_index() >= loc.frame_local_index())
-            continue;
-        }
+      // Frame-local dest: older frame-local regions outlive this one, skip.
+      if (
+        frame_local && hr->is_frame_local() &&
+        r->get_frame_depth() >= hr->get_frame_depth())
+        continue;
 
-        // This is the first internal edge, give it an internal RC count of 1.
+      if (hr->is_frame_local())
+      {
+        // Object is in a frame-local region — drag it to the destination.
         rc_map[next_h] = 1;
 
         if (program.is_array(next_h->get_type_id()))
-          static_cast<Array*>(next_h)->trace(wl);
+          static_cast<Array*>(next_h)->trace_fn(fn);
         else
-          static_cast<Object*>(next_h)->trace(wl);
-      }
+          static_cast<Object*>(next_h)->trace_fn(fn);
 
-      // Only need to track regions we visit if the dest_loc is not frame-local
-      if (loc.is_region() && !frame_local)
-      {
-        auto hr = loc.to_region();
-
-        // If hr is r, then we just need to perform a stack dec as we are making a
-        // borrow internal.
-        if (hr == r)
-        {
-          stack_rc_decs++;
+        // Frame-local dest: no sub-region tracking needed.
+        if (frame_local)
           continue;
-        }
-
-        // If r is not frame-local, it can't point to a region that already has
-        // a parent, even if that parent is r (to preserve single entry point).
-        if (!frame_local && hr->has_owner())
-          return false;
-
-        // If hr is already an ancestor of r, we can't drag the allocation, or
-        // we'll create a region cycle.
-        if (hr->is_ancestor_of(r))
-          return false;
-
-        // If r is not frame-local, it can't have multiple entry points to this
-        // region.
-        auto [it, ok] = regions.insert(hr);
-        if (!frame_local && !ok)
-          return false;
       }
-    }
-
-    // Assign parent to regions if r is not frame-local.
-    if (!frame_local)
-    {
-      for (auto& hr : regions)
+      else
       {
-        hr->set_parent(r);
-        // Decrease stack rc for this region, as a frame local entry point is
-        // now in r.
-        hr->stack_dec();
+        // Object is in a different heap region — don't drag it, but
+        // trace its fields to discover sub-sub-regions.
+        if (program.is_array(next_h->get_type_id()))
+          static_cast<Array*>(next_h)->trace_fn(fn);
+        else
+          static_cast<Object*>(next_h)->trace_fn(fn);
       }
+
+      // Sub-region tracking for heap regions.
+      if (frame_local)
+        continue;
+
+      // Frame-local source objects are dragged, not sub-region tracked.
+      if (hr->is_frame_local())
+        continue;
+
+      // If the sub-region is the previous region in a write-barrier exchange,
+      // don't clear the region parent.
+      if (pr && (*pr == hr))
+      {
+        *pr = nullptr;
+
+        // The reference to this sub-region was stack-like (from frame-local).
+        // After drag, it becomes hierarchy-internal: decrement stack_rc.
+        hr->stack_dec();
+        continue;
+      }
+
+      // Sub-region already parented to the destination — no new entry.
+      if (hr->has_parent() && (hr->get_parent() == r))
+        continue;
+
+      // Sub-region has an owner we can't clear — single entry violated.
+      if (hr->has_owner())
+        return false;
+
+      // Would create a cycle.
+      if (hr->is_ancestor_of(r))
+        return false;
+
+      // Can't have multiple entry points to the same sub-region.
+      if (!regions.insert(hr).second)
+        return false;
     }
 
-    // Move objects and arrays to the new region.
+    // Parent tracked sub-regions to the destination.
+    for (auto& hr : regions)
+    {
+      hr->set_parent(r);
+      hr->stack_dec();
+    }
+
+    // Move objects to the new region.
     for (auto& [hh, rc] : rc_map)
     {
-      LOG(Trace) << "Dragging header @" << hh << " to region @" << r << " with internal rc " << rc;
-      // Reduce internal RC map by 1 for the initial entry edge.
+      LOG(Trace) << "Dragging header @" << hh << " to region @" << r
+                 << " with internal rc " << rc;
+
       if (hh == h)
       {
         if constexpr (!is_move)
-        {
-          LOG(Trace) << "Copying header @" << hh << " to region @" << r;
           rc--;
-        }
-        else
-          LOG(Trace) << "Moving header @" << hh << " to region @" << r;
       }
-      // (hh->rc - rc) = stack rc. This works because frame-local regions are
-      // always reference counted.
+
       assert(hh->get_rc() >= rc);
       r->stack_inc(hh->get_rc() - rc);
-      hh->move_region(dest_loc, r);
+      hh->move_region(r);
     }
 
-    if (!frame_local && (stack_rc_decs > 0))
-      for (size_t i = 0; i < stack_rc_decs; i++)
-        r->stack_dec();
+    for (size_t i = 0; i < stack_rc_decs; i++)
+      r->stack_dec();
 
     return true;
-
   }
 
-  template bool drag_allocation<false>(Location dest_loc, Header* h);
-  template bool drag_allocation<true>(Location dest_loc, Header* h);
+  template bool drag_allocation<false>(Region* dest, Header* h, Region** pr);
+  template bool drag_allocation<true>(Region* dest, Header* h, Region** pr);
 }

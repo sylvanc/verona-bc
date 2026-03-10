@@ -16,7 +16,7 @@ namespace vbcc
   const auto FloatLiteral = T(Float, HexFloat);
 
   const auto Dst = T(LocalId)[LocalId] * T(Equals);
-  const auto RegionType = T(RegionRC, RegionGC, RegionArena);
+  const auto RegionType = T(RegionRC, RegionArena);
   const auto SymbolParams = T(LParen) *
     (~(TypePat * (T(Comma) * TypePat)++))[Params] *
     ~(T(Comma) * T(Vararg)[Vararg]) * T(RParen);

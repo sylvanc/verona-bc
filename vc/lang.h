@@ -416,7 +416,7 @@ namespace vc
     ;
   // clang-format on
 
-  inline const auto wfTypeInfer = wfTypeNoFunc - TypeVar;
+  inline const auto wfTypeInfer = wfTypeNoFunc;
   inline const auto wfBodyInfer = wfBodyANF - TypeAssertion;
 
   // clang-format off

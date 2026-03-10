@@ -45,7 +45,7 @@ namespace vbci
 
     ValueStaticLifetime(const Value& v) : Value(v)
     {
-      assert(v.location().is_stack() || v.location().is_frame_local());
+      assert(v.location().is_stack());
     }
   };
 
@@ -72,7 +72,7 @@ namespace vbci
     Register(ValueBorrow v)
     {
       set_raw_unsafe(v);
-      v.inc<true>();
+      v.reg_inc();
     };
 
     Register(ValueImmortal v)
@@ -83,7 +83,7 @@ namespace vbci
 
     Register(ValueStaticLifetime v)
     {
-      assert(v.location().is_stack() || v.location().is_frame_local());
+      assert(v.location().is_stack());
       set_raw_unsafe(v);
     };
 
@@ -127,7 +127,7 @@ namespace vbci
       Value old = *this;
       Value new_value = fun();
       set_raw_unsafe(new_value);
-      old.dec<true>();
+      old.reg_dec();
     }
 
     void operator=(ValueTransfer v)
@@ -138,7 +138,7 @@ namespace vbci
     void operator=(ValueBorrow v)
     {
       replace_unsafe([&]() {
-        v.inc<true>();
+        v.reg_inc();
         return v;
       });
     }
@@ -179,7 +179,7 @@ namespace vbci
     void operator=(const Register& v)
     {
       replace_unsafe([&]() -> Value {
-        v.inc<true>();
+        v.reg_inc();
         return v;
       });
     }
@@ -194,7 +194,7 @@ namespace vbci
     {
       replace_unsafe([&]() {
         ValueBorrow v = src.load_reference();
-        v.inc<true>();
+        v.reg_inc();
         return v;
       });
     }
@@ -202,7 +202,8 @@ namespace vbci
     template<bool is_move>
     void from_exchange(const Register& reference, Reg<is_move> new_value)
     {
-      reference.exchange<is_move>(*this, std::forward<Reg<is_move>>(new_value));
+      *this =
+        reference.exchange<is_move>(std::forward<Reg<is_move>>(new_value));
     }
 
     template<bool is_move>
@@ -214,34 +215,36 @@ namespace vbci
         {
           auto obj = src.get_object();
           auto f = obj->field(field_id);
-
           auto readonly = src.is_readonly();
 
           replace_unsafe([&]() {
             if constexpr (is_move)
               src.clear_unsafe();
             else
-              src.template inc<true>();
+              src.reg_inc();
+
             return Value(obj, f, readonly);
           });
           return;
         }
+
         case ValueType::Cown:
         {
           auto cown = src.get_cown();
           snmalloc::UNUSED(field_id);
-
           auto readonly = src.is_readonly();
 
           replace_unsafe([&]() {
             if constexpr (is_move)
               src.clear_unsafe();
             else
-              src.template inc<false>();
+              src.field_inc();
+
             return Value(cown, readonly);
           });
           return;
         }
+
         default:
           Value::error(Error::BadRefTarget);
       }
@@ -263,7 +266,7 @@ namespace vbci
       if constexpr (is_move)
         src.clear_unsafe();
       else
-        src.template inc<true>();
+        src.reg_inc();
 
       replace_unsafe([&]() { return Value(arr, index, readonly); });
     }

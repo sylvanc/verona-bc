@@ -27,7 +27,7 @@ namespace vbci
     dst(dst),
     raise_target(frame_id)
   {
-    region.set_frame_local_owner();
+    region = Region::create(RegionType::RegionRC, frame_id.stack_index() + 1);
   }
 
   Register& Frame::local(size_t idx)
@@ -95,8 +95,8 @@ namespace vbci
     args = 0;
   }
 
-  RegionRC& Frame::get_frame_local_region()
+  Region& Frame::get_frame_local_region() const
   {
-    return region;
+    return *region;
   }
 }

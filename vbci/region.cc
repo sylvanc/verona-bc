@@ -10,21 +10,21 @@
 
 namespace vbci
 {
-  Region* Region::create(RegionType type)
+  Region* Region::create(RegionType type, size_t frame_depth)
   {
     switch (type)
     {
       case RegionType::RegionArena:
-        {
-          auto result = new RegionArena();
-          return result;
-        }
+      {
+        auto result = new RegionArena(type, frame_depth);
+        return result;
+      }
 
       case RegionType::RegionRC:
-        {
-          auto result = new RegionRC();
-          return result;
-        }
+      {
+        auto result = new RegionRC(type, frame_depth);
+        return result;
+      }
 
       default:
         Value::error(Error::UnknownRegionType);

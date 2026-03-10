@@ -5,6 +5,7 @@
 #include "header.h"
 #include "program.h"
 #include "thread.h"
+#include "writebarrier.h"
 
 #include <format>
 
@@ -13,7 +14,8 @@ namespace vbci
   struct Object : public Header
   {
   private:
-    Object(Location loc, Class& cls) : Header(loc, cls.type_id) {
+    Object(Location loc, Class& cls) : Header(loc, cls.type_id)
+    {
       LOG(Trace) << "Creating object of class " << cls.type_id << "@" << this;
     }
 
@@ -25,8 +27,20 @@ namespace vbci
 
     Object& init(Frame& frame, Class& cls)
     {
+      uint8_t* base = reinterpret_cast<uint8_t*>(this + 1);
+      auto loc = location();
+
       for (size_t i = 0; i < cls.fields.size(); i++)
-        exchange<true, true>(nullptr, i, std::move(frame.arg(i)));
+      {
+        auto& f = cls.fields.at(i);
+        auto& v = frame.arg(i);
+
+        if (!Program::get().subtype(v->type_id(), f.type_id))
+          Value::error(Error::BadType);
+
+        void* addr = base + f.offset;
+        writebarrier::init(loc, addr, f.value_type, std::move(v));
+      }
 
       return *this;
     }
@@ -68,8 +82,8 @@ namespace vbci
       return Value::from_addr(f.value_type, addr);
     }
 
-    template <bool is_move, bool no_previous = false>
-    void exchange(Register* dst, size_t idx, Reg<is_move> v)
+    template<bool is_move>
+    ValueTransfer exchange(size_t idx, Reg<is_move> v)
     {
       auto& f = cls().fields.at(idx);
 
@@ -77,29 +91,54 @@ namespace vbci
         Value::error(Error::BadType);
 
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
-
-      Header::exchange<is_move, no_previous>(dst, addr, f.value_type, std::forward<Reg<is_move>>(v));
+      return writebarrier::exchange<is_move>(
+        location(), addr, f.value_type, std::forward<Reg<is_move>>(v));
     }
 
     /**
-     * Deallocate this object.
-     * 
-     * This should not be called directly, but rather by the collector
-     * to correctly handle re-entrancy.
+     * Run the finalizer and drop field references.
+     * Does not free memory — collect handles that separately.
      */
-    void deallocate()
+    void finalize()
     {
-      // This object isn't in a cycle. It can be immediately finalized and then
-      // freed.
-      finalize();
+      LOG(Trace) << "Finalizing fields of object of class " << cls().type_id
+                 << "@" << this;
 
-      if (location().is_immutable())
-        delete this;
-      else
-        region()->rfree(this);
+      auto& c = cls();
+      auto& f = c.fields;
+      auto fin = c.finalizer();
+
+      // Pass a read-only reference to the object.
+      if (fin)
+        Thread::run_sync(fin, ValueTransfer(this, true));
+
+      for (size_t i = 0; i < f.size(); i++)
+      {
+        switch (f.at(i).value_type)
+        {
+          case ValueType::Object:
+          case ValueType::Array:
+          case ValueType::Invalid:
+          {
+            auto prev = load(i);
+            writebarrier::drop(location(), prev);
+            break;
+          }
+
+          case ValueType::Cown:
+          {
+            auto prev = load(i);
+            prev.field_dec();
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
     }
 
-    void trace(std::vector<Header*>& list)
+    void trace_fn(auto&& fn)
     {
       auto& f = cls().fields;
 
@@ -113,14 +152,9 @@ namespace vbci
           {
             auto v = load(i);
 
-            if (!v.is_header())
-              return;
+            if (v.is_header())
+              fn(v.get_header());
 
-            auto h = v.get_header();
-
-            // Only add mutable, heap allocated objects and arrays to the list.
-            if (h->region())
-              list.push_back(h);
             break;
           }
 
@@ -147,75 +181,6 @@ namespace vbci
           case ValueType::Invalid:
             load(i).immortalize();
             break;
-
-          default:
-            break;
-        }
-      }
-    }
-
-    void finalize()
-    {
-      LOG(Trace) << "Finalizing fields of object of class " << cls().type_id << "@" << this;
-
-      auto& c = cls();
-      auto& f = c.fields;
-      auto fin = c.finalizer();
-
-      // Pass a read-only reference to the object.
-      if (fin)
-        Thread::run_sync(fin, ValueTransfer(this, true));
-
-      for (size_t i = 0; i < f.size(); i++)
-      {
-        switch (f.at(i).value_type)
-        {
-          case ValueType::Object:
-          case ValueType::Array:
-          case ValueType::Invalid:
-          {
-            auto prev = load(i);
-            field_drop(prev);
-            break;
-          }
-
-          case ValueType::Cown:
-          {
-            auto prev = load(i);
-            prev.dec<false>();
-            break;
-          }
-
-          default:
-            break;
-        }
-      }
-    }
-
-    // Drop all reference-holding fields without invoking a finalizer.
-    void destruct()
-    {
-      auto& f = cls().fields;
-
-      for (size_t i = 0; i < f.size(); i++)
-      {
-        switch (f.at(i).value_type)
-        {
-          case ValueType::Object:
-          case ValueType::Array:
-          case ValueType::Invalid:
-          {
-            auto prev = load(i);
-            field_drop(prev);
-            break;
-          }
-
-          case ValueType::Cown:
-          {
-            auto prev = load(i);
-            prev.dec<false>();
-            break;
-          }
 
           default:
             break;

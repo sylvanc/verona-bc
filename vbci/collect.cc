@@ -1,15 +1,26 @@
 /**
- * Implements a worklist collector for applying teardown code for objects,
- * regions, and arrays. Uses thread local storage to maintain the worklist, so
- * that reentrancy can be delayed until each item has completed its teardown.
+ * Implements a two-phase collector for objects, regions, and arrays.
+ *
+ * Phase 1 (finalizing): Run finalizers and drop field references. This may
+ * cause other objects' RCs to hit 0, adding them to the finalizing worklist.
+ * Drain until empty.
+ *
+ * Phase 2 (deleting): Free memory for all finalized objects.
+ *
+ * This separation ensures that all finalizers run before any memory is freed,
+ * preventing use-after-free when finalizers reference sibling objects.
  */
 
+#include "collect.h"
+
 #include "array.h"
+#include "header.h"
 #include "object.h"
 #include "region.h"
 
-#include <vbci.h>
 #include <queue>
+#include <vbci.h>
+#include <vector>
 
 namespace vbci
 {
@@ -19,8 +30,6 @@ namespace vbci
     Header
   };
 
-  // TODO: This could be optimised by borrowing low bits from the pointer if
-  // alignment allows it.  Only do this if profiling shows this is a bottleneck.
   struct WorkItem
   {
     CollectorType type;
@@ -29,7 +38,6 @@ namespace vbci
     WorkItem(CollectorType t, void* h) : type(t), header(h) {}
   };
 
-  // Used to get tag from type to reduce code duplication.
   template<typename T>
   struct Tag;
 
@@ -46,56 +54,145 @@ namespace vbci
   };
 
   static thread_local std::queue<WorkItem> worklist;
+  static thread_local std::vector<WorkItem> to_delete;
   static thread_local bool in_collection = false;
 
-  template<typename T>
-  static bool add_work_list(T* h)
+  static void drain_work_list()
   {
-    if (!in_collection)
-      return false;
-
-    LOG(Trace) << "Adding to worklist: " << static_cast<void*>(h);
-    worklist.emplace(Tag<T>::value, h);
-    return true;
-  }
-
-  template<typename T>
-  void collect(T* h)
-  {
-    if (add_work_list(h))
-      return;
-
-
-    in_collection = true;
-    add_work_list(h);
     auto& program = Program::get();
+    in_collection = true;
 
+    // Phase 1: Finalize all objects, collecting the transitive closure.
     while (!worklist.empty())
     {
       auto n = worklist.front();
       worklist.pop();
+      LOG(Trace) << "Finalizing work item: " << static_cast<void*>(n.header);
 
-      LOG(Trace) << "Processing work item: " << static_cast<void*>(n.header);
       switch (n.type)
       {
         case CollectorType::Header:
         {
           auto h = static_cast<Header*>(n.header);
+
           if (program.is_array(h->get_type_id()))
-            static_cast<Array*>(h)->deallocate();
+            static_cast<Array*>(h)->finalize();
           else
-            static_cast<Object*>(h)->deallocate();
+            static_cast<Object*>(h)->finalize();
           break;
         }
 
         case CollectorType::Region:
-          static_cast<Region*>(n.header)->deallocate();
+        {
+          auto r = static_cast<Region*>(n.header);
+          r->finalize_contents();
           break;
+        }
+      }
+
+      to_delete.push_back(n);
+    }
+
+    // Phase 2: Delete all finalized objects.
+    for (auto& n : to_delete)
+    {
+      LOG(Trace) << "Deleting work item: " << static_cast<void*>(n.header);
+
+      switch (n.type)
+      {
+        case CollectorType::Header:
+        {
+          auto h = static_cast<Header*>(n.header);
+
+          if (h->location().is_immutable() || h->location().is_pending())
+            delete[] reinterpret_cast<uint8_t*>(h);
+          else
+            h->region()->rfree(h);
+          break;
+        }
+
+        case CollectorType::Region:
+        {
+          auto r = static_cast<Region*>(n.header);
+          r->release_dead_objects();
+          break;
+        }
       }
     }
+
+    to_delete.clear();
+
+    // Phase 2 may have enqueued new items (e.g., freeing a region's objects
+    // causes a parent region's stack_rc to hit 0). Loop back to process them.
+    if (!worklist.empty())
+    {
+      drain_work_list();
+      return;
+    }
+
     in_collection = false;
+  }
+
+  template<typename T>
+  void collect(T* h)
+  {
+    worklist.emplace(Tag<T>::value, h);
+
+    if (!in_collection)
+      drain_work_list();
   }
 
   template void collect<Header>(Header* h);
   template void collect<Region>(Region* h);
-} // namespace vbci
+
+  // Collect a frozen SCC: walk all members via SCC_PTR chains,
+  // mark each as pending (processing sentinel), and push onto the
+  // collector worklist. The two-phase collector handles finalization
+  // (Phase 1) and deallocation (Phase 2), including cascading decrefs
+  // from field drops.
+  void collect_scc(Header* root)
+  {
+    assert(root->location().is_immutable());
+
+    // Walk the SCC members by tracing fields and following SCC_PTR.
+    std::vector<Header*> work;
+    work.push_back(root);
+    root->set_location(Location::from_raw(Location::Pending));
+
+    auto& program = Program::get();
+
+    auto fn = [&](Header* h) {
+      // If this is an SCC_PTR member of this SCC and not yet marked for
+      // processing, add it.
+      if (h->location().is_scc_ptr())
+      {
+        auto rep = Header::find(h);
+
+        if ((rep == root) || rep->location().is_pending())
+        {
+          h->set_location(Location::from_raw(Location::Pending));
+          work.push_back(h);
+        }
+      }
+    };
+
+    while (!work.empty())
+    {
+      auto x = work.back();
+      work.pop_back();
+
+      // Push this member into the collector worklist (don't drain yet).
+      worklist.emplace(Tag<Header>::value, x);
+
+      // Trace fields to find other SCC members.
+      if (program.is_array(x->get_type_id()))
+        static_cast<Array*>(x)->trace_fn(fn);
+      else
+        static_cast<Object*>(x)->trace_fn(fn);
+    }
+
+    // If we're not already inside a collection, drain now.
+    if (!in_collection)
+      drain_work_list();
+  }
+}

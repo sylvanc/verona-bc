@@ -40,11 +40,8 @@ namespace vbci
 
   public:
     static ValueTransfer run_async(uint32_t type_id, Function* func);
-    static Region* frame_local_region(size_t index);
-    static bool is_frame_local_region(Region* region);
-    static size_t frame_local_index(Region* region);
-    static Location region_location(Region* region);
     static Register& get_register(uint64_t id);
+    static Region* frame_region_for_stack(Location stack_loc);
 
     template<typename... Ts>
     static void run_sync(Function* func, Ts&&... argv)
@@ -88,13 +85,23 @@ namespace vbci
       assert(args == 0);
       ((arg(args++) = std::forward<Ts>(argv)), ...);
 
+      auto depth = frames.size();
+
       try
       {
         thread_run(func);
       }
       catch (Value& error_value)
       {
-        teardown_all();
+        // Only tear down frames we created, not our caller's frames.
+        while (frames.size() > depth)
+        {
+          frame->drop_args(args);
+          teardown();
+          frames.pop_back();
+          frame = frames.empty() ? nullptr : &frames.back();
+        }
+
         LOG(Error) << error_value.to_string();
       }
     }

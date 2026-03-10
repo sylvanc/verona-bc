@@ -672,27 +672,82 @@ namespace vbci
     Value::error(Error::BadOperand);
   }
 
-  template<bool needs_stack_rc>
-  void Value::inc() const
+  void Value::reg_inc() const
   {
+    if (readonly)
+    {
+      if (tag == ValueType::Cown)
+        cown->inc();
+      return;
+    }
+
+    field_inc();
+
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::FieldRef:
-        if (!readonly)
-          obj->inc<needs_stack_rc>();
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+      {
+        auto loc = location();
+        if (loc.is_region())
+          loc.to_region()->stack_inc();
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  void Value::reg_dec() const
+  {
+    if (readonly)
+    {
+      if (tag == ValueType::Cown)
+        cown->dec();
+      return;
+    }
+
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::FieldRef:
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+      {
+        auto loc = location();
+        if (loc.is_region() && !loc.to_region()->stack_dec())
+          return;
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    field_dec();
+  }
+
+  void Value::field_inc() const
+  {
+    assert(!readonly);
+
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::FieldRef:
+        obj->field_inc();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        if (!readonly)
-          arr->inc<needs_stack_rc>();
+        arr->field_inc();
         break;
 
       case ValueType::Cown:
       case ValueType::CownRef:
-        // Cowns do not have a stack RC, so doesn't mater if it is
-        // a stack RC or not.
         cown->inc();
         break;
 
@@ -701,46 +756,24 @@ namespace vbci
     }
   }
 
-  template void Value::inc<true>() const;
-  template void Value::inc<false>() const;
-
-  void Value::stack_inc() const
+  void Value::field_dec() const
   {
-    if (location().is_region())
-    {
-      location().to_region()->stack_inc();
-    }
-  }
+    assert(!readonly);
 
-  void Value::stack_dec() const
-  {
-    if (location().is_region())
-    {
-      location().to_region()->stack_dec();
-    }
-  }
-
-  template<bool needs_stack_rc>
-  void Value::dec() const
-  {
     switch (tag)
     {
       case ValueType::Object:
       case ValueType::FieldRef:
-        if (!readonly)
-          obj->dec<needs_stack_rc>();
+        obj->field_dec();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        if (!readonly)
-          arr->dec<needs_stack_rc>();
+        arr->field_dec();
         break;
 
       case ValueType::Cown:
       case ValueType::CownRef:
-        // Cowns do not have a stack RC, so doesn't mater if it is
-        // a stack RC or not.
         cown->dec();
         break;
 
@@ -748,9 +781,6 @@ namespace vbci
         break;
     }
   }
-
-  template void Value::dec<true>() const;
-  template void Value::dec<false>() const;
 
   Location Value::location() const
   {
@@ -851,19 +881,19 @@ namespace vbci
       default:
         Value::error(Error::BadLoadTarget);
     }
+
     v.readonly = readonly;
     return v;
   }
 
   template<bool is_move>
-  void Value::exchange(Register& dst, Reg<is_move> v) const
+  ValueTransfer Value::exchange(Reg<is_move> v) const
   {
     if (readonly)
-    {
       Value::error(Error::BadStoreTarget);
-    }
-    // Currently only cowns provide read-only access.  That means it
-    // is never valid to store a read-only reference any where.
+
+    // Currently only cowns provide read-only access. That means it is never
+    // valid to store a read-only reference any where.
     if (v->readonly)
       Value::error(Error::BadStore);
 
@@ -878,42 +908,45 @@ namespace vbci
         if (vloc.is_stack() && (vloc.stack_index() > ref_loc.stack_index()))
           Value::error(Error::BadStoreTarget);
 
-        // Should also check for frame local?
-        if (vloc.is_frame_local())
+        // If the value is in a frame-local region that is younger than the
+        // register's frame, drag it to the register's frame region.
+        if (vloc.is_region())
         {
-          if (vloc.frame_local_index() > ref_loc.stack_index())
-            // TODO This should perform a drag rather than failing.
-            // We need to move the frame local region to the frame local
-            // region associated with the register ref.
-            Value::error(Error::BadStoreTarget);
+          auto vr = vloc.to_region();
+
+          if (
+            vr->is_frame_local() &&
+            (vr->get_frame_depth() > (ref_loc.stack_index() + 1)))
+          {
+            // Find the target frame's region by matching stack index.
+            auto target_region =
+              Thread::frame_region_for_stack(ref_loc);
+
+            if (!target_region ||
+                !drag_allocation<is_move>(target_region, v->get_header()))
+              Value::error(Error::BadStoreTarget);
+          }
         }
 
         Register& reg = Thread::get_register(u64);
-        dst = std::move(reg);
+        ValueTransfer prev = reg.extract();
 
         if constexpr (is_move)
-        {
-          reg = std::move(v);
-        }
+          reg = ValueTransfer(v.extract());
         else
-        {
-          reg = v;
-        }
+          reg = ValueBorrow(v.borrow());
 
-        return;
+        return prev;
       }
 
       case ValueType::FieldRef:
-        obj->exchange<is_move>(&dst, idx, std::forward<Reg<is_move>>(v));
-        return;
+        return obj->exchange<is_move>(idx, std::forward<Reg<is_move>>(v));
 
       case ValueType::ArrayRef:
-        arr->exchange<is_move>(dst, idx, std::forward<Reg<is_move>>(v));
-        return;
+        return arr->exchange<is_move>(idx, std::forward<Reg<is_move>>(v));
 
       case ValueType::CownRef:
-        cown->exchange<is_move>(&dst, std::forward<Reg<is_move>>(v));
-        return;
+        return cown->exchange<is_move>(std::forward<Reg<is_move>>(v));
 
       default:
         Value::error(Error::BadStoreTarget);
@@ -921,8 +954,8 @@ namespace vbci
   }
 
   // Create instances of templated store
-  template void Value::exchange<true>(Register& old, Reg<true> v) const;
-  template void Value::exchange<false>(Register& old, Reg<false> v) const;
+  template ValueTransfer Value::exchange<true>(Reg<true> v) const;
+  template ValueTransfer Value::exchange<false>(Reg<false> v) const;
 
   Function* Value::method(size_t w) const
   {
