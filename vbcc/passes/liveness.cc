@@ -103,7 +103,6 @@ namespace vbcc
                       RegisterRef,
                       FieldRef,
                       ArrayRefConst,
-                      FnPointer,
                       FFI,
                       GetRaise,
                       Const_E,

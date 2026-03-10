@@ -17,7 +17,8 @@ int main(int argc, char** argv)
      assignids(state),
      validids(state),
      liveness(state),
-     typecheck(state)},
+     typecheck(state),
+     optimize(state)},
     parser()};
 
   struct Options : public trieste::Options
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
         auto pass = cli.get_option_no_throw("--pass");
 
         if (
-          !pass || pass->count() == 0 || pass->as<std::string>() == "typecheck")
+          !pass || pass->count() == 0 || pass->as<std::string>() == "optimize")
           build = true;
       });
     }

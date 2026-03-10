@@ -563,8 +563,6 @@ namespace vbci
         return os << "StoreMove";
       case Op::StoreCopy:
         return os << "StoreCopy";
-      case Op::LookupStatic:
-        return os << "LookupStatic";
       case Op::LookupDynamic:
         return os << "LookupDynamic";
       case Op::LookupFFI:
@@ -1149,13 +1147,6 @@ namespace vbci
       {
         process([](Register& dst, const Register& ref, const Register& src)
                   INLINE { dst.from_exchange<false>(ref, src); });
-        break;
-      }
-
-      case Op::LookupStatic:
-      {
-        process([](Register& dst, Function* func)
-                  INLINE { dst = ValueImmortal(func); });
         break;
       }
 

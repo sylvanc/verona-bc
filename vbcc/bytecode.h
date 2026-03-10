@@ -8,6 +8,13 @@
 
 namespace vbcc
 {
+  using namespace trieste;
+
+  struct LookupInfo
+  {
+    Node src_type;
+    Node method_id;
+  };
   using namespace vbci;
 
   struct VecHash
@@ -81,6 +88,16 @@ namespace vbcc
 
     std::unordered_map<std::vector<uint8_t>, size_t, VecHash> type_map;
     std::vector<std::vector<uint8_t>> types;
+
+    // Per-function type environments from typecheck.
+    // Outer key: FunctionId string. Inner key: register name.
+    std::unordered_map<std::string,
+      std::unordered_map<std::string, Node>> func_types;
+
+    // Per-function lookup info from typecheck.
+    // Outer key: FunctionId string. Inner key: lookup dst register name.
+    std::unordered_map<std::string,
+      std::unordered_map<std::string, LookupInfo>> func_lookups;
 
     Bytecode();
 

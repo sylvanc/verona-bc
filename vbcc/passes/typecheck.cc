@@ -374,11 +374,6 @@ namespace vbcc
       Node cur_func;
 
       // Track lookup results: dst register -> (src_type, MethodId).
-      struct LookupInfo
-      {
-        Node src_type;
-        Node method_id;
-      };
       std::unordered_map<std::string, LookupInfo> lookup_info;
 
       // Collect errors during traversal, apply after.
@@ -985,11 +980,6 @@ namespace vbcc
           lookup_info[dst_name] = {src_type, method_id};
 
           // Lookup produces a function pointer (opaque).
-          set_type(env, node / LocalId, Dyn);
-        }
-        else if (node == FnPointer)
-        {
-          // Function pointer is opaque.
           set_type(env, node / LocalId, Dyn);
         }
         else if (node == Call)
@@ -2068,6 +2058,17 @@ namespace vbcc
           process_node(term2);
         }
         checking = false;
+
+        // Persist type environment and lookup info for the optimize pass.
+        auto func_key =
+          std::string((func_node / FunctionId)->location().view());
+        state->func_types[func_key] = env;
+
+        std::unordered_map<std::string, LookupInfo> li_copy;
+        for (auto& [k, v] : lookup_info)
+          li_copy[k] = {v.src_type ? clone(v.src_type) : Node{},
+                        clone(v.method_id)};
+        state->func_lookups[func_key] = std::move(li_copy);
       }
 
       for (auto& [n, msg] : errors)

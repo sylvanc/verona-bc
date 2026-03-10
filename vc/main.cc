@@ -29,6 +29,7 @@ int main(int argc, char** argv)
       vbcc::validids(state),
       vbcc::liveness(state),
       vbcc::typecheck(state),
+      vbcc::optimize(state),
     },
     parse};
 
@@ -58,7 +59,7 @@ int main(int argc, char** argv)
         auto pass = cli.get_option_no_throw("--pass");
 
         if (
-          !pass || pass->count() == 0 || pass->as<std::string>() == "typecheck")
+          !pass || pass->count() == 0 || pass->as<std::string>() == "optimize")
           build = true;
       });
     }

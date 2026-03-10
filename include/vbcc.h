@@ -243,7 +243,7 @@ namespace vbcc
     New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
     StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
-    ArrayRefConst | Load | Store | Lookup | FnPointer | Arg | Call | CallDyn |
+    ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
     wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
     RegisterExternalNotify | MemoSlot;
@@ -320,7 +320,6 @@ namespace vbcc
     | (Load <<= wfDst * wfSrc)
     | (Store <<= wfDst * wfSrc * Arg)
     | (Lookup <<= wfDst * wfSrc * MethodId)
-    | (FnPointer <<= wfDst * (Rhs >>= FunctionId | SymbolId))
     | (Call <<= wfDst * FunctionId * Args)
     | (CallDyn <<= wfDst * wfSrc * Args)
     | (TryCallDyn <<= wfDst * wfSrc * Args)
