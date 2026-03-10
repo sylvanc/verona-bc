@@ -398,8 +398,12 @@ namespace vbci::writebarrier
     }
 
     // Internal edge within the same region — no parent to clear.
+    // Still decrement field RC so individual object collection cascades.
     if (store_loc == loc)
+    {
+      v.field_dec();
       return;
+    }
 
     // Clear parent if the region has one (sub-region relationship).
     if (r->has_parent())

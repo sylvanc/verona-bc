@@ -105,6 +105,10 @@ namespace vbci
       if (pr && (*pr == hr))
       {
         *pr = nullptr;
+
+        // The reference to this sub-region was stack-like (from frame-local).
+        // After drag, it becomes hierarchy-internal: decrement stack_rc.
+        hr->stack_dec();
         continue;
       }
 
