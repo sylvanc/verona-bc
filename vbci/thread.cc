@@ -864,7 +864,7 @@ namespace vbci
       {
         process(
           [](Program& program, Register& dst, Constant<size_t> string_id)
-            INLINE { dst = ValueTransfer(program.get_string(string_id)); });
+            INLINE { dst = ValueImmortal(program.get_string(string_id)); });
         break;
       }
 

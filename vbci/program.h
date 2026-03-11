@@ -32,6 +32,7 @@ namespace vbci
     std::filesystem::path file;
     std::vector<uint8_t> content;
     std::vector<std::string> strings;
+    std::vector<Array*> string_arrays;
 
     std::vector<Function> functions;
     std::vector<Class> classes;
@@ -150,6 +151,8 @@ namespace vbci
 
   private:
     void setup_value_type();
+    void setup_strings();
+    void cleanup_strings();
     void setup_argv(std::vector<std::string>& args);
     bool load();
     bool parse_function(Function& f, PC& pc);
