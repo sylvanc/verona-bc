@@ -1,0 +1,776 @@
+vc
+optimize
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars
+      (localid 6:$opt_8)
+      (localid 6:$opt_0)
+      (localid 6:$opt_3))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (memoslot
+            (localid 6:$opt_0)
+            (functionid 42:_builtin::ffi::external::create::0::0$once))
+          (lookup
+            (localid 6:$opt_1)
+            (localid 6:$opt_0)
+            (methodid 9:add::1::0))
+          (calldyn
+            (localid 6:$opt_2)
+            (localid 6:$opt_1)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (memoslot
+            (localid 6:$opt_3)
+            (functionid 42:_builtin::ffi::external::create::0::0$once))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_3)
+            (methodid 12:remove::1::0))
+          (calldyn
+            (localid 6:$opt_5)
+            (localid 6:$opt_4)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_3))))
+          (const
+            (localid 6:$opt_6)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 6:$opt_8)
+            (localid 6:$opt_6))
+          (ffi
+            (localid 6:$opt_9)
+            (symbolid 8:printval)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_8))))
+          (const
+            (localid 4:$977)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 4:$977)))))
+  (func
+    (functionid 24:notify_basic::main::0::0)
+    (params)
+    (i32)
+    (vars
+      (localid 1:x)
+      (localid 7:local$9)
+      (localid 8:local$10))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (memoslot
+            (localid 7:local$9)
+            (functionid 42:_builtin::ffi::external::create::0::0$once))
+          (new
+            (localid 7:$opt_10)
+            (classid 36:_builtin::ffi::external::lambda$1::0)
+            (args))
+          (lookup
+            (localid 7:$opt_11)
+            (localid 7:local$9)
+            (methodid 7:c::1::0))
+          (calldyn
+            (localid 7:$opt_12)
+            (localid 7:$opt_11)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:local$9))))
+          (lookup
+            (localid 7:$opt_13)
+            (localid 7:$opt_10)
+            (methodid 11:apply::2::0))
+          (whendyn
+            (localid 7:$opt_14)
+            (localid 7:$opt_13)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$opt_10))
+              (arg
+                (argcopy)
+                (localid 7:$opt_12)))
+            (cown
+              (none)))
+          (const
+            (localid 9:local$501)
+            (none)
+            (none))
+          (memoslot
+            (localid 8:local$10)
+            (functionid 42:_builtin::ffi::external::create::0::0$once))
+          (new
+            (localid 7:$opt_15)
+            (classid 36:_builtin::ffi::external::lambda$2::0)
+            (args))
+          (lookup
+            (localid 7:$opt_16)
+            (localid 8:local$10)
+            (methodid 7:c::1::0))
+          (calldyn
+            (localid 7:$opt_17)
+            (localid 7:$opt_16)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$10))))
+          (lookup
+            (localid 7:$opt_18)
+            (localid 7:$opt_15)
+            (methodid 11:apply::2::0))
+          (whendyn
+            (localid 7:$opt_19)
+            (localid 7:$opt_18)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$opt_15))
+              (arg
+                (argcopy)
+                (localid 7:$opt_17)))
+            (cown
+              (none)))
+          (const
+            (localid 9:local$503)
+            (none)
+            (none))
+          (const
+            (localid 8:local$11)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 1:x)
+            (localid 8:local$11))
+          (ffi
+            (localid 8:local$12)
+            (symbolid 8:printval)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:x))))
+          (const
+            (localid 8:local$13)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 8:local$13)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 37:_builtin::ffi::external::create::0::0)
+    (params)
+    (classid 26:_builtin::ffi::external::0)
+    (vars
+      (localid 5:$memo))
+    (labels
+      (label
+        (labelid 5:entry)
+        (body
+          (memoslot
+            (localid 5:$memo)
+            (functionid 42:_builtin::ffi::external::create::0::0$once)))
+        (ret
+          (localid 5:$memo)))))
+  (func
+    (functionid 42:_builtin::ffi::external::create::0::0$once)
+    (params)
+    (classid 26:_builtin::ffi::external::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 7:$opt_20)
+            (none)
+            (none))
+          (const
+            (localid 9:local$509)
+            (none)
+            (none))
+          (new
+            (localid 7:$opt_21)
+            (classid 27:_builtin::cown::lambda$3::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$509))))
+          (lookup
+            (localid 7:$opt_22)
+            (localid 7:$opt_21)
+            (methodid 11:apply::1::0))
+          (whendyn
+            (localid 9:local$112)
+            (localid 7:$opt_22)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$opt_21)))
+            (cown
+              (none)))
+          (new
+            (localid 8:local$17)
+            (classid 26:_builtin::ffi::external::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$112)))))
+        (ret
+          (localid 8:local$17)))))
+  (func
+    (functionid 24:notify_basic::init::0::0)
+    (params)
+    (dyn)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 9:local$110)
+            (classid 25:notify_basic::lambda$0::0)
+            (args))
+          (makecallback
+            (localid 7:$opt_23)
+            (localid 9:local$110))
+          (registerexternalnotify
+            (localid 7:$opt_24)
+            (localid 7:$opt_23))
+          (const
+            (localid 7:local$8)
+            (none)
+            (none)))
+        (ret
+          (localid 7:local$8)))))
+  (primitive
+    (none)
+    (methods))
+  (func
+    (functionid 36:notify_basic::lambda$0::create::0::0)
+    (params)
+    (classid 25:notify_basic::lambda$0::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$6)
+            (classid 25:notify_basic::lambda$0::0)
+            (args)))
+        (ret
+          (localid 7:local$6)))))
+  (func
+    (functionid 45:_builtin::ffi::register_external_notify::1::0)
+    (params
+      (param
+        (localid 1:f)
+        (classid 25:notify_basic::lambda$0::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (makecallback
+            (localid 8:local$15)
+            (localid 1:f))
+          (registerexternalnotify
+            (localid 9:local$873)
+            (localid 8:local$15))
+          (const
+            (localid 8:none$978)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$978)))))
+  (class
+    (classid 16:_builtin::ffi::0)
+    (fields)
+    (methods))
+  (class
+    (classid 25:notify_basic::lambda$0::0)
+    (fields)
+    (methods
+      (method
+        (methodid 9:@callback)
+        (functionid 35:notify_basic::lambda$0::apply::1::0))
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 35:notify_basic::lambda$0::apply::1::0))))
+  (func
+    (functionid 37:_builtin::ffi::callback::create::1::0)
+    (params
+      (param
+        (localid 8:callable)
+        (classid 25:notify_basic::lambda$0::0)))
+    (callback)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (makecallback
+            (localid 9:local$505)
+            (localid 8:callable)))
+        (ret
+          (localid 9:local$505)))))
+  (primitive
+    (callback)
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 36:_builtin::ffi::callback::apply::1::0))))
+  (func
+    (functionid 35:notify_basic::lambda$0::apply::1::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 25:notify_basic::lambda$0::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 9:local$109)
+            (u64)
+            (int 1:0))
+          (ffi
+            (localid 7:local$7)
+            (symbolid 8:printval)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$109))))
+          (const
+            (localid 8:none$979)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$979)))))
+  (primitive
+    (u64)
+    (methods))
+  (class
+    (classid 26:_builtin::ffi::external::0)
+    (fields
+      (field
+        (fieldid 1:c)
+        (cown
+          (none))))
+    (methods
+      (method
+        (methodid 9:add::1::0)
+        (functionid 34:_builtin::ffi::external::add::1::0))
+      (method
+        (methodid 12:remove::1::0)
+        (functionid 37:_builtin::ffi::external::remove::1::0))
+      (method
+        (methodid 7:c::1::0)
+        (functionid 32:_builtin::ffi::external::c::1::0))))
+  (func
+    (functionid 28:_builtin::none::create::0::0)
+    (params)
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 8:local$77)
+            (none)
+            (none))
+          (const
+            (localid 8:none$981)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$981)))))
+  (func
+    (functionid 28:_builtin::cown::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (none)))
+    (cown
+      (none))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$51)
+            (classid 27:_builtin::cown::lambda$3::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:some))))
+          (when
+            (localid 9:local$559)
+            (functionid 37:_builtin::cown::lambda$3::apply::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$51)))
+            (cown
+              (none))))
+        (ret
+          (localid 9:local$559)))))
+  (primitive
+    (cown
+      (none))
+    (methods))
+  (func
+    (functionid 38:_builtin::cown::lambda$3::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (none)))
+    (classid 27:_builtin::cown::lambda$3::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$50)
+            (classid 27:_builtin::cown::lambda$3::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:some)))))
+        (ret
+          (localid 8:local$50)))))
+  (func
+    (functionid 36:_builtin::ffi::callback::apply::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (callback)))
+    (ptr)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (callbackptr
+            (localid 9:local$506)
+            (localid 4:self)))
+        (ret
+          (localid 9:local$506)))))
+  (primitive
+    (ptr)
+    (methods))
+  (class
+    (classid 27:_builtin::cown::lambda$3::0)
+    (fields
+      (field
+        (fieldid 4:some)
+        (none)))
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 37:_builtin::cown::lambda$3::apply::1::0))))
+  (func
+    (functionid 37:_builtin::cown::lambda$3::apply::1::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 27:_builtin::cown::lambda$3::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$155)
+            (arg
+              (argcopy)
+              (localid 5:$self))
+            (fieldid 4:some))
+          (load
+            (localid 9:local$897)
+            (localid 9:local$155))
+          (const
+            (localid 8:none$980)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$980)))))
+  (primitive
+    (ref
+      (none))
+    (methods))
+  (primitive
+    (ref
+      (cown
+        (none)))
+    (methods))
+  (func
+    (functionid 34:_builtin::ffi::external::add::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 26:_builtin::ffi::external::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$20)
+            (classid 36:_builtin::ffi::external::lambda$1::0)
+            (args))
+          (fieldref
+            (localid 7:$opt_25)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 1:c))
+          (load
+            (localid 9:local$114)
+            (localid 7:$opt_25))
+          (when
+            (localid 9:local$511)
+            (functionid 46:_builtin::ffi::external::lambda$1::apply::2::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$20))
+              (arg
+                (argcopy)
+                (localid 9:local$114)))
+            (cown
+              (none)))
+          (const
+            (localid 8:none$984)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$984)))))
+  (func
+    (functionid 37:_builtin::ffi::external::remove::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 26:_builtin::ffi::external::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$23)
+            (classid 36:_builtin::ffi::external::lambda$2::0)
+            (args))
+          (fieldref
+            (localid 7:$opt_26)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 1:c))
+          (load
+            (localid 9:local$116)
+            (localid 7:$opt_26))
+          (when
+            (localid 9:local$513)
+            (functionid 46:_builtin::ffi::external::lambda$2::apply::2::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$23))
+              (arg
+                (argcopy)
+                (localid 9:local$116)))
+            (cown
+              (none)))
+          (const
+            (localid 8:none$982)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$982)))))
+  (func
+    (functionid 47:_builtin::ffi::external::lambda$2::create::0::0)
+    (params)
+    (classid 36:_builtin::ffi::external::lambda$2::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$21)
+            (classid 36:_builtin::ffi::external::lambda$2::0)
+            (args)))
+        (ret
+          (localid 8:local$21)))))
+  (func
+    (functionid 32:_builtin::ffi::external::c::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 26:_builtin::ffi::external::0)))
+    (cown
+      (none))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 8:local$16)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 1:c))
+          (load
+            (localid 9:local$508)
+            (localid 8:local$16)))
+        (ret
+          (localid 9:local$508)))))
+  (func
+    (functionid 37:_builtin::ffi::external::c::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 26:_builtin::ffi::external::0)))
+    (ref
+      (cown
+        (none)))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$111)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 1:c)))
+        (ret
+          (localid 9:local$111)))))
+  (class
+    (classid 36:_builtin::ffi::external::lambda$2::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 46:_builtin::ffi::external::lambda$2::apply::2::0))))
+  (func
+    (functionid 46:_builtin::ffi::external::lambda$2::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 36:_builtin::ffi::external::lambda$2::0))
+      (param
+        (localid 1:c)
+        (ref
+          (none))))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (removeexternal
+            (localid 8:local$22))
+          (const
+            (localid 8:none$983)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$983)))))
+  (func
+    (functionid 47:_builtin::ffi::external::lambda$1::create::0::0)
+    (params)
+    (classid 36:_builtin::ffi::external::lambda$1::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$18)
+            (classid 36:_builtin::ffi::external::lambda$1::0)
+            (args)))
+        (ret
+          (localid 8:local$18)))))
+  (class
+    (classid 36:_builtin::ffi::external::lambda$1::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 46:_builtin::ffi::external::lambda$1::apply::2::0))))
+  (func
+    (functionid 46:_builtin::ffi::external::lambda$1::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 36:_builtin::ffi::external::lambda$1::0))
+      (param
+        (localid 1:c)
+        (ref
+          (none))))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (addexternal
+            (localid 8:local$19))
+          (const
+            (localid 8:none$985)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$985)))))
+  (lib
+    (string 0:)
+    (symbols
+      (symbol
+        (symbolid 8:printval)
+        (string 8:printval)
+        (string 0:)
+        (none)
+        (ffiparams
+          (dyn))
+        (none))
+      (symbol
+        (symbolid 8:printval)
+        (string 8:printval)
+        (string 0:)
+        (none)
+        (ffiparams
+          (dyn))
+        (none)))
+    (functionid 24:notify_basic::init::0::0))
+  (memoinit
+    (functionid 42:_builtin::ffi::external::create::0::0$once)))

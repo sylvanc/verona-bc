@@ -27,9 +27,9 @@ int main(int argc, char** argv)
       vbcc::memo(),
       vbcc::assignids(state),
       vbcc::validids(state),
-      vbcc::liveness(state),
       vbcc::typecheck(state),
       vbcc::optimize(state),
+      vbcc::liveness(state),
     },
     parse};
 

@@ -27,7 +27,8 @@ VBCI_FFI Array* getargv()
 
 VBCI_FFI void printval(Value& val)
 {
-  std::cout << val.to_string() << std::endl;
+  auto s = val.to_string() + "\n";
+  std::cout << s;
 }
 
 VBCI_FFI uint64_t call_fn_ptr_u64(void (*fn)(uint64_t), uint64_t arg)

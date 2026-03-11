@@ -2,6 +2,10 @@
 
 ## To Do
 
+Optimize.
+- Unnecessary copies?
+- Array fill/copy is slow.
+
 Freezing.
 - Need freeze syntax and a freeze `vbci` operation.
 - Can we freeze an object instead of a region, extracting from the region as we go?
@@ -12,7 +16,6 @@ String literals should be immortal, not fresh allocations.
 
 Review `iowise`.
 - Buffer final can't call flush, that relies on mutation.
-- Array fill/copy is slow.
 - Dispose pattern?
 
 Semantics:

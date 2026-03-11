@@ -16,9 +16,9 @@ int main(int argc, char** argv)
      memo(),
      assignids(state),
      validids(state),
-     liveness(state),
      typecheck(state),
-     optimize(state)},
+     optimize(state),
+     liveness(state)},
     parser()};
 
   struct Options : public trieste::Options
