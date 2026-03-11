@@ -11,10 +11,24 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_2)
+            (usize)
+            (int 1:0))
+          (new
+            (localid 6:$opt_0)
+            (classid 26:infer_newfield::counter::0)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_2))))
+          (move
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (const
             (localid 4:$969)
-            (functionid 26:infer_newfield::main::0::0)
-            (args)))
+            (i32)
+            (int 1:0)))
         (ret
           (localid 4:$969)))))
   (func
@@ -26,10 +40,17 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_3)
+            (usize)
+            (int 1:0))
+          (new
             (localid 7:local$7)
-            (functionid 37:infer_newfield::counter::create::0::0)
-            (args))
+            (classid 26:infer_newfield::counter::0)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_3))))
           (move
             (localid 1:c)
             (localid 7:local$7))

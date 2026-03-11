@@ -11,10 +11,85 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:3))
+          (const
+            (localid 6:$opt_1)
+            (i32)
+            (int 1:4))
+          (lookup
+            (localid 6:$opt_2)
+            (localid 6:$opt_0)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_0))))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_1)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 6:$opt_5)
+            (localid 6:$opt_4)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_1))))
+          (new
+            (localid 6:$opt_6)
+            (classid 21:auto_create::point::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_3))
+              (arg
+                (argcopy)
+                (localid 6:$opt_5))))
+          (move
+            (localid 6:$opt_7)
+            (localid 6:$opt_6))
+          (lookup
+            (localid 6:$opt_8)
+            (localid 6:$opt_7)
+            (methodid 7:x::1::0))
+          (calldyn
+            (localid 6:$opt_9)
+            (localid 6:$opt_8)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_7))))
+          (lookup
+            (localid 7:$opt_10)
+            (localid 6:$opt_7)
+            (methodid 7:y::1::0))
+          (calldyn
+            (localid 7:$opt_11)
+            (localid 7:$opt_10)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_7))))
+          (lookup
+            (localid 7:$opt_12)
+            (localid 6:$opt_9)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 4:$982)
-            (functionid 23:auto_create::main::0::0)
-            (args)))
+            (localid 7:$opt_12)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_9))
+              (arg
+                (argmove)
+                (localid 7:$opt_11)))))
         (ret
           (localid 4:$982)))))
   (func
@@ -34,20 +109,12 @@ optimize
             (localid 9:local$107)
             (i32)
             (int 1:4))
-          (call
+          (copy
             (localid 9:local$873)
-            (functionid 24:_builtin::i32::i32::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$106))))
-          (call
+            (localid 9:local$106))
+          (copy
             (localid 9:local$875)
-            (functionid 24:_builtin::i32::i32::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$107))))
+            (localid 9:local$107))
           (new
             (localid 7:local$8)
             (classid 21:auto_create::point::0)
@@ -61,20 +128,24 @@ optimize
           (move
             (localid 1:p)
             (localid 7:local$8))
-          (call
+          (fieldref
+            (localid 7:$opt_13)
+            (arg
+              (argcopy)
+              (localid 1:p))
+            (fieldid 1:x))
+          (load
             (localid 9:local$109)
-            (functionid 27:auto_create::point::x::1::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:p))))
-          (call
+            (localid 7:$opt_13))
+          (fieldref
+            (localid 7:$opt_14)
+            (arg
+              (argcopy)
+              (localid 1:p))
+            (fieldid 1:y))
+          (load
             (localid 9:local$111)
-            (functionid 27:auto_create::point::y::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:p))))
+            (localid 7:$opt_14))
           (add
             (localid 9:local$877)
             (localid 9:local$109)

@@ -35,13 +35,23 @@ optimize
             (localid 9:local$109)
             (usize)
             (int 2:10))
+          (const
+            (localid 6:$opt_1)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 6:$opt_0)
+            (localid 6:$opt_1))
           (call
             (localid 7:local$6)
-            (functionid 27:_builtin::array::fill::1::0)
+            (functionid 27:_builtin::array::fill::2::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$109))
+              (arg
                 (argmove)
-                (localid 9:local$109))))
+                (localid 6:$opt_0))))
           (move
             (localid 3:arr)
             (localid 7:local$6))
@@ -117,12 +127,19 @@ optimize
           (move
             (localid 3:sum)
             (localid 7:local$9))
-          (call
+          (const
+            (localid 6:$opt_2)
+            (usize)
+            (int 1:0))
+          (new
             (localid 9:local$517)
-            (functionid 29:_builtin::array::values::1::0)
+            (classid 22:_builtin::arrayiter::0)
             (args
               (arg
                 (argmove)
+                (localid 6:$opt_2))
+              (arg
+                (argcopy)
                 (localid 3:arr))))
           (move
             (localid 4:it$0)
@@ -173,10 +190,14 @@ optimize
       (label
         (labelid 8:body$989)
         (body
-          (call
+          (const
+            (localid 6:$opt_3)
+            (none)
+            (none))
+          (const
             (localid 9:local$115)
-            (functionid 28:_builtin::none::create::0::0)
-            (args)))
+            (none)
+            (none)))
         (jump
           (labelid 8:join$113)))
       (label
@@ -236,10 +257,13 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_4)
+            (i32)
+            (int 1:0))
+          (copy
             (localid 9:local$122)
-            (functionid 27:_builtin::i32::create::0::0)
-            (args))
+            (localid 6:$opt_4))
           (call
             (localid 8:local$24)
             (functionid 27:_builtin::array::fill::2::0)
@@ -328,13 +352,9 @@ optimize
             (localid 9:local$224)
             (i32)
             (int 1:0))
-          (call
+          (copy
             (localid 8:local$63)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$224)))))
+            (localid 9:local$224)))
         (ret
           (localid 8:local$63)))))
   (func
@@ -493,12 +513,19 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_5)
+            (usize)
+            (int 1:0))
+          (new
             (localid 8:local$35)
-            (functionid 33:_builtin::arrayiter::create::1::0)
+            (classid 22:_builtin::arrayiter::0)
             (args
               (arg
                 (argmove)
+                (localid 6:$opt_5))
+              (arg
+                (argcopy)
                 (localid 4:self)))))
         (ret
           (localid 8:local$35)))))
@@ -574,20 +601,24 @@ optimize
             (localid 8:local$39)
             (classid 20:_builtin::nomatch::0)
             (args))
-          (call
+          (fieldref
+            (localid 6:$opt_6)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 5:index))
+          (load
             (localid 9:local$558)
-            (functionid 32:_builtin::arrayiter::index::1::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
-          (call
+            (localid 6:$opt_6))
+          (fieldref
+            (localid 6:$opt_7)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:arr))
+          (load
             (localid 9:local$560)
-            (functionid 30:_builtin::arrayiter::arr::1::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
+            (localid 6:$opt_7))
           (len
             (localid 9:local$992)
             (localid 9:local$560))
@@ -602,33 +633,36 @@ optimize
       (label
         (labelid 8:body$138)
         (body
-          (call
+          (fieldref
+            (localid 6:$opt_8)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:arr))
+          (load
             (localid 9:local$562)
-            (functionid 30:_builtin::arrayiter::arr::1::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
+            (localid 6:$opt_8))
           (move
             (localid 1:a)
             (localid 9:local$562))
-          (call
+          (fieldref
+            (localid 6:$opt_9)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 5:index))
+          (load
             (localid 9:local$902)
-            (functionid 32:_builtin::arrayiter::index::1::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
-          (call
+            (localid 6:$opt_9))
+          (arrayref
+            (localid 7:$opt_10)
+            (arg
+              (argcopy)
+              (localid 1:a))
+            (localid 9:local$902))
+          (load
             (localid 9:local$564)
-            (functionid 28:_builtin::array::apply::2::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:a))
-              (arg
-                (argmove)
-                (localid 9:local$902))))
+            (localid 7:$opt_10))
           (move
             (localid 4:item)
             (localid 9:local$564))
@@ -642,13 +676,15 @@ optimize
               (argcopy)
               (localid 4:self))
             (fieldid 5:index))
-          (call
+          (fieldref
+            (localid 7:$opt_11)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 5:index))
+          (load
             (localid 9:local$568)
-            (functionid 32:_builtin::arrayiter::index::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self))))
+            (localid 7:$opt_11))
           (add
             (localid 9:local$957)
             (localid 9:local$568)

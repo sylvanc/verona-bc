@@ -23,15 +23,15 @@ optimize
     (i32)
     (vars
       (localid 7:local$9)
-      (localid 9:local$509))
+      (localid 9:local$509)
+      (localid 7:local$8))
     (labels
       (label
         (labelid 5:start)
         (body
-          (call
+          (memoslot
             (localid 7:local$8)
-            (functionid 24:memo_deps::derived::0::0)
-            (args))
+            (functionid 29:memo_deps::derived::0::0$once))
           (move
             (localid 1:v)
             (localid 7:local$8))
@@ -43,13 +43,9 @@ optimize
             (localid 9:local$505)
             (i32)
             (int 2:42))
-          (call
+          (copy
             (localid 9:local$110)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$505))))
+            (localid 9:local$505))
           (eq
             (localid 9:local$507)
             (localid 1:v)
@@ -65,13 +61,9 @@ optimize
             (localid 9:local$508)
             (i32)
             (int 1:0))
-          (call
+          (copy
             (localid 9:local$111)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$508))))
+            (localid 9:local$508))
           (move
             (localid 7:local$9)
             (localid 9:local$111)))
@@ -103,13 +95,9 @@ optimize
             (localid 9:local$112)
             (i32)
             (int 1:1))
-          (call
+          (copy
             (localid 8:local$10)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$112))))
+            (localid 9:local$112))
           (move
             (localid 9:local$509)
             (localid 8:local$10)))
@@ -148,26 +136,22 @@ optimize
     (functionid 29:memo_deps::derived::0::0$once)
     (params)
     (i32)
-    (vars)
+    (vars
+      (localid 7:local$6))
     (labels
       (label
         (labelid 5:start)
         (body
-          (call
+          (memoslot
             (localid 7:local$6)
-            (functionid 21:memo_deps::base::0::0)
-            (args))
+            (functionid 26:memo_deps::base::0::0$once))
           (const
             (localid 9:local$107)
             (i32)
             (int 2:32))
-          (call
+          (copy
             (localid 7:local$7)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$107))))
+            (localid 9:local$107))
           (add
             (localid 9:local$503)
             (localid 7:local$6)
@@ -235,13 +219,9 @@ optimize
             (localid 9:local$106)
             (i32)
             (int 2:10))
-          (call
+          (copy
             (localid 7:local$5)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$106)))))
+            (localid 9:local$106)))
         (ret
           (localid 7:local$5)))))
   (func

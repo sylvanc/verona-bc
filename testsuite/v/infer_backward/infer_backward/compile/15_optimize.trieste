@@ -11,10 +11,31 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 2:42))
+          (new
+            (localid 6:$opt_1)
+            (classid 26:infer_backward::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (move
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (lookup
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (methodid 9:get::1::0))
+          (calldyn
             (localid 4:$974)
-            (functionid 26:infer_backward::main::0::0)
-            (args)))
+            (localid 6:$opt_3)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_2)))))
         (ret
           (localid 4:$974)))))
   (func
@@ -30,22 +51,26 @@ optimize
             (localid 9:local$110)
             (i32)
             (int 2:42))
-          (call
+          (new
             (localid 7:local$8)
-            (functionid 26:infer_backward::wrap::1::0)
+            (classid 26:infer_backward::wrapper::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$110))))
           (move
             (localid 1:w)
             (localid 7:local$8))
-          (call
+          (lookup
+            (localid 6:$opt_4)
+            (localid 1:w)
+            (methodid 9:get::1::0))
+          (calldyn
             (localid 7:local$9)
-            (functionid 32:infer_backward::unwrap_i32::1::0)
+            (localid 6:$opt_4)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:w)))))
         (ret
           (localid 7:local$9)))))
@@ -85,12 +110,16 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (lookup
+            (localid 6:$opt_5)
+            (localid 1:w)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$109)
-            (functionid 34:infer_backward::wrapper::get::1::0)
+            (localid 6:$opt_5)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:w)))))
         (ret
           (localid 9:local$109)))))
@@ -119,13 +148,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 6:$opt_6)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$107)
-            (functionid 34:infer_backward::wrapper::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self)))))
+            (localid 6:$opt_6)))
         (ret
           (localid 9:local$107)))))
   (func

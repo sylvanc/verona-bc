@@ -13,6 +13,8 @@ namespace vbcc
       }};
 
     p.post([state](auto top) {
+      // Counter for generating unique alpha-renamed local names.
+      size_t inline_counter = 0;
       // Helper: find a Class definition by ClassId.
       auto find_class = [&](const Node& class_id) -> Node {
         for (auto& child : *top)
@@ -218,58 +220,49 @@ namespace vbcc
           for (auto& [old_node, new_node] : replacements)
             old_node->parent()->replace(old_node, new_node);
 
-          // Phase B: Inline trivial calls.
-          // Re-scan body since replacements may have changed it.
-          std::vector<std::pair<Node, Node>> inline_replacements;
+          // Phase B: Inline single-label functions.
+          // Fixpoint loop: repeat until no more calls are inlined.
+          // Each iteration may expose new Call targets from inlined bodies.
+          auto& func_state = state->get_func(func_node / FunctionId);
+          auto caller_vars = func_node / Vars;
+          bool inline_changed = true;
 
-          for (auto& stmt : *body)
+          while (inline_changed)
           {
-            if (stmt != Call)
-              continue;
+            inline_changed = false;
 
-            auto target = find_func(stmt / FunctionId);
+            for (size_t si = 0; si < body->size(); si++)
+            {
+              auto stmt = body->at(si);
 
-            if (!target)
-              continue;
+              if (stmt != Call)
+                continue;
 
-            // Don't inline FuncOnce (has memoization semantics).
-            if (target == FuncOnce)
-              continue;
+              auto target = find_func(stmt / FunctionId);
 
-            auto labels_node = target / Labels;
+              if (!target)
+                continue;
+
+              // Don't inline FuncOnce (has memoization semantics).
+              if (target == FuncOnce)
+                continue;
+
+              // Don't inline self-recursive calls.
+              if (
+                (target / FunctionId)->location() ==
+                (func_node / FunctionId)->location())
+                continue;
+
+              auto labels_node = target / Labels;
 
             if (labels_node->size() != 1)
               continue;
 
             auto target_label = labels_node->front();
             auto target_body = target_label / Body;
-
-            if (target_body->size() != 1)
-              continue;
-
             auto target_term = target_label->back();
 
             if (target_term != Return)
-              continue;
-
-            auto target_stmt = target_body->front();
-
-            // Don't inline statements that themselves make calls.
-            if (target_stmt->type().in(
-                  {Call,
-                   CallDyn,
-                   TryCallDyn,
-                   FFI,
-                   When,
-                   WhenDyn,
-                   MemoSlot}))
-              continue;
-
-            // Check that the return value is the statement's dst.
-            auto target_ret_local = target_term / LocalId;
-            auto target_dst = target_stmt / LocalId;
-
-            if (target_ret_local->location() != target_dst->location())
               continue;
 
             // Build param→arg mapping.
@@ -294,56 +287,150 @@ namespace vbcc
               ++a_it;
             }
 
-            // Clone the target statement and remap locals.
-            Node inlined = clone(target_stmt);
-            auto call_dst_loc = (stmt / LocalId)->location();
+            auto call_dst_name =
+              std::string((stmt / LocalId)->location().view());
+            auto ret_name =
+              std::string((target_term / LocalId)->location().view());
 
-            // Replace dst: swap the inlined statement's dst LocalId.
-            auto inlined_dst = inlined / LocalId;
-            inlined->replace(inlined_dst, LocalId ^ call_dst_loc);
+            // Build alpha-rename map for callee-internal locals.
+            // Includes: callee dst registers, callee vars that aren't
+            // params. Does NOT include params (mapped to args) or the
+            // return value (mapped to call dst).
+            std::unordered_map<std::string, std::string> rename_map;
 
-            // Recursively remap all LocalId descendants that match
-            // callee params to caller args. Skip the dst (already done).
-            // Also change ArgMove→ArgCopy in Arg nodes for remapped
-            // params, since the caller owns the register and we must
-            // not move from it.
-            auto dst_loc = (inlined / LocalId)->location();
-            std::function<void(Node&)> remap_locals = [&](Node& n) {
-              for (size_t i = 0; i < n->size(); i++)
+            // Map return value → call dst.
+            rename_map[ret_name] = call_dst_name;
+
+            // Collect all callee locals that need renaming.
+            for (auto& ts : *target_body)
+            {
+              auto dst_name =
+                std::string((ts / LocalId)->location().view());
+
+              if (
+                param_map.count(dst_name) == 0 &&
+                rename_map.count(dst_name) == 0)
               {
-                auto child = n->at(i);
+                auto new_name =
+                  "$opt_" + std::to_string(inline_counter++);
+                rename_map[dst_name] = new_name;
+              }
+            }
 
-                if (
-                  child == LocalId && child->location() != dst_loc)
+            // Handle identity functions: empty body, return a param.
+            if (target_body->size() == 0)
+            {
+              auto ret_it = param_map.find(ret_name);
+
+              if (ret_it != param_map.end())
+              {
+                // Return value is a param — emit Copy(call_dst, arg).
+                Node copy =
+                  Copy << (LocalId ^ call_dst_name)
+                       << (LocalId ^ ret_it->second);
+                body->replace(stmt, copy);
+                inline_changed = true;
+              }
+              continue;
+            }
+
+            // Clone and remap all callee body statements.
+            // The full rename map: param_map + rename_map.
+            // param_map: callee param name → caller arg name
+            // rename_map: callee internal name → alpha-renamed name
+            auto remap = [&](Node& n) {
+              // Walk all LocalId descendants and remap.
+              std::function<void(Node&)> walk = [&](Node& node) {
+                for (size_t i = 0; i < node->size(); i++)
                 {
-                  auto name = std::string(child->location().view());
-                  auto map_it = param_map.find(name);
+                  auto child = node->at(i);
 
-                  if (map_it != param_map.end())
+                  if (child == LocalId)
                   {
-                    n->replace(child, LocalId ^ map_it->second);
+                    auto name = std::string(child->location().view());
 
-                    // If this LocalId is inside an Arg node, change
-                    // ArgMove to ArgCopy since we're now directly
-                    // referencing the caller's register.
-                    if (n == Arg && (n / Type) == ArgMove)
-                      n->replace(n / Type, ArgCopy);
+                    // Check param_map first.
+                    auto pit = param_map.find(name);
+
+                    if (pit != param_map.end())
+                    {
+                      node->replace(child, LocalId ^ pit->second);
+
+                      // ArgMove→ArgCopy for caller-owned registers.
+                      if (node == Arg && (node / Type) == ArgMove)
+                        node->replace(node / Type, ArgCopy);
+                    }
+                    else
+                    {
+                      // Check rename_map.
+                      auto rit = rename_map.find(name);
+
+                      if (rit != rename_map.end())
+                        node->replace(child, LocalId ^ rit->second);
+                    }
+                  }
+                  else if (child->size() > 0)
+                  {
+                    walk(child);
                   }
                 }
-                else if (child->size() > 0)
-                {
-                  remap_locals(child);
-                }
-              }
+              };
+              walk(n);
             };
-            remap_locals(inlined);
 
-            inline_replacements.push_back({stmt, inlined});
+            // Register new locals and vars in the caller.
+            for (auto& [old_name, new_name] : rename_map)
+            {
+              // Skip the return→call_dst mapping (already registered).
+              if (new_name == call_dst_name)
+                continue;
+
+              // Create a temporary node for registration.
+              Node new_local = LocalId ^ new_name;
+              func_state.add_register(new_local);
+            }
+
+            // Add callee vars to caller vars (alpha-renamed).
+            for (auto& v : *(target / Vars))
+            {
+              auto var_name = std::string(v->location().view());
+              auto rit = rename_map.find(var_name);
+
+              if (rit != rename_map.end())
+                caller_vars << (LocalId ^ rit->second);
+              else
+              {
+                // Var is a param name — shouldn't happen but handle
+                // gracefully by skipping.
+              }
+            }
+
+            // Build the replacement statement list.
+            std::vector<Node> inlined_stmts;
+
+            for (auto& ts : *target_body)
+            {
+              Node cloned = clone(ts);
+              remap(cloned);
+              inlined_stmts.push_back(cloned);
+            }
+
+            // Replace the Call with the inlined statements.
+            // Insert all statements at the Call's position, then remove
+            // the Call.
+            auto it = body->find(stmt);
+            assert(it != body->end());
+
+            for (auto& is : inlined_stmts)
+              it = body->insert(++it, is);
+
+            body->erase(body->find(stmt), std::next(body->find(stmt)));
+
+            // Restart the scan — inlined body may contain new Calls.
+            inline_changed = true;
+            break;
           }
-
-          // Apply Phase B replacements.
-          for (auto& [old_node, new_node] : inline_replacements)
-            old_node->parent()->replace(old_node, new_node);
+          } // while (inline_changed)
 
           // Phase C: Remove dead Lookups and Drops.
           // Only remove a Lookup if no remaining statement uses it.

@@ -55,13 +55,33 @@ optimize
               (arg
                 (argmove)
                 (localid 7:$a_true))))
-          (call
-            (localid 4:$res)
-            (functionid 9:@update_b)
+          (const
+            (localid 6:$opt_0)
+            (bool)
+            (false))
+          (new
+            (localid 6:$opt_1)
+            (classid 2:@A)
             (args
               (arg
-                (argcopy)
-                (localid 2:$b))))
+                (argmove)
+                (localid 6:$opt_0))))
+          (fieldref
+            (localid 6:$opt_2)
+            (arg
+              (argcopy)
+              (localid 2:$b))
+            (fieldid 3:@f1))
+          (store
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (arg
+              (argmove)
+              (localid 6:$opt_1)))
+          (const
+            (localid 4:$res)
+            (bool)
+            (true))
           (fieldref
             (localid 12:$b_field_ref)
             (arg

@@ -11,10 +11,31 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (new
+            (localid 6:$opt_0)
+            (classid 21:functype::lambda$0::0)
+            (args))
+          (move
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (const
+            (localid 6:$opt_2)
+            (i32)
+            (int 2:41))
+          (lookup
+            (localid 6:$opt_3)
+            (localid 6:$opt_1)
+            (methodid 11:apply::2::0))
+          (calldyn
             (localid 4:$974)
-            (functionid 20:functype::main::0::0)
-            (args)))
+            (localid 6:$opt_3)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_1))
+              (arg
+                (argcopy)
+                (localid 6:$opt_2)))))
         (ret
           (localid 4:$974)))))
   (func
@@ -37,15 +58,19 @@ optimize
             (localid 9:local$111)
             (i32)
             (int 2:41))
-          (call
+          (lookup
+            (localid 6:$opt_4)
+            (localid 3:inc)
+            (methodid 11:apply::2::0))
+          (calldyn
             (localid 8:local$11)
-            (functionid 24:functype::apply_fn::2::0)
+            (localid 6:$opt_4)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:inc))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$111)))))
         (ret
           (localid 8:local$11)))))
@@ -85,16 +110,24 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_5)
+            (i32)
+            (int 1:1))
+          (lookup
+            (localid 6:$opt_6)
+            (localid 1:x)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$108)
-            (functionid 31:functype::lambda$0::apply::2::0)
+            (localid 6:$opt_6)
             (args
               (arg
-                (argmove)
-                (localid 1:f))
+                (argcopy)
+                (localid 1:x))
               (arg
                 (argmove)
-                (localid 1:x)))))
+                (localid 6:$opt_5)))))
         (ret
           (localid 9:local$108)))))
   (type

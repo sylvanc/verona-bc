@@ -11,10 +11,31 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:1))
+          (new
+            (localid 6:$opt_1)
+            (classid 21:infer_newarg::cell::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (move
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (lookup
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (methodid 7:f::1::0))
+          (calldyn
             (localid 4:$970)
-            (functionid 24:infer_newarg::main::0::0)
-            (args)))
+            (localid 6:$opt_3)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_2)))))
         (ret
           (localid 4:$970)))))
   (func
@@ -40,13 +61,15 @@ optimize
           (move
             (localid 1:c)
             (localid 7:local$7))
-          (call
+          (fieldref
+            (localid 6:$opt_4)
+            (arg
+              (argcopy)
+              (localid 1:c))
+            (fieldid 1:f))
+          (load
             (localid 9:local$106)
-            (functionid 27:infer_newarg::cell::f::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:c)))))
+            (localid 6:$opt_4)))
         (ret
           (localid 9:local$106)))))
   (primitive

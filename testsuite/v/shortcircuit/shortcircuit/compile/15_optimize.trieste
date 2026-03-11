@@ -40,13 +40,20 @@ optimize
             (localid 9:local$143)
             (bool)
             (true))
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:0))
+          (new
             (localid 7:local$9)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$143))
+              (arg
                 (argmove)
-                (localid 9:local$143))))
+                (localid 6:$opt_0))))
           (move
             (localid 2:tt)
             (localid 7:local$9))
@@ -54,13 +61,20 @@ optimize
             (localid 9:local$144)
             (bool)
             (false))
-          (call
+          (const
+            (localid 6:$opt_1)
+            (i32)
+            (int 1:0))
+          (new
             (localid 8:local$10)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$144))
+              (arg
                 (argmove)
-                (localid 9:local$144))))
+                (localid 6:$opt_1))))
           (move
             (localid 2:tf)
             (localid 8:local$10))
@@ -68,13 +82,20 @@ optimize
             (localid 9:local$145)
             (bool)
             (true))
-          (call
+          (const
+            (localid 6:$opt_2)
+            (i32)
+            (int 1:0))
+          (new
             (localid 8:local$11)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$145))
+              (arg
                 (argmove)
-                (localid 9:local$145))))
+                (localid 6:$opt_2))))
           (move
             (localid 2:ft)
             (localid 8:local$11))
@@ -82,13 +103,20 @@ optimize
             (localid 9:local$146)
             (bool)
             (false))
-          (call
+          (const
+            (localid 6:$opt_3)
+            (i32)
+            (int 1:0))
+          (new
             (localid 8:local$12)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$146))
+              (arg
                 (argmove)
-                (localid 9:local$146))))
+                (localid 6:$opt_3))))
           (move
             (localid 2:ff)
             (localid 8:local$12))
@@ -164,13 +192,20 @@ optimize
             (localid 9:local$147)
             (bool)
             (true))
-          (call
+          (const
+            (localid 6:$opt_4)
+            (i32)
+            (int 1:0))
+          (new
             (localid 8:local$17)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$147))
+              (arg
                 (argmove)
-                (localid 9:local$147))))
+                (localid 6:$opt_4))))
           (move
             (localid 2:ot)
             (localid 8:local$17))
@@ -178,13 +213,20 @@ optimize
             (localid 9:local$148)
             (bool)
             (false))
-          (call
+          (const
+            (localid 6:$opt_5)
+            (i32)
+            (int 1:0))
+          (new
             (localid 8:local$18)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$148))
+              (arg
                 (argmove)
-                (localid 9:local$148))))
+                (localid 6:$opt_5))))
           (move
             (localid 2:of)
             (localid 8:local$18))
@@ -192,13 +234,20 @@ optimize
             (localid 9:local$149)
             (bool)
             (true))
-          (call
+          (const
+            (localid 6:$opt_6)
+            (i32)
+            (int 1:0))
+          (new
             (localid 8:local$19)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$149))
+              (arg
                 (argmove)
-                (localid 9:local$149))))
+                (localid 6:$opt_6))))
           (move
             (localid 2:pt)
             (localid 8:local$19))
@@ -206,13 +255,20 @@ optimize
             (localid 9:local$150)
             (bool)
             (false))
-          (call
+          (const
+            (localid 6:$opt_7)
+            (i32)
+            (int 1:0))
+          (new
             (localid 8:local$20)
-            (functionid 35:shortcircuit::counter::create::1::0)
+            (classid 24:shortcircuit::counter::0)
             (args
               (arg
+                (argcopy)
+                (localid 9:local$150))
+              (arg
                 (argmove)
-                (localid 9:local$150))))
+                (localid 6:$opt_7))))
           (move
             (localid 2:pf)
             (localid 8:local$20))
@@ -538,62 +594,78 @@ optimize
               (arg
                 (argmove)
                 (localid 6:result))))
-          (call
+          (fieldref
+            (localid 6:$opt_8)
+            (arg
+              (argcopy)
+              (localid 2:tt))
+            (fieldid 5:count))
+          (load
             (localid 9:local$174)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:tt))))
-          (call
+            (localid 6:$opt_8))
+          (fieldref
+            (localid 6:$opt_9)
+            (arg
+              (argcopy)
+              (localid 2:tf))
+            (fieldid 5:count))
+          (load
             (localid 9:local$176)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:tf))))
-          (call
+            (localid 6:$opt_9))
+          (fieldref
+            (localid 7:$opt_10)
+            (arg
+              (argcopy)
+              (localid 2:ft))
+            (fieldid 5:count))
+          (load
             (localid 9:local$178)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:ft))))
-          (call
+            (localid 7:$opt_10))
+          (fieldref
+            (localid 7:$opt_11)
+            (arg
+              (argcopy)
+              (localid 2:ff))
+            (fieldid 5:count))
+          (load
             (localid 9:local$180)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:ff))))
-          (call
+            (localid 7:$opt_11))
+          (fieldref
+            (localid 7:$opt_12)
+            (arg
+              (argcopy)
+              (localid 2:ot))
+            (fieldid 5:count))
+          (load
             (localid 9:local$182)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:ot))))
-          (call
+            (localid 7:$opt_12))
+          (fieldref
+            (localid 7:$opt_13)
+            (arg
+              (argcopy)
+              (localid 2:of))
+            (fieldid 5:count))
+          (load
             (localid 9:local$184)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:of))))
-          (call
+            (localid 7:$opt_13))
+          (fieldref
+            (localid 7:$opt_14)
+            (arg
+              (argcopy)
+              (localid 2:pt))
+            (fieldid 5:count))
+          (load
             (localid 9:local$186)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:pt))))
-          (call
+            (localid 7:$opt_14))
+          (fieldref
+            (localid 7:$opt_15)
+            (arg
+              (argcopy)
+              (localid 2:pf))
+            (fieldid 5:count))
+          (load
             (localid 9:local$188)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:pf))))
+            (localid 7:$opt_15))
           (add
             (localid 9:local$992)
             (localid 9:local$174)
@@ -981,13 +1053,15 @@ optimize
               (argcopy)
               (localid 4:self))
             (fieldid 5:count))
-          (call
+          (fieldref
+            (localid 7:$opt_16)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 5:count))
+          (load
             (localid 9:local$138)
-            (functionid 34:shortcircuit::counter::count::1::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
+            (localid 7:$opt_16))
           (add
             (localid 9:local$990)
             (localid 9:local$138)
@@ -998,13 +1072,15 @@ optimize
             (arg
               (argmove)
               (localid 9:local$990)))
-          (call
+          (fieldref
+            (localid 7:$opt_17)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$140)
-            (functionid 32:shortcircuit::counter::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self)))))
+            (localid 7:$opt_17)))
         (ret
           (localid 9:local$140)))))
   (func

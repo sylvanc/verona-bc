@@ -6,15 +6,19 @@ optimize
     (functionid 5:@main)
     (params)
     (i32)
-    (vars)
+    (vars
+      (localid 4:$963))
     (labels
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:0))
+          (move
             (localid 4:$963)
-            (functionid 21:infer_var::main::0::0)
-            (args)))
+            (localid 6:$opt_0)))
         (ret
           (localid 4:$963)))))
   (func

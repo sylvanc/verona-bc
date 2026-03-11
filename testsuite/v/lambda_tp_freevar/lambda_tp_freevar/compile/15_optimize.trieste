@@ -11,10 +11,52 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 2:10))
+          (const
+            (localid 6:$opt_1)
+            (i32)
+            (int 2:42))
+          (new
+            (localid 6:$opt_5)
+            (classid 30:lambda_tp_freevar::lambda$0::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_1))))
+          (move
+            (localid 6:$opt_6)
+            (localid 6:$opt_5))
+          (lookup
+            (localid 6:$opt_7)
+            (localid 6:$opt_6)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 6:$opt_2)
+            (localid 6:$opt_7)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_6))
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (move
+            (localid 6:$opt_3)
+            (localid 6:$opt_2))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_3)
+            (methodid 9:get::1::0))
+          (calldyn
             (localid 4:$982)
-            (functionid 29:lambda_tp_freevar::main::0::0)
-            (args)))
+            (localid 6:$opt_4)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_3)))))
         (ret
           (localid 4:$982)))))
   (func
@@ -34,25 +76,43 @@ optimize
             (localid 9:local$113)
             (i32)
             (int 2:42))
-          (call
+          (new
+            (localid 6:$opt_8)
+            (classid 30:lambda_tp_freevar::lambda$0::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$113))))
+          (move
+            (localid 6:$opt_9)
+            (localid 6:$opt_8))
+          (lookup
+            (localid 7:$opt_10)
+            (localid 6:$opt_9)
+            (methodid 11:apply::2::0))
+          (calldyn
             (localid 8:local$11)
-            (functionid 42:lambda_tp_freevar::apply_with_offset::2::0)
+            (localid 7:$opt_10)
             (args
               (arg
                 (argmove)
-                (localid 9:local$112))
+                (localid 6:$opt_9))
               (arg
-                (argmove)
-                (localid 9:local$113))))
+                (argcopy)
+                (localid 9:local$112))))
           (move
             (localid 1:w)
             (localid 8:local$11))
-          (call
+          (lookup
+            (localid 7:$opt_11)
+            (localid 1:w)
+            (methodid 11:value::1::0))
+          (calldyn
             (localid 9:local$115)
-            (functionid 37:lambda_tp_freevar::wrapper::get::1::0)
+            (localid 7:$opt_11)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:w)))))
         (ret
           (localid 9:local$115)))))
@@ -84,16 +144,22 @@ optimize
           (move
             (localid 1:f)
             (localid 8:local$10))
-          (call
+          (fieldref
+            (localid 7:$opt_12)
+            (arg
+              (argcopy)
+              (localid 1:f))
+            (fieldid 6:offset))
+          (load
+            (localid 7:$opt_13)
+            (localid 7:$opt_12))
+          (new
             (localid 9:local$111)
-            (functionid 40:lambda_tp_freevar::lambda$0::apply::2::0)
+            (classid 29:lambda_tp_freevar::wrapper::0)
             (args
               (arg
-                (argmove)
-                (localid 1:f))
-              (arg
-                (argmove)
-                (localid 3:val)))))
+                (argcopy)
+                (localid 7:$opt_13)))))
         (ret
           (localid 9:local$111)))))
   (class
@@ -210,13 +276,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 7:$opt_14)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 5:value))
+          (load
             (localid 9:local$109)
-            (functionid 39:lambda_tp_freevar::wrapper::value::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self)))))
+            (localid 7:$opt_14)))
         (ret
           (localid 9:local$109)))))
   (func

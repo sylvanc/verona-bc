@@ -11,10 +11,68 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 2:10))
+          (const
+            (localid 6:$opt_1)
+            (i32)
+            (int 2:42))
+          (const
+            (localid 6:$opt_2)
+            (i32)
+            (int 2:42))
+          (getraise
+            (localid 6:$opt_4))
+          (stack
+            (localid 6:$opt_5)
+            (classid 24:raise_block::lambda$0::0)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_4))
+              (arg
+                (argcopy)
+                (localid 6:$opt_2))))
+          (move
+            (localid 6:$opt_6)
+            (localid 6:$opt_5))
+          (lookup
+            (localid 6:$opt_7)
+            (localid 6:$opt_6)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 6:$opt_8)
+            (localid 6:$opt_7)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_6))
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (lookup
+            (localid 6:$opt_9)
+            (localid 6:$opt_6)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 7:$opt_10)
+            (localid 6:$opt_9)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_6))
+              (arg
+                (argcopy)
+                (localid 6:$opt_1))))
+          (const
+            (localid 6:$opt_3)
+            (i32)
+            (int 1:0))
+          (move
             (localid 4:$986)
-            (functionid 23:raise_block::main::0::0)
-            (args)))
+            (localid 6:$opt_3)))
         (ret
           (localid 4:$986)))))
   (func
@@ -38,19 +96,53 @@ optimize
             (localid 9:local$116)
             (i32)
             (int 2:42))
-          (call
-            (localid 7:local$9)
-            (functionid 29:raise_block::find_first::3::0)
+          (getraise
+            (localid 7:$opt_11))
+          (stack
+            (localid 7:$opt_12)
+            (classid 24:raise_block::lambda$0::0)
             (args
               (arg
                 (argmove)
-                (localid 9:local$114))
+                (localid 7:$opt_11))
               (arg
-                (argmove)
-                (localid 9:local$115))
-              (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$116))))
+          (move
+            (localid 7:$opt_13)
+            (localid 7:$opt_12))
+          (lookup
+            (localid 7:$opt_14)
+            (localid 7:$opt_13)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 7:$opt_15)
+            (localid 7:$opt_14)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$opt_13))
+              (arg
+                (argcopy)
+                (localid 9:local$114))))
+          (lookup
+            (localid 7:$opt_16)
+            (localid 7:$opt_13)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 7:$opt_17)
+            (localid 7:$opt_16)
+            (args
+              (arg
+                (argmove)
+                (localid 7:$opt_13))
+              (arg
+                (argcopy)
+                (localid 9:local$115))))
+          (const
+            (localid 7:local$9)
+            (i32)
+            (int 1:0))
           (move
             (localid 6:result)
             (localid 7:local$9)))

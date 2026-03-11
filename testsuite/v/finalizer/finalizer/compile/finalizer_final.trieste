@@ -6,15 +6,47 @@ optimize
     (functionid 5:@main)
     (params)
     (i32)
-    (vars)
+    (vars
+      (localid 4:$976))
     (labels
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:0))
+          (move
             (localid 4:$976)
-            (functionid 21:finalizer::main::0::0)
-            (args)))
+            (localid 6:$opt_0))
+          (const
+            (localid 6:$opt_1)
+            (i32)
+            (int 2:10))
+          (new
+            (localid 6:$opt_2)
+            (classid 22:finalizer::resource::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_1))))
+          (move
+            (localid 6:$opt_3)
+            (localid 6:$opt_2))
+          (const
+            (localid 6:$opt_4)
+            (i32)
+            (int 2:20))
+          (new
+            (localid 6:$opt_5)
+            (classid 22:finalizer::resource::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_4))))
+          (move
+            (localid 6:$opt_6)
+            (localid 6:$opt_5)))
         (ret
           (localid 4:$976)))))
   (func
@@ -113,13 +145,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 6:$opt_7)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$500)
-            (functionid 30:finalizer::resource::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self))))
+            (localid 6:$opt_7))
           (ffi
             (localid 7:local$6)
             (symbolid 8:printval)

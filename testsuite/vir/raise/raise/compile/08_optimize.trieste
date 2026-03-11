@@ -66,12 +66,23 @@ optimize
         (body
           (getraise
             (localid 7:$target))
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 2:42))
           (call
-            (localid 7:$result)
-            (functionid 6:@outer)
+            (localid 6:$opt_1)
+            (functionid 6:@inner)
             (args
               (arg
                 (argmove)
-                (localid 7:$target)))))
+                (localid 6:$opt_0))
+              (arg
+                (argcopy)
+                (localid 7:$target))))
+          (const
+            (localid 7:$result)
+            (i32)
+            (int 2:99)))
         (ret
           (localid 7:$result))))))

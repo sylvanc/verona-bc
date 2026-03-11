@@ -6,15 +6,150 @@ optimize
     (functionid 5:@main)
     (params)
     (i32)
-    (vars)
+    (vars
+      (localid 6:$opt_7))
     (labels
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 7:$opt_22)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 7:$opt_23)
+            (localid 7:$opt_22))
+          (new
+            (localid 6:$opt_0)
+            (classid 14:alloc::cell::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$opt_23))))
+          (move
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (const
+            (localid 6:$opt_2)
+            (i32)
+            (int 1:1))
+          (const
+            (localid 6:$opt_3)
+            (i32)
+            (int 1:2))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_2)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 6:$opt_5)
+            (localid 6:$opt_4)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_2))
+              (arg
+                (argmove)
+                (localid 6:$opt_3))))
+          (new
+            (localid 6:$opt_6)
+            (classid 14:alloc::cell::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_5))))
+          (move
+            (localid 6:$opt_7)
+            (localid 6:$opt_6))
+          (const
+            (localid 6:$opt_8)
+            (i32)
+            (int 1:3))
+          (const
+            (localid 6:$opt_9)
+            (i32)
+            (int 1:4))
+          (lookup
+            (localid 7:$opt_10)
+            (localid 6:$opt_8)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 7:$opt_11)
+            (localid 7:$opt_10)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_8))
+              (arg
+                (argmove)
+                (localid 6:$opt_9))))
+          (new
+            (localid 7:$opt_12)
+            (classid 14:alloc::cell::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$opt_11))))
+          (move
+            (localid 6:$opt_7)
+            (localid 7:$opt_12))
+          (const
+            (localid 7:$opt_13)
+            (i32)
+            (int 1:3))
+          (lookup
+            (localid 7:$opt_14)
+            (localid 6:$opt_1)
+            (methodid 12:f::1::ref::0))
+          (calldyn
+            (localid 7:$opt_15)
+            (localid 7:$opt_14)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_1))))
+          (store
+            (localid 7:$opt_16)
+            (localid 7:$opt_15)
+            (arg
+              (argmove)
+              (localid 7:$opt_13)))
+          (lookup
+            (localid 7:$opt_17)
+            (localid 6:$opt_1)
+            (methodid 7:f::1::0))
+          (calldyn
+            (localid 7:$opt_18)
+            (localid 7:$opt_17)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_1))))
+          (lookup
+            (localid 7:$opt_19)
+            (localid 6:$opt_7)
+            (methodid 7:f::1::0))
+          (calldyn
+            (localid 7:$opt_20)
+            (localid 7:$opt_19)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_7))))
+          (lookup
+            (localid 7:$opt_21)
+            (localid 7:$opt_18)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 4:$992)
-            (functionid 17:alloc::main::0::0)
-            (args)))
+            (localid 7:$opt_21)
+            (args
+              (arg
+                (argmove)
+                (localid 7:$opt_18))
+              (arg
+                (argmove)
+                (localid 7:$opt_20)))))
         (ret
           (localid 4:$992)))))
   (func
@@ -27,10 +162,20 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 7:$opt_24)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 7:$opt_25)
+            (localid 7:$opt_24))
+          (new
             (localid 7:local$8)
-            (functionid 25:alloc::cell::create::0::0)
-            (args))
+            (classid 14:alloc::cell::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:$opt_25))))
           (move
             (localid 1:a)
             (localid 7:local$8))
@@ -94,20 +239,24 @@ optimize
             (arg
               (argmove)
               (localid 8:local$11)))
-          (call
+          (fieldref
+            (localid 7:$opt_26)
+            (arg
+              (argcopy)
+              (localid 1:a))
+            (fieldid 1:f))
+          (load
             (localid 9:local$116)
-            (functionid 20:alloc::cell::f::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:a))))
-          (call
+            (localid 7:$opt_26))
+          (fieldref
+            (localid 7:$opt_27)
+            (arg
+              (argcopy)
+              (localid 1:b))
+            (fieldid 1:f))
+          (load
             (localid 9:local$118)
-            (functionid 20:alloc::cell::f::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:b))))
+            (localid 7:$opt_27))
           (add
             (localid 9:local$887)
             (localid 9:local$116)
@@ -133,13 +282,9 @@ optimize
             (localid 9:local$509)
             (i32)
             (int 1:0))
-          (call
+          (copy
             (localid 9:local$108)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$509))))
+            (localid 9:local$509))
           (new
             (localid 7:local$6)
             (classid 14:alloc::cell::0)

@@ -29,10 +29,20 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (new
             (localid 7:local$8)
-            (functionid 30:infer_store::box::create::0::0)
-            (args))
+            (classid 19:infer_store::box::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_1))))
           (move
             (localid 1:b)
             (localid 7:local$8))
@@ -67,20 +77,18 @@ optimize
             (localid 9:local$516)
             (i32)
             (int 2:42))
-          (call
+          (copy
             (localid 9:local$115)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$516))))
-          (call
+            (localid 9:local$516))
+          (fieldref
+            (localid 6:$opt_2)
+            (arg
+              (argcopy)
+              (localid 1:b))
+            (fieldid 1:x))
+          (load
             (localid 9:local$518)
-            (functionid 25:infer_store::box::x::1::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:b))))
+            (localid 6:$opt_2))
           (eq
             (localid 9:local$947)
             (localid 9:local$518)
@@ -135,20 +143,18 @@ optimize
             (localid 9:local$521)
             (i32)
             (int 2:10))
-          (call
+          (copy
             (localid 9:local$121)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$521))))
-          (call
+            (localid 9:local$521))
+          (fieldref
+            (localid 6:$opt_3)
+            (arg
+              (argcopy)
+              (localid 1:b))
+            (fieldid 1:x))
+          (load
             (localid 9:local$523)
-            (functionid 25:infer_store::box::x::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:b))))
+            (localid 6:$opt_3))
           (eq
             (localid 9:local$950)
             (localid 9:local$523)
@@ -203,13 +209,9 @@ optimize
             (localid 9:local$513)
             (i32)
             (int 1:0))
-          (call
+          (copy
             (localid 9:local$110)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$513))))
+            (localid 9:local$513))
           (new
             (localid 7:local$6)
             (classid 19:infer_store::box::0)

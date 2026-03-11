@@ -11,10 +11,45 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 2:42))
+          (new
+            (localid 6:$opt_4)
+            (classid 30:lambda_copy_infer::lambda$0::0)
+            (args))
+          (move
+            (localid 6:$opt_5)
+            (localid 6:$opt_4))
+          (lookup
+            (localid 6:$opt_6)
+            (localid 6:$opt_5)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 6:$opt_1)
+            (localid 6:$opt_6)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_5))
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (move
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (lookup
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (methodid 9:get::1::0))
+          (calldyn
             (localid 4:$980)
-            (functionid 29:lambda_copy_infer::main::0::0)
-            (args)))
+            (localid 6:$opt_3)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_2)))))
         (ret
           (localid 4:$980)))))
   (func
@@ -30,22 +65,40 @@ optimize
             (localid 9:local$112)
             (i32)
             (int 2:42))
-          (call
+          (new
+            (localid 6:$opt_7)
+            (classid 30:lambda_copy_infer::lambda$0::0)
+            (args))
+          (move
+            (localid 6:$opt_8)
+            (localid 6:$opt_7))
+          (lookup
+            (localid 6:$opt_9)
+            (localid 6:$opt_8)
+            (methodid 11:apply::2::0))
+          (calldyn
             (localid 8:local$11)
-            (functionid 34:lambda_copy_infer::wrap_copy::1::0)
+            (localid 6:$opt_9)
             (args
               (arg
                 (argmove)
+                (localid 6:$opt_8))
+              (arg
+                (argcopy)
                 (localid 9:local$112))))
           (move
             (localid 1:w)
             (localid 8:local$11))
-          (call
+          (lookup
+            (localid 7:$opt_10)
+            (localid 1:w)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$114)
-            (functionid 37:lambda_copy_infer::wrapper::get::1::0)
+            (localid 7:$opt_10)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:w)))))
         (ret
           (localid 9:local$114)))))
@@ -71,16 +124,16 @@ optimize
           (move
             (localid 1:f)
             (localid 8:local$10))
-          (call
+          (move
+            (localid 7:$opt_11)
+            (localid 3:val))
+          (new
             (localid 9:local$111)
-            (functionid 40:lambda_copy_infer::lambda$0::apply::2::0)
+            (classid 29:lambda_copy_infer::wrapper::0)
             (args
               (arg
-                (argmove)
-                (localid 1:f))
-              (arg
-                (argmove)
-                (localid 3:val)))))
+                (argcopy)
+                (localid 7:$opt_11)))))
         (ret
           (localid 9:local$111)))))
   (class
@@ -178,13 +231,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 7:$opt_12)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$109)
-            (functionid 37:lambda_copy_infer::wrapper::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self)))))
+            (localid 7:$opt_12)))
         (ret
           (localid 9:local$109)))))
   (func

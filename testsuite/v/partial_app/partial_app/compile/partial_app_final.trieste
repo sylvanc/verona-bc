@@ -68,15 +68,31 @@ optimize
             (localid 9:local$172)
             (i32)
             (int 1:8))
-          (call
+          (fieldref
+            (localid 6:$opt_0)
+            (arg
+              (argcopy)
+              (localid 4:add5))
+            (fieldid 5:$cap0))
+          (load
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (move
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (lookup
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$610)
-            (functionid 35:partial_app::partial$5::apply::2::0)
+            (localid 6:$opt_3)
             (args
               (arg
-                (argmove)
-                (localid 4:add5))
+                (argcopy)
+                (localid 6:$opt_2))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$171))))
           (ne
             (localid 10:local$1083)
@@ -134,16 +150,32 @@ optimize
             (localid 9:local$178)
             (i32)
             (int 1:7))
-          (call
+          (fieldref
+            (localid 6:$opt_4)
+            (arg
+              (argcopy)
+              (localid 4:sub3))
+            (fieldid 5:$cap0))
+          (load
+            (localid 6:$opt_5)
+            (localid 6:$opt_4))
+          (move
+            (localid 6:$opt_6)
+            (localid 6:$opt_5))
+          (lookup
+            (localid 6:$opt_7)
+            (localid 9:local$177)
+            (methodid 7:-::2::0))
+          (calldyn
             (localid 9:local$615)
-            (functionid 35:partial_app::partial$6::apply::2::0)
+            (localid 6:$opt_7)
             (args
               (arg
-                (argmove)
-                (localid 4:sub3))
+                (argcopy)
+                (localid 9:local$177))
               (arg
-                (argmove)
-                (localid 9:local$177))))
+                (argcopy)
+                (localid 6:$opt_6))))
           (ne
             (localid 10:local$1086)
             (localid 9:local$615)
@@ -204,18 +236,45 @@ optimize
             (localid 9:local$185)
             (i32)
             (int 2:13))
-          (call
+          (fieldref
+            (localid 6:$opt_8)
+            (arg
+              (argcopy)
+              (localid 1:f))
+            (fieldid 5:$cap0))
+          (load
+            (localid 6:$opt_9)
+            (localid 6:$opt_8))
+          (move
+            (localid 7:$opt_10)
+            (localid 6:$opt_9))
+          (lookup
+            (localid 7:$opt_11)
+            (localid 9:local$183)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 7:$opt_12)
+            (localid 7:$opt_11)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$183))
+              (arg
+                (argcopy)
+                (localid 7:$opt_10))))
+          (lookup
+            (localid 7:$opt_13)
+            (localid 7:$opt_12)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$620)
-            (functionid 35:partial_app::partial$7::apply::3::0)
+            (localid 7:$opt_13)
             (args
               (arg
                 (argmove)
-                (localid 1:f))
+                (localid 7:$opt_12))
               (arg
-                (argmove)
-                (localid 9:local$183))
-              (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$184))))
           (ne
             (localid 10:local$1089)
@@ -270,18 +329,19 @@ optimize
             (localid 9:local$191)
             (i32)
             (int 1:9))
-          (call
+          (lookup
+            (localid 7:$opt_14)
+            (localid 9:local$189)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$625)
-            (functionid 35:partial_app::partial$8::apply::3::0)
+            (localid 7:$opt_14)
             (args
               (arg
-                (argmove)
-                (localid 1:g))
-              (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$189))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$190))))
           (ne
             (localid 10:local$1092)
@@ -349,15 +409,31 @@ optimize
             (localid 9:local$197)
             (i32)
             (int 3:105))
-          (call
+          (fieldref
+            (localid 7:$opt_15)
+            (arg
+              (argcopy)
+              (localid 1:h))
+            (fieldid 5:$recv))
+          (load
+            (localid 7:$opt_16)
+            (localid 7:$opt_15))
+          (move
+            (localid 7:$opt_17)
+            (localid 7:$opt_16))
+          (lookup
+            (localid 7:$opt_18)
+            (localid 7:$opt_17)
+            (methodid 9:add::2::0))
+          (calldyn
             (localid 9:local$631)
-            (functionid 35:partial_app::partial$9::apply::2::0)
+            (localid 7:$opt_18)
             (args
               (arg
                 (argmove)
-                (localid 1:h))
+                (localid 7:$opt_17))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$196))))
           (ne
             (localid 10:local$1095)
@@ -418,15 +494,46 @@ optimize
             (localid 9:local$203)
             (i32)
             (int 3:130))
-          (call
+          (fieldref
+            (localid 7:$opt_19)
+            (arg
+              (argcopy)
+              (localid 1:j))
+            (fieldid 5:$recv))
+          (load
+            (localid 7:$opt_20)
+            (localid 7:$opt_19))
+          (move
+            (localid 7:$opt_21)
+            (localid 7:$opt_20))
+          (fieldref
+            (localid 7:$opt_22)
+            (arg
+              (argcopy)
+              (localid 1:j))
+            (fieldid 5:$cap0))
+          (load
+            (localid 7:$opt_23)
+            (localid 7:$opt_22))
+          (move
+            (localid 7:$opt_24)
+            (localid 7:$opt_23))
+          (lookup
+            (localid 7:$opt_25)
+            (localid 7:$opt_21)
+            (methodid 13:combine::3::0))
+          (calldyn
             (localid 9:local$636)
-            (functionid 36:partial_app::partial$10::apply::2::0)
+            (localid 7:$opt_25)
             (args
               (arg
                 (argmove)
-                (localid 1:j))
+                (localid 7:$opt_21))
               (arg
                 (argmove)
+                (localid 7:$opt_24))
+              (arg
+                (argcopy)
                 (localid 9:local$202))))
           (ne
             (localid 10:local$1098)
@@ -487,16 +594,47 @@ optimize
             (localid 9:local$209)
             (i32)
             (int 3:130))
-          (call
+          (fieldref
+            (localid 7:$opt_26)
+            (arg
+              (argcopy)
+              (localid 1:k))
+            (fieldid 5:$recv))
+          (load
+            (localid 7:$opt_27)
+            (localid 7:$opt_26))
+          (move
+            (localid 7:$opt_28)
+            (localid 7:$opt_27))
+          (fieldref
+            (localid 7:$opt_29)
+            (arg
+              (argcopy)
+              (localid 1:k))
+            (fieldid 5:$cap0))
+          (load
+            (localid 7:$opt_30)
+            (localid 7:$opt_29))
+          (move
+            (localid 7:$opt_31)
+            (localid 7:$opt_30))
+          (lookup
+            (localid 7:$opt_32)
+            (localid 7:$opt_28)
+            (methodid 13:combine::3::0))
+          (calldyn
             (localid 9:local$641)
-            (functionid 36:partial_app::partial$11::apply::2::0)
+            (localid 7:$opt_32)
             (args
               (arg
                 (argmove)
-                (localid 1:k))
+                (localid 7:$opt_28))
+              (arg
+                (argcopy)
+                (localid 9:local$208))
               (arg
                 (argmove)
-                (localid 9:local$208))))
+                (localid 7:$opt_31))))
           (ne
             (localid 10:local$1101)
             (localid 9:local$641)
@@ -553,18 +691,34 @@ optimize
             (localid 9:local$215)
             (i32)
             (int 3:130))
-          (call
+          (fieldref
+            (localid 7:$opt_33)
+            (arg
+              (argcopy)
+              (localid 1:m))
+            (fieldid 5:$recv))
+          (load
+            (localid 7:$opt_34)
+            (localid 7:$opt_33))
+          (move
+            (localid 7:$opt_35)
+            (localid 7:$opt_34))
+          (lookup
+            (localid 7:$opt_36)
+            (localid 7:$opt_35)
+            (methodid 13:combine::3::0))
+          (calldyn
             (localid 9:local$646)
-            (functionid 36:partial_app::partial$12::apply::3::0)
+            (localid 7:$opt_36)
             (args
               (arg
                 (argmove)
-                (localid 1:m))
+                (localid 7:$opt_35))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$213))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$214))))
           (ne
             (localid 10:local$1104)
@@ -876,18 +1030,44 @@ optimize
           (move
             (localid 5:$recv)
             (localid 10:local$1031))
-          (call
-            (localid 9:local$167)
-            (functionid 31:partial_app::box::combine::3::0)
+          (lookup
+            (localid 7:$opt_37)
+            (localid 5:$recv)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 7:$opt_38)
+            (localid 7:$opt_37)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$recv))))
+          (lookup
+            (localid 7:$opt_39)
+            (localid 7:$opt_38)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 7:$opt_40)
+            (localid 7:$opt_39)
             (args
               (arg
                 (argmove)
-                (localid 5:$recv))
+                (localid 7:$opt_38))
+              (arg
+                (argcopy)
+                (localid 3:$p0))))
+          (lookup
+            (localid 7:$opt_41)
+            (localid 7:$opt_40)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$167)
+            (localid 7:$opt_41)
+            (args
               (arg
                 (argmove)
-                (localid 3:$p0))
+                (localid 7:$opt_40))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$p1)))))
         (ret
           (localid 9:local$167)))))
@@ -917,13 +1097,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 7:$opt_42)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$150)
-            (functionid 27:partial_app::box::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self))))
+            (localid 7:$opt_42))
           (add
             (localid 10:local$1022)
             (localid 9:local$150)
@@ -1030,19 +1212,23 @@ optimize
           (move
             (localid 5:$cap0)
             (localid 10:local$1030))
-          (call
+          (fieldref
+            (localid 7:$opt_43)
+            (arg
+              (argcopy)
+              (localid 5:$recv))
+            (fieldid 3:val))
+          (load
+            (localid 7:$opt_44)
+            (localid 7:$opt_43))
+          (add
+            (localid 7:$opt_45)
+            (localid 7:$opt_44)
+            (localid 3:$p0))
+          (add
             (localid 9:local$164)
-            (functionid 31:partial_app::box::combine::3::0)
-            (args
-              (arg
-                (argmove)
-                (localid 5:$recv))
-              (arg
-                (argmove)
-                (localid 3:$p0))
-              (arg
-                (argmove)
-                (localid 5:$cap0)))))
+            (localid 7:$opt_45)
+            (localid 5:$cap0)))
         (ret
           (localid 9:local$164)))))
   (class
@@ -1097,19 +1283,23 @@ optimize
           (move
             (localid 5:$cap0)
             (localid 10:local$1028))
-          (call
+          (fieldref
+            (localid 7:$opt_46)
+            (arg
+              (argcopy)
+              (localid 5:$recv))
+            (fieldid 3:val))
+          (load
+            (localid 7:$opt_47)
+            (localid 7:$opt_46))
+          (add
+            (localid 7:$opt_48)
+            (localid 7:$opt_47)
+            (localid 5:$cap0))
+          (add
             (localid 9:local$160)
-            (functionid 31:partial_app::box::combine::3::0)
-            (args
-              (arg
-                (argmove)
-                (localid 5:$recv))
-              (arg
-                (argmove)
-                (localid 5:$cap0))
-              (arg
-                (argmove)
-                (localid 3:$p0)))))
+            (localid 7:$opt_48)
+            (localid 3:$p0)))
         (ret
           (localid 9:local$160)))))
   (class
@@ -1149,15 +1339,30 @@ optimize
           (move
             (localid 5:$recv)
             (localid 10:local$1026))
-          (call
+          (lookup
+            (localid 7:$opt_49)
+            (localid 5:$recv)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 7:$opt_50)
+            (localid 7:$opt_49)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$recv))))
+          (lookup
+            (localid 7:$opt_51)
+            (localid 7:$opt_50)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$156)
-            (functionid 27:partial_app::box::add::2::0)
+            (localid 7:$opt_51)
             (args
               (arg
                 (argmove)
-                (localid 5:$recv))
+                (localid 7:$opt_50))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$p0)))))
         (ret
           (localid 9:local$156)))))
@@ -1176,13 +1381,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 7:$opt_52)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$148)
-            (functionid 27:partial_app::box::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self))))
+            (localid 7:$opt_52))
           (add
             (localid 10:local$1020)
             (localid 9:local$148)
@@ -1214,15 +1421,19 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (lookup
+            (localid 7:$opt_53)
+            (localid 3:$p0)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 8:local$22)
-            (functionid 22:partial_app::add::2::0)
+            (localid 7:$opt_53)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$p0))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$p1)))))
         (ret
           (localid 8:local$22)))))
@@ -1287,18 +1498,33 @@ optimize
           (move
             (localid 5:$cap0)
             (localid 10:local$1025))
-          (call
+          (lookup
+            (localid 7:$opt_54)
+            (localid 3:$p0)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 7:$opt_55)
+            (localid 7:$opt_54)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$p0))
+              (arg
+                (argcopy)
+                (localid 5:$cap0))))
+          (lookup
+            (localid 7:$opt_56)
+            (localid 7:$opt_55)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 8:local$20)
-            (functionid 29:partial_app::three_args::3::0)
+            (localid 7:$opt_56)
             (args
               (arg
                 (argmove)
-                (localid 3:$p0))
+                (localid 7:$opt_55))
               (arg
-                (argmove)
-                (localid 5:$cap0))
-              (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$p1)))))
         (ret
           (localid 8:local$20)))))
@@ -1367,15 +1593,19 @@ optimize
           (move
             (localid 5:$cap0)
             (localid 10:local$1024))
-          (call
+          (lookup
+            (localid 7:$opt_57)
+            (localid 3:$p0)
+            (methodid 7:-::2::0))
+          (calldyn
             (localid 8:local$18)
-            (functionid 22:partial_app::sub::2::0)
+            (localid 7:$opt_57)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$p0))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 5:$cap0)))))
         (ret
           (localid 8:local$18)))))

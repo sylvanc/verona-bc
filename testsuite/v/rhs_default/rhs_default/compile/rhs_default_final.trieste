@@ -11,10 +11,24 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (new
+            (localid 6:$opt_0)
+            (classid 23:rhs_default::myclass::0)
+            (args))
+          (move
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (lookup
+            (localid 6:$opt_2)
+            (localid 6:$opt_1)
+            (methodid 9:get::1::0))
+          (calldyn
             (localid 4:$978)
-            (functionid 23:rhs_default::main::0::0)
-            (args)))
+            (localid 6:$opt_2)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_1)))))
         (ret
           (localid 4:$978)))))
   (func
@@ -33,13 +47,50 @@ optimize
           (move
             (localid 3:obj)
             (localid 7:local$9))
-          (call
-            (localid 9:local$107)
-            (functionid 31:rhs_default::myclass::get::1::0)
+          (const
+            (localid 6:$opt_3)
+            (i32)
+            (int 2:10))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_3)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 6:$opt_5)
+            (localid 6:$opt_4)
             (args
               (arg
                 (argmove)
-                (localid 3:obj)))))
+                (localid 6:$opt_3))))
+          (const
+            (localid 6:$opt_6)
+            (i32)
+            (int 2:42))
+          (lookup
+            (localid 6:$opt_7)
+            (localid 6:$opt_6)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 6:$opt_8)
+            (localid 6:$opt_7)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_6))))
+          (lookup
+            (localid 6:$opt_9)
+            (localid 6:$opt_8)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$107)
+            (localid 6:$opt_9)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_8))
+              (arg
+                (argcopy)
+                (localid 6:$opt_5)))))
         (ret
           (localid 9:local$107)))))
   (primitive
@@ -92,22 +143,37 @@ optimize
             (localid 9:local$105)
             (i32)
             (int 2:10))
-          (call
+          (copy
             (localid 9:local$871)
-            (functionid 24:_builtin::i32::i32::1::0)
+            (localid 9:local$105))
+          (const
+            (localid 7:$opt_10)
+            (i32)
+            (int 2:42))
+          (lookup
+            (localid 7:$opt_11)
+            (localid 7:$opt_10)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 7:$opt_12)
+            (localid 7:$opt_11)
             (args
               (arg
                 (argmove)
-                (localid 9:local$105))))
-          (call
+                (localid 7:$opt_10))))
+          (lookup
+            (localid 7:$opt_13)
+            (localid 7:$opt_12)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 7:local$7)
-            (functionid 31:rhs_default::myclass::get::2::0)
+            (localid 7:$opt_13)
             (args
               (arg
                 (argmove)
-                (localid 4:self))
+                (localid 7:$opt_12))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$871)))))
         (ret
           (localid 7:local$7)))))
@@ -130,13 +196,9 @@ optimize
             (localid 7:local$8)
             (i32)
             (int 2:42))
-          (call
+          (copy
             (localid 9:local$500)
-            (functionid 24:_builtin::i32::i32::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 7:local$8))))
+            (localid 7:local$8))
           (add
             (localid 9:local$923)
             (localid 9:local$500)

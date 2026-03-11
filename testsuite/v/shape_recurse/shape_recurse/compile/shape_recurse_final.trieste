@@ -11,10 +11,31 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 2:42))
+          (new
+            (localid 6:$opt_1)
+            (classid 21:shape_recurse::box::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (move
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (lookup
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 4:$975)
-            (functionid 25:shape_recurse::main::0::0)
-            (args)))
+            (localid 6:$opt_3)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_2)))))
         (ret
           (localid 4:$975)))))
   (func
@@ -40,12 +61,16 @@ optimize
           (move
             (localid 1:b)
             (localid 7:local$9))
-          (call
+          (lookup
+            (localid 6:$opt_4)
+            (localid 1:b)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 8:local$10)
-            (functionid 27:shape_recurse::invoke::1::0)
+            (localid 6:$opt_4)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:b)))))
         (ret
           (localid 8:local$10)))))
@@ -85,12 +110,16 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (lookup
+            (localid 6:$opt_5)
+            (localid 1:r)
+            (methodid 7:v::1::0))
+          (calldyn
             (localid 9:local$110)
-            (functionid 29:shape_recurse::box::val::1::0)
+            (localid 6:$opt_5)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:r)))))
         (ret
           (localid 9:local$110)))))
@@ -122,13 +151,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 6:$opt_6)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 1:v))
+          (load
             (localid 9:local$108)
-            (functionid 27:shape_recurse::box::v::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self)))))
+            (localid 6:$opt_6)))
         (ret
           (localid 9:local$108)))))
   (func

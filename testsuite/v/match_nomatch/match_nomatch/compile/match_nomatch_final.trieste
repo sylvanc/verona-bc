@@ -37,13 +37,9 @@ optimize
             (localid 9:local$185)
             (i32)
             (int 1:0))
-          (call
+          (copy
             (localid 8:local$35)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$185))))
+            (localid 9:local$185))
           (move
             (localid 6:result)
             (localid 8:local$35))
@@ -51,13 +47,9 @@ optimize
             (localid 9:local$605)
             (i32)
             (int 1:1))
-          (call
+          (copy
             (localid 9:local$186)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$605))))
+            (localid 9:local$605))
           (new
             (localid 8:local$36)
             (classid 22:match_nomatch::noeq::0)
@@ -75,13 +67,9 @@ optimize
             (localid 9:local$989)
             (i32)
             (int 1:1))
-          (call
+          (copy
             (localid 9:local$607)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$989))))
+            (localid 9:local$989))
           (new
             (localid 9:local$187)
             (classid 22:match_nomatch::noeq::0)
@@ -173,13 +161,9 @@ optimize
             (localid 9:local$188)
             (i32)
             (int 2:99))
-          (call
+          (copy
             (localid 8:local$39)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$188))))
+            (localid 9:local$188))
           (move
             (localid 10:local$1135)
             (localid 8:local$39)))
@@ -236,13 +220,9 @@ optimize
             (localid 9:local$612)
             (i32)
             (int 2:42))
-          (call
+          (copy
             (localid 9:local$193)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$612))))
+            (localid 9:local$612))
           (move
             (localid 7:local$6)
             (localid 9:local$193))
@@ -250,13 +230,9 @@ optimize
             (localid 9:local$613)
             (u32)
             (int 2:42))
-          (call
+          (copy
             (localid 9:local$194)
-            (functionid 27:_builtin::u32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$613))))
+            (localid 9:local$613))
           (move
             (localid 7:local$8)
             (localid 9:local$194))
@@ -341,13 +317,9 @@ optimize
             (localid 9:local$195)
             (i32)
             (int 1:0))
-          (call
+          (copy
             (localid 8:local$43)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$195))))
+            (localid 9:local$195))
           (move
             (localid 10:local$1136)
             (localid 8:local$43)))
@@ -941,13 +913,9 @@ optimize
             (localid 9:local$175)
             (i32)
             (int 2:10))
-          (call
+          (copy
             (localid 8:local$31)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$175)))))
+            (localid 9:local$175)))
         (ret
           (localid 8:local$31)))))
   (func
@@ -1096,13 +1064,15 @@ optimize
       (label
         (labelid 8:join$159)
         (body
-          (call
+          (fieldref
+            (localid 6:$opt_0)
+            (arg
+              (argcopy)
+              (localid 1:x))
+            (fieldid 3:val))
+          (load
             (localid 9:local$162)
-            (functionid 30:match_nomatch::noeq::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:x)))))
+            (localid 6:$opt_0)))
         (ret
           (localid 9:local$162)))))
   (class
@@ -1307,13 +1277,9 @@ optimize
             (localid 9:local$153)
             (i32)
             (int 2:10))
-          (call
+          (copy
             (localid 8:local$23)
-            (functionid 27:_builtin::i32::create::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$153)))))
+            (localid 9:local$153)))
         (ret
           (localid 8:local$23)))))
   (func

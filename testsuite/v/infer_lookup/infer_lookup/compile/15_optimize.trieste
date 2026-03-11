@@ -11,10 +11,37 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:1))
+          (new
+            (localid 6:$opt_1)
+            (classid 24:infer_lookup::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (move
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (lookup
+            (localid 6:$opt_3)
+            (localid 6:$opt_2)
+            (methodid 9:get::1::0))
+          (calldyn
+            (localid 6:$opt_4)
+            (localid 6:$opt_3)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_2))))
+          (move
+            (localid 6:$opt_5)
+            (localid 6:$opt_4))
+          (copy
             (localid 4:$974)
-            (functionid 24:infer_lookup::main::0::0)
-            (args)))
+            (localid 6:$opt_5)))
         (ret
           (localid 4:$974)))))
   (func
@@ -40,23 +67,23 @@ optimize
           (move
             (localid 1:w)
             (localid 7:local$7))
-          (call
+          (lookup
+            (localid 6:$opt_6)
+            (localid 1:w)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$109)
-            (functionid 32:infer_lookup::wrapper::get::1::0)
+            (localid 6:$opt_6)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:w))))
           (move
             (localid 1:v)
             (localid 9:local$109))
-          (call
+          (copy
             (localid 7:local$8)
-            (functionid 28:infer_lookup::identity::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 1:v)))))
+            (localid 1:v)))
         (ret
           (localid 7:local$8)))))
   (primitive
@@ -122,13 +149,15 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
+            (localid 6:$opt_7)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$106)
-            (functionid 32:infer_lookup::wrapper::val::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 4:self)))))
+            (localid 6:$opt_7)))
         (ret
           (localid 9:local$106)))))
   (func

@@ -62,13 +62,40 @@ optimize
               (arg
                 (argmove)
                 (localid 2:$d))))
-          (call
-            (localid 5:$blah)
-            (functionid 4:@foo)
+          (new
+            (localid 6:$opt_0)
+            (classid 2:@B)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:$a))))
+          (new
+            (localid 6:$opt_2)
+            (classid 2:@C)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (fieldref
+            (localid 6:$opt_3)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 2:@f))
+          (store
+            (localid 6:$opt_4)
+            (localid 6:$opt_3)
+            (arg
+              (argmove)
+              (localid 6:$opt_2)))
+          (const
+            (localid 6:$opt_1)
+            (i32)
+            (int 2:42))
+          (const
+            (localid 5:$blah)
+            (i32)
+            (int 2:42))
           (const
             (localid 8:$ret_val)
             (i32)
@@ -94,16 +121,29 @@ optimize
               (arg
                 (argcopy)
                 (localid 2:$a))))
-          (call
-            (localid 5:$blah)
-            (functionid 4:@bar)
+          (new
+            (localid 6:$opt_5)
+            (classid 2:@C)
             (args
               (arg
-                (argmove)
-                (localid 2:$a))
-              (arg
-                (argmove)
+                (argcopy)
                 (localid 2:$b))))
+          (fieldref
+            (localid 6:$opt_6)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 2:@f))
+          (store
+            (localid 6:$opt_7)
+            (localid 6:$opt_6)
+            (arg
+              (argmove)
+              (localid 6:$opt_5)))
+          (const
+            (localid 5:$blah)
+            (i32)
+            (int 2:42))
           (const
             (localid 8:$ret_val)
             (i32)

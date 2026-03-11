@@ -11,10 +11,30 @@ optimize
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:3))
+          (copy
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (move
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (new
+            (localid 6:$opt_3)
+            (classid 28:infer_callresult::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_2))))
+          (move
+            (localid 6:$opt_4)
+            (localid 6:$opt_3))
+          (const
             (localid 4:$972)
-            (functionid 28:infer_callresult::main::0::0)
-            (args)))
+            (i32)
+            (int 1:0)))
         (ret
           (localid 4:$972)))))
   (func
@@ -30,13 +50,9 @@ optimize
             (localid 9:local$107)
             (i32)
             (int 1:3))
-          (call
+          (copy
             (localid 7:local$8)
-            (functionid 36:infer_callresult::maker::value::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$107))))
+            (localid 9:local$107))
           (move
             (localid 1:x)
             (localid 7:local$8))

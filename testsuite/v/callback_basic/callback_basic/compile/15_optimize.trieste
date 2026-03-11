@@ -24,7 +24,11 @@ optimize
     (vars
       (localid 1:r)
       (localid 6:result)
-      (localid 8:local$13))
+      (localid 8:local$13)
+      (localid 6:$opt_1)
+      (localid 6:$opt_3)
+      (localid 6:$opt_6)
+      (localid 8:local$12))
     (labels
       (label
         (labelid 5:start)
@@ -36,10 +40,61 @@ optimize
           (move
             (localid 1:r)
             (localid 8:local$11))
-          (call
-            (localid 8:local$12)
-            (functionid 30:callback_basic::run_test::0::0)
+          (new
+            (localid 6:$opt_0)
+            (classid 27:callback_basic::lambda$0::0)
             (args))
+          (move
+            (localid 6:$opt_1)
+            (localid 6:$opt_0))
+          (makecallback
+            (localid 6:$opt_2)
+            (localid 6:$opt_1))
+          (move
+            (localid 6:$opt_3)
+            (localid 6:$opt_2))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_3)
+            (methodid 11:apply::1::0))
+          (calldyn
+            (localid 6:$opt_5)
+            (localid 6:$opt_4)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_3))))
+          (move
+            (localid 6:$opt_6)
+            (localid 6:$opt_5))
+          (const
+            (localid 6:$opt_7)
+            (u64)
+            (int 2:32))
+          (ffi
+            (localid 6:$opt_8)
+            (symbolid 19:call_fn_ptr_ret_u64)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_6))
+              (arg
+                (argmove)
+                (localid 6:$opt_7))))
+          (move
+            (localid 8:local$12)
+            (localid 6:$opt_8))
+          (lookup
+            (localid 6:$opt_9)
+            (localid 6:$opt_3)
+            (methodid 10:free::1::0))
+          (calldyn
+            (localid 7:$opt_10)
+            (localid 6:$opt_9)
+            (args
+              (arg
+                (argmove)
+                (localid 6:$opt_3))))
           (move
             (localid 6:result)
             (localid 8:local$12))
@@ -141,13 +196,13 @@ optimize
           (move
             (localid 6:result)
             (localid 8:local$10))
-          (call
+          (freecallback
+            (localid 7:$opt_11)
+            (localid 2:cb))
+          (const
             (localid 9:local$115)
-            (functionid 35:_builtin::ffi::callback::free::1::0)
-            (args
-              (arg
-                (argmove)
-                (localid 2:cb)))))
+            (none)
+            (none)))
         (ret
           (localid 6:result)))))
   (func
