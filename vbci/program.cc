@@ -121,23 +121,10 @@ namespace vbci
 
   Array* Program::get_string(size_t idx)
   {
-    if (idx >= strings.size())
+    if (idx >= string_arrays.size())
       Value::error(Error::UnknownString);
 
-    auto& str = strings.at(idx);
-    auto str_size = str.size() + 1;
-    auto arr = Array::create(
-      new uint8_t[Array::size_of(str_size, ffi_type_uint8.size)],
-      Location::immutable(),
-      typeid_arg,
-      ValueType::U8,
-      str_size,
-      ffi_type_uint8.size);
-
-    auto p = arr->get_pointer();
-    std::memcpy(p, str.c_str(), str_size);
-    arr->set_size(str_size - 1);
-    return arr;
+    return string_arrays.at(idx);
   }
 
   int Program::run(
@@ -150,6 +137,7 @@ namespace vbci
     if (!load())
       return -1;
 
+    setup_strings();
     setup_argv(args);
 
     // Run library init functions. If an init returns a value with an apply
@@ -233,6 +221,8 @@ namespace vbci
       free_callback(cc);
 
     external_notify_callbacks.clear();
+
+    cleanup_strings();
 
     return exit_code;
   }
@@ -620,6 +610,38 @@ namespace vbci
     return di_strings.at(di_uleb(pc));
   }
 
+  void Program::setup_strings()
+  {
+    string_arrays.resize(strings.size());
+
+    for (size_t i = 0; i < strings.size(); i++)
+    {
+      auto& str = strings.at(i);
+      auto str_size = str.size() + 1;
+      auto arr = Array::create(
+        new uint8_t[Array::size_of(str_size, ffi_type_uint8.size)],
+        Location::stack(),
+        typeid_arg,
+        ValueType::U8,
+        str_size,
+        ffi_type_uint8.size);
+
+      auto p = arr->get_pointer();
+      std::memcpy(p, str.c_str(), str_size);
+      arr->set_size(str_size - 1);
+      arr->immortalize();
+      string_arrays[i] = arr;
+    }
+  }
+
+  void Program::cleanup_strings()
+  {
+    for (auto* arr : string_arrays)
+      delete[] reinterpret_cast<uint8_t*>(arr);
+
+    string_arrays.clear();
+  }
+
   void Program::setup_value_type()
   {
     ffi_type_value_elements.clear();
@@ -676,6 +698,7 @@ namespace vbci
     content.clear();
     functions.clear();
     classes.clear();
+    string_arrays.clear();
 
     libs.clear();
     symbols.clear();
