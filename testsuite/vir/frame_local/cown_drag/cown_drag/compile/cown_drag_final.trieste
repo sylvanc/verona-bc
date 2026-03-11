@@ -1,5 +1,5 @@
 vbcc
-typecheck
+liveness
 (top
   {}
   (type
@@ -143,15 +143,11 @@ typecheck
               (arg
                 (argcopy)
                 (localid 2:$b))))
-          (lookup
-            (localid 16:$closure_a_apply)
-            (localid 10:$closure_a)
-            (methodid 6:@apply))
           (drop
             (localid 2:$b))
-          (whendyn
+          (when
             (localid 6:$cown1)
-            (localid 16:$closure_a_apply)
+            (functionid 16:@closure_a_apply)
             (args
               (arg
                 (argmove)

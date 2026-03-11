@@ -43,12 +43,18 @@ reify
                 (argcopy)
                 (localid 9:local$109))))
           (copy
+            (localid 9:local$505)
+            (localid 3:arr))
+          (copy
             (localid 3:arr)
             (localid 7:local$6))
           (const
             (localid 7:local$7)
             (usize)
             (int 1:0))
+          (copy
+            (localid 9:local$506)
+            (localid 5:index))
           (copy
             (localid 5:index)
             (localid 7:local$7))
@@ -147,7 +153,10 @@ reify
             (localid 5:index))
           (copy
             (localid 5:index)
-            (localid 9:local$514)))
+            (localid 9:local$514))
+          (copy
+            (localid 7:local$8)
+            (localid 9:local$943)))
         (jump
           (labelid 8:cond$106)))
       (label
@@ -157,6 +166,9 @@ reify
             (localid 7:local$9)
             (i32)
             (int 1:0))
+          (copy
+            (localid 9:local$515)
+            (localid 3:sum))
           (copy
             (localid 3:sum)
             (localid 7:local$9))
@@ -171,6 +183,9 @@ reify
               (arg
                 (argcopy)
                 (localid 3:arr))))
+          (copy
+            (localid 9:local$944)
+            (localid 4:it$0))
           (copy
             (localid 4:it$0)
             (localid 9:local$517))
@@ -227,12 +242,18 @@ reify
           (call
             (localid 9:local$115)
             (functionid 28:_builtin::none::create::0::0)
-            (args)))
+            (args))
+          (copy
+            (localid 8:local$10)
+            (localid 9:local$115)))
         (jump
           (labelid 8:join$113)))
       (label
         (labelid 8:join$990)
         (body
+          (copy
+            (localid 9:local$998)
+            (localid 1:i))
           (copy
             (localid 1:i)
             (localid 9:local$945))
@@ -255,7 +276,10 @@ reify
             (localid 3:sum))
           (copy
             (localid 3:sum)
-            (localid 9:local$521)))
+            (localid 9:local$521))
+          (copy
+            (localid 8:local$10)
+            (localid 9:local$946)))
         (jump
           (labelid 8:cond$111)))
       (label
@@ -422,12 +446,18 @@ reify
               (i32))
             (localid 4:size))
           (copy
+            (localid 9:local$947)
+            (localid 1:a))
+          (copy
             (localid 1:a)
             (localid 9:local$531))
           (const
             (localid 8:local$25)
             (usize)
             (int 1:0))
+          (copy
+            (localid 9:local$532)
+            (localid 1:i))
           (copy
             (localid 1:i)
             (localid 8:local$25))
@@ -504,7 +534,10 @@ reify
             (localid 1:i))
           (copy
             (localid 1:i)
-            (localid 9:local$538)))
+            (localid 9:local$538))
+          (copy
+            (localid 8:local$26)
+            (localid 9:local$949)))
         (jump
           (labelid 8:cond$123)))
       (label
@@ -729,6 +762,9 @@ reify
                 (argcopy)
                 (localid 4:self))))
           (copy
+            (localid 9:local$954)
+            (localid 1:a))
+          (copy
             (localid 1:a)
             (localid 9:local$562))
           (lookup
@@ -756,6 +792,9 @@ reify
               (arg
                 (argcopy)
                 (localid 9:local$902))))
+          (copy
+            (localid 9:local$955)
+            (localid 4:item))
           (copy
             (localid 4:item)
             (localid 9:local$564))

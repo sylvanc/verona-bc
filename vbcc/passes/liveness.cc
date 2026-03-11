@@ -103,7 +103,6 @@ namespace vbcc
                       RegisterRef,
                       FieldRef,
                       ArrayRefConst,
-                      FnPointer,
                       FFI,
                       GetRaise,
                       Const_E,
@@ -133,23 +132,11 @@ namespace vbcc
           }
           else if (node == Jump)
           {
-            auto& func_state = state->get_func(node->parent(Func) / FunctionId);
-            auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
-            auto succ = *func_state.get_label_id(node / LabelId);
-            func_state.labels.at(pred).succ.push_back(succ);
-            func_state.labels.at(succ).pred.push_back(pred);
+            // pred/succ edges are built by assignids.
           }
           else if (node == Cond)
           {
             use(node / LocalId);
-            auto& func_state = state->get_func(node->parent(Func) / FunctionId);
-            auto pred = *func_state.get_label_id(node->parent(Label) / LabelId);
-            auto lhs = *func_state.get_label_id(node / Lhs);
-            auto rhs = *func_state.get_label_id(node / Rhs);
-            func_state.labels.at(pred).succ.push_back(lhs);
-            func_state.labels.at(pred).succ.push_back(rhs);
-            func_state.labels.at(lhs).pred.push_back(pred);
-            func_state.labels.at(rhs).pred.push_back(pred);
           }
           else if (node == Error)
           {

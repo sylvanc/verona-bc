@@ -868,35 +868,6 @@ namespace vc
       Node vars = Vars;
       Node labels = clone(r.def / Labels);
 
-      // Build the set of LocalId locations that are used as sources (non-
-      // destination) anywhere across all labels, including terminators.
-      // A Copy whose destination is absent from this set is dead and can be
-      // elided.
-      std::set<Location> used_locs;
-
-      for (auto& lbl : *labels)
-      {
-        // Scan each body statement, skipping the destination (first child).
-        for (auto& stmt : *(lbl / Body))
-        {
-          for (size_t i = 1; i < stmt->size(); ++i)
-          {
-            stmt->at(i)->traverse([&](Node& n) {
-              if (n == LocalId)
-                used_locs.insert(n->location());
-              return true;
-            });
-          }
-        }
-
-        // Scan the terminator: all LocalIds here are uses.
-        (lbl / Return)->traverse([&](Node& n) {
-          if (n == LocalId)
-            used_locs.insert(n->location());
-          return true;
-        });
-      }
-
       for (auto& l : *labels)
       {
         Node body = l / Body;
@@ -1094,12 +1065,6 @@ namespace vc
 
             if (src_it != local_types.end())
               local_types[(n / LocalId)->location()] = clone(src_it->second);
-
-            // Elide dead Copies.
-            if (
-              (n == Copy) &&
-              used_locs.find((n / LocalId)->location()) == used_locs.end())
-              remove.push_back(n);
           }
           else if (n == RegisterRef)
           {

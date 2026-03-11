@@ -57,7 +57,6 @@ func @main(): i32
   $promise = when @behavior1_apply($closure1, $cown1, $ro_cown2): i32
   $ro_promise = read $promise
   $closure2 = new @behavior2()
-  $be4 = lookup @behavior2_apply
-  $_ = when $be4($closure2, $ro_promise): none
+  $_ = when @behavior2_apply($closure2, $ro_promise): none
   $zero = const i32 0
   ret $zero

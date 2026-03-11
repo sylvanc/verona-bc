@@ -2,6 +2,7 @@ add_library(libvbcc STATIC
   passes/assignids.cc
   passes/liveness.cc
   passes/memo.cc
+  passes/optimize.cc
   passes/typecheck.cc
   passes/validids.cc
   bitset.cc

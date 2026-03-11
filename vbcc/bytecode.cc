@@ -1014,17 +1014,6 @@ namespace vbcc
 
             code << dst(stmt) << src(stmt) << src(arg);
           }
-          else if (stmt == FnPointer)
-          {
-            auto f = stmt / Rhs;
-
-            if (f == FunctionId)
-              code << uleb(+Op::LookupStatic) << dst(stmt)
-                   << uleb(*get_func_id(f));
-            else
-              code << uleb(+Op::LookupFFI) << dst(stmt)
-                   << uleb(*get_symbol_id(f));
-          }
           else if (stmt == Lookup)
           {
             code << uleb(+Op::LookupDynamic) << dst(stmt) << src(stmt)

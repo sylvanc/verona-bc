@@ -200,11 +200,6 @@ namespace vbci
     // Arg2 = src.
     StoreCopy,
 
-    // Creates a function pointer from a function ID.
-    // Arg0 = dst.
-    // Arg1 = function ID.
-    LookupStatic,
-
     // Creates a function pointer from a source and a method.
     // Arg0 = dst.
     // Arg1 = src.

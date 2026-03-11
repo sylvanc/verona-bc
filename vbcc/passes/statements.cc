@@ -469,12 +469,6 @@ namespace vbcc
             return Store << _(LocalId) << _(Lhs) << (Arg << ArgCopy << _(Rhs));
           },
 
-        // Static lookup.
-        Dst * T(Lookup) * T(GlobalId)[GlobalId] >>
-          [](Match& _) {
-            return FnPointer << _(LocalId) << (FunctionId ^ _(GlobalId));
-          },
-
         // Dynamic lookup.
         Dst * T(Lookup) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
           [](Match& _) {

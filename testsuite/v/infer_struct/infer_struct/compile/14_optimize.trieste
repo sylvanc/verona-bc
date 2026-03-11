@@ -1,0 +1,175 @@
+vc
+optimize
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 1:1))
+          (new
+            (localid 6:$opt_1)
+            (classid 24:infer_struct::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_1)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 4:$971)
+            (localid 6:$opt_4)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_1)))))
+        (ret
+          (localid 4:$971)))))
+  (func
+    (functionid 24:infer_struct::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 9:local$107)
+            (i32)
+            (int 1:1))
+          (new
+            (localid 7:local$7)
+            (classid 24:infer_struct::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$107))))
+          (lookup
+            (localid 6:$opt_5)
+            (localid 7:local$7)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 7:local$8)
+            (localid 6:$opt_5)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:local$7)))))
+        (ret
+          (localid 7:local$8)))))
+  (primitive
+    (i32)
+    (methods))
+  (func
+    (functionid 35:infer_struct::wrapper::create::1::0)
+    (params
+      (param
+        (localid 3:val)
+        (i32)))
+    (classid 24:infer_struct::wrapper::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$6)
+            (classid 24:infer_struct::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:val)))))
+        (ret
+          (localid 7:local$6)))))
+  (func
+    (functionid 26:infer_struct::unwrap::1::0)
+    (params
+      (param
+        (localid 1:w)
+        (classid 24:infer_struct::wrapper::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 6:$opt_6)
+            (arg
+              (argcopy)
+              (localid 1:w))
+            (fieldid 3:val))
+          (load
+            (localid 9:local$106)
+            (localid 6:$opt_6)))
+        (ret
+          (localid 9:local$106)))))
+  (class
+    (classid 24:infer_struct::wrapper::0)
+    (fields
+      (field
+        (fieldid 3:val)
+        (i32)))
+    (methods
+      (method
+        (methodid 9:val::1::0)
+        (functionid 32:infer_struct::wrapper::val::1::0))))
+  (func
+    (functionid 32:infer_struct::wrapper::val::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 24:infer_struct::wrapper::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 7:local$5)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
+            (localid 9:local$497)
+            (localid 7:local$5)))
+        (ret
+          (localid 9:local$497)))))
+  (func
+    (functionid 37:infer_struct::wrapper::val::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 24:infer_struct::wrapper::0)))
+    (ref
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$104)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val)))
+        (ret
+          (localid 9:local$104)))))
+  (primitive
+    (ref
+      (i32))
+    (methods)))
