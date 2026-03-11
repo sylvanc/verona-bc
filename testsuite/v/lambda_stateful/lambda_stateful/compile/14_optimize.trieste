@@ -140,20 +140,10 @@ optimize
             (localid 9:local$165)
             (i32)
             (int 1:1))
-          (lookup
-            (localid 9:local$584)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$585)
-            (localid 9:local$584)
-            (args
-              (arg
-                (argcopy)
-                (localid 6:result))
-              (arg
-                (argcopy)
-                (localid 9:local$165))))
+            (localid 6:result)
+            (localid 9:local$165))
           (copy
             (localid 6:result)
             (localid 9:local$585)))
@@ -376,20 +366,10 @@ optimize
             (localid 9:local$177)
             (i32)
             (int 1:2))
-          (lookup
-            (localid 9:local$593)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$594)
-            (localid 9:local$593)
-            (args
-              (arg
-                (argcopy)
-                (localid 6:result))
-              (arg
-                (argcopy)
-                (localid 9:local$177))))
+            (localid 6:result)
+            (localid 9:local$177))
           (copy
             (localid 6:result)
             (localid 9:local$594)))
@@ -497,20 +477,10 @@ optimize
             (localid 9:local$181)
             (i32)
             (int 1:4))
-          (lookup
-            (localid 9:local$598)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$599)
-            (localid 9:local$598)
-            (args
-              (arg
-                (argcopy)
-                (localid 6:result))
-              (arg
-                (argcopy)
-                (localid 9:local$181))))
+            (localid 6:result)
+            (localid 9:local$181))
           (copy
             (localid 6:result)
             (localid 9:local$599)))
@@ -1334,20 +1304,9 @@ optimize
       (label
         (labelid 9:body$1006)
         (body
-          (lookup
-            (localid 9:local$215)
-            (localid 5:other)
-            (methodid 11:apply::1::0))
-          (calldyn
-            (localid 9:local$216)
-            (localid 9:local$215)
-            (args
-              (arg
-                (argcopy)
-                (localid 5:other))))
           (copy
             (localid 9:local$651)
-            (localid 9:local$216)))
+            (localid 5:other)))
         (jump
           (labelid 9:join$1007)))
       (label

@@ -336,31 +336,13 @@ optimize
       (label
         (labelid 8:cond$135)
         (body
-          (lookup
-            (localid 9:local$539)
-            (localid 1:i)
-            (methodid 7:<::2::0))
-          (lookup
-            (localid 9:local$890)
-            (localid 4:self)
-            (methodid 10:size::1::0))
-          (calldyn
+          (len
             (localid 9:local$891)
-            (localid 9:local$890)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
-          (calldyn
+            (localid 4:self))
+          (lt
             (localid 9:local$540)
-            (localid 9:local$539)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:i))
-              (arg
-                (argcopy)
-                (localid 9:local$891)))))
+            (localid 1:i)
+            (localid 9:local$891)))
         (cond
           (localid 9:local$540)
           (labelid 8:body$136)
@@ -368,55 +350,67 @@ optimize
       (label
         (labelid 8:body$136)
         (body
-          (lookup
-            (localid 9:local$541)
-            (localid 1:f)
-            (methodid 11:apply::3::0))
-          (lookup
-            (localid 9:local$892)
-            (localid 4:self)
-            (methodid 11:apply::2::0))
-          (calldyn
+          (arrayref
+            (localid 7:$opt_19)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (localid 1:i))
+          (load
             (localid 9:local$893)
-            (localid 9:local$892)
+            (localid 7:$opt_19))
+          (fieldref
+            (localid 7:$opt_20)
+            (arg
+              (argcopy)
+              (localid 1:f))
+            (fieldid 3:arr))
+          (lookup
+            (localid 7:$opt_21)
+            (localid 1:i)
+            (methodid 9:i32::1::0))
+          (calldyn
+            (localid 7:$opt_22)
+            (localid 7:$opt_21)
             (args
-              (arg
-                (argcopy)
-                (localid 4:self))
               (arg
                 (argcopy)
                 (localid 1:i))))
+          (load
+            (localid 7:$opt_23)
+            (localid 7:$opt_20))
+          (lookup
+            (localid 7:$opt_24)
+            (localid 7:$opt_23)
+            (methodid 16:apply::2::ref::0))
           (calldyn
-            (localid 9:local$542)
-            (localid 9:local$541)
+            (localid 7:$opt_25)
+            (localid 7:$opt_24)
             (args
               (arg
                 (argcopy)
-                (localid 1:f))
+                (localid 7:$opt_23))
               (arg
                 (argcopy)
-                (localid 1:i))
-              (arg
-                (argcopy)
-                (localid 9:local$893))))
+                (localid 1:i))))
+          (store
+            (localid 7:$opt_26)
+            (localid 7:$opt_25)
+            (arg
+              (argcopy)
+              (localid 7:$opt_22)))
+          (const
+            (localid 9:local$542)
+            (none)
+            (none))
           (const
             (localid 9:local$138)
             (usize)
             (int 1:1))
-          (lookup
-            (localid 9:local$543)
-            (localid 1:i)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$544)
-            (localid 9:local$543)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:i))
-              (arg
-                (argcopy)
-                (localid 9:local$138))))
+            (localid 1:i)
+            (localid 9:local$138))
           (copy
             (localid 1:i)
             (localid 9:local$544)))
@@ -465,31 +459,13 @@ optimize
       (label
         (labelid 8:cond$131)
         (body
-          (lookup
-            (localid 9:local$532)
-            (localid 1:i)
-            (methodid 7:<::2::0))
-          (lookup
-            (localid 9:local$886)
-            (localid 4:self)
-            (methodid 10:size::1::0))
-          (calldyn
+          (len
             (localid 9:local$887)
-            (localid 9:local$886)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
-          (calldyn
+            (localid 4:self))
+          (lt
             (localid 9:local$533)
-            (localid 9:local$532)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:i))
-              (arg
-                (argcopy)
-                (localid 9:local$887)))))
+            (localid 1:i)
+            (localid 9:local$887)))
         (cond
           (localid 9:local$533)
           (labelid 8:body$132)
@@ -497,52 +473,71 @@ optimize
       (label
         (labelid 8:body$132)
         (body
-          (lookup
-            (localid 9:local$534)
-            (localid 1:f)
-            (methodid 11:apply::2::0))
-          (lookup
-            (localid 9:local$888)
-            (localid 4:self)
-            (methodid 11:apply::2::0))
-          (calldyn
+          (arrayref
+            (localid 7:$opt_27)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (localid 1:i))
+          (load
             (localid 9:local$889)
-            (localid 9:local$888)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))
-              (arg
-                (argcopy)
-                (localid 1:i))))
+            (localid 7:$opt_27))
+          (fieldref
+            (localid 7:$opt_28)
+            (arg
+              (argcopy)
+              (localid 1:f))
+            (fieldid 13:$raise_target))
+          (load
+            (localid 7:$opt_29)
+            (localid 7:$opt_28))
+          (fieldref
+            (localid 7:$opt_32)
+            (arg
+              (argcopy)
+              (localid 1:f))
+            (fieldid 3:sum))
+          (load
+            (localid 7:$opt_33)
+            (localid 7:$opt_32))
+          (setraise
+            (localid 7:$opt_36)
+            (localid 7:$opt_29))
+          (load
+            (localid 7:$opt_37)
+            (localid 7:$opt_33))
+          (lookup
+            (localid 7:$opt_38)
+            (localid 7:$opt_37)
+            (methodid 7:+::2::0))
           (calldyn
-            (localid 9:local$535)
-            (localid 9:local$534)
+            (localid 7:$opt_39)
+            (localid 7:$opt_38)
             (args
               (arg
                 (argcopy)
-                (localid 1:f))
+                (localid 7:$opt_37))
               (arg
                 (argcopy)
                 (localid 9:local$889))))
+          (store
+            (localid 7:$opt_40)
+            (localid 7:$opt_33)
+            (arg
+              (argcopy)
+              (localid 7:$opt_39)))
+          (const
+            (localid 9:local$535)
+            (none)
+            (none))
           (const
             (localid 9:local$134)
             (usize)
             (int 1:1))
-          (lookup
-            (localid 9:local$536)
-            (localid 1:i)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$537)
-            (localid 9:local$536)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:i))
-              (arg
-                (argcopy)
-                (localid 9:local$134))))
+            (localid 1:i)
+            (localid 9:local$134))
           (copy
             (localid 1:i)
             (localid 9:local$537)))
@@ -819,20 +814,10 @@ optimize
       (label
         (labelid 8:cond$127)
         (body
-          (lookup
-            (localid 9:local$523)
-            (localid 1:i)
-            (methodid 7:<::2::0))
-          (calldyn
+          (lt
             (localid 9:local$524)
-            (localid 9:local$523)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:i))
-              (arg
-                (argcopy)
-                (localid 4:size)))))
+            (localid 1:i)
+            (localid 4:size)))
         (cond
           (localid 9:local$524)
           (labelid 8:body$128)
@@ -840,20 +825,12 @@ optimize
       (label
         (labelid 8:body$128)
         (body
-          (lookup
-            (localid 9:local$525)
-            (localid 1:a)
-            (methodid 16:apply::2::ref::0))
-          (calldyn
+          (arrayref
             (localid 9:local$526)
-            (localid 9:local$525)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:a))
-              (arg
-                (argcopy)
-                (localid 1:i))))
+            (arg
+              (argcopy)
+              (localid 1:a))
+            (localid 1:i))
           (store
             (localid 9:local$936)
             (localid 9:local$526)
@@ -864,20 +841,10 @@ optimize
             (localid 9:local$130)
             (usize)
             (int 1:1))
-          (lookup
-            (localid 9:local$527)
-            (localid 1:i)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$528)
-            (localid 9:local$527)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:i))
-              (arg
-                (argcopy)
-                (localid 9:local$130))))
+            (localid 1:i)
+            (localid 9:local$130))
           (copy
             (localid 1:i)
             (localid 9:local$528)))

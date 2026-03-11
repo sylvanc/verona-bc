@@ -235,6 +235,54 @@ namespace vbcc
           label.resize(func_state.register_names.size());
       }
 
+      // Build CFG pred/succ edges from terminators. This must happen in
+      // assignids (not liveness) because typecheck needs pred/succ for
+      // its flow analysis, and liveness may run after typecheck/optimize.
+      for (auto& func_node : *top)
+      {
+        if (!func_node->type().in({Func, FuncOnce}))
+          continue;
+
+        auto& func_state = state->get_func(func_node / FunctionId);
+
+        for (auto& label : *(func_node / Labels))
+        {
+          auto term = label->back();
+          auto pred = func_state.get_label_id(label / LabelId);
+
+          if (!pred)
+            continue;
+
+          if (term == Jump)
+          {
+            auto succ = func_state.get_label_id(term / LabelId);
+
+            if (succ)
+            {
+              func_state.labels.at(*pred).succ.push_back(*succ);
+              func_state.labels.at(*succ).pred.push_back(*pred);
+            }
+          }
+          else if (term == Cond)
+          {
+            auto lhs = func_state.get_label_id(term / Lhs);
+            auto rhs = func_state.get_label_id(term / Rhs);
+
+            if (lhs)
+            {
+              func_state.labels.at(*pred).succ.push_back(*lhs);
+              func_state.labels.at(*lhs).pred.push_back(*pred);
+            }
+
+            if (rhs)
+            {
+              func_state.labels.at(*pred).succ.push_back(*rhs);
+              func_state.labels.at(*rhs).pred.push_back(*pred);
+            }
+          }
+        }
+      }
+
       // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv), and
       // `ref dyn` (unknown RegisterRef types). This has to happen after all
       // classes have been added, but before any complex primitives.

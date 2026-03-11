@@ -3,7 +3,6 @@
 ## To Do
 
 Optimize.
-- Unnecessary copies?
 - Array fill/copy is slow.
 
 Freezing.

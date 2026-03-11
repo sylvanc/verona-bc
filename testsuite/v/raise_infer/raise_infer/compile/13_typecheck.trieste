@@ -1187,9 +1187,9 @@ typecheck
           (load
             (localid 10:local$1094)
             (localid 9:local$615)))
-        (error
-          (errormsg 80:raise: value type 'dyn' is not a subtype of enclosing function return type 'i32')
-          (raise)))
+        (raise
+          (localid 10:local$1094)
+          (i32)))
       (label
         (labelid 8:join$162)
         (body)

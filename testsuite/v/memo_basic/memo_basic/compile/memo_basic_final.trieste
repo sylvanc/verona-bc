@@ -74,20 +74,10 @@ liveness
             (localid 9:local$515)
             (i32)
             (int 1:1))
-          (lookup
-            (localid 9:local$516)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$517)
-            (localid 9:local$516)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$515))))
+            (localid 6:result)
+            (localid 9:local$515))
           (move
             (localid 6:result)
             (localid 9:local$517)))
@@ -104,20 +94,10 @@ liveness
             (localid 9:local$518)
             (i32)
             (int 2:42))
-          (lookup
-            (localid 9:local$519)
-            (localid 1:b)
-            (methodid 8:!=::2::0))
-          (calldyn
+          (ne
             (localid 9:local$520)
-            (localid 9:local$519)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:b))
-              (arg
-                (argmove)
-                (localid 9:local$518)))))
+            (localid 1:b)
+            (localid 9:local$518)))
         (cond
           (localid 9:local$520)
           (labelid 8:body$113)
@@ -129,20 +109,10 @@ liveness
             (localid 9:local$521)
             (i32)
             (int 1:2))
-          (lookup
-            (localid 9:local$522)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$523)
-            (localid 9:local$522)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$521))))
+            (localid 6:result)
+            (localid 9:local$521))
           (move
             (localid 6:result)
             (localid 9:local$523)))
@@ -155,20 +125,10 @@ liveness
             (localid 8:local$11)
             (classid 20:_builtin::nomatch::0)
             (args))
-          (lookup
-            (localid 9:local$524)
-            (localid 1:a)
-            (methodid 8:!=::2::0))
-          (calldyn
+          (ne
             (localid 9:local$525)
-            (localid 9:local$524)
-            (args
-              (arg
-                (argmove)
-                (localid 1:a))
-              (arg
-                (argmove)
-                (localid 1:b)))))
+            (localid 1:a)
+            (localid 1:b)))
         (cond
           (localid 9:local$525)
           (labelid 8:body$117)
@@ -180,20 +140,10 @@ liveness
             (localid 9:local$526)
             (i32)
             (int 1:4))
-          (lookup
-            (localid 9:local$527)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$528)
-            (localid 9:local$527)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$526))))
+            (localid 6:result)
+            (localid 9:local$526))
           (move
             (localid 6:result)
             (localid 9:local$528)))

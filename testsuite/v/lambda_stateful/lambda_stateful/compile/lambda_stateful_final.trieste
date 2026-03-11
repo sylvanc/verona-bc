@@ -140,20 +140,10 @@ liveness
             (localid 9:local$165)
             (i32)
             (int 1:1))
-          (lookup
-            (localid 9:local$584)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$585)
-            (localid 9:local$584)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$165))))
+            (localid 6:result)
+            (localid 9:local$165))
           (move
             (localid 6:result)
             (localid 9:local$585)))
@@ -376,20 +366,10 @@ liveness
             (localid 9:local$177)
             (i32)
             (int 1:2))
-          (lookup
-            (localid 9:local$593)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$594)
-            (localid 9:local$593)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$177))))
+            (localid 6:result)
+            (localid 9:local$177))
           (move
             (localid 6:result)
             (localid 9:local$594)))
@@ -497,20 +477,10 @@ liveness
             (localid 9:local$181)
             (i32)
             (int 1:4))
-          (lookup
-            (localid 9:local$598)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$599)
-            (localid 9:local$598)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$181))))
+            (localid 6:result)
+            (localid 9:local$181))
           (move
             (localid 6:result)
             (localid 9:local$599)))
@@ -1334,20 +1304,9 @@ liveness
       (label
         (labelid 9:body$1006)
         (body
-          (lookup
-            (localid 9:local$215)
-            (localid 5:other)
-            (methodid 11:apply::1::0))
-          (calldyn
-            (localid 9:local$216)
-            (localid 9:local$215)
-            (args
-              (arg
-                (argmove)
-                (localid 5:other))))
           (move
             (localid 9:local$651)
-            (localid 9:local$216)))
+            (localid 5:other)))
         (jump
           (labelid 9:join$1007)))
       (label

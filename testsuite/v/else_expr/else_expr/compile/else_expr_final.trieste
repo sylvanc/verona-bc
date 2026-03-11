@@ -136,31 +136,13 @@ liveness
             (localid 9:local$117)
             (i32)
             (int 2:42))
-          (lookup
-            (localid 9:local$516)
+          (eq
+            (localid 9:local$517)
             (localid 1:a)
-            (methodid 8:==::2::0))
-          (calldyn
-            (localid 9:local$517)
-            (localid 9:local$516)
-            (args
-              (arg
-                (argmove)
-                (localid 1:a))
-              (arg
-                (argmove)
-                (localid 9:local$117))))
-          (lookup
-            (localid 9:local$994)
-            (localid 9:local$517)
-            (methodid 7:!::1::0))
-          (calldyn
+            (localid 9:local$117))
+          (not
             (localid 9:local$995)
-            (localid 9:local$994)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$517)))))
+            (localid 9:local$517)))
         (cond
           (localid 9:local$995)
           (labelid 8:body$111)
@@ -172,20 +154,10 @@ liveness
             (localid 9:local$118)
             (i32)
             (int 1:1))
-          (lookup
-            (localid 9:local$518)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$519)
-            (localid 9:local$518)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$118))))
+            (localid 6:result)
+            (localid 9:local$118))
           (move
             (localid 6:result)
             (localid 9:local$519)))
@@ -202,31 +174,13 @@ liveness
             (localid 9:local$121)
             (i32)
             (int 1:0))
-          (lookup
-            (localid 9:local$520)
+          (eq
+            (localid 9:local$521)
             (localid 1:b)
-            (methodid 8:==::2::0))
-          (calldyn
-            (localid 9:local$521)
-            (localid 9:local$520)
-            (args
-              (arg
-                (argmove)
-                (localid 1:b))
-              (arg
-                (argmove)
-                (localid 9:local$121))))
-          (lookup
-            (localid 9:local$996)
-            (localid 9:local$521)
-            (methodid 7:!::1::0))
-          (calldyn
+            (localid 9:local$121))
+          (not
             (localid 9:local$997)
-            (localid 9:local$996)
-            (args
-              (arg
-                (argmove)
-                (localid 9:local$521)))))
+            (localid 9:local$521)))
         (cond
           (localid 9:local$997)
           (labelid 8:body$119)
@@ -238,20 +192,10 @@ liveness
             (localid 9:local$122)
             (i32)
             (int 1:2))
-          (lookup
-            (localid 9:local$522)
-            (localid 6:result)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$523)
-            (localid 9:local$522)
-            (args
-              (arg
-                (argmove)
-                (localid 6:result))
-              (arg
-                (argmove)
-                (localid 9:local$122))))
+            (localid 6:result)
+            (localid 9:local$122))
           (move
             (localid 6:result)
             (localid 9:local$523)))

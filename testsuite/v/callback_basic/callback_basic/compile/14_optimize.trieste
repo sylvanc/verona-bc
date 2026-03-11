@@ -121,20 +121,10 @@ optimize
             (localid 9:local$119)
             (i32)
             (int 1:1))
-          (lookup
-            (localid 9:local$516)
-            (localid 1:r)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$517)
-            (localid 9:local$516)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:r))
-              (arg
-                (argcopy)
-                (localid 9:local$119))))
+            (localid 1:r)
+            (localid 9:local$119))
           (copy
             (localid 1:r)
             (localid 9:local$517)))

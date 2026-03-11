@@ -108,31 +108,13 @@ optimize
       (label
         (labelid 8:cond$106)
         (body
-          (lookup
-            (localid 9:local$513)
-            (localid 5:index)
-            (methodid 7:<::2::0))
-          (lookup
-            (localid 9:local$888)
-            (localid 1:a)
-            (methodid 10:size::1::0))
-          (calldyn
+          (len
             (localid 9:local$889)
-            (localid 9:local$888)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:a))))
-          (calldyn
+            (localid 1:a))
+          (lt
             (localid 9:local$514)
-            (localid 9:local$513)
-            (args
-              (arg
-                (argcopy)
-                (localid 5:index))
-              (arg
-                (argcopy)
-                (localid 9:local$889)))))
+            (localid 5:index)
+            (localid 9:local$889)))
         (cond
           (localid 9:local$514)
           (labelid 8:body$107)
@@ -140,34 +122,19 @@ optimize
       (label
         (labelid 8:body$107)
         (body
-          (lookup
-            (localid 9:local$515)
-            (localid 3:sum)
-            (methodid 7:+::2::0))
-          (lookup
-            (localid 9:local$890)
-            (localid 1:a)
-            (methodid 11:apply::2::0))
-          (calldyn
+          (arrayref
+            (localid 6:$opt_0)
+            (arg
+              (argcopy)
+              (localid 1:a))
+            (localid 5:index))
+          (load
             (localid 9:local$891)
-            (localid 9:local$890)
-            (args
-              (arg
-                (argcopy)
-                (localid 1:a))
-              (arg
-                (argcopy)
-                (localid 5:index))))
-          (calldyn
+            (localid 6:$opt_0))
+          (add
             (localid 9:local$516)
-            (localid 9:local$515)
-            (args
-              (arg
-                (argcopy)
-                (localid 3:sum))
-              (arg
-                (argcopy)
-                (localid 9:local$891))))
+            (localid 3:sum)
+            (localid 9:local$891))
           (copy
             (localid 3:sum)
             (localid 9:local$516))
@@ -175,20 +142,10 @@ optimize
             (localid 9:local$517)
             (usize)
             (int 1:1))
-          (lookup
-            (localid 9:local$518)
-            (localid 5:index)
-            (methodid 7:+::2::0))
-          (calldyn
+          (add
             (localid 9:local$519)
-            (localid 9:local$518)
-            (args
-              (arg
-                (argcopy)
-                (localid 5:index))
-              (arg
-                (argcopy)
-                (localid 9:local$517))))
+            (localid 5:index)
+            (localid 9:local$517))
           (copy
             (localid 5:index)
             (localid 9:local$519)))
