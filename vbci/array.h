@@ -4,6 +4,7 @@
 #include "program.h"
 #include "writebarrier.h"
 
+#include <cstring>
 #include <format>
 
 namespace vbci
@@ -90,6 +91,101 @@ namespace vbci
       void* addr = reinterpret_cast<uint8_t*>(this + 1) + (stride * idx);
       return writebarrier::exchange<is_move>(
         location(), addr, value_type, std::forward<Reg<is_move>>(v));
+    }
+
+    bool is_primitive() const
+    {
+      return value_type != ValueType::Object && value_type != ValueType::Array &&
+        value_type != ValueType::Invalid && value_type != ValueType::Cown;
+    }
+
+    void bulk_copy(
+      size_t dst_off, Array* src, size_t src_off, size_t len)
+    {
+      if (len == 0)
+        return;
+
+      assert(dst_off + len <= size);
+      assert(src_off + len <= src->size);
+      assert(value_type == src->value_type);
+      assert(stride == src->stride);
+
+      auto* dst_data = reinterpret_cast<uint8_t*>(this + 1) + (stride * dst_off);
+      auto* src_data =
+        reinterpret_cast<uint8_t*>(src + 1) + (stride * src_off);
+
+      if (is_primitive())
+      {
+        std::memmove(dst_data, src_data, len * stride);
+        return;
+      }
+
+      // Complex elements: per-element with write barrier.
+      // The main win is already captured by the primitive memmove path above.
+      // For complex types, we still avoid Verona-level loop overhead
+      // (bytecode dispatch, ArrayRef, Load/Store per iteration).
+      for (size_t i = 0; i < len; i++)
+      {
+        auto in_val = src->load(src_off + i);
+        exchange<false>(dst_off + i, in_val);
+      }
+    }
+
+    void bulk_fill(size_t off, size_t len, const Value& fill_val)
+    {
+      if (len == 0)
+        return;
+
+      assert(off + len <= size);
+
+      if (is_primitive())
+      {
+        auto* dst_data = reinterpret_cast<uint8_t*>(this + 1) + (stride * off);
+
+        if (stride == 1)
+        {
+          uint8_t byte_val = 0;
+          fill_val.to_addr(value_type, &byte_val);
+          std::memset(dst_data, byte_val, len);
+        }
+        else
+        {
+          for (size_t i = 0; i < len; i++)
+          {
+            void* addr = dst_data + (stride * i);
+            fill_val.to_addr(value_type, addr);
+          }
+        }
+        return;
+      }
+
+      // Complex elements: per-element exchange.
+      for (size_t i = 0; i < len; i++)
+      {
+        // Make a copy of fill_val for each exchange.
+        ValueBorrow v(fill_val);
+        exchange<false>(off + i, v);
+      }
+    }
+
+    int bulk_compare(
+      size_t a_off, Array* other, size_t b_off, size_t len) const
+    {
+      if (len == 0)
+        return 0;
+
+      assert(a_off + len <= size);
+      assert(b_off + len <= other->size);
+      assert(value_type == other->value_type);
+      assert(stride == other->stride);
+      assert(is_primitive());
+
+      auto* a_data =
+        reinterpret_cast<const uint8_t*>(this + 1) + (stride * a_off);
+      auto* b_data =
+        reinterpret_cast<const uint8_t*>(other + 1) + (stride * b_off);
+
+      return std::memcmp(a_data, b_data, len * stride);
     }
 
     void trace_fn(auto&& fn)

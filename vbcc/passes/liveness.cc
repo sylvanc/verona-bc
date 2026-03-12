@@ -111,7 +111,10 @@ namespace vbcc
                       Const_NaN,
                       AddExternal,
                       RemoveExternal,
-                      MemoSlot}))
+                      MemoSlot,
+                      ArrayCopy,
+                      ArrayFill,
+                      ArrayCompare}))
           {
             def(node / LocalId);
           }

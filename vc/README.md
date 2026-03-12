@@ -5,19 +5,17 @@
 Optimize.
 - Array fill/copy is slow.
 
+Review `iowise`.
+- Buffer final can't call flush, that relies on mutation.
+- Dispose pattern?
+
 Freezing.
 - Need freeze syntax and a freeze `vbci` operation.
 - Can we freeze an object instead of a region, extracting from the region as we go?
 
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 
-String literals should be immortal, not fresh allocations.
-
-Review `iowise`.
-- Buffer final can't call flush, that relies on mutation.
-- Dispose pattern?
-
-Semantics:
+Semantics.
 - Region creation.
 
 FFI.
@@ -68,6 +66,5 @@ Encode `ValueParam` as types.
 - This may require execution during compilation.
 
 Optimization:
-- Optimize dynamic calls as static when there's a known type for the receiver.
 - Treat parameter types that are shapes as implicit type parameters.
 - Compile time evaluation.

@@ -8,14 +8,7 @@ array[T]
   fill(size: usize, from: T = T): array[T]
   {
     let a = :::newarray[T](size);
-    var i = 0;
-
-    while i < size
-    {
-      a(i) = from;
-      i = i + 1
-    }
-
+    a.fill_range(0, size, from);
     a
   }
 
@@ -54,6 +47,21 @@ array[T]
   values(self: array[T]): arrayiter[T]
   {
     arrayiter[T](self)
+  }
+
+  copy(self: array[T], dst_offset: usize, src: array[T], src_offset: usize, len: usize): none
+  {
+    :::arraycopy(self, dst_offset, src, src_offset, len)
+  }
+
+  fill_range(self: array[T], offset: usize, len: usize, value: T): none
+  {
+    :::arrayfill(self, offset, len, value)
+  }
+
+  compare(self: array[T], self_offset: usize, other: array[T], other_offset: usize, len: usize): i64
+  {
+    :::arraycmp(self, self_offset, other, other_offset, len)
   }
 }
 

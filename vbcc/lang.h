@@ -112,7 +112,10 @@ namespace vbcc
       AddExternal,
       RemoveExternal,
       RegisterExternalNotify,
-      MemoSlot);
+      MemoSlot,
+      ArrayCopy,
+      ArrayFill,
+      ArrayCompare);
 
   Parse parser();
   PassDef statements();

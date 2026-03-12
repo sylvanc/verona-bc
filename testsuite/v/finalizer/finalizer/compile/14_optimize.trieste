@@ -7,7 +7,7 @@ optimize
     (params)
     (i32)
     (vars
-      (localid 4:$976))
+      (localid 4:$914))
     (labels
       (label
         (labelid 5:start)
@@ -17,7 +17,7 @@ optimize
             (i32)
             (int 1:0))
           (copy
-            (localid 4:$976)
+            (localid 4:$914)
             (localid 6:$opt_0))
           (const
             (localid 6:$opt_2)
@@ -42,7 +42,7 @@ optimize
                 (argcopy)
                 (localid 6:$opt_6)))))
         (ret
-          (localid 4:$976)))))
+          (localid 4:$914)))))
   (func
     (functionid 21:finalizer::main::0::0)
     (params)
@@ -61,7 +61,7 @@ optimize
             (localid 6:result)
             (localid 7:local$8))
           (const
-            (localid 9:local$107)
+            (localid 9:local$110)
             (i32)
             (int 2:10))
           (new
@@ -70,9 +70,9 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$107))))
+                (localid 9:local$110))))
           (const
-            (localid 9:local$108)
+            (localid 9:local$111)
             (i32)
             (int 2:20))
           (new
@@ -81,7 +81,7 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$108)))))
+                (localid 9:local$111)))))
         (ret
           (localid 6:result)))))
   (primitive
@@ -140,7 +140,7 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$500)
+            (localid 9:local$504)
             (localid 7:$opt_10))
           (ffi
             (localid 7:local$6)
@@ -148,13 +148,13 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$500))))
+                (localid 9:local$504))))
           (const
-            (localid 8:none$977)
+            (localid 8:none$915)
             (none)
             (none)))
         (ret
-          (localid 8:none$977)))))
+          (localid 8:none$915)))))
   (primitive
     (none)
     (methods))
@@ -177,10 +177,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$498)
+            (localid 9:local$502)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$498)))))
+          (localid 9:local$502)))))
   (func
     (functionid 35:finalizer::resource::val::1::ref::0)
     (params
@@ -195,13 +195,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$106)
+            (localid 9:local$109)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$106)))))
+          (localid 9:local$109)))))
   (primitive
     (ref
       (i32))

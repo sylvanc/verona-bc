@@ -1049,6 +1049,21 @@ namespace vbcc
             code << uleb(+Op::FFI) << dst(stmt)
                  << uleb(*get_symbol_id(stmt / SymbolId));
           }
+          else if (stmt == ArrayCopy)
+          {
+            args(stmt / Args);
+            code << uleb(+Op::ArrayCopy) << dst(stmt);
+          }
+          else if (stmt == ArrayFill)
+          {
+            args(stmt / Args);
+            code << uleb(+Op::ArrayFill) << dst(stmt);
+          }
+          else if (stmt == ArrayCompare)
+          {
+            args(stmt / Args);
+            code << uleb(+Op::ArrayCompare) << dst(stmt);
+          }
           else if (stmt == When)
           {
             args(stmt / Args);

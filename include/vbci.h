@@ -390,6 +390,32 @@ namespace vbci
     // Arg0 = dst.
     // Arg1 = memo slot index.
     MemoLoad,
+
+    // Bulk copy elements between arrays.
+    // Arg0 = dst (none).
+    // Arg1 = dst array.
+    // Arg2 = dst offset.
+    // Arg3 = src array.
+    // Arg4 = src offset.
+    // Arg5 = length.
+    ArrayCopy,
+
+    // Bulk fill array elements with a value.
+    // Arg0 = dst (none).
+    // Arg1 = dst array.
+    // Arg2 = offset.
+    // Arg3 = length.
+    // Arg4 = value.
+    ArrayFill,
+
+    // Bulk compare array elements (primitive types only).
+    // Arg0 = dst (i64 result: <0, 0, or >0).
+    // Arg1 = array a.
+    // Arg2 = a offset.
+    // Arg3 = array b.
+    // Arg4 = b offset.
+    // Arg5 = length.
+    ArrayCompare,
   };
 
   enum class ValueType : uint8_t

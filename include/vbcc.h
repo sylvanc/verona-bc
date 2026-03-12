@@ -154,6 +154,11 @@ namespace vbcc
   inline const auto RemoveExternal = TokenDef("removeexternal");
   inline const auto RegisterExternalNotify = TokenDef("registerexternalnotify");
 
+  // Bulk array operations.
+  inline const auto ArrayCopy = TokenDef("arraycopy");
+  inline const auto ArrayFill = TokenDef("arrayfill");
+  inline const auto ArrayCompare = TokenDef("arraycmp");
+
   // Raise target.
   inline const auto GetRaise = TokenDef("getraise");
   inline const auto SetRaise = TokenDef("setraise");
@@ -246,7 +251,7 @@ namespace vbcc
     ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
     wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
-    RegisterExternalNotify | MemoSlot;
+    RegisterExternalNotify | MemoSlot | ArrayCopy | ArrayFill | ArrayCompare;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -397,6 +402,9 @@ namespace vbcc
     | (CallbackPtr <<= wfDst * wfSrc)
     | (FreeCallback <<= wfDst * wfSrc)
     | (RegisterExternalNotify <<= wfDst * wfSrc)
+    | (ArrayCopy <<= wfDst * Args)
+    | (ArrayFill <<= wfDst * Args)
+    | (ArrayCompare <<= wfDst * Args)
     ;
   // clang-format on
 }
