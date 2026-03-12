@@ -871,6 +871,18 @@ namespace vc
                        << (LocalId ^ id);
           },
 
+        // Bulk array operations.
+        In(Expr, Lhs) *
+            T(ArrayCopy, ArrayFill, ArrayCompare)[Lhs] << T(Args)[Args] >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            auto op = _(Lhs)->type();
+            return Seq
+              << (Lift << Body
+                       << (NodeDef::create(op) << (LocalId ^ id) << _(Args)))
+              << (LocalId ^ id);
+          },
+
         // Compact LocalId.
         T(Expr, Lhs) << (T(LocalId)[LocalId] * End) >>
           [](Match& _) { return _(LocalId); },

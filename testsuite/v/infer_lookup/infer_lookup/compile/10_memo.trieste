@@ -12,11 +12,11 @@ memo
         (labelid 5:start)
         (body
           (call
-            (localid 4:$974)
+            (localid 4:$912)
             (functionid 24:infer_lookup::main::0::0)
             (args)))
         (ret
-          (localid 4:$974)))))
+          (localid 4:$912)))))
   (func
     (functionid 24:infer_lookup::main::0::0)
     (params)
@@ -27,7 +27,7 @@ memo
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$107)
+            (localid 9:local$110)
             (i32)
             (int 1:1))
           (call
@@ -36,30 +36,30 @@ memo
             (args
               (arg
                 (argcopy)
-                (localid 9:local$107))))
+                (localid 9:local$110))))
           (copy
-            (localid 9:local$500)
+            (localid 9:local$504)
             (localid 1:w))
           (copy
             (localid 1:w)
             (localid 7:local$7))
           (lookup
-            (localid 9:local$108)
+            (localid 9:local$111)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 9:local$109)
-            (localid 9:local$108)
+            (localid 9:local$112)
+            (localid 9:local$111)
             (args
               (arg
                 (argcopy)
                 (localid 1:w))))
           (copy
-            (localid 9:local$869)
+            (localid 9:local$837)
             (localid 1:v))
           (copy
             (localid 1:v)
-            (localid 9:local$109))
+            (localid 9:local$112))
           (call
             (localid 7:local$8)
             (functionid 28:infer_lookup::identity::1::0)
@@ -133,18 +133,18 @@ memo
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$105)
+            (localid 9:local$108)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$106)
-            (localid 9:local$105)
+            (localid 9:local$109)
+            (localid 9:local$108)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 9:local$106)))))
+          (localid 9:local$109)))))
   (func
     (functionid 32:infer_lookup::wrapper::val::1::0)
     (params
@@ -165,10 +165,10 @@ memo
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$499)
+            (localid 9:local$503)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$499)))))
+          (localid 9:local$503)))))
   (func
     (functionid 37:infer_lookup::wrapper::val::1::ref::0)
     (params
@@ -183,13 +183,13 @@ memo
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$104)
+            (localid 9:local$107)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$104)))))
+          (localid 9:local$107)))))
   (primitive
     (ref
       (i32))

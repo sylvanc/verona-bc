@@ -719,6 +719,12 @@ namespace vbci
         return os << "RegisterExternalNotify";
       case Op::MemoLoad:
         return os << "MemoLoad";
+      case Op::ArrayCopy:
+        return os << "ArrayCopy";
+      case Op::ArrayFill:
+        return os << "ArrayFill";
+      case Op::ArrayCompare:
+        return os << "ArrayCompare";
       default:
         return os << "Unknown";
     }
@@ -1625,6 +1631,69 @@ namespace vbci
         process([](Register& dst, Constant<size_t> slot) INLINE {
           auto& val = Program::get().memo_slot(slot);
           dst = val.borrow();
+        });
+        break;
+      }
+
+      case Op::ArrayCopy:
+      {
+        process([](Register& dst, Thread& self, Frame& frame) INLINE {
+          auto& dst_arr_reg = frame.arg(0);
+          auto& dst_off_reg = frame.arg(1);
+          auto& src_arr_reg = frame.arg(2);
+          auto& src_off_reg = frame.arg(3);
+          auto& len_reg = frame.arg(4);
+
+          auto* dst_arr = dst_arr_reg->get_array();
+          auto* src_arr = src_arr_reg->get_array();
+          auto dst_off = dst_off_reg->get_size();
+          auto src_off = src_off_reg->get_size();
+          auto len = len_reg->get_size();
+
+          dst_arr->bulk_copy(dst_off, src_arr, src_off, len);
+          self.drop_args();
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::ArrayFill:
+      {
+        process([](Register& dst, Thread& self, Frame& frame) INLINE {
+          auto& dst_arr_reg = frame.arg(0);
+          auto& off_reg = frame.arg(1);
+          auto& len_reg = frame.arg(2);
+          auto& val_reg = frame.arg(3);
+
+          auto* dst_arr = dst_arr_reg->get_array();
+          auto off = off_reg->get_size();
+          auto len = len_reg->get_size();
+
+          dst_arr->bulk_fill(off, len, static_cast<const Value&>(val_reg.borrow()));
+          self.drop_args();
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::ArrayCompare:
+      {
+        process([](Register& dst, Thread& self, Frame& frame) INLINE {
+          auto& a_reg = frame.arg(0);
+          auto& a_off_reg = frame.arg(1);
+          auto& b_reg = frame.arg(2);
+          auto& b_off_reg = frame.arg(3);
+          auto& len_reg = frame.arg(4);
+
+          auto* a = a_reg->get_array();
+          auto* b = b_reg->get_array();
+          auto a_off = a_off_reg->get_size();
+          auto b_off = b_off_reg->get_size();
+          auto len = len_reg->get_size();
+
+          auto result = a->bulk_compare(a_off, b, b_off, len);
+          self.drop_args();
+          dst = ValueImmortal(Value(static_cast<int64_t>(result)));
         });
         break;
       }

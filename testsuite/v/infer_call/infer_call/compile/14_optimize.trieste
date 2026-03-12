@@ -24,7 +24,7 @@ optimize
             (localid 6:$opt_0)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 4:$966)
+            (localid 4:$904)
             (localid 6:$opt_2)
             (args
               (arg
@@ -34,7 +34,7 @@ optimize
                 (argcopy)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 4:$966)))))
+          (localid 4:$904)))))
   (func
     (functionid 22:infer_call::main::0::0)
     (params)
@@ -45,16 +45,16 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$103)
+            (localid 9:local$106)
             (i32)
             (int 1:1))
           (const
-            (localid 9:local$104)
+            (localid 9:local$107)
             (i32)
             (int 1:2))
           (lookup
             (localid 6:$opt_3)
-            (localid 9:local$103)
+            (localid 9:local$106)
             (methodid 7:+::2::0))
           (calldyn
             (localid 7:local$5)
@@ -62,10 +62,10 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$103))
+                (localid 9:local$106))
               (arg
                 (argcopy)
-                (localid 9:local$104)))))
+                (localid 9:local$107)))))
         (ret
           (localid 7:local$5)))))
   (primitive
@@ -90,11 +90,11 @@ optimize
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$102)
+            (localid 9:local$105)
             (localid 1:a)
             (localid 1:b)))
         (ret
-          (localid 9:local$102)))))
+          (localid 9:local$105)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -111,8 +111,8 @@ optimize
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$214)
+            (localid 9:local$215)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$214))))))
+          (localid 9:local$215))))))

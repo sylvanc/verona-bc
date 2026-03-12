@@ -1058,10 +1058,15 @@ namespace vbcc
               {
                 for (auto& child : *top)
                 {
-                  if (child == Primitive && (child / Type)->type() == t->type())
+                  if (child == Primitive)
                   {
-                    cls = child;
-                    break;
+                    auto prim_type = child / Type;
+                    auto target = t;
+                    if (prim_type->equals(target))
+                    {
+                      cls = child;
+                      break;
+                    }
                   }
                 }
               }
@@ -1592,6 +1597,16 @@ namespace vbcc
         {
           // These produce None.
           set_type(env, node / LocalId, None);
+        }
+        else if (node->type().in({ArrayCopy, ArrayFill}))
+        {
+          // Bulk array ops that return None.
+          set_type(env, node / LocalId, None);
+        }
+        else if (node == ArrayCompare)
+        {
+          // ArrayCompare produces I64.
+          set_type(env, node / LocalId, I64);
         }
         else if (node->type().in({MakeCallback}))
         {

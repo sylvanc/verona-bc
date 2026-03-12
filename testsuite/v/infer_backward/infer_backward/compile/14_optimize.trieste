@@ -27,14 +27,14 @@ optimize
             (localid 6:$opt_1)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 4:$974)
+            (localid 4:$912)
             (localid 6:$opt_4)
             (args
               (arg
                 (argcopy)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 4:$974)))))
+          (localid 4:$912)))))
   (func
     (functionid 26:infer_backward::main::0::0)
     (params)
@@ -45,7 +45,7 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$110)
+            (localid 9:local$113)
             (i32)
             (int 2:42))
           (new
@@ -54,7 +54,7 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$110))))
+                (localid 9:local$113))))
           (lookup
             (localid 6:$opt_5)
             (localid 7:local$8)
@@ -109,14 +109,14 @@ optimize
             (localid 1:w)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$109)
+            (localid 9:local$112)
             (localid 6:$opt_6)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$112)))))
   (class
     (classid 26:infer_backward::wrapper::0)
     (fields
@@ -149,10 +149,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$107)
+            (localid 9:local$110)
             (localid 6:$opt_7)))
         (ret
-          (localid 9:local$107)))))
+          (localid 9:local$110)))))
   (func
     (functionid 34:infer_backward::wrapper::val::1::0)
     (params
@@ -172,10 +172,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$500)
+            (localid 9:local$504)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$500)))))
+          (localid 9:local$504)))))
   (func
     (functionid 39:infer_backward::wrapper::val::1::ref::0)
     (params
@@ -190,13 +190,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$105)
+            (localid 9:local$108)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$105)))))
+          (localid 9:local$108)))))
   (primitive
     (ref
       (i32))

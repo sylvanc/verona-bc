@@ -12,11 +12,11 @@ optimize
         (labelid 5:start)
         (body
           (call
-            (localid 4:$992)
+            (localid 4:$930)
             (functionid 26:callback_basic::main::0::0)
             (args)))
         (ret
-          (localid 4:$992)))))
+          (localid 4:$930)))))
   (func
     (functionid 26:callback_basic::main::0::0)
     (params)
@@ -103,35 +103,35 @@ optimize
             (classid 20:_builtin::nomatch::0)
             (args))
           (const
-            (localid 9:local$118)
+            (localid 9:local$121)
             (u64)
             (int 2:42))
           (ne
-            (localid 9:local$515)
+            (localid 9:local$519)
             (localid 6:result)
-            (localid 9:local$118)))
+            (localid 9:local$121)))
         (cond
-          (localid 9:local$515)
-          (labelid 8:body$116)
-          (labelid 8:join$117)))
+          (localid 9:local$519)
+          (labelid 8:body$119)
+          (labelid 8:join$120)))
       (label
-        (labelid 8:body$116)
+        (labelid 8:body$119)
         (body
           (const
-            (localid 9:local$119)
+            (localid 9:local$122)
             (i32)
             (int 1:1))
           (add
-            (localid 9:local$517)
+            (localid 9:local$521)
             (localid 1:r)
-            (localid 9:local$119))
+            (localid 9:local$122))
           (copy
             (localid 1:r)
-            (localid 9:local$517)))
+            (localid 9:local$521)))
         (jump
-          (labelid 8:join$117)))
+          (labelid 8:join$120)))
       (label
-        (labelid 8:join$117)
+        (labelid 8:join$120)
         (body)
         (ret
           (localid 1:r)))))
@@ -171,13 +171,13 @@ optimize
             (localid 2:cb)
             (localid 7:local$9))
           (callbackptr
-            (localid 9:local$112)
+            (localid 9:local$115)
             (localid 2:cb))
           (copy
             (localid 6:fn_ptr)
-            (localid 9:local$112))
+            (localid 9:local$115))
           (const
-            (localid 9:local$113)
+            (localid 9:local$116)
             (u64)
             (int 2:32))
           (ffi
@@ -189,7 +189,7 @@ optimize
                 (localid 6:fn_ptr))
               (arg
                 (argcopy)
-                (localid 9:local$113))))
+                (localid 9:local$116))))
           (copy
             (localid 6:result)
             (localid 8:local$10))
@@ -197,7 +197,7 @@ optimize
             (localid 7:$opt_15)
             (localid 2:cb))
           (const
-            (localid 9:local$115)
+            (localid 9:local$118)
             (none)
             (none)))
         (ret
@@ -212,11 +212,11 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$76)
+            (localid 8:local$78)
             (classid 20:_builtin::nomatch::0)
             (args)))
         (ret
-          (localid 8:local$76)))))
+          (localid 8:local$78)))))
   (primitive
     (u64)
     (methods
@@ -242,11 +242,11 @@ optimize
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$437)
+            (localid 9:local$441)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$437)))))
+          (localid 9:local$441)))))
   (primitive
     (bool)
     (methods
@@ -272,11 +272,11 @@ optimize
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$157)
+            (localid 9:local$158)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$157)))))
+          (localid 9:local$158)))))
   (class
     (classid 20:_builtin::nomatch::0)
     (fields)
@@ -309,10 +309,10 @@ optimize
         (labelid 5:start)
         (body
           (makecallback
-            (localid 9:local$518)
+            (localid 9:local$522)
             (localid 8:callable)))
         (ret
-          (localid 9:local$518)))))
+          (localid 9:local$522)))))
   (func
     (functionid 27:_builtin::bool::apply::1::0)
     (params
@@ -366,11 +366,11 @@ optimize
             (u64)
             (int 2:10))
           (add
-            (localid 9:local$110)
+            (localid 9:local$113)
             (localid 1:x)
             (localid 7:local$7)))
         (ret
-          (localid 9:local$110)))))
+          (localid 9:local$113)))))
   (func
     (functionid 22:_builtin::u64::+::2::0)
     (params
@@ -387,11 +387,11 @@ optimize
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$426)
+            (localid 9:local$430)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$426)))))
+          (localid 9:local$430)))))
   (func
     (functionid 36:_builtin::ffi::callback::apply::1::0)
     (params
@@ -405,10 +405,10 @@ optimize
         (labelid 5:start)
         (body
           (callbackptr
-            (localid 9:local$519)
+            (localid 9:local$523)
             (localid 4:self)))
         (ret
-          (localid 9:local$519)))))
+          (localid 9:local$523)))))
   (func
     (functionid 35:_builtin::ffi::callback::free::1::0)
     (params
@@ -422,14 +422,14 @@ optimize
         (labelid 5:start)
         (body
           (freecallback
-            (localid 9:local$520)
+            (localid 9:local$524)
             (localid 4:self))
           (const
-            (localid 8:none$993)
+            (localid 8:none$931)
             (none)
             (none)))
         (ret
-          (localid 8:none$993)))))
+          (localid 8:none$931)))))
   (primitive
     (none)
     (methods))
@@ -449,11 +449,11 @@ optimize
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$240)
+            (localid 9:local$241)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$240)))))
+          (localid 9:local$241)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -470,11 +470,11 @@ optimize
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$229)
+            (localid 9:local$230)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$229)))))
+          (localid 9:local$230)))))
   (lib
     (string 0:)
     (symbols

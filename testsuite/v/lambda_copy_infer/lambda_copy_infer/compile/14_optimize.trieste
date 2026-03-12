@@ -38,14 +38,14 @@ optimize
             (localid 6:$opt_1)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 4:$980)
+            (localid 4:$918)
             (localid 6:$opt_4)
             (args
               (arg
                 (argcopy)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 4:$980)))))
+          (localid 4:$918)))))
   (func
     (functionid 29:lambda_copy_infer::main::0::0)
     (params)
@@ -56,7 +56,7 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$112)
+            (localid 9:local$115)
             (i32)
             (int 2:42))
           (new
@@ -76,20 +76,20 @@ optimize
                 (localid 6:$opt_9))
               (arg
                 (argcopy)
-                (localid 9:local$112))))
+                (localid 9:local$115))))
           (lookup
             (localid 7:$opt_13)
             (localid 8:local$11)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$114)
+            (localid 9:local$117)
             (localid 7:$opt_13)
             (args
               (arg
                 (argcopy)
                 (localid 8:local$11)))))
         (ret
-          (localid 9:local$114)))))
+          (localid 9:local$117)))))
   (primitive
     (i32)
     (methods))
@@ -110,14 +110,14 @@ optimize
             (classid 30:lambda_copy_infer::lambda$0::0)
             (args))
           (new
-            (localid 9:local$111)
+            (localid 9:local$114)
             (classid 29:lambda_copy_infer::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 9:local$111)))))
+          (localid 9:local$114)))))
   (class
     (classid 29:lambda_copy_infer::wrapper::0)
     (fields
@@ -217,10 +217,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$109)
+            (localid 9:local$112)
             (localid 7:$opt_16)))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$112)))))
   (func
     (functionid 37:lambda_copy_infer::wrapper::val::1::0)
     (params
@@ -240,10 +240,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$504)
+            (localid 9:local$508)
             (localid 7:local$6)))
         (ret
-          (localid 9:local$504)))))
+          (localid 9:local$508)))))
   (func
     (functionid 42:lambda_copy_infer::wrapper::val::1::ref::0)
     (params
@@ -258,13 +258,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$107)
+            (localid 9:local$110)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$107)))))
+          (localid 9:local$110)))))
   (primitive
     (ref
       (i32))

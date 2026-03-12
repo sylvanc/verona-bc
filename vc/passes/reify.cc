@@ -1058,6 +1058,16 @@ namespace vc
             reify_primitive(None);
             local_types[(n / LocalId)->location()] = clone(None);
           }
+          else if (n->in({ArrayCopy, ArrayFill}))
+          {
+            reify_primitive(None);
+            local_types[(n / LocalId)->location()] = clone(None);
+          }
+          else if (n == ArrayCompare)
+          {
+            reify_primitive(I64);
+            local_types[(n / LocalId)->location()] = clone(I64);
+          }
           else if (n->in({Copy, Move}))
           {
             // Propagate type from source to destination.

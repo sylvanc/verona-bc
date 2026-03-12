@@ -2652,6 +2652,16 @@ namespace vc
         auto dst = stmt / LocalId;
         env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
       }
+      else if (stmt->in({ArrayCopy, ArrayFill}))
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
+      }
+      else if (stmt == ArrayCompare)
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(I64));
+      }
       else if (stmt == Call)
       {
         infer_call(stmt, env, top, lookup_stmts);

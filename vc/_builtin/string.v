@@ -34,19 +34,7 @@ string
       return false
     }
 
-    var i = 0;
-
-    while i < self.size
-    {
-      if self.data()(i) != other.data()(i)
-      {
-        return false
-      }
-
-      i = i + 1
-    }
-
-    true
+    self.data.compare(0, other.data, 0, self.size) == i64 0
   }
 
   !=(self: string, other: string): bool
@@ -57,23 +45,15 @@ string
   <(self: string, other: string): bool
   {
     let len = self.size.min(other.size);
-    var i = 0;
+    let cmp = self.data.compare(0, other.data, 0, len);
 
-    while i < len
+    if cmp < i64 0
     {
-      let sc = self.data()(i);
-      let oc = other.data()(i);
-
-      if sc < oc
-      {
-        return true
-      }
-      else if oc < sc
-      {
-        return false
-      }
-
-      i = i + 1
+      return true
+    }
+    else if cmp > i64 0
+    {
+      return false
     }
 
     self.size < other.size
@@ -97,23 +77,8 @@ string
   +(self: string, other: string): string
   {
     let result = array[u8]::fill(self.size + other.size);
-    var i = 0;
-
-    while i < self.size
-    {
-      result(i) = self.data()(i);
-      i = i + 1
-    }
-
-    var j = 0;
-
-    while j < other.size
-    {
-      result(i) = other.data()(j);
-      i = i + 1;
-      j = j + 1
-    }
-
+    result.copy(0, self.data, 0, self.size);
+    result.copy(self.size, other.data, 0, other.size);
     string(result)
   }
 }
