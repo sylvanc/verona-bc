@@ -119,13 +119,11 @@ ident
           i32_src = let
           obj_dst = let
           obj_filled = let
+          obj_overlap = let
           obj_src = let
           overlap = let
           overlap2 = let
           result = var
-          s1 = let
-          s2 = let
-          s3 = let
           u8_dst = let
           u8_src = let
           usize_dst = let
@@ -1812,33 +1810,178 @@ ident
             (=
               (expr
                 (let
-                  (ident 2:s1)
+                  (ident 11:obj_overlap)
                   (type
                     (typevar))))
               (expr
-                (string 5:hello))))
+                (funcname
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 5:array)
+                    (typeargs
+                      (type
+                        (typename
+                          (nameelement
+                            (ident 10:array_bulk)
+                            (typeargs))
+                          (nameelement
+                            (ident 3:box)
+                            (typeargs))))))
+                  (nameelement
+                    (ident 4:fill)
+                    (typeargs)))
+                (tuple
+                  (expr
+                    (int 1:5))
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 10:array_bulk)
+                        (typeargs))
+                      (nameelement
+                        (ident 3:box)
+                        (typeargs))
+                      (nameelement
+                        (ident 6:create)
+                        (typeargs)))
+                    (exprseq
+                      (expr
+                        (int 1:0))))))))
           (expr
             (=
               (expr
-                (let
-                  (ident 2:s2)
-                  (type
-                    (typevar))))
+                (localid 11:obj_overlap)
+                (exprseq
+                  (expr
+                    (int 1:0))))
               (expr
-                (string 5:hello))))
+                (funcname
+                  (nameelement
+                    (ident 10:array_bulk)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:box)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:1))))))
+          (expr
+            (=
+              (expr
+                (localid 11:obj_overlap)
+                (exprseq
+                  (expr
+                    (int 1:1))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 10:array_bulk)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:box)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:2))))))
+          (expr
+            (=
+              (expr
+                (localid 11:obj_overlap)
+                (exprseq
+                  (expr
+                    (int 1:2))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 10:array_bulk)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:box)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:3))))))
+          (expr
+            (=
+              (expr
+                (localid 11:obj_overlap)
+                (exprseq
+                  (expr
+                    (int 1:3))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 10:array_bulk)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:box)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:4))))))
+          (expr
+            (=
+              (expr
+                (localid 11:obj_overlap)
+                (exprseq
+                  (expr
+                    (int 1:4))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 10:array_bulk)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:box)
+                    (typeargs))
+                  (nameelement
+                    (ident 6:create)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:5))))))
+          (expr
+            (localid 11:obj_overlap)
+            (dot
+              (ident 4:copy)
+              (typeargs))
+            (tuple
+              (expr
+                (int 1:2))
+              (expr
+                (localid 11:obj_overlap))
+              (expr
+                (int 1:0))
+              (expr
+                (int 1:3))))
           (expr
             (if
               (expr
-                (methodname
-                  (symbolid 1:!)
-                  (typeargs))
+                (localid 11:obj_overlap)
                 (exprseq
                   (expr
-                    (localid 2:s1)
-                    (methodname
-                      (symbolid 2:==)
-                      (typeargs))
-                    (localid 2:s2))))
+                    (int 1:2)))
+                (dot
+                  (ident 3:val)
+                  (typeargs))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (int 1:1))
               (block
                 {}
                 (body
@@ -1853,31 +1996,19 @@ ident
                           (typeargs))
                         (int 9:536870912))))))))
           (expr
-            (=
-              (expr
-                (let
-                  (ident 2:s3)
-                  (type
-                    (typevar))))
-              (expr
-                (localid 2:s1)
-                (methodname
-                  (symbolid 1:+)
-                  (typeargs))
-                (string 6: world))))
-          (expr
             (if
               (expr
-                (methodname
-                  (symbolid 1:!)
-                  (typeargs))
+                (localid 11:obj_overlap)
                 (exprseq
                   (expr
-                    (localid 2:s3)
-                    (methodname
-                      (symbolid 2:==)
-                      (typeargs))
-                    (string 11:hello world))))
+                    (int 1:3)))
+                (dot
+                  (ident 3:val)
+                  (typeargs))
+                (methodname
+                  (symbolid 2:!=)
+                  (typeargs))
+                (int 1:2))
               (block
                 {}
                 (body

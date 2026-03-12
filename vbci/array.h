@@ -124,10 +124,23 @@ namespace vbci
       // The main win is already captured by the primitive memmove path above.
       // For complex types, we still avoid Verona-level loop overhead
       // (bytecode dispatch, ArrayRef, Load/Store per iteration).
-      for (size_t i = 0; i < len; i++)
+      // Iterate backwards when copying forward within the same array
+      // to avoid overwriting source elements.
+      if (this == src && dst_off > src_off)
       {
-        auto in_val = src->load(src_off + i);
-        exchange<false>(dst_off + i, in_val);
+        for (size_t i = len; i > 0; i--)
+        {
+          auto in_val = src->load(src_off + i - 1);
+          exchange<false>(dst_off + i - 1, in_val);
+        }
+      }
+      else
+      {
+        for (size_t i = 0; i < len; i++)
+        {
+          auto in_val = src->load(src_off + i);
+          exchange<false>(dst_off + i, in_val);
+        }
       }
     }
 
@@ -178,7 +191,9 @@ namespace vbci
       assert(b_off + len <= other->size);
       assert(value_type == other->value_type);
       assert(stride == other->stride);
-      assert(is_primitive());
+
+      if (!is_primitive())
+        Value::error(Error::BadType);
 
       auto* a_data =
         reinterpret_cast<const uint8_t*>(this + 1) + (stride * a_off);

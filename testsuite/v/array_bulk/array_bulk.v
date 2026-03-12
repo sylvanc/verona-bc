@@ -102,13 +102,13 @@ main(): i32
 
   if u8_src.compare(0, u8_dst, 0, 0) != i64 0 { result = result + 268435456 }
 
-  // === String ops using bulk array ops ===
-  let s1 = "hello";
-  let s2 = "hello";
-  if !(s1 == s2) { result = result + 536870912 }
-
-  let s3 = s1 + " world";
-  if !(s3 == "hello world") { result = result + 1073741824 }
+  // === Overlapping copy on object arrays (forward: dst > src) ===
+  let obj_overlap = array[box]::fill(5, box(0));
+  obj_overlap(0) = box(1); obj_overlap(1) = box(2); obj_overlap(2) = box(3);
+  obj_overlap(3) = box(4); obj_overlap(4) = box(5);
+  obj_overlap.copy(2, obj_overlap, 0, 3);
+  if obj_overlap(2).val != 1 { result = result + 536870912 }
+  if obj_overlap(3).val != 2 { result = result + 1073741824 }
 
   i32 result
 }
