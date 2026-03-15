@@ -97,23 +97,37 @@ namespace vbci
       return true;
     }
 
+    struct RegionWork
+    {
+      Region* region;
+      Header* root;
+      RC stack_adjustment;
+      bool clear_parent;
+      bool clear_cown;
+    };
+
+    std::vector<Header*> worklist;
     std::vector<Header*> dfs;
     std::vector<Header*> pending;
     std::unordered_set<Header*> frozen_set;
-    RC arc_sum = 0;
+    std::vector<RegionWork> work;
 
-    // Freeze a single region's reachable subgraph and adjust its stack_rc.
-    // Sub-regions are processed recursively before the parent's stack_rc
-    // adjustment, ensuring the parent is alive when children clear ownership.
-    auto freeze_region = [&](auto& self, Header* root, bool is_sub) -> void {
-      auto region = root->region();
+    worklist.push_back(root);
 
-      // Reset per-region state.
-      arc_sum = 0;
+    // Phase 1: DFS each region, freeze objects, compute adjustments.
+    while (!worklist.empty())
+    {
+      root = worklist.back();
+      region = root->region();
+      worklist.pop_back();
+
+      // Regions discovered later are children. They appear later in `work`,
+      // so reverse iteration processes children before parents.
+      bool is_sub = !work.empty();
+
+      RC arc_sum = 0;
       frozen_set.clear();
-      std::vector<Header*> sub_region_roots;
 
-      // DFS from root.
       dfs.push_back(root);
 
       while (!dfs.empty())
@@ -169,20 +183,14 @@ namespace vbci
           }
           else if (!rep_loc.to_region()->is_frame_local())
           {
-            // Sub-region entry point. Collect for recursive processing.
-            sub_region_roots.push_back(h);
+            worklist.push_back(h);
           }
         }
       }
 
-      // Recursively freeze sub-regions BEFORE adjusting the parent's
-      // stack_rc. This clears sub-region ownership while the parent
-      // region is still alive.
-      for (auto sub_root : sub_region_roots)
-        self(self, sub_root, true);
-
-      // Count frozen-to-frozen field references.
+      // Count frozen-to-frozen and unfrozen-to-frozen field references.
       RC frozen_internal = 0;
+      RC unfrozen_to_frozen = 0;
       auto& program = Program::get();
 
       for (auto fh : frozen_set)
@@ -198,9 +206,6 @@ namespace vbci
           static_cast<Object*>(fh)->trace_fn(count_fn);
       }
 
-      // Count unfrozen-to-frozen field references.
-      RC unfrozen_to_frozen = 0;
-
       region->for_each_header([&](Header* h) {
         auto count_fn = [&](Header* target) {
           if (frozen_set.count(target))
@@ -213,29 +218,34 @@ namespace vbci
           static_cast<Object*>(h)->trace_fn(count_fn);
       });
 
-      // Adjust stack_rc. For sub-regions, subtract 1 from arc_sum to account
-      // for the frozen parent's field ref to the entry point (not a stack ref).
       RC parent_ref = is_sub ? 1 : 0;
       assert(arc_sum >= frozen_internal + unfrozen_to_frozen + parent_ref);
       RC stack_adjustment =
         arc_sum - frozen_internal - unfrozen_to_frozen - parent_ref;
 
-      // Determine ownership clearing before stack_dec.
       bool do_clear_parent = region->has_parent()
         && root == region->get_entry_point();
       bool do_clear_cown = !do_clear_parent && region->has_cown_owner()
         && root == region->get_entry_point();
 
-      for (RC i = 0; i < stack_adjustment; i++)
-        region->stack_dec();
+      work.push_back({region, root, stack_adjustment,
+        do_clear_parent, do_clear_cown});
+    }
 
-      if (do_clear_parent)
-        region->clear_parent();
-      else if (do_clear_cown)
-        region->clear_cown_owner();
-    };
+    // Phase 2: Apply adjustments in reverse (children before parents).
+    // This ensures child ownership is cleared while the parent is alive.
+    for (auto it = work.rbegin(); it != work.rend(); ++it)
+    {
+      auto& w = *it;
 
-    freeze_region(freeze_region, root, false);
+      if (w.clear_parent)
+        w.region->clear_parent();
+      else if (w.clear_cown)
+        w.region->clear_cown_owner();
+
+      for (RC i = 0; i < w.stack_adjustment; i++)
+        w.region->stack_dec();
+    }
 
     return true;
   }
