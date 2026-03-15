@@ -85,11 +85,6 @@ namespace vbci
       return value >= other.value;
     }
 
-    bool no_rc() const
-    {
-      return is_stack() || (value == Immortal);
-    }
-
     bool is_region() const
     {
       return (value & Mask) == 0;
@@ -107,7 +102,8 @@ namespace vbci
 
     bool is_immutable() const
     {
-      return (value & Mask) == Immutable;
+      auto tag = value & Mask;
+      return tag == Immutable || tag == SccPtr;
     }
 
     bool is_scc_ptr() const

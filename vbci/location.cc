@@ -22,7 +22,7 @@ namespace vbci
 
     std::vector<Header*> wl;
     std::unordered_map<Header*, RC> rc_map;
-    std::unordered_set<Region*> regions;
+    std::unordered_map<Region*, Header*> regions;
     wl.push_back(h);
 
     auto fn = [&](Header* h) {
@@ -68,71 +68,51 @@ namespace vbci
         r->get_frame_depth() >= hr->get_frame_depth())
         continue;
 
-      if (hr->is_frame_local())
+      if (!hr->is_frame_local())
       {
-        // Object is in a frame-local region — drag it to the destination.
-        rc_map[next_h] = 1;
+        // Object is in a heap region — already parented within its own
+        // region tree. Sub-regions of hr are parented to hr, not to us.
+        // No dragging, no sub-region tracking needed.
 
-        if (program.is_array(next_h->get_type_id()))
-          static_cast<Array*>(next_h)->trace_fn(fn);
-        else
-          static_cast<Object*>(next_h)->trace_fn(fn);
+        // If this is the destination for a write-barrier exchange, clear
+        // the exchange pointer so apply_out doesn't unparent it.
+        if (pr && (*pr == hr))
+        {
+          *pr = nullptr;
+          hr->stack_dec();
+        }
+        else if (!frame_local)
+        {
+          // Heap-to-heap drag: parent this region to the destination.
+          if (hr->has_parent() && (hr->get_parent() == r))
+            continue;
 
-        // Frame-local dest: no sub-region tracking needed.
-        if (frame_local)
-          continue;
+          if (hr->has_owner())
+            return false;
+
+          if (hr->is_ancestor_of(r))
+            return false;
+
+          if (!regions.emplace(hr, next_h).second)
+            return false;
+        }
+
+        continue;
       }
+
+      // Object is in a frame-local region — drag it to the destination.
+      rc_map[next_h] = 1;
+
+      if (program.is_array(next_h->get_type_id()))
+        static_cast<Array*>(next_h)->trace_fn(fn);
       else
-      {
-        // Object is in a different heap region — don't drag it, but
-        // trace its fields to discover sub-sub-regions.
-        if (program.is_array(next_h->get_type_id()))
-          static_cast<Array*>(next_h)->trace_fn(fn);
-        else
-          static_cast<Object*>(next_h)->trace_fn(fn);
-      }
-
-      // Sub-region tracking for heap regions.
-      if (frame_local)
-        continue;
-
-      // Frame-local source objects are dragged, not sub-region tracked.
-      if (hr->is_frame_local())
-        continue;
-
-      // If the sub-region is the previous region in a write-barrier exchange,
-      // don't clear the region parent.
-      if (pr && (*pr == hr))
-      {
-        *pr = nullptr;
-
-        // The reference to this sub-region was stack-like (from frame-local).
-        // After drag, it becomes hierarchy-internal: decrement stack_rc.
-        hr->stack_dec();
-        continue;
-      }
-
-      // Sub-region already parented to the destination — no new entry.
-      if (hr->has_parent() && (hr->get_parent() == r))
-        continue;
-
-      // Sub-region has an owner we can't clear — single entry violated.
-      if (hr->has_owner())
-        return false;
-
-      // Would create a cycle.
-      if (hr->is_ancestor_of(r))
-        return false;
-
-      // Can't have multiple entry points to the same sub-region.
-      if (!regions.insert(hr).second)
-        return false;
+        static_cast<Object*>(next_h)->trace_fn(fn);
     }
 
     // Parent tracked sub-regions to the destination.
-    for (auto& hr : regions)
+    for (auto& [hr, entry] : regions)
     {
-      hr->set_parent(r);
+      hr->set_parent(r, entry);
       hr->stack_dec();
     }
 

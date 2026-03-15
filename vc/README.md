@@ -2,13 +2,15 @@
 
 ## To Do
 
+Freezing.
+- Need freeze syntax and a freeze `vbci` operation.
+- Can we optimize it?
+- Frame-local freeze.
+  - Can we just call this from `freeze()` if the region is frame-local, and do the right thing?
+
 Review `iowise`.
 - Buffer final can't call flush, that relies on mutation.
 - Dispose pattern?
-
-Freezing.
-- Need freeze syntax and a freeze `vbci` operation.
-- Can we freeze an object instead of a region, extracting from the region as we go?
 
 Semantics.
 - Region creation.

@@ -178,6 +178,11 @@ namespace vbci::writebarrier
     {
       assert(ok);
 
+      // Save the header for potential reparenting (before the register is
+      // cleared during a move).
+      Header* in_header =
+        (need_in_parent && in->is_header()) ? in->get_header() : nullptr;
+
       // Drag the incoming value.
       if (need_in_drag)
       {
@@ -233,7 +238,8 @@ namespace vbci::writebarrier
       if (need_in_parent)
       {
         assert(!need_in_drag);
-        in_loc.to_region()->set_parent(in_parent_value);
+        assert(in_header);
+        in_loc.to_region()->set_parent(in_parent_value, in_header);
       }
 
       return true;

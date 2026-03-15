@@ -62,16 +62,6 @@ namespace vbci
       arc++;
     }
 
-    ARC get_arc() const
-    {
-      return arc.load();
-    }
-
-    void dec_arc()
-    {
-      arc--;
-    }
-
     Location location() const
     {
       return loc;
@@ -184,7 +174,7 @@ namespace vbci
         return;
       }
 
-      if (loc.no_rc())
+      if (loc.is_stack() || loc.is_immortal())
         return;
 
       if (loc.is_immutable())
@@ -209,7 +199,7 @@ namespace vbci
         return;
       }
 
-      if (loc.no_rc())
+      if (loc.is_stack() || loc.is_immortal())
         return;
 
       if (loc.is_immutable())

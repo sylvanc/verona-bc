@@ -6,6 +6,7 @@
 #include "program.h"
 #include "region_ext.h"
 
+#include <unordered_set>
 #include <vector>
 
 namespace vbci
@@ -27,48 +28,30 @@ namespace vbci
     return (reinterpret_cast<uintptr_t>(h) & 1) != 0;
   }
 
-  // Get rank from a PENDING header (stored in rc field).
-  static RC get_rank(Header* h)
+  // Union-by-address with rc transfer. Transfers child's external ref count
+  // to the new representative, minus 1 for the tree edge (parent→child).
+  // Address as rank + path compression gives O(α(n)) amortized.
+  static void scc_union(Header* child, Header* rep)
   {
-    assert(h->location().is_pending());
-    return h->get_rc();
+    auto r = Header::find(child);
+    auto rep_r = Header::find(rep);
+    assert(r != rep_r);
+
+    // Lower address points to higher address (address serves as rank).
+    if (reinterpret_cast<uintptr_t>(r) > reinterpret_cast<uintptr_t>(rep_r))
+      std::swap(r, rep_r);
+
+    // Transfer external refs: child.rc includes the tree edge, subtract it.
+    rep_r->set_rc(rep_r->get_rc() + r->get_rc() - 1);
+    r->set_location(Location::scc_ptr(rep_r));
   }
 
-  // Union two SCC representatives. Returns false if already same SCC.
-  // Uses rank-balanced union.
-  static bool scc_union(Header* h1, Header* h2)
-  {
-    auto r1 = Header::find(h1);
-    auto r2 = Header::find(h2);
-
-    if (r1 == r2)
-      return false;
-
-    auto rank1 = get_rank(r1);
-    auto rank2 = get_rank(r2);
-
-    if (rank1 > rank2)
-      std::swap(r1, r2);
-    else if (rank1 == rank2)
-      r2->set_rc(rank2 + 1);
-
-    // r1 (smaller rank) points to r2 (larger rank).
-    r1->set_location(Location::scc_ptr(r2));
-    return true;
-  }
-
-  // Trace a header's fields, pushing region-object children onto the DFS stack.
-  // Returns external references (cowns, immutables) that need incref.
-  static void
-  trace_fields(Header* h, std::vector<Header*>& dfs, Region* source_region)
+  // Trace a header's fields, pushing children onto the DFS stack.
+  static void trace_fields(Header* h, std::vector<Header*>& dfs)
   {
     auto& program = Program::get();
     auto fn = [&](Header* h) {
       auto loc = h->location();
-
-      // Already immutable or immortal — skip.
-      if (loc.is_immutable() || loc.is_immortal())
-        return;
 
       // SCC_PTR — already part of a (potentially incomplete) SCC.
       // Treat as same-region: push to DFS.
@@ -78,15 +61,15 @@ namespace vbci
         return;
       }
 
-      // In the source region — process via DFS.
-      if (loc.is_region() && loc.to_region() == source_region)
+      // Already immutable or immortal — skip.
+      if (loc.is_immutable() || loc.is_immortal())
+        return;
+
+      if (loc.is_region())
       {
         dfs.push_back(h);
         return;
       }
-
-      // External region object — this shouldn't happen for isolated regions.
-      // For now, skip (the freeze caller must ensure isolation).
     };
 
     if (program.is_array(h->get_type_id()))
@@ -95,13 +78,162 @@ namespace vbci
       static_cast<Object*>(h)->trace_fn(fn);
   }
 
-  void freeze(Region* region, Header* root)
+  bool freeze(Header* root)
   {
     assert(root);
+    auto loc = root->location();
+
+    if (loc.is_immutable() || loc.is_immortal())
+      return true;
+
+    if (loc.is_stack())
+      return false;
+
+    auto region = loc.to_region();
+
+    // TODO: drag into a fresh region, then freeze.
+    if (region->is_frame_local())
+      return false;
+
+    std::vector<Header*> sub_regions;
+    std::vector<Header*> dfs;
+    std::vector<Header*> pending;
+    std::unordered_set<Header*> frozen_set;
+    RC arc_sum = 0;
+    RC frozen_cross = 0;
+
+    sub_regions.push_back(root);
+
+    while (!sub_regions.empty())
+    {
+      // Iterate over reachable regions.
+      root = sub_regions.back();
+      region = root->region();
+      sub_regions.pop_back();
+
+      // Reset per-region counters.
+      arc_sum = 0;
+      frozen_cross = 0;
+      frozen_set.clear();
+
+      // Start DFS from the root.
+      dfs.push_back(root);
+
+      while (!dfs.empty())
+      {
+        Header* h_mark = dfs.back();
+        dfs.pop_back();
+
+        if (is_post_order(h_mark))
+        {
+          // Post-order visit: check if this completes an SCC.
+          Header* h = remove_post_order_mark(h_mark);
+
+          if (!pending.empty() && (pending.back() == h))
+          {
+            // This is the SCC root. Set arc from accumulated rc.
+            pending.pop_back();
+            auto rep = Header::find(h);
+            arc_sum += rep->get_rc();
+            rep->set_location(Location::immutable());
+            rep->set_arc(rep->get_rc());
+          }
+
+          continue;
+        }
+
+        Header* h = h_mark;
+        auto rep = Header::find(h);
+        auto rep_loc = rep->location();
+
+        if (rep_loc.is_pending())
+        {
+          // Back edge: subtract this intra-SCC edge from rep's rc.
+          rep->set_rc(rep->get_rc() - 1);
+
+          // Collapse everything on the pending stack into this SCC.
+          while (!pending.empty() && pending.back() != rep)
+          {
+            scc_union(pending.back(), rep);
+            pending.pop_back();
+          }
+        }
+        else if (rep_loc.is_immutable())
+        {
+          // Cross edge to an immutable object. Only count as frozen_cross
+          // if the target was frozen by THIS freeze call.
+          if (frozen_set.count(h))
+            frozen_cross++;
+        }
+        else if (rep_loc.is_region())
+        {
+          if (rep_loc.to_region() == region)
+          {
+            // UNMARKED: first visit.
+            region->remove(h);
+            h->set_location(Location::from_raw(Location::Pending));
+            frozen_set.insert(h);
+
+            pending.push_back(h);
+            dfs.push_back(post_order_mark(h));
+
+            // Trace fields and push children.
+            trace_fields(h, dfs);
+          }
+          else
+          {
+            // Entry point to another region.
+            assert(rep_loc.to_region()->get_entry_point() == h);
+            sub_regions.push_back(h);
+          }
+        }
+
+        // SCC_PTR with non-pending target — already processed, skip.
+      }
+
+      // Scan unfrozen region objects to count refs to newly-frozen objects.
+      RC unfrozen_to_frozen = 0;
+      auto& program = Program::get();
+
+      region->for_each_header([&](Header* h) {
+        auto count_fn = [&](Header* target) {
+          if (frozen_set.count(target))
+            unfrozen_to_frozen++;
+        };
+
+        if (program.is_array(h->get_type_id()))
+          static_cast<Array*>(h)->trace_fn(count_fn);
+        else
+          static_cast<Object*>(h)->trace_fn(count_fn);
+      });
+
+      // stack_rc adjustment = refs that were stack→region but now point to
+      // immutable objects directly.
+      RC stack_adjustment = arc_sum - frozen_cross - unfrozen_to_frozen;
+      assert(stack_adjustment >= 0);
+
+      for (RC i = 0; i < stack_adjustment; i++)
+        region->stack_dec();
+
+      // Clear ownership only if we froze the entry point.
+      if (region->has_parent() && root == region->get_entry_point())
+        region->clear_parent();
+      else if (region->has_cown_owner() && root == region->get_entry_point())
+        region->clear_cown_owner();
+    }
+
+    return true;
+  }
+
+  void freeze_local(Header* root)
+  {
+    assert(root);
+    assert(root->location().is_region());
+    assert(root->location().to_region()->is_frame_local());
+
     std::vector<Header*> dfs;
     std::vector<Header*> pending;
 
-    // Start DFS from the root.
     dfs.push_back(root);
 
     while (!dfs.empty())
@@ -111,16 +243,14 @@ namespace vbci
 
       if (is_post_order(h_mark))
       {
-        // Post-order visit: check if this completes an SCC.
         Header* h = remove_post_order_mark(h_mark);
 
-        if (!pending.empty() && pending.back() == h)
+        if (!pending.empty() && (pending.back() == h))
         {
           pending.pop_back();
-          // This is the SCC root. Mark as frozen with RC=1.
           auto rep = Header::find(h);
           rep->set_location(Location::immutable());
-          rep->set_arc(1);
+          rep->set_arc(rep->get_rc());
         }
         continue;
       }
@@ -131,8 +261,11 @@ namespace vbci
 
       if (rep_loc.is_pending())
       {
-        // Back edge: collapse everything on the path to this SCC.
-        while (!pending.empty() && Header::find(pending.back()) != rep)
+        // Back edge: subtract this intra-SCC edge from rep's rc.
+        rep->set_rc(rep->get_rc() - 1);
+
+        // Collapse everything on the pending stack into this SCC.
+        while (!pending.empty() && pending.back() != rep)
         {
           scc_union(pending.back(), rep);
           pending.pop_back();
@@ -140,43 +273,30 @@ namespace vbci
       }
       else if (rep_loc.is_immutable())
       {
-        // Cross edge to a completed SCC. Increment its ARC.
-        rep->inc_arc();
+        // Cross edge to a completed SCC. Already counted in target's rc.
       }
       else if (rep_loc.is_region())
       {
-        // UNMARKED: first visit.
+        auto obj_region = rep_loc.to_region();
+
+        if (!obj_region->is_frame_local())
+        {
+          // Heap-region object — not eligible for in-place freeze.
+          LOG(Trace) << "freeze_local: skipping heap object @" << h;
+          continue;
+        }
+
+        // Remove from the frame-local region before marking pending.
+        obj_region->remove(h);
+
         h->set_location(Location::from_raw(Location::Pending));
-        h->set_rc(0); // rank = 0
 
         pending.push_back(h);
         dfs.push_back(post_order_mark(h));
 
-        // Trace fields and push children.
-        trace_fields(h, dfs, region);
+        // Push all region-located children (filtering happens in this loop).
+        trace_fields(h, dfs);
       }
-      // SCC_PTR with non-pending target — already processed, skip.
     }
-
-    // Sweep: finalize and free unreachable objects.
-    auto& program = Program::get();
-
-    region->for_each_header([&](Header* h) {
-      auto loc = h->location();
-
-      if (loc.is_region() && loc.to_region() == region)
-      {
-        // Still UNMARKED = unreachable from root. Finalize and free.
-        if (program.is_array(h->get_type_id()))
-          static_cast<Array*>(h)->finalize();
-        else
-          static_cast<Object*>(h)->finalize();
-
-        delete[] reinterpret_cast<uint8_t*>(h);
-      }
-    });
-
-    // Delete the region (all surviving objects are now frozen).
-    delete region;
   }
 }

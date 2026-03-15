@@ -13,10 +13,13 @@
 
 namespace vbci
 {
+  struct Header;
+
   struct Region
   {
   private:
     Region* parent;
+    Header* entry_point;
     RC stack_rc;
     RegionType type;
     bool cown_owned;
@@ -29,7 +32,7 @@ namespace vbci
 
   protected:
     Region(RegionType type, size_t frame_depth = 0)
-    : parent(nullptr), stack_rc(0), type(type), cown_owned(false), frame_depth(frame_depth)
+    : parent(nullptr), entry_point(nullptr), stack_rc(0), type(type), cown_owned(false), frame_depth(frame_depth)
     {}
 
   public:
@@ -147,11 +150,13 @@ namespace vbci
       return parent;
     }
 
-    void set_parent(Region* r)
+    void set_parent(Region* r, Header* entry)
     {
       LOG(Trace) << "Region @" << this << " setting parent region to @" << r;
       assert(!has_owner());
+      assert(entry);
       parent = r;
+      entry_point = entry;
 
       if (stack_rc > 0)
       {
@@ -167,6 +172,7 @@ namespace vbci
       auto p = parent;
       assert(p != nullptr);
       parent = nullptr;
+      entry_point = nullptr;
 
       if (stack_rc > 0)
         p->stack_dec();
@@ -179,17 +185,27 @@ namespace vbci
       return cown_owned;
     }
 
-    void set_cown_owner()
+    void set_cown_owner(Header* entry)
     {
       assert(!has_owner());
+      assert(entry);
       cown_owned = true;
+      entry_point = entry;
     }
 
-    bool clear_cown_owner()
+    void clear_cown_owner()
     {
       assert(cown_owned);
       cown_owned = false;
-      return stack_rc == 0;
+      entry_point = nullptr;
+
+      if (stack_rc == 0)
+        free_region();
+    }
+
+    Header* get_entry_point() const
+    {
+      return entry_point;
     }
 
     void free_region()

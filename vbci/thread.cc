@@ -298,9 +298,14 @@ namespace vbci
       {
         auto r = closure.get_header()->region();
 
-        // Clear the parent region, as it's no longer acquired by the behaviour.
-        if (r)
+        // Clear the cown ownership, as it's no longer acquired by the
+        // behaviour. Bump stack_rc to prevent premature free.
+        // The closure value will maintain the stack reference.
+        if (r && r->has_cown_owner())
+        {
+          r->stack_inc();
           r->clear_cown_owner();
+        }
       }
 
       locals.at(args++) = ValueTransfer(closure);
@@ -2167,7 +2172,7 @@ namespace vbci
           {
             LOG(Trace) << "Setting closure (" << closure.borrow()
                        << ") region owner: " << r << " to cown owner.";
-            r->set_cown_owner();
+            r->set_cown_owner(closure->get_header());
           }
           else
           {
