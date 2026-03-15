@@ -2,15 +2,17 @@
 
 ## To Do
 
+Freezing.
+- Need freeze syntax and a freeze `vbci` operation.
+- Can we optimize it?
+
 Review `iowise`.
 - Buffer final can't call flush, that relies on mutation.
 - Dispose pattern?
 
-Freezing.
-- Need freeze syntax and a freeze `vbci` operation.
-- Can we freeze an object instead of a region, extracting from the region as we go?
-
 Semantics.
+- How does `:::arraycmp` work with non-primitives?
+- Remove `arrayiter`?
 - Region creation.
 
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.

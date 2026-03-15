@@ -175,12 +175,7 @@ namespace vbci
       // converts all reachable objects to immutable with union-find RC.
       auto& slot = memo_slots[i];
       if (slot->is_header())
-      {
-        auto h = slot->get_header();
-        auto r = h->region();
-        if (r)
-          freeze(r, h);
-      }
+        freeze(slot->get_header());
     }
 
     ValueTransfer ret =

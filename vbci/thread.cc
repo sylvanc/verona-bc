@@ -298,8 +298,10 @@ namespace vbci
       {
         auto r = closure.get_header()->region();
 
-        // Clear the parent region, as it's no longer acquired by the behaviour.
-        if (r)
+        // Clear the cown ownership, as it's no longer acquired by the
+        // behaviour. The region's stack_rc is > 0 (from the When op's
+        // register), so clear_cown_owner won't auto-free.
+        if (r && r->has_cown_owner())
           r->clear_cown_owner();
       }
 
@@ -2167,7 +2169,7 @@ namespace vbci
           {
             LOG(Trace) << "Setting closure (" << closure.borrow()
                        << ") region owner: " << r << " to cown owner.";
-            r->set_cown_owner();
+            r->set_cown_owner(closure->get_header());
           }
           else
           {
