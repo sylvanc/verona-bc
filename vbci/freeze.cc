@@ -29,7 +29,7 @@ namespace vbci
   }
 
   // Union-by-address with rc transfer. Transfers child's external ref count
-  // to the new representative, minus 1 for the tree edge (parent→child).
+  // to the new representative, minus 1 for the intra-SCC tree edge.
   // Address as rank + path compression gives O(α(n)) amortized.
   static void scc_union(Header* child, Header* rep)
   {
@@ -41,7 +41,7 @@ namespace vbci
     if (reinterpret_cast<uintptr_t>(r) > reinterpret_cast<uintptr_t>(rep_r))
       std::swap(r, rep_r);
 
-    // Transfer external refs: child.rc includes the tree edge, subtract it.
+    // Transfer external refs, minus 1 for the intra-SCC tree edge.
     rep_r->set_rc(rep_r->get_rc() + r->get_rc() - 1);
     r->set_location(Location::scc_ptr(rep_r));
   }
@@ -102,7 +102,6 @@ namespace vbci
     std::vector<Header*> pending;
     std::unordered_set<Header*> frozen_set;
     RC arc_sum = 0;
-    RC frozen_cross = 0;
 
     sub_regions.push_back(root);
 
@@ -115,10 +114,9 @@ namespace vbci
 
       // Reset per-region counters.
       arc_sum = 0;
-      frozen_cross = 0;
       frozen_set.clear();
 
-      // Start DFS from the root.
+      // Start DFS from the root (no tree edge to subtract).
       dfs.push_back(root);
 
       while (!dfs.empty())
@@ -162,10 +160,8 @@ namespace vbci
         }
         else if (rep_loc.is_immutable())
         {
-          // Cross edge to an immutable object. Only count as frozen_cross
-          // if the target was frozen by THIS freeze call.
-          if (frozen_set.count(h))
-            frozen_cross++;
+          // Cross edge to a previously-frozen immutable. Already in the
+          // target's arc. No action needed during DFS.
         }
         else if (rep_loc.is_region())
         {
@@ -185,7 +181,6 @@ namespace vbci
           else
           {
             // Entry point to another region.
-            assert(rep_loc.to_region()->get_entry_point() == h);
             sub_regions.push_back(h);
           }
         }
@@ -193,9 +188,26 @@ namespace vbci
         // SCC_PTR with non-pending target — already processed, skip.
       }
 
+      // Count all frozen-to-frozen field references (inter-SCC cross edges
+      // and intra-SCC edges that weren't subtracted by scc_union).
+      RC frozen_internal = 0;
+      auto& program = Program::get();
+
+      for (auto fh : frozen_set)
+      {
+        auto count_fn = [&](Header* target) {
+          if (frozen_set.count(target))
+            frozen_internal++;
+        };
+
+        if (program.is_array(fh->get_type_id()))
+          static_cast<Array*>(fh)->trace_fn(count_fn);
+        else
+          static_cast<Object*>(fh)->trace_fn(count_fn);
+      }
+
       // Scan unfrozen region objects to count refs to newly-frozen objects.
       RC unfrozen_to_frozen = 0;
-      auto& program = Program::get();
 
       region->for_each_header([&](Header* h) {
         auto count_fn = [&](Header* target) {
@@ -211,8 +223,8 @@ namespace vbci
 
       // stack_rc adjustment = refs that were stack→region but now point to
       // immutable objects directly.
-      assert(arc_sum >= frozen_cross + unfrozen_to_frozen);
-      RC stack_adjustment = arc_sum - frozen_cross - unfrozen_to_frozen;
+      assert(arc_sum >= frozen_internal + unfrozen_to_frozen);
+      RC stack_adjustment = arc_sum - frozen_internal - unfrozen_to_frozen;
 
       // Determine ownership clearing before stack_dec, which may free
       // the region if stack_rc reaches 0 with no owner.

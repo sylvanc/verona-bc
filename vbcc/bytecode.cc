@@ -963,7 +963,7 @@ namespace vbcc
           }
           else if (stmt == Freeze)
           {
-            code << uleb(+Op::Freeze) << src(stmt);
+            code << uleb(+Op::Freeze) << dst(stmt);
           }
           else if (stmt == RegisterRef)
           {
