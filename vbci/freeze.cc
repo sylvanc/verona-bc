@@ -233,6 +233,7 @@ namespace vbci
 
     std::vector<Header*> dfs;
     std::vector<Header*> pending;
+    std::vector<Header*> heap_roots;
 
     dfs.push_back(root);
 
@@ -281,8 +282,8 @@ namespace vbci
 
         if (!obj_region->is_frame_local())
         {
-          // Heap-region object — not eligible for in-place freeze.
-          LOG(Trace) << "freeze_local: skipping heap object @" << h;
+          // Heap-region object — collect for phase 2 freeze.
+          heap_roots.push_back(h);
           continue;
         }
 
@@ -298,5 +299,11 @@ namespace vbci
         trace_fields(h, dfs);
       }
     }
+
+    // Phase 2: freeze any heap-region objects discovered during the
+    // frame-local DFS. Duplicates and already-frozen objects are handled
+    // by freeze() (immutable check returns true early).
+    for (auto h : heap_roots)
+      freeze(h);
   }
 }

@@ -5,8 +5,6 @@
 Freezing.
 - Need freeze syntax and a freeze `vbci` operation.
 - Can we optimize it?
-- Frame-local freeze.
-  - Can we just call this from `freeze()` if the region is frame-local, and do the right thing?
 
 Review `iowise`.
 - Buffer final can't call flush, that relies on mutation.
