@@ -53,8 +53,7 @@ namespace vbci
     auto fn = [&](Header* h) {
       auto loc = h->location();
 
-      // SCC_PTR — already part of a (potentially incomplete) SCC.
-      // Treat as same-region: push to DFS.
+      // SCC_PTR or PENDING — part of an in-progress SCC.
       if (loc.is_scc_ptr() || loc.is_pending())
       {
         dfs.push_back(h);
