@@ -3,7 +3,8 @@
 ## To Do
 
 Freezing.
-- Need freeze syntax and a freeze `vbci` operation.
+- Return freeze to be iterative, not recursive.
+- Need Verona freeze syntax.
 - Can we optimize it?
 
 Review `iowise`.

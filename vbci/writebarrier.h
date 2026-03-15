@@ -225,6 +225,16 @@ namespace vbci::writebarrier
           in->field_inc();
       }
 
+      // Reparent the region before stack_dec. If both are needed, parenting
+      // must happen first — stack_dec to 0 with no owner would free the
+      // region prematurely.
+      if (need_in_parent)
+      {
+        assert(!need_in_drag);
+        assert(in_header);
+        in_loc.to_region()->set_parent(in_parent_value, in_header);
+      }
+
       // Change the region stack RC.
       assert(need_in_stack_inc >= -1);
       assert(need_in_stack_inc <= 1);
@@ -233,14 +243,6 @@ namespace vbci::writebarrier
         in_loc.to_region()->stack_inc();
       else if (need_in_stack_inc == -1)
         in_loc.to_region()->stack_dec();
-
-      // Reparent the region.
-      if (need_in_parent)
-      {
-        assert(!need_in_drag);
-        assert(in_header);
-        in_loc.to_region()->set_parent(in_parent_value, in_header);
-      }
 
       return true;
     }

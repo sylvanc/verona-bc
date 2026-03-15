@@ -338,11 +338,45 @@ typecheck
         (labelid 15:^test_subregion)
         (body
           (const
-            (localid 2:$v)
+            (localid 3:$v1)
             (i32)
-            (int 2:22)))
+            (int 2:11))
+          (region
+            (localid 6:$inner)
+            (rc)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$v1))))
+          (const
+            (localid 3:$v2)
+            (i32)
+            (int 2:22))
+          (region
+            (localid 6:$outer)
+            (rc)
+            (classid 4:@Box)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$inner))
+              (arg
+                (argcopy)
+                (localid 3:$v2))))
+          (freeze
+            (localid 6:$outer))
+          (fieldref
+            (localid 8:$ref_val)
+            (arg
+              (argcopy)
+              (localid 6:$outer))
+            (fieldid 4:@val))
+          (load
+            (localid 2:$r)
+            (localid 8:$ref_val)))
         (ret
-          (localid 2:$v)))))
+          (localid 2:$r)))))
   (func
     (functionid 19:@test_double_freeze)
     (params)

@@ -97,26 +97,23 @@ namespace vbci
       return true;
     }
 
-    std::vector<Header*> sub_regions;
     std::vector<Header*> dfs;
     std::vector<Header*> pending;
     std::unordered_set<Header*> frozen_set;
     RC arc_sum = 0;
 
-    sub_regions.push_back(root);
+    // Freeze a single region's reachable subgraph and adjust its stack_rc.
+    // Sub-regions are processed recursively before the parent's stack_rc
+    // adjustment, ensuring the parent is alive when children clear ownership.
+    auto freeze_region = [&](auto& self, Header* root, bool is_sub) -> void {
+      auto region = root->region();
 
-    while (!sub_regions.empty())
-    {
-      // Iterate over reachable regions.
-      root = sub_regions.back();
-      region = root->region();
-      sub_regions.pop_back();
-
-      // Reset per-region counters.
+      // Reset per-region state.
       arc_sum = 0;
       frozen_set.clear();
+      std::vector<Header*> sub_region_roots;
 
-      // Start DFS from the root (no tree edge to subtract).
+      // DFS from root.
       dfs.push_back(root);
 
       while (!dfs.empty())
@@ -126,12 +123,10 @@ namespace vbci
 
         if (is_post_order(h_mark))
         {
-          // Post-order visit: check if this completes an SCC.
           Header* h = remove_post_order_mark(h_mark);
 
           if (!pending.empty() && (pending.back() == h))
           {
-            // This is the SCC root. Set arc from accumulated rc.
             pending.pop_back();
             auto rep = Header::find(h);
             arc_sum += rep->get_rc();
@@ -148,10 +143,8 @@ namespace vbci
 
         if (rep_loc.is_pending())
         {
-          // Back edge: subtract this intra-SCC edge from rep's rc.
           rep->set_rc(rep->get_rc() - 1);
 
-          // Collapse everything on the pending stack into this SCC.
           while (!pending.empty() && pending.back() != rep)
           {
             scc_union(pending.back(), rep);
@@ -160,40 +153,35 @@ namespace vbci
         }
         else if (rep_loc.is_immutable())
         {
-          // Cross edge to a previously-frozen immutable. Already in the
-          // target's arc. No action needed during DFS.
+          // Already frozen. No action needed.
         }
         else if (rep_loc.is_region())
         {
           if (rep_loc.to_region() == region)
           {
-            // UNMARKED: first visit.
             region->remove(h);
             h->set_location(Location::from_raw(Location::Pending));
             frozen_set.insert(h);
 
             pending.push_back(h);
             dfs.push_back(post_order_mark(h));
-
-            // Trace fields and push children.
             trace_fields(h, dfs);
           }
-          else
+          else if (!rep_loc.to_region()->is_frame_local())
           {
-            // Entry point to another region. Skip frame-local regions
-            // (handled by freeze_local's phase 2).
-            auto sub_r = rep_loc.to_region();
-
-            if (!sub_r->is_frame_local())
-              sub_regions.push_back(h);
+            // Sub-region entry point. Collect for recursive processing.
+            sub_region_roots.push_back(h);
           }
         }
-
-        // SCC_PTR with non-pending target — already processed, skip.
       }
 
-      // Count all frozen-to-frozen field references (inter-SCC cross edges
-      // and intra-SCC edges that weren't subtracted by scc_union).
+      // Recursively freeze sub-regions BEFORE adjusting the parent's
+      // stack_rc. This clears sub-region ownership while the parent
+      // region is still alive.
+      for (auto sub_root : sub_region_roots)
+        self(self, sub_root, true);
+
+      // Count frozen-to-frozen field references.
       RC frozen_internal = 0;
       auto& program = Program::get();
 
@@ -210,7 +198,7 @@ namespace vbci
           static_cast<Object*>(fh)->trace_fn(count_fn);
       }
 
-      // Scan unfrozen region objects to count refs to newly-frozen objects.
+      // Count unfrozen-to-frozen field references.
       RC unfrozen_to_frozen = 0;
 
       region->for_each_header([&](Header* h) {
@@ -225,28 +213,29 @@ namespace vbci
           static_cast<Object*>(h)->trace_fn(count_fn);
       });
 
-      // stack_rc adjustment = refs that were stack→region but now point to
-      // immutable objects directly.
-      assert(arc_sum >= frozen_internal + unfrozen_to_frozen);
-      RC stack_adjustment = arc_sum - frozen_internal - unfrozen_to_frozen;
+      // Adjust stack_rc. For sub-regions, subtract 1 from arc_sum to account
+      // for the frozen parent's field ref to the entry point (not a stack ref).
+      RC parent_ref = is_sub ? 1 : 0;
+      assert(arc_sum >= frozen_internal + unfrozen_to_frozen + parent_ref);
+      RC stack_adjustment =
+        arc_sum - frozen_internal - unfrozen_to_frozen - parent_ref;
 
-      // Determine ownership clearing before stack_dec, which may free
-      // the region if stack_rc reaches 0 with no owner.
-      bool clear_parent = region->has_parent()
+      // Determine ownership clearing before stack_dec.
+      bool do_clear_parent = region->has_parent()
         && root == region->get_entry_point();
-      bool clear_cown = !clear_parent && region->has_cown_owner()
+      bool do_clear_cown = !do_clear_parent && region->has_cown_owner()
         && root == region->get_entry_point();
 
       for (RC i = 0; i < stack_adjustment; i++)
         region->stack_dec();
 
-      // Clear ownership after stack_rc adjustment. If stack_dec freed
-      // the region (no owner, stack_rc hit 0), these won't fire.
-      if (clear_parent)
+      if (do_clear_parent)
         region->clear_parent();
-      else if (clear_cown)
+      else if (do_clear_cown)
         region->clear_cown_owner();
-    }
+    };
+
+    freeze_region(freeze_region, root, false);
 
     return true;
   }
