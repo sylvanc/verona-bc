@@ -214,13 +214,21 @@ namespace vbci
       assert(arc_sum >= frozen_cross + unfrozen_to_frozen);
       RC stack_adjustment = arc_sum - frozen_cross - unfrozen_to_frozen;
 
+      // Determine ownership clearing before stack_dec, which may free
+      // the region if stack_rc reaches 0 with no owner.
+      bool clear_parent = region->has_parent()
+        && root == region->get_entry_point();
+      bool clear_cown = !clear_parent && region->has_cown_owner()
+        && root == region->get_entry_point();
+
       for (RC i = 0; i < stack_adjustment; i++)
         region->stack_dec();
 
-      // Clear ownership only if we froze the entry point.
-      if (region->has_parent() && root == region->get_entry_point())
+      // Clear ownership after stack_rc adjustment. If stack_dec freed
+      // the region (no owner, stack_rc hit 0), these won't fire.
+      if (clear_parent)
         region->clear_parent();
-      else if (region->has_cown_owner() && root == region->get_entry_point())
+      else if (clear_cown)
         region->clear_cown_owner();
     }
 
