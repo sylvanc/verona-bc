@@ -91,9 +91,11 @@ namespace vbci
 
     auto region = loc.to_region();
 
-    // TODO: drag into a fresh region, then freeze.
     if (region->is_frame_local())
-      return false;
+    {
+      freeze_local(root);
+      return true;
+    }
 
     std::vector<Header*> sub_regions;
     std::vector<Header*> dfs;

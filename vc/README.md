@@ -11,6 +11,8 @@ Review `iowise`.
 - Dispose pattern?
 
 Semantics.
+- How does `:::arraycmp` work with non-primitives?
+- Remove `arrayiter`?
 - Region creation.
 
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
