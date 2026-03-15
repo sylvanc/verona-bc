@@ -65,6 +65,10 @@ namespace vbcc
           {
             kill(node / LocalId);
           }
+          else if (node == Freeze)
+          {
+            use(node / Rhs);
+          }
           else if (node->in({HeapArray, Add, Sub, Mul, Div,     Mod,  Pow, And,
                              Or,        Xor, Shl, Shr, Eq,      Ne,   Lt,  Le,
                              Gt,        Ge,  Min, Max, LogBase, Atan2}))

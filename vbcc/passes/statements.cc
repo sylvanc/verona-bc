@@ -433,6 +433,9 @@ namespace vbcc
         (T(Drop) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Drop << _(LocalId); },
 
+        (T(Freeze) << End) * T(LocalId)[Rhs] >>
+          [](Match& _) { return Freeze << _(Rhs); },
+
         // Reference operations.
         Dst * T(Ref) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
           [](Match& _) {

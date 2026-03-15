@@ -3,6 +3,7 @@
 #include "array.h"
 #include "callback.h"
 #include "cown.h"
+#include "freeze.h"
 #include "function_signature.h"
 #include "object.h"
 #include "program.h"
@@ -545,6 +546,8 @@ namespace vbci
         return os << "Move";
       case Op::Drop:
         return os << "Drop";
+      case Op::Freeze:
+        return os << "Freeze";
       case Op::RegisterRef:
         return os << "RegisterRef";
       case Op::FieldRefMove:
@@ -1082,6 +1085,15 @@ namespace vbci
       case Op::Drop:
       {
         process([](Register) INLINE {});
+        break;
+      }
+
+      case Op::Freeze:
+      {
+        process([](const Register& src) INLINE {
+          if (src->is_header())
+            freeze(src->get_header());
+        });
         break;
       }
 

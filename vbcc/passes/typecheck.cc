@@ -1249,6 +1249,10 @@ namespace vbcc
         {
           // Drop removes a register - nothing to check.
         }
+        else if (node == Freeze)
+        {
+          // Freeze makes the reachable subgraph immutable - nothing to check.
+        }
         else if (node->type().in(
                    {Add, Sub, Mul, Div, Mod, And, Or, Xor, Shl, Shr, Min, Max}))
         {

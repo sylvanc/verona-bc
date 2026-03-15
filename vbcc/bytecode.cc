@@ -961,6 +961,10 @@ namespace vbcc
           {
             code << uleb(+Op::Drop) << dst(stmt);
           }
+          else if (stmt == Freeze)
+          {
+            code << uleb(+Op::Freeze) << src(stmt);
+          }
           else if (stmt == RegisterRef)
           {
             code << uleb(+Op::RegisterRef) << dst(stmt) << src(stmt);
