@@ -118,8 +118,14 @@ namespace vbci
     while (!worklist.empty())
     {
       root = worklist.back();
-      region = root->region();
       worklist.pop_back();
+
+      // Skip if already frozen (duplicate worklist entry from multiple
+      // parent fields pointing to the same sub-region entry point).
+      if (root->location().is_immutable() || root->location().is_scc_ptr())
+        continue;
+
+      region = root->region();
 
       // Regions discovered later are children. They appear later in `work`,
       // so reverse iteration processes children before parents.
