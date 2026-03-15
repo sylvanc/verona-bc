@@ -211,8 +211,8 @@ namespace vbci
 
       // stack_rc adjustment = refs that were stack→region but now point to
       // immutable objects directly.
+      assert(arc_sum >= frozen_cross + unfrozen_to_frozen);
       RC stack_adjustment = arc_sum - frozen_cross - unfrozen_to_frozen;
-      assert(stack_adjustment >= 0);
 
       for (RC i = 0; i < stack_adjustment; i++)
         region->stack_dec();
