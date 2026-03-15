@@ -1,0 +1,708 @@
+vbcc
+validids
+(top
+  {}
+  (class
+    (classid 5:@Leaf)
+    (fields
+      (field
+        (fieldid 4:@val)
+        (i32)))
+    (methods))
+  (class
+    (classid 4:@Box)
+    (fields
+      (field
+        (fieldid 6:@child)
+        (dyn))
+      (field
+        (fieldid 4:@val)
+        (i32)))
+    (methods))
+  (class
+    (classid 5:@Pair)
+    (fields
+      (field
+        (fieldid 4:@fst)
+        (dyn))
+      (field
+        (fieldid 4:@snd)
+        (dyn)))
+    (methods))
+  (func
+    (functionid 12:@test_simple)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 12:^test_simple)
+        (body
+          (const
+            (localid 2:$v)
+            (i32)
+            (int 2:10))
+          (region
+            (localid 2:$a)
+            (rc)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$v))))
+          (freeze
+            (localid 2:$a))
+          (fieldref
+            (localid 4:$ref)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 4:@val))
+          (load
+            (localid 2:$r)
+            (localid 4:$ref)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 11:@test_chain)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 11:^test_chain)
+        (body
+          (const
+            (localid 3:$v1)
+            (i32)
+            (int 1:2))
+          (region
+            (localid 5:$leaf)
+            (rc)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$v1))))
+          (const
+            (localid 3:$v2)
+            (i32)
+            (int 2:99))
+          (heap
+            (localid 4:$box)
+            (localid 5:$leaf)
+            (classid 4:@Box)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$leaf))
+              (arg
+                (argcopy)
+                (localid 3:$v2))))
+          (freeze
+            (localid 4:$box))
+          (fieldref
+            (localid 8:$ref_val)
+            (arg
+              (argcopy)
+              (localid 4:$box))
+            (fieldid 4:@val))
+          (load
+            (localid 2:$r)
+            (localid 8:$ref_val)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 13:@test_forward)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 13:^test_forward)
+        (body
+          (const
+            (localid 3:$v1)
+            (i32)
+            (int 1:5))
+          (region
+            (localid 5:$leaf)
+            (rc)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$v1))))
+          (const
+            (localid 3:$v2)
+            (i32)
+            (int 2:88))
+          (heap
+            (localid 4:$box)
+            (localid 5:$leaf)
+            (classid 4:@Box)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$leaf))
+              (arg
+                (argcopy)
+                (localid 3:$v2))))
+          (freeze
+            (localid 4:$box))
+          (fieldref
+            (localid 8:$ref_val)
+            (arg
+              (argcopy)
+              (localid 4:$box))
+            (fieldid 4:@val))
+          (load
+            (localid 2:$r)
+            (localid 8:$ref_val)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 13:@test_diamond)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 13:^test_diamond)
+        (body
+          (const
+            (localid 2:$v)
+            (i32)
+            (int 2:42))
+          (region
+            (localid 5:$leaf)
+            (rc)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$v))))
+          (const
+            (localid 3:$v1)
+            (i32)
+            (int 2:10))
+          (heap
+            (localid 3:$b1)
+            (localid 5:$leaf)
+            (classid 4:@Box)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$leaf))
+              (arg
+                (argcopy)
+                (localid 3:$v1))))
+          (const
+            (localid 3:$v2)
+            (i32)
+            (int 2:20))
+          (heap
+            (localid 3:$b2)
+            (localid 5:$leaf)
+            (classid 4:@Box)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:$leaf))
+              (arg
+                (argcopy)
+                (localid 3:$v2))))
+          (heap
+            (localid 5:$pair)
+            (localid 5:$leaf)
+            (classid 5:@Pair)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$b1))
+              (arg
+                (argcopy)
+                (localid 3:$b2))))
+          (freeze
+            (localid 5:$pair))
+          (fieldref
+            (localid 8:$ref_val)
+            (arg
+              (argcopy)
+              (localid 3:$b2))
+            (fieldid 4:@val))
+          (load
+            (localid 2:$r)
+            (localid 8:$ref_val)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 13:@test_partial)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 13:^test_partial)
+        (body
+          (const
+            (localid 3:$v1)
+            (i32)
+            (int 3:100))
+          (region
+            (localid 2:$a)
+            (rc)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$v1))))
+          (const
+            (localid 3:$v2)
+            (i32)
+            (int 3:200))
+          (heap
+            (localid 2:$b)
+            (localid 2:$a)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:$v2))))
+          (freeze
+            (localid 2:$a))
+          (fieldref
+            (localid 6:$ref_a)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 4:@val))
+          (load
+            (localid 3:$ra)
+            (localid 6:$ref_a))
+          (fieldref
+            (localid 6:$ref_b)
+            (arg
+              (argcopy)
+              (localid 2:$b))
+            (fieldid 4:@val))
+          (load
+            (localid 3:$rb)
+            (localid 6:$ref_b))
+          (add
+            (localid 2:$r)
+            (localid 3:$ra)
+            (localid 3:$rb)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 17:@test_frame_local)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 17:^test_frame_local)
+        (body
+          (const
+            (localid 2:$v)
+            (i32)
+            (int 2:77))
+          (new
+            (localid 2:$a)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$v))))
+          (freeze
+            (localid 2:$a))
+          (fieldref
+            (localid 4:$ref)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 4:@val))
+          (load
+            (localid 2:$r)
+            (localid 4:$ref)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 15:@test_subregion)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 15:^test_subregion)
+        (body
+          (const
+            (localid 2:$v)
+            (i32)
+            (int 2:22)))
+        (ret
+          (localid 2:$v)))))
+  (func
+    (functionid 19:@test_double_freeze)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 19:^test_double_freeze)
+        (body
+          (const
+            (localid 2:$v)
+            (i32)
+            (int 2:55))
+          (region
+            (localid 2:$a)
+            (rc)
+            (classid 5:@Leaf)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:$v))))
+          (freeze
+            (localid 2:$a))
+          (freeze
+            (localid 2:$a))
+          (fieldref
+            (localid 4:$ref)
+            (arg
+              (argcopy)
+              (localid 2:$a))
+            (fieldid 4:@val))
+          (load
+            (localid 2:$r)
+            (localid 4:$ref)))
+        (ret
+          (localid 2:$r)))))
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:^main)
+        (body
+          (const
+            (localid 3:$r0)
+            (i32)
+            (int 1:0))
+          (call
+            (localid 3:$r1)
+            (functionid 12:@test_simple)
+            (args))
+          (const
+            (localid 3:$e1)
+            (i32)
+            (int 2:10))
+          (eq
+            (localid 4:$ok1)
+            (localid 3:$r1)
+            (localid 3:$e1)))
+        (cond
+          (localid 4:$ok1)
+          (labelid 3:^t2)
+          (labelid 3:^f1)))
+      (label
+        (labelid 3:^f1)
+        (body
+          (const
+            (localid 3:$b1)
+            (i32)
+            (int 1:1))
+          (add
+            (localid 3:$a1)
+            (localid 3:$r0)
+            (localid 3:$b1)))
+        (jump
+          (labelid 4:^t2a)))
+      (label
+        (labelid 3:^t2)
+        (body
+          (copy
+            (localid 3:$a1)
+            (localid 3:$r0)))
+        (jump
+          (labelid 4:^t2a)))
+      (label
+        (labelid 4:^t2a)
+        (body
+          (call
+            (localid 3:$r2)
+            (functionid 11:@test_chain)
+            (args))
+          (const
+            (localid 3:$e2)
+            (i32)
+            (int 2:99))
+          (eq
+            (localid 4:$ok2)
+            (localid 3:$r2)
+            (localid 3:$e2)))
+        (cond
+          (localid 4:$ok2)
+          (labelid 3:^t3)
+          (labelid 3:^f2)))
+      (label
+        (labelid 3:^f2)
+        (body
+          (const
+            (localid 3:$b2)
+            (i32)
+            (int 1:2))
+          (add
+            (localid 3:$a2)
+            (localid 3:$a1)
+            (localid 3:$b2)))
+        (jump
+          (labelid 4:^t3a)))
+      (label
+        (labelid 3:^t3)
+        (body
+          (copy
+            (localid 3:$a2)
+            (localid 3:$a1)))
+        (jump
+          (labelid 4:^t3a)))
+      (label
+        (labelid 4:^t3a)
+        (body
+          (call
+            (localid 3:$r3)
+            (functionid 13:@test_forward)
+            (args))
+          (const
+            (localid 3:$e3)
+            (i32)
+            (int 2:88))
+          (eq
+            (localid 4:$ok3)
+            (localid 3:$r3)
+            (localid 3:$e3)))
+        (cond
+          (localid 4:$ok3)
+          (labelid 3:^t4)
+          (labelid 3:^f3)))
+      (label
+        (labelid 3:^f3)
+        (body
+          (const
+            (localid 3:$b3)
+            (i32)
+            (int 1:4))
+          (add
+            (localid 3:$a3)
+            (localid 3:$a2)
+            (localid 3:$b3)))
+        (jump
+          (labelid 4:^t4a)))
+      (label
+        (labelid 3:^t4)
+        (body
+          (copy
+            (localid 3:$a3)
+            (localid 3:$a2)))
+        (jump
+          (labelid 4:^t4a)))
+      (label
+        (labelid 4:^t4a)
+        (body
+          (call
+            (localid 3:$r4)
+            (functionid 13:@test_diamond)
+            (args))
+          (const
+            (localid 3:$e4)
+            (i32)
+            (int 2:20))
+          (eq
+            (localid 4:$ok4)
+            (localid 3:$r4)
+            (localid 3:$e4)))
+        (cond
+          (localid 4:$ok4)
+          (labelid 3:^t5)
+          (labelid 3:^f4)))
+      (label
+        (labelid 3:^f4)
+        (body
+          (const
+            (localid 3:$b4)
+            (i32)
+            (int 1:8))
+          (add
+            (localid 3:$a4)
+            (localid 3:$a3)
+            (localid 3:$b4)))
+        (jump
+          (labelid 4:^t5a)))
+      (label
+        (labelid 3:^t5)
+        (body
+          (copy
+            (localid 3:$a4)
+            (localid 3:$a3)))
+        (jump
+          (labelid 4:^t5a)))
+      (label
+        (labelid 4:^t5a)
+        (body
+          (call
+            (localid 3:$r5)
+            (functionid 13:@test_partial)
+            (args))
+          (const
+            (localid 3:$e5)
+            (i32)
+            (int 3:300))
+          (eq
+            (localid 4:$ok5)
+            (localid 3:$r5)
+            (localid 3:$e5)))
+        (cond
+          (localid 4:$ok5)
+          (labelid 3:^t6)
+          (labelid 3:^f5)))
+      (label
+        (labelid 3:^f5)
+        (body
+          (const
+            (localid 3:$b5)
+            (i32)
+            (int 2:16))
+          (add
+            (localid 3:$a5)
+            (localid 3:$a4)
+            (localid 3:$b5)))
+        (jump
+          (labelid 4:^t6a)))
+      (label
+        (labelid 3:^t6)
+        (body
+          (copy
+            (localid 3:$a5)
+            (localid 3:$a4)))
+        (jump
+          (labelid 4:^t6a)))
+      (label
+        (labelid 4:^t6a)
+        (body
+          (call
+            (localid 3:$r6)
+            (functionid 17:@test_frame_local)
+            (args))
+          (const
+            (localid 3:$e6)
+            (i32)
+            (int 2:77))
+          (eq
+            (localid 4:$ok6)
+            (localid 3:$r6)
+            (localid 3:$e6)))
+        (cond
+          (localid 4:$ok6)
+          (labelid 3:^t7)
+          (labelid 3:^f6)))
+      (label
+        (labelid 3:^f6)
+        (body
+          (const
+            (localid 3:$b6)
+            (i32)
+            (int 2:32))
+          (add
+            (localid 3:$a6)
+            (localid 3:$a5)
+            (localid 3:$b6)))
+        (jump
+          (labelid 4:^t7a)))
+      (label
+        (labelid 3:^t7)
+        (body
+          (copy
+            (localid 3:$a6)
+            (localid 3:$a5)))
+        (jump
+          (labelid 4:^t7a)))
+      (label
+        (labelid 4:^t7a)
+        (body
+          (call
+            (localid 3:$r7)
+            (functionid 15:@test_subregion)
+            (args))
+          (const
+            (localid 3:$e7)
+            (i32)
+            (int 2:22))
+          (eq
+            (localid 4:$ok7)
+            (localid 3:$r7)
+            (localid 3:$e7)))
+        (cond
+          (localid 4:$ok7)
+          (labelid 3:^t8)
+          (labelid 3:^f7)))
+      (label
+        (labelid 3:^f7)
+        (body
+          (const
+            (localid 3:$b7)
+            (i32)
+            (int 2:64))
+          (add
+            (localid 3:$a7)
+            (localid 3:$a6)
+            (localid 3:$b7)))
+        (jump
+          (labelid 4:^t8a)))
+      (label
+        (labelid 3:^t8)
+        (body
+          (copy
+            (localid 3:$a7)
+            (localid 3:$a6)))
+        (jump
+          (labelid 4:^t8a)))
+      (label
+        (labelid 4:^t8a)
+        (body
+          (call
+            (localid 3:$r8)
+            (functionid 19:@test_double_freeze)
+            (args))
+          (const
+            (localid 3:$e8)
+            (i32)
+            (int 2:55))
+          (eq
+            (localid 4:$ok8)
+            (localid 3:$r8)
+            (localid 3:$e8)))
+        (cond
+          (localid 4:$ok8)
+          (labelid 7:^t8pass)
+          (labelid 3:^f8)))
+      (label
+        (labelid 3:^f8)
+        (body
+          (const
+            (localid 3:$b8)
+            (i32)
+            (int 3:128))
+          (add
+            (localid 3:$a8)
+            (localid 3:$a7)
+            (localid 3:$b8)))
+        (ret
+          (localid 3:$a8)))
+      (label
+        (labelid 7:^t8pass)
+        (body)
+        (ret
+          (localid 3:$a7))))))

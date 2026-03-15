@@ -180,8 +180,12 @@ namespace vbci
           }
           else
           {
-            // Entry point to another region.
-            sub_regions.push_back(h);
+            // Entry point to another region. Skip frame-local regions
+            // (handled by freeze_local's phase 2).
+            auto sub_r = rep_loc.to_region();
+
+            if (!sub_r->is_frame_local())
+              sub_regions.push_back(h);
           }
         }
 
