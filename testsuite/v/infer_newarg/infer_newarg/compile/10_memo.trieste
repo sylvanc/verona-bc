@@ -12,11 +12,11 @@ memo
         (labelid 5:start)
         (body
           (call
-            (localid 4:$909)
+            (localid 4:$921)
             (functionid 24:infer_newarg::main::0::0)
             (args)))
         (ret
-          (localid 4:$909)))))
+          (localid 4:$921)))))
   (func
     (functionid 24:infer_newarg::main::0::0)
     (params)
@@ -27,7 +27,7 @@ memo
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$107)
+            (localid 9:local$108)
             (i32)
             (int 1:1))
           (call
@@ -36,26 +36,26 @@ memo
             (args
               (arg
                 (argcopy)
-                (localid 9:local$107))))
+                (localid 9:local$108))))
           (copy
-            (localid 9:local$501)
+            (localid 9:local$506)
             (localid 1:c))
           (copy
             (localid 1:c)
             (localid 7:local$7))
           (lookup
-            (localid 9:local$108)
+            (localid 9:local$109)
             (localid 1:c)
             (methodid 7:f::1::0))
           (calldyn
+            (localid 9:local$110)
             (localid 9:local$109)
-            (localid 9:local$108)
             (args
               (arg
                 (argcopy)
                 (localid 1:c)))))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$110)))))
   (primitive
     (i32)
     (methods))
@@ -110,10 +110,10 @@ memo
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$500)
+            (localid 9:local$505)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$500)))))
+          (localid 9:local$505)))))
   (func
     (functionid 32:infer_newarg::cell::f::1::ref::0)
     (params
@@ -128,13 +128,13 @@ memo
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$106)
+            (localid 9:local$107)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 1:f)))
         (ret
-          (localid 9:local$106)))))
+          (localid 9:local$107)))))
   (primitive
     (ref
       (i32))

@@ -61,6 +61,12 @@ namespace vc
       if (steps() == Delay)
         return false;
 
+      // If state.result was never set (e.g., bail-out due to child errors
+      // or unresolved name before resolve_down), propagate the error by
+      // wrapping n in an Error node.
+      if (!state.result)
+        state.result = err(n, "Could not resolve name");
+
       // This gets run on resolution, no matter which step returned Done.
       if (n->type() == state.result->type())
       {
@@ -89,6 +95,12 @@ namespace vc
         return Done;
 
       STEP(resolve_first());
+
+      // If resolve_first didn't find anything, it already set an error or
+      // converted to MethodName. Don't proceed to resolve_down/resolve_last,
+      // as `found` is null and would crash on comparison.
+      if (!found)
+        return Done;
 
       for (auto it = n->begin() + 1; it != n->end(); ++it)
       {

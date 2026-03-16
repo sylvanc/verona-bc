@@ -938,6 +938,7 @@ dot
             function
           compare = function
           copy = function
+          copy_from = function
           create = function
           each = function
           fill =
@@ -1834,13 +1835,152 @@ dot
                     (localid 4:self))))))
           (function
             {
+              a = let
+              len = paramdef
+              n = let
+              offset = paramdef
+              self = paramdef}
+            (rhs)
+            (ident 4:copy)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs)))))))))
+              (paramdef
+                (ident 6:offset)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs)))))
+              (paramdef
+                (ident 3:len)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:n)
+                      (type
+                        (typevar))))
+                  (expr
+                    (exprseq
+                      (expr
+                        (calldyn
+                          (expr
+                            (localid 4:self))
+                          (ident 4:size)
+                          (typeargs)
+                          (args))
+                        (methodname
+                          (symbolid 1:-)
+                          (typeargs))
+                        (localid 6:offset)))
+                    (methodname
+                      (ident 3:min)
+                      (typeargs))
+                    (localid 3:len))))
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:a)
+                      (type
+                        (typevar))))
+                  (expr
+                    (newarray
+                      (type
+                        (typename
+                          (nameelement
+                            (ident 8:_builtin)
+                            (typeargs))
+                          (nameelement
+                            (ident 5:array)
+                            (typeargs))
+                          (nameelement
+                            (ident 1:T)
+                            (typeargs))))
+                      (args
+                        (expr
+                          (exprseq
+                            (expr
+                              (localid 1:n)))))))))
+              (expr
+                (calldyn
+                  (expr
+                    (localid 1:a))
+                  (ident 9:copy_from)
+                  (typeargs)
+                  (args
+                    (expr
+                      (int 1:0))
+                    (expr
+                      (localid 4:self))
+                    (expr
+                      (localid 6:offset))
+                    (expr
+                      (localid 1:n)))))
+              (expr
+                (localid 1:a))))
+          (function
+            {
               dst_offset = paramdef
               len = paramdef
               self = paramdef
               src = paramdef
               src_offset = paramdef}
             (rhs)
-            (ident 4:copy)
+            (ident 9:copy_from)
             (typeparams)
             (params
               (paramdef
@@ -18922,7 +19062,7 @@ dot
                 (calldyn
                   (expr
                     (localid 6:result))
-                  (ident 4:copy)
+                  (ident 9:copy_from)
                   (typeargs)
                   (args
                     (expr
@@ -18947,7 +19087,7 @@ dot
                 (calldyn
                   (expr
                     (localid 6:result))
-                  (ident 4:copy)
+                  (ident 9:copy_from)
                   (typeargs)
                   (args
                     (expr

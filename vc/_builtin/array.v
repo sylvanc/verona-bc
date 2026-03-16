@@ -49,7 +49,16 @@ array[T]
     arrayiter[T](self)
   }
 
-  copy(self: array[T], dst_offset: usize, src: array[T], src_offset: usize, len: usize): none
+  copy(self: array[T], offset: usize, len: usize): array[T]
+  {
+    let n = (self.size - offset) min len;
+    let a = :::newarray[T](n);
+    a.copy_from(0, self, offset, n);
+    a
+  }
+
+  copy_from(self: array[T], dst_offset: usize,
+    src: array[T], src_offset: usize, len: usize): none
   {
     :::arraycopy(self, dst_offset, src, src_offset, len)
   }
@@ -59,7 +68,8 @@ array[T]
     :::arrayfill(self, offset, len, value)
   }
 
-  compare(self: array[T], self_offset: usize, other: array[T], other_offset: usize, len: usize): i64
+  compare(self: array[T], self_offset: usize,
+    other: array[T], other_offset: usize, len: usize): i64
   {
     :::arraycmp(self, self_offset, other, other_offset, len)
   }

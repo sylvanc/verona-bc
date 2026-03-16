@@ -133,9 +133,7 @@ namespace vbci
       hh->move_region(r);
     }
 
-    for (size_t i = 0; i < stack_rc_decs; i++)
-      r->stack_dec();
-
+    r->stack_dec(stack_rc_decs);
     return true;
   }
 

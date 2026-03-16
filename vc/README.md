@@ -2,14 +2,23 @@
 
 ## To Do
 
-Review `iowise`.
-- Buffer final can't call flush, that relies on mutation.
-- Dispose pattern?
+Fix lambda type inference.
+- `async_writer::println`.
+- `_fd_writer::create`.
+
+Call the library "print"?
+- Add `apply` to the top level module that returns `out`?
+- Add `apply` to `async_writer` that calls `println`?
+- `print "foo"` becomes `print::out.println "foo"`?
 
 Semantics.
-- How does `:::arraycmp` work with non-primitives?
 - Remove `arrayiter`?
 - Region creation.
+- Null terminators in `string`?
+- Fix path compression, storing rank in Pending Location.
+
+Compiler errors.
+- Not getting node based errors.
 
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 

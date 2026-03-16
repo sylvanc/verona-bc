@@ -469,6 +469,78 @@ parse
                     (group
                       (ident 1:T))))
                 (group
+                  (ident 6:offset)
+                  (:)
+                  (ident 5:usize))
+                (group
+                  (ident 3:len)
+                  (:)
+                  (ident 5:usize))))
+            (:)
+            (ident 5:array)
+            (bracket
+              (group
+                (ident 1:T)))
+            (brace
+              (group
+                (let)
+                (ident 1:n)
+                (=)
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:size)
+                    (symbolid 1:-)
+                    (ident 6:offset)))
+                (ident 3:min)
+                (ident 3:len))
+              (group
+                (semi))
+              (group
+                (let)
+                (ident 1:a)
+                (=)
+                (triplecolon)
+                (ident 8:newarray)
+                (bracket
+                  (group
+                    (ident 1:T)))
+                (paren
+                  (group
+                    (ident 1:n))))
+              (group
+                (semi))
+              (group
+                (ident 1:a)
+                (dot)
+                (ident 9:copy_from)
+                (paren
+                  (list
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 4:self))
+                    (group
+                      (ident 6:offset))
+                    (group
+                      (ident 1:n)))))
+              (group
+                (semi))
+              (group
+                (ident 1:a))))
+          (group
+            (ident 9:copy_from)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 5:array)
+                  (bracket
+                    (group
+                      (ident 1:T))))
+                (group
                   (ident 10:dst_offset)
                   (:)
                   (ident 5:usize))
@@ -8070,7 +8142,7 @@ parse
               (group
                 (ident 6:result)
                 (dot)
-                (ident 4:copy)
+                (ident 9:copy_from)
                 (paren
                   (list
                     (group
@@ -8090,7 +8162,7 @@ parse
               (group
                 (ident 6:result)
                 (dot)
-                (ident 4:copy)
+                (ident 9:copy_from)
                 (paren
                   (list
                     (group

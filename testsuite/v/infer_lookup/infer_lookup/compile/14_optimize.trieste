@@ -34,10 +34,10 @@ optimize
                 (argcopy)
                 (localid 6:$opt_1))))
           (copy
-            (localid 4:$913)
+            (localid 4:$925)
             (localid 6:$opt_5)))
         (ret
-          (localid 4:$913)))))
+          (localid 4:$925)))))
   (func
     (functionid 24:infer_lookup::main::0::0)
     (params)
@@ -48,7 +48,7 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$110)
+            (localid 9:local$111)
             (i32)
             (int 1:1))
           (new
@@ -57,13 +57,13 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$110))))
+                (localid 9:local$111))))
           (lookup
             (localid 6:$opt_8)
             (localid 7:local$7)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$112)
+            (localid 9:local$113)
             (localid 6:$opt_8)
             (args
               (arg
@@ -71,7 +71,7 @@ optimize
                 (localid 7:local$7))))
           (copy
             (localid 7:local$8)
-            (localid 9:local$112)))
+            (localid 9:local$113)))
         (ret
           (localid 7:local$8)))))
   (primitive
@@ -144,10 +144,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$109)
+            (localid 9:local$110)
             (localid 6:$opt_9)))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$110)))))
   (func
     (functionid 32:infer_lookup::wrapper::val::1::0)
     (params
@@ -167,10 +167,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$503)
+            (localid 9:local$508)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$503)))))
+          (localid 9:local$508)))))
   (func
     (functionid 37:infer_lookup::wrapper::val::1::ref::0)
     (params
@@ -185,13 +185,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$107)
+            (localid 9:local$108)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$107)))))
+          (localid 9:local$108)))))
   (primitive
     (ref
       (i32))
