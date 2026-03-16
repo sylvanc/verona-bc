@@ -47,26 +47,39 @@ namespace vbci
   }
 
   // Trace a header's fields, pushing children onto the DFS stack.
-  static void trace_fields(Header* h, std::vector<Header*>& dfs)
+  // Returns the number of frozen-to-frozen edges found.
+  static RC trace_fields(
+    Header* h,
+    std::vector<Header*>& dfs,
+    Region* region = nullptr,
+    std::unordered_set<Header*>* frozen_set = nullptr)
   {
+    RC frozen_edges = 0;
     auto& program = Program::get();
     auto fn = [&](Header* h) {
       auto loc = h->location();
 
-      // SCC_PTR or PENDING — part of an in-progress SCC.
       if (loc.is_scc_ptr() || loc.is_pending())
       {
         dfs.push_back(h);
+        if (region)
+          frozen_edges++;
         return;
       }
 
-      // Already immutable or immortal — skip.
       if (loc.is_immutable() || loc.is_immortal())
+      {
+        // Count edges to objects frozen by THIS call.
+        if (frozen_set && frozen_set->count(h))
+          frozen_edges++;
         return;
+      }
 
       if (loc.is_region())
       {
         dfs.push_back(h);
+        if (region && loc.to_region() == region)
+          frozen_edges++;
         return;
       }
     };
@@ -75,6 +88,8 @@ namespace vbci
       static_cast<Array*>(h)->trace_fn(fn);
     else
       static_cast<Object*>(h)->trace_fn(fn);
+
+    return frozen_edges;
   }
 
   bool freeze(Header* root)
@@ -117,6 +132,7 @@ namespace vbci
       bool is_sub = region->has_owner();
 
       RC arc_sum = 0;
+      RC frozen_internal = 0;
       frozen_set.clear();
 
       dfs.push_back(root);
@@ -170,7 +186,7 @@ namespace vbci
 
             pending.push_back(h);
             dfs.push_back(post_order_mark(h));
-            trace_fields(h, dfs);
+            frozen_internal += trace_fields(h, dfs, region, &frozen_set);
           }
           else if (!rep_loc.to_region()->is_frame_local())
           {
@@ -179,23 +195,9 @@ namespace vbci
         }
       }
 
-      // Count frozen-to-frozen and unfrozen-to-frozen field references.
-      RC frozen_internal = 0;
+      // Count unfrozen-to-frozen field references.
       RC unfrozen_to_frozen = 0;
       auto& program = Program::get();
-
-      for (auto fh : frozen_set)
-      {
-        auto count_fn = [&](Header* target) {
-          if (frozen_set.count(target))
-            frozen_internal++;
-        };
-
-        if (program.is_array(fh->get_type_id()))
-          static_cast<Array*>(fh)->trace_fn(count_fn);
-        else
-          static_cast<Object*>(fh)->trace_fn(count_fn);
-      }
 
       region->for_each_header([&](Header* h) {
         auto count_fn = [&](Header* target) {
