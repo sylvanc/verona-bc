@@ -1651,12 +1651,29 @@ namespace vc
   // If the new type is a subtype of any existing member, returns the
   // existing union unchanged. If any existing member is a subtype of the
   // new type, removes it and adds the new type.
-  static Node merge_type(const Node& existing, const Node& incoming, Node top)
+  // When one side is a default-typed literal and the other is concrete,
+  // the concrete type wins (the default yields).
+  static Node merge_type(
+    const Node& existing,
+    const Node& incoming,
+    Node top,
+    bool existing_default = false,
+    bool incoming_default = false)
   {
     if (!existing || existing->front() == TypeVar)
       return clone(incoming);
 
     if (!incoming || incoming->front() == TypeVar)
+      return clone(existing);
+
+    // A default-typed literal yields to any concrete type at a merge
+    // point. This allows match arm defaults (u64) to be subsumed by the
+    // else arm's concrete type, enabling back-propagation of the
+    // concrete type into the lambda for literal refinement.
+    if (existing_default && !incoming_default)
+      return clone(incoming);
+
+    if (incoming_default && !existing_default)
       return clone(existing);
 
     SequentCtx ctx{top, {}, {}};
@@ -1744,7 +1761,12 @@ namespace vc
       }
       else
       {
-        auto merged = merge_type(it->second.type, src_info.type, top);
+        auto merged = merge_type(
+          it->second.type,
+          src_info.type,
+          top,
+          it->second.is_default,
+          src_info.is_default);
         it->second.type = merged;
 
         // Once merged from multiple paths, the entry is no longer
