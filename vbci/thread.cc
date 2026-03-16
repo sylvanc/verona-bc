@@ -299,10 +299,15 @@ namespace vbci
       {
         auto r = closure.get_header()->region();
 
-        // Clear the cown ownership, as it's no longer acquired by the
-        // behaviour.
+        // Clear cown ownership. Protect with stack_inc to prevent
+        // auto-free (matching ~Cown pattern). The register that will
+        // hold the closure value inherits this stack ref — reg_dec
+        // on frame teardown will balance it.
         if (r && r->has_cown_owner())
+        {
+          r->stack_inc();
           r->clear_cown_owner();
+        }
       }
 
       locals.at(args++) = ValueTransfer(closure);

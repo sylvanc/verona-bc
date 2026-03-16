@@ -223,14 +223,7 @@ namespace vbci
       if (region->has_parent() && root == region->get_entry_point())
         region->clear_parent();
       else if (region->has_cown_owner() && root == region->get_entry_point())
-      {
         region->clear_cown_owner();
-
-        // clear_cown_owner doesn't auto-free. If stack_rc is already 0
-        // after adjustment, free the region explicitly.
-        if (stack_adjustment == 0 && !region->has_owner())
-          region->free_region();
-      }
 
       // Adjust stack_rc. May free the region if stack_rc hits 0 with
       // no owner.

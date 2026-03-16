@@ -200,6 +200,9 @@ namespace vbci
       assert(cown_owned);
       cown_owned = false;
       entry_point = nullptr;
+
+      if (stack_rc == 0)
+        free_region();
     }
 
     Header* get_entry_point() const
