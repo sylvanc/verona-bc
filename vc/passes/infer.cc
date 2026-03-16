@@ -5,6 +5,11 @@
 
 namespace vc
 {
+  // Sentinel types for unresolved integer/float literals. Exist only during
+  // the infer pass — resolved to U64/F64 before the pass terminates.
+  inline const auto DefaultInt = TokenDef("default_int");
+  inline const auto DefaultFloat = TokenDef("default_float");
+
   // Map from builtin primitive name to IR token.
   const std::map<std::string_view, Token> primitive_from_name = {
     {"none", None},
@@ -44,6 +49,25 @@ namespace vc
     return Type
       << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
                    << (NameElement << (Ident ^ tok.str()) << TypeArgs));
+  }
+
+  // Check if a type node is a default (unresolved) literal type.
+  bool is_default_type(const Node& type)
+  {
+    return type && !type->empty() &&
+      type->front()->in({DefaultInt, DefaultFloat});
+  }
+
+  // Resolve a default type to its concrete fallback.
+  Node resolve_default(const Node& type)
+  {
+    if (!type || type->empty())
+      return type;
+    if (type->front() == DefaultInt)
+      return primitive_type(U64);
+    if (type->front() == DefaultFloat)
+      return primitive_type(F64);
+    return type;
   }
 
   // Build a source-level Type node for an ffi primitive (_builtin::ffi::name).
@@ -149,34 +173,38 @@ namespace vc
   struct LocalTypeInfo
   {
     Node type; // Source-level Type node (e.g., Type << TypeName << ...)
-    bool is_default; // True if type came from Const default (U64/F64)
     bool is_fixed; // True if from Param or TypeAssertion
     Node const_node; // If from a Const, the Const stmt (for refinement)
     Node call_node; // If from a default-inferred Call/CallDyn, the stmt
 
+    // Whether the type is a default (unresolved) literal type.
+    bool is_default() const { return is_default_type(type); }
+
+    // Resolve the type from default to concrete fallback.
+    void resolve() { type = resolve_default(type); }
+
     // Factory: fixed type from Param or TypeAssertion.
     static LocalTypeInfo fixed(Node type)
     {
-      return {std::move(type), false, true, {}, {}};
+      return {std::move(type), true, {}, {}};
     }
 
-    // Factory: default-typed literal (U64/F64).
+    // Factory: default-typed literal (DefaultInt/DefaultFloat).
     static LocalTypeInfo literal(Node type, Node const_node)
     {
-      return {std::move(type), true, false, std::move(const_node), {}};
+      return {std::move(type), false, std::move(const_node), {}};
     }
 
     // Factory: computed result (non-default, non-fixed).
     static LocalTypeInfo computed(Node type)
     {
-      return {std::move(type), false, false, {}, {}};
+      return {std::move(type), false, {}, {}};
     }
 
     // Factory: propagated from another entry (Copy/Move).
     static LocalTypeInfo propagated(const LocalTypeInfo& src)
     {
-      return {
-        clone(src.type), src.is_default, false, src.const_node, src.call_node};
+      return {clone(src.type), false, src.const_node, src.call_node};
     }
   };
 
@@ -226,9 +254,9 @@ namespace vc
 
         if (existing == constraints.end())
         {
-          constraints[def] = {actual_type, is_default, false, {}, {}};
+          constraints[def] = {actual_type, false, {}, {}};
         }
-        else if (existing->second.is_default && !is_default)
+        else if (existing->second.is_default() && !is_default)
         {
           existing->second = LocalTypeInfo::computed(actual_type);
         }
@@ -682,6 +710,13 @@ namespace vc
 
     auto inner = type_node->front();
 
+    // Default literal sentinels pass through as themselves.
+    if (inner == DefaultInt)
+      return DefaultInt;
+
+    if (inner == DefaultFloat)
+      return DefaultFloat;
+
     if (inner != TypeName)
       return {};
 
@@ -833,10 +868,10 @@ namespace vc
       return None;
 
     if (lit->in({Bin, Oct, Int, Hex, Char}))
-      return U64;
+      return DefaultInt;
 
     if (lit->in({Float, HexFloat}))
-      return F64;
+      return DefaultFloat;
 
     assert(false && "unhandled literal type in infer");
     return {};
@@ -857,7 +892,6 @@ namespace vc
       if (info.const_node == const_node)
       {
         info.type = clone(new_src_type);
-        info.is_default = false;
         info.const_node = {};
       }
     }
@@ -874,7 +908,7 @@ namespace vc
 
     auto& info = it->second;
 
-    if (!info.is_default || !info.const_node)
+    if (!info.is_default() || !info.const_node)
       return false;
 
     // Use the env type to determine the current primitive, not the AST
@@ -1281,7 +1315,7 @@ namespace vc
           formal_type->front(),
           arg_info.type->front(),
           constraints,
-          arg_info.is_default);
+          arg_info.is_default());
       }
 
       // Check if all constraints were from default-typed args.
@@ -1289,7 +1323,7 @@ namespace vc
 
       for (auto& [tp, info] : constraints)
       {
-        if (!info.is_default)
+        if (!info.is_default())
         {
           all_default_inference = false;
           break;
@@ -1461,7 +1495,7 @@ namespace vc
 
           if (
             it == env.end() || contains_typevar(it->second.type) ||
-            it->second.is_default)
+            it->second.is_default())
             continue;
 
           resolved_type = it->second.type;
@@ -1534,7 +1568,6 @@ namespace vc
       auto dst = call / LocalId;
       env[dst->location()] = {
         result_type,
-        all_default_inference,
         false,
         {},
         all_default_inference ? call : Node{}};
@@ -1558,7 +1591,7 @@ namespace vc
 
       auto& arg_info = arg_it->second;
 
-      if (!arg_info.is_default)
+      if (!arg_info.is_default())
         continue;
 
       if (arg_info.call_node)
@@ -1656,9 +1689,7 @@ namespace vc
   static Node merge_type(
     const Node& existing,
     const Node& incoming,
-    Node top,
-    bool existing_default = false,
-    bool incoming_default = false)
+    Node top)
   {
     if (!existing || existing->front() == TypeVar)
       return clone(incoming);
@@ -1670,10 +1701,10 @@ namespace vc
     // point. This allows match arm defaults (u64) to be subsumed by the
     // else arm's concrete type, enabling back-propagation of the
     // concrete type into the lambda for literal refinement.
-    if (existing_default && !incoming_default)
+    if (is_default_type(existing) && !is_default_type(incoming))
       return clone(incoming);
 
-    if (incoming_default && !existing_default)
+    if (is_default_type(incoming) && !is_default_type(existing))
       return clone(existing);
 
     SequentCtx ctx{top, {}, {}};
@@ -1754,7 +1785,6 @@ namespace vc
         // First time seeing this location: copy all metadata.
         dst[loc] = {
           clone(src_info.type),
-          src_info.is_default,
           src_info.is_fixed,
           src_info.const_node,
           src_info.call_node};
@@ -1762,23 +1792,19 @@ namespace vc
       else
       {
         auto merged = merge_type(
-          it->second.type,
-          src_info.type,
-          top,
-          it->second.is_default,
-          src_info.is_default);
+          it->second.type, src_info.type, top);
         it->second.type = merged;
 
         // Once merged from multiple paths, the entry is no longer
         // default or fixed, and loses const/call tracking — unless
         // both sources agree on all metadata.
         if (
-          it->second.is_default != src_info.is_default ||
+          it->second.is_default() != src_info.is_default() ||
           it->second.is_fixed != src_info.is_fixed ||
           it->second.const_node != src_info.const_node ||
           !types_equal(it->second.type, src_info.type))
         {
-          it->second.is_default = false;
+          it->second.resolve();
           it->second.is_fixed = false;
           it->second.const_node = {};
           it->second.call_node = {};
@@ -1918,7 +1944,7 @@ namespace vc
 
       for (auto& [loc, info] : env)
       {
-        if (!info.is_default || !info.const_node)
+        if (!info.is_default() || !info.const_node)
           continue;
 
         if (try_refine(env, loc, expected_prim))
@@ -1938,7 +1964,7 @@ namespace vc
       auto p = extract_primitive(info.type);
 
       if (
-        p && p->type() == expected_prim->type() && !info.is_default &&
+        p && p->type() == expected_prim->type() && !info.is_default() &&
         !info.is_fixed)
       {
         cascade_changed.insert(loc);
@@ -2250,9 +2276,9 @@ namespace vc
         }
 
         // Record in type env.
-        bool is_default = type->in({U64, F64});
+        bool is_default = type->in({DefaultInt, DefaultFloat});
         env[dst->location()] = is_default ?
-          LocalTypeInfo::literal(primitive_type(type->type()), stmt) :
+          LocalTypeInfo::literal(Type << type->type(), stmt) :
           LocalTypeInfo::computed(primitive_type(type->type()));
       }
       else if (stmt == ConstStr)
@@ -2743,7 +2769,7 @@ namespace vc
             if (info.func)
             {
               auto params = info.func / Params;
-              bool recv_confirmed = !recv_it->second.is_default;
+              bool recv_confirmed = !recv_it->second.is_default();
               size_t i = 0;
 
               for (auto& arg_node : *args)
@@ -2765,13 +2791,13 @@ namespace vc
                   {
                     auto arg_it = env.find(arg_src->location());
 
-                    if (arg_it != env.end() && arg_it->second.is_default)
+                    if (arg_it != env.end() && arg_it->second.is_default())
                     {
                       auto arg_prim = extract_primitive(arg_it->second.type);
 
                       if (arg_prim && arg_prim->type() == prim->type())
                       {
-                        arg_it->second.is_default = false;
+                        arg_it->second.resolve();
                         arg_it->second.const_node = {};
                       }
                     }
@@ -2841,7 +2867,7 @@ namespace vc
                     if (
                       arg_it != env.end() &&
                       !contains_typevar(arg_it->second.type) &&
-                      !arg_it->second.is_default)
+                      !arg_it->second.is_default())
                     {
                       resolved_type = arg_it->second.type;
                     }
@@ -2924,7 +2950,7 @@ namespace vc
             auto arg_src = arg_node / Rhs;
             auto it = env.find(arg_src->location());
 
-            if (it == env.end() || it->second.is_default)
+            if (it == env.end() || it->second.is_default())
               continue;
 
             auto prim = extract_callable_primitive(it->second.type);
@@ -2945,7 +2971,7 @@ namespace vc
             auto lookup_src = lookup_node / Rhs;
             auto recv_it = env.find(lookup_src->location());
 
-            if (recv_it != env.end() && !recv_it->second.is_default)
+            if (recv_it != env.end() && !recv_it->second.is_default())
             {
               auto prim = extract_callable_primitive(recv_it->second.type);
 
@@ -3003,9 +3029,8 @@ namespace vc
             auto recv_loc = (lookup_it->second / Rhs)->location();
             auto recv_it = env.find(recv_loc);
 
-            if (recv_it != env.end() && recv_it->second.is_default)
+            if (recv_it != env.end() && recv_it->second.is_default())
             {
-              info.is_default = true;
               info.call_node = stmt;
             }
           }
@@ -3194,7 +3219,7 @@ namespace vc
           if (it == env.end())
             continue;
 
-          if (!it->second.is_default)
+          if (!it->second.is_default())
           {
             dominant_prim = extract_primitive(it->second.type);
 
@@ -3516,7 +3541,6 @@ namespace vc
                 {
                   label_env[loc] = {
                     clone(binfo.type),
-                    binfo.is_default,
                     binfo.is_fixed,
                     binfo.const_node,
                     binfo.call_node};
@@ -3529,7 +3553,6 @@ namespace vc
                   // a possible assignment.
                   it->second = {
                     clone(binfo.type),
-                    binfo.is_default,
                     binfo.is_fixed,
                     binfo.const_node,
                     binfo.call_node};
@@ -3652,7 +3675,7 @@ namespace vc
         {
           auto it = exit_envs[lbl_idx].find(loc);
 
-          if (it != exit_envs[lbl_idx].end() && !it->second.is_default)
+          if (it != exit_envs[lbl_idx].end() && !it->second.is_default())
           {
             auto p = extract_primitive(it->second.type);
 
@@ -4116,6 +4139,27 @@ namespace vc
 
         process_function(func, top, true);
       }
+
+      // Resolve any remaining DefaultInt/DefaultFloat in the AST.
+      // These are unresolved default literals that didn't get refined
+      // by context. Fall back to U64/F64 TypeName nodes.
+      top->traverse([](Node& node) {
+        if (node == DefaultInt)
+        {
+          auto replacement = primitive_type(U64)->front();
+          node->parent()->replace(node, replacement);
+          return false;
+        }
+
+        if (node == DefaultFloat)
+        {
+          auto replacement = primitive_type(F64)->front();
+          node->parent()->replace(node, replacement);
+          return false;
+        }
+
+        return true;
+      });
 
       return 0;
     });
