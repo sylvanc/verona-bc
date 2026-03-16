@@ -75,6 +75,7 @@ namespace vbcc
   inline const auto Copy = TokenDef("copy");
   inline const auto Move = TokenDef("move");
   inline const auto Drop = TokenDef("drop");
+  inline const auto Freeze = TokenDef("freeze");
   inline const auto RegisterRef = TokenDef("registerref");
   inline const auto FieldRef = TokenDef("fieldref");
   inline const auto ArrayRef = TokenDef("arrayref");
@@ -247,7 +248,7 @@ namespace vbcc
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
     StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
-    RegionArrayConst | Copy | Move | Drop | RegisterRef | FieldRef | ArrayRef |
+    RegionArrayConst | Copy | Move | Drop | Freeze | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
     wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
@@ -318,6 +319,7 @@ namespace vbcc
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
+    | (Freeze <<= wfDst * wfSrc)
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)

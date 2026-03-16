@@ -12,11 +12,11 @@ memo
         (labelid 5:start)
         (body
           (call
-            (localid 4:$923)
+            (localid 4:$924)
             (functionid 23:controlflow::main::0::0)
             (args)))
         (ret
-          (localid 4:$923)))))
+          (localid 4:$924)))))
   (func
     (functionid 23:controlflow::main::0::0)
     (params)
@@ -25,7 +25,7 @@ memo
       (localid 7:local$5)
       (localid 7:local$6)
       (localid 9:local$506)
-      (localid 9:local$892))
+      (localid 9:local$893))
     (labels
       (label
         (labelid 5:start)
@@ -65,23 +65,23 @@ memo
         (labelid 8:join$107)
         (body
           (typetest
-            (localid 9:local$839)
+            (localid 9:local$840)
             (localid 7:local$5)
             (classid 20:_builtin::nomatch::0)))
         (cond
-          (localid 9:local$839)
-          (labelid 8:body$841)
-          (labelid 8:body$840)))
+          (localid 9:local$840)
+          (labelid 8:body$842)
+          (labelid 8:body$841)))
       (label
-        (labelid 8:body$840)
+        (labelid 8:body$841)
         (body
           (copy
             (localid 9:local$506)
             (localid 7:local$5)))
         (jump
-          (labelid 8:join$842)))
+          (labelid 8:join$843)))
       (label
-        (labelid 8:body$841)
+        (labelid 8:body$842)
         (body
           (call
             (localid 7:local$6)
@@ -99,7 +99,7 @@ memo
         (labelid 8:body$110)
         (body
           (const
-            (localid 9:local$843)
+            (localid 9:local$844)
             (i32)
             (int 1:1))
           (call
@@ -108,7 +108,7 @@ memo
             (args
               (arg
                 (argcopy)
-                (localid 9:local$843))))
+                (localid 9:local$844))))
           (copy
             (localid 7:local$6)
             (localid 9:local$113)))
@@ -121,28 +121,28 @@ memo
             (localid 9:local$506)
             (localid 7:local$6)))
         (jump
-          (labelid 8:join$842)))
+          (labelid 8:join$843)))
       (label
-        (labelid 8:join$842)
+        (labelid 8:join$843)
         (body
           (typetest
-            (localid 9:local$912)
+            (localid 9:local$913)
             (localid 9:local$506)
             (classid 20:_builtin::nomatch::0)))
         (cond
-          (localid 9:local$912)
-          (labelid 8:body$914)
-          (labelid 8:body$913)))
-      (label
-        (labelid 8:body$913)
-        (body
-          (copy
-            (localid 9:local$892)
-            (localid 9:local$506)))
-        (jump
-          (labelid 8:join$915)))
+          (localid 9:local$913)
+          (labelid 8:body$915)
+          (labelid 8:body$914)))
       (label
         (labelid 8:body$914)
+        (body
+          (copy
+            (localid 9:local$893)
+            (localid 9:local$506)))
+        (jump
+          (labelid 8:join$916)))
+      (label
+        (labelid 8:body$915)
         (body
           (const
             (localid 9:local$114)
@@ -156,15 +156,15 @@ memo
                 (argcopy)
                 (localid 9:local$114))))
           (copy
-            (localid 9:local$892)
+            (localid 9:local$893)
             (localid 7:local$7)))
         (jump
-          (labelid 8:join$915)))
+          (labelid 8:join$916)))
       (label
-        (labelid 8:join$915)
+        (labelid 8:join$916)
         (body)
         (ret
-          (localid 9:local$892)))))
+          (localid 9:local$893)))))
   (primitive
     (i32)
     (methods))

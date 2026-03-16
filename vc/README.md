@@ -2,10 +2,6 @@
 
 ## To Do
 
-Freezing.
-- Need freeze syntax and a freeze `vbci` operation.
-- Can we optimize it?
-
 Review `iowise`.
 - Buffer final can't call flush, that relies on mutation.
 - Dispose pattern?

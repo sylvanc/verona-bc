@@ -270,7 +270,7 @@ namespace vc
   inline const auto wfExprDot =
     (wfExprSugar | CallDyn | TryCallDyn | Convert | Binop | Nulop | FFI |
      NewArray | ArrayRef | MakeCallback | CallbackPtr | FreeCallback |
-     RegisterExternalNotify | ArrayCopy | ArrayFill | ArrayCompare) -
+     RegisterExternalNotify | Freeze | ArrayCopy | ArrayFill | ArrayCompare) -
     Dot - TripleColon;
 
   // clang-format off
@@ -286,6 +286,7 @@ namespace vc
     | (CallbackPtr <<= Args)
     | (FreeCallback <<= Args)
     | (RegisterExternalNotify <<= Args)
+    | (Freeze <<= Args)
     | (ArrayCopy <<= Args)
     | (ArrayFill <<= Args)
     | (ArrayCompare <<= Args)
@@ -312,7 +313,7 @@ namespace vc
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
     When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
     GetRaise | SetRaise | SplatOp | ArrayRefFromEnd | MakeCallback |
-    CallbackPtr | FreeCallback | RegisterExternalNotify | ArrayCopy |
+    CallbackPtr | FreeCallback | RegisterExternalNotify | Freeze | ArrayCopy |
     ArrayFill | ArrayCompare;
 
   // clang-format off
@@ -420,6 +421,7 @@ namespace vc
     | (CallbackPtr <<= wfDst * wfSrc)
     | (FreeCallback <<= wfDst * wfSrc)
     | (RegisterExternalNotify <<= wfDst * wfSrc)
+    | (Freeze <<= wfDst * wfSrc)
     ;
   // clang-format on
 

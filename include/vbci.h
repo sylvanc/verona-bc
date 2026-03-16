@@ -140,6 +140,10 @@ namespace vbci
     // Arg0 = dst.
     Drop,
 
+    // Freeze the reachable subgraph from the value, making it immutable.
+    // Arg0 = src.
+    Freeze,
+
     // Create a reference to a register.
     // Arg0 = dst.
     // Arg1 = src.

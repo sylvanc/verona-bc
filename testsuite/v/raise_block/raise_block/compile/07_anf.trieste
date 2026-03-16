@@ -96,14 +96,14 @@ anf
                       (localid 5:$self))
                     (fieldid 13:$raise_target))
                   (load
-                    (localid 9:local$846)
+                    (localid 9:local$847)
                     (localid 9:local$110))
                   (copy
-                    (localid 9:local$915)
+                    (localid 9:local$916)
                     (localid 13:$raise_target))
                   (copy
                     (localid 13:$raise_target)
-                    (localid 9:local$846))
+                    (localid 9:local$847))
                   (setraise
                     (localid 9:local$111)
                     (localid 13:$raise_target))
@@ -129,14 +129,14 @@ anf
                     (typeargs)
                     (int 1:2))
                   (fieldref
-                    (localid 9:local$847)
+                    (localid 9:local$848)
                     (arg
                       (argcopy)
                       (localid 5:$self))
                     (fieldid 6:target))
                   (load
-                    (localid 9:local$916)
-                    (localid 9:local$847))
+                    (localid 9:local$917)
+                    (localid 9:local$848))
                   (calldyn
                     (localid 9:local$511)
                     (localid 9:local$510)
@@ -146,7 +146,7 @@ anf
                         (localid 1:x))
                       (arg
                         (argcopy)
-                        (localid 9:local$916)))))
+                        (localid 9:local$917)))))
                 (cond
                   (localid 9:local$511)
                   (labelid 8:body$108)
@@ -381,6 +381,7 @@ anf
       f32 = classdef
       f64 = classdef
       ffi = classdef
+      freeze = function
       i16 = classdef
       i32 = classdef
       i64 = classdef
@@ -616,10 +617,10 @@ anf
                         (argcopy)
                         (localid 1:f))))
                   (registerexternalnotify
-                    (localid 9:local$848)
+                    (localid 9:local$849)
                     (localid 8:local$11)))
                 (ret
-                  (localid 9:local$848)))))
+                  (localid 9:local$849)))))
           (classdef
             {
               add = function
@@ -1582,7 +1583,7 @@ anf
                           (typeargs))))
                     (localid 4:size))
                   (copy
-                    (localid 9:local$896)
+                    (localid 9:local$897)
                     (localid 1:a))
                   (copy
                     (localid 1:a)
@@ -1999,15 +2000,15 @@ anf
                     (typeargs)
                     (int 1:2))
                   (lookup
-                    (localid 9:local$849)
+                    (localid 9:local$850)
                     (localid 4:self)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$851)
                     (localid 9:local$850)
-                    (localid 9:local$849)
                     (args
                       (arg
                         (argcopy)
@@ -2021,7 +2022,7 @@ anf
                         (localid 1:i))
                       (arg
                         (argcopy)
-                        (localid 9:local$850)))))
+                        (localid 9:local$851)))))
                 (cond
                   (localid 9:local$528)
                   (labelid 8:body$130)
@@ -2037,15 +2038,15 @@ anf
                     (typeargs)
                     (int 1:2))
                   (lookup
-                    (localid 9:local$851)
+                    (localid 9:local$852)
                     (localid 4:self)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$853)
                     (localid 9:local$852)
-                    (localid 9:local$851)
                     (args
                       (arg
                         (argcopy)
@@ -2062,7 +2063,7 @@ anf
                         (localid 1:f))
                       (arg
                         (argcopy)
-                        (localid 9:local$852))))
+                        (localid 9:local$853))))
                   (const
                     (localid 9:local$132)
                     (int 1:1))
@@ -2084,14 +2085,14 @@ anf
                         (argcopy)
                         (localid 9:local$132))))
                   (copy
-                    (localid 9:local$897)
+                    (localid 9:local$898)
                     (localid 1:i))
                   (copy
                     (localid 1:i)
                     (localid 9:local$532))
                   (copy
                     (localid 8:local$29)
-                    (localid 9:local$897)))
+                    (localid 9:local$898)))
                 (jump
                   (labelid 8:cond$129)))
               (label
@@ -2297,15 +2298,15 @@ anf
                     (typeargs)
                     (int 1:2))
                   (lookup
-                    (localid 9:local$853)
+                    (localid 9:local$854)
                     (localid 4:self)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$855)
                     (localid 9:local$854)
-                    (localid 9:local$853)
                     (args
                       (arg
                         (argcopy)
@@ -2319,7 +2320,7 @@ anf
                         (localid 1:i))
                       (arg
                         (argcopy)
-                        (localid 9:local$854)))))
+                        (localid 9:local$855)))))
                 (cond
                   (localid 9:local$535)
                   (labelid 8:body$134)
@@ -2335,15 +2336,15 @@ anf
                     (typeargs)
                     (int 1:3))
                   (lookup
-                    (localid 9:local$855)
+                    (localid 9:local$856)
                     (localid 4:self)
                     (rhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$857)
                     (localid 9:local$856)
-                    (localid 9:local$855)
                     (args
                       (arg
                         (argcopy)
@@ -2363,7 +2364,7 @@ anf
                         (localid 1:i))
                       (arg
                         (argcopy)
-                        (localid 9:local$856))))
+                        (localid 9:local$857))))
                   (const
                     (localid 9:local$136)
                     (int 1:1))
@@ -2385,14 +2386,14 @@ anf
                         (argcopy)
                         (localid 9:local$136))))
                   (copy
-                    (localid 9:local$898)
+                    (localid 9:local$899)
                     (localid 1:i))
                   (copy
                     (localid 1:i)
                     (localid 9:local$539))
                   (copy
                     (localid 8:local$32)
-                    (localid 9:local$898)))
+                    (localid 9:local$899)))
                 (jump
                   (labelid 8:cond$133)))
               (label
@@ -3303,38 +3304,38 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$899)
+                    (localid 9:local$900)
                     (localid 9:local$543)
                     (rhs)
                     (symbolid 1:<)
                     (typeargs)
                     (int 1:2))
                   (lookup
-                    (localid 9:local$917)
+                    (localid 9:local$918)
                     (localid 9:local$545)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$919)
                     (localid 9:local$918)
-                    (localid 9:local$917)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$545))))
                   (calldyn
+                    (localid 9:local$901)
                     (localid 9:local$900)
-                    (localid 9:local$899)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$543))
                       (arg
                         (argcopy)
-                        (localid 9:local$918)))))
+                        (localid 9:local$919)))))
                 (cond
-                  (localid 9:local$900)
+                  (localid 9:local$901)
                   (labelid 8:body$140)
                   (labelid 8:join$141)))
               (label
@@ -3355,7 +3356,7 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (copy
-                    (localid 9:local$901)
+                    (localid 9:local$902)
                     (localid 1:a))
                   (copy
                     (localid 1:a)
@@ -3368,15 +3369,15 @@ anf
                     (typeargs)
                     (int 1:2))
                   (lookup
-                    (localid 9:local$857)
+                    (localid 9:local$858)
                     (localid 4:self)
                     (rhs)
                     (ident 5:index)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$859)
                     (localid 9:local$858)
-                    (localid 9:local$857)
                     (args
                       (arg
                         (argcopy)
@@ -3390,9 +3391,9 @@ anf
                         (localid 1:a))
                       (arg
                         (argcopy)
-                        (localid 9:local$858))))
+                        (localid 9:local$859))))
                   (copy
-                    (localid 9:local$902)
+                    (localid 9:local$903)
                     (localid 4:item))
                   (copy
                     (localid 4:item)
@@ -3429,15 +3430,15 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$903)
+                    (localid 9:local$904)
                     (localid 9:local$553)
                     (rhs)
                     (symbolid 1:+)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$905)
                     (localid 9:local$904)
-                    (localid 9:local$903)
                     (args
                       (arg
                         (argcopy)
@@ -3446,11 +3447,11 @@ anf
                         (argcopy)
                         (localid 9:local$142))))
                   (store
-                    (localid 9:local$923)
+                    (localid 9:local$924)
                     (localid 9:local$551)
                     (arg
                       (argcopy)
-                      (localid 9:local$904)))
+                      (localid 9:local$905)))
                   (copy
                     (localid 8:local$40)
                     (localid 4:item)))
@@ -3462,7 +3463,7 @@ anf
                   (var
                     (ident 8:local$40))
                   (typetest
-                    (localid 9:local$859)
+                    (localid 9:local$860)
                     (localid 8:local$40)
                     (type
                       (typename
@@ -3473,19 +3474,19 @@ anf
                           (ident 7:nomatch)
                           (typeargs))))))
                 (cond
-                  (localid 9:local$859)
-                  (labelid 8:body$861)
-                  (labelid 8:body$860)))
+                  (localid 9:local$860)
+                  (labelid 8:body$862)
+                  (labelid 8:body$861)))
               (label
-                (labelid 8:body$860)
+                (labelid 8:body$861)
                 (body
                   (copy
                     (localid 9:local$554)
                     (localid 8:local$40)))
                 (jump
-                  (labelid 8:join$862)))
+                  (labelid 8:join$863)))
               (label
-                (labelid 8:body$861)
+                (labelid 8:body$862)
                 (body
                   (call
                     (localid 8:local$41)
@@ -3505,9 +3506,9 @@ anf
                     (localid 9:local$554)
                     (localid 8:local$41)))
                 (jump
-                  (labelid 8:join$862)))
+                  (labelid 8:join$863)))
               (label
-                (labelid 8:join$862)
+                (labelid 8:join$863)
                 (body
                   (var
                     (ident 9:local$554)))
@@ -3566,13 +3567,13 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (store
-                    (localid 9:local$863)
+                    (localid 9:local$864)
                     (localid 9:local$144)
                     (arg
                       (argcopy)
                       (localid 8:local$42))))
                 (ret
-                  (localid 9:local$863)))))))
+                  (localid 9:local$864)))))))
       (classdef
         {
           apply = function}
@@ -3839,7 +3840,7 @@ anf
                   (var
                     (ident 8:local$45))
                   (typetest
-                    (localid 9:local$864)
+                    (localid 9:local$865)
                     (localid 8:local$45)
                     (type
                       (typename
@@ -3850,19 +3851,19 @@ anf
                           (ident 7:nomatch)
                           (typeargs))))))
                 (cond
-                  (localid 9:local$864)
-                  (labelid 8:body$866)
-                  (labelid 8:body$865)))
+                  (localid 9:local$865)
+                  (labelid 8:body$867)
+                  (labelid 8:body$866)))
               (label
-                (labelid 8:body$865)
+                (labelid 8:body$866)
                 (body
                   (copy
                     (localid 9:local$557)
                     (localid 8:local$45)))
                 (jump
-                  (labelid 8:join$867)))
+                  (labelid 8:join$868)))
               (label
-                (labelid 8:body$866)
+                (labelid 8:body$867)
                 (body
                   (const
                     (localid 8:local$46)
@@ -3871,9 +3872,9 @@ anf
                     (localid 9:local$557)
                     (localid 8:local$46)))
                 (jump
-                  (labelid 8:join$867)))
+                  (labelid 8:join$868)))
               (label
-                (labelid 8:join$867)
+                (labelid 8:join$868)
                 (body
                   (var
                     (ident 9:local$557)))
@@ -3957,7 +3958,7 @@ anf
                   (var
                     (ident 8:local$47))
                   (typetest
-                    (localid 9:local$868)
+                    (localid 9:local$869)
                     (localid 8:local$47)
                     (type
                       (typename
@@ -3968,19 +3969,19 @@ anf
                           (ident 7:nomatch)
                           (typeargs))))))
                 (cond
-                  (localid 9:local$868)
-                  (labelid 8:body$870)
-                  (labelid 8:body$869)))
+                  (localid 9:local$869)
+                  (labelid 8:body$871)
+                  (labelid 8:body$870)))
               (label
-                (labelid 8:body$869)
+                (labelid 8:body$870)
                 (body
                   (copy
                     (localid 9:local$558)
                     (localid 8:local$47)))
                 (jump
-                  (labelid 8:join$871)))
+                  (labelid 8:join$872)))
               (label
-                (labelid 8:body$870)
+                (labelid 8:body$871)
                 (body
                   (lookup
                     (localid 9:local$151)
@@ -4000,9 +4001,9 @@ anf
                     (localid 9:local$558)
                     (localid 9:local$152)))
                 (jump
-                  (labelid 8:join$871)))
+                  (labelid 8:join$872)))
               (label
-                (labelid 8:join$871)
+                (labelid 8:join$872)
                 (body
                   (var
                     (ident 9:local$558)))
@@ -4695,10 +4696,10 @@ anf
                           (localid 5:$self))
                         (fieldid 4:some))
                       (load
-                        (localid 9:local$872)
+                        (localid 9:local$873)
                         (localid 9:local$162)))
                     (ret
-                      (localid 9:local$872)))))))
+                      (localid 9:local$873)))))))
           (function
             {
               some = paramdef}
@@ -9542,6 +9543,41 @@ anf
                 (body)
                 (ret
                   (localid 4:self)))))))
+      (function
+        {
+          x = paramdef}
+        (rhs)
+        (ident 6:freeze)
+        (typeparams)
+        (params
+          (paramdef
+            (ident 1:x)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:any)
+                  (typeargs))))))
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))
+            (nameelement
+              (ident 4:none)
+              (typeargs))))
+        (where)
+        (labels
+          (label
+            (labelid 5:start)
+            (body
+              (freeze
+                (localid 9:local$633)
+                (localid 1:x)))
+            (ret
+              (localid 9:local$633)))))
       (classdef
         {
           ! = function
@@ -10539,10 +10575,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$633)
+                    (localid 9:local$634)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$633)))))
+                  (localid 9:local$634)))))
           (function
             {
               self = paramdef}
@@ -10574,10 +10610,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$634)
+                    (localid 9:local$635)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$634)))))
+                  (localid 9:local$635)))))
           (function
             {
               self = paramdef}
@@ -10609,10 +10645,10 @@ anf
                 (labelid 5:start)
                 (body
                   (abs
-                    (localid 9:local$635)
+                    (localid 9:local$636)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$635)))))
+                  (localid 9:local$636)))))
           (function
             {
               self = paramdef}
@@ -10696,11 +10732,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$636)
+                    (localid 9:local$637)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$636)))))
+                  (localid 9:local$637)))))
           (function
             {
               self = paramdef}
@@ -10764,11 +10800,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$637)
+                    (localid 9:local$638)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$637)))))
+                  (localid 9:local$638)))))
           (function
             {
               self = paramdef}
@@ -10800,11 +10836,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$638)
+                    (localid 9:local$639)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$638)))))
+                  (localid 9:local$639)))))
           (function
             {
               self = paramdef}
@@ -10836,11 +10872,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$639)
+                    (localid 9:local$640)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$639)))))
+                  (localid 9:local$640)))))
           (function
             {
               self = paramdef}
@@ -10872,11 +10908,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$640)
+                    (localid 9:local$641)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$640)))))
+                  (localid 9:local$641)))))
           (function
             {
               self = paramdef}
@@ -10908,11 +10944,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$641)
+                    (localid 9:local$642)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$641)))))
+                  (localid 9:local$642)))))
           (function
             {
               self = paramdef}
@@ -10944,11 +10980,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$642)
+                    (localid 9:local$643)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$642)))))
+                  (localid 9:local$643)))))
           (function
             {
               self = paramdef}
@@ -10980,11 +11016,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$643)
+                    (localid 9:local$644)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$643)))))
+                  (localid 9:local$644)))))
           (function
             {
               self = paramdef}
@@ -11016,11 +11052,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$644)
+                    (localid 9:local$645)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$644)))))
+                  (localid 9:local$645)))))
           (function
             {
               self = paramdef}
@@ -11052,11 +11088,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$645)
+                    (localid 9:local$646)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$645)))))
+                  (localid 9:local$646)))))
           (function
             {
               self = paramdef}
@@ -11088,11 +11124,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$646)
+                    (localid 9:local$647)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$646)))))
+                  (localid 9:local$647)))))
           (function
             {
               self = paramdef}
@@ -11124,11 +11160,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$647)
+                    (localid 9:local$648)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$647)))))
+                  (localid 9:local$648)))))
           (function
             {
               self = paramdef}
@@ -11160,11 +11196,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$648)
+                    (localid 9:local$649)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$648)))))))
+                  (localid 9:local$649)))))))
       (classdef
         {
           ! = function
@@ -12162,10 +12198,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$649)
+                    (localid 9:local$650)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$649)))))
+                  (localid 9:local$650)))))
           (function
             {
               self = paramdef}
@@ -12197,10 +12233,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$650)
+                    (localid 9:local$651)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$650)))))
+                  (localid 9:local$651)))))
           (function
             {
               self = paramdef}
@@ -12232,10 +12268,10 @@ anf
                 (labelid 5:start)
                 (body
                   (abs
-                    (localid 9:local$651)
+                    (localid 9:local$652)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$651)))))
+                  (localid 9:local$652)))))
           (function
             {
               self = paramdef}
@@ -12319,11 +12355,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$652)
+                    (localid 9:local$653)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$652)))))
+                  (localid 9:local$653)))))
           (function
             {
               self = paramdef}
@@ -12355,11 +12391,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$653)
+                    (localid 9:local$654)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$653)))))
+                  (localid 9:local$654)))))
           (function
             {
               self = paramdef}
@@ -12423,11 +12459,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$654)
+                    (localid 9:local$655)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$654)))))
+                  (localid 9:local$655)))))
           (function
             {
               self = paramdef}
@@ -12459,11 +12495,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$655)
+                    (localid 9:local$656)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$655)))))
+                  (localid 9:local$656)))))
           (function
             {
               self = paramdef}
@@ -12495,11 +12531,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$656)
+                    (localid 9:local$657)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$656)))))
+                  (localid 9:local$657)))))
           (function
             {
               self = paramdef}
@@ -12531,11 +12567,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$657)
+                    (localid 9:local$658)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$657)))))
+                  (localid 9:local$658)))))
           (function
             {
               self = paramdef}
@@ -12567,11 +12603,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$658)
+                    (localid 9:local$659)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$658)))))
+                  (localid 9:local$659)))))
           (function
             {
               self = paramdef}
@@ -12603,11 +12639,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$659)
+                    (localid 9:local$660)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$659)))))
+                  (localid 9:local$660)))))
           (function
             {
               self = paramdef}
@@ -12639,11 +12675,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$660)
+                    (localid 9:local$661)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$660)))))
+                  (localid 9:local$661)))))
           (function
             {
               self = paramdef}
@@ -12675,11 +12711,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$661)
+                    (localid 9:local$662)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$661)))))
+                  (localid 9:local$662)))))
           (function
             {
               self = paramdef}
@@ -12711,11 +12747,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$662)
+                    (localid 9:local$663)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$662)))))
+                  (localid 9:local$663)))))
           (function
             {
               self = paramdef}
@@ -12747,11 +12783,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$663)
+                    (localid 9:local$664)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$663)))))
+                  (localid 9:local$664)))))
           (function
             {
               self = paramdef}
@@ -12783,11 +12819,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$664)
+                    (localid 9:local$665)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$664)))))))
+                  (localid 9:local$665)))))))
       (classdef
         {
           ! = function
@@ -13785,10 +13821,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$665)
+                    (localid 9:local$666)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$665)))))
+                  (localid 9:local$666)))))
           (function
             {
               self = paramdef}
@@ -13820,10 +13856,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$666)
+                    (localid 9:local$667)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$666)))))
+                  (localid 9:local$667)))))
           (function
             {
               self = paramdef}
@@ -13855,10 +13891,10 @@ anf
                 (labelid 5:start)
                 (body
                   (abs
-                    (localid 9:local$667)
+                    (localid 9:local$668)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$667)))))
+                  (localid 9:local$668)))))
           (function
             {
               self = paramdef}
@@ -13942,11 +13978,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$668)
+                    (localid 9:local$669)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$668)))))
+                  (localid 9:local$669)))))
           (function
             {
               self = paramdef}
@@ -13978,11 +14014,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$669)
+                    (localid 9:local$670)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$669)))))
+                  (localid 9:local$670)))))
           (function
             {
               self = paramdef}
@@ -14014,11 +14050,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$670)
+                    (localid 9:local$671)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$670)))))
+                  (localid 9:local$671)))))
           (function
             {
               self = paramdef}
@@ -14082,11 +14118,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$671)
+                    (localid 9:local$672)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$671)))))
+                  (localid 9:local$672)))))
           (function
             {
               self = paramdef}
@@ -14118,11 +14154,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$672)
+                    (localid 9:local$673)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$672)))))
+                  (localid 9:local$673)))))
           (function
             {
               self = paramdef}
@@ -14154,11 +14190,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$673)
+                    (localid 9:local$674)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$673)))))
+                  (localid 9:local$674)))))
           (function
             {
               self = paramdef}
@@ -14190,11 +14226,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$674)
+                    (localid 9:local$675)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$674)))))
+                  (localid 9:local$675)))))
           (function
             {
               self = paramdef}
@@ -14226,11 +14262,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$675)
+                    (localid 9:local$676)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$675)))))
+                  (localid 9:local$676)))))
           (function
             {
               self = paramdef}
@@ -14262,11 +14298,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$676)
+                    (localid 9:local$677)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$676)))))
+                  (localid 9:local$677)))))
           (function
             {
               self = paramdef}
@@ -14298,11 +14334,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$677)
+                    (localid 9:local$678)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$677)))))
+                  (localid 9:local$678)))))
           (function
             {
               self = paramdef}
@@ -14334,11 +14370,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$678)
+                    (localid 9:local$679)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$678)))))
+                  (localid 9:local$679)))))
           (function
             {
               self = paramdef}
@@ -14370,11 +14406,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$679)
+                    (localid 9:local$680)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$679)))))
+                  (localid 9:local$680)))))
           (function
             {
               self = paramdef}
@@ -14406,11 +14442,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$680)
+                    (localid 9:local$681)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$680)))))))
+                  (localid 9:local$681)))))))
       (classdef
         {
           ! = function
@@ -15408,10 +15444,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$681)
+                    (localid 9:local$682)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$681)))))
+                  (localid 9:local$682)))))
           (function
             {
               self = paramdef}
@@ -15443,10 +15479,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$682)
+                    (localid 9:local$683)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$682)))))
+                  (localid 9:local$683)))))
           (function
             {
               self = paramdef}
@@ -15478,10 +15514,10 @@ anf
                 (labelid 5:start)
                 (body
                   (abs
-                    (localid 9:local$683)
+                    (localid 9:local$684)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$683)))))
+                  (localid 9:local$684)))))
           (function
             {
               self = paramdef}
@@ -15597,11 +15633,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$684)
+                    (localid 9:local$685)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$684)))))
+                  (localid 9:local$685)))))
           (function
             {
               self = paramdef}
@@ -15633,11 +15669,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$685)
+                    (localid 9:local$686)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$685)))))
+                  (localid 9:local$686)))))
           (function
             {
               self = paramdef}
@@ -15669,11 +15705,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$686)
+                    (localid 9:local$687)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$686)))))
+                  (localid 9:local$687)))))
           (function
             {
               self = paramdef}
@@ -15705,11 +15741,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$687)
+                    (localid 9:local$688)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$687)))))
+                  (localid 9:local$688)))))
           (function
             {
               self = paramdef}
@@ -15741,11 +15777,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$688)
+                    (localid 9:local$689)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$688)))))
+                  (localid 9:local$689)))))
           (function
             {
               self = paramdef}
@@ -15777,11 +15813,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$689)
+                    (localid 9:local$690)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$689)))))
+                  (localid 9:local$690)))))
           (function
             {
               self = paramdef}
@@ -15813,11 +15849,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$690)
+                    (localid 9:local$691)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$690)))))
+                  (localid 9:local$691)))))
           (function
             {
               self = paramdef}
@@ -15849,11 +15885,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$691)
+                    (localid 9:local$692)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$691)))))
+                  (localid 9:local$692)))))
           (function
             {
               self = paramdef}
@@ -15885,11 +15921,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$692)
+                    (localid 9:local$693)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$692)))))
+                  (localid 9:local$693)))))
           (function
             {
               self = paramdef}
@@ -15921,11 +15957,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$693)
+                    (localid 9:local$694)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$693)))))
+                  (localid 9:local$694)))))
           (function
             {
               self = paramdef}
@@ -15957,11 +15993,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$694)
+                    (localid 9:local$695)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$694)))))
+                  (localid 9:local$695)))))
           (function
             {
               self = paramdef}
@@ -15993,11 +16029,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$695)
+                    (localid 9:local$696)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$695)))))
+                  (localid 9:local$696)))))
           (function
             {
               self = paramdef}
@@ -16029,11 +16065,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$696)
+                    (localid 9:local$697)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$696)))))))
+                  (localid 9:local$697)))))))
       (classdef
         {
           ! = function
@@ -17031,10 +17067,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$697)
+                    (localid 9:local$698)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$697)))))
+                  (localid 9:local$698)))))
           (function
             {
               self = paramdef}
@@ -17066,10 +17102,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$698)
+                    (localid 9:local$699)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$698)))))
+                  (localid 9:local$699)))))
           (function
             {
               self = paramdef}
@@ -17101,10 +17137,10 @@ anf
                 (labelid 5:start)
                 (body
                   (abs
-                    (localid 9:local$699)
+                    (localid 9:local$700)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$699)))))
+                  (localid 9:local$700)))))
           (function
             {
               self = paramdef}
@@ -17188,11 +17224,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$700)
+                    (localid 9:local$701)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$700)))))
+                  (localid 9:local$701)))))
           (function
             {
               self = paramdef}
@@ -17224,11 +17260,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$701)
+                    (localid 9:local$702)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$701)))))
+                  (localid 9:local$702)))))
           (function
             {
               self = paramdef}
@@ -17260,11 +17296,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$702)
+                    (localid 9:local$703)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$702)))))
+                  (localid 9:local$703)))))
           (function
             {
               self = paramdef}
@@ -17296,11 +17332,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$703)
+                    (localid 9:local$704)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$703)))))
+                  (localid 9:local$704)))))
           (function
             {
               self = paramdef}
@@ -17332,11 +17368,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$704)
+                    (localid 9:local$705)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$704)))))
+                  (localid 9:local$705)))))
           (function
             {
               self = paramdef}
@@ -17368,11 +17404,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$705)
+                    (localid 9:local$706)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$705)))))
+                  (localid 9:local$706)))))
           (function
             {
               self = paramdef}
@@ -17404,11 +17440,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$706)
+                    (localid 9:local$707)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$706)))))
+                  (localid 9:local$707)))))
           (function
             {
               self = paramdef}
@@ -17440,11 +17476,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$707)
+                    (localid 9:local$708)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$707)))))
+                  (localid 9:local$708)))))
           (function
             {
               self = paramdef}
@@ -17476,11 +17512,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$708)
+                    (localid 9:local$709)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$708)))))
+                  (localid 9:local$709)))))
           (function
             {
               self = paramdef}
@@ -17512,11 +17548,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$709)
+                    (localid 9:local$710)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$709)))))
+                  (localid 9:local$710)))))
           (function
             {
               self = paramdef}
@@ -17580,11 +17616,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$710)
+                    (localid 9:local$711)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$710)))))
+                  (localid 9:local$711)))))
           (function
             {
               self = paramdef}
@@ -17616,11 +17652,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$711)
+                    (localid 9:local$712)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$711)))))
+                  (localid 9:local$712)))))
           (function
             {
               self = paramdef}
@@ -17652,11 +17688,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$712)
+                    (localid 9:local$713)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$712)))))))
+                  (localid 9:local$713)))))))
       (function
         {
           a = paramdef
@@ -17782,10 +17818,10 @@ anf
             (labelid 5:start)
             (body
               (bits
-                (localid 9:local$713)
+                (localid 9:local$714)
                 (localid 1:a)))
             (ret
-              (localid 9:local$713)))))
+              (localid 9:local$714)))))
       (classdef
         {
           ! = function
@@ -18783,10 +18819,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$714)
+                    (localid 9:local$715)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$714)))))
+                  (localid 9:local$715)))))
           (function
             {
               self = paramdef}
@@ -18818,10 +18854,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$715)
+                    (localid 9:local$716)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$715)))))
+                  (localid 9:local$716)))))
           (function
             {
               self = paramdef}
@@ -18853,10 +18889,10 @@ anf
                 (labelid 5:start)
                 (body
                   (abs
-                    (localid 9:local$716)
+                    (localid 9:local$717)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$716)))))
+                  (localid 9:local$717)))))
           (function
             {
               self = paramdef}
@@ -18940,11 +18976,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$717)
+                    (localid 9:local$718)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$717)))))
+                  (localid 9:local$718)))))
           (function
             {
               self = paramdef}
@@ -18976,11 +19012,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$718)
+                    (localid 9:local$719)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$718)))))
+                  (localid 9:local$719)))))
           (function
             {
               self = paramdef}
@@ -19012,11 +19048,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$719)
+                    (localid 9:local$720)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$719)))))
+                  (localid 9:local$720)))))
           (function
             {
               self = paramdef}
@@ -19048,11 +19084,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$720)
+                    (localid 9:local$721)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$720)))))
+                  (localid 9:local$721)))))
           (function
             {
               self = paramdef}
@@ -19084,11 +19120,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$721)
+                    (localid 9:local$722)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$721)))))
+                  (localid 9:local$722)))))
           (function
             {
               self = paramdef}
@@ -19120,11 +19156,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$722)
+                    (localid 9:local$723)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$722)))))
+                  (localid 9:local$723)))))
           (function
             {
               self = paramdef}
@@ -19156,11 +19192,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$723)
+                    (localid 9:local$724)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$723)))))
+                  (localid 9:local$724)))))
           (function
             {
               self = paramdef}
@@ -19192,11 +19228,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$724)
+                    (localid 9:local$725)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$724)))))
+                  (localid 9:local$725)))))
           (function
             {
               self = paramdef}
@@ -19228,11 +19264,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$725)
+                    (localid 9:local$726)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$725)))))
+                  (localid 9:local$726)))))
           (function
             {
               self = paramdef}
@@ -19264,11 +19300,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$726)
+                    (localid 9:local$727)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$726)))))
+                  (localid 9:local$727)))))
           (function
             {
               self = paramdef}
@@ -19332,11 +19368,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$727)
+                    (localid 9:local$728)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$727)))))
+                  (localid 9:local$728)))))
           (function
             {
               self = paramdef}
@@ -19368,11 +19404,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$728)
+                    (localid 9:local$729)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$728)))))
+                  (localid 9:local$729)))))
           (function
             {
               self = paramdef}
@@ -19404,11 +19440,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$729)
+                    (localid 9:local$730)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$729)))))))
+                  (localid 9:local$730)))))))
       (classdef
         {
           create = function}
@@ -19613,10 +19649,10 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (load
-                    (localid 9:local$730)
+                    (localid 9:local$731)
                     (localid 8:local$76)))
                 (ret
-                  (localid 9:local$730)))))
+                  (localid 9:local$731)))))
           (function
             {}
             (rhs)
@@ -19809,10 +19845,10 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (load
-                    (localid 9:local$731)
+                    (localid 9:local$732)
                     (localid 8:local$78)))
                 (ret
-                  (localid 9:local$731)))))
+                  (localid 9:local$732)))))
           (function
             {
               data = paramdef}
@@ -19912,21 +19948,21 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$873)
+                    (localid 9:local$874)
                     (localid 9:local$335)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$875)
                     (localid 9:local$874)
-                    (localid 9:local$873)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$335)))))
                 (ret
-                  (localid 9:local$874)))))
+                  (localid 9:local$875)))))
           (function
             {
               index = paramdef
@@ -19991,15 +20027,15 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$875)
+                    (localid 9:local$876)
                     (localid 9:local$337)
                     (lhs)
                     (ident 5:apply)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$877)
                     (localid 9:local$876)
-                    (localid 9:local$875)
                     (args
                       (arg
                         (argcopy)
@@ -20008,7 +20044,7 @@ anf
                         (argcopy)
                         (localid 5:index)))))
                 (ret
-                  (localid 9:local$876)))))
+                  (localid 9:local$877)))))
           (function
             {
               index = paramdef
@@ -20065,10 +20101,10 @@ anf
                         (argcopy)
                         (localid 5:index))))
                   (load
-                    (localid 9:local$732)
+                    (localid 9:local$733)
                     (localid 8:local$80)))
                 (ret
-                  (localid 9:local$732)))))
+                  (localid 9:local$733)))))
           (function
             {
               self = paramdef}
@@ -20122,21 +20158,21 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$877)
+                    (localid 9:local$878)
                     (localid 9:local$339)
                     (rhs)
                     (ident 6:values)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$879)
                     (localid 9:local$878)
-                    (localid 9:local$877)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$339)))))
                 (ret
-                  (localid 9:local$878)))))
+                  (localid 9:local$879)))))
           (function
             {
               self = paramdef}
@@ -20185,15 +20221,15 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$879)
+                    (localid 9:local$880)
                     (localid 9:local$341)
                     (rhs)
                     (symbolid 2:!=)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$881)
                     (localid 9:local$880)
-                    (localid 9:local$879)
                     (args
                       (arg
                         (argcopy)
@@ -20202,7 +20238,7 @@ anf
                         (argcopy)
                         (localid 8:local$81)))))
                 (ret
-                  (localid 9:local$880)))))
+                  (localid 9:local$881)))))
           (function
             {
               local$82 = var
@@ -20260,52 +20296,52 @@ anf
                         (typeargs)))
                     (args))
                   (lookup
-                    (localid 9:local$733)
+                    (localid 9:local$734)
                     (localid 4:self)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$735)
                     (localid 9:local$734)
-                    (localid 9:local$733)
                     (args
                       (arg
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$735)
+                    (localid 9:local$736)
                     (localid 5:other)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$737)
                     (localid 9:local$736)
-                    (localid 9:local$735)
                     (args
                       (arg
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$905)
-                    (localid 9:local$734)
+                    (localid 9:local$906)
+                    (localid 9:local$735)
                     (rhs)
                     (symbolid 2:!=)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$907)
                     (localid 9:local$906)
-                    (localid 9:local$905)
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$734))
+                        (localid 9:local$735))
                       (arg
                         (argcopy)
-                        (localid 9:local$736)))))
+                        (localid 9:local$737)))))
                 (cond
-                  (localid 9:local$906)
+                  (localid 9:local$907)
                   (labelid 8:body$342)
                   (labelid 8:join$343)))
               (label
@@ -20390,15 +20426,15 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$881)
+                    (localid 9:local$882)
                     (localid 9:local$347)
                     (rhs)
                     (ident 7:compare)
                     (typeargs)
                     (int 1:5))
                   (calldyn
+                    (localid 9:local$883)
                     (localid 9:local$882)
-                    (localid 9:local$881)
                     (args
                       (arg
                         (argcopy)
@@ -20416,24 +20452,24 @@ anf
                         (argcopy)
                         (localid 9:local$351))))
                   (lookup
-                    (localid 9:local$919)
-                    (localid 9:local$882)
+                    (localid 9:local$920)
+                    (localid 9:local$883)
                     (rhs)
                     (symbolid 2:==)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$921)
                     (localid 9:local$920)
-                    (localid 9:local$919)
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$882))
+                        (localid 9:local$883))
                       (arg
                         (argcopy)
                         (localid 8:local$85)))))
                 (ret
-                  (localid 9:local$920)))))
+                  (localid 9:local$921)))))
           (function
             {
               other = paramdef
@@ -20493,24 +20529,24 @@ anf
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$907)
+                    (localid 9:local$908)
                     (localid 9:local$353)
                     (rhs)
                     (symbolid 1:!)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$909)
                     (localid 9:local$908)
-                    (localid 9:local$907)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$353)))))
                 (ret
-                  (localid 9:local$908)))))
+                  (localid 9:local$909)))))
           (function
             {
-              local$740 = var
+              local$741 = var
               local$88 = var
               local$89 = var
               other = paramdef
@@ -20581,15 +20617,15 @@ anf
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$883)
+                    (localid 9:local$884)
                     (localid 9:local$357)
                     (rhs)
                     (ident 3:min)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$885)
                     (localid 9:local$884)
-                    (localid 9:local$883)
                     (args
                       (arg
                         (argcopy)
@@ -20598,11 +20634,11 @@ anf
                         (argcopy)
                         (localid 9:local$359))))
                   (copy
-                    (localid 9:local$921)
+                    (localid 9:local$922)
                     (localid 3:len))
                   (copy
                     (localid 3:len)
-                    (localid 9:local$884))
+                    (localid 9:local$885))
                   (const
                     (localid 8:local$86)
                     (int 1:0))
@@ -20638,15 +20674,15 @@ anf
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$885)
+                    (localid 9:local$886)
                     (localid 9:local$361)
                     (rhs)
                     (ident 7:compare)
                     (typeargs)
                     (int 1:5))
                   (calldyn
+                    (localid 9:local$887)
                     (localid 9:local$886)
-                    (localid 9:local$885)
                     (args
                       (arg
                         (argcopy)
@@ -20664,11 +20700,11 @@ anf
                         (argcopy)
                         (localid 3:len))))
                   (copy
-                    (localid 9:local$922)
+                    (localid 9:local$923)
                     (localid 3:cmp))
                   (copy
                     (localid 3:cmp)
-                    (localid 9:local$886))
+                    (localid 9:local$887))
                   (call
                     (localid 8:local$88)
                     (rhs)
@@ -20684,7 +20720,7 @@ anf
                         (typeargs)))
                     (args))
                   (const
-                    (localid 9:local$737)
+                    (localid 9:local$738)
                     (int 1:0))
                   (call
                     (localid 9:local$364)
@@ -20702,17 +20738,17 @@ anf
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$737))))
+                        (localid 9:local$738))))
                   (lookup
-                    (localid 9:local$738)
+                    (localid 9:local$739)
                     (localid 3:cmp)
                     (rhs)
                     (symbolid 1:<)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$740)
                     (localid 9:local$739)
-                    (localid 9:local$738)
                     (args
                       (arg
                         (argcopy)
@@ -20721,7 +20757,7 @@ anf
                         (argcopy)
                         (localid 9:local$364)))))
                 (cond
-                  (localid 9:local$739)
+                  (localid 9:local$740)
                   (labelid 8:body$354)
                   (labelid 8:join$355)))
               (label
@@ -20738,7 +20774,7 @@ anf
                   (var
                     (ident 8:local$88))
                   (typetest
-                    (localid 9:local$887)
+                    (localid 9:local$888)
                     (localid 8:local$88)
                     (type
                       (typename
@@ -20749,19 +20785,19 @@ anf
                           (ident 7:nomatch)
                           (typeargs))))))
                 (cond
-                  (localid 9:local$887)
-                  (labelid 8:body$889)
-                  (labelid 8:body$888)))
-              (label
-                (labelid 8:body$888)
-                (body
-                  (copy
-                    (localid 9:local$740)
-                    (localid 8:local$88)))
-                (jump
-                  (labelid 8:join$890)))
+                  (localid 9:local$888)
+                  (labelid 8:body$890)
+                  (labelid 8:body$889)))
               (label
                 (labelid 8:body$889)
+                (body
+                  (copy
+                    (localid 9:local$741)
+                    (localid 8:local$88)))
+                (jump
+                  (labelid 8:join$891)))
+              (label
+                (labelid 8:body$890)
                 (body
                   (call
                     (localid 8:local$89)
@@ -20778,7 +20814,7 @@ anf
                         (typeargs)))
                     (args))
                   (const
-                    (localid 9:local$891)
+                    (localid 9:local$892)
                     (int 1:0))
                   (call
                     (localid 9:local$368)
@@ -20796,17 +20832,17 @@ anf
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$891))))
+                        (localid 9:local$892))))
                   (lookup
-                    (localid 9:local$892)
+                    (localid 9:local$893)
                     (localid 3:cmp)
                     (rhs)
                     (symbolid 1:>)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$894)
                     (localid 9:local$893)
-                    (localid 9:local$892)
                     (args
                       (arg
                         (argcopy)
@@ -20815,7 +20851,7 @@ anf
                         (argcopy)
                         (localid 9:local$368)))))
                 (cond
-                  (localid 9:local$893)
+                  (localid 9:local$894)
                   (labelid 8:body$366)
                   (labelid 8:join$367)))
               (label
@@ -20832,15 +20868,15 @@ anf
                   (var
                     (ident 8:local$89))
                   (copy
-                    (localid 9:local$740)
+                    (localid 9:local$741)
                     (localid 8:local$89)))
                 (jump
-                  (labelid 8:join$890)))
+                  (labelid 8:join$891)))
               (label
-                (labelid 8:join$890)
+                (labelid 8:join$891)
                 (body
                   (var
-                    (ident 9:local$740))
+                    (ident 9:local$741))
                   (lookup
                     (localid 9:local$370)
                     (localid 4:self)
@@ -20870,15 +20906,15 @@ anf
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$894)
+                    (localid 9:local$895)
                     (localid 9:local$371)
                     (rhs)
                     (symbolid 1:<)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$896)
                     (localid 9:local$895)
-                    (localid 9:local$894)
                     (args
                       (arg
                         (argcopy)
@@ -20887,7 +20923,7 @@ anf
                         (argcopy)
                         (localid 9:local$373)))))
                 (ret
-                  (localid 9:local$895)))))
+                  (localid 9:local$896)))))
           (function
             {
               other = paramdef
@@ -20947,21 +20983,21 @@ anf
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$909)
+                    (localid 9:local$910)
                     (localid 9:local$375)
                     (rhs)
                     (symbolid 1:!)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$911)
                     (localid 9:local$910)
-                    (localid 9:local$909)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$375)))))
                 (ret
-                  (localid 9:local$910)))))
+                  (localid 9:local$911)))))
           (function
             {
               other = paramdef
@@ -21081,21 +21117,21 @@ anf
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$911)
+                    (localid 9:local$912)
                     (localid 9:local$379)
                     (rhs)
                     (symbolid 1:!)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$913)
                     (localid 9:local$912)
-                    (localid 9:local$911)
                     (args
                       (arg
                         (argcopy)
                         (localid 9:local$379)))))
                 (ret
-                  (localid 9:local$912)))))
+                  (localid 9:local$913)))))
           (function
             {
               other = paramdef
@@ -21138,50 +21174,50 @@ anf
                 (labelid 5:start)
                 (body
                   (lookup
-                    (localid 9:local$741)
+                    (localid 9:local$742)
                     (localid 4:self)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$743)
                     (localid 9:local$742)
-                    (localid 9:local$741)
                     (args
                       (arg
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$743)
+                    (localid 9:local$744)
                     (localid 5:other)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$745)
                     (localid 9:local$744)
-                    (localid 9:local$743)
                     (args
                       (arg
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$913)
-                    (localid 9:local$742)
+                    (localid 9:local$914)
+                    (localid 9:local$743)
                     (rhs)
                     (symbolid 1:+)
                     (typeargs)
                     (int 1:2))
                   (calldyn
+                    (localid 9:local$915)
                     (localid 9:local$914)
-                    (localid 9:local$913)
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$742))
+                        (localid 9:local$743))
                       (arg
                         (argcopy)
-                        (localid 9:local$744))))
+                        (localid 9:local$745))))
                   (call
                     (localid 8:local$90)
                     (rhs)
@@ -21206,9 +21242,9 @@ anf
                     (args
                       (arg
                         (argcopy)
-                        (localid 9:local$914))))
+                        (localid 9:local$915))))
                   (copy
-                    (localid 9:local$745)
+                    (localid 9:local$746)
                     (localid 6:result))
                   (copy
                     (localid 6:result)
@@ -21227,29 +21263,29 @@ anf
                     (typeargs)
                     (int 1:5))
                   (lookup
-                    (localid 9:local$746)
+                    (localid 9:local$747)
                     (localid 4:self)
                     (rhs)
                     (ident 4:data)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$748)
                     (localid 9:local$747)
-                    (localid 9:local$746)
                     (args
                       (arg
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$748)
+                    (localid 9:local$749)
                     (localid 4:self)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$750)
                     (localid 9:local$749)
-                    (localid 9:local$748)
                     (args
                       (arg
                         (argcopy)
@@ -21266,13 +21302,13 @@ anf
                         (localid 8:local$91))
                       (arg
                         (argcopy)
-                        (localid 9:local$747))
+                        (localid 9:local$748))
                       (arg
                         (argcopy)
                         (localid 8:local$92))
                       (arg
                         (argcopy)
-                        (localid 9:local$749))))
+                        (localid 9:local$750))))
                   (const
                     (localid 8:local$93)
                     (int 1:0))
@@ -21284,43 +21320,43 @@ anf
                     (typeargs)
                     (int 1:5))
                   (lookup
-                    (localid 9:local$750)
+                    (localid 9:local$751)
                     (localid 4:self)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$752)
                     (localid 9:local$751)
-                    (localid 9:local$750)
                     (args
                       (arg
                         (argcopy)
                         (localid 4:self))))
                   (lookup
-                    (localid 9:local$752)
+                    (localid 9:local$753)
                     (localid 5:other)
                     (rhs)
                     (ident 4:data)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$754)
                     (localid 9:local$753)
-                    (localid 9:local$752)
                     (args
                       (arg
                         (argcopy)
                         (localid 5:other))))
                   (lookup
-                    (localid 9:local$754)
+                    (localid 9:local$755)
                     (localid 5:other)
                     (rhs)
                     (ident 4:size)
                     (typeargs)
                     (int 1:1))
                   (calldyn
+                    (localid 9:local$756)
                     (localid 9:local$755)
-                    (localid 9:local$754)
                     (args
                       (arg
                         (argcopy)
@@ -21334,16 +21370,16 @@ anf
                         (localid 6:result))
                       (arg
                         (argcopy)
-                        (localid 9:local$751))
+                        (localid 9:local$752))
                       (arg
                         (argcopy)
-                        (localid 9:local$753))
+                        (localid 9:local$754))
                       (arg
                         (argcopy)
                         (localid 8:local$93))
                       (arg
                         (argcopy)
-                        (localid 9:local$755))))
+                        (localid 9:local$756))))
                   (call
                     (localid 8:local$94)
                     (rhs)
@@ -22359,10 +22395,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$756)
+                    (localid 9:local$757)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$756)))))
+                  (localid 9:local$757)))))
           (function
             {
               self = paramdef}
@@ -22394,10 +22430,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$757)
+                    (localid 9:local$758)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$757)))))
+                  (localid 9:local$758)))))
           (function
             {
               self = paramdef}
@@ -22481,11 +22517,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$758)
+                    (localid 9:local$759)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$758)))))
+                  (localid 9:local$759)))))
           (function
             {
               self = paramdef}
@@ -22517,11 +22553,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$759)
+                    (localid 9:local$760)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$759)))))
+                  (localid 9:local$760)))))
           (function
             {
               self = paramdef}
@@ -22553,11 +22589,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$760)
+                    (localid 9:local$761)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$760)))))
+                  (localid 9:local$761)))))
           (function
             {
               self = paramdef}
@@ -22589,11 +22625,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$761)
+                    (localid 9:local$762)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$761)))))
+                  (localid 9:local$762)))))
           (function
             {
               self = paramdef}
@@ -22625,11 +22661,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$762)
+                    (localid 9:local$763)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$762)))))
+                  (localid 9:local$763)))))
           (function
             {
               self = paramdef}
@@ -22693,11 +22729,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$763)
+                    (localid 9:local$764)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$763)))))
+                  (localid 9:local$764)))))
           (function
             {
               self = paramdef}
@@ -22729,11 +22765,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$764)
+                    (localid 9:local$765)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$764)))))
+                  (localid 9:local$765)))))
           (function
             {
               self = paramdef}
@@ -22765,11 +22801,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$765)
+                    (localid 9:local$766)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$765)))))
+                  (localid 9:local$766)))))
           (function
             {
               self = paramdef}
@@ -22801,11 +22837,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$766)
+                    (localid 9:local$767)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$766)))))
+                  (localid 9:local$767)))))
           (function
             {
               self = paramdef}
@@ -22837,11 +22873,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$767)
+                    (localid 9:local$768)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$767)))))
+                  (localid 9:local$768)))))
           (function
             {
               self = paramdef}
@@ -22873,11 +22909,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$768)
+                    (localid 9:local$769)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$768)))))
+                  (localid 9:local$769)))))
           (function
             {
               self = paramdef}
@@ -22909,11 +22945,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$769)
+                    (localid 9:local$770)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$769)))))
+                  (localid 9:local$770)))))
           (function
             {
               self = paramdef}
@@ -22945,11 +22981,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$770)
+                    (localid 9:local$771)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$770)))))))
+                  (localid 9:local$771)))))))
       (classdef
         {
           ! = function
@@ -23946,10 +23982,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$771)
+                    (localid 9:local$772)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$771)))))
+                  (localid 9:local$772)))))
           (function
             {
               self = paramdef}
@@ -23981,10 +24017,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$772)
+                    (localid 9:local$773)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$772)))))
+                  (localid 9:local$773)))))
           (function
             {
               self = paramdef}
@@ -24068,11 +24104,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$773)
+                    (localid 9:local$774)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$773)))))
+                  (localid 9:local$774)))))
           (function
             {
               self = paramdef}
@@ -24104,11 +24140,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$774)
+                    (localid 9:local$775)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$774)))))
+                  (localid 9:local$775)))))
           (function
             {
               self = paramdef}
@@ -24140,11 +24176,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$775)
+                    (localid 9:local$776)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$775)))))
+                  (localid 9:local$776)))))
           (function
             {
               self = paramdef}
@@ -24176,11 +24212,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$776)
+                    (localid 9:local$777)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$776)))))
+                  (localid 9:local$777)))))
           (function
             {
               self = paramdef}
@@ -24212,11 +24248,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$777)
+                    (localid 9:local$778)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$777)))))
+                  (localid 9:local$778)))))
           (function
             {
               self = paramdef}
@@ -24248,11 +24284,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$778)
+                    (localid 9:local$779)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$778)))))
+                  (localid 9:local$779)))))
           (function
             {
               self = paramdef}
@@ -24316,11 +24352,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$779)
+                    (localid 9:local$780)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$779)))))
+                  (localid 9:local$780)))))
           (function
             {
               self = paramdef}
@@ -24352,11 +24388,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$780)
+                    (localid 9:local$781)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$780)))))
+                  (localid 9:local$781)))))
           (function
             {
               self = paramdef}
@@ -24388,11 +24424,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$781)
+                    (localid 9:local$782)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$781)))))
+                  (localid 9:local$782)))))
           (function
             {
               self = paramdef}
@@ -24424,11 +24460,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$782)
+                    (localid 9:local$783)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$782)))))
+                  (localid 9:local$783)))))
           (function
             {
               self = paramdef}
@@ -24460,11 +24496,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$783)
+                    (localid 9:local$784)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$783)))))
+                  (localid 9:local$784)))))
           (function
             {
               self = paramdef}
@@ -24496,11 +24532,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$784)
+                    (localid 9:local$785)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$784)))))
+                  (localid 9:local$785)))))
           (function
             {
               self = paramdef}
@@ -24532,11 +24568,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$785)
+                    (localid 9:local$786)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$785)))))))
+                  (localid 9:local$786)))))))
       (classdef
         {
           ! = function
@@ -25533,10 +25569,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$786)
+                    (localid 9:local$787)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$786)))))
+                  (localid 9:local$787)))))
           (function
             {
               self = paramdef}
@@ -25568,10 +25604,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$787)
+                    (localid 9:local$788)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$787)))))
+                  (localid 9:local$788)))))
           (function
             {
               self = paramdef}
@@ -25655,11 +25691,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$788)
+                    (localid 9:local$789)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$788)))))
+                  (localid 9:local$789)))))
           (function
             {
               self = paramdef}
@@ -25691,11 +25727,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$789)
+                    (localid 9:local$790)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$789)))))
+                  (localid 9:local$790)))))
           (function
             {
               self = paramdef}
@@ -25727,11 +25763,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$790)
+                    (localid 9:local$791)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$790)))))
+                  (localid 9:local$791)))))
           (function
             {
               self = paramdef}
@@ -25763,11 +25799,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$791)
+                    (localid 9:local$792)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$791)))))
+                  (localid 9:local$792)))))
           (function
             {
               self = paramdef}
@@ -25799,11 +25835,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$792)
+                    (localid 9:local$793)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$792)))))
+                  (localid 9:local$793)))))
           (function
             {
               self = paramdef}
@@ -25835,11 +25871,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$793)
+                    (localid 9:local$794)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$793)))))
+                  (localid 9:local$794)))))
           (function
             {
               self = paramdef}
@@ -25871,11 +25907,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$794)
+                    (localid 9:local$795)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$794)))))
+                  (localid 9:local$795)))))
           (function
             {
               self = paramdef}
@@ -25939,11 +25975,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$795)
+                    (localid 9:local$796)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$795)))))
+                  (localid 9:local$796)))))
           (function
             {
               self = paramdef}
@@ -25975,11 +26011,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$796)
+                    (localid 9:local$797)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$796)))))
+                  (localid 9:local$797)))))
           (function
             {
               self = paramdef}
@@ -26011,11 +26047,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$797)
+                    (localid 9:local$798)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$797)))))
+                  (localid 9:local$798)))))
           (function
             {
               self = paramdef}
@@ -26047,11 +26083,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$798)
+                    (localid 9:local$799)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$798)))))
+                  (localid 9:local$799)))))
           (function
             {
               self = paramdef}
@@ -26083,11 +26119,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$799)
+                    (localid 9:local$800)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$799)))))
+                  (localid 9:local$800)))))
           (function
             {
               self = paramdef}
@@ -26119,11 +26155,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$800)
+                    (localid 9:local$801)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$800)))))))
+                  (localid 9:local$801)))))))
       (classdef
         {
           ! = function
@@ -27120,10 +27156,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$801)
+                    (localid 9:local$802)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$801)))))
+                  (localid 9:local$802)))))
           (function
             {
               self = paramdef}
@@ -27155,10 +27191,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$802)
+                    (localid 9:local$803)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$802)))))
+                  (localid 9:local$803)))))
           (function
             {
               self = paramdef}
@@ -27242,11 +27278,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$803)
+                    (localid 9:local$804)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$803)))))
+                  (localid 9:local$804)))))
           (function
             {
               self = paramdef}
@@ -27278,11 +27314,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$804)
+                    (localid 9:local$805)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$804)))))
+                  (localid 9:local$805)))))
           (function
             {
               self = paramdef}
@@ -27314,11 +27350,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$805)
+                    (localid 9:local$806)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$805)))))
+                  (localid 9:local$806)))))
           (function
             {
               self = paramdef}
@@ -27350,11 +27386,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$806)
+                    (localid 9:local$807)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$806)))))
+                  (localid 9:local$807)))))
           (function
             {
               self = paramdef}
@@ -27418,11 +27454,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$807)
+                    (localid 9:local$808)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$807)))))
+                  (localid 9:local$808)))))
           (function
             {
               self = paramdef}
@@ -27454,11 +27490,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$808)
+                    (localid 9:local$809)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$808)))))
+                  (localid 9:local$809)))))
           (function
             {
               self = paramdef}
@@ -27490,11 +27526,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$809)
+                    (localid 9:local$810)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$809)))))
+                  (localid 9:local$810)))))
           (function
             {
               self = paramdef}
@@ -27526,11 +27562,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$810)
+                    (localid 9:local$811)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$810)))))
+                  (localid 9:local$811)))))
           (function
             {
               self = paramdef}
@@ -27562,11 +27598,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$811)
+                    (localid 9:local$812)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$811)))))
+                  (localid 9:local$812)))))
           (function
             {
               self = paramdef}
@@ -27598,11 +27634,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$812)
+                    (localid 9:local$813)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$812)))))
+                  (localid 9:local$813)))))
           (function
             {
               self = paramdef}
@@ -27634,11 +27670,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$813)
+                    (localid 9:local$814)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$813)))))
+                  (localid 9:local$814)))))
           (function
             {
               self = paramdef}
@@ -27670,11 +27706,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$814)
+                    (localid 9:local$815)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$814)))))
+                  (localid 9:local$815)))))
           (function
             {
               self = paramdef}
@@ -27706,11 +27742,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$815)
+                    (localid 9:local$816)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$815)))))))
+                  (localid 9:local$816)))))))
       (classdef
         {
           ! = function
@@ -28707,10 +28743,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$816)
+                    (localid 9:local$817)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$816)))))
+                  (localid 9:local$817)))))
           (function
             {
               self = paramdef}
@@ -28742,10 +28778,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$817)
+                    (localid 9:local$818)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$817)))))
+                  (localid 9:local$818)))))
           (function
             {
               self = paramdef}
@@ -28829,11 +28865,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$818)
+                    (localid 9:local$819)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$818)))))
+                  (localid 9:local$819)))))
           (function
             {
               self = paramdef}
@@ -28865,11 +28901,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$819)
+                    (localid 9:local$820)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$819)))))
+                  (localid 9:local$820)))))
           (function
             {
               self = paramdef}
@@ -28901,11 +28937,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$820)
+                    (localid 9:local$821)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$820)))))
+                  (localid 9:local$821)))))
           (function
             {
               self = paramdef}
@@ -28937,11 +28973,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$821)
+                    (localid 9:local$822)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$821)))))
+                  (localid 9:local$822)))))
           (function
             {
               self = paramdef}
@@ -28973,11 +29009,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$822)
+                    (localid 9:local$823)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$822)))))
+                  (localid 9:local$823)))))
           (function
             {
               self = paramdef}
@@ -29009,11 +29045,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$823)
+                    (localid 9:local$824)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$823)))))
+                  (localid 9:local$824)))))
           (function
             {
               self = paramdef}
@@ -29045,11 +29081,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$824)
+                    (localid 9:local$825)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$824)))))
+                  (localid 9:local$825)))))
           (function
             {
               self = paramdef}
@@ -29081,11 +29117,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$825)
+                    (localid 9:local$826)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$825)))))
+                  (localid 9:local$826)))))
           (function
             {
               self = paramdef}
@@ -29117,11 +29153,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$826)
+                    (localid 9:local$827)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$826)))))
+                  (localid 9:local$827)))))
           (function
             {
               self = paramdef}
@@ -29185,11 +29221,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$827)
+                    (localid 9:local$828)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$827)))))
+                  (localid 9:local$828)))))
           (function
             {
               self = paramdef}
@@ -29221,11 +29257,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$828)
+                    (localid 9:local$829)
                     (usize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$828)))))
+                  (localid 9:local$829)))))
           (function
             {
               self = paramdef}
@@ -29257,11 +29293,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$829)
+                    (localid 9:local$830)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$829)))))
+                  (localid 9:local$830)))))
           (function
             {
               self = paramdef}
@@ -29293,11 +29329,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$830)
+                    (localid 9:local$831)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$830)))))))
+                  (localid 9:local$831)))))))
       (classdef
         {
           ! = function
@@ -30294,10 +30330,10 @@ anf
                 (labelid 5:start)
                 (body
                   (neg
-                    (localid 9:local$831)
+                    (localid 9:local$832)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$831)))))
+                  (localid 9:local$832)))))
           (function
             {
               self = paramdef}
@@ -30329,10 +30365,10 @@ anf
                 (labelid 5:start)
                 (body
                   (not
-                    (localid 9:local$832)
+                    (localid 9:local$833)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$832)))))
+                  (localid 9:local$833)))))
           (function
             {
               self = paramdef}
@@ -30416,11 +30452,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$833)
+                    (localid 9:local$834)
                     (i8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$833)))))
+                  (localid 9:local$834)))))
           (function
             {
               self = paramdef}
@@ -30452,11 +30488,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$834)
+                    (localid 9:local$835)
                     (i16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$834)))))
+                  (localid 9:local$835)))))
           (function
             {
               self = paramdef}
@@ -30488,11 +30524,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$835)
+                    (localid 9:local$836)
                     (i32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$835)))))
+                  (localid 9:local$836)))))
           (function
             {
               self = paramdef}
@@ -30524,11 +30560,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$836)
+                    (localid 9:local$837)
                     (i64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$836)))))
+                  (localid 9:local$837)))))
           (function
             {
               self = paramdef}
@@ -30560,11 +30596,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$837)
+                    (localid 9:local$838)
                     (u8)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$837)))))
+                  (localid 9:local$838)))))
           (function
             {
               self = paramdef}
@@ -30596,11 +30632,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$838)
+                    (localid 9:local$839)
                     (u16)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$838)))))
+                  (localid 9:local$839)))))
           (function
             {
               self = paramdef}
@@ -30632,11 +30668,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$839)
+                    (localid 9:local$840)
                     (u32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$839)))))
+                  (localid 9:local$840)))))
           (function
             {
               self = paramdef}
@@ -30668,11 +30704,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$840)
+                    (localid 9:local$841)
                     (u64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$840)))))
+                  (localid 9:local$841)))))
           (function
             {
               self = paramdef}
@@ -30704,11 +30740,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$841)
+                    (localid 9:local$842)
                     (ilong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$841)))))
+                  (localid 9:local$842)))))
           (function
             {
               self = paramdef}
@@ -30740,11 +30776,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$842)
+                    (localid 9:local$843)
                     (ulong)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$842)))))
+                  (localid 9:local$843)))))
           (function
             {
               self = paramdef}
@@ -30776,11 +30812,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$843)
+                    (localid 9:local$844)
                     (isize)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$843)))))
+                  (localid 9:local$844)))))
           (function
             {
               self = paramdef}
@@ -30844,11 +30880,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$844)
+                    (localid 9:local$845)
                     (f32)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$844)))))
+                  (localid 9:local$845)))))
           (function
             {
               self = paramdef}
@@ -30880,11 +30916,11 @@ anf
                 (labelid 5:start)
                 (body
                   (convert
-                    (localid 9:local$845)
+                    (localid 9:local$846)
                     (f64)
                     (localid 4:self)))
                 (ret
-                  (localid 9:local$845)))))))
+                  (localid 9:local$846)))))))
       (function
         {}
         (rhs)

@@ -1058,6 +1058,11 @@ namespace vc
             reify_primitive(None);
             local_types[(n / LocalId)->location()] = clone(None);
           }
+          else if (n == Freeze)
+          {
+            reify_primitive(None);
+            local_types[(n / LocalId)->location()] = clone(None);
+          }
           else if (n->in({ArrayCopy, ArrayFill}))
           {
             reify_primitive(None);

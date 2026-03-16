@@ -2652,6 +2652,11 @@ namespace vc
         auto dst = stmt / LocalId;
         env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
       }
+      else if (stmt == Freeze)
+      {
+        auto dst = stmt / LocalId;
+        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
+      }
       else if (stmt->in({ArrayCopy, ArrayFill}))
       {
         auto dst = stmt / LocalId;

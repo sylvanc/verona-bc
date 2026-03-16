@@ -1249,6 +1249,11 @@ namespace vbcc
         {
           // Drop removes a register - nothing to check.
         }
+        else if (node == Freeze)
+        {
+          // Freeze returns none.
+          set_type(env, node / LocalId, None);
+        }
         else if (node->type().in(
                    {Add, Sub, Mul, Div, Mod, And, Or, Xor, Shl, Shr, Min, Max}))
         {

@@ -4402,6 +4402,23 @@ parse
                 (ident 4:self)))))))
     (file
       (group
+        (ident 6:freeze)
+        (paren
+          (group
+            (ident 1:x)
+            (:)
+            (ident 3:any)))
+        (:)
+        (ident 4:none)
+        (brace
+          (group
+            (triplecolon)
+            (ident 6:freeze)
+            (paren
+              (group
+                (ident 1:x)))))))
+    (file
+      (group
         (ident 3:i16)
         (brace
           (group

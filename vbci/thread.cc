@@ -3,6 +3,7 @@
 #include "array.h"
 #include "callback.h"
 #include "cown.h"
+#include "freeze.h"
 #include "function_signature.h"
 #include "object.h"
 #include "program.h"
@@ -298,11 +299,14 @@ namespace vbci
       {
         auto r = closure.get_header()->region();
 
-        // Clear the cown ownership, as it's no longer acquired by the
-        // behaviour. The region's stack_rc is > 0 (from the When op's
-        // register), so clear_cown_owner won't auto-free.
         if (r && r->has_cown_owner())
+        {
+          // stack_inc to prevent auto-free during clear_cown_owner.
+          // This becomes the register's stack ref — reg_dec on
+          // teardown will balance it.
+          r->stack_inc();
           r->clear_cown_owner();
+        }
       }
 
       locals.at(args++) = ValueTransfer(closure);
@@ -545,6 +549,8 @@ namespace vbci
         return os << "Move";
       case Op::Drop:
         return os << "Drop";
+      case Op::Freeze:
+        return os << "Freeze";
       case Op::RegisterRef:
         return os << "RegisterRef";
       case Op::FieldRefMove:
@@ -1082,6 +1088,18 @@ namespace vbci
       case Op::Drop:
       {
         process([](Register) INLINE {});
+        break;
+      }
+
+      case Op::Freeze:
+      {
+        process([](const Register& src) INLINE {
+          if (src->is_readonly())
+            Value::error(Error::BadFreeze);
+
+          if (src->is_header())
+            freeze(src->get_header());
+        });
         break;
       }
 
@@ -2179,7 +2197,28 @@ namespace vbci
         }
       }
 
+      // Save the closure region before extract clears the register.
+      Region* closure_region = nullptr;
+
+      if (closure->is_header())
+      {
+        auto h = closure->get_header();
+
+        if (h->region() && !h->region()->is_frame_local())
+          closure_region = h->region();
+      }
+
       b->get_body<Value>()[1] = closure.extract();
+
+      // The extract moved the value to the behaviour body (raw memory)
+      // without reg_dec. Remove the orphaned stack ref — the behaviour
+      // dispatch will re-establish it with stack_inc.
+      if (closure_region)
+      {
+        LOG(Trace) << "queue_behavior: stack_dec closure region @"
+                   << closure_region;
+        closure_region->stack_dec();
+      }
     }
 
     verona::rt::BehaviourCore::schedule_many(&b, 1);

@@ -70,6 +70,7 @@ namespace vbcc
         "copy\\b" >> [](auto& m) { m.add(Copy); },
         "move\\b" >> [](auto& m) { m.add(Move); },
         "drop\\b" >> [](auto& m) { m.add(Drop); },
+        "freeze\\b" >> [](auto& m) { m.add(Freeze); },
         "ref\\b" >> [](auto& m) { m.add(Ref); },
         "load\\b" >> [](auto& m) { m.add(Load); },
         "store\\b" >> [](auto& m) { m.add(Store); },
