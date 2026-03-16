@@ -96,24 +96,13 @@ namespace vbci
       return true;
     }
 
-    struct RegionWork
-    {
-      Region* region;
-      Header* root;
-      RC stack_adjustment;
-      bool clear_parent;
-      bool clear_cown;
-    };
-
     std::vector<Header*> worklist;
     std::vector<Header*> dfs;
     std::vector<Header*> pending;
     std::unordered_set<Header*> frozen_set;
-    std::vector<RegionWork> work;
 
     worklist.push_back(root);
 
-    // Phase 1: DFS each region, freeze objects, compute adjustments.
     while (!worklist.empty())
     {
       root = worklist.back();
@@ -125,10 +114,7 @@ namespace vbci
         continue;
 
       region = root->region();
-
-      // Regions discovered later are children. They appear later in `work`,
-      // so reverse iteration processes children before parents.
-      bool is_sub = !work.empty();
+      bool is_sub = region->has_owner();
 
       RC arc_sum = 0;
       frozen_set.clear();
@@ -223,33 +209,24 @@ namespace vbci
           static_cast<Object*>(h)->trace_fn(count_fn);
       });
 
+      // For sub-regions, subtract the frozen parent's field ref to the
+      // entry point (not a stack ref).
       RC parent_ref = is_sub ? 1 : 0;
       assert(arc_sum >= frozen_internal + unfrozen_to_frozen + parent_ref);
       RC stack_adjustment =
         arc_sum - frozen_internal - unfrozen_to_frozen - parent_ref;
 
-      bool do_clear_parent = region->has_parent()
-        && root == region->get_entry_point();
-      bool do_clear_cown = !do_clear_parent && region->has_cown_owner()
-        && root == region->get_entry_point();
+      // Clear ownership if we froze the entry point. The parent region
+      // is still alive (it has stack refs that haven't been adjusted yet).
+      if (region->has_parent() && root == region->get_entry_point())
+        region->clear_parent();
+      else if (region->has_cown_owner() && root == region->get_entry_point())
+        region->clear_cown_owner();
 
-      work.push_back({region, root, stack_adjustment,
-        do_clear_parent, do_clear_cown});
-    }
-
-    // Phase 2: Apply adjustments in reverse (children before parents).
-    // This ensures child ownership is cleared while the parent is alive.
-    for (auto it = work.rbegin(); it != work.rend(); ++it)
-    {
-      auto& w = *it;
-
-      if (w.clear_parent)
-        w.region->clear_parent();
-      else if (w.clear_cown)
-        w.region->clear_cown_owner();
-
-      for (RC i = 0; i < w.stack_adjustment; i++)
-        w.region->stack_dec();
+      // Adjust stack_rc. May free the region if stack_rc hits 0 with
+      // no owner.
+      for (RC i = 0; i < stack_adjustment; i++)
+        region->stack_dec();
     }
 
     return true;
