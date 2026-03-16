@@ -9,6 +9,7 @@ structure
       create = function
       leaf = classdef
       main = function
+      node = classdef
       include }
     (none)
     (ident 11:test_freeze)
@@ -106,10 +107,223 @@ structure
                           (nameelement
                             (ident 3:val)
                             (typeargs))))))))))))
+      (classdef
+        {
+          create = function
+          left = function
+          right = function
+          val = function}
+        (none)
+        (ident 4:node)
+        (typeparams)
+        (where)
+        (classbody
+          (fielddef
+            (ident 4:left)
+            (type
+              (typename
+                (nameelement
+                  (ident 4:leaf)
+                  (typeargs)))))
+          (function
+            {
+              self = paramdef}
+            (lhs)
+            (ident 4:left)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 11:test_freeze)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:node)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 4:leaf)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (fieldref
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))
+                  (fieldid 4:left)))))
+          (fielddef
+            (ident 5:right)
+            (type
+              (typename
+                (nameelement
+                  (ident 4:leaf)
+                  (typeargs)))))
+          (function
+            {
+              self = paramdef}
+            (lhs)
+            (ident 5:right)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 11:test_freeze)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:node)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 4:leaf)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (fieldref
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))
+                  (fieldid 5:right)))))
+          (fielddef
+            (ident 3:val)
+            (type
+              (typename
+                (nameelement
+                  (ident 3:i32)
+                  (typeargs)))))
+          (function
+            {
+              self = paramdef}
+            (lhs)
+            (ident 3:val)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 11:test_freeze)
+                      (typeargs))
+                    (nameelement
+                      (ident 4:node)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 3:ref)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 3:i32)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (fieldref
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))
+                  (fieldid 3:val)))))
+          (function
+            {
+              left = paramdef
+              right = paramdef
+              val = paramdef}
+            (rhs)
+            (ident 6:create)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:left)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 4:leaf)
+                      (typeargs))))
+                (body))
+              (paramdef
+                (ident 5:right)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 4:leaf)
+                      (typeargs))))
+                (body))
+              (paramdef
+                (ident 3:val)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 3:i32)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 4:node)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (new
+                  (newargs
+                    (newarg
+                      (ident 4:left)
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 4:left)
+                            (typeargs)))))
+                    (newarg
+                      (ident 5:right)
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 5:right)
+                            (typeargs)))))
+                    (newarg
+                      (ident 3:val)
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 3:val)
+                            (typeargs))))))))))))
       (function
         {
           a = var
           b = var
+          l = var
+          n = var
+          r = var
           result = var}
         (rhs)
         (ident 4:main)
@@ -264,6 +478,183 @@ structure
                             (symbolid 1:+)
                             (typeargs)))
                         (int 1:2))))))))
+          (expr
+            (=
+              (expr
+                (var
+                  (ident 1:l)
+                  (type
+                    (typevar))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:leaf)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:3))))))
+          (expr
+            (=
+              (expr
+                (var
+                  (ident 1:r)
+                  (type
+                    (typevar))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:leaf)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (int 1:7))))))
+          (expr
+            (=
+              (expr
+                (var
+                  (ident 1:n)
+                  (type
+                    (typevar))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 4:node)
+                    (typeargs)))
+                (tuple
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 1:l)
+                        (typeargs))))
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 1:r)
+                        (typeargs))))
+                  (expr
+                    (int 3:100))))))
+          (expr
+            (funcname
+              (nameelement
+                (ident 6:freeze)
+                (typeargs)))
+            (exprseq
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:n)
+                    (typeargs))))))
+          (expr
+            (if
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:n)
+                    (typeargs)))
+                (dot
+                  (ident 3:val)
+                  (typeargs))
+                (funcname
+                  (nameelement
+                    (symbolid 2:!=)
+                    (typeargs)))
+                (int 3:100))
+              (block
+                {}
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 6:result)
+                            (typeargs))))
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 6:result)
+                            (typeargs)))
+                        (funcname
+                          (nameelement
+                            (symbolid 1:+)
+                            (typeargs)))
+                        (int 1:4))))))))
+          (expr
+            (if
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:n)
+                    (typeargs)))
+                (dot
+                  (ident 4:left)
+                  (typeargs))
+                (dot
+                  (ident 3:val)
+                  (typeargs))
+                (funcname
+                  (nameelement
+                    (symbolid 2:!=)
+                    (typeargs)))
+                (int 1:3))
+              (block
+                {}
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 6:result)
+                            (typeargs))))
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 6:result)
+                            (typeargs)))
+                        (funcname
+                          (nameelement
+                            (symbolid 1:+)
+                            (typeargs)))
+                        (int 1:8))))))))
+          (expr
+            (if
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:n)
+                    (typeargs)))
+                (dot
+                  (ident 5:right)
+                  (typeargs))
+                (dot
+                  (ident 3:val)
+                  (typeargs))
+                (funcname
+                  (nameelement
+                    (symbolid 2:!=)
+                    (typeargs)))
+                (int 1:7))
+              (block
+                {}
+                (body
+                  (expr
+                    (=
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 6:result)
+                            (typeargs))))
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 6:result)
+                            (typeargs)))
+                        (funcname
+                          (nameelement
+                            (symbolid 1:+)
+                            (typeargs)))
+                        (int 2:16))))))))
           (expr
             (funcname
               (nameelement

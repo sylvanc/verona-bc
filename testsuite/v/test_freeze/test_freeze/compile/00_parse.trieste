@@ -29,6 +29,56 @@ parse
                   (group
                     (ident 3:val))))))))
       (group
+        (ident 4:node)
+        (brace
+          (group
+            (ident 4:left)
+            (:)
+            (ident 4:leaf))
+          (group
+            (semi))
+          (group
+            (ident 5:right)
+            (:)
+            (ident 4:leaf))
+          (group
+            (semi))
+          (group
+            (ident 3:val)
+            (:)
+            (ident 3:i32))
+          (group
+            (semi))
+          (group
+            (ident 6:create)
+            (paren
+              (list
+                (group
+                  (ident 4:left)
+                  (:)
+                  (ident 4:leaf))
+                (group
+                  (ident 5:right)
+                  (:)
+                  (ident 4:leaf))
+                (group
+                  (ident 3:val)
+                  (:)
+                  (ident 3:i32))))
+            (:)
+            (ident 4:node)
+            (brace
+              (group
+                (new)
+                (brace
+                  (list
+                    (group
+                      (ident 4:left))
+                    (group
+                      (ident 5:right))
+                    (group
+                      (ident 3:val)))))))))
+      (group
         (ident 4:main)
         (paren)
         (:)
@@ -112,6 +162,100 @@ parse
                 (ident 6:result)
                 (symbolid 1:+)
                 (int 1:2))
+              (group
+                (semi))))
+          (group
+            (var)
+            (ident 1:l)
+            (=)
+            (ident 4:leaf)
+            (paren
+              (group
+                (int 1:3))))
+          (group
+            (semi))
+          (group
+            (var)
+            (ident 1:r)
+            (=)
+            (ident 4:leaf)
+            (paren
+              (group
+                (int 1:7))))
+          (group
+            (semi))
+          (group
+            (var)
+            (ident 1:n)
+            (=)
+            (ident 4:node)
+            (paren
+              (list
+                (group
+                  (ident 1:l))
+                (group
+                  (ident 1:r))
+                (group
+                  (int 3:100)))))
+          (group
+            (semi))
+          (group
+            (ident 6:freeze)
+            (paren
+              (group
+                (ident 1:n))))
+          (group
+            (semi))
+          (group
+            (if)
+            (ident 1:n)
+            (dot)
+            (ident 3:val)
+            (symbolid 2:!=)
+            (int 3:100)
+            (brace
+              (group
+                (ident 6:result)
+                (=)
+                (ident 6:result)
+                (symbolid 1:+)
+                (int 1:4))
+              (group
+                (semi))))
+          (group
+            (if)
+            (ident 1:n)
+            (dot)
+            (ident 4:left)
+            (dot)
+            (ident 3:val)
+            (symbolid 2:!=)
+            (int 1:3)
+            (brace
+              (group
+                (ident 6:result)
+                (=)
+                (ident 6:result)
+                (symbolid 1:+)
+                (int 1:8))
+              (group
+                (semi))))
+          (group
+            (if)
+            (ident 1:n)
+            (dot)
+            (ident 5:right)
+            (dot)
+            (ident 3:val)
+            (symbolid 2:!=)
+            (int 1:7)
+            (brace
+              (group
+                (ident 6:result)
+                (=)
+                (ident 6:result)
+                (symbolid 1:+)
+                (int 2:16))
               (group
                 (semi))))
           (group
