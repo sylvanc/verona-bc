@@ -300,8 +300,7 @@ namespace vbci
         auto r = closure.get_header()->region();
 
         // Clear the cown ownership, as it's no longer acquired by the
-        // behaviour. The region's stack_rc is > 0 (from the When op's
-        // register), so clear_cown_owner won't auto-free.
+        // behaviour.
         if (r && r->has_cown_owner())
           r->clear_cown_owner();
       }
