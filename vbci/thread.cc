@@ -299,12 +299,11 @@ namespace vbci
       {
         auto r = closure.get_header()->region();
 
-        // Clear cown ownership. Protect with stack_inc to prevent
-        // auto-free (matching ~Cown pattern). The register that will
-        // hold the closure value inherits this stack ref — reg_dec
-        // on frame teardown will balance it.
         if (r && r->has_cown_owner())
         {
+          // stack_inc to prevent auto-free during clear_cown_owner.
+          // This becomes the register's stack ref — reg_dec on
+          // teardown will balance it.
           r->stack_inc();
           r->clear_cown_owner();
         }
@@ -2198,7 +2197,28 @@ namespace vbci
         }
       }
 
+      // Save the closure region before extract clears the register.
+      Region* closure_region = nullptr;
+
+      if (closure->is_header())
+      {
+        auto h = closure->get_header();
+
+        if (h->region() && !h->region()->is_frame_local())
+          closure_region = h->region();
+      }
+
       b->get_body<Value>()[1] = closure.extract();
+
+      // The extract moved the value to the behaviour body (raw memory)
+      // without reg_dec. Remove the orphaned stack ref — the behaviour
+      // dispatch will re-establish it with stack_inc.
+      if (closure_region)
+      {
+        LOG(Trace) << "queue_behavior: stack_dec closure region @"
+                   << closure_region;
+        closure_region->stack_dec();
+      }
     }
 
     verona::rt::BehaviourCore::schedule_many(&b, 1);
