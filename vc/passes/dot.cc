@@ -205,6 +205,15 @@ namespace vc
                            << (_(Dot) / TypeArgs) << (Args << (Expr << _(Rhs)));
           },
 
+        // Dot with RHS FuncName at end of expression: a.method FuncName
+        // Safe to convert FuncName to a zero-arg call because nothing follows.
+        In(Expr) * ValuePat[Lhs] * T(Dot)[Dot] * T(FuncName)[Rhs] * End >>
+          [](Match& _) {
+            return CallDyn << (Expr << _(Lhs)) << (_(Dot) / Ident)
+                           << (_(Dot) / TypeArgs)
+                           << (Args << (Expr << (Call << _(Rhs) << Args)));
+          },
+
         // Dot without arguments.
         In(Expr) * ValuePat[Lhs] * T(Dot)[Dot] >>
           [](Match& _) {
