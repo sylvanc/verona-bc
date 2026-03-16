@@ -85,6 +85,7 @@ namespace vc
     {"callback_ptr", {0, 1, CallbackPtr}},
     {"free_callback", {0, 1, FreeCallback}},
     {"register_external_notify", {0, 1, RegisterExternalNotify}},
+    {"freeze", {0, 1, Freeze}},
     {"arraycopy", {0, 5, ArrayCopy}},
     {"arrayfill", {0, 4, ArrayFill}},
     {"arraycmp", {0, 5, ArrayCompare}},

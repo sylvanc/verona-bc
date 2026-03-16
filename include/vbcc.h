@@ -319,7 +319,7 @@ namespace vbcc
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
-    | (Freeze <<= LocalId)
+    | (Freeze <<= wfDst * wfSrc)
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)

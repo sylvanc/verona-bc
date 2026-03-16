@@ -112,6 +112,7 @@ namespace vbcc
       AddExternal,
       RemoveExternal,
       RegisterExternalNotify,
+      Freeze,
       MemoSlot,
       ArrayCopy,
       ArrayFill,

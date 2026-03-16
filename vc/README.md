@@ -2,11 +2,6 @@
 
 ## To Do
 
-Freezing.
-- Return freeze to be iterative, not recursive.
-- Need Verona freeze syntax.
-- Can we optimize it?
-
 Review `iowise`.
 - Buffer final can't call flush, that relies on mutation.
 - Dispose pattern?

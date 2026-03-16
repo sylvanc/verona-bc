@@ -234,6 +234,7 @@ structure
       f32 = classdef
       f64 = classdef
       ffi = classdef
+      freeze = function
       i16 = classdef
       i32 = classdef
       i64 = classdef
@@ -6964,6 +6965,39 @@ structure
                 (funcname
                   (nameelement
                     (ident 4:self)
+                    (typeargs))))))))
+      (function
+        {
+          x = paramdef}
+        (rhs)
+        (ident 6:freeze)
+        (typeparams)
+        (params
+          (paramdef
+            (ident 1:x)
+            (type
+              (typename
+                (nameelement
+                  (ident 3:any)
+                  (typeargs))))
+            (body)))
+        (type
+          (typename
+            (nameelement
+              (ident 4:none)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (triplecolon
+              (nameelement
+                (ident 6:freeze)
+                (typeargs)))
+            (exprseq
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:x)
                     (typeargs))))))))
       (classdef
         {

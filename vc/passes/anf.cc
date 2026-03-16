@@ -848,7 +848,7 @@ namespace vc
         // rules extract expressions to locals).
         In(Expr, Lhs) *
             T(MakeCallback, CallbackPtr, FreeCallback,
-              RegisterExternalNotify)[Lhs]
+              RegisterExternalNotify, Freeze)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
