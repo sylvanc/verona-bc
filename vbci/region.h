@@ -74,16 +74,18 @@ namespace vbci
       stack_rc += inc;
     }
 
-    bool stack_dec()
+    bool stack_dec(RC dec = 1)
     {
       if (is_frame_local())
         return true;
 
-      assert(stack_rc > 0);
+      assert(stack_rc >= dec);
       LOG(Trace) << "Region @" << this << " stack_rc decremented from "
-                 << stack_rc << " to " << (stack_rc - 1);
+                 << stack_rc << " to " << (stack_rc - dec);
 
-      if (--stack_rc == 0)
+      stack_rc -= dec;
+
+      if (stack_rc == 0)
       {
         if (!has_owner())
         {

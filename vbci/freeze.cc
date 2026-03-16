@@ -225,8 +225,8 @@ namespace vbci
 
       // Adjust stack_rc. May free the region if stack_rc hits 0 with
       // no owner.
-      for (RC i = 0; i < stack_adjustment; i++)
-        region->stack_dec();
+      if (stack_adjustment > 0)
+        region->stack_dec(stack_adjustment);
     }
 
     return true;
