@@ -1,0 +1,445 @@
+vc
+validids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$939)
+            (functionid 23:test_freeze::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$939)))))
+  (func
+    (functionid 23:test_freeze::main::0::0)
+    (params)
+    (i32)
+    (vars
+      (localid 6:result)
+      (localid 1:a)
+      (localid 8:local$10)
+      (localid 1:b)
+      (localid 8:local$14))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 7:local$7)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 9:local$515)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 7:local$7))
+          (const
+            (localid 9:local$116)
+            (i32)
+            (int 2:10))
+          (call
+            (localid 7:local$8)
+            (functionid 31:test_freeze::leaf::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$116))))
+          (copy
+            (localid 9:local$516)
+            (localid 1:a))
+          (copy
+            (localid 1:a)
+            (localid 7:local$8))
+          (call
+            (localid 7:local$9)
+            (functionid 22:_builtin::freeze::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:a))))
+          (call
+            (localid 8:local$10)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$117)
+            (i32)
+            (int 2:10))
+          (lookup
+            (localid 9:local$517)
+            (localid 1:a)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 9:local$518)
+            (localid 9:local$517)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:a))))
+          (lookup
+            (localid 9:local$907)
+            (localid 9:local$518)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$908)
+            (localid 9:local$907)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$518))
+              (arg
+                (argcopy)
+                (localid 9:local$117)))))
+        (cond
+          (localid 9:local$908)
+          (labelid 8:body$114)
+          (labelid 8:join$115)))
+      (label
+        (labelid 8:body$114)
+        (body
+          (const
+            (localid 9:local$118)
+            (i32)
+            (int 1:1))
+          (lookup
+            (localid 9:local$519)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$520)
+            (localid 9:local$519)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$118))))
+          (copy
+            (localid 9:local$909)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$520))
+          (copy
+            (localid 8:local$10)
+            (localid 9:local$909)))
+        (jump
+          (labelid 8:join$115)))
+      (label
+        (labelid 8:join$115)
+        (body
+          (const
+            (localid 9:local$121)
+            (i32)
+            (int 2:55))
+          (call
+            (localid 8:local$11)
+            (functionid 31:test_freeze::leaf::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$121))))
+          (copy
+            (localid 9:local$521)
+            (localid 1:b))
+          (copy
+            (localid 1:b)
+            (localid 8:local$11))
+          (call
+            (localid 8:local$12)
+            (functionid 22:_builtin::freeze::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b))))
+          (call
+            (localid 8:local$13)
+            (functionid 22:_builtin::freeze::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b))))
+          (call
+            (localid 8:local$14)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$122)
+            (i32)
+            (int 2:55))
+          (lookup
+            (localid 9:local$522)
+            (localid 1:b)
+            (methodid 9:val::1::0))
+          (calldyn
+            (localid 9:local$523)
+            (localid 9:local$522)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b))))
+          (lookup
+            (localid 9:local$910)
+            (localid 9:local$523)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$911)
+            (localid 9:local$910)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$523))
+              (arg
+                (argcopy)
+                (localid 9:local$122)))))
+        (cond
+          (localid 9:local$911)
+          (labelid 8:body$119)
+          (labelid 8:join$120)))
+      (label
+        (labelid 8:body$119)
+        (body
+          (const
+            (localid 9:local$123)
+            (i32)
+            (int 1:2))
+          (lookup
+            (localid 9:local$524)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$525)
+            (localid 9:local$524)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$123))))
+          (copy
+            (localid 9:local$912)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$525))
+          (copy
+            (localid 8:local$14)
+            (localid 9:local$912)))
+        (jump
+          (labelid 8:join$120)))
+      (label
+        (labelid 8:join$120)
+        (body)
+        (ret
+          (localid 6:result)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (func
+    (functionid 31:test_freeze::leaf::create::1::0)
+    (params
+      (param
+        (localid 3:val)
+        (i32)))
+    (classid 20:test_freeze::leaf::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 7:local$6)
+            (classid 20:test_freeze::leaf::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:val)))))
+        (ret
+          (localid 7:local$6)))))
+  (func
+    (functionid 22:_builtin::freeze::1::0)
+    (params
+      (param
+        (localid 1:x)
+        (dyn)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (freeze
+            (localid 9:local$645)
+            (localid 1:x))
+          (const
+            (localid 8:none$940)
+            (none)
+            (none)))
+        (ret
+          (localid 8:none$940)))))
+  (func
+    (functionid 31:_builtin::nomatch::create::0::0)
+    (params)
+    (classid 20:_builtin::nomatch::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$79)
+            (classid 20:_builtin::nomatch::0)
+            (args)))
+        (ret
+          (localid 8:local$79)))))
+  (class
+    (classid 20:_builtin::nomatch::0)
+    (fields)
+    (methods))
+  (primitive
+    (none)
+    (methods))
+  (class
+    (classid 20:test_freeze::leaf::0)
+    (fields
+      (field
+        (fieldid 3:val)
+        (i32)))
+    (methods
+      (method
+        (methodid 9:val::1::0)
+        (functionid 28:test_freeze::leaf::val::1::0))))
+  (func
+    (functionid 28:test_freeze::leaf::val::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 20:test_freeze::leaf::0)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 7:local$5)
+            (functionid 33:test_freeze::leaf::val::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 9:local$514)
+            (localid 7:local$5)))
+        (ret
+          (localid 9:local$514)))))
+  (func
+    (functionid 33:test_freeze::leaf::val::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 20:test_freeze::leaf::0)))
+    (ref
+      (i32))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$113)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val)))
+        (ret
+          (localid 9:local$113)))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (func
+    (functionid 23:_builtin::i32::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$242)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$242)))))
+  (func
+    (functionid 22:_builtin::i32::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$231)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$231)))))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0))))
+  (func
+    (functionid 24:_builtin::bool::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$159)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$159))))))

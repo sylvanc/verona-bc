@@ -1,5 +1,5 @@
 vbcc
-liveness
+typecheck
 (top
   {}
   (class
@@ -48,7 +48,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:$v))))
           (freeze
             (localid 2:$_)
@@ -56,7 +56,7 @@ liveness
           (fieldref
             (localid 4:$ref)
             (arg
-              (argmove)
+              (argcopy)
               (localid 2:$a))
             (fieldid 4:@val))
           (load
@@ -83,7 +83,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v1))))
           (const
             (localid 3:$v2)
@@ -98,7 +98,7 @@ liveness
                 (argcopy)
                 (localid 5:$leaf))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v2))))
           (freeze
             (localid 2:$_)
@@ -106,7 +106,7 @@ liveness
           (fieldref
             (localid 8:$ref_val)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:$box))
             (fieldid 4:@val))
           (load
@@ -133,7 +133,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v1))))
           (const
             (localid 3:$v2)
@@ -148,7 +148,7 @@ liveness
                 (argcopy)
                 (localid 5:$leaf))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v2))))
           (freeze
             (localid 2:$_)
@@ -156,7 +156,7 @@ liveness
           (fieldref
             (localid 8:$ref_val)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:$box))
             (fieldid 4:@val))
           (load
@@ -183,7 +183,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:$v))))
           (const
             (localid 3:$v1)
@@ -198,7 +198,7 @@ liveness
                 (argcopy)
                 (localid 5:$leaf))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v1))))
           (const
             (localid 3:$v2)
@@ -213,7 +213,7 @@ liveness
                 (argcopy)
                 (localid 5:$leaf))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v2))))
           (heap
             (localid 5:$pair)
@@ -221,7 +221,7 @@ liveness
             (classid 5:@Pair)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$b1))
               (arg
                 (argcopy)
@@ -232,7 +232,7 @@ liveness
           (fieldref
             (localid 8:$ref_val)
             (arg
-              (argmove)
+              (argcopy)
               (localid 3:$b2))
             (fieldid 4:@val))
           (load
@@ -259,7 +259,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v1))))
           (const
             (localid 3:$v2)
@@ -271,7 +271,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v2))))
           (freeze
             (localid 2:$_)
@@ -279,7 +279,7 @@ liveness
           (fieldref
             (localid 6:$ref_a)
             (arg
-              (argmove)
+              (argcopy)
               (localid 2:$a))
             (fieldid 4:@val))
           (load
@@ -288,7 +288,7 @@ liveness
           (fieldref
             (localid 6:$ref_b)
             (arg
-              (argmove)
+              (argcopy)
               (localid 2:$b))
             (fieldid 4:@val))
           (load
@@ -318,7 +318,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:$v))))
           (freeze
             (localid 2:$_)
@@ -326,7 +326,7 @@ liveness
           (fieldref
             (localid 4:$ref)
             (arg
-              (argmove)
+              (argcopy)
               (localid 2:$a))
             (fieldid 4:@val))
           (load
@@ -353,7 +353,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v1))))
           (const
             (localid 3:$v2)
@@ -365,10 +365,10 @@ liveness
             (classid 4:@Box)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 6:$inner))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:$v2))))
           (freeze
             (localid 2:$_)
@@ -376,7 +376,7 @@ liveness
           (fieldref
             (localid 8:$ref_val)
             (arg
-              (argmove)
+              (argcopy)
               (localid 6:$outer))
             (fieldid 4:@val))
           (load
@@ -403,7 +403,7 @@ liveness
             (classid 5:@Leaf)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 2:$v))))
           (freeze
             (localid 3:$f1)
@@ -414,7 +414,7 @@ liveness
           (fieldref
             (localid 4:$ref)
             (arg
-              (argmove)
+              (argcopy)
               (localid 2:$a))
             (fieldid 4:@val))
           (load
@@ -435,30 +435,10 @@ liveness
             (localid 3:$r0)
             (i32)
             (int 1:0))
-          (const
-            (localid 6:$opt_0)
-            (i32)
-            (int 2:10))
-          (region
-            (localid 6:$opt_1)
-            (rc)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 6:$opt_0))))
-          (freeze
-            (localid 6:$opt_2)
-            (localid 6:$opt_1))
-          (fieldref
-            (localid 6:$opt_3)
-            (arg
-              (argmove)
-              (localid 6:$opt_1))
-            (fieldid 4:@val))
-          (load
+          (call
             (localid 3:$r1)
-            (localid 6:$opt_3))
+            (functionid 12:@test_simple)
+            (args))
           (const
             (localid 3:$e1)
             (i32)
@@ -487,7 +467,7 @@ liveness
       (label
         (labelid 3:^t2)
         (body
-          (move
+          (copy
             (localid 3:$a1)
             (localid 3:$r0)))
         (jump
@@ -495,45 +475,10 @@ liveness
       (label
         (labelid 4:^t2a)
         (body
-          (const
-            (localid 6:$opt_4)
-            (i32)
-            (int 1:2))
-          (region
-            (localid 6:$opt_5)
-            (rc)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 6:$opt_4))))
-          (const
-            (localid 6:$opt_6)
-            (i32)
-            (int 2:99))
-          (heap
-            (localid 6:$opt_7)
-            (localid 6:$opt_5)
-            (classid 4:@Box)
-            (args
-              (arg
-                (argcopy)
-                (localid 6:$opt_5))
-              (arg
-                (argmove)
-                (localid 6:$opt_6))))
-          (freeze
-            (localid 6:$opt_8)
-            (localid 6:$opt_7))
-          (fieldref
-            (localid 6:$opt_9)
-            (arg
-              (argmove)
-              (localid 6:$opt_7))
-            (fieldid 4:@val))
-          (load
+          (call
             (localid 3:$r2)
-            (localid 6:$opt_9))
+            (functionid 11:@test_chain)
+            (args))
           (const
             (localid 3:$e2)
             (i32)
@@ -562,7 +507,7 @@ liveness
       (label
         (labelid 3:^t3)
         (body
-          (move
+          (copy
             (localid 3:$a2)
             (localid 3:$a1)))
         (jump
@@ -570,45 +515,10 @@ liveness
       (label
         (labelid 4:^t3a)
         (body
-          (const
-            (localid 7:$opt_10)
-            (i32)
-            (int 1:5))
-          (region
-            (localid 7:$opt_11)
-            (rc)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_10))))
-          (const
-            (localid 7:$opt_12)
-            (i32)
-            (int 2:88))
-          (heap
-            (localid 7:$opt_13)
-            (localid 7:$opt_11)
-            (classid 4:@Box)
-            (args
-              (arg
-                (argcopy)
-                (localid 7:$opt_11))
-              (arg
-                (argmove)
-                (localid 7:$opt_12))))
-          (freeze
-            (localid 7:$opt_14)
-            (localid 7:$opt_13))
-          (fieldref
-            (localid 7:$opt_15)
-            (arg
-              (argmove)
-              (localid 7:$opt_13))
-            (fieldid 4:@val))
-          (load
+          (call
             (localid 3:$r3)
-            (localid 7:$opt_15))
+            (functionid 13:@test_forward)
+            (args))
           (const
             (localid 3:$e3)
             (i32)
@@ -637,7 +547,7 @@ liveness
       (label
         (labelid 3:^t4)
         (body
-          (move
+          (copy
             (localid 3:$a3)
             (localid 3:$a2)))
         (jump
@@ -645,71 +555,10 @@ liveness
       (label
         (labelid 4:^t4a)
         (body
-          (const
-            (localid 7:$opt_16)
-            (i32)
-            (int 2:42))
-          (region
-            (localid 7:$opt_17)
-            (rc)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_16))))
-          (const
-            (localid 7:$opt_18)
-            (i32)
-            (int 2:10))
-          (heap
-            (localid 7:$opt_19)
-            (localid 7:$opt_17)
-            (classid 4:@Box)
-            (args
-              (arg
-                (argcopy)
-                (localid 7:$opt_17))
-              (arg
-                (argmove)
-                (localid 7:$opt_18))))
-          (const
-            (localid 7:$opt_20)
-            (i32)
-            (int 2:20))
-          (heap
-            (localid 7:$opt_21)
-            (localid 7:$opt_17)
-            (classid 4:@Box)
-            (args
-              (arg
-                (argcopy)
-                (localid 7:$opt_17))
-              (arg
-                (argmove)
-                (localid 7:$opt_20))))
-          (heap
-            (localid 7:$opt_22)
-            (localid 7:$opt_17)
-            (classid 5:@Pair)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_19))
-              (arg
-                (argcopy)
-                (localid 7:$opt_21))))
-          (freeze
-            (localid 7:$opt_23)
-            (localid 7:$opt_22))
-          (fieldref
-            (localid 7:$opt_24)
-            (arg
-              (argmove)
-              (localid 7:$opt_21))
-            (fieldid 4:@val))
-          (load
+          (call
             (localid 3:$r4)
-            (localid 7:$opt_24))
+            (functionid 13:@test_diamond)
+            (args))
           (const
             (localid 3:$e4)
             (i32)
@@ -738,7 +587,7 @@ liveness
       (label
         (labelid 3:^t5)
         (body
-          (move
+          (copy
             (localid 3:$a4)
             (localid 3:$a3)))
         (jump
@@ -746,55 +595,10 @@ liveness
       (label
         (labelid 4:^t5a)
         (body
-          (const
-            (localid 7:$opt_25)
-            (i32)
-            (int 3:100))
-          (region
-            (localid 7:$opt_26)
-            (rc)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_25))))
-          (const
-            (localid 7:$opt_27)
-            (i32)
-            (int 3:200))
-          (heap
-            (localid 7:$opt_28)
-            (localid 7:$opt_26)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_27))))
-          (freeze
-            (localid 7:$opt_29)
-            (localid 7:$opt_26))
-          (fieldref
-            (localid 7:$opt_30)
-            (arg
-              (argmove)
-              (localid 7:$opt_26))
-            (fieldid 4:@val))
-          (load
-            (localid 7:$opt_31)
-            (localid 7:$opt_30))
-          (fieldref
-            (localid 7:$opt_32)
-            (arg
-              (argmove)
-              (localid 7:$opt_28))
-            (fieldid 4:@val))
-          (load
-            (localid 7:$opt_33)
-            (localid 7:$opt_32))
-          (add
+          (call
             (localid 3:$r5)
-            (localid 7:$opt_31)
-            (localid 7:$opt_33))
+            (functionid 13:@test_partial)
+            (args))
           (const
             (localid 3:$e5)
             (i32)
@@ -823,7 +627,7 @@ liveness
       (label
         (labelid 3:^t6)
         (body
-          (move
+          (copy
             (localid 3:$a5)
             (localid 3:$a4)))
         (jump
@@ -831,29 +635,10 @@ liveness
       (label
         (labelid 4:^t6a)
         (body
-          (const
-            (localid 7:$opt_34)
-            (i32)
-            (int 2:77))
-          (new
-            (localid 7:$opt_35)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_34))))
-          (freeze
-            (localid 7:$opt_36)
-            (localid 7:$opt_35))
-          (fieldref
-            (localid 7:$opt_37)
-            (arg
-              (argmove)
-              (localid 7:$opt_35))
-            (fieldid 4:@val))
-          (load
+          (call
             (localid 3:$r6)
-            (localid 7:$opt_37))
+            (functionid 17:@test_frame_local)
+            (args))
           (const
             (localid 3:$e6)
             (i32)
@@ -882,7 +667,7 @@ liveness
       (label
         (labelid 3:^t7)
         (body
-          (move
+          (copy
             (localid 3:$a6)
             (localid 3:$a5)))
         (jump
@@ -890,45 +675,10 @@ liveness
       (label
         (labelid 4:^t7a)
         (body
-          (const
-            (localid 7:$opt_38)
-            (i32)
-            (int 2:11))
-          (region
-            (localid 7:$opt_39)
-            (rc)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_38))))
-          (const
-            (localid 7:$opt_40)
-            (i32)
-            (int 2:22))
-          (region
-            (localid 7:$opt_41)
-            (rc)
-            (classid 4:@Box)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_39))
-              (arg
-                (argmove)
-                (localid 7:$opt_40))))
-          (freeze
-            (localid 7:$opt_42)
-            (localid 7:$opt_41))
-          (fieldref
-            (localid 7:$opt_43)
-            (arg
-              (argmove)
-              (localid 7:$opt_41))
-            (fieldid 4:@val))
-          (load
+          (call
             (localid 3:$r7)
-            (localid 7:$opt_43))
+            (functionid 15:@test_subregion)
+            (args))
           (const
             (localid 3:$e7)
             (i32)
@@ -957,7 +707,7 @@ liveness
       (label
         (labelid 3:^t8)
         (body
-          (move
+          (copy
             (localid 3:$a7)
             (localid 3:$a6)))
         (jump
@@ -965,33 +715,10 @@ liveness
       (label
         (labelid 4:^t8a)
         (body
-          (const
-            (localid 7:$opt_44)
-            (i32)
-            (int 2:55))
-          (region
-            (localid 7:$opt_45)
-            (rc)
-            (classid 5:@Leaf)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_44))))
-          (freeze
-            (localid 7:$opt_46)
-            (localid 7:$opt_45))
-          (freeze
-            (localid 7:$opt_47)
-            (localid 7:$opt_45))
-          (fieldref
-            (localid 7:$opt_48)
-            (arg
-              (argmove)
-              (localid 7:$opt_45))
-            (fieldid 4:@val))
-          (load
+          (call
             (localid 3:$r8)
-            (localid 7:$opt_48))
+            (functionid 19:@test_double_freeze)
+            (args))
           (const
             (localid 3:$e8)
             (i32)
