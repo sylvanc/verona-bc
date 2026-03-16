@@ -1095,6 +1095,9 @@ namespace vbci
       case Op::Freeze:
       {
         process([](const Register& src) INLINE {
+          if (src->is_readonly())
+            Value::error(Error::BadFreeze);
+
           if (src->is_header())
             freeze(src->get_header());
         });
