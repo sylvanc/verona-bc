@@ -6,11 +6,6 @@ Fix lambda type inference.
 - `async_writer::println`.
 - `_fd_writer::create`.
 
-Call the library "print"?
-- Add `apply` to the top level module that returns `out`?
-- Add `apply` to `async_writer` that calls `println`?
-- `print "foo"` becomes `print::out.println "foo"`?
-
 Semantics.
 - Remove `arrayiter`?
 - Region creation.

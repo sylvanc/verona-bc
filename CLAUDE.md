@@ -89,3 +89,4 @@
   - **freeze_local**: Freezes frame-local objects in place, then delegates heap sub-regions to `freeze()` in phase 2. `freeze()` delegates frame-local roots to `freeze_local()`.
   - **Use-after-move in write barrier**: When `apply_in` needs the header for `set_parent`, save it BEFORE the register is cleared (move semantics). Use `content.get_header()` not `next->get_header()` after extract.
   - **clear_cown_owner auto-free**: `clear_cown_owner()` now auto-frees like `clear_parent()` (calls `free_region()` if `stack_rc == 0`). Callers that need to prevent premature free must `stack_inc()` first (cown destructor and exchange already do this).
+- **Type system**: `Dyn` is a top type (`anything <: Dyn`). The bottom type is an empty `Union` (no members). In IRSubtype, the axiom table is keyed by the right operand's type (`r->type()` lookup in `reduce()`).
