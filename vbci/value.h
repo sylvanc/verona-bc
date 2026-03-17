@@ -69,10 +69,6 @@ namespace vbci
     uint8_t readonly : 1 = 0;
 
     Value(ValueType t) : tag(t), readonly(0) {}
-#ifdef PLATFORM_IS_MACOSX
-    Value(long ilong);
-    Value(unsigned long ulong);
-#endif
 
   public:
     Value();
@@ -85,6 +81,10 @@ namespace vbci
     explicit Value(int16_t i16);
     explicit Value(int32_t i32);
     explicit Value(int64_t i64);
+#ifdef PLATFORM_IS_MACOSX
+    explicit Value(long ilong);
+    explicit Value(unsigned long ulong);
+#endif
     explicit Value(float f32);
     explicit Value(double f64);
     explicit Value(void* ptr);
