@@ -1844,65 +1844,31 @@ namespace vc
     }
   }
 
-  // Compute a fingerprint string for a type environment, for convergence
-  // detection.
-  static std::string env_fingerprint(const TypeEnv& env)
+  // Check if two type environments differ in any entry's type.
+  // Uses pointer comparison on type nodes for speed — if types were
+  // cloned during this iteration, they'll have different pointers.
+  static bool env_changed(const TypeEnv& a, const TypeEnv& b)
   {
-    // Use a sorted map for deterministic ordering.
-    std::map<std::string, std::string> sorted;
+    if (a.size() != b.size())
+      return true;
 
-    for (auto& [loc, info] : env)
+    for (auto& [loc, info] : a)
     {
-      auto prim = extract_primitive(info.type);
-      std::string type_str;
+      auto it = b.find(loc);
 
-      if (prim)
-        type_str = std::string(prim->type().str());
-      else if (info.type->front() == TypeVar)
-        type_str = "?";
-      else if (info.type->front() == TypeName)
-      {
-        auto inner = info.type->front();
+      if (it == b.end())
+        return true;
 
-        for (auto& ne : *inner)
-          type_str += std::string((ne / Ident)->location().view()) + "::";
-      }
-      else if (info.type->front() == Union)
-      {
-        type_str = "U(";
+      // Fast path: if the type node is the same pointer, they're equal.
+      if (info.type == it->second.type)
+        continue;
 
-        for (auto& child : *(info.type->front()))
-        {
-          Node wrapped = Type << clone(child);
-          auto p = extract_primitive(wrapped);
-
-          if (p)
-            type_str += std::string(p->type().str()) + "|";
-          else if (child == TypeName)
-          {
-            for (auto& ne : *child)
-              type_str += std::string((ne / Ident)->location().view()) + "::";
-
-            type_str += "|";
-          }
-          else
-            type_str += "?|";
-        }
-
-        type_str += ")";
-      }
-      else
-        type_str = "dyn";
-
-      sorted[std::string(loc.view())] = type_str;
+      // Slow path: different pointers, check structural equality.
+      if (!types_equal(info.type, it->second.type))
+        return true;
     }
 
-    std::string fp;
-
-    for (auto& [k, v] : sorted)
-      fp += k + ":" + v + ";";
-
-    return fp;
+    return false;
   }
 
   // Trace backward from a Cond operand through the label body to find a
@@ -3681,7 +3647,6 @@ namespace vc
     // Per-label environments for tracking narrowed types at Cond/Typetest.
     // Only needed if there are Cond terminators with Typetest traces.
     std::vector<TypeEnv> exit_envs(n_labels);
-    std::vector<std::string> fingerprints(n_labels);
     std::vector<std::map<std::string, TypeEnv>> branch_exits(n_labels);
 
     // Initialize exit envs: copy the Phase A env for all labels.
@@ -3829,12 +3794,9 @@ namespace vc
             }
           }
 
-          // Check convergence.
-          auto fp = env_fingerprint(label_env);
-
-          if (fp != fingerprints[idx])
+          // Check convergence: did the label env change?
+          if (env_changed(label_env, exit_envs[idx]))
           {
-            fingerprints[idx] = fp;
             exit_envs[idx] = std::move(label_env);
             made_progress = true;
 

@@ -2,9 +2,7 @@
 
 ## To Do
 
-Fix lambda type inference.
-- `async_writer::println`.
-- `_fd_writer::create`.
+Lambda type inference is slow.
 
 Semantics.
 - Remove `arrayiter`?
