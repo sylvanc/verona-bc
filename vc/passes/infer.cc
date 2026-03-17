@@ -2267,7 +2267,8 @@ namespace vc
     const Node& enclosing_func,
     std::map<Location, Node>& lookup_stmts,
     std::vector<std::pair<Location, Location>>& typevar_aliases,
-    std::map<Location, std::pair<Location, size_t>>& ref_to_tuple)
+    std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
+    const std::map<Location, Node>& lambda_cache = {})
   {
     // Track tuple construction from NewArrayConst patterns.
     struct TupleTracking
@@ -2817,62 +2818,12 @@ namespace vc
           {
             auto recv_loc = (lookup_node / Rhs)->location();
 
-            // Trace the receiver back to its creation Call to find
-            // the lambda ClassDef.
-            Node lambda_cls;
+            // Look up lambda ClassDef from cache.
+            auto cache_it = lambda_cache.find(recv_loc);
 
-            body->traverse([&](Node& s) {
-              if (lambda_cls)
-                return false;
-
-              if (s != Call)
-                return true;
-
-              if ((s / LocalId)->location() != recv_loc)
-                return false;
-
-              auto fn = s / FuncName;
-              bool is_lambda = false;
-              std::string_view cls_name;
-
-              for (auto& elem : *fn)
-              {
-                auto name = (elem / Ident)->location().view();
-
-                if (name.starts_with("lambda$"))
-                {
-                  is_lambda = true;
-                  cls_name = name;
-                }
-              }
-
-              if (!is_lambda)
-                return false;
-
-              // Find the ClassDef.
-              auto scope = enclosing_func->parent({ClassDef, Top});
-
-              scope->traverse([&](auto n) {
-                if (lambda_cls)
-                  return false;
-
-                if (n != ClassDef)
-                  return n == scope || n == ClassBody;
-
-                if ((n / Ident)->location().view() == cls_name)
-                {
-                  lambda_cls = n;
-                  return false;
-                }
-
-                return true;
-              });
-
-              return false;
-            });
-
-            if (lambda_cls)
+            if (cache_it != lambda_cache.end())
             {
+              auto lambda_cls = cache_it->second;
               // Find the apply Function.
               Node apply_func;
 
@@ -3622,10 +3573,69 @@ namespace vc
     std::vector<std::pair<Location, Location>> typevar_aliases;
     std::map<Location, std::pair<Location, size_t>> ref_to_tuple;
 
+    // Cache: map from lambda create Call dst location → lambda ClassDef.
+    // Built once, used by inline lambda processing in CallDyn handler.
+    std::map<Location, Node> lambda_cache;
+    {
+      auto scope = node->parent({ClassDef, Top});
+
+      for (auto& lbl : *labels)
+      {
+        for (auto& stmt : *(lbl / Body))
+        {
+          if (stmt != Call)
+            continue;
+
+          auto fn = stmt / FuncName;
+          std::string_view cls_name;
+
+          for (auto& elem : *fn)
+          {
+            auto name = (elem / Ident)->location().view();
+
+            if (name.starts_with("lambda$"))
+              cls_name = name;
+          }
+
+          if (cls_name.empty())
+            continue;
+
+          // Find the ClassDef.
+          Node lambda_cls;
+
+          scope->traverse([&](auto n) {
+            if (lambda_cls)
+              return false;
+
+            if (n != ClassDef)
+              return n == scope || n == ClassBody;
+
+            if ((n / Ident)->location().view() == cls_name)
+            {
+              lambda_cls = n;
+              return false;
+            }
+
+            return true;
+          });
+
+          if (lambda_cls)
+            lambda_cache[(stmt / LocalId)->location()] = lambda_cls;
+        }
+      }
+    }
+
     for (auto& lbl : *labels)
     {
       process_label_body(
-        lbl / Body, env, top, node, lookup_stmts, typevar_aliases, ref_to_tuple);
+        lbl / Body,
+        env,
+        top,
+        node,
+        lookup_stmts,
+        typevar_aliases,
+        ref_to_tuple,
+        lambda_cache);
 
       // Refine return values against the function's declared return type.
       auto term = lbl / Return;
