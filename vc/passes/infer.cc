@@ -1922,10 +1922,12 @@ namespace vc
   // compatible with `expected_prim`, then propagate through
   // Copy/Move/Lookup/CallDyn until stable. `cascade_changed` tracks
   // affected locations to prevent oscillation.
+  using SrcIndex = std::multimap<Location, Node>;
+
   static void run_cascade(
     TypeEnv& env,
     Node expected_prim,
-    const Node& labels,
+    const SrcIndex& src_to_stmt,
     Node top,
     std::map<Location, Node>& lookup_stmts)
   {
@@ -1952,9 +1954,9 @@ namespace vc
       }
     }
 
-    // Seed cascade_changed with locations that have the expected
-    // primitive type.
-    std::set<Location> cascade_changed;
+    // Seed cascade with locations that have the expected primitive type.
+    std::queue<Location> work;
+    std::set<Location> visited;
 
     for (auto& [loc, info] : env)
     {
@@ -1964,261 +1966,218 @@ namespace vc
         p && p->type() == expected_prim->type() && !info.is_default() &&
         !info.is_fixed)
       {
-        cascade_changed.insert(loc);
+        work.push(loc);
+        visited.insert(loc);
       }
     }
 
-    // Cascade: re-iterate all statements in all labels to
-    // re-propagate types through Copy/Move, Lookup, and CallDyn.
-    bool changed = true;
-
-    while (changed)
+    // Propagate changes via the pre-built index.
+    while (!work.empty())
     {
-      changed = false;
+      auto loc = work.front();
+      work.pop();
 
-      for (auto& lbl2 : *labels)
+      auto [begin, end] = src_to_stmt.equal_range(loc);
+
+      for (auto it = begin; it != end; ++it)
       {
-        for (auto& stmt2 : *(lbl2 / Body))
+        auto& stmt = it->second;
+
+        if (stmt->in({Copy, Move}))
         {
-          if (stmt2->in({Copy, Move}))
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_it = env.find((stmt / Rhs)->location());
+          auto dst_it = env.find(dst_loc);
+
+          if (
+            src_it != env.end() &&
+            (dst_it == env.end() || !dst_it->second.is_fixed))
           {
-            auto cp_dst = stmt2 / LocalId;
-            auto cp_src = stmt2 / Rhs;
+            auto new_info = LocalTypeInfo::propagated(src_it->second);
 
             if (
-              cascade_changed.find(cp_src->location()) == cascade_changed.end())
-              continue;
-
-            auto dst_it = env.find(cp_dst->location());
-            auto src_it = env.find(cp_src->location());
-
-            if (
-              src_it != env.end() &&
-              (dst_it == env.end() || !dst_it->second.is_fixed))
+              dst_it == env.end() ||
+              !types_equal(dst_it->second.type, new_info.type))
             {
-              auto new_info = LocalTypeInfo::propagated(src_it->second);
+              env[dst_loc] = new_info;
+
+              if (visited.insert(dst_loc).second)
+                work.push(dst_loc);
+            }
+          }
+        }
+        else if (stmt == Lookup)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto hand = (stmt / Lhs)->type();
+          auto ident = stmt / Ident;
+          auto ta = stmt / TypeArgs;
+          auto ar = from_chars_sep_v<size_t>(stmt / Int);
+          auto src_it = env.find((stmt / Rhs)->location());
+
+          if (src_it != env.end())
+          {
+            auto rt = resolve_method_return_type(
+              top, src_it->second.type, ident, hand, ar, ta);
+
+            if (rt)
+            {
+              auto dst_it = env.find(dst_loc);
 
               if (
-                dst_it == env.end() ||
-                !types_equal(dst_it->second.type, new_info.type))
+                dst_it == env.end() || !types_equal(dst_it->second.type, rt))
               {
-                env[cp_dst->location()] = new_info;
-                cascade_changed.insert(cp_dst->location());
-                changed = true;
+                env[dst_loc] = LocalTypeInfo::computed(rt);
+
+                if (visited.insert(dst_loc).second)
+                  work.push(dst_loc);
               }
             }
           }
-          else if (stmt2 == Lookup)
+        }
+        else if (stmt->in({CallDyn, TryCallDyn}))
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto cd_src = stmt / Rhs;
+          auto cd_args = stmt / Args;
+
+          // Refine CallDyn args via method parameter types.
+          auto li = lookup_stmts.find(cd_src->location());
+
+          if (li != lookup_stmts.end())
           {
-            auto lk_dst = stmt2 / LocalId;
-            auto lk_src = stmt2 / Rhs;
+            auto lk = li->second;
+            auto lk_src = lk / Rhs;
+            auto ri = env.find(lk_src->location());
 
-            if (
-              cascade_changed.find(lk_src->location()) == cascade_changed.end())
-              continue;
-
-            auto lk_hand = (stmt2 / Lhs)->type();
-            auto lk_ident = stmt2 / Ident;
-            auto lk_ta = stmt2 / TypeArgs;
-            auto lk_ar = from_chars_sep_v<size_t>(stmt2 / Int);
-            auto src_it = env.find(lk_src->location());
-
-            if (src_it != env.end())
+            if (ri != env.end())
             {
-              auto rt = resolve_method_return_type(
-                top, src_it->second.type, lk_ident, lk_hand, lk_ar, lk_ta);
+              auto hi = (lk / Lhs)->type();
+              auto mi = lk / Ident;
+              auto ta = lk / TypeArgs;
+              auto ar = from_chars_sep_v<size_t>(lk / Int);
 
-              if (rt)
+              auto minfo =
+                resolve_method(top, ri->second.type, mi, hi, ar, ta);
+
+              if (minfo.func)
               {
-                auto dst_it = env.find(lk_dst->location());
+                auto mparams = minfo.func / Params;
+                size_t idx = 0;
 
-                if (
-                  dst_it == env.end() || !types_equal(dst_it->second.type, rt))
+                for (auto& arg_node : *cd_args)
                 {
-                  env[lk_dst->location()] = LocalTypeInfo::computed(rt);
-                  cascade_changed.insert(lk_dst->location());
-                  changed = true;
-                }
-              }
-            }
-          }
-          else if (stmt2->in({CallDyn, TryCallDyn}))
-          {
-            auto cd_dst = stmt2 / LocalId;
-            auto cd_src = stmt2 / Rhs;
-            auto cd_args = stmt2 / Args;
+                  if (idx >= mparams->size())
+                    break;
 
-            bool src_changed =
-              cascade_changed.find(cd_src->location()) != cascade_changed.end();
-            bool arg_changed = false;
+                  auto pt =
+                    apply_subst(top, mparams->at(idx) / Type, minfo.subst);
+                  auto pp = extract_callable_primitive(pt);
 
-            for (auto& arg_node : *cd_args)
-            {
-              auto as = arg_node / Rhs;
-
-              if (cascade_changed.find(as->location()) != cascade_changed.end())
-              {
-                arg_changed = true;
-                break;
-              }
-            }
-
-            if (!src_changed && !arg_changed)
-              continue;
-
-            auto li = lookup_stmts.find(cd_src->location());
-
-            if (li != lookup_stmts.end())
-            {
-              auto lk = li->second;
-              auto lk_src = lk / Rhs;
-              auto ri = env.find(lk_src->location());
-
-              if (ri != env.end())
-              {
-                auto hi = (lk / Lhs)->type();
-                auto mi = lk / Ident;
-                auto ta = lk / TypeArgs;
-                auto ar = from_chars_sep_v<size_t>(lk / Int);
-
-                auto minfo =
-                  resolve_method(top, ri->second.type, mi, hi, ar, ta);
-
-                if (minfo.func)
-                {
-                  auto mparams = minfo.func / Params;
-                  size_t idx = 0;
-
-                  for (auto& arg_node : *cd_args)
+                  if (pp)
                   {
-                    if (idx >= mparams->size())
-                      break;
+                    auto as = (arg_node / Rhs)->location();
 
-                    auto pt =
-                      apply_subst(top, mparams->at(idx) / Type, minfo.subst);
-                    auto pp = extract_callable_primitive(pt);
-
-                    if (pp)
+                    if (try_refine(env, as, pp))
                     {
-                      auto as = arg_node / Rhs;
-
-                      if (try_refine(env, as->location(), pp))
-                      {
-                        cascade_changed.insert(as->location());
-                        changed = true;
-                      }
+                      if (visited.insert(as).second)
+                        work.push(as);
                     }
-
-                    idx++;
                   }
-                }
-              }
-            }
 
-            // Re-propagate CallDyn result type.
-            if (src_changed)
-            {
-              auto src_it = env.find(cd_src->location());
-
-              if (src_it != env.end())
-              {
-                auto dst_it = env.find(cd_dst->location());
-
-                if (
-                  dst_it == env.end() ||
-                  !types_equal(dst_it->second.type, src_it->second.type))
-                {
-                  env[cd_dst->location()] =
-                    LocalTypeInfo::computed(clone(src_it->second.type));
-                  cascade_changed.insert(cd_dst->location());
-                  changed = true;
+                  idx++;
                 }
               }
             }
           }
-          else if (stmt2 == RegisterRef)
+
+          // Re-propagate CallDyn result type from Lookup.
+          if (visited.count(cd_src->location()))
           {
-            // When the source of a RegisterRef is refined, update the
-            // ref's type to ref[new_type].
-            auto rr_dst = stmt2 / LocalId;
-            auto rr_src = stmt2 / Rhs;
-            auto rr_src_loc = rr_src->location();
-
-            if (cascade_changed.find(rr_src_loc) == cascade_changed.end())
-              continue;
-
-            auto src_it = env.find(rr_src_loc);
+            auto src_it = env.find(cd_src->location());
 
             if (src_it != env.end())
             {
-              auto new_ref_type = ref_type(clone(src_it->second.type));
-              auto dst_it = env.find(rr_dst->location());
+              auto dst_it = env.find(dst_loc);
 
               if (
                 dst_it == env.end() ||
-                !types_equal(dst_it->second.type, new_ref_type))
+                !types_equal(dst_it->second.type, src_it->second.type))
               {
-                env[rr_dst->location()] = LocalTypeInfo::computed(new_ref_type);
-                cascade_changed.insert(rr_dst->location());
-                changed = true;
+                env[dst_loc] =
+                  LocalTypeInfo::computed(clone(src_it->second.type));
+
+                if (visited.insert(dst_loc).second)
+                  work.push(dst_loc);
               }
             }
           }
-          else if (stmt2->in({New, Stack}))
+        }
+        else if (stmt == RegisterRef)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_it = env.find((stmt / Rhs)->location());
+
+          if (src_it != env.end())
           {
-            // When a NewArg's source is refined, update the matching
-            // FieldDef in the class.
-            auto new_type = stmt2 / Type;
-            auto inner = new_type->front();
+            auto new_ref = ref_type(clone(src_it->second.type));
+            auto dst_it = env.find(dst_loc);
 
-            if (inner != TypeName)
-              continue;
-
-            auto class_def = find_def(top, inner);
-
-            if (!class_def || class_def != ClassDef)
-              continue;
-
-            auto class_body = class_def / ClassBody;
-
-            for (auto& new_arg : *(stmt2 / NewArgs))
+            if (
+              dst_it == env.end() ||
+              !types_equal(dst_it->second.type, new_ref))
             {
-              auto arg_src = new_arg / Rhs;
-              auto arg_loc = arg_src->location();
-              bool in_changed =
-                cascade_changed.find(arg_loc) != cascade_changed.end();
+              env[dst_loc] = LocalTypeInfo::computed(new_ref);
 
-              if (!in_changed)
+              if (visited.insert(dst_loc).second)
+                work.push(dst_loc);
+            }
+          }
+        }
+        else if (stmt->in({New, Stack}))
+        {
+          auto new_type = stmt / Type;
+          auto inner = new_type->front();
+
+          if (inner != TypeName)
+            continue;
+
+          auto class_def = find_def(top, inner);
+
+          if (!class_def || class_def != ClassDef)
+            continue;
+
+          for (auto& na : *(stmt / NewArgs))
+          {
+            auto arg_loc = (na / Rhs)->location();
+
+            if (!visited.count(arg_loc))
+              continue;
+
+            auto arg_it = env.find(arg_loc);
+
+            if (arg_it == env.end())
+              continue;
+
+            auto fname = (na / Ident)->location().view();
+
+            for (auto& f : *(class_def / ClassBody))
+            {
+              if (f != FieldDef)
                 continue;
 
-              auto arg_it = env.find(arg_loc);
-
-              if (arg_it == env.end())
+              if ((f / Ident)->location().view() != fname)
                 continue;
 
-              auto field_ident = new_arg / Ident;
+              auto ft = f / Type;
 
-              for (auto& child : *class_body)
+              if (
+                contains_typevar(ft) || !types_equal(ft, arg_it->second.type))
               {
-                if (child != FieldDef)
-                  continue;
-
-                if (
-                  (child / Ident)->location().view() !=
-                  field_ident->location().view())
-                  continue;
-
-                auto ft = child / Type;
-
-                if (
-                  contains_typevar(ft) || !types_equal(ft, arg_it->second.type))
-                {
-                  child->replace(ft, clone(arg_it->second.type));
-                  changed = true;
-                }
-
-                break;
+                f->replace(ft, clone(arg_it->second.type));
               }
+
+              break;
             }
           }
         }
@@ -2234,7 +2193,8 @@ namespace vc
     std::map<Location, Node>& lookup_stmts,
     std::vector<std::pair<Location, Location>>& typevar_aliases,
     std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
-    const std::map<Location, Node>& lambda_cache = {})
+    const std::map<Location, Node>& lambda_cache = {},
+    const SrcIndex* src_index_ptr = nullptr)
   {
     // Track tuple construction from NewArrayConst patterns.
     struct TupleTracking
@@ -2609,11 +2569,11 @@ namespace vc
                     }
                   }
 
-                  if (has_defaults)
+                  if (has_defaults && src_index_ptr)
                     run_cascade(
                       env,
                       expected_prim,
-                      enclosing_func / Labels,
+                      *src_index_ptr,
                       top,
                       lookup_stmts);
                 }
@@ -3539,6 +3499,35 @@ namespace vc
     std::vector<std::pair<Location, Location>> typevar_aliases;
     std::map<Location, std::pair<Location, size_t>> ref_to_tuple;
 
+    // Reverse index: source location → statements that read it.
+    // Built once, used by run_cascade for efficient propagation.
+    SrcIndex src_index;
+
+    for (auto& lbl : *labels)
+    {
+      for (auto& stmt : *(lbl / Body))
+      {
+        if (stmt->in({Copy, Move}))
+          src_index.emplace((stmt / Rhs)->location(), stmt);
+        else if (stmt == Lookup)
+          src_index.emplace((stmt / Rhs)->location(), stmt);
+        else if (stmt == RegisterRef)
+          src_index.emplace((stmt / Rhs)->location(), stmt);
+        else if (stmt->in({CallDyn, TryCallDyn}))
+        {
+          src_index.emplace((stmt / Rhs)->location(), stmt);
+
+          for (auto& arg : *(stmt / Args))
+            src_index.emplace((arg / Rhs)->location(), stmt);
+        }
+        else if (stmt->in({New, Stack}))
+        {
+          for (auto& na : *(stmt / NewArgs))
+            src_index.emplace((na / Rhs)->location(), stmt);
+        }
+      }
+    }
+
     // Cache: map from lambda create Call dst location → lambda ClassDef.
     // Built once, used by inline lambda processing in CallDyn handler.
     std::map<Location, Node> lambda_cache;
@@ -3601,7 +3590,8 @@ namespace vc
         lookup_stmts,
         typevar_aliases,
         ref_to_tuple,
-        lambda_cache);
+        lambda_cache,
+        &src_index);
 
       // Refine return values against the function's declared return type.
       auto term = lbl / Return;
@@ -3639,7 +3629,7 @@ namespace vc
     {
       auto func_ret = node / Type;
       auto expected_prim = extract_primitive(func_ret);
-      run_cascade(env, expected_prim, labels, top, lookup_stmts);
+      run_cascade(env, expected_prim, src_index, top, lookup_stmts);
     }
 
     // ---------- Phase B: Convergence loop (typetest narrowing) ----------
@@ -3825,7 +3815,7 @@ namespace vc
     {
       auto func_ret = node / Type;
       auto expected_prim = extract_primitive(func_ret);
-      run_cascade(env, expected_prim, labels, top, lookup_stmts);
+      run_cascade(env, expected_prim, src_index, top, lookup_stmts);
     }
 
     // ---------- Post-convergence: finalize Const AST nodes ----------
