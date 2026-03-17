@@ -1716,15 +1716,25 @@ namespace vc
     if (!incoming || incoming->front() == TypeVar)
       return clone(existing);
 
-    // A default-typed literal yields to any concrete type at a merge
-    // point. This allows match arm defaults (u64) to be subsumed by the
-    // else arm's concrete type, enabling back-propagation of the
-    // concrete type into the lambda for literal refinement.
+    // A default-typed literal yields to a concrete primitive of the same
+    // kind (integer or float) at a merge point. DefaultInt yields to any
+    // integer type; DefaultFloat yields to any float type. But neither
+    // yields to non-primitive types like nomatch or class types.
     if (is_default_type(existing) && !is_default_type(incoming))
-      return clone(incoming);
+    {
+      auto prim = extract_primitive(incoming);
+
+      if (prim)
+        return clone(incoming);
+    }
 
     if (is_default_type(incoming) && !is_default_type(existing))
-      return clone(existing);
+    {
+      auto prim = extract_primitive(existing);
+
+      if (prim)
+        return clone(existing);
+    }
 
     SequentCtx ctx{top, {}, {}};
 
@@ -2615,7 +2625,16 @@ namespace vc
                 auto expected_prim = extract_primitive(ft);
 
                 if (expected_prim)
+                {
                   try_refine(env, arg_src->location(), expected_prim);
+
+                  // If the arg has DefaultInt/DefaultFloat type (e.g.,
+                  // from a merged match result), refine it to the field's
+                  // concrete type directly. try_refine only handles Const
+                  // nodes; this handles Var/Copy chains.
+                  if (it->second.is_default())
+                    it->second.type = clone(ft);
+                }
 
                 // Reverse propagation: when the FieldDef contains
                 // TypeVar (possibly nested, e.g., ref[TypeVar]) and
