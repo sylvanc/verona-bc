@@ -4360,19 +4360,6 @@ namespace vc
           return node == Top || node == ClassDef || node == ClassBody ||
             node == Lib || node == Symbols;
 
-        // Skip lambda$ apply functions — they're processed inline
-        // by their parent function's inference.
-        auto parent_cls = node->parent(ClassDef);
-
-        if (parent_cls)
-        {
-          auto cls_name = (parent_cls / Ident)->location().view();
-
-          if (cls_name.starts_with("lambda$") &&
-              (node / Ident)->location().view() == "apply")
-            return false;
-        }
-
         process_function(node, top, false);
 
         // Collect functions that still have unresolved TypeVar types
