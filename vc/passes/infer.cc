@@ -3182,18 +3182,10 @@ namespace vc
                       LocalTypeInfo::fixed(new_type);
                   }
 
-                  // Propagate return type: if the lambda's apply has
-                  // TypeVar return and the enclosing function has a
-                  // concrete return type, use that.
-                  auto apply_ret = apply_func / Type;
-
-                  if (apply_ret->front() == TypeVar)
-                  {
-                    auto enclosing_ret = enclosing_func / Type;
-
-                    if (enclosing_ret->front() != TypeVar)
-                      apply_func->replace(apply_ret, clone(enclosing_ret));
-                  }
+                  // The when-lambda's return type T determines the
+                  // When result as cown[T]. Don't set it from the
+                  // enclosing function — let the infer/reify pass
+                  // compute it from the lambda body.
                 }
               }
             }

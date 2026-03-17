@@ -6,14 +6,14 @@ Inference regressions.
 - `generic_when`, `infer_backward`.
 - The `when` lambda in `async_writer` also still fails.
 
+Compiler errors.
+- Not getting node based errors.
+
 Semantics.
 - Remove `arrayiter`?
 - Region creation.
 - Null terminators in `string`?
 - Fix path compression, storing rank in Pending Location.
-
-Compiler errors.
-- Not getting node based errors.
 
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 
