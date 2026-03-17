@@ -4261,7 +4261,165 @@ namespace vc
           if (old_ret->front() == TypeVar)
             func->replace(old_ret, make_type());
 
+          // Also reset DefaultInt/DefaultFloat return types so they
+          // can be re-inferred with updated context.
+          bool has_default_ret = false;
+          auto ret_front = old_ret->front();
+
+          if (ret_front->in({DefaultInt, DefaultFloat}))
+            has_default_ret = true;
+          else if (ret_front == Union)
+          {
+            for (auto& child : *ret_front)
+            {
+              if (child->in({DefaultInt, DefaultFloat}))
+              {
+                has_default_ret = true;
+                break;
+              }
+            }
+          }
+
+          if (has_default_ret)
+            func->replace(func / Type, make_type());
+
           process_function(func, top, false);
+        }
+
+        // Cross-function propagation: for each lambda with DefaultInt
+        // in its return type, find callers and resolve DefaultInt to
+        // the concrete type expected by the caller's context.
+        for (auto& func : deferred)
+        {
+          // Only process lambda apply functions.
+          auto parent_cls = func->parent(ClassDef);
+
+          if (!parent_cls)
+            continue;
+
+          auto cls_name = (parent_cls / Ident)->location().view();
+
+          if (!cls_name.starts_with("lambda$"))
+            continue;
+
+          if ((func / Ident)->location().view() != "apply")
+            continue;
+
+          auto func_ret = func / Type;
+          auto ret_front = func_ret->front();
+
+          // Find DefaultInt/DefaultFloat in the return type.
+          Node default_node;
+
+          if (ret_front->in({DefaultInt, DefaultFloat}))
+          {
+            default_node = ret_front;
+          }
+          else if (ret_front == Union)
+          {
+            for (auto& child : *ret_front)
+            {
+              if (child->in({DefaultInt, DefaultFloat}))
+              {
+                default_node = child;
+                break;
+              }
+            }
+          }
+
+          if (!default_node)
+            continue;
+
+          // Find a parent caller that uses this lambda. Search all
+          // functions in the same enclosing class for a Call to
+          // this lambda's create and trace the CallDyn result.
+          auto enclosing = parent_cls->parent(ClassDef);
+
+          if (!enclosing)
+            continue;
+
+          // Find the New that uses the match result, and get the
+          // field type. Walk the enclosing class's functions.
+          for (auto& sibling_func : *(enclosing / ClassBody))
+          {
+            if (sibling_func != Function)
+              continue;
+
+            auto labels = sibling_func / Labels;
+
+            for (auto& lbl : *labels)
+            {
+              for (auto& stmt : *(lbl / Body))
+              {
+                if (!stmt->in({New, Stack}))
+                  continue;
+
+                // Check each NewArg's field type.
+                for (auto& new_arg : *(stmt / NewArgs))
+                {
+                  auto ft_node = sibling_func->parent(ClassDef);
+
+                  if (!ft_node)
+                    continue;
+
+                  auto field_name =
+                    (new_arg / Ident)->location().view();
+                  auto new_type = stmt / Type;
+                  auto new_inner = new_type->front();
+
+                  if (new_inner != TypeName)
+                    continue;
+
+                  auto class_def = find_def(top, new_inner);
+
+                  if (!class_def || class_def != ClassDef)
+                    continue;
+
+                  for (auto& field : *(class_def / ClassBody))
+                  {
+                    if (field != FieldDef)
+                      continue;
+
+                    if ((field / Ident)->location().view() != field_name)
+                      continue;
+
+                    auto expected = extract_primitive(field / Type);
+
+                    if (!expected)
+                      break;
+
+                    // Replace DefaultInt with the expected type
+                    // in the lambda's return type.
+                    auto new_ret = clone(func_ret);
+                    auto nr_front = new_ret->front();
+
+                    if (nr_front->in({DefaultInt, DefaultFloat}))
+                    {
+                      new_ret->replace(
+                        nr_front, primitive_type(expected->type())->front());
+                    }
+                    else if (nr_front == Union)
+                    {
+                      for (auto& child : *nr_front)
+                      {
+                        if (child->in({DefaultInt, DefaultFloat}))
+                        {
+                          nr_front->replace(
+                            child,
+                            primitive_type(expected->type())->front());
+                          break;
+                        }
+                      }
+                    }
+
+                    func->replace(func_ret, new_ret);
+                    goto next_lambda;
+                  }
+                }
+              }
+            }
+          }
+          next_lambda:;
         }
 
         // Count functions that still have unresolved TypeVars.
