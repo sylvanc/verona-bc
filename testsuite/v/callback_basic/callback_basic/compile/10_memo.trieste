@@ -112,15 +112,6 @@ memo
         (body)
         (ret
           (localid 1:r)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::i32::!=::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
   (func
     (functionid 30:callback_basic::run_test::0::0)
     (params)
@@ -222,15 +213,6 @@ memo
             (args)))
         (ret
           (localid 8:local$79)))))
-  (primitive
-    (u64)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::u64::!=::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::u64::+::2::0))))
   (func
     (functionid 23:_builtin::u64::!=::2::0)
     (params
@@ -252,15 +234,6 @@ memo
             (localid 5:other)))
         (ret
           (localid 9:local$446)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))
-      (method
-        (methodid 11:apply::1::0)
-        (functionid 27:_builtin::bool::apply::1::0))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -332,18 +305,6 @@ memo
         (body)
         (ret
           (localid 4:self)))))
-  (primitive
-    (ptr)
-    (methods))
-  (primitive
-    (callback)
-    (methods
-      (method
-        (methodid 11:apply::1::0)
-        (functionid 36:_builtin::ffi::callback::apply::1::0))
-      (method
-        (methodid 10:free::1::0)
-        (functionid 35:_builtin::ffi::callback::free::1::0))))
   (class
     (classid 27:callback_basic::lambda$0::0)
     (fields)
@@ -445,9 +406,6 @@ memo
             (none)))
         (ret
           (localid 8:none$944)))))
-  (primitive
-    (none)
-    (methods))
   (func
     (functionid 23:_builtin::i32::!=::2::0)
     (params
@@ -490,6 +448,48 @@ memo
             (localid 5:other)))
         (ret
           (localid 9:local$235)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::u64::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::u64::+::2::0))))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0))
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 27:_builtin::bool::apply::1::0))))
+  (primitive
+    (ptr)
+    (methods))
+  (primitive
+    (callback)
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 36:_builtin::ffi::callback::apply::1::0))
+      (method
+        (methodid 10:free::1::0)
+        (functionid 35:_builtin::ffi::callback::free::1::0))))
+  (primitive
+    (none)
+    (methods))
   (lib
     (string 0:)
     (symbols

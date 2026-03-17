@@ -106,24 +106,6 @@ reify
                 (localid 8:local$11)))))
         (ret
           (localid 3:sum)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
-  (primitive
-    (usize)
-    (methods
-      (method
-        (methodid 7:<::2::0)
-        (functionid 24:_builtin::usize::<::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 24:_builtin::usize::+::2::0))
-      (method
-        (methodid 9:i32::1::0)
-        (functionid 26:_builtin::usize::i32::1::0))))
   (func
     (functionid 27:_builtin::array::fill::1::0)
     (params
@@ -175,24 +157,6 @@ reify
                 (localid 3:arr)))))
         (ret
           (localid 7:local$7)))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
-  (primitive
-    (ref
-      (u64))
-    (methods))
-  (primitive
-    (ref
-      (ref
-        (i32)))
-    (methods))
-  (primitive
-    (ref
-      (array
-        (i32)))
-    (methods))
   (class
     (classid 22:each_loop::lambda$1::0)
     (fields
@@ -207,9 +171,6 @@ reify
       (method
         (methodid 11:apply::2::0)
         (functionid 32:each_loop::lambda$1::apply::2::0))))
-  (primitive
-    (u64)
-    (methods))
   (class
     (classid 22:each_loop::lambda$0::0)
     (fields
@@ -221,28 +182,6 @@ reify
       (method
         (methodid 11:apply::3::0)
         (functionid 32:each_loop::lambda$0::apply::3::0))))
-  (primitive
-    (array
-      (i32))
-    (methods
-      (method
-        (methodid 11:pairs::2::0)
-        (functionid 28:_builtin::array::pairs::2::0))
-      (method
-        (methodid 10:each::2::0)
-        (functionid 27:_builtin::array::each::2::0))
-      (method
-        (methodid 10:size::1::0)
-        (functionid 27:_builtin::array::size::1::0))
-      (method
-        (methodid 11:apply::2::0)
-        (functionid 28:_builtin::array::apply::2::0))
-      (method
-        (methodid 16:apply::2::ref::0)
-        (functionid 33:_builtin::array::apply::2::ref::0))
-      (method
-        (methodid 16:fill_range::4::0)
-        (functionid 33:_builtin::array::fill_range::4::0))))
   (func
     (functionid 28:_builtin::array::pairs::2::0)
     (params
@@ -516,9 +455,6 @@ reify
             (none)))
         (ret
           (localid 8:none$947)))))
-  (primitive
-    (none)
-    (methods))
   (type
     (typeid 24:_builtin::array::fn$5::0)
     (classid 22:each_loop::lambda$1::0))
@@ -951,9 +887,6 @@ reify
             (localid 4:self)))
         (ret
           (localid 9:local$844)))))
-  (primitive
-    (bool)
-    (methods))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -974,4 +907,71 @@ reify
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$235))))))
+          (localid 9:local$235)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (usize)
+    (methods
+      (method
+        (methodid 7:<::2::0)
+        (functionid 24:_builtin::usize::<::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 24:_builtin::usize::+::2::0))
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 26:_builtin::usize::i32::1::0))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (ref
+      (u64))
+    (methods))
+  (primitive
+    (ref
+      (ref
+        (i32)))
+    (methods))
+  (primitive
+    (ref
+      (array
+        (i32)))
+    (methods))
+  (primitive
+    (u64)
+    (methods))
+  (primitive
+    (array
+      (i32))
+    (methods
+      (method
+        (methodid 11:pairs::2::0)
+        (functionid 28:_builtin::array::pairs::2::0))
+      (method
+        (methodid 10:each::2::0)
+        (functionid 27:_builtin::array::each::2::0))
+      (method
+        (methodid 10:size::1::0)
+        (functionid 27:_builtin::array::size::1::0))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::0))
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::0))
+      (method
+        (methodid 16:fill_range::4::0)
+        (functionid 33:_builtin::array::fill_range::4::0))))
+  (primitive
+    (none)
+    (methods))
+  (primitive
+    (bool)
+    (methods)))

@@ -751,8 +751,16 @@ infer
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:none)
-                  (typeargs))))
+                  (ident 4:cown)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 4:none)
+                          (typeargs))))))))
             (where)
             (labels
               (label
@@ -885,18 +893,7 @@ infer
                       (typeargs))
                     (nameelement
                       (ident 3:box)
-                      (typeargs
-                        (type
-                          (typename
-                            (nameelement
-                              (ident 12:generic_when)
-                              (typeargs))
-                            (nameelement
-                              (ident 3:box)
-                              (typeargs))
-                            (nameelement
-                              (ident 1:A)
-                              (typeargs))))))
+                      (typeargs))
                     (nameelement
                       (ident 8:lambda$1)
                       (typeargs
@@ -1023,21 +1020,7 @@ infer
                           (typeargs))
                         (nameelement
                           (ident 8:lambda$1)
-                          (typeargs
-                            (type
-                              (typename
-                                (nameelement
-                                  (ident 12:generic_when)
-                                  (typeargs))
-                                (nameelement
-                                  (ident 3:box)
-                                  (typeargs))
-                                (nameelement
-                                  (ident 8:lambda$1)
-                                  (typeargs))
-                                (nameelement
-                                  (ident 1:A)
-                                  (typeargs))))))
+                          (typeargs))
                         (nameelement
                           (ident 8:lambda$6)
                           (typeargs
@@ -1419,7 +1402,7 @@ infer
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 4:none)
+                      (ident 7:nomatch)
                       (typeargs))))
                 (where)
                 (labels
@@ -1642,7 +1625,7 @@ infer
                           (ident 8:_builtin)
                           (typeargs))
                         (nameelement
-                          (ident 4:none)
+                          (ident 7:nomatch)
                           (typeargs))))))
                 (ret
                   (localid 9:local$550)))))))

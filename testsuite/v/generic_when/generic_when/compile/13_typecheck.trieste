@@ -98,9 +98,6 @@ typecheck
             (int 1:0)))
         (ret
           (localid 8:local$25)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 27:_builtin::i32::create::1::0)
     (params
@@ -164,19 +161,6 @@ typecheck
                 (localid 9:local$127)))))
         (ret
           (localid 8:local$13)))))
-  (primitive
-    (array
-      (u8))
-    (methods
-      (method
-        (methodid 11:apply::2::0)
-        (functionid 28:_builtin::array::apply::2::0))
-      (method
-        (methodid 16:apply::2::ref::0)
-        (functionid 33:_builtin::array::apply::2::ref::0))))
-  (primitive
-    (u8)
-    (methods))
   (func
     (functionid 30:_builtin::string::create::1::0)
     (params
@@ -281,10 +265,6 @@ typecheck
               (classid 21:generic_when::cell::0))))
         (ret
           (localid 9:local$601)))))
-  (primitive
-    (cown
-      (classid 21:generic_when::cell::0))
-    (methods))
   (func
     (functionid 38:_builtin::cown::lambda$4::create::1::0)
     (params
@@ -339,47 +319,14 @@ typecheck
             (localid 9:local$193)))
         (ret
           (localid 9:local$917)))))
-  (primitive
-    (ref
-      (classid 21:generic_when::cell::0))
-    (methods
-      (method
-        (methodid 7:*::1::0)
-        (functionid 22:_builtin::ref::*::1::0))))
-  (primitive
-    (ref
-      (u8))
-    (methods))
-  (primitive
-    (ref
-      (array
-        (u8)))
-    (methods))
-  (primitive
-    (ref
-      (cown
-        (classid 21:generic_when::cell::0)))
-    (methods))
-  (primitive
-    (ref
-      (classid 19:_builtin::string::0))
-    (methods))
-  (primitive
-    (ref
-      (ref
-        (classid 21:generic_when::cell::0)))
-    (methods))
-  (primitive
-    (ref
-      (i32))
-    (methods))
   (func
     (functionid 28:generic_when::box::get::1::0)
     (params
       (param
         (localid 4:self)
         (classid 20:generic_when::box::0)))
-    (none)
+    (cown
+      (none))
     (vars)
     (labels
       (label
@@ -415,13 +362,9 @@ typecheck
                 (argcopy)
                 (localid 9:local$131)))
             (cown
-              (none)))
-          (const
-            (localid 8:none$987)
-            (none)
-            (none)))
+              (none))))
         (ret
-          (localid 8:none$987)))))
+          (localid 9:local$544)))))
   (func
     (functionid 29:generic_when::box::doit::2::0)
     (params
@@ -470,16 +413,13 @@ typecheck
                 (argcopy)
                 (localid 9:local$141)))
             (cown
-              (none)))
+              (classid 20:_builtin::nomatch::0)))
           (const
             (localid 8:none$983)
             (none)
             (none)))
         (ret
           (localid 8:none$983)))))
-  (primitive
-    (none)
-    (methods))
   (func
     (functionid 41:generic_when::box::lambda$1::create::1::0)
     (params
@@ -587,12 +527,10 @@ typecheck
             (localid 8:local$97)))
         (ret
           (localid 9:local$773)))))
-  (primitive
-    (usize)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 25:_builtin::usize::!=::2::0))))
+  (class
+    (classid 20:_builtin::nomatch::0)
+    (fields)
+    (methods))
   (func
     (functionid 34:_builtin::string::apply::2::ref::0)
     (params
@@ -750,7 +688,7 @@ typecheck
         (localid 1:w)
         (ref
           (classid 21:generic_when::cell::0))))
-    (none)
+    (classid 20:_builtin::nomatch::0)
     (vars)
     (labels
       (label
@@ -791,13 +729,9 @@ typecheck
                 (localid 8:local$20))
               (arg
                 (argcopy)
-                (localid 7:local$5))))
-          (const
-            (localid 8:none$984)
-            (none)
-            (none)))
-        (ret
-          (localid 8:none$984)))))
+                (localid 7:local$5)))))
+        (error
+          (errormsg 118:return: value type 'Union(_builtin::nomatch::0, none)' is not a subtype of function return type '_builtin::nomatch::0')))))
   (func
     (functionid 51:generic_when::box::lambda$1::lambda$6::create::1::0)
     (params
@@ -1041,11 +975,11 @@ typecheck
             (functionid 28:_builtin::none::create::0::0)
             (args))
           (const
-            (localid 8:none$985)
+            (localid 8:none$984)
             (none)
             (none)))
         (ret
-          (localid 8:none$985)))))
+          (localid 8:none$984)))))
   (func
     (functionid 28:_builtin::none::create::0::0)
     (params)
@@ -1060,11 +994,11 @@ typecheck
             (none)
             (none))
           (const
-            (localid 8:none$986)
+            (localid 8:none$985)
             (none)
             (none)))
         (ret
-          (localid 8:none$986)))))
+          (localid 8:none$985)))))
   (func
     (functionid 27:_builtin::ref::*::1::ref::0)
     (params
@@ -1081,12 +1015,6 @@ typecheck
         (body)
         (ret
           (localid 4:self)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 11:apply::1::0)
-        (functionid 27:_builtin::bool::apply::1::0))))
   (func
     (functionid 27:_builtin::bool::apply::1::0)
     (params
@@ -1101,10 +1029,6 @@ typecheck
         (body)
         (ret
           (localid 4:self)))))
-  (class
-    (classid 20:_builtin::nomatch::0)
-    (fields)
-    (methods))
   (func
     (functionid 41:generic_when::box::lambda$0::create::0::0)
     (params)
@@ -1166,11 +1090,11 @@ typecheck
                 (argcopy)
                 (localid 9:local$129))))
           (const
-            (localid 8:none$988)
+            (localid 8:none$986)
             (none)
             (none)))
         (ret
-          (localid 8:none$988)))))
+          (localid 8:none$986)))))
   (func
     (functionid 27:generic_when::cell::f::1::0)
     (params
@@ -1215,4 +1139,77 @@ typecheck
               (localid 4:self))
             (fieldid 1:f)))
         (ret
-          (localid 9:local$125))))))
+          (localid 9:local$125)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (array
+      (u8))
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::0))
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::0))))
+  (primitive
+    (u8)
+    (methods))
+  (primitive
+    (cown
+      (classid 21:generic_when::cell::0))
+    (methods))
+  (primitive
+    (cown
+      (none))
+    (methods))
+  (primitive
+    (ref
+      (classid 21:generic_when::cell::0))
+    (methods
+      (method
+        (methodid 7:*::1::0)
+        (functionid 22:_builtin::ref::*::1::0))))
+  (primitive
+    (ref
+      (u8))
+    (methods))
+  (primitive
+    (ref
+      (array
+        (u8)))
+    (methods))
+  (primitive
+    (ref
+      (cown
+        (classid 21:generic_when::cell::0)))
+    (methods))
+  (primitive
+    (ref
+      (classid 19:_builtin::string::0))
+    (methods))
+  (primitive
+    (ref
+      (ref
+        (classid 21:generic_when::cell::0)))
+    (methods))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (none)
+    (methods))
+  (primitive
+    (usize)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 25:_builtin::usize::!=::2::0))))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 27:_builtin::bool::apply::1::0)))))

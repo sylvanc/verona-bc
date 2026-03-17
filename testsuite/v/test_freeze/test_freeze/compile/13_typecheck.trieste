@@ -550,15 +550,6 @@ typecheck
         (body)
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::i32::!=::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
   (func
     (functionid 31:test_freeze::leaf::create::1::0)
     (params
@@ -726,14 +717,6 @@ typecheck
             (fieldid 3:val)))
         (ret
           (localid 9:local$125)))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
-  (primitive
-    (ref
-      (classid 20:test_freeze::leaf::0))
-    (methods))
   (func
     (functionid 28:test_freeze::node::val::1::0)
     (params
@@ -873,9 +856,6 @@ typecheck
     (classid 20:_builtin::nomatch::0)
     (fields)
     (methods))
-  (primitive
-    (none)
-    (methods))
   (func
     (functionid 23:_builtin::i32::!=::2::0)
     (params
@@ -918,12 +898,6 @@ typecheck
             (localid 5:other)))
         (ret
           (localid 9:local$265)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -944,4 +918,30 @@ typecheck
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$193))))))
+          (localid 9:local$193)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (ref
+      (classid 20:test_freeze::leaf::0))
+    (methods))
+  (primitive
+    (none)
+    (methods))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0)))))

@@ -362,18 +362,6 @@ validids
         (body)
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::i32::!=::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))
-      (method
-        (methodid 8:==::2::0)
-        (functionid 23:_builtin::i32::==::2::0))))
   (func
     (functionid 34:lambda_var_capture::read_var::1::0)
     (params
@@ -566,19 +554,6 @@ validids
             (int 1:0)))
         (ret
           (localid 8:local$15)))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
-  (primitive
-    (ref
-      (u64))
-    (methods))
-  (primitive
-    (ref
-      (ref
-        (i32)))
-    (methods))
   (class
     (classid 31:lambda_var_capture::lambda$2::0)
     (fields
@@ -593,12 +568,6 @@ validids
       (method
         (methodid 11:apply::2::0)
         (functionid 41:lambda_var_capture::lambda$2::apply::2::0))))
-  (primitive
-    (u64)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::u64::!=::2::0))))
   (func
     (functionid 41:lambda_var_capture::lambda$2::apply::2::0)
     (params
@@ -712,12 +681,6 @@ validids
             (localid 5:other)))
         (ret
           (localid 9:local$488)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -953,4 +916,41 @@ validids
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$287))))))
+          (localid 9:local$287)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 23:_builtin::i32::==::2::0))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (ref
+      (u64))
+    (methods))
+  (primitive
+    (ref
+      (ref
+        (i32)))
+    (methods))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::u64::!=::2::0))))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0)))))

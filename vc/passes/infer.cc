@@ -1591,9 +1591,12 @@ namespace vc
 
       auto& arg_info = arg_it->second;
 
-      if (!arg_info.is_default())
-        continue;
-
+      // Backward-refine prior calls whose TypeArgs were inferred
+      // entirely from default-typed literals. Check call_node (which
+      // is set when all_default_inference was true at the call site)
+      // rather than is_default(), because the call result type may be
+      // a concrete wrapper like wrapper[u64] even though the inference
+      // was from defaults.
       if (arg_info.call_node)
       {
         // Backward-refine a prior Call whose TypeArgs were inferred
@@ -1663,35 +1666,6 @@ namespace vc
         if (child->in({DefaultInt, DefaultFloat}))
           return true;
       }
-    }
-
-    // Also check FieldDefs in the parent class and any nested ClassDefs:
-    // if any field contains TypeVar (possibly nested, e.g., ref[TypeVar]),
-    // the function body may reference it and needs re-processing. Nested
-    // classes capture variables from the enclosing scope via fields, so
-    // TypeVar in a nested class's fields means the enclosing function
-    // needs to propagate types into the nested class's create call.
-    auto parent_cls = func->parent(ClassDef);
-
-    if (parent_cls)
-    {
-      bool found = false;
-
-      parent_cls->traverse([&](auto node) {
-        if (found)
-          return false;
-
-        if (node == FieldDef && contains_typevar(node / Type))
-        {
-          found = true;
-          return false;
-        }
-
-        return node == parent_cls || node == ClassBody || node == ClassDef;
-      });
-
-      if (found)
-        return true;
     }
 
     return false;
@@ -3109,14 +3083,14 @@ namespace vc
                   auto params = apply_func / Params;
                   auto args = stmt / Args;
 
+                  // Map lambda params to When cown args. Param 0 is
+                  // $self (skip), params 1..N get ref[cown_inner] types
+                  // from the When's cown arguments.
                   for (size_t i = 1; i < args->size() && i < params->size();
                        ++i)
                   {
                     auto param = params->at(i);
                     auto param_type = param / Type;
-
-                    if (param_type->front() != TypeVar)
-                      continue;
 
                     auto arg_local = args->at(i) / Rhs;
                     auto arg_it = env.find(arg_local->location());
@@ -3130,7 +3104,14 @@ namespace vc
                       continue;
 
                     auto new_type = ref_type(cown_inner);
-                    param->replace(param_type, new_type);
+
+                    if (param_type->front() == TypeVar)
+                      param->replace(param_type, new_type);
+
+                    // Populate the lambda param in the parent env for
+                    // inline processing.
+                    env[(param / Ident)->location()] =
+                      LocalTypeInfo::fixed(new_type);
                   }
 
                   // Propagate return type: if the lambda's apply has
@@ -4224,8 +4205,6 @@ namespace vc
             func->replace(old_ret, make_type());
           else if (has_typevar(func))
           {
-            // Reset DefaultInt/DefaultFloat return types to TypeVar
-            // so return type inference re-runs with refined Consts.
             func->replace(old_ret, make_type());
           }
 

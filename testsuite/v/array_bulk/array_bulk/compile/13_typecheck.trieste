@@ -4241,21 +4241,6 @@ typecheck
                 (localid 6:result)))))
         (ret
           (localid 9:local$141)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::i32::!=::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
-  (primitive
-    (usize)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 25:_builtin::usize::!=::2::0))))
   (func
     (functionid 27:_builtin::array::fill::1::0)
     (params
@@ -4343,12 +4328,6 @@ typecheck
                 (localid 9:local$518)))))
         (ret
           (localid 9:local$155)))))
-  (primitive
-    (u8)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 22:_builtin::u8::!=::2::0))))
   (func
     (functionid 31:_builtin::nomatch::create::0::0)
     (params)
@@ -4629,12 +4608,6 @@ typecheck
                 (localid 4:from)))))
         (ret
           (localid 1:a)))))
-  (primitive
-    (i64)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::i64::!=::2::0))))
   (func
     (functionid 27:_builtin::i64::create::1::0)
     (params
@@ -4649,12 +4622,6 @@ typecheck
         (body)
         (ret
           (localid 4:some)))))
-  (primitive
-    (f64)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::f64::!=::2::0))))
   (func
     (functionid 29:_builtin::usize::create::1::0)
     (params
@@ -4704,101 +4671,6 @@ typecheck
         (body)
         (ret
           (localid 4:some)))))
-  (primitive
-    (array
-      (classid 18:array_bulk::box::0))
-    (methods
-      (method
-        (methodid 16:apply::2::ref::0)
-        (functionid 33:_builtin::array::apply::2::ref::0))
-      (method
-        (methodid 15:copy_from::5::0)
-        (functionid 32:_builtin::array::copy_from::5::0))
-      (method
-        (methodid 11:apply::2::0)
-        (functionid 28:_builtin::array::apply::2::0))
-      (method
-        (methodid 16:fill_range::4::0)
-        (functionid 33:_builtin::array::fill_range::4::0))
-      (method
-        (methodid 13:compare::5::0)
-        (functionid 30:_builtin::array::compare::5::0))))
-  (primitive
-    (array
-      (usize))
-    (methods
-      (method
-        (methodid 16:apply::2::ref::0)
-        (functionid 33:_builtin::array::apply::2::ref::1))
-      (method
-        (methodid 15:copy_from::5::0)
-        (functionid 32:_builtin::array::copy_from::5::1))
-      (method
-        (methodid 11:apply::2::0)
-        (functionid 28:_builtin::array::apply::2::1))
-      (method
-        (methodid 16:fill_range::4::0)
-        (functionid 33:_builtin::array::fill_range::4::1))
-      (method
-        (methodid 13:compare::5::0)
-        (functionid 30:_builtin::array::compare::5::1))))
-  (primitive
-    (array
-      (f64))
-    (methods
-      (method
-        (methodid 16:apply::2::ref::0)
-        (functionid 33:_builtin::array::apply::2::ref::2))
-      (method
-        (methodid 15:copy_from::5::0)
-        (functionid 32:_builtin::array::copy_from::5::2))
-      (method
-        (methodid 11:apply::2::0)
-        (functionid 28:_builtin::array::apply::2::2))
-      (method
-        (methodid 16:fill_range::4::0)
-        (functionid 33:_builtin::array::fill_range::4::2))
-      (method
-        (methodid 13:compare::5::0)
-        (functionid 30:_builtin::array::compare::5::2))))
-  (primitive
-    (array
-      (i32))
-    (methods
-      (method
-        (methodid 16:apply::2::ref::0)
-        (functionid 33:_builtin::array::apply::2::ref::3))
-      (method
-        (methodid 15:copy_from::5::0)
-        (functionid 32:_builtin::array::copy_from::5::3))
-      (method
-        (methodid 11:apply::2::0)
-        (functionid 28:_builtin::array::apply::2::3))
-      (method
-        (methodid 16:fill_range::4::0)
-        (functionid 33:_builtin::array::fill_range::4::3))
-      (method
-        (methodid 13:compare::5::0)
-        (functionid 30:_builtin::array::compare::5::3))))
-  (primitive
-    (array
-      (u8))
-    (methods
-      (method
-        (methodid 16:apply::2::ref::0)
-        (functionid 33:_builtin::array::apply::2::ref::4))
-      (method
-        (methodid 15:copy_from::5::0)
-        (functionid 32:_builtin::array::copy_from::5::4))
-      (method
-        (methodid 11:apply::2::0)
-        (functionid 28:_builtin::array::apply::2::4))
-      (method
-        (methodid 16:fill_range::4::0)
-        (functionid 33:_builtin::array::fill_range::4::4))
-      (method
-        (methodid 13:compare::5::0)
-        (functionid 30:_builtin::array::compare::5::4))))
   (class
     (classid 18:array_bulk::box::0)
     (fields
@@ -5784,29 +5656,6 @@ typecheck
                 (localid 3:len)))))
         (ret
           (localid 9:local$169)))))
-  (primitive
-    (none)
-    (methods))
-  (primitive
-    (ref
-      (classid 18:array_bulk::box::0))
-    (methods))
-  (primitive
-    (ref
-      (i32))
-    (methods))
-  (primitive
-    (ref
-      (usize))
-    (methods))
-  (primitive
-    (ref
-      (f64))
-    (methods))
-  (primitive
-    (ref
-      (u8))
-    (methods))
   (func
     (functionid 26:array_bulk::box::val::1::0)
     (params
@@ -5895,12 +5744,6 @@ typecheck
             (localid 5:other)))
         (ret
           (localid 9:local$590)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -6088,4 +5931,161 @@ typecheck
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$623))))))
+          (localid 9:local$623)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (usize)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 25:_builtin::usize::!=::2::0))))
+  (primitive
+    (u8)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 22:_builtin::u8::!=::2::0))))
+  (primitive
+    (i64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i64::!=::2::0))))
+  (primitive
+    (f64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::f64::!=::2::0))))
+  (primitive
+    (array
+      (classid 18:array_bulk::box::0))
+    (methods
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::0))
+      (method
+        (methodid 15:copy_from::5::0)
+        (functionid 32:_builtin::array::copy_from::5::0))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::0))
+      (method
+        (methodid 16:fill_range::4::0)
+        (functionid 33:_builtin::array::fill_range::4::0))
+      (method
+        (methodid 13:compare::5::0)
+        (functionid 30:_builtin::array::compare::5::0))))
+  (primitive
+    (array
+      (usize))
+    (methods
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::1))
+      (method
+        (methodid 15:copy_from::5::0)
+        (functionid 32:_builtin::array::copy_from::5::1))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::1))
+      (method
+        (methodid 16:fill_range::4::0)
+        (functionid 33:_builtin::array::fill_range::4::1))
+      (method
+        (methodid 13:compare::5::0)
+        (functionid 30:_builtin::array::compare::5::1))))
+  (primitive
+    (array
+      (f64))
+    (methods
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::2))
+      (method
+        (methodid 15:copy_from::5::0)
+        (functionid 32:_builtin::array::copy_from::5::2))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::2))
+      (method
+        (methodid 16:fill_range::4::0)
+        (functionid 33:_builtin::array::fill_range::4::2))
+      (method
+        (methodid 13:compare::5::0)
+        (functionid 30:_builtin::array::compare::5::2))))
+  (primitive
+    (array
+      (i32))
+    (methods
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::3))
+      (method
+        (methodid 15:copy_from::5::0)
+        (functionid 32:_builtin::array::copy_from::5::3))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::3))
+      (method
+        (methodid 16:fill_range::4::0)
+        (functionid 33:_builtin::array::fill_range::4::3))
+      (method
+        (methodid 13:compare::5::0)
+        (functionid 30:_builtin::array::compare::5::3))))
+  (primitive
+    (array
+      (u8))
+    (methods
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::4))
+      (method
+        (methodid 15:copy_from::5::0)
+        (functionid 32:_builtin::array::copy_from::5::4))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::4))
+      (method
+        (methodid 16:fill_range::4::0)
+        (functionid 33:_builtin::array::fill_range::4::4))
+      (method
+        (methodid 13:compare::5::0)
+        (functionid 30:_builtin::array::compare::5::4))))
+  (primitive
+    (none)
+    (methods))
+  (primitive
+    (ref
+      (classid 18:array_bulk::box::0))
+    (methods))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (ref
+      (usize))
+    (methods))
+  (primitive
+    (ref
+      (f64))
+    (methods))
+  (primitive
+    (ref
+      (u8))
+    (methods))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0)))))

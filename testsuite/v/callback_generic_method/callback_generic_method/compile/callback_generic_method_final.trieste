@@ -68,9 +68,6 @@ reify
             (int 1:0)))
         (ret
           (localid 7:local$8)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 48:callback_generic_method::genmethod::create::0::0)
     (params)
@@ -103,12 +100,6 @@ reify
             (makecallback)))
         (ret
           (localid 9:local$506)))))
-  (primitive
-    (callback)
-    (methods
-      (method
-        (methodid 10:free::1::0)
-        (functionid 35:_builtin::ffi::callback::free::1::0))))
   (class
     (classid 37:callback_generic_method::genmethod::0)
     (fields)
@@ -134,6 +125,15 @@ reify
             (none)))
         (ret
           (localid 8:none$921)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (callback)
+    (methods
+      (method
+        (methodid 10:free::1::0)
+        (functionid 35:_builtin::ffi::callback::free::1::0))))
   (primitive
     (none)
     (methods)))

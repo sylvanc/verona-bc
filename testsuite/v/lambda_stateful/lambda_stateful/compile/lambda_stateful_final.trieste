@@ -491,18 +491,6 @@ liveness
         (body)
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::i32::!=::2::0))
-      (method
-        (methodid 7:|::2::0)
-        (functionid 22:_builtin::i32::|::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
   (func
     (functionid 35:lambda_stateful::make_counter::0::0)
     (params)
@@ -891,10 +879,6 @@ liveness
             (localid 9:local$147)))
         (ret
           (localid 9:local$950)))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
   (class
     (classid 28:lambda_stateful::lambda$2::0)
     (fields
@@ -1198,18 +1182,6 @@ liveness
             (localid 5:other)))
         (ret
           (localid 9:local$297)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 11:apply::1::0)
-        (functionid 27:_builtin::bool::apply::1::0))
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))
-      (method
-        (methodid 7:|::2::0)
-        (functionid 23:_builtin::bool::|::2::0))))
   (func
     (functionid 27:_builtin::bool::apply::1::0)
     (params
@@ -1316,4 +1288,32 @@ liveness
           (localid 9:local$654)))))
   (type
     (typeid 20:_builtin::to_bool::0)
-    (bool)))
+    (bool))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:|::2::0)
+        (functionid 22:_builtin::i32::|::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 27:_builtin::bool::apply::1::0))
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0))
+      (method
+        (methodid 7:|::2::0)
+        (functionid 23:_builtin::bool::|::2::0)))))

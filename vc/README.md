@@ -2,7 +2,9 @@
 
 ## To Do
 
-Lambda type inference is slow.
+Inference regressions.
+- `generic_when`, `infer_backward`.
+- The `when` lambda in `async_writer` also still fails.
 
 Semantics.
 - Remove `arrayiter`?

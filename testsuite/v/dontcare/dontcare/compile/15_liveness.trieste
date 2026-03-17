@@ -512,18 +512,6 @@ liveness
         (body)
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:==::2::0)
-        (functionid 23:_builtin::i32::==::2::0))
-      (method
-        (methodid 7:!::1::0)
-        (functionid 22:_builtin::i32::!::1::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
   (func
     (functionid 27:_builtin::i32::create::1::0)
     (params
@@ -538,10 +526,6 @@ liveness
         (body)
         (ret
           (localid 4:some)))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
   (func
     (functionid 31:_builtin::nomatch::create::0::0)
     (params)
@@ -620,12 +604,6 @@ liveness
             (localid 5:other)))
         (ret
           (localid 9:local$251)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 7:!::1::0)
-        (functionid 23:_builtin::bool::!::1::0))))
   (func
     (functionid 23:_builtin::bool::!::1::0)
     (params
@@ -642,4 +620,26 @@ liveness
             (localid 9:local$647)
             (localid 4:self)))
         (ret
-          (localid 9:local$647))))))
+          (localid 9:local$647)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:==::2::0)
+        (functionid 23:_builtin::i32::==::2::0))
+      (method
+        (methodid 7:!::1::0)
+        (functionid 22:_builtin::i32::!::1::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 7:!::1::0)
+        (functionid 23:_builtin::bool::!::1::0)))))

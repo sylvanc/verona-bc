@@ -844,18 +844,6 @@ reify
         (body)
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 23:_builtin::i32::!=::2::0))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))
-      (method
-        (methodid 7:-::2::0)
-        (functionid 22:_builtin::i32::-::2::0))))
   (func
     (functionid 36:partial_app::partial$5::create::1::0)
     (params
@@ -1144,14 +1132,6 @@ reify
                 (localid 3:$p1)))))
         (ret
           (localid 9:local$171)))))
-  (primitive
-    (ref
-      (classid 19:partial_app::box::0))
-    (methods))
-  (primitive
-    (ref
-      (i32))
-    (methods))
   (func
     (functionid 31:partial_app::box::combine::3::0)
     (params
@@ -1884,12 +1864,6 @@ reify
             (localid 5:other)))
         (ret
           (localid 9:local$333)))))
-  (primitive
-    (bool)
-    (methods
-      (method
-        (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -1910,4 +1884,30 @@ reify
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$260))))))
+          (localid 9:local$260)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))
+      (method
+        (methodid 7:-::2::0)
+        (functionid 22:_builtin::i32::-::2::0))))
+  (primitive
+    (ref
+      (classid 19:partial_app::box::0))
+    (methods))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0)))))
