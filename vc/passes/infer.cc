@@ -1812,6 +1812,8 @@ namespace vc
       {
         auto merged = merge_type(
           it->second.type, src_info.type, top);
+
+        // Debug: track when default types are involved in merges.
         it->second.type = merged;
 
         // Once merged from multiple paths, the entry is no longer
