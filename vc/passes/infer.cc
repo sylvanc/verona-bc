@@ -2618,6 +2618,35 @@ namespace vc
 
               if (apply_func)
               {
+                // Only graft inline if the lambda body has default-typed
+                // literals that need refinement from the parent context.
+                // Unnecessary grafting can pollute the lambda's AST with
+                // stale intermediate types from the parent's env.
+                bool has_default_consts = false;
+
+                for (auto& lbl : *(apply_func / Labels))
+                {
+                  for (auto& s : *(lbl / Body))
+                  {
+                    if (s == Const && s->size() >= 2 &&
+                        s->at(1)->in({DefaultInt, DefaultFloat}))
+                    {
+                      has_default_consts = true;
+                      break;
+                    }
+                  }
+
+                  if (has_default_consts)
+                    break;
+                }
+
+                if (!has_default_consts)
+                {
+                  // No default literals — skip grafting, let the
+                  // lambda's own process_function handle it.
+                }
+                else
+                {
                 // Map lambda params to CallDyn args.
                 auto apply_params = apply_func / Params;
                 size_t param_idx = 0;
@@ -2679,6 +2708,7 @@ namespace vc
 
                 // Skip the rest of the CallDyn handler.
                 continue;
+                }
               }
             }
           }

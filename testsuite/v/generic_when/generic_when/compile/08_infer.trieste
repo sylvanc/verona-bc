@@ -751,16 +751,8 @@ infer
                   (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 4:cown)
-                  (typeargs
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))))))))
+                  (ident 4:none)
+                  (typeargs))))
             (where)
             (labels
               (label
@@ -837,13 +829,7 @@ infer
                         (argcopy)
                         (localid 9:local$131)))
                     (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))))))
+                      (typevar))))
                 (ret
                   (localid 9:local$544)))))
           (classdef
@@ -893,7 +879,18 @@ infer
                       (typeargs))
                     (nameelement
                       (ident 3:box)
-                      (typeargs))
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 12:generic_when)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:box)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:A)
+                              (typeargs))))))
                     (nameelement
                       (ident 8:lambda$1)
                       (typeargs
@@ -1402,7 +1399,7 @@ infer
                       (ident 8:_builtin)
                       (typeargs))
                     (nameelement
-                      (ident 7:nomatch)
+                      (ident 4:none)
                       (typeargs))))
                 (where)
                 (labels
@@ -1620,13 +1617,7 @@ infer
                         (argcopy)
                         (localid 9:local$141)))
                     (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 7:nomatch)
-                          (typeargs))))))
+                      (typevar))))
                 (ret
                   (localid 9:local$550)))))))
       (function

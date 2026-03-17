@@ -34,8 +34,9 @@ typecheck
             (localid 7:local$8)
             (functionid 26:infer_backward::wrap::1::0)
             (args
-              (error
-                (errormsg 66:call: argument type 'i32' is not a subtype of parameter type 'u64'))))
+              (arg
+                (argcopy)
+                (localid 9:local$114))))
           (copy
             (localid 9:local$510)
             (localid 1:w))
@@ -46,9 +47,9 @@ typecheck
             (localid 7:local$9)
             (functionid 32:infer_backward::unwrap_i32::1::0)
             (args
-              (error
-                (errormsg 89:call: argument type 'dyn' is not a subtype of parameter type 'infer_backward::wrapper::0')
-                (arg)))))
+              (arg
+                (argcopy)
+                (localid 1:w)))))
         (ret
           (localid 7:local$9)))))
   (func
@@ -56,8 +57,8 @@ typecheck
     (params
       (param
         (localid 3:val)
-        (u64)))
-    (classid 26:infer_backward::wrapper::1)
+        (i32)))
+    (classid 26:infer_backward::wrapper::0)
     (vars)
     (labels
       (label
@@ -110,13 +111,6 @@ typecheck
       (method
         (methodid 9:val::1::0)
         (functionid 34:infer_backward::wrapper::val::1::0))))
-  (class
-    (classid 26:infer_backward::wrapper::1)
-    (fields
-      (field
-        (fieldid 3:val)
-        (u64)))
-    (methods))
   (func
     (functionid 34:infer_backward::wrapper::get::1::0)
     (params
@@ -192,8 +186,8 @@ typecheck
     (params
       (param
         (localid 3:val)
-        (u64)))
-    (classid 26:infer_backward::wrapper::1)
+        (i32)))
+    (classid 26:infer_backward::wrapper::0)
     (vars)
     (labels
       (label
@@ -201,7 +195,7 @@ typecheck
         (body
           (new
             (localid 7:local$6)
-            (classid 26:infer_backward::wrapper::1)
+            (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
@@ -214,7 +208,4 @@ typecheck
   (primitive
     (ref
       (i32))
-    (methods))
-  (primitive
-    (u64)
     (methods)))

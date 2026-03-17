@@ -1,5 +1,5 @@
 vc
-memo
+optimize
 (top
   {}
   (func
@@ -11,10 +11,28 @@ memo
       (label
         (labelid 5:start)
         (body
-          (call
+          (const
+            (localid 6:$opt_0)
+            (i32)
+            (int 2:42))
+          (new
+            (localid 6:$opt_1)
+            (classid 26:infer_backward::wrapper::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_0))))
+          (lookup
+            (localid 6:$opt_4)
+            (localid 6:$opt_1)
+            (methodid 9:get::1::0))
+          (calldyn
             (localid 4:$925)
-            (functionid 26:infer_backward::main::0::0)
-            (args)))
+            (localid 6:$opt_4)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:$opt_1)))))
         (ret
           (localid 4:$925)))))
   (func
@@ -30,26 +48,24 @@ memo
             (localid 9:local$114)
             (i32)
             (int 2:42))
-          (call
+          (new
             (localid 7:local$8)
-            (functionid 26:infer_backward::wrap::1::0)
+            (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 9:local$114))))
-          (copy
-            (localid 9:local$510)
-            (localid 1:w))
-          (copy
-            (localid 1:w)
-            (localid 7:local$8))
-          (call
+          (lookup
+            (localid 6:$opt_5)
+            (localid 7:local$8)
+            (methodid 9:get::1::0))
+          (calldyn
             (localid 7:local$9)
-            (functionid 32:infer_backward::unwrap_i32::1::0)
+            (localid 6:$opt_5)
             (args
               (arg
                 (argcopy)
-                (localid 1:w)))))
+                (localid 7:local$8)))))
         (ret
           (localid 7:local$9)))))
   (func
@@ -64,9 +80,9 @@ memo
       (label
         (labelid 5:start)
         (body
-          (call
+          (new
             (localid 7:local$7)
-            (functionid 37:infer_backward::wrapper::create::1::0)
+            (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
@@ -86,12 +102,12 @@ memo
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$112)
+            (localid 6:$opt_6)
             (localid 1:w)
-            (methodid 9:get::1::0))
+            (methodid 9:val::1::0))
           (calldyn
             (localid 9:local$113)
-            (localid 9:local$112)
+            (localid 6:$opt_6)
             (args
               (arg
                 (argcopy)
@@ -123,17 +139,15 @@ memo
       (label
         (labelid 5:start)
         (body
-          (lookup
-            (localid 9:local$110)
-            (localid 4:self)
-            (methodid 9:val::1::0))
-          (calldyn
+          (fieldref
+            (localid 6:$opt_7)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
+          (load
             (localid 9:local$111)
-            (localid 9:local$110)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self)))))
+            (localid 6:$opt_7)))
         (ret
           (localid 9:local$111)))))
   (func
@@ -148,13 +162,12 @@ memo
       (label
         (labelid 5:start)
         (body
-          (call
+          (fieldref
             (localid 7:local$5)
-            (functionid 39:infer_backward::wrapper::val::1::ref::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 4:self))))
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:val))
           (load
             (localid 9:local$509)
             (localid 7:local$5)))
