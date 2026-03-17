@@ -2629,11 +2629,17 @@ namespace vc
                   try_refine(env, arg_src->location(), expected_prim);
 
                   // If the arg has DefaultInt/DefaultFloat type (e.g.,
-                  // from a merged match result), refine it to the field's
-                  // concrete type directly. try_refine only handles Const
-                  // nodes; this handles Var/Copy chains.
+                  // from a merged match result), run a cascade to refine
+                  // all compatible default Consts and propagate through
+                  // Copy/Move chains. This handles the case where the
+                  // default type flowed through lambdas/branches.
                   if (it->second.is_default())
-                    it->second.type = clone(ft);
+                    run_cascade(
+                      env,
+                      expected_prim,
+                      enclosing_func / Labels,
+                      top,
+                      lookup_stmts);
                 }
 
                 // Reverse propagation: when the FieldDef contains
