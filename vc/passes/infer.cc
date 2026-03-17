@@ -2628,18 +2628,15 @@ namespace vc
                 {
                   try_refine(env, arg_src->location(), expected_prim);
 
-                  // If the arg has DefaultInt/DefaultFloat type (e.g.,
-                  // from a merged match result), run a cascade to refine
-                  // all compatible default Consts and propagate through
-                  // Copy/Move chains. This handles the case where the
-                  // default type flowed through lambdas/branches.
-                  if (it->second.is_default())
-                    run_cascade(
-                      env,
-                      expected_prim,
-                      enclosing_func / Labels,
-                      top,
-                      lookup_stmts);
+                  // Run cascade to refine all compatible default Consts
+                  // (including those in grafted lambda bodies) and
+                  // propagate through Copy/Move chains.
+                  run_cascade(
+                    env,
+                    expected_prim,
+                    enclosing_func / Labels,
+                    top,
+                    lookup_stmts);
                 }
 
                 // Reverse propagation: when the FieldDef contains
@@ -2794,6 +2791,161 @@ namespace vc
         bool refined = false;
 
         auto lookup_it = lookup_stmts.find(src->location());
+
+        // Lambda inline processing: if this CallDyn calls apply on a
+        // lambda$ class, process the lambda's body inline using the
+        // parent's env. This enables bidirectional type refinement
+        // between the parent and the lambda.
+        if (lookup_it != lookup_stmts.end())
+        {
+          auto lookup_node = lookup_it->second;
+          auto method_name = (lookup_node / Ident)->location().view();
+
+          if (method_name == "apply")
+          {
+            auto recv_loc = (lookup_node / Rhs)->location();
+
+            // Trace the receiver back to its creation Call to find
+            // the lambda ClassDef.
+            Node lambda_cls;
+
+            body->traverse([&](Node& s) {
+              if (lambda_cls)
+                return false;
+
+              if (s != Call)
+                return true;
+
+              if ((s / LocalId)->location() != recv_loc)
+                return false;
+
+              auto fn = s / FuncName;
+              bool is_lambda = false;
+              std::string_view cls_name;
+
+              for (auto& elem : *fn)
+              {
+                auto name = (elem / Ident)->location().view();
+
+                if (name.starts_with("lambda$"))
+                {
+                  is_lambda = true;
+                  cls_name = name;
+                }
+              }
+
+              if (!is_lambda)
+                return false;
+
+              // Find the ClassDef.
+              auto scope = enclosing_func->parent({ClassDef, Top});
+
+              scope->traverse([&](auto n) {
+                if (lambda_cls)
+                  return false;
+
+                if (n != ClassDef)
+                  return n == scope || n == ClassBody;
+
+                if ((n / Ident)->location().view() == cls_name)
+                {
+                  lambda_cls = n;
+                  return false;
+                }
+
+                return true;
+              });
+
+              return false;
+            });
+
+            if (lambda_cls)
+            {
+              // Find the apply Function.
+              Node apply_func;
+
+              for (auto& f : *(lambda_cls / ClassBody))
+              {
+                if (f != Function)
+                  continue;
+
+                if ((f / Ident)->location().view() != "apply")
+                  continue;
+
+                if ((f / Lhs)->type() != Rhs)
+                  continue;
+
+                apply_func = f;
+                break;
+              }
+
+              if (apply_func)
+              {
+                // Map lambda params to CallDyn args.
+                auto apply_params = apply_func / Params;
+                size_t param_idx = 0;
+
+                for (auto& pd : *apply_params)
+                {
+                  if (param_idx == 0)
+                  {
+                    // $self — skip, not meaningful for inference.
+                    param_idx++;
+                    continue;
+                  }
+
+                  if (param_idx < args->size())
+                  {
+                    auto arg_node = args->at(param_idx);
+                    auto arg_loc = (arg_node / Rhs)->location();
+                    auto arg_it = env.find(arg_loc);
+
+                    if (arg_it != env.end())
+                    {
+                      env[(pd / Ident)->location()] =
+                        LocalTypeInfo::propagated(arg_it->second);
+                    }
+                  }
+
+                  param_idx++;
+                }
+
+                // Process the lambda's labels inline.
+                auto apply_labels = apply_func / Labels;
+
+                for (auto& lbl : *apply_labels)
+                {
+                  process_label_body(
+                    lbl / Body,
+                    env,
+                    top,
+                    enclosing_func,
+                    lookup_stmts,
+                    typevar_aliases,
+                    ref_to_tuple);
+
+                  // Map lambda return to CallDyn result.
+                  auto term = lbl / Return;
+
+                  if (term == Return)
+                  {
+                    auto ret_loc = (term / LocalId)->location();
+                    auto ret_it = env.find(ret_loc);
+
+                    if (ret_it != env.end())
+                    {
+                      env[dst->location()] =
+                        LocalTypeInfo::propagated(ret_it->second);
+                    }
+                  }
+                }
+
+                // Skip the rest of the CallDyn handler.
+                continue;
+              }
+            }
+          }
+        }
 
         // Phase 1: Parameter-type-based refinement.
         if (lookup_it != lookup_stmts.end())
@@ -3776,6 +3928,84 @@ namespace vc
       }
     }
 
+    // Finalize Const nodes in grafted lambda apply bodies using the
+    // parent's env (which includes the lambda's locals from inline
+    // processing).
+    {
+      auto scope = node->parent({ClassDef, Top});
+
+      if (scope)
+      {
+        scope->traverse([&](auto cls) {
+          if (cls != ClassDef)
+            return cls == scope || cls == ClassBody;
+
+          auto cls_name = (cls / Ident)->location().view();
+
+          if (!cls_name.starts_with("lambda$"))
+            return true; // recurse into nested classes
+
+          for (auto& f : *(cls / ClassBody))
+          {
+            if (f != Function)
+              continue;
+
+            if ((f / Ident)->location().view() != "apply")
+              continue;
+
+            for (auto& lbl : *(f / Labels))
+            {
+              for (auto& stmt : *(lbl / Body))
+              {
+                if (stmt != Const)
+                  continue;
+
+                auto dst = stmt->front();
+                auto loc = dst->location();
+                Node final_type;
+
+                auto it = env.find(loc);
+
+                if (it != env.end() && !it->second.is_default())
+                {
+                  auto p = extract_primitive(it->second.type);
+
+                  if (p)
+                    final_type = p;
+                }
+
+                if (stmt->size() == 3)
+                {
+                  if (final_type)
+                  {
+                    auto old_type = stmt->at(1);
+
+                    if (old_type->type() != final_type->type())
+                      stmt->replace(old_type, final_type->type());
+                  }
+                }
+                else if (stmt->size() == 2)
+                {
+                  auto lit = stmt->back();
+                  Node type_token;
+
+                  if (final_type)
+                    type_token = final_type->type();
+                  else
+                    type_token = default_literal_type(lit);
+
+                  stmt->erase(stmt->begin(), stmt->end());
+                  stmt << dst << type_token << lit;
+                }
+              }
+            }
+          }
+
+          return true;
+        });
+      }
+    }
+
     // ---------- Post-convergence: finalize tuple/array types ----------
 
     // Re-process labels once more to finalize NewArrayConst types
@@ -4129,6 +4359,19 @@ namespace vc
         if (node != Function)
           return node == Top || node == ClassDef || node == ClassBody ||
             node == Lib || node == Symbols;
+
+        // Skip lambda$ apply functions — they're processed inline
+        // by their parent function's inference.
+        auto parent_cls = node->parent(ClassDef);
+
+        if (parent_cls)
+        {
+          auto cls_name = (parent_cls / Ident)->location().view();
+
+          if (cls_name.starts_with("lambda$") &&
+              (node / Ident)->location().view() == "apply")
+            return false;
+        }
 
         process_function(node, top, false);
 
