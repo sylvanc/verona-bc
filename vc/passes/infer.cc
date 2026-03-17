@@ -1336,8 +1336,28 @@ namespace vc
         auto ta = scope.name_elem / TypeArgs;
         auto tps = scope.def / TypeParams;
 
-        if (!ta->empty() || tps->empty())
+        if (tps->empty())
           continue;
+
+        // Re-infer TypeArgs if they're empty or contain unresolved
+        // TypeParam references (filled during a prior pass with generic
+        // types that are now concrete after cown type propagation).
+        if (!ta->empty())
+        {
+          bool needs_reinfer = false;
+
+          for (auto& t : *ta)
+          {
+            if (direct_typeparam(top, t))
+            {
+              needs_reinfer = true;
+              break;
+            }
+          }
+
+          if (!needs_reinfer)
+            continue;
+        }
 
         bool all_constrained = true;
         Node new_ta = TypeArgs;
@@ -1664,6 +1684,20 @@ namespace vc
       for (auto& child : *ret)
       {
         if (child->in({DefaultInt, DefaultFloat}))
+          return true;
+      }
+    }
+
+    // Check for unresolved DefaultInt/DefaultFloat Const nodes in the
+    // body. These need re-processing after the enclosing context
+    // provides concrete types (e.g., when-lambda bodies where method
+    // param types become known after cown type propagation).
+    for (auto& lbl : *(func / Labels))
+    {
+      for (auto& stmt : *(lbl / Body))
+      {
+        if (stmt == Const && stmt->size() >= 2 &&
+            stmt->at(1)->in({DefaultInt, DefaultFloat}))
           return true;
       }
     }
@@ -2125,7 +2159,6 @@ namespace vc
     std::map<Location, Node>& lookup_stmts,
     std::vector<std::pair<Location, Location>>& typevar_aliases,
     std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
-    const std::map<Location, Node>& lambda_cache = {},
     const SrcIndex* src_index_ptr = nullptr)
   {
     // Track tuple construction from NewArrayConst patterns.
@@ -2580,9 +2613,9 @@ namespace vc
         auto lookup_it = lookup_stmts.find(src->location());
 
         // Lambda inline processing: if this CallDyn calls apply on a
-        // lambda$ class, process the lambda's body inline using the
-        // parent's env. This enables bidirectional type refinement
-        // between the parent and the lambda.
+        // lambda$ class, graft the lambda's body inline using the
+        // parent's env. Operates on a deep clone to avoid modifying
+        // the original AST.
         if (lookup_it != lookup_stmts.end())
         {
           auto lookup_node = lookup_it->second;
@@ -2592,13 +2625,53 @@ namespace vc
           {
             auto recv_loc = (lookup_node / Rhs)->location();
 
-            // Look up lambda ClassDef from cache.
-            auto cache_it = lambda_cache.find(recv_loc);
+            // Trace receiver to lambda ClassDef via create Call.
+            Node lambda_cls;
+            auto scope = enclosing_func->parent({ClassDef, Top});
 
-            if (cache_it != lambda_cache.end())
+            for (auto& s : *body)
             {
-              auto lambda_cls = cache_it->second;
-              // Find the apply Function.
+              if (s != Call)
+                continue;
+
+              if ((s / LocalId)->location() != recv_loc)
+                continue;
+
+              auto fn = s / FuncName;
+              std::string_view cls_name;
+
+              for (auto& elem : *fn)
+              {
+                auto name = (elem / Ident)->location().view();
+
+                if (name.starts_with("lambda$"))
+                  cls_name = name;
+              }
+
+              if (cls_name.empty())
+                continue;
+
+              scope->traverse([&](auto n) {
+                if (lambda_cls)
+                  return false;
+
+                if (n != ClassDef)
+                  return n == scope || n == ClassBody;
+
+                if ((n / Ident)->location().view() == cls_name)
+                {
+                  lambda_cls = n;
+                  return false;
+                }
+
+                return true;
+              });
+
+              break;
+            }
+
+            if (lambda_cls)
+            {
               Node apply_func;
 
               for (auto& f : *(lambda_cls / ClassBody))
@@ -2618,44 +2691,15 @@ namespace vc
 
               if (apply_func)
               {
-                // Only graft inline if the lambda body has default-typed
-                // literals that need refinement from the parent context.
-                // Unnecessary grafting can pollute the lambda's AST with
-                // stale intermediate types from the parent's env.
-                bool has_default_consts = false;
-
-                for (auto& lbl : *(apply_func / Labels))
-                {
-                  for (auto& s : *(lbl / Body))
-                  {
-                    if (s == Const && s->size() >= 2 &&
-                        s->at(1)->in({DefaultInt, DefaultFloat}))
-                    {
-                      has_default_consts = true;
-                      break;
-                    }
-                  }
-
-                  if (has_default_consts)
-                    break;
-                }
-
-                if (!has_default_consts)
-                {
-                  // No default literals — skip grafting, let the
-                  // lambda's own process_function handle it.
-                }
-                else
-                {
-                // Map lambda params to CallDyn args.
-                auto apply_params = apply_func / Params;
+                // Deep-clone the apply function for grafting.
+                auto graft_func = clone(apply_func);
+                auto graft_params = graft_func / Params;
                 size_t param_idx = 0;
 
-                for (auto& pd : *apply_params)
+                for (auto& pd : *graft_params)
                 {
                   if (param_idx == 0)
                   {
-                    // $self — skip, not meaningful for inference.
                     param_idx++;
                     continue;
                   }
@@ -2676,10 +2720,8 @@ namespace vc
                   param_idx++;
                 }
 
-                // Process the lambda's labels inline.
-                auto apply_labels = apply_func / Labels;
-
-                for (auto& lbl : *apply_labels)
+                // Process the cloned labels inline.
+                for (auto& lbl : *(graft_func / Labels))
                 {
                   process_label_body(
                     lbl / Body,
@@ -2690,7 +2732,6 @@ namespace vc
                     typevar_aliases,
                     ref_to_tuple);
 
-                  // Map lambda return to CallDyn result.
                   auto term = lbl / Return;
 
                   if (term == Return)
@@ -2706,9 +2747,8 @@ namespace vc
                   }
                 }
 
-                // Skip the rest of the CallDyn handler.
+                // Clone was modified, original is untouched.
                 continue;
-                }
               }
             }
           }
@@ -3134,9 +3174,7 @@ namespace vc
                       continue;
 
                     auto new_type = ref_type(cown_inner);
-
-                    if (param_type->front() == TypeVar)
-                      param->replace(param_type, new_type);
+                    param->replace(param_type, new_type);
 
                     // Populate the lambda param in the parent env for
                     // inline processing.
@@ -3413,58 +3451,6 @@ namespace vc
       }
     }
 
-    // Cache: map from lambda create Call dst location → lambda ClassDef.
-    // Built once, used by inline lambda processing in CallDyn handler.
-    std::map<Location, Node> lambda_cache;
-    {
-      auto scope = node->parent({ClassDef, Top});
-
-      for (auto& lbl : *labels)
-      {
-        for (auto& stmt : *(lbl / Body))
-        {
-          if (stmt != Call)
-            continue;
-
-          auto fn = stmt / FuncName;
-          std::string_view cls_name;
-
-          for (auto& elem : *fn)
-          {
-            auto name = (elem / Ident)->location().view();
-
-            if (name.starts_with("lambda$"))
-              cls_name = name;
-          }
-
-          if (cls_name.empty())
-            continue;
-
-          // Find the ClassDef.
-          Node lambda_cls;
-
-          scope->traverse([&](auto n) {
-            if (lambda_cls)
-              return false;
-
-            if (n != ClassDef)
-              return n == scope || n == ClassBody;
-
-            if ((n / Ident)->location().view() == cls_name)
-            {
-              lambda_cls = n;
-              return false;
-            }
-
-            return true;
-          });
-
-          if (lambda_cls)
-            lambda_cache[(stmt / LocalId)->location()] = lambda_cls;
-        }
-      }
-    }
-
     for (auto& lbl : *labels)
     {
       process_label_body(
@@ -3475,7 +3461,6 @@ namespace vc
         lookup_stmts,
         typevar_aliases,
         ref_to_tuple,
-        lambda_cache,
         &src_index);
 
       // Refine return values against the function's declared return type.
