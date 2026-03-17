@@ -39,6 +39,53 @@ namespace vc
 
   const std::initializer_list<Token> float_types = {F32, F64};
 
+  // Dispatch tables for trivial statement handlers in process_label_body.
+  // Statements that produce a fixed primitive result type.
+  const std::map<Token, Token> fixed_result_type = {
+    {Eq, Bool},
+    {Ne, Bool},
+    {Lt, Bool},
+    {Le, Bool},
+    {Gt, Bool},
+    {Ge, Bool},
+    {IsInf, Bool},
+    {IsNaN, Bool},
+    {Not, Bool},
+    {Bits, U64},
+    {Len, USize},
+    {Const_E, F64},
+    {Const_Pi, F64},
+    {Const_Inf, F64},
+    {Const_NaN, F64},
+    {GetRaise, U64},
+    {SetRaise, U64},
+    {FreeCallback, None},
+    {AddExternal, None},
+    {RemoveExternal, None},
+    {RegisterExternalNotify, None},
+    {Freeze, None},
+    {ArrayCopy, None},
+    {ArrayFill, None},
+    {ArrayCompare, I64},
+  };
+
+  // Statements that produce a fixed FFI primitive result type.
+  const std::map<Token, Token> fixed_ffi_result_type = {
+    {MakePtr, Ptr},
+    {CallbackPtr, Ptr},
+    {MakeCallback, Callback},
+  };
+
+  // Binary ops where result type = LHS type.
+  const std::initializer_list<Token> propagate_lhs_ops = {
+    Add, Sub, Mul, Div, Mod, Pow, And, Or, Xor, Shl, Shr, Min, Max, LogBase,
+    Atan2};
+
+  // Unary ops where result type = RHS (operand) type.
+  const std::initializer_list<Token> propagate_rhs_ops = {
+    Neg,  Abs,  Ceil, Floor, Exp,  Log,   Sqrt,  Cbrt, Sin,  Cos, Tan,
+    Asin, Acos, Atan, Sinh,  Cosh, Tanh,  Asinh, Acosh, Atanh, Read};
+
   // Build a source-level Type node wrapping a FQ TypeName for a primitive.
   // Creates fresh nodes on each call (no shared-node issues).
   Node primitive_type(const Token& tok)
@@ -1756,52 +1803,6 @@ namespace vc
     return Type << union_node;
   }
 
-  // Merge a source TypeEnv into a destination TypeEnv. For each variable,
-  // merges types using union with subtype pruning.
-  [[maybe_unused]] static void merge_env(
-    TypeEnv& dst,
-    const TypeEnv& src,
-    Node top)
-  {
-    for (auto& [loc, src_info] : src)
-    {
-      auto it = dst.find(loc);
-
-      if (it == dst.end())
-      {
-        // First time seeing this location: copy all metadata.
-        dst[loc] = {
-          clone(src_info.type),
-          src_info.is_fixed,
-          src_info.const_node,
-          src_info.call_node};
-      }
-      else
-      {
-        auto merged = merge_type(
-          it->second.type, src_info.type, top);
-
-        // Debug: track when default types are involved in merges.
-        it->second.type = merged;
-
-        // Once merged from multiple paths, the entry is no longer
-        // default or fixed, and loses const/call tracking — unless
-        // both sources agree on all metadata.
-        if (
-          it->second.is_default() != src_info.is_default() ||
-          it->second.is_fixed != src_info.is_fixed ||
-          it->second.const_node != src_info.const_node ||
-          !Subtype.invariant(top, it->second.type, src_info.type))
-        {
-          it->second.resolve();
-          it->second.is_fixed = false;
-          it->second.const_node = {};
-          it->second.call_node = {};
-        }
-      }
-    }
-  }
-
   // Check if two type environments differ in any entry's type.
   static bool env_changed(const TypeEnv& a, const TypeEnv& b, Node top)
   {
@@ -2437,25 +2438,10 @@ namespace vc
             tuple_locals[dst->location()].element_value_locs.resize(sz);
         }
       }
-      else if (stmt == MakePtr)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(ffi_primitive_type(Ptr));
-      }
       else if (stmt == TypeAssertion)
       {
         auto local_id = stmt / LocalId;
         env[local_id->location()] = LocalTypeInfo::fixed(clone(stmt / Type));
-      }
-      else if (stmt == GetRaise)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
-      }
-      else if (stmt == SetRaise)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
       }
       else if (stmt->in({New, Stack}))
       {
@@ -2551,22 +2537,7 @@ namespace vc
           }
         }
       }
-      else if (stmt->in(
-                 {Add,
-                  Sub,
-                  Mul,
-                  Div,
-                  Mod,
-                  Pow,
-                  And,
-                  Or,
-                  Xor,
-                  Shl,
-                  Shr,
-                  Min,
-                  Max,
-                  LogBase,
-                  Atan2}))
+      else if (stmt->in(propagate_lhs_ops))
       {
         auto dst = stmt / LocalId;
         auto lhs = stmt / Lhs;
@@ -2576,14 +2547,7 @@ namespace vc
           env[dst->location()] =
             LocalTypeInfo::computed(clone(it->second.type));
       }
-      else if (stmt->in({Eq, Ne, Lt, Le, Gt, Ge}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(Bool));
-      }
-      else if (stmt->in({Neg,  Abs,  Ceil, Floor, Exp,   Log,   Sqrt,
-                         Cbrt, Sin,  Cos,  Tan,   Asin,  Acos,  Atan,
-                         Sinh, Cosh, Tanh, Asinh, Acosh, Atanh, Read}))
+      else if (stmt->in(propagate_rhs_ops))
       {
         auto dst = stmt / LocalId;
         auto src = stmt / Rhs;
@@ -2593,66 +2557,19 @@ namespace vc
           env[dst->location()] =
             LocalTypeInfo::computed(clone(it->second.type));
       }
-      else if (stmt->in({IsInf, IsNaN, Not}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(Bool));
-      }
-      else if (stmt == Bits)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
-      }
-      else if (stmt == Len)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(USize));
-      }
-      else if (stmt->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(F64));
-      }
-      else if (stmt == MakeCallback)
+      else if (auto frt = fixed_result_type.find(stmt->type());
+               frt != fixed_result_type.end())
       {
         auto dst = stmt / LocalId;
         env[dst->location()] =
-          LocalTypeInfo::computed(ffi_primitive_type(Callback));
+          LocalTypeInfo::computed(primitive_type(frt->second));
       }
-      else if (stmt == CallbackPtr)
+      else if (auto ffrt = fixed_ffi_result_type.find(stmt->type());
+               ffrt != fixed_ffi_result_type.end())
       {
         auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(ffi_primitive_type(Ptr));
-      }
-      else if (stmt == FreeCallback)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt->in({AddExternal, RemoveExternal}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt == RegisterExternalNotify)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt == Freeze)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt->in({ArrayCopy, ArrayFill}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt == ArrayCompare)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(I64));
+        env[dst->location()] =
+          LocalTypeInfo::computed(ffi_primitive_type(ffrt->second));
       }
       else if (stmt == Call)
       {
@@ -3658,42 +3575,10 @@ namespace vc
             auto& be = branch_exits[p_idx];
             auto be_it = be.find(label_name);
 
-            if (be_it != be.end())
+            // Apply the predecessor's exit_envs delta (entries that
+            // changed during the predecessor's label processing).
+            if (!exit_envs[p_idx].empty())
             {
-              // Apply branch-specific narrowing: only overwrite entries
-              // that actually changed from the init_env baseline.
-              for (auto& [loc, binfo] : be_it->second)
-              {
-                // Skip entries unchanged from init_env.
-                auto init_it = init_env.find(loc);
-                if (
-                  init_it != init_env.end() &&
-                  init_it->second.type == binfo.type)
-                  continue;
-
-                auto it = label_env.find(loc);
-
-                if (it == label_env.end())
-                {
-                  label_env[loc] = {
-                    clone(binfo.type),
-                    binfo.is_fixed,
-                    binfo.const_node,
-                    binfo.call_node};
-                }
-                else
-                {
-                  it->second = {
-                    clone(binfo.type),
-                    binfo.is_fixed,
-                    binfo.const_node,
-                    binfo.call_node};
-                }
-              }
-            }
-            else if (!exit_envs[p_idx].empty())
-            {
-              // Merge only entries that changed from init_env.
               for (auto& [loc, src_info] : exit_envs[p_idx])
               {
                 // Skip entries unchanged from init_env baseline.
@@ -3713,8 +3598,10 @@ namespace vc
                     src_info.const_node,
                     src_info.call_node};
                 }
-                else
+                else if (be_it == be.end())
                 {
+                  // No branch-specific exit: merge types from
+                  // multiple predecessors.
                   auto merged =
                     merge_type(it->second.type, src_info.type, top);
 
@@ -3732,6 +3619,30 @@ namespace vc
                     it->second.call_node = {};
                   }
                 }
+                else
+                {
+                  // Has branch-specific exit: overwrite (the branch
+                  // delta will be applied on top below).
+                  it->second = {
+                    clone(src_info.type),
+                    src_info.is_fixed,
+                    src_info.const_node,
+                    src_info.call_node};
+                }
+              }
+            }
+
+            // Overlay branch-specific narrowing delta (typically 1
+            // entry from a typetest Cond).
+            if (be_it != be.end())
+            {
+              for (auto& [loc, binfo] : be_it->second)
+              {
+                label_env[loc] = {
+                  clone(binfo.type),
+                  binfo.is_fixed,
+                  binfo.const_node,
+                  binfo.call_node};
               }
             }
           }
@@ -3763,29 +3674,43 @@ namespace vc
 
               auto narrowed_type = clone(trace->type);
 
+              // Store only the narrowed entry as a delta, not the
+              // full env. The predecessor merge loop will apply
+              // exit_envs[idx] first, then overlay this delta.
               if (!trace->negated)
               {
-                TypeEnv true_env = label_env;
-                true_env[src_loc] =
+                TypeEnv true_delta;
+                true_delta[src_loc] =
                   LocalTypeInfo::computed(clone(narrowed_type));
-                branch_exits[idx][true_name] = std::move(true_env);
-                branch_exits[idx][false_name] = label_env;
+                branch_exits[idx][true_name] = std::move(true_delta);
+                branch_exits[idx][false_name] = {};
               }
               else
               {
-                TypeEnv false_env = label_env;
-                false_env[src_loc] =
+                TypeEnv false_delta;
+                false_delta[src_loc] =
                   LocalTypeInfo::computed(clone(narrowed_type));
-                branch_exits[idx][false_name] = std::move(false_env);
-                branch_exits[idx][true_name] = label_env;
+                branch_exits[idx][false_name] = std::move(false_delta);
+                branch_exits[idx][true_name] = {};
               }
             }
           }
 
-          // Check convergence: did the label env change?
-          if (env_changed(label_env, exit_envs[idx], top))
+          // Compute delta: entries in label_env that differ from init_env.
+          TypeEnv label_delta;
+
+          for (auto& [loc, info] : label_env)
           {
-            exit_envs[idx] = std::move(label_env);
+            auto init_it = init_env.find(loc);
+
+            if (init_it == init_env.end() || init_it->second.type != info.type)
+              label_delta[loc] = std::move(info);
+          }
+
+          // Check convergence: did the delta change?
+          if (env_changed(label_delta, exit_envs[idx], top))
+          {
+            exit_envs[idx] = std::move(label_delta);
             made_progress = true;
 
             for (auto s : succ[idx])
@@ -3816,87 +3741,124 @@ namespace vc
       run_cascade(env, expected_prim, src_index, top, lookup_stmts);
     }
 
-    // ---------- Post-convergence: finalize Const AST nodes ----------
+    // ---------- Post-convergence: finalize AST nodes ----------
 
-    // Now that types are converged, write final types to Const nodes.
-    // For each Const, check both the per-label exit env (which captures
-    // use-site demands like CallDyn arg refinement after typetest
-    // narrowing) and the global env (which captures cascade refinement
-    // from return type). Prefer the one that's non-default (refined).
+    // Single pass over all labels to finalize Const types, NewArrayConst
+    // types, and remove TypeAssertion statements.
+    auto finalize_const = [&](const Node& stmt, const TypeEnv* label_env_ptr) {
+      auto dst = stmt->front();
+      auto loc = dst->location();
+      Node final_type;
+
+      // Check per-label env first (has typetest narrowing).
+      if (label_env_ptr)
+      {
+        auto it = label_env_ptr->find(loc);
+
+        if (it != label_env_ptr->end() && !it->second.is_default())
+        {
+          auto p = extract_primitive(it->second.type);
+
+          if (p)
+            final_type = p;
+        }
+      }
+
+      // Fall back to global env.
+      if (!final_type)
+      {
+        auto it = env.find(loc);
+
+        if (it != env.end())
+        {
+          auto p = extract_primitive(it->second.type);
+
+          if (p)
+            final_type = p;
+        }
+      }
+
+      if (stmt->size() == 3)
+      {
+        if (final_type)
+        {
+          auto old_type = stmt->at(1);
+
+          // Don't overwrite DefaultInt/DefaultFloat with U64/F64 —
+          // keep the default sentinel for cross-function propagation.
+          if (old_type->in({DefaultInt, DefaultFloat}) &&
+              is_default_type(env[loc].type))
+            return;
+
+          if (old_type->type() != final_type->type())
+            stmt->replace(old_type, final_type->type());
+        }
+      }
+      else if (stmt->size() == 2)
+      {
+        auto lit = stmt->back();
+        Node type_token;
+
+        if (final_type)
+          type_token = final_type->type();
+        else
+          type_token = default_literal_type(lit);
+
+        stmt->erase(stmt->begin(), stmt->end());
+        stmt << dst << type_token << lit;
+      }
+    };
+
     for (size_t lbl_idx = 0; lbl_idx < n_labels; lbl_idx++)
     {
       auto& lbl = labels->at(lbl_idx);
       bool have_label_env = has_typetest_conds && !exit_envs[lbl_idx].empty();
+      const TypeEnv* label_env_ptr =
+        have_label_env ? &exit_envs[lbl_idx] : nullptr;
 
-      for (auto& stmt : *(lbl / Body))
+      auto body = lbl / Body;
+      auto it = body->begin();
+
+      while (it != body->end())
       {
-        if (stmt != Const)
+        if (*it == TypeAssertion)
+        {
+          it = body->erase(it, std::next(it));
           continue;
+        }
 
-        // Find the best type for this Const: check per-label env
-        // first (captures use-site demands), then global env
-        // (captures cascade). Prefer the non-default refined entry.
-        auto dst = (stmt->size() == 3) ? stmt->front() : stmt->front();
-        Node final_type;
-        auto loc = dst->location();
-
-        // Check per-label env.
-        if (have_label_env)
+        if (*it == Const)
+          finalize_const(*it, label_env_ptr);
+        else if (*it == NewArrayConst)
         {
-          auto it = exit_envs[lbl_idx].find(loc);
+          auto dst = *it / LocalId;
+          auto env_it = env.find(dst->location());
 
-          if (it != exit_envs[lbl_idx].end() && !it->second.is_default())
+          if (env_it != env.end())
           {
-            auto p = extract_primitive(it->second.type);
+            auto inner = env_it->second.type->front();
 
-            if (p)
-              final_type = p;
+            if (inner == TupleType)
+            {
+              auto old_type = *it / Type;
+              (*it)->replace(old_type, clone(env_it->second.type));
+            }
+            else
+            {
+              auto prim = extract_primitive(env_it->second.type);
+
+              if (prim)
+              {
+                auto old_type = *it / Type;
+
+                if (!Subtype.invariant(top, old_type, env_it->second.type))
+                  (*it)->replace(old_type, clone(env_it->second.type));
+              }
+            }
           }
         }
 
-        // If per-label didn't refine, check global env.
-        if (!final_type)
-        {
-          auto it = env.find(loc);
-
-          if (it != env.end())
-          {
-            auto p = extract_primitive(it->second.type);
-
-            if (p)
-              final_type = p;
-          }
-        }
-
-        if (stmt->size() == 3)
-        {
-          if (final_type)
-          {
-            auto old_type = stmt->at(1);
-
-            // Don't overwrite DefaultInt/DefaultFloat with U64/F64 —
-            // keep the default sentinel for cross-function propagation.
-            if (old_type->in({DefaultInt, DefaultFloat}) &&
-                is_default_type(env[dst->location()].type))
-              continue;
-
-            if (old_type->type() != final_type->type())
-              stmt->replace(old_type, final_type->type());
-          }
-        }
-        else if (stmt->size() == 2)
-        {
-          auto lit = stmt->back();
-          Node type_token;
-
-          if (final_type)
-            type_token = final_type->type();
-          else
-            type_token = default_literal_type(lit);
-
-          stmt->erase(stmt->begin(), stmt->end());
-          stmt << dst << type_token << lit;
-        }
+        ++it;
       }
     }
 
@@ -3915,7 +3877,7 @@ namespace vc
           auto cls_name = (cls / Ident)->location().view();
 
           if (!cls_name.starts_with("lambda$"))
-            return true; // recurse into nested classes
+            return true;
 
           for (auto& f : *(cls / ClassBody))
           {
@@ -3929,92 +3891,14 @@ namespace vc
             {
               for (auto& stmt : *(lbl / Body))
               {
-                if (stmt != Const)
-                  continue;
-
-                auto dst = stmt->front();
-                auto loc = dst->location();
-                Node final_type;
-
-                auto it = env.find(loc);
-
-                if (it != env.end() && !it->second.is_default())
-                {
-                  auto p = extract_primitive(it->second.type);
-
-                  if (p)
-                    final_type = p;
-                }
-
-                if (stmt->size() == 3)
-                {
-                  if (final_type)
-                  {
-                    auto old_type = stmt->at(1);
-
-                    if (old_type->type() != final_type->type())
-                      stmt->replace(old_type, final_type->type());
-                  }
-                }
-                else if (stmt->size() == 2)
-                {
-                  auto lit = stmt->back();
-                  Node type_token;
-
-                  if (final_type)
-                    type_token = final_type->type();
-                  else
-                    type_token = default_literal_type(lit);
-
-                  stmt->erase(stmt->begin(), stmt->end());
-                  stmt << dst << type_token << lit;
-                }
+                if (stmt == Const)
+                  finalize_const(stmt, nullptr);
               }
             }
           }
 
           return true;
         });
-      }
-    }
-
-    // ---------- Post-convergence: finalize tuple/array types ----------
-
-    // Re-process labels once more to finalize NewArrayConst types
-    // using the converged env.
-    for (auto& lbl : *labels)
-    {
-      for (auto& stmt : *(lbl / Body))
-      {
-        if (stmt != NewArrayConst)
-          continue;
-
-        auto dst = stmt / LocalId;
-        auto it = env.find(dst->location());
-
-        if (it == env.end())
-          continue;
-
-        auto inner = it->second.type->front();
-
-        if (inner == TupleType)
-        {
-          auto old_type = stmt / Type;
-          stmt->replace(old_type, clone(it->second.type));
-        }
-        else
-        {
-          // Array literal or homogeneous tuple.
-          auto prim = extract_primitive(it->second.type);
-
-          if (prim)
-          {
-            auto old_type = stmt / Type;
-
-            if (!Subtype.invariant(top, old_type, it->second.type))
-              stmt->replace(old_type, clone(it->second.type));
-          }
-        }
       }
     }
 
@@ -4295,22 +4179,6 @@ namespace vc
         node->parent()->replace(
           node, err(node / Ident, "Cannot infer return type of function"));
         return false;
-      }
-    }
-
-    // ---------- Post-convergence: cleanup ----------
-
-    for (auto& lbl : *labels)
-    {
-      auto body = lbl / Body;
-      auto it = body->begin();
-
-      while (it != body->end())
-      {
-        if (*it == TypeAssertion)
-          it = body->erase(it, std::next(it));
-        else
-          ++it;
       }
     }
 
