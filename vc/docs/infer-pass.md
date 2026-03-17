@@ -202,6 +202,29 @@ transfer_const(env, dst, literal):
   env[dst] = merge(env[dst], type)
 ```
 
+### ConstStr
+
+```
+transfer_conststr(env, dst):
+  env[dst] = merge(env[dst], string_type())
+```
+
+### Convert
+
+```
+transfer_convert(env, dst, type):
+  env[dst] = merge(env[dst], type)         // explicit cast, no backward
+```
+
+### TypeAssertion
+
+```
+transfer_typeassertion(env, dst, type):
+  env[dst] = merge(env[dst], type)
+  env[dst].is_fixed = true                 // cannot be refined further
+  // TypeAssertion stmts are removed from body during finalization
+```
+
 ### Call
 
 ```
@@ -282,8 +305,56 @@ transfer_store(env, dst, ref_src, val_src):
 transfer_when(env, dst, lookup_src, args):
   apply_ret = env[lookup_src]
   env[dst] = merge(env[dst], cown(apply_ret))
-  // Set lambda params from cown types (always, not just when TypeVar)
+  // Set lambda params from cown types. Use existing logic: navigate to
+  // lambda ClassDef, find apply Function, set params to ref[cown_inner].
+  // Set UNCONDITIONALLY (not just when TypeVar) using merge on the param
+  // type in the AST. Keep the env population for the parent's fixpoint.
   set_when_lambda_params(env, args)
+```
+
+### FFI
+
+```
+transfer_ffi(env, dst, stmt):
+  // Forward: resolve return type from FFI Symbol table
+  ret = resolve_ffi_return(stmt)
+  if ret: env[dst] = merge(env[dst], ret)
+  // Backward: constrain args from FFI param types
+  for (arg, param_type) in zip(args, ffi_params):
+    env[arg] = merge(env[arg], param_type)
+    propagate_call_node(env, arg)
+```
+
+### NewArray / NewArrayConst
+
+```
+transfer_newarray(env, dst, type):
+  env[dst] = merge(env[dst], type)
+
+transfer_newarrayconst(env, dst, type, size):
+  env[dst] = merge(env[dst], type)
+  // Initialize tuple tracking for heterogeneous tuples / array literals.
+  // Keep TupleTracking helper from old impl — it tracks element types
+  // as they're stored via ArrayRefConst+Store, then finalizes the
+  // aggregate type (TupleType or homogeneous array) in finalization.
+```
+
+### ArrayRef / ArrayRefConst / ArrayRefFromEnd / SplatOp
+
+```
+transfer_arrayref(env, dst, src):
+  env[dst] = merge(env[dst], ref(env[src]))    // ref to array element
+
+transfer_arrayrefconst(env, dst, src, index):
+  // If src is TupleType, resolve element at index precisely
+  // Otherwise, ref to general element type
+  // Update tuple tracking for Store-based element tracking
+
+transfer_arrayrefend(env, dst):
+  env[dst] = merge(env[dst], ref(any_type()))   // index unknown pre-reify
+
+transfer_splatop(env, dst):
+  env[dst] = merge(env[dst], any_type())        // sub-range count unknown
 ```
 
 ### Return
@@ -294,6 +365,25 @@ transfer_return(env, src, func):
   propagate_call_node(env, src)
 ```
 
+### RegisterRef
+
+```
+transfer_registerref(env, dst, src):
+  env[dst] = merge(env[dst], ref(env[src]))
+```
+
+### Typetest
+
+```
+transfer_typetest(env, dst):
+  env[dst] = merge(env[dst], Bool)             // result is always Bool
+```
+
+### MakePtr / GetRaise / SetRaise / etc.
+
+Handled by the fixed_result_type and fixed_ffi_result_type dispatch
+tables. Each produces `env[dst] = merge(env[dst], primitive_type(tok))`.
+
 ### Arithmetic / Unary / Fixed-Result
 
 ```
@@ -301,6 +391,9 @@ transfer_arithmetic(env, dst, lhs, rhs):
   env[dst] = merge(env[dst], env[lhs])          // forward: result = lhs type
   env[rhs] = merge(env[rhs], env[lhs])          // backward: refine rhs from lhs
   propagate_call_node(env, rhs)
+
+transfer_unary(env, dst, rhs):
+  env[dst] = merge(env[dst], env[rhs])          // forward: result = operand type
 
 transfer_fixed(env, dst, result_type):
   env[dst] = merge(env[dst], result_type)        // e.g., Bool, USize, None
