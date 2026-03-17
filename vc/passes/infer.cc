@@ -710,12 +710,14 @@ namespace vc
 
     auto inner = type_node->front();
 
-    // Default literal sentinels pass through as themselves.
+    // Default literal sentinels map to their fallback primitives for
+    // comparison purposes. The DefaultInt/DefaultFloat distinction is
+    // preserved in the Type node for cross-function propagation.
     if (inner == DefaultInt)
-      return DefaultInt;
+      return U64;
 
     if (inner == DefaultFloat)
-      return DefaultFloat;
+      return F64;
 
     if (inner != TypeName)
       return {};
@@ -1645,8 +1647,25 @@ namespace vc
         return true;
     }
 
-    if ((func / Type)->front() == TypeVar)
+    auto ret = (func / Type)->front();
+
+    if (ret == TypeVar)
       return true;
+
+    // Check if the return type contains DefaultInt/DefaultFloat, which
+    // indicates the function has unrefined literals that may benefit
+    // from cross-function context in Phase 2.
+    if (ret->in({DefaultInt, DefaultFloat}))
+      return true;
+
+    if (ret == Union)
+    {
+      for (auto& child : *ret)
+      {
+        if (child->in({DefaultInt, DefaultFloat}))
+          return true;
+      }
+    }
 
     // Also check FieldDefs in the parent class and any nested ClassDefs:
     // if any field contains TypeVar (possibly nested, e.g., ref[TypeVar]),
@@ -3704,6 +3723,12 @@ namespace vc
           {
             auto old_type = stmt->at(1);
 
+            // Don't overwrite DefaultInt/DefaultFloat with U64/F64 —
+            // keep the default sentinel for cross-function propagation.
+            if (old_type->in({DefaultInt, DefaultFloat}) &&
+                is_default_type(env[dst->location()].type))
+              continue;
+
             if (old_type->type() != final_type->type())
               stmt->replace(old_type, final_type->type());
           }
@@ -4080,12 +4105,108 @@ namespace vc
 
         process_function(node, top, false);
 
-        // Collect functions that still have unresolved TypeVar types.
+        // Collect functions that still have unresolved TypeVar types
+        // or DefaultInt/DefaultFloat return types.
         if (has_typevar(node))
           deferred.push_back(node);
 
         return false;
       });
+
+      // Also defer parent functions that call lambdas with DefaultInt
+      // return types, so they can re-read the lambda's return type
+      // in Phase 2 and propagate the default into their own env.
+      {
+        // Collect lambda ClassDefs with DefaultInt/DefaultFloat returns.
+        std::set<std::string_view> default_lambda_names;
+
+        top->traverse([&](auto node) {
+          if (node != ClassDef)
+            return node == Top || node == ClassDef || node == ClassBody;
+
+          auto name = (node / Ident)->location().view();
+
+          if (!name.starts_with("lambda$"))
+            return true;
+
+          // Check if any apply function has DefaultInt/DefaultFloat return.
+          for (auto& f : *(node / ClassBody))
+          {
+            if (f != Function)
+              continue;
+
+            if ((f / Ident)->location().view() != "apply")
+              continue;
+
+            auto ret = (f / Type)->front();
+
+            bool has_default = ret->in({DefaultInt, DefaultFloat});
+
+            if (!has_default && ret == Union)
+            {
+              for (auto& child : *ret)
+              {
+                if (child->in({DefaultInt, DefaultFloat}))
+                {
+                  has_default = true;
+                  break;
+                }
+              }
+            }
+
+            if (has_default)
+              default_lambda_names.insert(name);
+          }
+
+          return true;
+        });
+
+        if (!default_lambda_names.empty())
+        {
+          // Find parent functions that call these lambdas.
+          std::set<Node> already_deferred(deferred.begin(), deferred.end());
+
+          top->traverse([&](auto node) {
+            if (node != Function)
+              return node == Top || node == ClassDef || node == ClassBody ||
+                node == Lib || node == Symbols;
+
+            if (already_deferred.count(node))
+              return false;
+
+            // Scan body for Call to lambda$::create.
+            bool calls_default_lambda = false;
+
+            node->traverse([&](auto stmt) {
+              if (calls_default_lambda)
+                return false;
+
+              if (stmt != Call)
+                return true;
+
+              auto fn = stmt / FuncName;
+
+              for (auto& elem : *fn)
+              {
+                auto ename = (elem / Ident)->location().view();
+
+                if (default_lambda_names.count(ename))
+                {
+                  calls_default_lambda = true;
+                  return false;
+                }
+              }
+
+              return false;
+            });
+
+            if (calls_default_lambda)
+              deferred.push_back(node);
+
+            return false;
+          });
+        }
+      }
 
       // Second pass: iteratively re-process deferred functions until
       // no more progress is made. Each iteration may resolve FieldDef
@@ -4141,20 +4262,28 @@ namespace vc
       }
 
       // Resolve any remaining DefaultInt/DefaultFloat in the AST.
-      // These are unresolved default literals that didn't get refined
-      // by context. Fall back to U64/F64 TypeName nodes.
+      // In Const nodes, these appear as bare type tokens — replace with
+      // the concrete fallback token. In Type nodes (e.g., function return
+      // types), replace with the full TypeName.
       top->traverse([](Node& node) {
-        if (node == DefaultInt)
+        if (node->in({DefaultInt, DefaultFloat}))
         {
-          auto replacement = primitive_type(U64)->front();
-          node->parent()->replace(node, replacement);
-          return false;
-        }
+          auto parent = node->parent();
+          bool is_int = (node == DefaultInt);
 
-        if (node == DefaultFloat)
-        {
-          auto replacement = primitive_type(F64)->front();
-          node->parent()->replace(node, replacement);
+          if (parent == Const)
+          {
+            // Const type position: bare token.
+            parent->replace(node, is_int ? Node{U64} : Node{F64});
+          }
+          else
+          {
+            // Type child position: full TypeName.
+            parent->replace(
+              node, is_int ? primitive_type(U64)->front()
+                           : primitive_type(F64)->front());
+          }
+
           return false;
         }
 
