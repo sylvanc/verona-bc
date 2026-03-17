@@ -5,10 +5,7 @@
 
 namespace vc
 {
-  // Sentinel types for unresolved integer/float literals. Exist only during
-  // the infer pass — resolved to U64/F64 before the pass terminates.
-  inline const auto DefaultInt = TokenDef("default_int");
-  inline const auto DefaultFloat = TokenDef("default_float");
+  // DefaultInt and DefaultFloat are defined in lang.h.
 
   // Map from builtin primitive name to IR token.
   const std::map<std::string_view, Token> primitive_from_name = {
@@ -766,52 +763,6 @@ namespace vc
   // For primitives, compares the _builtin type name.
   // For non-primitives, falls back to comparing inner Token types
   // and (for TypeName) the last NameElement's ident.
-  bool types_equal(const Node& a, const Node& b)
-  {
-    if (a != Type || b != Type)
-      return false;
-
-    auto ia = a->front();
-    auto ib = b->front();
-
-    // Different inner Token types → not equal.
-    if (ia->type() != ib->type())
-      return false;
-
-    // Both are TypeName: compare the fully-qualified name + TypeArgs.
-    if (ia == TypeName && ib == TypeName)
-    {
-      if (ia->size() != ib->size())
-        return false;
-
-      for (size_t i = 0; i < ia->size(); i++)
-      {
-        auto ea = ia->at(i) / Ident;
-        auto eb = ib->at(i) / Ident;
-
-        if (ea->location().view() != eb->location().view())
-          return false;
-
-        auto ta_a = ia->at(i) / TypeArgs;
-        auto ta_b = ib->at(i) / TypeArgs;
-
-        if (ta_a->size() != ta_b->size())
-          return false;
-
-        for (size_t j = 0; j < ta_a->size(); j++)
-        {
-          if (!types_equal(ta_a->at(j), ta_b->at(j)))
-            return false;
-        }
-      }
-
-      return true;
-    }
-
-    // Same Token type (TypeVar, Dyn, etc.) — treat as equal.
-    return true;
-  }
-
   Node extract_callable_primitive(const Node& type_node)
   {
     auto prim = extract_primitive(type_node);
@@ -1716,6 +1667,12 @@ namespace vc
     if (!incoming || incoming->front() == TypeVar)
       return clone(existing);
 
+    SequentCtx ctx{top, {}, {}};
+
+    // Fast path: bidirectional subtype (invariant = equal types).
+    if (Subtype.invariant(ctx, existing, incoming))
+      return clone(existing);
+
     // A default-typed literal yields to a concrete primitive of the same
     // kind (integer or float) at a merge point. DefaultInt yields to any
     // integer type; DefaultFloat yields to any float type. But neither
@@ -1735,8 +1692,6 @@ namespace vc
       if (prim)
         return clone(existing);
     }
-
-    SequentCtx ctx{top, {}, {}};
 
     // If incoming is a subtype of existing, keep existing.
     if (Subtype(ctx, incoming, existing))
@@ -1803,7 +1758,10 @@ namespace vc
 
   // Merge a source TypeEnv into a destination TypeEnv. For each variable,
   // merges types using union with subtype pruning.
-  static void merge_env(TypeEnv& dst, const TypeEnv& src, Node top)
+  [[maybe_unused]] static void merge_env(
+    TypeEnv& dst,
+    const TypeEnv& src,
+    Node top)
   {
     for (auto& [loc, src_info] : src)
     {
@@ -1833,7 +1791,7 @@ namespace vc
           it->second.is_default() != src_info.is_default() ||
           it->second.is_fixed != src_info.is_fixed ||
           it->second.const_node != src_info.const_node ||
-          !types_equal(it->second.type, src_info.type))
+          !Subtype.invariant(top, it->second.type, src_info.type))
         {
           it->second.resolve();
           it->second.is_fixed = false;
@@ -1845,12 +1803,12 @@ namespace vc
   }
 
   // Check if two type environments differ in any entry's type.
-  // Uses pointer comparison on type nodes for speed — if types were
-  // cloned during this iteration, they'll have different pointers.
-  static bool env_changed(const TypeEnv& a, const TypeEnv& b)
+  static bool env_changed(const TypeEnv& a, const TypeEnv& b, Node top)
   {
     if (a.size() != b.size())
       return true;
+
+    SequentCtx ctx{top, {}, {}};
 
     for (auto& [loc, info] : a)
     {
@@ -1863,8 +1821,7 @@ namespace vc
       if (info.type == it->second.type)
         continue;
 
-      // Slow path: different pointers, check structural equality.
-      if (!types_equal(info.type, it->second.type))
+      if (!Subtype.invariant(ctx, info.type, it->second.type))
         return true;
     }
 
@@ -1997,7 +1954,7 @@ namespace vc
 
             if (
               dst_it == env.end() ||
-              !types_equal(dst_it->second.type, new_info.type))
+              !Subtype.invariant(top, dst_it->second.type, new_info.type))
             {
               env[dst_loc] = new_info;
 
@@ -2025,7 +1982,7 @@ namespace vc
               auto dst_it = env.find(dst_loc);
 
               if (
-                dst_it == env.end() || !types_equal(dst_it->second.type, rt))
+                dst_it == env.end() || !Subtype.invariant(top, dst_it->second.type, rt))
               {
                 env[dst_loc] = LocalTypeInfo::computed(rt);
 
@@ -2102,7 +2059,7 @@ namespace vc
 
               if (
                 dst_it == env.end() ||
-                !types_equal(dst_it->second.type, src_it->second.type))
+                !Subtype.invariant(top, dst_it->second.type, src_it->second.type))
               {
                 env[dst_loc] =
                   LocalTypeInfo::computed(clone(src_it->second.type));
@@ -2125,7 +2082,7 @@ namespace vc
 
             if (
               dst_it == env.end() ||
-              !types_equal(dst_it->second.type, new_ref))
+              !Subtype.invariant(top, dst_it->second.type, new_ref))
             {
               env[dst_loc] = LocalTypeInfo::computed(new_ref);
 
@@ -2172,7 +2129,7 @@ namespace vc
               auto ft = f / Type;
 
               if (
-                contains_typevar(ft) || !types_equal(ft, arg_it->second.type))
+                contains_typevar(ft) || !Subtype.invariant(top, ft, arg_it->second.type))
               {
                 f->replace(ft, clone(arg_it->second.type));
               }
@@ -3692,10 +3649,7 @@ namespace vc
           auto lbl = labels->at(idx);
 
           // Build entry env: start from Phase A baseline, then apply
-          // branch-specific narrowing from predecessors. Branch exits
-          // represent intersection constraints (use-site demands from
-          // typetests), so narrowed entries OVERRIDE the baseline
-          // rather than being unioned with it.
+          // branch-specific narrowing from predecessors.
           TypeEnv label_env = init_env;
 
           for (auto p_idx : pred[idx])
@@ -3706,10 +3660,17 @@ namespace vc
 
             if (be_it != be.end())
             {
-              // Apply branch-specific narrowing: overwrite entries
-              // that the branch exit narrowed (typetest constraints).
+              // Apply branch-specific narrowing: only overwrite entries
+              // that actually changed from the init_env baseline.
               for (auto& [loc, binfo] : be_it->second)
               {
+                // Skip entries unchanged from init_env.
+                auto init_it = init_env.find(loc);
+                if (
+                  init_it != init_env.end() &&
+                  init_it->second.type == binfo.type)
+                  continue;
+
                 auto it = label_env.find(loc);
 
                 if (it == label_env.end())
@@ -3722,10 +3683,6 @@ namespace vc
                 }
                 else
                 {
-                  // Overwrite with narrowed type. This is correct
-                  // because the branch exit represents the type
-                  // AFTER the typetest passed — it's a demand, not
-                  // a possible assignment.
                   it->second = {
                     clone(binfo.type),
                     binfo.is_fixed,
@@ -3735,7 +3692,48 @@ namespace vc
               }
             }
             else if (!exit_envs[p_idx].empty())
-              merge_env(label_env, exit_envs[p_idx], top);
+            {
+              // Merge only entries that changed from init_env.
+              for (auto& [loc, src_info] : exit_envs[p_idx])
+              {
+                // Skip entries unchanged from init_env baseline.
+                auto init_it = init_env.find(loc);
+                if (
+                  init_it != init_env.end() &&
+                  init_it->second.type == src_info.type)
+                  continue;
+
+                auto it = label_env.find(loc);
+
+                if (it == label_env.end())
+                {
+                  label_env[loc] = {
+                    clone(src_info.type),
+                    src_info.is_fixed,
+                    src_info.const_node,
+                    src_info.call_node};
+                }
+                else
+                {
+                  auto merged =
+                    merge_type(it->second.type, src_info.type, top);
+
+                  it->second.type = merged;
+
+                  if (
+                    it->second.is_default() != src_info.is_default() ||
+                    it->second.is_fixed != src_info.is_fixed ||
+                    it->second.const_node != src_info.const_node ||
+                    !Subtype.invariant(top, it->second.type, src_info.type))
+                  {
+                    it->second.resolve();
+                    it->second.is_fixed = false;
+                    it->second.const_node = {};
+                    it->second.call_node = {};
+                  }
+                }
+              }
+            }
           }
 
           // Re-process label body with narrowed types.
@@ -3785,7 +3783,7 @@ namespace vc
           }
 
           // Check convergence: did the label env change?
-          if (env_changed(label_env, exit_envs[idx]))
+          if (env_changed(label_env, exit_envs[idx], top))
           {
             exit_envs[idx] = std::move(label_env);
             made_progress = true;
@@ -4013,7 +4011,7 @@ namespace vc
           {
             auto old_type = stmt / Type;
 
-            if (!types_equal(old_type, it->second.type))
+            if (!Subtype.invariant(top, old_type, it->second.type))
               stmt->replace(old_type, clone(it->second.type));
           }
         }

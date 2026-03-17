@@ -74,6 +74,9 @@ namespace trieste
   inline const Axiom AxiomTrue = [](const SequentCtx&, Node&, Node&) {
     return true;
   };
+  inline const Axiom AxiomFalse = [](const SequentCtx&, Node&, Node&) {
+    return false;
+  };
 
   struct SequentCalculus
   {

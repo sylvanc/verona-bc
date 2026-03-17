@@ -56,6 +56,11 @@ namespace vc
   inline const auto TypeVar = TokenDef("typevar");
   inline const auto TypeSelf = TokenDef("typeself");
 
+  // Sentinel types for unresolved integer/float literals. Exist only during
+  // the infer pass — resolved to U64/F64 before the pass terminates.
+  inline const auto DefaultInt = TokenDef("default_int");
+  inline const auto DefaultFloat = TokenDef("default_float");
+
   inline const auto WhereAnd = TokenDef("whereand");
   inline const auto WhereOr = TokenDef("whereor");
   inline const auto WhereNot = TokenDef("wherenot");
