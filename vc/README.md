@@ -2,9 +2,9 @@
 
 ## To Do
 
-Inference regressions.
-- `generic_when`, `infer_backward`.
-- The `when` lambda in `async_writer` also still fails.
+Inference.
+- Are we special casing methods on integers and floats in inference? Or actually looking at the implementation?
+- Are we allowing arguments to refine the receiver?
 
 Compiler errors.
 - Not getting node based errors.

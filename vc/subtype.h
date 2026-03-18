@@ -128,6 +128,7 @@ namespace vc
       DefaultInt >> AxiomEq,
       DefaultFloat >> AxiomEq,
       TypeSelf >> AxiomEq,
+      TypeVar >> AxiomEq,
     },
     {
       // TypeSelf is always bound through implications (TypeSelf <: T and
@@ -140,6 +141,10 @@ namespace vc
       // any primitive. They never contradict any type.
       DefaultInt >> AxiomFalse,
       DefaultFloat >> AxiomFalse,
+
+      // TypeVar is an unresolved type parameter. Like defaults, it
+      // never contradicts — it could become anything.
+      TypeVar >> AxiomFalse,
 
       TypeName >>
         [](const SequentCtx& ctx, Node& l, Node& r) {

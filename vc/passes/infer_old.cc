@@ -1882,13 +1882,86 @@ namespace vc
     return std::nullopt;
   }
 
-  // Process statements in a label body, updating the type environment.
-  // This contains all per-statement type inference logic.
-  // Cascade re-propagation: refine all remaining default Consts
-  // compatible with `expected_prim`, then propagate through
-  // Copy/Move/Lookup/CallDyn until stable. `cascade_changed` tracks
-  // affected locations to prevent oscillation.
-  using SrcIndex = std::multimap<Location, Node>;
+  // --- NEW IMPLEMENTATION: bidirectional transfer functions + fixpoint ---
+
+  // Merge a LocalTypeInfo entry using merge_type. Returns true if the
+  // type changed. Preserves const_node and call_node from whichever side
+  // has them (preferring incoming on first assignment).
+  static bool merge_entry(
+    TypeEnv& env,
+    const Location& loc,
+    const Node& incoming_type,
+    Node top,
+    Node const_node = {},
+    Node call_node = {})
+  {
+    auto it = env.find(loc);
+
+    if (it == env.end())
+    {
+      env[loc] = {clone(incoming_type), false, const_node, call_node};
+      return true;
+    }
+
+    if (it->second.is_fixed)
+      return false;
+
+    auto merged = merge_type(it->second.type, incoming_type, top);
+
+    if (!merged)
+      return false;
+
+    SequentCtx ctx{top, {}, {}};
+
+    if (Subtype.invariant(ctx, it->second.type, merged))
+      return false;
+
+    it->second.type = merged;
+
+    // Preserve const_node from incoming if we don't have one.
+    if (!it->second.const_node && const_node)
+      it->second.const_node = const_node;
+
+    // Preserve call_node from incoming if we don't have one.
+    if (!it->second.call_node && call_node)
+      it->second.call_node = call_node;
+
+    return true;
+  }
+
+  // Propagate backward through call_node when a default type becomes
+  // concrete after a merge.
+  static void propagate_call_node(
+    TypeEnv& env,
+    const Location& loc,
+    Node top,
+    std::map<Location, Node>& lookup_stmts)
+  {
+    auto it = env.find(loc);
+
+    if (it == env.end())
+      return;
+
+    auto& info = it->second;
+
+    // Only propagate when the type is NOW concrete (not default).
+    if (info.is_default() || !info.call_node)
+      return;
+
+    auto call = info.call_node;
+
+    if (call == Call)
+    {
+      backward_refine_call(call, info.type, env, top);
+    }
+    else if (call->in({CallDyn, TryCallDyn}))
+    {
+      auto prim = extract_primitive(info.type);
+
+      if (prim)
+        backward_refine_calldyn(call, prim, env, top, lookup_stmts);
+    }
+  }
 
   static void run_cascade(
     TypeEnv& env,
