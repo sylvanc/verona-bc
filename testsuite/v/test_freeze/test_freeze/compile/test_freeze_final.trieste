@@ -1,5 +1,5 @@
 vc
-liveness
+typecheck
 (top
   {}
   (func
@@ -41,51 +41,68 @@ liveness
             (localid 8:local$11)
             (i32)
             (int 1:0))
-          (move
+          (copy
+            (localid 9:local$552)
+            (localid 6:result))
+          (copy
             (localid 6:result)
             (localid 8:local$11))
           (const
             (localid 9:local$131)
             (i32)
             (int 2:10))
-          (new
+          (call
             (localid 8:local$12)
-            (classid 20:test_freeze::leaf::0)
+            (functionid 31:test_freeze::leaf::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$131))))
-          (move
+          (copy
+            (localid 9:local$553)
+            (localid 1:a))
+          (copy
             (localid 1:a)
             (localid 8:local$12))
-          (freeze
-            (localid 6:$opt_0)
-            (localid 1:a))
-          (const
+          (call
             (localid 8:local$13)
-            (none)
-            (none))
-          (new
+            (functionid 22:_builtin::freeze::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:a))))
+          (call
             (localid 8:local$14)
-            (classid 20:_builtin::nomatch::0)
+            (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (const
             (localid 9:local$132)
-            (i32)
+            (u64)
             (int 2:10))
-          (fieldref
-            (localid 6:$opt_1)
-            (arg
-              (argmove)
-              (localid 1:a))
-            (fieldid 3:val))
-          (load
+          (lookup
+            (localid 9:local$554)
+            (localid 1:a)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$555)
-            (localid 6:$opt_1))
-          (ne
+            (localid 9:local$554)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:a))))
+          (lookup
+            (localid 9:local$962)
+            (localid 9:local$555)
+            (methodid 8:!=::2::0))
+          (calldyn
             (localid 9:local$963)
-            (localid 9:local$555)
-            (localid 9:local$132)))
+            (localid 9:local$962)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$555))
+              (error
+                (errormsg 66:call: argument type 'u64' is not a subtype of parameter type 'i32')))))
         (cond
           (localid 9:local$963)
           (labelid 8:body$129)
@@ -97,13 +114,29 @@ liveness
             (localid 9:local$133)
             (i32)
             (int 1:1))
-          (add
+          (lookup
+            (localid 9:local$556)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$557)
+            (localid 9:local$556)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$133))))
+          (copy
+            (localid 9:local$964)
+            (localid 6:result))
+          (copy
             (localid 6:result)
-            (localid 9:local$133))
-          (move
-            (localid 6:result)
-            (localid 9:local$557)))
+            (localid 9:local$557))
+          (copy
+            (localid 8:local$14)
+            (localid 9:local$964)))
         (jump
           (labelid 8:join$130)))
       (label
@@ -113,51 +146,65 @@ liveness
             (localid 9:local$136)
             (i32)
             (int 2:55))
-          (new
+          (call
             (localid 8:local$15)
-            (classid 20:test_freeze::leaf::0)
+            (functionid 31:test_freeze::leaf::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$136))))
-          (move
+          (copy
+            (localid 9:local$558)
+            (localid 1:b))
+          (copy
             (localid 1:b)
             (localid 8:local$15))
-          (freeze
-            (localid 6:$opt_2)
-            (localid 1:b))
-          (const
+          (call
             (localid 8:local$16)
-            (none)
-            (none))
-          (freeze
-            (localid 6:$opt_3)
-            (localid 1:b))
-          (const
+            (functionid 22:_builtin::freeze::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b))))
+          (call
             (localid 8:local$17)
-            (none)
-            (none))
-          (new
+            (functionid 22:_builtin::freeze::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b))))
+          (call
             (localid 8:local$18)
-            (classid 20:_builtin::nomatch::0)
+            (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (const
             (localid 9:local$137)
-            (i32)
+            (u64)
             (int 2:55))
-          (fieldref
-            (localid 6:$opt_4)
-            (arg
-              (argmove)
-              (localid 1:b))
-            (fieldid 3:val))
-          (load
+          (lookup
+            (localid 9:local$559)
+            (localid 1:b)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$560)
-            (localid 6:$opt_4))
-          (ne
+            (localid 9:local$559)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:b))))
+          (lookup
+            (localid 9:local$965)
+            (localid 9:local$560)
+            (methodid 8:!=::2::0))
+          (calldyn
             (localid 9:local$966)
-            (localid 9:local$560)
-            (localid 9:local$137)))
+            (localid 9:local$965)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$560))
+              (error
+                (errormsg 66:call: argument type 'u64' is not a subtype of parameter type 'i32')))))
         (cond
           (localid 9:local$966)
           (labelid 8:body$134)
@@ -169,13 +216,29 @@ liveness
             (localid 9:local$138)
             (i32)
             (int 1:2))
-          (add
+          (lookup
+            (localid 9:local$561)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$562)
+            (localid 9:local$561)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$138))))
+          (copy
+            (localid 9:local$967)
+            (localid 6:result))
+          (copy
             (localid 6:result)
-            (localid 9:local$138))
-          (move
-            (localid 6:result)
-            (localid 9:local$562)))
+            (localid 9:local$562))
+          (copy
+            (localid 8:local$18)
+            (localid 9:local$967)))
         (jump
           (labelid 8:join$135)))
       (label
@@ -185,78 +248,98 @@ liveness
             (localid 9:local$141)
             (i32)
             (int 1:3))
-          (new
+          (call
             (localid 8:local$19)
-            (classid 20:test_freeze::leaf::0)
+            (functionid 31:test_freeze::leaf::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$141))))
-          (move
+          (copy
+            (localid 9:local$563)
+            (localid 1:l))
+          (copy
             (localid 1:l)
             (localid 8:local$19))
           (const
             (localid 9:local$142)
             (i32)
             (int 1:7))
-          (new
+          (call
             (localid 8:local$20)
-            (classid 20:test_freeze::leaf::0)
+            (functionid 31:test_freeze::leaf::create::1::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$142))))
-          (move
+          (copy
+            (localid 9:local$564)
+            (localid 1:r))
+          (copy
             (localid 1:r)
             (localid 8:local$20))
           (const
             (localid 9:local$143)
             (i32)
             (int 3:100))
-          (new
+          (call
             (localid 8:local$21)
-            (classid 20:test_freeze::node::0)
+            (functionid 31:test_freeze::node::create::3::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:l))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 1:r))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 9:local$143))))
-          (move
+          (copy
+            (localid 9:local$565)
+            (localid 1:n))
+          (copy
             (localid 1:n)
             (localid 8:local$21))
-          (freeze
-            (localid 6:$opt_5)
-            (localid 1:n))
-          (const
+          (call
             (localid 8:local$22)
-            (none)
-            (none))
-          (new
+            (functionid 22:_builtin::freeze::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:n))))
+          (call
             (localid 8:local$23)
-            (classid 20:_builtin::nomatch::0)
+            (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (const
             (localid 9:local$144)
-            (i32)
+            (u64)
             (int 3:100))
-          (fieldref
-            (localid 6:$opt_6)
-            (arg
-              (argcopy)
-              (localid 1:n))
-            (fieldid 3:val))
-          (load
+          (lookup
+            (localid 9:local$566)
+            (localid 1:n)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$567)
-            (localid 6:$opt_6))
-          (ne
+            (localid 9:local$566)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:n))))
+          (lookup
+            (localid 9:local$968)
+            (localid 9:local$567)
+            (methodid 8:!=::2::0))
+          (calldyn
             (localid 9:local$969)
-            (localid 9:local$567)
-            (localid 9:local$144)))
+            (localid 9:local$968)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$567))
+              (error
+                (errormsg 66:call: argument type 'u64' is not a subtype of parameter type 'i32')))))
         (cond
           (localid 9:local$969)
           (labelid 8:body$139)
@@ -268,48 +351,77 @@ liveness
             (localid 9:local$145)
             (i32)
             (int 1:4))
-          (add
+          (lookup
+            (localid 9:local$568)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$569)
+            (localid 9:local$568)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$145))))
+          (copy
+            (localid 9:local$970)
+            (localid 6:result))
+          (copy
             (localid 6:result)
-            (localid 9:local$145))
-          (move
-            (localid 6:result)
-            (localid 9:local$569)))
+            (localid 9:local$569))
+          (copy
+            (localid 8:local$23)
+            (localid 9:local$970)))
         (jump
           (labelid 8:join$140)))
       (label
         (labelid 8:join$140)
         (body
-          (new
+          (call
             (localid 8:local$24)
-            (classid 20:_builtin::nomatch::0)
+            (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (const
             (localid 9:local$148)
-            (i32)
+            (u64)
             (int 1:3))
-          (fieldref
-            (localid 6:$opt_7)
-            (arg
-              (argcopy)
-              (localid 1:n))
-            (fieldid 4:left))
-          (load
+          (lookup
+            (localid 9:local$570)
+            (localid 1:n)
+            (methodid 10:left::1::0))
+          (calldyn
             (localid 9:local$571)
-            (localid 6:$opt_7))
-          (fieldref
-            (localid 6:$opt_8)
-            (arg
-              (argmove)
-              (localid 9:local$571))
-            (fieldid 3:val))
-          (load
+            (localid 9:local$570)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:n))))
+          (lookup
+            (localid 9:local$971)
+            (localid 9:local$571)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$972)
-            (localid 6:$opt_8))
-          (ne
+            (localid 9:local$971)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$571))))
+          (lookup
+            (localid 10:local$1003)
+            (localid 9:local$972)
+            (methodid 8:!=::2::0))
+          (calldyn
             (localid 10:local$1004)
-            (localid 9:local$972)
-            (localid 9:local$148)))
+            (localid 10:local$1003)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$972))
+              (error
+                (errormsg 66:call: argument type 'u64' is not a subtype of parameter type 'i32')))))
         (cond
           (localid 10:local$1004)
           (labelid 8:body$146)
@@ -321,48 +433,77 @@ liveness
             (localid 9:local$149)
             (i32)
             (int 1:8))
-          (add
+          (lookup
+            (localid 9:local$572)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$573)
+            (localid 9:local$572)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$149))))
+          (copy
+            (localid 9:local$973)
+            (localid 6:result))
+          (copy
             (localid 6:result)
-            (localid 9:local$149))
-          (move
-            (localid 6:result)
-            (localid 9:local$573)))
+            (localid 9:local$573))
+          (copy
+            (localid 8:local$24)
+            (localid 9:local$973)))
         (jump
           (labelid 8:join$147)))
       (label
         (labelid 8:join$147)
         (body
-          (new
+          (call
             (localid 8:local$25)
-            (classid 20:_builtin::nomatch::0)
+            (functionid 31:_builtin::nomatch::create::0::0)
             (args))
           (const
             (localid 9:local$152)
-            (i32)
+            (u64)
             (int 1:7))
-          (fieldref
-            (localid 6:$opt_9)
-            (arg
-              (argmove)
-              (localid 1:n))
-            (fieldid 5:right))
-          (load
+          (lookup
+            (localid 9:local$574)
+            (localid 1:n)
+            (methodid 11:right::1::0))
+          (calldyn
             (localid 9:local$575)
-            (localid 6:$opt_9))
-          (fieldref
-            (localid 7:$opt_10)
-            (arg
-              (argmove)
-              (localid 9:local$575))
-            (fieldid 3:val))
-          (load
+            (localid 9:local$574)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:n))))
+          (lookup
+            (localid 9:local$974)
+            (localid 9:local$575)
+            (methodid 9:val::1::0))
+          (calldyn
             (localid 9:local$975)
-            (localid 7:$opt_10))
-          (ne
+            (localid 9:local$974)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$575))))
+          (lookup
+            (localid 10:local$1005)
+            (localid 9:local$975)
+            (methodid 8:!=::2::0))
+          (calldyn
             (localid 10:local$1006)
-            (localid 9:local$975)
-            (localid 9:local$152)))
+            (localid 10:local$1005)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$975))
+              (error
+                (errormsg 66:call: argument type 'u64' is not a subtype of parameter type 'i32')))))
         (cond
           (localid 10:local$1006)
           (labelid 8:body$150)
@@ -374,13 +515,29 @@ liveness
             (localid 9:local$153)
             (i32)
             (int 2:16))
-          (add
+          (lookup
+            (localid 9:local$576)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$577)
+            (localid 9:local$576)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$153))))
+          (copy
+            (localid 9:local$976)
+            (localid 6:result))
+          (copy
             (localid 6:result)
-            (localid 9:local$153))
-          (move
-            (localid 6:result)
-            (localid 9:local$577)))
+            (localid 9:local$577))
+          (copy
+            (localid 8:local$25)
+            (localid 9:local$976)))
         (jump
           (labelid 8:join$151)))
       (label
@@ -405,7 +562,7 @@ liveness
             (classid 20:test_freeze::leaf::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:val)))))
         (ret
           (localid 7:local$6)))))
@@ -468,13 +625,13 @@ liveness
             (classid 20:test_freeze::node::0)
             (args
               (arg
-                (argmove)
+                (argcopy)
                 (localid 4:left))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 5:right))
               (arg
-                (argmove)
+                (argcopy)
                 (localid 3:val)))))
         (ret
           (localid 8:local$10)))))
@@ -522,12 +679,13 @@ liveness
       (label
         (labelid 5:start)
         (body
-          (fieldref
+          (call
             (localid 7:local$5)
-            (arg
-              (argmove)
-              (localid 4:self))
-            (fieldid 3:val))
+            (functionid 33:test_freeze::leaf::val::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
           (load
             (localid 9:local$548)
             (localid 7:local$5)))
@@ -549,7 +707,7 @@ liveness
           (fieldref
             (localid 9:local$125)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
@@ -566,12 +724,13 @@ liveness
       (label
         (labelid 5:start)
         (body
-          (fieldref
+          (call
             (localid 7:local$9)
-            (arg
-              (argmove)
-              (localid 4:self))
-            (fieldid 3:val))
+            (functionid 33:test_freeze::node::val::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
           (load
             (localid 9:local$551)
             (localid 7:local$9)))
@@ -589,12 +748,13 @@ liveness
       (label
         (labelid 5:start)
         (body
-          (fieldref
+          (call
             (localid 7:local$7)
-            (arg
-              (argmove)
-              (localid 4:self))
-            (fieldid 4:left))
+            (functionid 34:test_freeze::node::left::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
           (load
             (localid 9:local$549)
             (localid 7:local$7)))
@@ -612,12 +772,13 @@ liveness
       (label
         (labelid 5:start)
         (body
-          (fieldref
+          (call
             (localid 7:local$8)
-            (arg
-              (argmove)
-              (localid 4:self))
-            (fieldid 5:right))
+            (functionid 35:test_freeze::node::right::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
           (load
             (localid 9:local$550)
             (localid 7:local$8)))
@@ -639,7 +800,7 @@ liveness
           (fieldref
             (localid 9:local$127)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:self))
             (fieldid 5:right)))
         (ret
@@ -660,7 +821,7 @@ liveness
           (fieldref
             (localid 9:local$126)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:self))
             (fieldid 4:left)))
         (ret
@@ -681,11 +842,53 @@ liveness
           (fieldref
             (localid 9:local$128)
             (arg
-              (argmove)
+              (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
           (localid 9:local$128)))))
+  (func
+    (functionid 23:_builtin::u64::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$476)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$476)))))
+  (func
+    (functionid 24:_builtin::bool::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$193)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$193)))))
   (class
     (classid 20:_builtin::nomatch::0)
     (fields)
@@ -732,27 +935,6 @@ liveness
             (localid 5:other)))
         (ret
           (localid 9:local$265)))))
-  (func
-    (functionid 24:_builtin::bool::!=::2::0)
-    (params
-      (param
-        (localid 4:self)
-        (bool))
-      (param
-        (localid 5:other)
-        (bool)))
-    (bool)
-    (vars)
-    (labels
-      (label
-        (labelid 5:start)
-        (body
-          (ne
-            (localid 9:local$193)
-            (localid 4:self)
-            (localid 5:other)))
-        (ret
-          (localid 9:local$193)))))
   (primitive
     (i32)
     (methods
@@ -763,6 +945,12 @@ liveness
         (methodid 7:+::2::0)
         (functionid 22:_builtin::i32::+::2::0))))
   (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::u64::!=::2::0))))
+  (primitive
     (ref
       (i32))
     (methods))
@@ -771,11 +959,11 @@ liveness
       (classid 20:test_freeze::leaf::0))
     (methods))
   (primitive
-    (none)
-    (methods))
-  (primitive
     (bool)
     (methods
       (method
         (methodid 8:!=::2::0)
-        (functionid 24:_builtin::bool::!=::2::0)))))
+        (functionid 24:_builtin::bool::!=::2::0))))
+  (primitive
+    (none)
+    (methods)))

@@ -73,7 +73,7 @@ validids
             (localid 1:v))
           (const
             (localid 9:local$377)
-            (i32)
+            (u64)
             (int 2:42))
           (copy
             (localid 10:local$1241)
@@ -222,7 +222,7 @@ validids
             (localid 1:v))
           (const
             (localid 9:local$382)
-            (i32)
+            (u64)
             (int 2:99))
           (copy
             (localid 10:local$1245)
@@ -371,7 +371,7 @@ validids
             (localid 1:v))
           (const
             (localid 9:local$387)
-            (i32)
+            (u64)
             (int 1:1))
           (copy
             (localid 10:local$1249)
@@ -424,7 +424,7 @@ validids
         (body
           (const
             (localid 9:local$388)
-            (i32)
+            (u64)
             (int 2:42))
           (copy
             (localid 10:local$1252)
@@ -485,7 +485,7 @@ validids
         (body
           (const
             (localid 9:local$389)
-            (i32)
+            (u64)
             (int 2:99))
           (copy
             (localid 10:local$1255)
@@ -642,7 +642,7 @@ validids
             (localid 1:v))
           (const
             (localid 9:local$394)
-            (i32)
+            (u64)
             (int 1:1))
           (copy
             (localid 10:local$1259)
@@ -695,7 +695,7 @@ validids
         (body
           (const
             (localid 9:local$395)
-            (i32)
+            (u64)
             (int 1:2))
           (copy
             (localid 10:local$1262)
@@ -756,7 +756,7 @@ validids
         (body
           (const
             (localid 9:local$396)
-            (i32)
+            (u64)
             (int 1:3))
           (copy
             (localid 10:local$1265)
@@ -923,7 +923,7 @@ validids
             (localid 1:w))
           (const
             (localid 9:local$401)
-            (i32)
+            (u64)
             (int 1:7))
           (copy
             (localid 10:local$1269)
@@ -1117,7 +1117,7 @@ validids
             (localid 1:w))
           (const
             (localid 9:local$406)
-            (i32)
+            (u64)
             (int 2:42))
           (copy
             (localid 10:local$1275)
@@ -3734,6 +3734,44 @@ validids
         (ret
           (localid 10:local$1403)))))
   (func
+    (functionid 22:_builtin::u64::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 10:local$1161)
+            (localid 4:self)))
+        (ret
+          (localid 10:local$1161)))))
+  (func
+    (functionid 23:_builtin::u64::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (eq
+            (localid 9:local$730)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$730)))))
+  (func
     (functionid 23:_builtin::i32::==::2::0)
     (params
       (param
@@ -3804,6 +3842,15 @@ validids
       (method
         (methodid 7:+::2::0)
         (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 7:!::1::0)
+        (functionid 22:_builtin::u64::!::1::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 23:_builtin::u64::==::2::0))))
   (primitive
     (usize)
     (methods

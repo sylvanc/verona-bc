@@ -188,6 +188,32 @@ namespace vc
     return candidate;
   }
 
+  Node exclude_tested_type(
+    Node top, const Node& source_type, const Node& tested_type)
+  {
+    if (source_type != Type || tested_type != Type)
+      return {};
+
+    auto inner = source_type->front();
+    if (inner != Union)
+      return {};
+
+    SequentCtx ctx{top, {}, {}};
+    Node remaining = Union;
+    for (auto& component : *inner)
+    {
+      auto component_type = Type << clone(component);
+      if (!Subtype(ctx, component_type, tested_type))
+        remaining << clone(component);
+    }
+
+    if (remaining->empty() || remaining->size() == inner->size())
+      return {};
+
+    return (remaining->size() == 1) ? Type << clone(remaining->front())
+                                    : Type << remaining;
+  }
+
   Node extract_wrapper_primitive(const Node& type_node)
   {
     auto inner = extract_ref_inner(type_node);
@@ -232,6 +258,14 @@ namespace vc
       return {};
     auto def = find_def(top, inner);
     return (def && def == TypeParam) ? def : Node{};
+  }
+
+  Node lookup_method_name(const Node& stmt)
+  {
+    Node ident = stmt / Ident;
+    if (ident)
+      return ident;
+    return stmt / SymbolId;
   }
 
   // ===== Type environment =====
@@ -476,6 +510,21 @@ namespace vc
     return src_index;
   }
 
+  static std::set<Location> collect_label_defs(const Node& body)
+  {
+    std::set<Location> defs;
+    for (auto& stmt : *body)
+    {
+      if (!stmt->empty() && stmt->front() == LocalId)
+      {
+        auto loc = stmt->front()->location();
+        if (loc.view().starts_with("local$"))
+          defs.insert(loc);
+      }
+    }
+    return defs;
+  }
+
   static void run_dependency_cascade(
     TypeEnv& env,
     const Node& body,
@@ -567,7 +616,7 @@ namespace vc
             continue;
 
           auto hand = (stmt / Lhs)->type();
-          auto method_ident = stmt / Ident;
+          auto method_ident = lookup_method_name(stmt);
           auto method_ta = stmt / TypeArgs;
           auto arity = from_chars_sep_v<size_t>(stmt / Int);
           auto ret = resolve_method_return_type(
@@ -694,7 +743,7 @@ namespace vc
             continue;
 
           auto hand = (lookup_node / Lhs)->type();
-          auto method_ident = lookup_node / Ident;
+          auto method_ident = lookup_method_name(lookup_node);
           auto method_ta = lookup_node / TypeArgs;
           auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
           auto info = resolve_callable_method(
@@ -928,7 +977,9 @@ namespace vc
     {
       if (child != Function)
         continue;
-      if ((child / Ident)->location().view() != method_name)
+
+      auto child_name = lookup_method_name(child);
+      if (!child_name || child_name->location().view() != method_name)
         continue;
       if ((child / Lhs)->type() != hand)
         continue;
@@ -1248,7 +1299,7 @@ namespace vc
     if (recv_it != env.end())
     {
       auto hand = (lookup_node / Lhs)->type();
-      auto method_ident = lookup_node / Ident;
+      auto method_ident = lookup_method_name(lookup_node);
       auto method_ta = lookup_node / TypeArgs;
       auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
       auto ret = resolve_method_return_type(
@@ -2065,7 +2116,7 @@ namespace vc
           else
           {
             auto hand = (stmt / Lhs)->type();
-            auto method_ident = stmt / Ident;
+            auto method_ident = lookup_method_name(stmt);
             auto method_ta = stmt / TypeArgs;
             auto arity = from_chars_sep_v<size_t>(stmt / Int);
             auto ret = resolve_method_return_type(
@@ -2078,11 +2129,11 @@ namespace vc
         lookup_stmts[dst_loc] = stmt;
       }
       // ----- CallDyn / TryCallDyn -----
-      else if (stmt->in({CallDyn, TryCallDyn}))
-      {
-        auto dst_loc = (stmt / LocalId)->location();
-        auto src_loc = (stmt / Rhs)->location();
-        auto args = stmt / Args;
+        else if (stmt->in({CallDyn, TryCallDyn}))
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = (stmt / Rhs)->location();
+          auto args = stmt / Args;
 
         // Forward: result from Lookup.
         auto src_it = env.find(src_loc);
@@ -2107,7 +2158,7 @@ namespace vc
           if (recv_it != env.end() && !is_default_type(recv_it->second.type))
           {
             auto hand = (lookup_node / Lhs)->type();
-            auto method_ident = lookup_node / Ident;
+            auto method_ident = lookup_method_name(lookup_node);
             auto method_ta = lookup_node / TypeArgs;
             auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
             auto info = resolve_callable_method(
@@ -2406,6 +2457,9 @@ namespace vc
 
     // Backward envs: carry type expectations from downstream.
     std::vector<TypeEnv> bwd_envs(n);
+    std::vector<std::set<Location>> label_defs(n);
+    for (size_t j = 0; j < n; j++)
+      label_defs[j] = collect_label_defs(labels->at(j) / Body);
 
     // Initialize backward env for Return labels with declared return type.
     {
@@ -2484,10 +2538,16 @@ namespace vc
       {
         auto eit = entry.find(loc);
         if (eit == entry.end())
-          continue;
-        auto m = merge_type(eit->second.type, info.type, top);
-        if (m)
-          eit->second.type = m;
+        {
+          if (label_defs[i].count(loc) > 0)
+            entry[loc] = {clone(info.type), false, {}};
+        }
+        else
+        {
+          auto m = merge_type(eit->second.type, info.type, top);
+          if (m)
+            eit->second.type = m;
+        }
       }
 
       // Merge backward envs from successors into entry.
@@ -2497,10 +2557,16 @@ namespace vc
         {
           auto eit = entry.find(loc);
           if (eit == entry.end())
-            continue;
-          auto m = merge_type(eit->second.type, info.type, top);
-          if (m)
-            eit->second.type = m;
+          {
+            if (label_defs[i].count(loc) > 0)
+              entry[loc] = {clone(info.type), false, {}};
+          }
+          else
+          {
+            auto m = merge_type(eit->second.type, info.type, top);
+            if (m)
+              eit->second.type = m;
+          }
         }
       }
 
@@ -2563,7 +2629,18 @@ namespace vc
               branch_exits[{i, t_it->second}] = std::move(ne);
             }
             if (f_it != label_idx.end())
-              branch_exits[{i, f_it->second}] = make_clone();
+            {
+              auto ne = make_clone();
+              auto src_it = ne.find(trace->src->location());
+              if (src_it != ne.end())
+              {
+                auto excluded =
+                  exclude_tested_type(top, src_it->second.type, trace->type);
+                if (excluded)
+                  src_it->second = {std::move(excluded), true, {}};
+              }
+              branch_exits[{i, f_it->second}] = std::move(ne);
+            }
           }
           else
           {
@@ -2575,7 +2652,18 @@ namespace vc
               branch_exits[{i, f_it->second}] = std::move(ne);
             }
             if (t_it != label_idx.end())
-              branch_exits[{i, t_it->second}] = make_clone();
+            {
+              auto ne = make_clone();
+              auto src_it = ne.find(trace->src->location());
+              if (src_it != ne.end())
+              {
+                auto excluded =
+                  exclude_tested_type(top, src_it->second.type, trace->type);
+                if (excluded)
+                  src_it->second = {std::move(excluded), true, {}};
+              }
+              branch_exits[{i, t_it->second}] = std::move(ne);
+            }
           }
         }
       }

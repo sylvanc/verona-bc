@@ -49,7 +49,7 @@ typecheck
             (localid 8:local$19))
           (const
             (localid 9:local$145)
-            (i32)
+            (u64)
             (int 1:7))
           (copy
             (localid 9:local$891)
@@ -59,7 +59,7 @@ typecheck
             (localid 9:local$145))
           (const
             (localid 9:local$146)
-            (i32)
+            (u64)
             (int 1:7))
           (copy
             (localid 9:local$892)
@@ -189,9 +189,8 @@ typecheck
               (arg
                 (argcopy)
                 (localid 1:a))
-              (arg
-                (argcopy)
-                (localid 9:local$147))))
+              (error
+                (errormsg 66:call: argument type 'i32' is not a subtype of parameter type 'u64'))))
           (lookup
             (localid 9:local$976)
             (localid 9:local$553)
@@ -512,7 +511,7 @@ typecheck
         (dyn)))
     (union
       (classid 20:_builtin::nomatch::0)
-      (i32))
+      (u64))
     (vars
       (localid 8:local$12)
       (localid 8:local$13)
@@ -649,7 +648,7 @@ typecheck
         (body
           (const
             (localid 8:local$15)
-            (i32)
+            (u64)
             (int 3:100)))
         (ret
           (localid 8:local$15)))))
@@ -695,6 +694,65 @@ typecheck
             (localid 5:other)))
         (ret
           (localid 9:local$187)))))
+  (func
+    (functionid 22:_builtin::u64::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 9:local$831)
+            (localid 4:self)))
+        (ret
+          (localid 9:local$831)))))
+  (func
+    (functionid 22:_builtin::u64::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$460)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$460)))))
+  (func
+    (functionid 23:_builtin::u64::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (eq
+            (localid 9:local$470)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$470)))))
   (func
     (functionid 23:_builtin::i32::==::2::0)
     (params
@@ -766,6 +824,18 @@ typecheck
       (method
         (methodid 7:+::2::0)
         (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 7:!::1::0)
+        (functionid 22:_builtin::u64::!::1::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::u64::+::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 23:_builtin::u64::==::2::0))))
   (primitive
     (usize)
     (methods

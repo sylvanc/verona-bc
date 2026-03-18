@@ -1,5 +1,5 @@
 vc
-liveness
+typecheck
 (top
   {}
   (func
@@ -11,106 +11,10 @@ liveness
       (label
         (labelid 5:start)
         (body
-          (const
-            (localid 6:$opt_0)
-            (i32)
-            (int 1:3))
-          (const
-            (localid 6:$opt_2)
-            (i32)
-            (int 1:5))
-          (newarrayconst
-            (localid 6:$opt_4)
-            (tupletype
-              (i32)
-              (i32))
-            (int 1:2))
-          (arrayrefconst
-            (localid 6:$opt_5)
-            (arg
-              (argcopy)
-              (localid 6:$opt_4))
-            (int 1:0))
-          (store
-            (localid 6:$opt_6)
-            (localid 6:$opt_5)
-            (arg
-              (argmove)
-              (localid 6:$opt_0)))
-          (arrayrefconst
-            (localid 6:$opt_7)
-            (arg
-              (argcopy)
-              (localid 6:$opt_4))
-            (int 1:1))
-          (store
-            (localid 6:$opt_8)
-            (localid 6:$opt_7)
-            (arg
-              (argmove)
-              (localid 6:$opt_2)))
-          (arrayrefconst
-            (localid 7:$opt_11)
-            (arg
-              (argcopy)
-              (localid 6:$opt_4))
-            (int 1:0))
-          (load
-            (localid 7:$opt_12)
-            (localid 7:$opt_11))
-          (arrayrefconst
-            (localid 7:$opt_14)
-            (arg
-              (argmove)
-              (localid 6:$opt_4))
-            (int 1:1))
-          (load
-            (localid 7:$opt_15)
-            (localid 7:$opt_14))
-          (newarrayconst
-            (localid 7:$opt_17)
-            (tupletype
-              (dyn)
-              (dyn))
-            (int 1:2))
-          (arrayrefconst
-            (localid 7:$opt_18)
-            (arg
-              (argcopy)
-              (localid 7:$opt_17))
-            (int 1:0))
-          (store
-            (localid 7:$opt_19)
-            (localid 7:$opt_18)
-            (arg
-              (argcopy)
-              (localid 7:$opt_12)))
-          (arrayrefconst
-            (localid 7:$opt_20)
-            (arg
-              (argmove)
-              (localid 7:$opt_17))
-            (int 1:1))
-          (store
-            (localid 7:$opt_21)
-            (localid 7:$opt_20)
-            (arg
-              (argcopy)
-              (localid 7:$opt_15)))
-          (lookup
-            (localid 7:$opt_22)
-            (localid 7:$opt_12)
-            (methodid 7:+::2::0))
-          (calldyn
+          (call
             (localid 4:$933)
-            (localid 7:$opt_22)
-            (args
-              (arg
-                (argmove)
-                (localid 7:$opt_12))
-              (arg
-                (argmove)
-                (localid 7:$opt_15)))))
+            (functionid 17:tuple::main::0::0)
+            (args)))
         (ret
           (localid 4:$933)))))
   (func
@@ -126,15 +30,28 @@ liveness
             (localid 9:local$106)
             (i32)
             (int 1:3))
+          (call
+            (localid 7:local$5)
+            (functionid 27:_builtin::i32::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$106))))
           (const
             (localid 9:local$107)
             (i32)
             (int 1:5))
+          (call
+            (localid 7:local$6)
+            (functionid 27:_builtin::i32::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$107))))
           (newarrayconst
             (localid 9:local$504)
-            (tupletype
-              (i32)
-              (i32))
+            (array
+              (dyn))
             (int 1:2))
           (arrayrefconst
             (localid 9:local$505)
@@ -146,8 +63,8 @@ liveness
             (localid 9:local$506)
             (localid 9:local$505)
             (arg
-              (argmove)
-              (localid 9:local$106)))
+              (argcopy)
+              (localid 7:local$5)))
           (arrayrefconst
             (localid 9:local$507)
             (arg
@@ -158,30 +75,41 @@ liveness
             (localid 9:local$508)
             (localid 9:local$507)
             (arg
-              (argmove)
-              (localid 9:local$107)))
+              (argcopy)
+              (localid 7:local$6)))
+          (copy
+            (localid 9:local$902)
+            (localid 1:t))
+          (copy
+            (localid 1:t)
+            (localid 9:local$504))
           (arrayrefconst
             (localid 9:local$509)
             (arg
               (argcopy)
-              (localid 9:local$504))
+              (localid 1:t))
             (int 1:0))
           (load
             (localid 9:local$510)
             (localid 9:local$509))
+          (copy
+            (localid 1:a)
+            (localid 9:local$510))
           (arrayrefconst
             (localid 9:local$511)
             (arg
-              (argmove)
-              (localid 9:local$504))
+              (argcopy)
+              (localid 1:t))
             (int 1:1))
           (load
             (localid 9:local$512)
             (localid 9:local$511))
+          (copy
+            (localid 1:b)
+            (localid 9:local$512))
           (newarrayconst
             (localid 9:local$513)
-            (tupletype
-              (dyn)
+            (array
               (dyn))
             (int 1:2))
           (arrayrefconst
@@ -199,7 +127,7 @@ liveness
           (arrayrefconst
             (localid 9:local$516)
             (arg
-              (argmove)
+              (argcopy)
               (localid 9:local$513))
             (int 1:1))
           (store
@@ -208,12 +136,22 @@ liveness
             (arg
               (argcopy)
               (localid 9:local$512)))
-          (add
+          (lookup
+            (localid 9:local$108)
+            (localid 1:a)
+            (methodid 7:+::2::0))
+          (calldyn
             (localid 9:local$109)
-            (localid 9:local$510)
-            (localid 9:local$512)))
-        (ret
-          (localid 9:local$109)))))
+            (localid 9:local$108)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:a))
+              (arg
+                (argcopy)
+                (localid 1:b)))))
+        (error
+          (errormsg 71:return: value type 'dyn' is not a subtype of function return type 'i32')))))
   (func
     (functionid 27:_builtin::i32::create::1::0)
     (params
@@ -254,8 +192,4 @@ liveness
     (methods
       (method
         (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
-  (primitive
-    (ref
-      (i32))
-    (methods)))
+        (functionid 22:_builtin::i32::+::2::0)))))

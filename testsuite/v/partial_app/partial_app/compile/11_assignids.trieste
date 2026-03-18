@@ -472,11 +472,11 @@ assignids
             (args))
           (const
             (localid 9:local$200)
-            (i32)
+            (u64)
             (int 1:5))
           (const
             (localid 9:local$201)
-            (i32)
+            (u64)
             (int 3:105))
           (lookup
             (localid 9:local$639)
@@ -547,7 +547,7 @@ assignids
         (body
           (const
             (localid 9:local$205)
-            (i32)
+            (u64)
             (int 2:10))
           (call
             (localid 8:local$39)
@@ -571,11 +571,11 @@ assignids
             (args))
           (const
             (localid 9:local$206)
-            (i32)
+            (u64)
             (int 2:20))
           (const
             (localid 9:local$207)
-            (i32)
+            (u64)
             (int 3:130))
           (lookup
             (localid 9:local$644)
@@ -646,7 +646,7 @@ assignids
         (body
           (const
             (localid 9:local$211)
-            (i32)
+            (u64)
             (int 2:20))
           (call
             (localid 8:local$41)
@@ -670,11 +670,11 @@ assignids
             (args))
           (const
             (localid 9:local$212)
-            (i32)
+            (u64)
             (int 2:10))
           (const
             (localid 9:local$213)
-            (i32)
+            (u64)
             (int 3:130))
           (lookup
             (localid 9:local$649)
@@ -762,15 +762,15 @@ assignids
             (args))
           (const
             (localid 9:local$217)
-            (i32)
+            (u64)
             (int 2:10))
           (const
             (localid 9:local$218)
-            (i32)
+            (u64)
             (int 2:20))
           (const
             (localid 9:local$219)
-            (i32)
+            (u64)
             (int 3:130))
           (lookup
             (localid 9:local$654)
@@ -1390,6 +1390,69 @@ assignids
                 (localid 3:$p0)))))
         (ret
           (localid 9:local$164)))))
+  (func
+    (functionid 23:_builtin::u64::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$543)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$543)))))
+  (func
+    (functionid 22:_builtin::u64::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$532)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$532)))))
+  (func
+    (functionid 24:_builtin::bool::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$260)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$260)))))
   (class
     (classid 25:partial_app::partial$9::0)
     (fields
@@ -1864,27 +1927,6 @@ assignids
             (localid 5:other)))
         (ret
           (localid 9:local$333)))))
-  (func
-    (functionid 24:_builtin::bool::!=::2::0)
-    (params
-      (param
-        (localid 4:self)
-        (bool))
-      (param
-        (localid 5:other)
-        (bool)))
-    (bool)
-    (vars)
-    (labels
-      (label
-        (labelid 5:start)
-        (body
-          (ne
-            (localid 9:local$260)
-            (localid 4:self)
-            (localid 5:other)))
-        (ret
-          (localid 9:local$260)))))
   (primitive
     (i32)
     (methods
@@ -1897,6 +1939,15 @@ assignids
       (method
         (methodid 7:-::2::0)
         (functionid 22:_builtin::i32::-::2::0))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::u64::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::u64::+::2::0))))
   (primitive
     (ref
       (classid 19:partial_app::box::0))

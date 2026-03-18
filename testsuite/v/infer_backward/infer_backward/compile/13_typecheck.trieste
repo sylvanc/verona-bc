@@ -28,7 +28,7 @@ typecheck
         (body
           (const
             (localid 9:local$114)
-            (i32)
+            (u64)
             (int 2:42))
           (call
             (localid 7:local$8)
@@ -47,9 +47,9 @@ typecheck
             (localid 7:local$9)
             (functionid 32:infer_backward::unwrap_i32::1::0)
             (args
-              (arg
-                (argcopy)
-                (localid 1:w)))))
+              (error
+                (errormsg 112:call: argument type 'infer_backward::wrapper::1' is not a subtype of parameter type 'infer_backward::wrapper::0')
+                (arg)))))
         (ret
           (localid 7:local$9)))))
   (func
@@ -57,8 +57,8 @@ typecheck
     (params
       (param
         (localid 3:val)
-        (i32)))
-    (classid 26:infer_backward::wrapper::0)
+        (u64)))
+    (classid 26:infer_backward::wrapper::1)
     (vars)
     (labels
       (label
@@ -111,6 +111,13 @@ typecheck
       (method
         (methodid 9:val::1::0)
         (functionid 34:infer_backward::wrapper::val::1::0))))
+  (class
+    (classid 26:infer_backward::wrapper::1)
+    (fields
+      (field
+        (fieldid 3:val)
+        (u64)))
+    (methods))
   (func
     (functionid 34:infer_backward::wrapper::get::1::0)
     (params
@@ -186,8 +193,8 @@ typecheck
     (params
       (param
         (localid 3:val)
-        (i32)))
-    (classid 26:infer_backward::wrapper::0)
+        (u64)))
+    (classid 26:infer_backward::wrapper::1)
     (vars)
     (labels
       (label
@@ -195,7 +202,7 @@ typecheck
         (body
           (new
             (localid 7:local$6)
-            (classid 26:infer_backward::wrapper::0)
+            (classid 26:infer_backward::wrapper::1)
             (args
               (arg
                 (argcopy)
@@ -204,6 +211,9 @@ typecheck
           (localid 7:local$6)))))
   (primitive
     (i32)
+    (methods))
+  (primitive
+    (u64)
     (methods))
   (primitive
     (ref

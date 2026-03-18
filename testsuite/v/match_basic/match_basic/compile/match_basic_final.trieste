@@ -42,7 +42,7 @@ liveness
             (localid 8:local$23))
           (const
             (localid 9:local$161)
-            (i32)
+            (u64)
             (int 2:42))
           (new
             (localid 8:local$24)
@@ -129,7 +129,7 @@ liveness
         (body
           (const
             (localid 9:local$166)
-            (i32)
+            (u64)
             (int 2:10))
           (new
             (localid 8:local$27)
@@ -216,7 +216,7 @@ liveness
         (body
           (const
             (localid 9:local$171)
-            (i32)
+            (u64)
             (int 1:5))
           (new
             (localid 8:local$30)
@@ -756,6 +756,65 @@ liveness
         (ret
           (localid 9:local$140)))))
   (func
+    (functionid 22:_builtin::u64::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 9:local$865)
+            (localid 4:self)))
+        (ret
+          (localid 9:local$865)))))
+  (func
+    (functionid 22:_builtin::u64::*::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (mul
+            (localid 9:local$487)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$487)))))
+  (func
+    (functionid 22:_builtin::u64::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$485)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$485)))))
+  (func
     (functionid 23:_builtin::i32::==::2::0)
     (params
       (param
@@ -850,6 +909,18 @@ liveness
       (method
         (methodid 7:*::2::0)
         (functionid 22:_builtin::i32::*::2::0))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 7:!::1::0)
+        (functionid 22:_builtin::u64::!::1::0))
+      (method
+        (methodid 7:*::2::0)
+        (functionid 22:_builtin::u64::*::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::u64::+::2::0))))
   (primitive
     (usize)
     (methods

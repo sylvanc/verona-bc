@@ -65,7 +65,7 @@ memo
           (newarrayconst
             (localid 9:array$513)
             (array
-              (i32))
+              (dyn))
             (int 1:3))
           (arrayrefconst
             (localid 9:local$514)
@@ -375,7 +375,7 @@ memo
       (param
         (localid 4:self)
         (array
-          (i32))))
+          (dyn))))
     (usize)
     (vars)
     (labels
@@ -393,11 +393,11 @@ memo
       (param
         (localid 4:self)
         (array
-          (i32)))
+          (dyn)))
       (param
         (localid 5:index)
         (usize)))
-    (i32)
+    (dyn)
     (vars)
     (labels
       (label
@@ -424,12 +424,12 @@ memo
       (param
         (localid 4:self)
         (array
-          (i32)))
+          (dyn)))
       (param
         (localid 5:index)
         (usize)))
     (ref
-      (i32))
+      (dyn))
     (vars)
     (labels
       (label
@@ -496,7 +496,7 @@ memo
         (functionid 22:_builtin::i32::+::2::0))))
   (primitive
     (array
-      (i32))
+      (dyn))
     (methods
       (method
         (methodid 10:size::1::0)
@@ -504,10 +504,6 @@ memo
       (method
         (methodid 11:apply::2::0)
         (functionid 28:_builtin::array::apply::2::0))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
   (primitive
     (usize)
     (methods
@@ -522,4 +518,8 @@ memo
     (methods
       (method
         (methodid 7:<::2::0)
-        (functionid 23:_builtin::bool::<::2::0)))))
+        (functionid 23:_builtin::bool::<::2::0))))
+  (primitive
+    (ref
+      (dyn))
+    (methods)))

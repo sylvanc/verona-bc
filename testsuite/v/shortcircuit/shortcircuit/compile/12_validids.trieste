@@ -366,7 +366,7 @@ validids
             (localid 9:local$612))
           (const
             (localid 8:local$25)
-            (i32)
+            (u64)
             (int 1:0))
           (copy
             (localid 9:local$613)
@@ -387,7 +387,7 @@ validids
         (body
           (const
             (localid 9:local$155)
-            (i32)
+            (u64)
             (int 3:128))
           (lookup
             (localid 9:local$614)
@@ -430,7 +430,7 @@ validids
         (body
           (const
             (localid 9:local$158)
-            (i32)
+            (u64)
             (int 2:64))
           (lookup
             (localid 9:local$616)
@@ -473,7 +473,7 @@ validids
         (body
           (const
             (localid 9:local$161)
-            (i32)
+            (u64)
             (int 2:32))
           (lookup
             (localid 9:local$618)
@@ -516,7 +516,7 @@ validids
         (body
           (const
             (localid 9:local$164)
-            (i32)
+            (u64)
             (int 2:16))
           (lookup
             (localid 9:local$620)
@@ -559,7 +559,7 @@ validids
         (body
           (const
             (localid 9:local$167)
-            (i32)
+            (u64)
             (int 1:8))
           (lookup
             (localid 9:local$622)
@@ -602,7 +602,7 @@ validids
         (body
           (const
             (localid 9:local$170)
-            (i32)
+            (u64)
             (int 1:4))
           (lookup
             (localid 9:local$624)
@@ -645,7 +645,7 @@ validids
         (body
           (const
             (localid 9:local$173)
-            (i32)
+            (u64)
             (int 1:2))
           (lookup
             (localid 9:local$626)
@@ -688,7 +688,7 @@ validids
         (body
           (const
             (localid 9:local$176)
-            (i32)
+            (u64)
             (int 1:1))
           (lookup
             (localid 9:local$628)
@@ -977,6 +977,27 @@ validids
     (classid 20:_builtin::nomatch::0)
     (fields)
     (methods))
+  (func
+    (functionid 22:_builtin::u64::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$504)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$504)))))
   (class
     (classid 24:shortcircuit::counter::0)
     (fields
@@ -1378,6 +1399,12 @@ validids
       (method
         (methodid 11:apply::1::0)
         (functionid 27:_builtin::bool::apply::1::0))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::u64::+::2::0))))
   (primitive
     (none)
     (methods))
