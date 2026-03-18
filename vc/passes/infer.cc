@@ -250,6 +250,34 @@ namespace vc
   // Forward declaration for use in extract_constraints.
   Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst);
 
+  struct MethodInfo
+  {
+    Node func;
+    NodeMap<Node> subst;
+  };
+
+  MethodInfo resolve_method(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs);
+  Node resolve_method_return_type(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs);
+  MethodInfo resolve_callable_method(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs);
+
   // Returns the merged type, or {} if no change from existing.
   static Node merge_type(
     const Node& existing, const Node& incoming, Node top)
@@ -380,12 +408,316 @@ namespace vc
 
     auto merged = merge_type(it->second.type, type, top);
     if (!merged)
+    {
+      if (call_node && !it->second.call_node)
+      {
+        it->second.call_node = call_node;
+        return true;
+      }
+
       return false;
+    }
 
     it->second.type = merged;
     if (call_node && !it->second.call_node)
       it->second.call_node = call_node;
     return true;
+  }
+
+  using SrcIndex = std::multimap<Location, Node>;
+
+  static bool is_cascade_concrete(const Node& type)
+  {
+    return type && !type->empty() &&
+      !type->front()->in({TypeVar, DefaultInt, DefaultFloat, Union});
+  }
+
+  static void enqueue_if_concrete(
+    const TypeEnv& env,
+    const Location& loc,
+    std::deque<Location>& work,
+    std::set<Location>& in_queue)
+  {
+    auto it = env.find(loc);
+    if (it == env.end() || !is_cascade_concrete(it->second.type))
+      return;
+    if (in_queue.insert(loc).second)
+      work.push_back(loc);
+  }
+
+  static SrcIndex build_src_index(const Node& body)
+  {
+    SrcIndex src_index;
+    for (auto& stmt : *body)
+    {
+      if (stmt->in({Copy, Move}))
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+      }
+      else if (stmt == Lookup)
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+      }
+      else if (stmt->in({ArrayRef, ArrayRefConst, ArrayRefFromEnd, SplatOp}))
+      {
+        src_index.emplace(((stmt / Arg) / Rhs)->location(), stmt);
+      }
+      else if (stmt == Load)
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+      }
+      else if (stmt->in({CallDyn, TryCallDyn}))
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+        for (auto& arg : *(stmt / Args))
+          src_index.emplace((arg / Rhs)->location(), stmt);
+      }
+    }
+    return src_index;
+  }
+
+  static void run_dependency_cascade(
+    TypeEnv& env,
+    const Node& body,
+    Node top,
+    std::map<Location, Node>& lookup_stmts)
+  {
+    auto src_index = build_src_index(body);
+    std::map<Location, Node> const_defs;
+    std::deque<Location> work;
+    std::set<Location> in_queue;
+
+    for (auto& stmt : *body)
+      if (stmt == Const)
+        const_defs[(stmt / LocalId)->location()] = stmt;
+
+    auto refine_local_const =
+      [&](const Location& loc, const Node& expected) -> bool {
+      auto const_it = const_defs.find(loc);
+      if (const_it == const_defs.end())
+        return false;
+
+      auto env_it = env.find(loc);
+      if (env_it == env.end() || !is_default_type(env_it->second.type))
+        return false;
+
+      auto expected_prim = extract_primitive(expected);
+      if (!expected_prim)
+        return false;
+
+      bool compatible =
+        (env_it->second.type->front() == DefaultInt &&
+         expected_prim->in(integer_types)) ||
+        (env_it->second.type->front() == DefaultFloat &&
+         expected_prim->in(float_types));
+      if (!compatible)
+        return false;
+
+      env_it->second.type = primitive_type(expected_prim->type());
+      auto const_stmt = const_it->second;
+      if (const_stmt->size() == 3)
+      {
+        auto old_type = const_stmt->at(1);
+        if (old_type->type() != expected_prim->type())
+          const_stmt->replace(old_type, expected_prim->type());
+      }
+      else
+      {
+        auto dst = const_stmt->front();
+        auto lit = const_stmt->back();
+        const_stmt->erase(const_stmt->begin(), const_stmt->end());
+        const_stmt << dst << expected_prim->type() << lit;
+      }
+
+      return true;
+    };
+
+    for (auto& [loc, info] : env)
+      if (is_cascade_concrete(info.type))
+        enqueue_if_concrete(env, loc, work, in_queue);
+
+    while (!work.empty())
+    {
+      auto loc = work.front();
+      work.pop_front();
+      in_queue.erase(loc);
+
+      auto [begin, end] = src_index.equal_range(loc);
+      for (auto it = begin; it != end; ++it)
+      {
+        auto stmt = it->second;
+
+        if (stmt->in({Copy, Move}))
+        {
+          auto src_loc = (stmt / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          auto dst_loc = (stmt / LocalId)->location();
+          if (merge_env(
+                env, dst_loc, src_it->second.type, top, src_it->second.call_node))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt == Lookup)
+        {
+          auto src_loc = (stmt / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end() || is_default_type(src_it->second.type))
+            continue;
+
+          auto hand = (stmt / Lhs)->type();
+          auto method_ident = stmt / Ident;
+          auto method_ta = stmt / TypeArgs;
+          auto arity = from_chars_sep_v<size_t>(stmt / Int);
+          auto ret = resolve_method_return_type(
+            top, src_it->second.type, method_ident, hand, arity, method_ta);
+          if (!ret)
+            continue;
+
+          auto dst_loc = (stmt / LocalId)->location();
+          if (merge_env(env, dst_loc, ret, top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt->in({ArrayRef, ArrayRefConst}))
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = ((stmt / Arg) / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          if (stmt == ArrayRefConst)
+          {
+            auto index = from_chars_sep_v<size_t>(stmt / Rhs);
+            auto inner = src_it->second.type->front();
+            if (inner == TupleType && index < inner->size())
+            {
+              if (merge_env(
+                    env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
+                enqueue_if_concrete(env, dst_loc, work, in_queue);
+              continue;
+            }
+          }
+
+          if (merge_env(env, dst_loc, ref_type(clone(src_it->second.type)), top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt == ArrayRefFromEnd)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = ((stmt / Arg) / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          auto offset = from_chars_sep_v<size_t>(stmt / Rhs);
+          auto inner = src_it->second.type->front();
+          if (inner == TupleType && offset > 0 && offset <= inner->size())
+          {
+            auto index = inner->size() - offset;
+            if (merge_env(
+                  env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+          else if (
+            merge_env(env, dst_loc, ref_type(clone(src_it->second.type)), top))
+          {
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+        }
+        else if (stmt == Load)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_it = env.find((stmt / Rhs)->location());
+          if (src_it == env.end())
+            continue;
+
+          auto inner = extract_ref_inner(src_it->second.type);
+          if (inner && merge_env(env, dst_loc, inner, top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt == SplatOp)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = ((stmt / Arg) / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          auto inner = src_it->second.type->front();
+          if (inner != TupleType)
+            continue;
+
+          auto before = from_chars_sep_v<size_t>(stmt / Lhs);
+          auto after = from_chars_sep_v<size_t>(stmt / Rhs);
+          if (before + after > inner->size())
+            continue;
+
+          auto remaining = inner->size() - before - after;
+          Node splat_type;
+          if (remaining == 0)
+            splat_type = primitive_type(None);
+          else if (remaining == 1)
+            splat_type = Type << clone(inner->at(before));
+          else
+          {
+            Node tup = TupleType;
+            for (size_t i = before; i < before + remaining; i++)
+              tup << clone(inner->at(i));
+            splat_type = Type << tup;
+          }
+
+          if (merge_env(env, dst_loc, splat_type, top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt->in({CallDyn, TryCallDyn}))
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = (stmt / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it != env.end())
+          {
+            auto call_node = is_default_type(src_it->second.type) ? stmt : Node{};
+            if (merge_env(env, dst_loc, src_it->second.type, top, call_node))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+
+          auto lookup_it = lookup_stmts.find(src_loc);
+          if (lookup_it == lookup_stmts.end())
+            continue;
+
+          auto lookup_node = lookup_it->second;
+          auto recv_loc = (lookup_node / Rhs)->location();
+          auto recv_it = env.find(recv_loc);
+          if (recv_it == env.end() || is_default_type(recv_it->second.type))
+            continue;
+
+          auto hand = (lookup_node / Lhs)->type();
+          auto method_ident = lookup_node / Ident;
+          auto method_ta = lookup_node / TypeArgs;
+          auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+          auto info = resolve_callable_method(
+            top, recv_it->second.type, method_ident, hand, arity, method_ta);
+          if (!info.func)
+            continue;
+
+          auto params = info.func / Params;
+          auto args = stmt / Args;
+          for (size_t i = 0; i < params->size() && i < args->size(); i++)
+          {
+            auto expected = apply_subst(top, params->at(i) / Type, info.subst);
+            if (!expected || expected->front() == TypeVar)
+              continue;
+
+            auto arg_loc = (args->at(i) / Rhs)->location();
+            snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+            if (merge_env(env, arg_loc, expected, top))
+              enqueue_if_concrete(env, arg_loc, work, in_queue);
+          }
+        }
+      }
+    }
   }
 
   // ===== Generic type inference =====
@@ -558,12 +890,6 @@ namespace vc
 
   // ===== Method resolution =====
 
-  struct MethodInfo
-  {
-    Node func;
-    NodeMap<Node> subst;
-  };
-
   MethodInfo resolve_method(
     Node top,
     const Node& receiver_type,
@@ -578,10 +904,24 @@ namespace vc
     if (inner != TypeName)
       return {};
     auto class_def = find_def(top, inner);
+    Node subst_source = inner;
+    if ((!class_def || class_def != ClassDef) && inner->size() > 1)
+    {
+      Node base = TypeName;
+      for (size_t i = 0; i + 1 < inner->size(); i++)
+        base << clone(inner->at(i));
+
+      auto base_def = find_def(top, base);
+      if (base_def && base_def == ClassDef)
+      {
+        class_def = base_def;
+        subst_source = base;
+      }
+    }
     if (!class_def || class_def != ClassDef)
       return {};
 
-    auto subst = build_class_subst(class_def, inner);
+    auto subst = build_class_subst(class_def, subst_source);
     auto method_name = method_ident->location().view();
 
     for (auto& child : *(class_def / ClassBody))
@@ -645,6 +985,22 @@ namespace vc
       }
     }
     return ret;
+  }
+
+  MethodInfo resolve_callable_method(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs)
+  {
+    auto info = resolve_method(
+      top, receiver_type, method_ident, hand, arity, method_typeargs);
+    if (!info.func && hand == Rhs)
+      info = resolve_method(
+        top, receiver_type, method_ident, Lhs, arity, method_typeargs);
+    return info;
   }
 
   void propagate_shape_to_lambda(
@@ -1127,7 +1483,13 @@ namespace vc
     std::vector<Location> element_value_locs;
   };
 
-  static bool process_label_body(
+  struct LabelChanges
+  {
+    bool forward = false;
+    bool backward = false;
+  };
+
+  static LabelChanges process_label_body(
     const Node& body,
     TypeEnv& env,
     TypeEnv& bwd,
@@ -1137,35 +1499,99 @@ namespace vc
     std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
     std::map<Location, TupleTracking>& tuple_locals)
   {
-    bool any_changed = false;
+    LabelChanges changes;
+    std::map<Location, Node> const_defs;
+
+    for (auto& stmt : *body)
+      if (stmt == Const)
+        const_defs[(stmt / LocalId)->location()] = stmt;
 
     auto merge = [&](const Location& loc, const Node& type,
                      Node call_node = {}) -> bool {
       bool c = merge_env(env, loc, type, top, call_node);
-      if (c) any_changed = true;
+      if (c)
+        changes.forward = true;
       return c;
     };
 
-    auto merge_bwd = [&](const Location& loc, const Node& type) -> bool {
-      bool c = merge_env(env, loc, type, top);
-      if (c)
+    auto refine_local_const =
+      [&](const Location& loc, const Node& expected) -> bool {
+      auto const_it = const_defs.find(loc);
+      if (const_it == const_defs.end())
+        return false;
+
+      auto env_it = env.find(loc);
+      if (env_it == env.end() || !is_default_type(env_it->second.type))
+        return false;
+
+      auto expected_prim = extract_primitive(expected);
+      if (!expected_prim)
+        return false;
+
+      bool compatible =
+        (env_it->second.type->front() == DefaultInt &&
+         expected_prim->in(integer_types)) ||
+        (env_it->second.type->front() == DefaultFloat &&
+         expected_prim->in(float_types));
+      if (!compatible)
+        return false;
+
+      auto refined = primitive_type(expected_prim->type());
+      env_it->second.type = refined;
+      changes.forward = true;
+
+      auto const_stmt = const_it->second;
+      if (const_stmt->size() == 3)
       {
-        any_changed = true;
-        // Record backward constraint (only concrete, non-union types).
-        if (type && !type->empty() &&
-            !type->front()->in({TypeVar, DefaultInt, DefaultFloat, Union}))
+        auto old_type = const_stmt->at(1);
+        if (old_type->type() != expected_prim->type())
+          const_stmt->replace(old_type, expected_prim->type());
+      }
+      else
+      {
+        auto dst = const_stmt->front();
+        auto lit = const_stmt->back();
+        const_stmt->erase(const_stmt->begin(), const_stmt->end());
+        const_stmt << dst << expected_prim->type() << lit;
+      }
+
+      return true;
+    };
+
+    auto merge_bwd = [&](const Location& loc, const Node& type) -> bool {
+      bool changed = false;
+
+      if (merge_env(env, loc, type, top))
+      {
+        changes.forward = true;
+        changed = true;
+      }
+
+      // Record backward constraint (only concrete, non-union types).
+      if (
+        type && !type->empty() &&
+        !type->front()->in({TypeVar, DefaultInt, DefaultFloat, Union}))
+      {
+        auto bit = bwd.find(loc);
+        if (bit == bwd.end())
         {
-          auto bit = bwd.find(loc);
-          if (bit == bwd.end())
-            bwd[loc] = {clone(type), false, {}};
-          else
+          bwd[loc] = {clone(type), false, {}};
+          changes.backward = true;
+          changed = true;
+        }
+        else
+        {
+          auto m = merge_type(bit->second.type, type, top);
+          if (m)
           {
-            auto m = merge_type(bit->second.type, type, top);
-            if (m) bit->second.type = m;
+            bit->second.type = m;
+            changes.backward = true;
+            changed = true;
           }
         }
       }
-      return c;
+
+      return changed;
     };
 
     for (auto& stmt : *body)
@@ -1182,6 +1608,23 @@ namespace vc
 
         auto type = type_tok->in({DefaultInt, DefaultFloat})
           ? (Type << type_tok->type()) : primitive_type(type_tok->type());
+
+        if (is_default_type(type))
+        {
+          auto it = env.find(dst->location());
+          if (it != env.end() && !is_default_type(it->second.type))
+          {
+            auto prim = extract_primitive(it->second.type);
+            if (
+              prim &&
+              ((type->front() == DefaultInt && prim->in(integer_types)) ||
+               (type->front() == DefaultFloat && prim->in(float_types))))
+            {
+              type = clone(it->second.type);
+            }
+          }
+        }
+
         merge(dst->location(), type);
       }
       // ----- ConstStr -----
@@ -1220,6 +1663,8 @@ namespace vc
         dst_it = env.find(dst_loc);
         if (dst_it != env.end())
         {
+          if (dst_it->second.is_fixed)
+            snmalloc::UNUSED(refine_local_const(src_loc, dst_it->second.type));
           if (merge_bwd(src_loc, dst_it->second.type))
             propagate_call_node(env, src_loc, top, lookup_stmts);
         }
@@ -1358,13 +1803,59 @@ namespace vc
         auto arg_loc = ((stmt / Arg) / Rhs)->location();
         auto src_it = env.find(arg_loc);
         if (src_it != env.end())
+        {
+          auto inner = src_it->second.type->front();
+          if (inner == TupleType)
+          {
+            auto offset = from_chars_sep_v<size_t>(stmt / Rhs);
+            if (offset > 0 && offset <= inner->size())
+            {
+              auto index = inner->size() - offset;
+              merge(
+                (stmt / LocalId)->location(),
+                ref_type(Type << clone(inner->at(index))));
+              continue;
+            }
+          }
+
           merge(
             (stmt / LocalId)->location(),
             ref_type(clone(src_it->second.type)));
+        }
       }
       // ----- SplatOp -----
       else if (stmt == SplatOp)
       {
+        auto arg_loc = ((stmt / Arg) / Rhs)->location();
+        auto src_it = env.find(arg_loc);
+        if (src_it != env.end() && src_it->second.type->front() == TupleType)
+        {
+          auto inner = src_it->second.type->front();
+          auto before = from_chars_sep_v<size_t>(stmt / Lhs);
+          auto after = from_chars_sep_v<size_t>(stmt / Rhs);
+          if (before + after <= inner->size())
+          {
+            auto remaining = inner->size() - before - after;
+            if (remaining == 0)
+            {
+              merge((stmt / LocalId)->location(), primitive_type(None));
+            }
+            else if (remaining == 1)
+            {
+              merge(
+                (stmt / LocalId)->location(), Type << clone(inner->at(before)));
+            }
+            else
+            {
+              Node tup = TupleType;
+              for (size_t i = before; i < before + remaining; i++)
+                tup << clone(inner->at(i));
+              merge((stmt / LocalId)->location(), Type << tup);
+            }
+            continue;
+          }
+        }
+
         merge((stmt / LocalId)->location(), make_type());
       }
       // ----- NewArray / NewArrayConst -----
@@ -1420,6 +1911,7 @@ namespace vc
                 auto ft = apply_subst(top, f / Type, subst);
                 if (ft && !contains_typevar(ft))
                 {
+                  snmalloc::UNUSED(refine_local_const(arg_loc, ft));
                   if (merge_bwd(arg_loc, ft))
                     propagate_call_node(env, arg_loc, top, lookup_stmts);
                 }
@@ -1535,6 +2027,7 @@ namespace vc
           if (expected && expected->front() != TypeVar)
           {
             auto arg_loc = (args->at(i) / Rhs)->location();
+            snmalloc::UNUSED(refine_local_const(arg_loc, expected));
             if (merge_bwd(arg_loc, expected))
               propagate_call_node(env, arg_loc, top, lookup_stmts);
           }
@@ -1612,13 +2105,12 @@ namespace vc
           auto lookup_node = lookup_it->second;
           auto recv_it = env.find((lookup_node / Rhs)->location());
           if (recv_it != env.end() && !is_default_type(recv_it->second.type))
-          if (recv_it != env.end())
           {
             auto hand = (lookup_node / Lhs)->type();
             auto method_ident = lookup_node / Ident;
             auto method_ta = lookup_node / TypeArgs;
             auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
-            auto info = resolve_method(
+            auto info = resolve_callable_method(
               top, recv_it->second.type, method_ident, hand, arity,
               method_ta);
 
@@ -1634,6 +2126,7 @@ namespace vc
                 if (expected && expected->front() != TypeVar)
                 {
                   auto arg_loc = (args->at(i) / Rhs)->location();
+                  snmalloc::UNUSED(refine_local_const(arg_loc, expected));
                   if (merge_bwd(arg_loc, expected))
                     propagate_call_node(env, arg_loc, top, lookup_stmts);
                 }
@@ -1691,6 +2184,7 @@ namespace vc
               auto fa = ffi_args->begin();
               while (fp != ffi_params->end() && fa != ffi_args->end())
               {
+                snmalloc::UNUSED(refine_local_const((*fa)->location(), clone(*fp)));
                 if (merge_bwd((*fa)->location(), clone(*fp)))
                   propagate_call_node(
                     env, (*fa)->location(), top, lookup_stmts);
@@ -1856,7 +2350,7 @@ namespace vc
       }
     }
 
-    return any_changed;
+    return changes;
   }
 
   // ===== Fixpoint algorithm =====
@@ -1983,6 +2477,19 @@ namespace vc
         }
       }
 
+      // Merge backward envs for this label and its successors into entry.
+      // Including bwd_envs[i] lets same-label requeueing expose new local
+      // backward facts to earlier statements on the next iteration.
+      for (auto& [loc, info] : bwd_envs[i])
+      {
+        auto eit = entry.find(loc);
+        if (eit == entry.end())
+          continue;
+        auto m = merge_type(eit->second.type, info.type, top);
+        if (m)
+          eit->second.type = m;
+      }
+
       // Merge backward envs from successors into entry.
       for (auto s : succ[i])
       {
@@ -2006,9 +2513,10 @@ namespace vc
       std::map<Location, TupleTracking> tuple_locals;
 
       // Process body.
-      bool label_changed = process_label_body(
+      auto label_changes = process_label_body(
         labels->at(i) / Body, env, bwd_envs[i], top, lookup_stmts,
         typevar_aliases, ref_to_tuple, tuple_locals);
+      bool label_changed = label_changes.forward;
 
       // Return terminator: backward merge.
       auto term = labels->at(i) / Return;
@@ -2080,8 +2588,15 @@ namespace vc
           worklist.insert(s);
       }
 
+      // Body-local backward refinement can improve earlier statements in the
+      // same label (for example, a later comparison refining an earlier
+      // CallDyn result), so re-run this label until its local backward facts
+      // stabilize.
+      if (label_changes.backward)
+        worklist.insert(i);
+
       // Propagate backward constraints from successors.
-      bool bwd_changed = false;
+      bool bwd_changed = label_changes.backward;
       for (auto s : succ[i])
       {
         for (auto& [loc, info] : bwd_envs[s])
@@ -2111,6 +2626,10 @@ namespace vc
           worklist.insert(p);
       }
     }
+
+    for (size_t i = 0; i < n; i++)
+      run_dependency_cascade(
+        exit_envs[i], labels->at(i) / Body, top, lookup_stmts);
 
     // ===== Finalization =====
 
