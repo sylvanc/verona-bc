@@ -1,6 +1,10 @@
 #include "../lang.h"
 #include "../subtype.h"
 
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
+
 namespace vc
 {
   // ===== Dispatch tables =====
@@ -268,6 +272,234 @@ namespace vc
     return stmt / SymbolId;
   }
 
+  using InferClock = std::chrono::steady_clock;
+
+  struct InferProfileStats
+  {
+    std::string function_name;
+    size_t labels = 0;
+    size_t worklist_iterations = 0;
+    size_t labels_processed = 0;
+    size_t labels_skipped = 0;
+    size_t entry_bindings = 0;
+    size_t process_label_body_calls = 0;
+    size_t dependency_cascade_calls = 0;
+    size_t entry_update_calls = 0;
+    size_t resolve_method_calls = 0;
+    size_t resolve_method_cache_hits = 0;
+    size_t resolve_method_cache_misses = 0;
+    size_t resolve_method_scans = 0;
+    size_t merge_type_calls = 0;
+    size_t merge_env_calls = 0;
+    size_t merge_type_existing_typevar = 0;
+    size_t merge_type_both_typevar = 0;
+    size_t merge_type_incoming_typevar = 0;
+    size_t merge_type_pointer_equal = 0;
+    size_t merge_type_structural_equal = 0;
+    size_t merge_type_default_promote = 0;
+    size_t merge_type_default_keep = 0;
+    size_t merge_type_invariant_equal = 0;
+    size_t merge_type_subtype_keep = 0;
+    size_t merge_type_subtype_widen = 0;
+    size_t merge_type_union_build = 0;
+    size_t same_type_tree_calls = 0;
+    size_t same_type_tree_equal = 0;
+    size_t same_type_env_calls = 0;
+    size_t same_type_env_equal = 0;
+    size_t navigate_call_calls = 0;
+    size_t apply_subst_calls = 0;
+    size_t infer_typeargs_calls = 0;
+    size_t push_arg_types_to_params_calls = 0;
+    size_t propagate_call_node_calls = 0;
+    size_t stmt_const_like = 0;
+    size_t stmt_copy_like = 0;
+    size_t stmt_ref_ops = 0;
+    size_t stmt_tuple_ops = 0;
+    size_t stmt_new_ops = 0;
+    size_t stmt_call_ops = 0;
+    size_t stmt_ffi_when_ops = 0;
+    size_t stmt_typetest_ops = 0;
+    size_t tuple_finalize_ops = 0;
+    size_t requeue_succ = 0;
+    size_t requeue_self_bwd = 0;
+    size_t requeue_pred_bwd = 0;
+    size_t entry_pred_merge_count = 0;
+    size_t entry_self_bwd_merge_count = 0;
+    size_t entry_succ_bwd_merge_count = 0;
+    size_t entry_env_unchanged = 0;
+    size_t entry_env_changed = 0;
+    InferClock::duration process_function_time{};
+    InferClock::duration entry_build_time{};
+    InferClock::duration entry_pred_time{};
+    InferClock::duration entry_self_bwd_time{};
+    InferClock::duration entry_succ_bwd_time{};
+    InferClock::duration process_label_body_time{};
+    InferClock::duration resolve_method_time{};
+    InferClock::duration dependency_cascade_time{};
+    InferClock::duration entry_update_time{};
+    InferClock::duration same_type_tree_time{};
+    InferClock::duration same_type_env_time{};
+    InferClock::duration navigate_call_time{};
+    InferClock::duration apply_subst_time{};
+    InferClock::duration infer_typeargs_time{};
+    InferClock::duration push_arg_types_to_params_time{};
+    InferClock::duration propagate_call_node_time{};
+    InferClock::duration stmt_const_like_time{};
+    InferClock::duration stmt_copy_like_time{};
+    InferClock::duration stmt_ref_ops_time{};
+    InferClock::duration stmt_tuple_ops_time{};
+    InferClock::duration stmt_new_ops_time{};
+    InferClock::duration stmt_call_ops_time{};
+    InferClock::duration stmt_ffi_when_ops_time{};
+    InferClock::duration stmt_typetest_ops_time{};
+    InferClock::duration tuple_finalize_time{};
+  };
+
+  static InferProfileStats* active_infer_profile = nullptr;
+  static size_t* active_infer_transfer_epoch = nullptr;
+
+  static bool infer_profile_enabled()
+  {
+    static const bool enabled = (std::getenv("VC_INFER_PROFILE") != nullptr);
+    return enabled;
+  }
+
+  static double infer_duration_ms(const InferClock::duration& duration)
+  {
+    return std::chrono::duration<double, std::milli>(duration).count();
+  }
+
+  struct InferScopedTimer
+  {
+    InferClock::duration* slot;
+    InferClock::time_point start;
+
+    explicit InferScopedTimer(InferClock::duration* slot_) : slot(slot_)
+    {
+      if (slot != nullptr)
+        start = InferClock::now();
+    }
+
+    ~InferScopedTimer()
+    {
+      if (slot != nullptr)
+        *slot += InferClock::now() - start;
+    }
+  };
+
+  static std::string infer_function_name(const Node& func)
+  {
+    Node ident = func / Ident;
+    if (ident)
+      return std::string(ident->location().view());
+    return "<function>";
+  }
+
+  static void dump_infer_profile(const InferProfileStats& stats)
+  {
+    std::cerr << "infer-profile"
+              << "\tfunc=" << stats.function_name
+              << "\tlabels=" << stats.labels
+              << "\twl_iters=" << stats.worklist_iterations
+              << "\tlabel_runs=" << stats.labels_processed
+              << "\tlabel_skips=" << stats.labels_skipped
+              << "\tentry_bindings=" << stats.entry_bindings
+              << "\tmerge_type=" << stats.merge_type_calls
+              << "\tmerge_env=" << stats.merge_env_calls
+              << "\tmt_exist_tv=" << stats.merge_type_existing_typevar
+              << "\tmt_both_tv=" << stats.merge_type_both_typevar
+              << "\tmt_in_tv=" << stats.merge_type_incoming_typevar
+              << "\tmt_ptr_eq=" << stats.merge_type_pointer_equal
+              << "\tmt_struct_eq=" << stats.merge_type_structural_equal
+              << "\tmt_def_promote=" << stats.merge_type_default_promote
+              << "\tmt_def_keep=" << stats.merge_type_default_keep
+              << "\tmt_invariant=" << stats.merge_type_invariant_equal
+              << "\tmt_sub_keep=" << stats.merge_type_subtype_keep
+              << "\tmt_sub_widen=" << stats.merge_type_subtype_widen
+              << "\tmt_union=" << stats.merge_type_union_build
+              << "\tst_tree=" << stats.same_type_tree_calls
+              << "\tst_tree_eq=" << stats.same_type_tree_equal
+              << "\tst_env=" << stats.same_type_env_calls
+              << "\tst_env_eq=" << stats.same_type_env_equal
+              << "\tresolve=" << stats.resolve_method_calls
+              << "\tresolve_hit=" << stats.resolve_method_cache_hits
+              << "\tresolve_miss=" << stats.resolve_method_cache_misses
+              << "\tresolve_scan=" << stats.resolve_method_scans
+              << "\tnavigate_call=" << stats.navigate_call_calls
+              << "\tapply_subst=" << stats.apply_subst_calls
+              << "\tinfer_typeargs=" << stats.infer_typeargs_calls
+              << "\tpush_arg_types=" << stats.push_arg_types_to_params_calls
+              << "\tprop_call_node=" << stats.propagate_call_node_calls
+              << "\tbody_calls=" << stats.process_label_body_calls
+              << "\tcascade_calls=" << stats.dependency_cascade_calls
+              << "\tentry_updates=" << stats.entry_update_calls
+              << "\tstmt_const=" << stats.stmt_const_like
+              << "\tstmt_copy=" << stats.stmt_copy_like
+              << "\tstmt_ref=" << stats.stmt_ref_ops
+              << "\tstmt_tuple=" << stats.stmt_tuple_ops
+              << "\tstmt_new=" << stats.stmt_new_ops
+              << "\tstmt_call=" << stats.stmt_call_ops
+              << "\tstmt_ffi_when=" << stats.stmt_ffi_when_ops
+              << "\tstmt_typetest=" << stats.stmt_typetest_ops
+              << "\ttuple_finalize=" << stats.tuple_finalize_ops
+              << "\treq_succ=" << stats.requeue_succ
+              << "\treq_self_bwd=" << stats.requeue_self_bwd
+              << "\treq_pred_bwd=" << stats.requeue_pred_bwd
+              << "\tentry_pred_merges=" << stats.entry_pred_merge_count
+              << "\tentry_self_bwd_merges=" << stats.entry_self_bwd_merge_count
+              << "\tentry_succ_bwd_merges=" << stats.entry_succ_bwd_merge_count
+              << "\tentry_same=" << stats.entry_env_unchanged
+              << "\tentry_diff=" << stats.entry_env_changed
+              << "\ttotal_ms=" << infer_duration_ms(stats.process_function_time)
+              << "\tentry_ms=" << infer_duration_ms(stats.entry_build_time)
+              << "\tentry_pred_ms="
+              << infer_duration_ms(stats.entry_pred_time)
+              << "\tentry_self_bwd_ms="
+              << infer_duration_ms(stats.entry_self_bwd_time)
+              << "\tentry_succ_bwd_ms="
+              << infer_duration_ms(stats.entry_succ_bwd_time)
+              << "\tentry_update_ms="
+              << infer_duration_ms(stats.entry_update_time)
+              << "\tst_tree_ms="
+              << infer_duration_ms(stats.same_type_tree_time)
+              << "\tst_env_ms="
+              << infer_duration_ms(stats.same_type_env_time)
+              << "\tbody_ms="
+              << infer_duration_ms(stats.process_label_body_time)
+              << "\tconst_ms="
+              << infer_duration_ms(stats.stmt_const_like_time)
+              << "\tcopy_ms="
+              << infer_duration_ms(stats.stmt_copy_like_time)
+              << "\tref_ms="
+              << infer_duration_ms(stats.stmt_ref_ops_time)
+              << "\ttuple_ms="
+              << infer_duration_ms(stats.stmt_tuple_ops_time)
+              << "\tnew_ms="
+              << infer_duration_ms(stats.stmt_new_ops_time)
+              << "\tcall_ms="
+              << infer_duration_ms(stats.stmt_call_ops_time)
+              << "\tffi_when_ms="
+              << infer_duration_ms(stats.stmt_ffi_when_ops_time)
+              << "\ttypetest_ms="
+              << infer_duration_ms(stats.stmt_typetest_ops_time)
+              << "\ttuple_finalize_ms="
+              << infer_duration_ms(stats.tuple_finalize_time)
+              << "\tresolve_ms="
+              << infer_duration_ms(stats.resolve_method_time)
+              << "\tnavigate_call_ms="
+              << infer_duration_ms(stats.navigate_call_time)
+              << "\tapply_subst_ms="
+              << infer_duration_ms(stats.apply_subst_time)
+              << "\tinfer_typeargs_ms="
+              << infer_duration_ms(stats.infer_typeargs_time)
+              << "\tpush_arg_types_ms="
+              << infer_duration_ms(stats.push_arg_types_to_params_time)
+              << "\tprop_call_node_ms="
+              << infer_duration_ms(stats.propagate_call_node_time)
+              << "\tcascade_ms="
+              << infer_duration_ms(stats.dependency_cascade_time) << '\n';
+  }
+
   // ===== Type environment =====
 
   struct LocalTypeInfo
@@ -288,6 +520,55 @@ namespace vc
   {
     Node func;
     NodeMap<Node> subst;
+  };
+
+  struct MethodOwner
+  {
+    Node class_def;
+    Node subst_source;
+    std::string key;
+  };
+
+  struct MethodLookupKey
+  {
+    std::string owner_key;
+    std::string method_name;
+    std::string hand_name;
+    size_t arity;
+
+    auto operator<=>(const MethodLookupKey&) const = default;
+  };
+
+  using MethodLookupCache = std::map<MethodLookupKey, Node>;
+
+  static MethodLookupCache* active_method_cache = nullptr;
+
+  struct InferProcessScope
+  {
+    InferProfileStats* current_profile;
+    InferProfileStats* prev_profile;
+    MethodLookupCache* prev_method_cache;
+    size_t* prev_transfer_epoch;
+
+    InferProcessScope(
+      InferProfileStats* current_profile_,
+      InferProfileStats* prev_profile_,
+      MethodLookupCache* prev_method_cache_,
+      size_t* prev_transfer_epoch_)
+    : current_profile(current_profile_),
+      prev_profile(prev_profile_),
+      prev_method_cache(prev_method_cache_),
+      prev_transfer_epoch(prev_transfer_epoch_)
+    {}
+
+    ~InferProcessScope()
+    {
+      active_method_cache = prev_method_cache;
+      active_infer_transfer_epoch = prev_transfer_epoch;
+      if (current_profile != nullptr)
+        dump_infer_profile(*current_profile);
+      active_infer_profile = prev_profile;
+    }
   };
 
   MethodInfo resolve_method(
@@ -312,22 +593,264 @@ namespace vc
     size_t arity,
     const Node& method_typeargs);
 
+  static std::string typename_path_key(const Node& type_name)
+  {
+    if (type_name != TypeName)
+      return {};
+
+    std::string key;
+    for (auto& elem : *type_name)
+    {
+      if (!key.empty())
+        key += "::";
+      key += std::string((elem / Ident)->location().view());
+    }
+    return key;
+  }
+
+  static MethodOwner resolve_method_owner(Node top, const Node& receiver_type)
+  {
+    if (receiver_type != Type)
+      return {};
+
+    auto inner = receiver_type->front();
+    if (inner != TypeName)
+      return {};
+
+    auto class_def = find_def(top, inner);
+    Node subst_source = inner;
+    if ((!class_def || class_def != ClassDef) && inner->size() > 1)
+    {
+      Node base = TypeName;
+      for (size_t i = 0; i + 1 < inner->size(); i++)
+        base << clone(inner->at(i));
+
+      auto base_def = find_def(top, base);
+      if (base_def && base_def == ClassDef)
+      {
+        class_def = base_def;
+        subst_source = base;
+      }
+    }
+
+    if (!class_def || class_def != ClassDef)
+      return {};
+
+    return {class_def, subst_source, typename_path_key(subst_source)};
+  }
+
+  static Node resolve_class_method(
+    const MethodOwner& owner, std::string_view method_name, Token hand,
+    size_t arity)
+  {
+    if (!owner.class_def)
+      return {};
+
+    MethodLookupKey key{
+      owner.key, std::string(method_name), std::string(hand.str()), arity};
+
+    if (active_method_cache != nullptr)
+    {
+      auto it = active_method_cache->find(key);
+      if (it != active_method_cache->end())
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->resolve_method_cache_hits++;
+        return it->second;
+      }
+    }
+
+    if (active_infer_profile != nullptr)
+    {
+      active_infer_profile->resolve_method_cache_misses++;
+      active_infer_profile->resolve_method_scans++;
+    }
+
+    Node func;
+    for (auto& child : *(owner.class_def / ClassBody))
+    {
+      if (child != Function)
+        continue;
+
+      auto child_name = lookup_method_name(child);
+      if (!child_name || child_name->location().view() != method_name)
+        continue;
+      if ((child / Lhs)->type() != hand)
+        continue;
+      if ((child / Params)->size() != arity)
+        continue;
+
+      func = child;
+      break;
+    }
+
+    if (active_method_cache != nullptr)
+      (*active_method_cache)[std::move(key)] = func;
+
+    return func;
+  }
+
+  static bool same_type_tree(const Node& left, const Node& right)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_tree_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->same_type_tree_time
+        : nullptr);
+
+    if (left == right)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->same_type_tree_equal++;
+      return true;
+    }
+    if (!left || !right)
+      return false;
+    if (left->type() != right->type())
+      return false;
+    if (left->size() != right->size())
+      return false;
+
+    if (left == Ident)
+      return left->location().view() == right->location().view();
+
+    for (size_t i = 0; i < left->size(); i++)
+      if (!same_type_tree(left->at(i), right->at(i)))
+        return false;
+
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_tree_equal++;
+    return true;
+  }
+
+  static bool same_type_env(const TypeEnv& left, const TypeEnv& right)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_env_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->same_type_env_time
+        : nullptr);
+
+    if (left.size() != right.size())
+      return false;
+
+    auto lit = left.begin();
+    auto rit = right.begin();
+    while (lit != left.end())
+    {
+      if (lit->first != rit->first)
+        return false;
+      if (lit->second.is_fixed != rit->second.is_fixed)
+        return false;
+      if (lit->second.call_node != rit->second.call_node)
+        return false;
+      if (!same_type_tree(lit->second.type, rit->second.type))
+        return false;
+      ++lit;
+      ++rit;
+    }
+
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_env_equal++;
+    return true;
+  }
+
+  static void note_infer_transfer_change()
+  {
+    if (active_infer_transfer_epoch != nullptr)
+      (*active_infer_transfer_epoch)++;
+  }
+
+  static bool replace_if_changed(
+    const Node& owner, const Node& old_child, const Node& new_child)
+  {
+    if (same_type_tree(old_child, new_child))
+      return false;
+    owner->replace(old_child, new_child);
+    note_infer_transfer_change();
+    return true;
+  }
+
+  static bool upsert_lookup_stmt(
+    std::map<Location, Node>& lookup_stmts, const Location& loc, const Node& stmt)
+  {
+    auto [it, inserted] = lookup_stmts.insert({loc, stmt});
+    if (inserted)
+    {
+      note_infer_transfer_change();
+      return true;
+    }
+    if (it->second != stmt)
+    {
+      it->second = stmt;
+      note_infer_transfer_change();
+      return true;
+    }
+    return false;
+  }
+
+  static bool upsert_ref_to_tuple(
+    std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
+    const Location& loc,
+    const std::pair<Location, size_t>& value)
+  {
+    auto [it, inserted] = ref_to_tuple.insert({loc, value});
+    if (inserted)
+    {
+      note_infer_transfer_change();
+      return true;
+    }
+    if (it->second != value)
+    {
+      it->second = value;
+      note_infer_transfer_change();
+      return true;
+    }
+    return false;
+  }
+
   // Returns the merged type, or {} if no change from existing.
   static Node merge_type(
     const Node& existing, const Node& incoming, Node top)
   {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->merge_type_calls++;
+
     if (!existing || existing->empty() || existing->front() == TypeVar)
     {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_existing_typevar++;
+
       // Both TypeVar → no change.
       if (incoming && !incoming->empty() && incoming->front() == TypeVar)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->merge_type_both_typevar++;
         return {};
+      }
       return clone(incoming);
     }
     if (!incoming || incoming->empty() || incoming->front() == TypeVar)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_incoming_typevar++;
       return {};
+    }
 
     if (existing == incoming)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_pointer_equal++;
       return {};
+    }
+    if (same_type_tree(existing, incoming))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_structural_equal++;
+      return {};
+    }
 
     // Default yields to compatible concrete primitive.
     // Checked BEFORE Subtype.invariant because AxiomFalse makes
@@ -341,7 +864,11 @@ namespace vc
           (existing->front() == DefaultInt && prim->in(integer_types)) ||
           (existing->front() == DefaultFloat && prim->in(float_types));
         if (compat)
+        {
+          if (active_infer_profile != nullptr)
+            active_infer_profile->merge_type_default_promote++;
           return clone(incoming);
+        }
       }
     }
 
@@ -354,19 +881,38 @@ namespace vc
           (incoming->front() == DefaultInt && prim->in(integer_types)) ||
           (incoming->front() == DefaultFloat && prim->in(float_types));
         if (compat)
+        {
+          if (active_infer_profile != nullptr)
+            active_infer_profile->merge_type_default_keep++;
           return {};
+        }
       }
     }
 
     SequentCtx ctx{top, {}, {}};
 
     if (Subtype.invariant(ctx, existing, incoming))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_invariant_equal++;
       return {};
+    }
 
     if (Subtype(ctx, incoming, existing))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_subtype_keep++;
       return {};
+    }
     if (Subtype(ctx, existing, incoming))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_subtype_widen++;
       return clone(incoming);
+    }
+
+    if (active_infer_profile != nullptr)
+      active_infer_profile->merge_type_union_build++;
 
     // Build union.
     auto e_inner = existing->front();
@@ -431,6 +977,9 @@ namespace vc
     Node top,
     Node call_node = {})
   {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->merge_env_calls++;
+
     auto it = env.find(loc);
     if (it == env.end())
     {
@@ -439,6 +988,17 @@ namespace vc
     }
     if (it->second.is_fixed)
       return false;
+
+    if (it->second.type == type)
+    {
+      if (call_node && !it->second.call_node)
+      {
+        it->second.call_node = call_node;
+        return true;
+      }
+
+      return false;
+    }
 
     auto merged = merge_type(it->second.type, type, top);
     if (!merged)
@@ -525,6 +1085,62 @@ namespace vc
     return defs;
   }
 
+  static std::set<Location> collect_label_uses(
+    const Node& body, const Node& term, const std::set<Location>& defs)
+  {
+    std::set<Location> uses;
+
+    auto collect = [&](const Node& root) {
+      if (!root)
+        return;
+      root->traverse([&](auto& node) {
+        if (node == LocalId)
+          uses.insert(node->location());
+        return true;
+      });
+    };
+
+    collect(body);
+    collect(term);
+
+    for (auto& def : defs)
+      uses.erase(def);
+
+    return uses;
+  }
+
+  static std::set<Location> collect_label_kills(const Node& body)
+  {
+    std::set<Location> kills;
+    for (auto& stmt : *body)
+    {
+      if (!stmt->empty() && stmt->front() == LocalId)
+        kills.insert(stmt->front()->location());
+    }
+    return kills;
+  }
+
+  static bool prune_bwd_env(
+    TypeEnv& env,
+    const std::set<Location>& live_in,
+    const std::set<Location>& defs)
+  {
+    bool changed = false;
+    for (auto it = env.begin(); it != env.end();)
+    {
+      if ((live_in.count(it->first) == 0) && (defs.count(it->first) == 0))
+      {
+        it = env.erase(it);
+        changed = true;
+      }
+      else
+      {
+        ++it;
+      }
+    }
+    return changed;
+  }
+
   static void run_dependency_cascade(
     TypeEnv& env,
     const Node& body,
@@ -568,7 +1184,10 @@ namespace vc
       {
         auto old_type = const_stmt->at(1);
         if (old_type->type() != expected_prim->type())
+        {
           const_stmt->replace(old_type, expected_prim->type());
+          note_infer_transfer_change();
+        }
       }
       else
       {
@@ -576,6 +1195,7 @@ namespace vc
         auto lit = const_stmt->back();
         const_stmt->erase(const_stmt->begin(), const_stmt->end());
         const_stmt << dst << expected_prim->type() << lit;
+        note_infer_transfer_change();
       }
 
       return true;
@@ -900,6 +1520,13 @@ namespace vc
 
   Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
   {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->apply_subst_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->apply_subst_time
+        : nullptr);
+
     if (type_node != Type || subst.empty())
       return clone(type_node);
 
@@ -947,54 +1574,31 @@ namespace vc
     size_t arity,
     const Node& method_typeargs)
   {
-    if (receiver_type != Type)
-      return {};
-    auto inner = receiver_type->front();
-    if (inner != TypeName)
-      return {};
-    auto class_def = find_def(top, inner);
-    Node subst_source = inner;
-    if ((!class_def || class_def != ClassDef) && inner->size() > 1)
+    if (active_infer_profile != nullptr)
+      active_infer_profile->resolve_method_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->resolve_method_time
+        : nullptr);
+
+    auto owner = resolve_method_owner(top, receiver_type);
+    if (owner.class_def)
     {
-      Node base = TypeName;
-      for (size_t i = 0; i + 1 < inner->size(); i++)
-        base << clone(inner->at(i));
-
-      auto base_def = find_def(top, base);
-      if (base_def && base_def == ClassDef)
+      auto subst = build_class_subst(owner.class_def, owner.subst_source);
+      auto func =
+        resolve_class_method(owner, method_ident->location().view(), hand, arity);
+      if (func)
       {
-        class_def = base_def;
-        subst_source = base;
+        auto func_tps = func / TypeParams;
+        if (
+          !method_typeargs->empty() &&
+          method_typeargs->size() == func_tps->size())
+        {
+          for (size_t i = 0; i < func_tps->size(); i++)
+            subst[func_tps->at(i)] = method_typeargs->at(i);
+        }
+        return {func, std::move(subst)};
       }
-    }
-    if (!class_def || class_def != ClassDef)
-      return {};
-
-    auto subst = build_class_subst(class_def, subst_source);
-    auto method_name = method_ident->location().view();
-
-    for (auto& child : *(class_def / ClassBody))
-    {
-      if (child != Function)
-        continue;
-
-      auto child_name = lookup_method_name(child);
-      if (!child_name || child_name->location().view() != method_name)
-        continue;
-      if ((child / Lhs)->type() != hand)
-        continue;
-      if ((child / Params)->size() != arity)
-        continue;
-
-      auto func_tps = child / TypeParams;
-      if (
-        !method_typeargs->empty() &&
-        method_typeargs->size() == func_tps->size())
-      {
-        for (size_t i = 0; i < func_tps->size(); i++)
-          subst[func_tps->at(i)] = method_typeargs->at(i);
-      }
-      return {child, std::move(subst)};
     }
 
     // Auto-deref ref[T] / cown[T].
@@ -1102,7 +1706,7 @@ namespace vc
           auto spt = apply_subst(top, shape_params->at(j) / Type, shape_subst);
           if (!spt || spt->front() == TypeVar || spt->front() == TypeSelf)
             continue;
-          ap->replace(apt, clone(spt));
+          snmalloc::UNUSED(replace_if_changed(ap, apt, clone(spt)));
         }
 
         auto actual_ret = af / Type;
@@ -1110,7 +1714,8 @@ namespace vc
         {
           auto shape_ret = apply_subst(top, sf / Type, shape_subst);
           if (shape_ret && shape_ret->front() != TypeVar)
-            af->replace(actual_ret, clone(shape_ret));
+            snmalloc::UNUSED(
+              replace_if_changed(af, actual_ret, clone(shape_ret)));
         }
         break;
       }
@@ -1127,6 +1732,13 @@ namespace vc
 
   Node navigate_call(Node call, Node top, std::vector<ScopeInfo>& scopes)
   {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->navigate_call_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->navigate_call_time
+        : nullptr);
+
     auto funcname = call / FuncName;
     auto args = call / Args;
     auto func_def = find_func_def(top, funcname, args->size(), call / Lhs);
@@ -1238,7 +1850,7 @@ namespace vc
         new_ta << clone(find->second.type);
       }
       if (all_constrained)
-        scope.name_elem->replace(ta, new_ta);
+        snmalloc::UNUSED(replace_if_changed(scope.name_elem, ta, new_ta));
     }
 
     // Build substitution from updated TypeArgs.
@@ -1357,6 +1969,13 @@ namespace vc
     Node top,
     std::map<Location, Node>& lookup_stmts)
   {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->propagate_call_node_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->propagate_call_node_time
+        : nullptr);
+
     auto it = env.find(loc);
     if (it == env.end() || is_default_type(it->second.type) ||
         !it->second.call_node)
@@ -1384,6 +2003,13 @@ namespace vc
     TypeEnv& env,
     Node top)
   {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->infer_typeargs_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->infer_typeargs_time
+        : nullptr);
+
     auto args = call / Args;
     auto params = func_def / Params;
 
@@ -1455,7 +2081,7 @@ namespace vc
         new_ta << clone(find->second.type);
       }
       if (all_constrained)
-        scope.name_elem->replace(ta, new_ta);
+        snmalloc::UNUSED(replace_if_changed(scope.name_elem, ta, new_ta));
     }
 
     return all_default;
@@ -1465,6 +2091,13 @@ namespace vc
   static void push_arg_types_to_params(
     Node func_def, const Node& args, TypeEnv& env, Node /*top*/)
   {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->push_arg_types_to_params_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->push_arg_types_to_params_time
+        : nullptr);
+
     auto params = func_def / Params;
     auto parent_cls = func_def->parent(ClassDef);
 
@@ -1503,7 +2136,7 @@ namespace vc
         resolved = arg_it->second.type;
       }
 
-      param->replace(formal_type, clone(resolved));
+      snmalloc::UNUSED(replace_if_changed(param, formal_type, clone(resolved)));
 
       // Keep FieldDef in sync.
       if (parent_cls)
@@ -1516,7 +2149,8 @@ namespace vc
           if ((child / Ident)->location().view() != pname)
             continue;
           if (contains_typevar(child / Type))
-            child->replace(child / Type, clone(resolved));
+            snmalloc::UNUSED(
+              replace_if_changed(child, child / Type, clone(resolved)));
           break;
         }
       }
@@ -1540,13 +2174,72 @@ namespace vc
     bool backward = false;
   };
 
+  enum class InferStmtFamily
+  {
+    ConstLike,
+    CopyLike,
+    RefOps,
+    TupleOps,
+    NewOps,
+    CallOps,
+    FFIWhenOps,
+    TypetestOps,
+  };
+
+  struct InferStmtScope
+  {
+    InferStmtScope(InferStmtFamily family)
+    {
+      if (active_infer_profile == nullptr)
+        return;
+
+      switch (family)
+      {
+        case InferStmtFamily::ConstLike:
+          active_infer_profile->stmt_const_like++;
+          timer.emplace(&active_infer_profile->stmt_const_like_time);
+          break;
+        case InferStmtFamily::CopyLike:
+          active_infer_profile->stmt_copy_like++;
+          timer.emplace(&active_infer_profile->stmt_copy_like_time);
+          break;
+        case InferStmtFamily::RefOps:
+          active_infer_profile->stmt_ref_ops++;
+          timer.emplace(&active_infer_profile->stmt_ref_ops_time);
+          break;
+        case InferStmtFamily::TupleOps:
+          active_infer_profile->stmt_tuple_ops++;
+          timer.emplace(&active_infer_profile->stmt_tuple_ops_time);
+          break;
+        case InferStmtFamily::NewOps:
+          active_infer_profile->stmt_new_ops++;
+          timer.emplace(&active_infer_profile->stmt_new_ops_time);
+          break;
+        case InferStmtFamily::CallOps:
+          active_infer_profile->stmt_call_ops++;
+          timer.emplace(&active_infer_profile->stmt_call_ops_time);
+          break;
+        case InferStmtFamily::FFIWhenOps:
+          active_infer_profile->stmt_ffi_when_ops++;
+          timer.emplace(&active_infer_profile->stmt_ffi_when_ops_time);
+          break;
+        case InferStmtFamily::TypetestOps:
+          active_infer_profile->stmt_typetest_ops++;
+          timer.emplace(&active_infer_profile->stmt_typetest_ops_time);
+          break;
+      }
+    }
+
+    std::optional<InferScopedTimer> timer;
+  };
+
   static LabelChanges process_label_body(
     const Node& body,
     TypeEnv& env,
     TypeEnv& bwd,
     Node top,
     std::map<Location, Node>& lookup_stmts,
-    std::vector<std::pair<Location, Location>>& typevar_aliases,
+    std::set<std::pair<Location, Location>>& typevar_aliases,
     std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
     std::map<Location, TupleTracking>& tuple_locals)
   {
@@ -1596,7 +2289,10 @@ namespace vc
       {
         auto old_type = const_stmt->at(1);
         if (old_type->type() != expected_prim->type())
+        {
           const_stmt->replace(old_type, expected_prim->type());
+          note_infer_transfer_change();
+        }
       }
       else
       {
@@ -1604,6 +2300,7 @@ namespace vc
         auto lit = const_stmt->back();
         const_stmt->erase(const_stmt->begin(), const_stmt->end());
         const_stmt << dst << expected_prim->type() << lit;
+        note_infer_transfer_change();
       }
 
       return true;
@@ -1650,6 +2347,7 @@ namespace vc
       // ----- Const -----
       if (stmt == Const)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         auto dst = stmt->front();
         Node type_tok;
         if (stmt->size() == 3)
@@ -1681,16 +2379,19 @@ namespace vc
       // ----- ConstStr -----
       else if (stmt == ConstStr)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), string_type());
       }
       // ----- Convert -----
       else if (stmt == Convert)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), clone(stmt / Type));
       }
       // ----- Copy / Move -----
       else if (stmt->in({Copy, Move}))
       {
+        InferStmtScope stmt_scope(InferStmtFamily::CopyLike);
         auto dst_loc = (stmt / LocalId)->location();
         auto src_loc = (stmt / Rhs)->location();
         auto src_it = env.find(src_loc);
@@ -1702,7 +2403,8 @@ namespace vc
           bool dst_tv = dst_it->second.type->front() == TypeVar;
           bool src_tv = src_it->second.type->front() == TypeVar;
           if (dst_tv != src_tv)
-            typevar_aliases.push_back({dst_loc, src_loc});
+            if (typevar_aliases.insert({dst_loc, src_loc}).second)
+              note_infer_transfer_change();
         }
 
         // Forward: dst = merge(dst, src).
@@ -1723,6 +2425,7 @@ namespace vc
       // ----- RegisterRef -----
       else if (stmt == RegisterRef)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
         auto src_it = env.find((stmt / Rhs)->location());
         if (src_it != env.end())
           merge(
@@ -1732,6 +2435,7 @@ namespace vc
       // ----- FieldRef -----
       else if (stmt == FieldRef)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
         auto arg_src = (stmt / Arg) / Rhs;
         auto obj_it = env.find(arg_src->location());
         if (obj_it != env.end())
@@ -1763,6 +2467,7 @@ namespace vc
       // ----- Load -----
       else if (stmt == Load)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
         auto src_it = env.find((stmt / Rhs)->location());
         if (src_it != env.end())
         {
@@ -1774,6 +2479,7 @@ namespace vc
       // ----- Store -----
       else if (stmt == Store)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
         // WF: wfDst * wfSrc * Arg → LocalId(dst), Rhs(ref), Arg(val)
         auto dst_loc = (stmt / LocalId)->location();
         auto ref_loc = (stmt / Rhs)->location();
@@ -1815,6 +2521,7 @@ namespace vc
       // ----- ArrayRef / ArrayRefConst -----
       else if (stmt->in({ArrayRef, ArrayRefConst}))
       {
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto arg_loc = ((stmt / Arg) / Rhs)->location();
         auto src_it = env.find(arg_loc);
@@ -1825,9 +2532,11 @@ namespace vc
           // Track ref_to_tuple for Store-based element tracking.
           auto rtt = ref_to_tuple.find(arg_loc);
           if (rtt != ref_to_tuple.end())
-            ref_to_tuple[dst_loc] = {rtt->second.first, index};
+            snmalloc::UNUSED(
+              upsert_ref_to_tuple(ref_to_tuple, dst_loc, {rtt->second.first, index}));
           else
-            ref_to_tuple[dst_loc] = {arg_loc, index};
+            snmalloc::UNUSED(
+              upsert_ref_to_tuple(ref_to_tuple, dst_loc, {arg_loc, index}));
 
           // Resolve element if source is TupleType.
           if (src_it != env.end())
@@ -1851,6 +2560,7 @@ namespace vc
       // ----- ArrayRefFromEnd -----
       else if (stmt == ArrayRefFromEnd)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
         auto arg_loc = ((stmt / Arg) / Rhs)->location();
         auto src_it = env.find(arg_loc);
         if (src_it != env.end())
@@ -1877,6 +2587,7 @@ namespace vc
       // ----- SplatOp -----
       else if (stmt == SplatOp)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
         auto arg_loc = ((stmt / Arg) / Rhs)->location();
         auto src_it = env.find(arg_loc);
         if (src_it != env.end() && src_it->second.type->front() == TupleType)
@@ -1912,6 +2623,7 @@ namespace vc
       // ----- NewArray / NewArrayConst -----
       else if (stmt->in({NewArray, NewArrayConst}))
       {
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
         auto dst_loc = (stmt / LocalId)->location();
         merge(dst_loc, clone(stmt / Type));
 
@@ -1922,12 +2634,14 @@ namespace vc
             dst_loc.view().find("array") != std::string_view::npos;
           tuple_locals[dst_loc] =
             {sz, is_lit, std::vector<Node>(sz), std::vector<Location>(sz)};
-          ref_to_tuple[dst_loc] = {dst_loc, 0};
+          snmalloc::UNUSED(
+            upsert_ref_to_tuple(ref_to_tuple, dst_loc, {dst_loc, 0}));
         }
       }
       // ----- TypeAssertion -----
       else if (stmt == TypeAssertion)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         auto loc = (stmt / LocalId)->location();
         merge(loc, clone(stmt / Type));
         auto it = env.find(loc);
@@ -1937,6 +2651,7 @@ namespace vc
       // ----- New / Stack -----
       else if (stmt->in({New, Stack}))
       {
+        InferStmtScope stmt_scope(InferStmtFamily::NewOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto new_type = stmt / Type;
         merge(dst_loc, clone(new_type));
@@ -1971,7 +2686,8 @@ namespace vc
                 if (arg_it != env.end() && contains_typevar(f / Type) &&
                     !contains_typevar(arg_it->second.type) &&
                     !is_default_type(arg_it->second.type))
-                  f->replace(f / Type, clone(arg_it->second.type));
+                  snmalloc::UNUSED(replace_if_changed(
+                    f, f / Type, clone(arg_it->second.type)));
                 break;
               }
             }
@@ -1981,6 +2697,7 @@ namespace vc
       // ----- Binary ops (result = LHS type) -----
       else if (stmt->in(propagate_lhs_ops))
       {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto lhs_loc = (stmt / Lhs)->location();
         auto rhs_loc = (stmt / Rhs)->location();
@@ -2009,6 +2726,7 @@ namespace vc
       // ----- Unary ops (result = operand type) -----
       else if (stmt->in(propagate_rhs_ops))
       {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto src_loc = (stmt / Rhs)->location();
 
@@ -2028,6 +2746,7 @@ namespace vc
       else if (auto frt = fixed_result_type.find(stmt->type());
                frt != fixed_result_type.end())
       {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge(
           (stmt / LocalId)->location(),
           primitive_type(frt->second));
@@ -2035,6 +2754,7 @@ namespace vc
       else if (auto ffrt = fixed_ffi_result_type.find(stmt->type());
                ffrt != fixed_ffi_result_type.end())
       {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge(
           (stmt / LocalId)->location(),
           ffi_primitive_type(ffrt->second));
@@ -2042,6 +2762,7 @@ namespace vc
       // ----- Call -----
       else if (stmt == Call)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
         std::vector<ScopeInfo> scopes;
         auto func_def = navigate_call(stmt, top, scopes);
         if (!func_def)
@@ -2102,6 +2823,7 @@ namespace vc
       // ----- Lookup -----
       else if (stmt == Lookup)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto src_it = env.find((stmt / Rhs)->location());
         if (src_it != env.end())
@@ -2126,11 +2848,12 @@ namespace vc
               merge(dst_loc, ret);
           }
         }
-        lookup_stmts[dst_loc] = stmt;
+        snmalloc::UNUSED(upsert_lookup_stmt(lookup_stmts, dst_loc, stmt));
       }
       // ----- CallDyn / TryCallDyn -----
         else if (stmt->in({CallDyn, TryCallDyn}))
         {
+          InferStmtScope stmt_scope(InferStmtFamily::CallOps);
           auto dst_loc = (stmt / LocalId)->location();
           auto src_loc = (stmt / Rhs)->location();
           auto args = stmt / Args;
@@ -2205,6 +2928,7 @@ namespace vc
       // ----- FFI -----
       else if (stmt == FFI)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::FFIWhenOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto sym_name = (stmt / SymbolId)->location();
         auto cls = body->parent(Function)->parent(ClassDef);
@@ -2256,13 +2980,15 @@ namespace vc
       // ----- When -----
       else if (stmt == When)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::FFIWhenOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto src_it = env.find((stmt / Rhs)->location());
 
         if (src_it != env.end())
         {
           auto apply_ret = src_it->second.type;
-          stmt->replace(stmt / Type, clone(apply_ret));
+          snmalloc::UNUSED(
+            replace_if_changed(stmt, stmt / Type, clone(apply_ret)));
           merge(dst_loc, cown_type(apply_ret));
         }
 
@@ -2307,7 +3033,8 @@ namespace vc
                       continue;
                     auto new_type = ref_type(ci);
                     auto param = params->at(i);
-                    param->replace(param / Type, new_type);
+                    snmalloc::UNUSED(
+                      replace_if_changed(param, param / Type, new_type));
                     env[(param / Ident)->location()] =
                       {clone(new_type), true, {}};
                   }
@@ -2320,6 +3047,7 @@ namespace vc
       // ----- Typetest -----
       else if (stmt == Typetest)
       {
+        InferStmtScope stmt_scope(InferStmtFamily::TypetestOps);
         merge(
           (stmt / LocalId)->location(), primitive_type(Bool));
       }
@@ -2328,6 +3056,12 @@ namespace vc
     // Finalize tuple/array-lit types within this label.
     for (auto& [loc, tt] : tuple_locals)
     {
+      InferScopedTimer tuple_finalize_timer(
+        (active_infer_profile != nullptr)
+          ? &active_infer_profile->tuple_finalize_time
+          : nullptr);
+      if (active_infer_profile != nullptr)
+        active_infer_profile->tuple_finalize_ops++;
       if (tt.is_array_lit)
       {
         // Sibling refinement: find dominant non-default type.
@@ -2413,6 +3147,27 @@ namespace vc
     if (n == 0)
       return true;
 
+    InferProfileStats profile;
+    profile.function_name = infer_function_name(node);
+    profile.labels = n;
+    InferProfileStats* prev_profile = active_infer_profile;
+    MethodLookupCache method_cache;
+    MethodLookupCache* prev_method_cache = active_method_cache;
+    size_t transfer_epoch = 0;
+    size_t* prev_transfer_epoch = active_infer_transfer_epoch;
+    bool profile_enabled = infer_profile_enabled();
+    if (profile_enabled)
+      active_infer_profile = &profile;
+    active_method_cache = &method_cache;
+    active_infer_transfer_epoch = &transfer_epoch;
+    InferProcessScope process_scope(
+      profile_enabled ? &profile : nullptr, prev_profile, prev_method_cache,
+      prev_transfer_epoch);
+    InferScopedTimer function_timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->process_function_time
+        : nullptr);
+
     // Build label graph.
     std::map<std::string, size_t> label_idx;
     for (size_t i = 0; i < n; i++)
@@ -2446,6 +3201,9 @@ namespace vc
     // Initialize exit envs.
     std::vector<TypeEnv> exit_envs(n);
     std::map<std::pair<size_t, size_t>, TypeEnv> branch_exits;
+    std::vector<TypeEnv> prior_entry_envs(n);
+    std::vector<bool> prior_entry_valid(n, false);
+    std::vector<size_t> prior_transfer_epochs(n, 0);
 
     for (auto& pd : *(node / Params))
     {
@@ -2458,9 +3216,43 @@ namespace vc
     // Backward envs: carry type expectations from downstream.
     std::vector<TypeEnv> bwd_envs(n);
     std::vector<std::set<Location>> label_defs(n);
+    std::vector<std::set<Location>> label_uses(n);
+    std::vector<std::set<Location>> label_kills(n);
+    std::vector<std::set<Location>> label_live_in(n);
+    std::vector<std::set<Location>> label_live_out(n);
     for (size_t j = 0; j < n; j++)
+    {
       label_defs[j] = collect_label_defs(labels->at(j) / Body);
+      label_uses[j] = collect_label_uses(
+        labels->at(j) / Body, labels->at(j) / Return, label_defs[j]);
+      label_kills[j] = collect_label_kills(labels->at(j) / Body);
+    }
 
+    bool live_changed = true;
+    while (live_changed)
+    {
+      live_changed = false;
+      for (size_t j = n; j-- > 0;)
+      {
+        std::set<Location> next_out;
+        for (auto s : succ[j])
+          next_out.insert(label_live_in[s].begin(), label_live_in[s].end());
+
+        std::set<Location> next_in = label_uses[j];
+        for (auto& loc : next_out)
+        {
+          if (label_kills[j].count(loc) == 0)
+            next_in.insert(loc);
+        }
+
+        if (next_out != label_live_out[j] || next_in != label_live_in[j])
+        {
+          label_live_out[j] = std::move(next_out);
+          label_live_in[j] = std::move(next_in);
+          live_changed = true;
+        }
+      }
+    }
     // Initialize backward env for Return labels with declared return type.
     {
       auto func_ret = node / Type;
@@ -2480,7 +3272,7 @@ namespace vc
 
     // Shared state.
     std::map<Location, Node> lookup_stmts;
-    std::vector<std::pair<Location, Location>> typevar_aliases;
+    std::set<std::pair<Location, Location>> typevar_aliases;
     std::map<Location, std::pair<Location, size_t>> ref_to_tuple;
 
     // Worklist algorithm.
@@ -2499,90 +3291,163 @@ namespace vc
       size_t i = *wit;
       worklist.erase(wit);
 
-      // Build entry from predecessor exit envs.
-      TypeEnv entry;
-      if (i == 0)
+      prune_bwd_env(bwd_envs[i], label_live_in[i], label_defs[i]);
+
+      // Build the working env directly from predecessor exit envs.
+      TypeEnv env;
       {
-        for (auto& [loc, info] : exit_envs[0])
-          entry[loc] = {info.type, info.is_fixed, info.call_node};
-      }
-      else
-      {
-        for (auto p : pred[i])
+        InferScopedTimer entry_timer(
+          (active_infer_profile != nullptr)
+            ? &active_infer_profile->entry_build_time
+            : nullptr);
+        if (i == 0)
         {
-          auto bk = std::make_pair(p, i);
-          auto bi = branch_exits.find(bk);
-          const auto& pe = (bi != branch_exits.end()) ? bi->second
-                                                       : exit_envs[p];
-          for (auto& [loc, info] : pe)
+          env = exit_envs[0];
+        }
+        else
+        {
+          InferScopedTimer pred_timer(
+            (active_infer_profile != nullptr)
+              ? &active_infer_profile->entry_pred_time
+              : nullptr);
+          for (auto p : pred[i])
           {
-            auto eit = entry.find(loc);
-            if (eit == entry.end())
-              entry[loc] = {info.type, info.is_fixed, info.call_node};
+            auto bk = std::make_pair(p, i);
+            auto bi = branch_exits.find(bk);
+            const auto& pe = (bi != branch_exits.end()) ? bi->second
+                                                        : exit_envs[p];
+            for (auto& [loc, info] : pe)
+            {
+              if (label_live_in[i].count(loc) == 0)
+                continue;
+              if (active_infer_profile != nullptr)
+                active_infer_profile->entry_pred_merge_count++;
+              auto eit = env.find(loc);
+              if (eit == env.end())
+                env[loc] = {info.type, info.is_fixed, info.call_node};
+              else
+              {
+                if (eit->second.type == info.type)
+                {
+                  if (!eit->second.call_node && info.call_node)
+                    eit->second.call_node = info.call_node;
+                  continue;
+                }
+                auto m = merge_type(eit->second.type, info.type, top);
+                if (m)
+                  eit->second.type = m;
+                if (!eit->second.call_node && info.call_node)
+                  eit->second.call_node = info.call_node;
+              }
+            }
+          }
+        }
+
+        // Merge backward envs for this label and its successors into entry.
+        // Including bwd_envs[i] lets same-label requeueing expose new local
+        // backward facts to earlier statements on the next iteration.
+        {
+          InferScopedTimer self_bwd_timer(
+            (active_infer_profile != nullptr)
+              ? &active_infer_profile->entry_self_bwd_time
+              : nullptr);
+          for (auto& [loc, info] : bwd_envs[i])
+          {
+            if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+              continue;
+            if (active_infer_profile != nullptr)
+              active_infer_profile->entry_self_bwd_merge_count++;
+            auto eit = env.find(loc);
+            if (eit == env.end())
+            {
+              if (label_defs[i].count(loc) > 0)
+                env[loc] = {clone(info.type), false, {}};
+            }
             else
             {
+              if (eit->second.type == info.type)
+                continue;
               auto m = merge_type(eit->second.type, info.type, top);
               if (m)
                 eit->second.type = m;
-              if (!eit->second.call_node && info.call_node)
-                eit->second.call_node = info.call_node;
+            }
+          }
+        }
+
+        // Merge backward envs from successors into entry.
+        {
+          InferScopedTimer succ_bwd_timer(
+            (active_infer_profile != nullptr)
+              ? &active_infer_profile->entry_succ_bwd_time
+              : nullptr);
+          for (auto s : succ[i])
+          {
+            for (auto& [loc, info] : bwd_envs[s])
+            {
+              if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+                continue;
+              if (active_infer_profile != nullptr)
+                active_infer_profile->entry_succ_bwd_merge_count++;
+              auto eit = env.find(loc);
+              if (eit == env.end())
+              {
+                if (label_defs[i].count(loc) > 0)
+                  env[loc] = {clone(info.type), false, {}};
+              }
+              else
+              {
+                if (eit->second.type == info.type)
+                  continue;
+                auto m = merge_type(eit->second.type, info.type, top);
+                if (m)
+                  eit->second.type = m;
+              }
             }
           }
         }
       }
-
-      // Merge backward envs for this label and its successors into entry.
-      // Including bwd_envs[i] lets same-label requeueing expose new local
-      // backward facts to earlier statements on the next iteration.
-      for (auto& [loc, info] : bwd_envs[i])
+      if (active_infer_profile != nullptr)
+        active_infer_profile->entry_bindings += env.size();
+      bool same_entry = prior_entry_valid[i] && same_type_env(prior_entry_envs[i], env);
+      if (same_entry)
       {
-        auto eit = entry.find(loc);
-        if (eit == entry.end())
+        if (active_infer_profile != nullptr)
+          active_infer_profile->entry_env_unchanged++;
+        if (prior_transfer_epochs[i] == transfer_epoch)
         {
-          if (label_defs[i].count(loc) > 0)
-            entry[loc] = {clone(info.type), false, {}};
-        }
-        else
-        {
-          auto m = merge_type(eit->second.type, info.type, top);
-          if (m)
-            eit->second.type = m;
+          if (active_infer_profile != nullptr)
+            active_infer_profile->labels_skipped++;
+          continue;
         }
       }
-
-      // Merge backward envs from successors into entry.
-      for (auto s : succ[i])
+      else
       {
-        for (auto& [loc, info] : bwd_envs[s])
-        {
-          auto eit = entry.find(loc);
-          if (eit == entry.end())
-          {
-            if (label_defs[i].count(loc) > 0)
-              entry[loc] = {clone(info.type), false, {}};
-          }
-          else
-          {
-            auto m = merge_type(eit->second.type, info.type, top);
-            if (m)
-              eit->second.type = m;
-          }
-        }
+        if (active_infer_profile != nullptr)
+          active_infer_profile->entry_env_changed++;
       }
-
-      // Copy entry → working env.
-      TypeEnv env;
-      for (auto& [loc, info] : entry)
-        env[loc] = {info.type, info.is_fixed, info.call_node};
+      prior_entry_envs[i] = env;
+      prior_entry_valid[i] = true;
 
       // Per-label state.
       std::map<Location, TupleTracking> tuple_locals;
 
       // Process body.
-      auto label_changes = process_label_body(
-        labels->at(i) / Body, env, bwd_envs[i], top, lookup_stmts,
-        typevar_aliases, ref_to_tuple, tuple_locals);
-      bool label_changed = label_changes.forward;
+      if (active_infer_profile != nullptr)
+      {
+        active_infer_profile->labels_processed++;
+        active_infer_profile->process_label_body_calls++;
+      }
+      LabelChanges label_changes;
+      {
+        InferScopedTimer body_timer(
+          (active_infer_profile != nullptr)
+            ? &active_infer_profile->process_label_body_time
+            : nullptr);
+        label_changes = process_label_body(
+          labels->at(i) / Body, env, bwd_envs[i], top, lookup_stmts,
+          typevar_aliases, ref_to_tuple, tuple_locals);
+      }
+      bool forward_out_changed = false;
 
       // Return terminator: backward merge.
       auto term = labels->at(i) / Return;
@@ -2595,7 +3460,6 @@ namespace vc
           if (merge_env(env, ret_loc, clone(func_ret), top))
           {
             propagate_call_node(env, ret_loc, top, lookup_stmts);
-            label_changed = true;
             bwd_envs[i][ret_loc] = {clone(func_ret), false, {}};
           }
         }
@@ -2618,6 +3482,14 @@ namespace vc
               c[loc] = {clone(info.type), info.is_fixed, info.call_node};
             return c;
           };
+          auto update_branch_exit = [&](size_t succ_idx, TypeEnv&& next_env) {
+            auto key = std::make_pair(i, succ_idx);
+            auto it = branch_exits.find(key);
+            if (it != branch_exits.end() && same_type_env(it->second, next_env))
+              return;
+            branch_exits[key] = std::move(next_env);
+            forward_out_changed = true;
+          };
 
           if (!trace->negated)
           {
@@ -2626,7 +3498,7 @@ namespace vc
               auto ne = make_clone();
               ne[trace->src->location()] =
                 {clone(trace->type), true, {}};
-              branch_exits[{i, t_it->second}] = std::move(ne);
+              update_branch_exit(t_it->second, std::move(ne));
             }
             if (f_it != label_idx.end())
             {
@@ -2639,7 +3511,7 @@ namespace vc
                 if (excluded)
                   src_it->second = {std::move(excluded), true, {}};
               }
-              branch_exits[{i, f_it->second}] = std::move(ne);
+              update_branch_exit(f_it->second, std::move(ne));
             }
           }
           else
@@ -2649,7 +3521,7 @@ namespace vc
               auto ne = make_clone();
               ne[trace->src->location()] =
                 {clone(trace->type), true, {}};
-              branch_exits[{i, f_it->second}] = std::move(ne);
+              update_branch_exit(f_it->second, std::move(ne));
             }
             if (t_it != label_idx.end())
             {
@@ -2662,16 +3534,27 @@ namespace vc
                 if (excluded)
                   src_it->second = {std::move(excluded), true, {}};
               }
-              branch_exits[{i, t_it->second}] = std::move(ne);
+              update_branch_exit(t_it->second, std::move(ne));
             }
           }
         }
       }
 
       // Update forward exit env. Re-queue successors if forward changed.
-      exit_envs[i] = std::move(env);
-      if (label_changed)
+      bool exit_changed = !same_type_env(exit_envs[i], env);
+      if (exit_changed)
       {
+        exit_envs[i] = env;
+        forward_out_changed = true;
+      }
+      else
+      {
+        exit_envs[i] = env;
+      }
+      if (forward_out_changed)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->requeue_succ += succ[i].size();
         for (auto s : succ[i])
           worklist.insert(s);
       }
@@ -2681,7 +3564,11 @@ namespace vc
       // CallDyn result), so re-run this label until its local backward facts
       // stabilize.
       if (label_changes.backward)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->requeue_self_bwd++;
         worklist.insert(i);
+      }
 
       // Propagate backward constraints from successors.
       bool bwd_changed = label_changes.backward;
@@ -2689,6 +3576,8 @@ namespace vc
       {
         for (auto& [loc, info] : bwd_envs[s])
         {
+          if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+            continue;
           auto bit = bwd_envs[i].find(loc);
           if (bit == bwd_envs[i].end())
           {
@@ -2710,14 +3599,28 @@ namespace vc
       // Re-queue predecessors if backward changed.
       if (bwd_changed)
       {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->requeue_pred_bwd += pred[i].size();
         for (auto p : pred[i])
           worklist.insert(p);
       }
+
+      prior_transfer_epochs[i] = transfer_epoch;
     }
 
+    profile.worklist_iterations = wl_iters;
+
     for (size_t i = 0; i < n; i++)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->dependency_cascade_calls++;
+      InferScopedTimer cascade_timer(
+        (active_infer_profile != nullptr)
+          ? &active_infer_profile->dependency_cascade_time
+          : nullptr);
       run_dependency_cascade(
         exit_envs[i], labels->at(i) / Body, top, lookup_stmts);
+    }
 
     // ===== Finalization =====
 

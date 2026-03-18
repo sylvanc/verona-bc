@@ -3,8 +3,9 @@
 ## To Do
 
 Inference.
-- Are we special casing methods on integers and floats in inference? Or actually looking at the implementation?
 - Are we allowing arguments to refine the receiver?
+
+Sequent calculus optimizations.
 
 Compiler errors.
 - Not getting node based errors.
