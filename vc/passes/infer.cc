@@ -785,6 +785,55 @@ namespace vc
     return true;
   }
 
+  static bool refine_const_local(
+    TypeEnv& env,
+    const std::map<Location, Node>& const_defs,
+    const Location& loc,
+    const Node& expected)
+  {
+    auto const_it = const_defs.find(loc);
+    if (const_it == const_defs.end())
+      return false;
+
+    auto env_it = env.find(loc);
+    if (env_it == env.end() || !is_default_type(env_it->second.type))
+      return false;
+
+    auto expected_prim = extract_primitive(expected);
+    if (!expected_prim)
+      return false;
+
+    bool compatible =
+      (env_it->second.type->front() == DefaultInt &&
+       expected_prim->in(integer_types)) ||
+      (env_it->second.type->front() == DefaultFloat &&
+       expected_prim->in(float_types));
+    if (!compatible)
+      return false;
+
+    env_it->second.type = primitive_type(expected_prim->type());
+    auto const_stmt = const_it->second;
+    if (const_stmt->size() == 3)
+    {
+      auto old_type = const_stmt->at(1);
+      if (old_type->type() != expected_prim->type())
+      {
+        const_stmt->replace(old_type, expected_prim->type());
+        note_infer_transfer_change();
+      }
+    }
+    else
+    {
+      auto dst = const_stmt->front();
+      auto lit = const_stmt->back();
+      const_stmt->erase(const_stmt->begin(), const_stmt->end());
+      const_stmt << dst << expected_prim->type() << lit;
+      note_infer_transfer_change();
+    }
+
+    return true;
+  }
+
   static bool upsert_lookup_stmt(
     std::map<Location, Node>& lookup_stmts, const Location& loc, const Node& stmt)
   {
@@ -1170,47 +1219,7 @@ namespace vc
 
     auto refine_local_const =
       [&](const Location& loc, const Node& expected) -> bool {
-      auto const_it = const_defs.find(loc);
-      if (const_it == const_defs.end())
-        return false;
-
-      auto env_it = env.find(loc);
-      if (env_it == env.end() || !is_default_type(env_it->second.type))
-        return false;
-
-      auto expected_prim = extract_primitive(expected);
-      if (!expected_prim)
-        return false;
-
-      bool compatible =
-        (env_it->second.type->front() == DefaultInt &&
-         expected_prim->in(integer_types)) ||
-        (env_it->second.type->front() == DefaultFloat &&
-         expected_prim->in(float_types));
-      if (!compatible)
-        return false;
-
-      env_it->second.type = primitive_type(expected_prim->type());
-      auto const_stmt = const_it->second;
-      if (const_stmt->size() == 3)
-      {
-        auto old_type = const_stmt->at(1);
-        if (old_type->type() != expected_prim->type())
-        {
-          const_stmt->replace(old_type, expected_prim->type());
-          note_infer_transfer_change();
-        }
-      }
-      else
-      {
-        auto dst = const_stmt->front();
-        auto lit = const_stmt->back();
-        const_stmt->erase(const_stmt->begin(), const_stmt->end());
-        const_stmt << dst << expected_prim->type() << lit;
-        note_infer_transfer_change();
-      }
-
-      return true;
+      return refine_const_local(env, const_defs, loc, expected);
     };
 
     for (auto& [loc, info] : env)
@@ -1901,6 +1910,9 @@ namespace vc
     Node top,
     std::map<Location, Node>& lookup_stmts)
   {
+    assert(calldyn->in({CallDyn, TryCallDyn}));
+    assert(expected_prim);
+    auto dst = calldyn / LocalId;
     auto src = calldyn / Rhs;
     auto args = calldyn / Args;
     auto lookup_it = lookup_stmts.find(src->location());
@@ -1908,17 +1920,31 @@ namespace vc
       return;
 
     auto lookup_node = lookup_it->second;
-    auto expected_type = primitive_type(expected_prim->type());
+    auto refine_default = [&](const Location& loc) -> bool {
+      auto it = env.find(loc);
+      if (it == env.end() || !is_default_type(it->second.type))
+        return false;
 
-    // Merge expected type into each arg.
+      bool compatible =
+        (it->second.type->front() == DefaultInt && expected_prim->in(integer_types)) ||
+        (it->second.type->front() == DefaultFloat && expected_prim->in(float_types));
+      if (!compatible)
+        return false;
+
+      it->second.type = primitive_type(expected_prim->type());
+      return true;
+    };
+
+    bool refined = false;
     for (auto& arg_node : *args)
-      merge_env(env, (arg_node / Rhs)->location(), expected_type, top);
+      refined = refine_default((arg_node / Rhs)->location()) || refined;
 
-    // Merge into receiver.
-    merge_env(env, (lookup_node / Rhs)->location(), expected_type, top);
-
-    // Re-resolve the Lookup.
     auto lookup_src = lookup_node / Rhs;
+    refined = refine_default(lookup_src->location()) || refined;
+
+    if (!refined)
+      return;
+
     auto recv_it = env.find(lookup_src->location());
     if (recv_it != env.end())
     {
@@ -1930,9 +1956,19 @@ namespace vc
         top, recv_it->second.type, method_ident, hand, arity, method_ta);
       if (ret)
       {
-        merge_env(env, (lookup_node / LocalId)->location(), ret, top);
-        merge_env(env, src->location(), ret, top);
-        merge_env(env, (calldyn / LocalId)->location(), ret, top);
+        env[(lookup_node / LocalId)->location()] = {ret, false, {}};
+      }
+    }
+
+    auto src_it = env.find(src->location());
+    if (src_it != env.end())
+    {
+      env[dst->location()] = {clone(src_it->second.type), false, {}};
+      auto lookup_dst_it = env.find((lookup_node / LocalId)->location());
+      if (lookup_dst_it != env.end())
+      {
+        env[src->location()] = {clone(lookup_dst_it->second.type), false, {}};
+        env[dst->location()] = {clone(lookup_dst_it->second.type), false, {}};
       }
     }
   }
@@ -2304,10 +2340,15 @@ namespace vc
   {
     LabelChanges changes;
     std::map<Location, Node> const_defs;
+    std::map<Location, Node> def_stmts;
 
     for (auto& stmt : *body)
+    {
+      if (!stmt->empty() && stmt->front() == LocalId)
+        def_stmts[stmt->front()->location()] = stmt;
       if (stmt == Const)
         const_defs[(stmt / LocalId)->location()] = stmt;
+    }
 
     auto merge = [&](const Location& loc, const Node& type,
                      Node call_node = {}) -> bool {
@@ -2319,50 +2360,10 @@ namespace vc
 
     auto refine_local_const =
       [&](const Location& loc, const Node& expected) -> bool {
-      auto const_it = const_defs.find(loc);
-      if (const_it == const_defs.end())
-        return false;
-
-      auto env_it = env.find(loc);
-      if (env_it == env.end() || !is_default_type(env_it->second.type))
-        return false;
-
-      auto expected_prim = extract_primitive(expected);
-      if (!expected_prim)
-        return false;
-
-      bool compatible =
-        (env_it->second.type->front() == DefaultInt &&
-         expected_prim->in(integer_types)) ||
-        (env_it->second.type->front() == DefaultFloat &&
-         expected_prim->in(float_types));
-      if (!compatible)
-        return false;
-
-      auto refined = primitive_type(expected_prim->type());
-      env_it->second.type = refined;
-      changes.forward = true;
-
-      auto const_stmt = const_it->second;
-      if (const_stmt->size() == 3)
-      {
-        auto old_type = const_stmt->at(1);
-        if (old_type->type() != expected_prim->type())
-        {
-          const_stmt->replace(old_type, expected_prim->type());
-          note_infer_transfer_change();
-        }
-      }
-      else
-      {
-        auto dst = const_stmt->front();
-        auto lit = const_stmt->back();
-        const_stmt->erase(const_stmt->begin(), const_stmt->end());
-        const_stmt << dst << expected_prim->type() << lit;
-        note_infer_transfer_change();
-      }
-
-      return true;
+      bool changed = refine_const_local(env, const_defs, loc, expected);
+      if (changed)
+        changes.forward = true;
+      return changed;
     };
 
     auto merge_bwd = [&](const Location& loc, const Node& type) -> bool {
@@ -2878,6 +2879,17 @@ namespace vc
             snmalloc::UNUSED(refine_local_const(arg_loc, expected));
             if (merge_bwd(arg_loc, expected))
               propagate_call_node(env, arg_loc, top, lookup_stmts);
+
+            auto expected_prim = extract_primitive(expected);
+            auto def_it = def_stmts.find(arg_loc);
+            if (
+              expected_prim && def_it != def_stmts.end() &&
+              def_it->second->in({CallDyn, TryCallDyn}))
+            {
+              backward_refine_calldyn(
+                def_it->second, expected_prim, env, top, lookup_stmts);
+              changes.forward = true;
+            }
           }
         }
 
@@ -2927,12 +2939,13 @@ namespace vc
         snmalloc::UNUSED(upsert_lookup_stmt(lookup_stmts, dst_loc, stmt));
       }
       // ----- CallDyn / TryCallDyn -----
-        else if (stmt->in({CallDyn, TryCallDyn}))
-        {
-          InferStmtScope stmt_scope(InferStmtFamily::CallOps);
-          auto dst_loc = (stmt / LocalId)->location();
-          auto src_loc = (stmt / Rhs)->location();
-          auto args = stmt / Args;
+      else if (stmt->in({CallDyn, TryCallDyn}))
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_loc = (stmt / Rhs)->location();
+        auto args = stmt / Args;
+        bool refined = false;
 
         // Forward: result from Lookup.
         auto src_it = env.find(src_loc);
@@ -2978,7 +2991,10 @@ namespace vc
                   auto arg_loc = (args->at(i) / Rhs)->location();
                   snmalloc::UNUSED(refine_local_const(arg_loc, expected));
                   if (merge_bwd(arg_loc, expected))
+                  {
+                    refined = true;
                     propagate_call_node(env, arg_loc, top, lookup_stmts);
+                  }
                 }
               }
 
@@ -2997,6 +3013,57 @@ namespace vc
                     propagate_shape_to_lambda(top, pt, arg_it->second.type);
                 }
               }
+            }
+          }
+        }
+
+        if (!refined)
+        {
+          Node target_prim;
+
+          for (auto& arg_node : *args)
+          {
+            auto arg_it = env.find((arg_node / Rhs)->location());
+            if (arg_it == env.end() || is_default_type(arg_it->second.type))
+              continue;
+
+            auto prim = extract_callable_primitive(arg_it->second.type);
+            if (!prim)
+              prim = extract_wrapper_primitive(arg_it->second.type);
+            if (prim)
+            {
+              target_prim = prim;
+              break;
+            }
+          }
+
+          if (!target_prim)
+          {
+            auto lookup_it = lookup_stmts.find(src_loc);
+            if (lookup_it != lookup_stmts.end())
+            {
+              auto recv_it = env.find((lookup_it->second / Rhs)->location());
+              if (recv_it != env.end() && !is_default_type(recv_it->second.type))
+              {
+                auto prim = extract_callable_primitive(recv_it->second.type);
+                if (!prim)
+                  prim = extract_wrapper_primitive(recv_it->second.type);
+                if (prim)
+                  target_prim = prim;
+              }
+            }
+          }
+
+          if (target_prim)
+          {
+            for (auto& arg_node : *args)
+            {
+              auto arg_loc = (arg_node / Rhs)->location();
+              bool local_refined = refine_local_const(arg_loc, target_prim);
+              bool bwd_refined = merge_bwd(arg_loc, target_prim);
+              if (bwd_refined)
+                propagate_call_node(env, arg_loc, top, lookup_stmts);
+              refined = refined || local_refined || bwd_refined;
             }
           }
         }
@@ -3525,7 +3592,18 @@ namespace vc
           }
         }
       }
+      else if (term == Raise)
+      {
+        std::map<Location, Node> const_defs;
+        for (auto& stmt : *(labels->at(i) / Body))
+          if (stmt == Const)
+            const_defs[(stmt / LocalId)->location()] = stmt;
 
+        auto raise_ret = term / Type;
+        auto ret_loc = (term / LocalId)->location();
+        if (refine_const_local(env, const_defs, ret_loc, raise_ret))
+          label_changes.forward = true;
+      }
       // Cond: branch exits with typetest narrowing.
       if (term == Cond)
       {
