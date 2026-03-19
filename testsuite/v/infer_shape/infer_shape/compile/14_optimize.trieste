@@ -27,14 +27,14 @@ optimize
             (localid 6:$opt_1)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 4:$913)
+            (localid 4:$925)
             (localid 6:$opt_4)
             (args
               (arg
                 (argcopy)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 4:$913)))))
+          (localid 4:$925)))))
   (func
     (functionid 23:infer_shape::main::0::0)
     (params)
@@ -45,7 +45,7 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$113)
+            (localid 9:local$114)
             (i32)
             (int 2:42))
           (new
@@ -54,7 +54,7 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$113))))
+                (localid 9:local$114))))
           (lookup
             (localid 6:$opt_5)
             (localid 7:local$8)
@@ -68,9 +68,6 @@ optimize
                 (localid 7:local$8)))))
         (ret
           (localid 7:local$9)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 30:infer_shape::box::create::1::0)
     (params
@@ -109,14 +106,14 @@ optimize
             (localid 1:g)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$112)
+            (localid 9:local$113)
             (localid 6:$opt_6)
             (args
               (arg
                 (argcopy)
                 (localid 1:g)))))
         (ret
-          (localid 9:local$112)))))
+          (localid 9:local$113)))))
   (type
     (typeid 22:infer_shape::getter::0)
     (classid 19:infer_shape::box::0))
@@ -152,10 +149,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$110)
+            (localid 9:local$111)
             (localid 6:$opt_7)))
         (ret
-          (localid 9:local$110)))))
+          (localid 9:local$111)))))
   (func
     (functionid 27:infer_shape::box::val::1::0)
     (params
@@ -175,10 +172,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$504)
+            (localid 9:local$509)
             (localid 7:local$6)))
         (ret
-          (localid 9:local$504)))))
+          (localid 9:local$509)))))
   (func
     (functionid 32:infer_shape::box::val::1::ref::0)
     (params
@@ -193,13 +190,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$108)
+            (localid 9:local$109)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$108)))))
+          (localid 9:local$109)))))
+  (primitive
+    (i32)
+    (methods))
   (primitive
     (ref
       (i32))

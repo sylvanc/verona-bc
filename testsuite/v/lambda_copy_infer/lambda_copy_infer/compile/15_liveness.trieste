@@ -38,14 +38,14 @@ liveness
             (localid 6:$opt_1)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 4:$919)
+            (localid 4:$931)
             (localid 6:$opt_4)
             (args
               (arg
                 (argmove)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 4:$919)))))
+          (localid 4:$931)))))
   (func
     (functionid 29:lambda_copy_infer::main::0::0)
     (params)
@@ -56,7 +56,7 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$115)
+            (localid 9:local$116)
             (i32)
             (int 2:42))
           (new
@@ -76,23 +76,20 @@ liveness
                 (localid 6:$opt_9))
               (arg
                 (argmove)
-                (localid 9:local$115))))
+                (localid 9:local$116))))
           (lookup
             (localid 7:$opt_13)
             (localid 8:local$11)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$117)
+            (localid 9:local$118)
             (localid 7:$opt_13)
             (args
               (arg
                 (argmove)
                 (localid 8:local$11)))))
         (ret
-          (localid 9:local$117)))))
-  (primitive
-    (i32)
-    (methods))
+          (localid 9:local$118)))))
   (func
     (functionid 34:lambda_copy_infer::wrap_copy::1::0)
     (params
@@ -110,14 +107,14 @@ liveness
             (classid 30:lambda_copy_infer::lambda$0::0)
             (args))
           (new
-            (localid 9:local$114)
+            (localid 9:local$115)
             (classid 29:lambda_copy_infer::wrapper::0)
             (args
               (arg
                 (argmove)
                 (localid 3:val)))))
         (ret
-          (localid 9:local$114)))))
+          (localid 9:local$115)))))
   (class
     (classid 29:lambda_copy_infer::wrapper::0)
     (fields
@@ -217,10 +214,10 @@ liveness
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$112)
+            (localid 9:local$113)
             (localid 7:$opt_16)))
         (ret
-          (localid 9:local$112)))))
+          (localid 9:local$113)))))
   (func
     (functionid 37:lambda_copy_infer::wrapper::val::1::0)
     (params
@@ -240,10 +237,10 @@ liveness
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$508)
+            (localid 9:local$513)
             (localid 7:local$6)))
         (ret
-          (localid 9:local$508)))))
+          (localid 9:local$513)))))
   (func
     (functionid 42:lambda_copy_infer::wrapper::val::1::ref::0)
     (params
@@ -258,13 +255,16 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$110)
+            (localid 9:local$111)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$110)))))
+          (localid 9:local$111)))))
+  (primitive
+    (i32)
+    (methods))
   (primitive
     (ref
       (i32))

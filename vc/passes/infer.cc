@@ -1,35 +1,24 @@
 #include "../lang.h"
 #include "../subtype.h"
 
-#include <queue>
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
 
 namespace vc
 {
-  // Map from builtin primitive name to IR token.
+  // ===== Dispatch tables =====
+
   const std::map<std::string_view, Token> primitive_from_name = {
-    {"none", None},
-    {"bool", Bool},
-    {"i8", I8},
-    {"i16", I16},
-    {"i32", I32},
-    {"i64", I64},
-    {"u8", U8},
-    {"u16", U16},
-    {"u32", U32},
-    {"u64", U64},
-    {"ilong", ILong},
-    {"ulong", ULong},
-    {"isize", ISize},
-    {"usize", USize},
-    {"f32", F32},
-    {"f64", F64},
+    {"none", None}, {"bool", Bool},
+    {"i8", I8}, {"i16", I16}, {"i32", I32}, {"i64", I64},
+    {"u8", U8}, {"u16", U16}, {"u32", U32}, {"u64", U64},
+    {"ilong", ILong}, {"ulong", ULong}, {"isize", ISize}, {"usize", USize},
+    {"f32", F32}, {"f64", F64},
   };
 
-  // Map from ffi primitive name to IR token.
-  // These live under _builtin::ffi:: (3-element path).
   const std::map<std::string_view, Token> ffi_primitive_from_name = {
-    {"ptr", Ptr},
-    {"callback", Callback},
+    {"ptr", Ptr}, {"callback", Callback},
   };
 
   const std::initializer_list<Token> integer_types = {
@@ -37,8 +26,34 @@ namespace vc
 
   const std::initializer_list<Token> float_types = {F32, F64};
 
-  // Build a source-level Type node wrapping a FQ TypeName for a primitive.
-  // Creates fresh nodes on each call (no shared-node issues).
+  // Binary ops: result type = LHS type.
+  const std::initializer_list<Token> propagate_lhs_ops = {
+    Add, Sub, Mul, Div, Mod, Pow, And, Or, Xor, Shl, Shr, Min, Max,
+    LogBase, Atan2};
+
+  // Unary ops: result type = operand type.
+  const std::initializer_list<Token> propagate_rhs_ops = {
+    Neg, Abs, Ceil, Floor, Exp, Log, Sqrt, Cbrt, Sin, Cos, Tan,
+    Asin, Acos, Atan, Sinh, Cosh, Tanh, Asinh, Acosh, Atanh, Read};
+
+  // Ops with fixed result types.
+  const std::map<Token, Token> fixed_result_type = {
+    {Eq, Bool}, {Ne, Bool}, {Lt, Bool}, {Le, Bool},
+    {Gt, Bool}, {Ge, Bool}, {IsInf, Bool}, {IsNaN, Bool}, {Not, Bool},
+    {Bits, U64}, {Len, USize},
+    {Const_E, F64}, {Const_Pi, F64}, {Const_Inf, F64}, {Const_NaN, F64},
+    {GetRaise, U64}, {SetRaise, U64},
+    {FreeCallback, None}, {AddExternal, None}, {RemoveExternal, None},
+    {RegisterExternalNotify, None}, {Freeze, None},
+    {ArrayCopy, None}, {ArrayFill, None}, {ArrayCompare, I64},
+  };
+
+  const std::map<Token, Token> fixed_ffi_result_type = {
+    {MakePtr, Ptr}, {CallbackPtr, Ptr}, {MakeCallback, Callback},
+  };
+
+  // ===== Type constructors =====
+
   Node primitive_type(const Token& tok)
   {
     return Type
@@ -46,8 +61,6 @@ namespace vc
                    << (NameElement << (Ident ^ tok.str()) << TypeArgs));
   }
 
-  // Build a source-level Type node for an ffi primitive (_builtin::ffi::name).
-  // Creates fresh nodes on each call.
   Node ffi_primitive_type(const Token& tok)
   {
     return Type
@@ -56,8 +69,6 @@ namespace vc
                    << (NameElement << (Ident ^ tok.str()) << TypeArgs));
   }
 
-  // Build a source-level Type node for _builtin::array[_builtin::u8].
-  // Creates fresh nodes on each call.
   Node string_type()
   {
     return Type
@@ -65,502 +76,1557 @@ namespace vc
                    << (NameElement << (Ident ^ "string") << TypeArgs));
   }
 
-  // Build a source-level Type node for _builtin::ref[inner].
-  // Creates fresh nodes on each call.
-  Node ref_type(const Node& inner_type)
+  Node ref_type(const Node& inner)
   {
     return Type
       << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
                    << (NameElement << (Ident ^ "ref")
-                                   << (TypeArgs << clone(inner_type))));
+                                   << (TypeArgs << clone(inner))));
   }
 
-  // Build a source-level Type node for _builtin::cown[inner].
-  // Creates fresh nodes on each call.
-  Node cown_type(const Node& inner_type)
+  Node cown_type(const Node& inner)
   {
     return Type
       << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
                    << (NameElement << (Ident ^ "cown")
-                                   << (TypeArgs << clone(inner_type))));
+                                   << (TypeArgs << clone(inner))));
   }
 
-  // If type_node is _builtin::X[T] for the given wrapper name,
-  // return T as a cloned Type node. Returns empty Node otherwise.
+  // ===== Type predicates =====
+
+  bool is_default_type(const Node& type)
+  {
+    return type && !type->empty() &&
+      type->front()->in({DefaultInt, DefaultFloat});
+  }
+
+  bool contains_default_type(const Node& type)
+  {
+    if (!type)
+      return false;
+
+    bool found = false;
+    type->traverse([&](auto node) {
+      if (node->in({DefaultInt, DefaultFloat}))
+      {
+        found = true;
+        return false;
+      }
+      return !found;
+    });
+    return found;
+  }
+
+  Node resolve_default(const Node& type)
+  {
+    if (!type || type->empty())
+      return type;
+    if (type->front() == DefaultInt)
+      return primitive_type(U64);
+    if (type->front() == DefaultFloat)
+      return primitive_type(F64);
+    return type;
+  }
+
+  bool is_any_type(const Node& type)
+  {
+    if (type != Type)
+      return false;
+    auto inner = type->front();
+    if (inner != TypeName || inner->size() != 2)
+      return false;
+    if ((inner->front() / Ident)->location().view() != "_builtin")
+      return false;
+    return (inner->back() / Ident)->location().view() == "any";
+  }
+
+  bool is_dyn_type(const Node& type)
+  {
+    if (type != Type)
+      return false;
+    auto inner = type->front();
+    if (inner != TypeName || inner->size() != 2)
+      return false;
+    if ((inner->front() / Ident)->location().view() != "_builtin")
+      return false;
+    return (inner->back() / Ident)->location().view() == "dyn";
+  }
+
+  bool is_uninformative_backward_type(const Node& type)
+  {
+    return is_any_type(type) || is_dyn_type(type) ||
+      (type == Type && !type->empty() && type->front() == TypeSelf);
+  }
+
   Node extract_wrapper_inner(const Node& type_node, std::string_view wrapper)
   {
     if (type_node != Type)
       return {};
-
     auto inner = type_node->front();
-
     if (inner != TypeName || inner->size() != 2)
       return {};
-
-    auto first = (inner->front() / Ident)->location().view();
-    auto second = (inner->back() / Ident)->location().view();
-
-    if (first != "_builtin" || second != wrapper)
+    if ((inner->front() / Ident)->location().view() != "_builtin")
       return {};
-
+    if ((inner->back() / Ident)->location().view() != wrapper)
+      return {};
     auto ta = inner->back() / TypeArgs;
-
     if (ta->size() != 1)
       return {};
-
     return clone(ta->front());
   }
 
-  // If type_node is _builtin::ref[T], return T as a cloned Type node.
-  // Returns empty Node otherwise.
   Node extract_ref_inner(const Node& type_node)
   {
     return extract_wrapper_inner(type_node, "ref");
   }
 
-  // If type_node is _builtin::cown[T], return T as a cloned Type node.
-  // Returns empty Node otherwise.
   Node extract_cown_inner(const Node& type_node)
   {
     return extract_wrapper_inner(type_node, "cown");
   }
 
-  // Check if a Type node directly references a single TypeParam.
-  // Returns the TypeParam def node, or empty Node.
+  Node extract_primitive(const Node& type_node)
+  {
+    if (type_node != Type)
+      return {};
+    auto inner = type_node->front();
+    if (inner == DefaultInt)
+      return U64;
+    if (inner == DefaultFloat)
+      return F64;
+    if (inner != TypeName)
+      return {};
+    auto first = (inner->front() / Ident)->location().view();
+    if (first != "_builtin")
+      return {};
+    if (inner->size() == 2)
+    {
+      auto it = primitive_from_name.find(
+        (inner->back() / Ident)->location().view());
+      return (it != primitive_from_name.end()) ? Node{it->second} : Node{};
+    }
+    if (inner->size() == 3)
+    {
+      if ((inner->at(1) / Ident)->location().view() != "ffi")
+        return {};
+      auto it = ffi_primitive_from_name.find(
+        (inner->at(2) / Ident)->location().view());
+      return (it != ffi_primitive_from_name.end()) ? Node{it->second} : Node{};
+    }
+    return {};
+  }
+
+  Node extract_callable_primitive(const Node& type_node)
+  {
+    auto prim = extract_primitive(type_node);
+    if (prim)
+      return prim;
+    if (type_node != Type)
+      return {};
+    auto inner = type_node->front();
+    if (!inner->in({Union, Isect}))
+      return {};
+    Node candidate;
+    for (auto& component : *inner)
+    {
+      auto p = extract_primitive(Type << clone(component));
+      if (!p)
+        continue;
+      if (candidate && candidate->type() != p->type())
+        return {};
+      candidate = p;
+    }
+    return candidate;
+  }
+
+  Node exclude_tested_type(
+    Node top, const Node& source_type, const Node& tested_type)
+  {
+    if (source_type != Type || tested_type != Type)
+      return {};
+
+    auto inner = source_type->front();
+    if (inner != Union)
+      return {};
+
+    SequentCtx ctx{top, {}, {}};
+    Node remaining = Union;
+    for (auto& component : *inner)
+    {
+      auto component_type = Type << clone(component);
+      if (!Subtype(ctx, component_type, tested_type))
+        remaining << clone(component);
+    }
+
+    if (remaining->empty() || remaining->size() == inner->size())
+      return {};
+
+    return (remaining->size() == 1) ? Type << clone(remaining->front())
+                                    : Type << remaining;
+  }
+
+  Node extract_wrapper_primitive(const Node& type_node)
+  {
+    auto inner = extract_ref_inner(type_node);
+    if (!inner)
+      inner = extract_cown_inner(type_node);
+    return inner ? extract_callable_primitive(inner) : Node{};
+  }
+
+  Node default_literal_type(const Node& lit)
+  {
+    if (lit->in({True, False}))
+      return Bool;
+    if (lit == None)
+      return None;
+    if (lit->in({Bin, Oct, Int, Hex, Char}))
+      return DefaultInt;
+    if (lit->in({Float, HexFloat}))
+      return DefaultFloat;
+    assert(false && "unhandled literal type");
+    return {};
+  }
+
+  static bool contains_typevar(const Node& type_node)
+  {
+    if (!type_node)
+      return false;
+    bool found = false;
+    type_node->traverse([&](auto node) {
+      if (node == TypeVar)
+        found = true;
+      return !found;
+    });
+    return found;
+  }
+
   Node direct_typeparam(Node top, const Node& type_node)
   {
     if (type_node != Type)
       return {};
-
     auto inner = type_node->front();
-
     if (inner != TypeName)
       return {};
-
     auto def = find_def(top, inner);
-
-    if (def && (def == TypeParam))
-      return def;
-
-    return {};
+    return (def && def == TypeParam) ? def : Node{};
   }
 
-  // Entry for a local variable in the type environment.
+  Node lookup_method_name(const Node& stmt)
+  {
+    Node ident = stmt / Ident;
+    if (ident)
+      return ident;
+    return stmt / SymbolId;
+  }
+
+  using InferClock = std::chrono::steady_clock;
+
+  struct InferProfileStats
+  {
+    std::string function_name;
+    size_t labels = 0;
+    size_t worklist_iterations = 0;
+    size_t labels_processed = 0;
+    size_t labels_skipped = 0;
+    size_t entry_bindings = 0;
+    size_t process_label_body_calls = 0;
+    size_t dependency_cascade_calls = 0;
+    size_t entry_update_calls = 0;
+    size_t resolve_method_calls = 0;
+    size_t resolve_method_cache_hits = 0;
+    size_t resolve_method_cache_misses = 0;
+    size_t resolve_method_scans = 0;
+    size_t merge_type_calls = 0;
+    size_t merge_env_calls = 0;
+    size_t merge_type_existing_typevar = 0;
+    size_t merge_type_both_typevar = 0;
+    size_t merge_type_incoming_typevar = 0;
+    size_t merge_type_pointer_equal = 0;
+    size_t merge_type_structural_equal = 0;
+    size_t merge_type_default_promote = 0;
+    size_t merge_type_default_keep = 0;
+    size_t merge_type_invariant_equal = 0;
+    size_t merge_type_subtype_keep = 0;
+    size_t merge_type_subtype_widen = 0;
+    size_t merge_type_union_build = 0;
+    size_t same_type_tree_calls = 0;
+    size_t same_type_tree_equal = 0;
+    size_t same_type_env_calls = 0;
+    size_t same_type_env_equal = 0;
+    size_t navigate_call_calls = 0;
+    size_t apply_subst_calls = 0;
+    size_t infer_typeargs_calls = 0;
+    size_t push_arg_types_to_params_calls = 0;
+    size_t propagate_call_node_calls = 0;
+    size_t stmt_const_like = 0;
+    size_t stmt_copy_like = 0;
+    size_t stmt_ref_ops = 0;
+    size_t stmt_tuple_ops = 0;
+    size_t stmt_new_ops = 0;
+    size_t stmt_call_ops = 0;
+    size_t stmt_ffi_when_ops = 0;
+    size_t stmt_typetest_ops = 0;
+    size_t tuple_finalize_ops = 0;
+    size_t requeue_succ = 0;
+    size_t requeue_self_bwd = 0;
+    size_t requeue_pred_bwd = 0;
+    size_t entry_pred_merge_count = 0;
+    size_t entry_self_bwd_merge_count = 0;
+    size_t entry_succ_bwd_merge_count = 0;
+    size_t entry_env_unchanged = 0;
+    size_t entry_env_changed = 0;
+    InferClock::duration process_function_time{};
+    InferClock::duration entry_build_time{};
+    InferClock::duration entry_pred_time{};
+    InferClock::duration entry_self_bwd_time{};
+    InferClock::duration entry_succ_bwd_time{};
+    InferClock::duration process_label_body_time{};
+    InferClock::duration resolve_method_time{};
+    InferClock::duration dependency_cascade_time{};
+    InferClock::duration entry_update_time{};
+    InferClock::duration same_type_tree_time{};
+    InferClock::duration same_type_env_time{};
+    InferClock::duration navigate_call_time{};
+    InferClock::duration apply_subst_time{};
+    InferClock::duration infer_typeargs_time{};
+    InferClock::duration push_arg_types_to_params_time{};
+    InferClock::duration propagate_call_node_time{};
+    InferClock::duration stmt_const_like_time{};
+    InferClock::duration stmt_copy_like_time{};
+    InferClock::duration stmt_ref_ops_time{};
+    InferClock::duration stmt_tuple_ops_time{};
+    InferClock::duration stmt_new_ops_time{};
+    InferClock::duration stmt_call_ops_time{};
+    InferClock::duration stmt_ffi_when_ops_time{};
+    InferClock::duration stmt_typetest_ops_time{};
+    InferClock::duration tuple_finalize_time{};
+  };
+
+  static InferProfileStats* active_infer_profile = nullptr;
+  static size_t* active_infer_transfer_epoch = nullptr;
+
+  static bool infer_profile_enabled()
+  {
+    static const bool enabled = (std::getenv("VC_INFER_PROFILE") != nullptr);
+    return enabled;
+  }
+
+  static double infer_duration_ms(const InferClock::duration& duration)
+  {
+    return std::chrono::duration<double, std::milli>(duration).count();
+  }
+
+  struct InferScopedTimer
+  {
+    InferClock::duration* slot;
+    InferClock::time_point start;
+
+    explicit InferScopedTimer(InferClock::duration* slot_) : slot(slot_)
+    {
+      if (slot != nullptr)
+        start = InferClock::now();
+    }
+
+    ~InferScopedTimer()
+    {
+      if (slot != nullptr)
+        *slot += InferClock::now() - start;
+    }
+  };
+
+  static std::string infer_function_name(const Node& func)
+  {
+    Node ident = func / Ident;
+    if (ident)
+      return std::string(ident->location().view());
+    return "<function>";
+  }
+
+  static void dump_infer_profile(const InferProfileStats& stats)
+  {
+    std::cerr << "infer-profile"
+              << "\tfunc=" << stats.function_name
+              << "\tlabels=" << stats.labels
+              << "\twl_iters=" << stats.worklist_iterations
+              << "\tlabel_runs=" << stats.labels_processed
+              << "\tlabel_skips=" << stats.labels_skipped
+              << "\tentry_bindings=" << stats.entry_bindings
+              << "\tmerge_type=" << stats.merge_type_calls
+              << "\tmerge_env=" << stats.merge_env_calls
+              << "\tmt_exist_tv=" << stats.merge_type_existing_typevar
+              << "\tmt_both_tv=" << stats.merge_type_both_typevar
+              << "\tmt_in_tv=" << stats.merge_type_incoming_typevar
+              << "\tmt_ptr_eq=" << stats.merge_type_pointer_equal
+              << "\tmt_struct_eq=" << stats.merge_type_structural_equal
+              << "\tmt_def_promote=" << stats.merge_type_default_promote
+              << "\tmt_def_keep=" << stats.merge_type_default_keep
+              << "\tmt_invariant=" << stats.merge_type_invariant_equal
+              << "\tmt_sub_keep=" << stats.merge_type_subtype_keep
+              << "\tmt_sub_widen=" << stats.merge_type_subtype_widen
+              << "\tmt_union=" << stats.merge_type_union_build
+              << "\tst_tree=" << stats.same_type_tree_calls
+              << "\tst_tree_eq=" << stats.same_type_tree_equal
+              << "\tst_env=" << stats.same_type_env_calls
+              << "\tst_env_eq=" << stats.same_type_env_equal
+              << "\tresolve=" << stats.resolve_method_calls
+              << "\tresolve_hit=" << stats.resolve_method_cache_hits
+              << "\tresolve_miss=" << stats.resolve_method_cache_misses
+              << "\tresolve_scan=" << stats.resolve_method_scans
+              << "\tnavigate_call=" << stats.navigate_call_calls
+              << "\tapply_subst=" << stats.apply_subst_calls
+              << "\tinfer_typeargs=" << stats.infer_typeargs_calls
+              << "\tpush_arg_types=" << stats.push_arg_types_to_params_calls
+              << "\tprop_call_node=" << stats.propagate_call_node_calls
+              << "\tbody_calls=" << stats.process_label_body_calls
+              << "\tcascade_calls=" << stats.dependency_cascade_calls
+              << "\tentry_updates=" << stats.entry_update_calls
+              << "\tstmt_const=" << stats.stmt_const_like
+              << "\tstmt_copy=" << stats.stmt_copy_like
+              << "\tstmt_ref=" << stats.stmt_ref_ops
+              << "\tstmt_tuple=" << stats.stmt_tuple_ops
+              << "\tstmt_new=" << stats.stmt_new_ops
+              << "\tstmt_call=" << stats.stmt_call_ops
+              << "\tstmt_ffi_when=" << stats.stmt_ffi_when_ops
+              << "\tstmt_typetest=" << stats.stmt_typetest_ops
+              << "\ttuple_finalize=" << stats.tuple_finalize_ops
+              << "\treq_succ=" << stats.requeue_succ
+              << "\treq_self_bwd=" << stats.requeue_self_bwd
+              << "\treq_pred_bwd=" << stats.requeue_pred_bwd
+              << "\tentry_pred_merges=" << stats.entry_pred_merge_count
+              << "\tentry_self_bwd_merges=" << stats.entry_self_bwd_merge_count
+              << "\tentry_succ_bwd_merges=" << stats.entry_succ_bwd_merge_count
+              << "\tentry_same=" << stats.entry_env_unchanged
+              << "\tentry_diff=" << stats.entry_env_changed
+              << "\ttotal_ms=" << infer_duration_ms(stats.process_function_time)
+              << "\tentry_ms=" << infer_duration_ms(stats.entry_build_time)
+              << "\tentry_pred_ms="
+              << infer_duration_ms(stats.entry_pred_time)
+              << "\tentry_self_bwd_ms="
+              << infer_duration_ms(stats.entry_self_bwd_time)
+              << "\tentry_succ_bwd_ms="
+              << infer_duration_ms(stats.entry_succ_bwd_time)
+              << "\tentry_update_ms="
+              << infer_duration_ms(stats.entry_update_time)
+              << "\tst_tree_ms="
+              << infer_duration_ms(stats.same_type_tree_time)
+              << "\tst_env_ms="
+              << infer_duration_ms(stats.same_type_env_time)
+              << "\tbody_ms="
+              << infer_duration_ms(stats.process_label_body_time)
+              << "\tconst_ms="
+              << infer_duration_ms(stats.stmt_const_like_time)
+              << "\tcopy_ms="
+              << infer_duration_ms(stats.stmt_copy_like_time)
+              << "\tref_ms="
+              << infer_duration_ms(stats.stmt_ref_ops_time)
+              << "\ttuple_ms="
+              << infer_duration_ms(stats.stmt_tuple_ops_time)
+              << "\tnew_ms="
+              << infer_duration_ms(stats.stmt_new_ops_time)
+              << "\tcall_ms="
+              << infer_duration_ms(stats.stmt_call_ops_time)
+              << "\tffi_when_ms="
+              << infer_duration_ms(stats.stmt_ffi_when_ops_time)
+              << "\ttypetest_ms="
+              << infer_duration_ms(stats.stmt_typetest_ops_time)
+              << "\ttuple_finalize_ms="
+              << infer_duration_ms(stats.tuple_finalize_time)
+              << "\tresolve_ms="
+              << infer_duration_ms(stats.resolve_method_time)
+              << "\tnavigate_call_ms="
+              << infer_duration_ms(stats.navigate_call_time)
+              << "\tapply_subst_ms="
+              << infer_duration_ms(stats.apply_subst_time)
+              << "\tinfer_typeargs_ms="
+              << infer_duration_ms(stats.infer_typeargs_time)
+              << "\tpush_arg_types_ms="
+              << infer_duration_ms(stats.push_arg_types_to_params_time)
+              << "\tprop_call_node_ms="
+              << infer_duration_ms(stats.propagate_call_node_time)
+              << "\tcascade_ms="
+              << infer_duration_ms(stats.dependency_cascade_time) << '\n';
+  }
+
+  // ===== Type environment =====
+
   struct LocalTypeInfo
   {
-    Node type; // Source-level Type node (e.g., Type << TypeName << ...)
-    bool is_default; // True if type came from Const default (U64/F64)
-    bool is_fixed; // True if from Param or TypeAssertion
-    Node const_node; // If from a Const, the Const stmt (for refinement)
-    Node call_node; // If from a default-inferred Call/CallDyn, the stmt
-
-    // Factory: fixed type from Param or TypeAssertion.
-    static LocalTypeInfo fixed(Node type)
-    {
-      return {std::move(type), false, true, {}, {}};
-    }
-
-    // Factory: default-typed literal (U64/F64).
-    static LocalTypeInfo literal(Node type, Node const_node)
-    {
-      return {std::move(type), true, false, std::move(const_node), {}};
-    }
-
-    // Factory: computed result (non-default, non-fixed).
-    static LocalTypeInfo computed(Node type)
-    {
-      return {std::move(type), false, false, {}, {}};
-    }
-
-    // Factory: propagated from another entry (Copy/Move).
-    static LocalTypeInfo propagated(const LocalTypeInfo& src)
-    {
-      return {
-        clone(src.type), src.is_default, false, src.const_node, src.call_node};
-    }
+    Node type;
+    bool is_fixed;
+    Node call_node; // Call/CallDyn that produced this (for cross-function prop)
   };
 
   using TypeEnv = std::map<Location, LocalTypeInfo>;
 
+  // ===== Type lattice: merge =====
+
   // Forward declaration for use in extract_constraints.
   Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst);
 
-  // Build a substitution map from a ClassDef's TypeParams to a TypeName's
-  // last NameElement's TypeArgs. Returns an empty map on size mismatch.
+  struct MethodInfo
+  {
+    Node func;
+    NodeMap<Node> subst;
+  };
+
+  struct MethodOwner
+  {
+    Node class_def;
+    Node subst_source;
+    std::string key;
+  };
+
+  struct MethodLookupKey
+  {
+    std::string owner_key;
+    std::string method_name;
+    std::string hand_name;
+    size_t arity;
+
+    auto operator<=>(const MethodLookupKey&) const = default;
+  };
+
+  using MethodLookupCache = std::map<MethodLookupKey, Node>;
+
+  static MethodLookupCache* active_method_cache = nullptr;
+
+  struct InferProcessScope
+  {
+    InferProfileStats* current_profile;
+    InferProfileStats* prev_profile;
+    MethodLookupCache* prev_method_cache;
+    size_t* prev_transfer_epoch;
+
+    InferProcessScope(
+      InferProfileStats* current_profile_,
+      InferProfileStats* prev_profile_,
+      MethodLookupCache* prev_method_cache_,
+      size_t* prev_transfer_epoch_)
+    : current_profile(current_profile_),
+      prev_profile(prev_profile_),
+      prev_method_cache(prev_method_cache_),
+      prev_transfer_epoch(prev_transfer_epoch_)
+    {}
+
+    ~InferProcessScope()
+    {
+      active_method_cache = prev_method_cache;
+      active_infer_transfer_epoch = prev_transfer_epoch;
+      if (current_profile != nullptr)
+        dump_infer_profile(*current_profile);
+      active_infer_profile = prev_profile;
+    }
+  };
+
+  MethodInfo resolve_method(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs);
+  Node resolve_method_return_type(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs);
+  MethodInfo resolve_callable_method(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs);
+
+  static std::string typename_path_key(const Node& type_name)
+  {
+    if (type_name != TypeName)
+      return {};
+
+    std::string key;
+    for (auto& elem : *type_name)
+    {
+      if (!key.empty())
+        key += "::";
+      key += std::string((elem / Ident)->location().view());
+    }
+    return key;
+  }
+
+  static MethodOwner resolve_method_owner(Node top, const Node& receiver_type)
+  {
+    if (receiver_type != Type)
+      return {};
+
+    auto inner = receiver_type->front();
+    if (inner != TypeName)
+      return {};
+
+    auto class_def = find_def(top, inner);
+    Node subst_source = inner;
+    if ((!class_def || class_def != ClassDef) && inner->size() > 1)
+    {
+      Node base = TypeName;
+      for (size_t i = 0; i + 1 < inner->size(); i++)
+        base << clone(inner->at(i));
+
+      auto base_def = find_def(top, base);
+      if (base_def && base_def == ClassDef)
+      {
+        class_def = base_def;
+        subst_source = base;
+      }
+    }
+
+    if (!class_def || class_def != ClassDef)
+      return {};
+
+    return {class_def, subst_source, typename_path_key(subst_source)};
+  }
+
+  static Node resolve_class_method(
+    const MethodOwner& owner, std::string_view method_name, Token hand,
+    size_t arity)
+  {
+    if (!owner.class_def)
+      return {};
+
+    MethodLookupKey key{
+      owner.key, std::string(method_name), std::string(hand.str()), arity};
+
+    if (active_method_cache != nullptr)
+    {
+      auto it = active_method_cache->find(key);
+      if (it != active_method_cache->end())
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->resolve_method_cache_hits++;
+        return it->second;
+      }
+    }
+
+    if (active_infer_profile != nullptr)
+    {
+      active_infer_profile->resolve_method_cache_misses++;
+      active_infer_profile->resolve_method_scans++;
+    }
+
+    Node func;
+    for (auto& child : *(owner.class_def / ClassBody))
+    {
+      if (child != Function)
+        continue;
+
+      auto child_name = lookup_method_name(child);
+      if (!child_name || child_name->location().view() != method_name)
+        continue;
+      if ((child / Lhs)->type() != hand)
+        continue;
+      if ((child / Params)->size() != arity)
+        continue;
+
+      func = child;
+      break;
+    }
+
+    if (active_method_cache != nullptr)
+      (*active_method_cache)[std::move(key)] = func;
+
+    return func;
+  }
+
+  static bool same_type_tree(const Node& left, const Node& right)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_tree_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->same_type_tree_time
+        : nullptr);
+
+    if (left == right)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->same_type_tree_equal++;
+      return true;
+    }
+    if (!left || !right)
+      return false;
+    if (left->type() != right->type())
+      return false;
+    if (left->size() != right->size())
+      return false;
+
+    if (left == Ident)
+      return left->location().view() == right->location().view();
+
+    for (size_t i = 0; i < left->size(); i++)
+      if (!same_type_tree(left->at(i), right->at(i)))
+        return false;
+
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_tree_equal++;
+    return true;
+  }
+
+  static bool same_type_env(const TypeEnv& left, const TypeEnv& right)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_env_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->same_type_env_time
+        : nullptr);
+
+    if (left.size() != right.size())
+      return false;
+
+    auto lit = left.begin();
+    auto rit = right.begin();
+    while (lit != left.end())
+    {
+      if (lit->first != rit->first)
+        return false;
+      if (lit->second.is_fixed != rit->second.is_fixed)
+        return false;
+      if (lit->second.call_node != rit->second.call_node)
+        return false;
+      if (!same_type_tree(lit->second.type, rit->second.type))
+        return false;
+      ++lit;
+      ++rit;
+    }
+
+    if (active_infer_profile != nullptr)
+      active_infer_profile->same_type_env_equal++;
+    return true;
+  }
+
+  static void note_infer_transfer_change()
+  {
+    if (active_infer_transfer_epoch != nullptr)
+      (*active_infer_transfer_epoch)++;
+  }
+
+  static bool replace_if_changed(
+    const Node& owner, const Node& old_child, const Node& new_child)
+  {
+    if (same_type_tree(old_child, new_child))
+      return false;
+    owner->replace(old_child, new_child);
+    note_infer_transfer_change();
+    return true;
+  }
+
+  static bool refine_const_local(
+    TypeEnv& env,
+    const std::map<Location, Node>& const_defs,
+    const Location& loc,
+    const Node& expected)
+  {
+    auto const_it = const_defs.find(loc);
+    if (const_it == const_defs.end())
+      return false;
+
+    auto env_it = env.find(loc);
+    if (env_it == env.end())
+      return false;
+
+    auto expected_prim = extract_primitive(expected);
+    if (!expected_prim)
+      return false;
+
+    auto current_prim = extract_primitive(env_it->second.type);
+    bool compatible =
+      (env_it->second.type->front() == DefaultInt &&
+       expected_prim->in(integer_types)) ||
+      (env_it->second.type->front() == DefaultFloat &&
+       expected_prim->in(float_types)) ||
+      (current_prim && current_prim->in(integer_types) &&
+       expected_prim->in(integer_types)) ||
+      (current_prim && current_prim->in(float_types) &&
+       expected_prim->in(float_types));
+    if (!compatible)
+      return false;
+
+    env_it->second.type = primitive_type(expected_prim->type());
+    auto const_stmt = const_it->second;
+    if (const_stmt->size() == 3)
+    {
+      auto old_type = const_stmt->at(1);
+      if (old_type->type() != expected_prim->type())
+      {
+        const_stmt->replace(old_type, expected_prim->type());
+        note_infer_transfer_change();
+      }
+    }
+    else
+    {
+      auto dst = const_stmt->front();
+      auto lit = const_stmt->back();
+      const_stmt->erase(const_stmt->begin(), const_stmt->end());
+      const_stmt << dst << expected_prim->type() << lit;
+      note_infer_transfer_change();
+    }
+
+    return true;
+  }
+
+  static bool upsert_lookup_stmt(
+    std::map<Location, Node>& lookup_stmts, const Location& loc, const Node& stmt)
+  {
+    auto [it, inserted] = lookup_stmts.insert({loc, stmt});
+    if (inserted)
+    {
+      note_infer_transfer_change();
+      return true;
+    }
+    if (it->second != stmt)
+    {
+      it->second = stmt;
+      note_infer_transfer_change();
+      return true;
+    }
+    return false;
+  }
+
+  static bool upsert_ref_to_tuple(
+    std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
+    const Location& loc,
+    const std::pair<Location, size_t>& value)
+  {
+    auto [it, inserted] = ref_to_tuple.insert({loc, value});
+    if (inserted)
+    {
+      note_infer_transfer_change();
+      return true;
+    }
+    if (it->second != value)
+    {
+      it->second = value;
+      note_infer_transfer_change();
+      return true;
+    }
+    return false;
+  }
+
+  // Returns the merged type, or {} if no change from existing.
+  static Node merge_type(
+    const Node& existing, const Node& incoming, Node top)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->merge_type_calls++;
+
+    if (!existing || existing->empty() || existing->front() == TypeVar)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_existing_typevar++;
+
+      // Both TypeVar → no change.
+      if (incoming && !incoming->empty() && incoming->front() == TypeVar)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->merge_type_both_typevar++;
+        return {};
+      }
+      return clone(incoming);
+    }
+    if (!incoming || incoming->empty() || incoming->front() == TypeVar)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_incoming_typevar++;
+      return {};
+    }
+
+    if (existing == incoming)
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_pointer_equal++;
+      return {};
+    }
+    if (same_type_tree(existing, incoming))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_structural_equal++;
+      return {};
+    }
+
+    // Default yields to compatible concrete primitive.
+    // Checked BEFORE Subtype.invariant because AxiomFalse makes
+    // Subtype consider DefaultInt invariant with i32.
+    if (is_default_type(existing) && !is_default_type(incoming))
+    {
+      auto prim = extract_primitive(incoming);
+      if (prim)
+      {
+        bool compat =
+          (existing->front() == DefaultInt && prim->in(integer_types)) ||
+          (existing->front() == DefaultFloat && prim->in(float_types));
+        if (compat)
+        {
+          if (active_infer_profile != nullptr)
+            active_infer_profile->merge_type_default_promote++;
+          return clone(incoming);
+        }
+      }
+    }
+
+    if (is_default_type(incoming) && !is_default_type(existing))
+    {
+      auto prim = extract_primitive(existing);
+      if (prim)
+      {
+        bool compat =
+          (incoming->front() == DefaultInt && prim->in(integer_types)) ||
+          (incoming->front() == DefaultFloat && prim->in(float_types));
+        if (compat)
+        {
+          if (active_infer_profile != nullptr)
+            active_infer_profile->merge_type_default_keep++;
+          return {};
+        }
+      }
+    }
+
+    SequentCtx ctx{top, {}, {}};
+
+    if (Subtype.invariant(ctx, existing, incoming))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_invariant_equal++;
+      return {};
+    }
+
+    if (Subtype(ctx, incoming, existing))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_subtype_keep++;
+      return {};
+    }
+    if (Subtype(ctx, existing, incoming))
+    {
+      if (active_infer_profile != nullptr)
+        active_infer_profile->merge_type_subtype_widen++;
+      return clone(incoming);
+    }
+
+    if (active_infer_profile != nullptr)
+      active_infer_profile->merge_type_union_build++;
+
+    // Build union.
+    auto e_inner = existing->front();
+    auto i_inner = incoming->front();
+    Node u = Union;
+
+    if (e_inner == Union)
+      for (auto& c : *e_inner)
+        u << clone(c);
+    else
+      u << clone(e_inner);
+
+    // If incoming is a concrete primitive, replace compatible Default
+    // members in the union (DefaultInt→integer, DefaultFloat→float).
+    auto inc_prim = extract_primitive(incoming);
+    if (inc_prim && !is_default_type(incoming))
+    {
+      auto it = u->begin();
+      while (it != u->end())
+      {
+        bool is_def_int = (*it) == DefaultInt;
+        bool is_def_float = (*it) == DefaultFloat;
+        if ((is_def_int && inc_prim->in(integer_types)) ||
+            (is_def_float && inc_prim->in(float_types)))
+          it = u->erase(it, std::next(it));
+        else
+          ++it;
+      }
+    }
+
+    bool covered = false;
+    for (auto& m : *u)
+    {
+      if (Subtype(ctx, incoming, Type << clone(m)))
+      {
+        covered = true;
+        break;
+      }
+    }
+
+    if (!covered)
+    {
+      auto it = u->begin();
+      while (it != u->end())
+      {
+        if (Subtype(ctx, Type << clone(*it), incoming))
+          it = u->erase(it, std::next(it));
+        else
+          ++it;
+      }
+      u << clone(i_inner);
+    }
+
+    return (u->size() == 1) ? Type << clone(u->front()) : Type << u;
+  }
+
+  // Merge a type into env at loc. Returns true if the type changed.
+  static bool merge_env(
+    TypeEnv& env,
+    const Location& loc,
+    const Node& type,
+    Node top,
+    Node call_node = {})
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->merge_env_calls++;
+
+    auto it = env.find(loc);
+    if (it == env.end())
+    {
+      env[loc] = {clone(type), false, call_node};
+      return true;
+    }
+    if (it->second.is_fixed)
+      return false;
+
+    if (it->second.type == type)
+    {
+      if (call_node && !it->second.call_node)
+      {
+        it->second.call_node = call_node;
+        return true;
+      }
+
+      return false;
+    }
+
+    auto merged = merge_type(it->second.type, type, top);
+    if (!merged)
+    {
+      if (call_node && !it->second.call_node)
+      {
+        it->second.call_node = call_node;
+        return true;
+      }
+
+      return false;
+    }
+
+    it->second.type = merged;
+    if (call_node && !it->second.call_node)
+      it->second.call_node = call_node;
+    return true;
+  }
+
+  using SrcIndex = std::multimap<Location, Node>;
+
+  static bool is_cascade_concrete(const Node& type)
+  {
+    return type && !type->empty() &&
+      !type->front()->in({TypeVar, DefaultInt, DefaultFloat, Union});
+  }
+
+  static void enqueue_if_concrete(
+    const TypeEnv& env,
+    const Location& loc,
+    std::deque<Location>& work,
+    std::set<Location>& in_queue)
+  {
+    auto it = env.find(loc);
+    if (it == env.end() || !is_cascade_concrete(it->second.type))
+      return;
+    if (in_queue.insert(loc).second)
+      work.push_back(loc);
+  }
+
+  static SrcIndex build_src_index(const Node& body)
+  {
+    SrcIndex src_index;
+    for (auto& stmt : *body)
+    {
+      if (stmt->in({Copy, Move}))
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+      }
+      else if (stmt == Lookup)
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+      }
+      else if (stmt->in({ArrayRef, ArrayRefConst, ArrayRefFromEnd, SplatOp}))
+      {
+        src_index.emplace(((stmt / Arg) / Rhs)->location(), stmt);
+      }
+      else if (stmt == Load)
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+      }
+      else if (stmt->in({CallDyn, TryCallDyn}))
+      {
+        src_index.emplace((stmt / Rhs)->location(), stmt);
+        for (auto& arg : *(stmt / Args))
+          src_index.emplace((arg / Rhs)->location(), stmt);
+      }
+    }
+    return src_index;
+  }
+
+  static std::set<Location> collect_label_defs(const Node& body)
+  {
+    std::set<Location> defs;
+    for (auto& stmt : *body)
+    {
+      if (!stmt->empty() && stmt->front() == LocalId)
+      {
+        auto loc = stmt->front()->location();
+        if (loc.view().starts_with("local$"))
+          defs.insert(loc);
+      }
+    }
+    return defs;
+  }
+
+  static std::set<Location> collect_label_uses(
+    const Node& body, const Node& term, const std::set<Location>& defs)
+  {
+    std::set<Location> uses;
+
+    auto collect = [&](const Node& root) {
+      if (!root)
+        return;
+      root->traverse([&](auto& node) {
+        if (node == LocalId)
+          uses.insert(node->location());
+        return true;
+      });
+    };
+
+    collect(body);
+    collect(term);
+
+    for (auto& def : defs)
+      uses.erase(def);
+
+    return uses;
+  }
+
+  static std::set<Location> collect_label_kills(const Node& body)
+  {
+    std::set<Location> kills;
+    for (auto& stmt : *body)
+    {
+      if (!stmt->empty() && stmt->front() == LocalId)
+        kills.insert(stmt->front()->location());
+    }
+    return kills;
+  }
+
+  static bool prune_bwd_env(
+    TypeEnv& env,
+    const std::set<Location>& live_in,
+    const std::set<Location>& defs)
+  {
+    bool changed = false;
+    for (auto it = env.begin(); it != env.end();)
+    {
+      if ((live_in.count(it->first) == 0) && (defs.count(it->first) == 0))
+      {
+        it = env.erase(it);
+        changed = true;
+      }
+      else
+      {
+        ++it;
+      }
+    }
+    return changed;
+  }
+
+  static void run_dependency_cascade(
+    TypeEnv& env,
+    const Node& body,
+    Node top,
+    std::map<Location, Node>& lookup_stmts)
+  {
+    auto src_index = build_src_index(body);
+    std::map<Location, Node> const_defs;
+    std::deque<Location> work;
+    std::set<Location> in_queue;
+
+    for (auto& stmt : *body)
+      if (stmt == Const)
+        const_defs[(stmt / LocalId)->location()] = stmt;
+
+    auto refine_local_const =
+      [&](const Location& loc, const Node& expected) -> bool {
+      return refine_const_local(env, const_defs, loc, expected);
+    };
+
+    for (auto& [loc, info] : env)
+      if (is_cascade_concrete(info.type))
+        enqueue_if_concrete(env, loc, work, in_queue);
+
+    while (!work.empty())
+    {
+      auto loc = work.front();
+      work.pop_front();
+      in_queue.erase(loc);
+
+      auto [begin, end] = src_index.equal_range(loc);
+      for (auto it = begin; it != end; ++it)
+      {
+        auto stmt = it->second;
+
+        if (stmt->in({Copy, Move}))
+        {
+          auto src_loc = (stmt / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          auto dst_loc = (stmt / LocalId)->location();
+          if (merge_env(
+                env, dst_loc, src_it->second.type, top, src_it->second.call_node))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt == Lookup)
+        {
+          auto src_loc = (stmt / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end() || is_default_type(src_it->second.type))
+            continue;
+
+          auto hand = (stmt / Lhs)->type();
+          auto method_ident = lookup_method_name(stmt);
+          auto method_ta = stmt / TypeArgs;
+          auto arity = from_chars_sep_v<size_t>(stmt / Int);
+          auto ret = resolve_method_return_type(
+            top, src_it->second.type, method_ident, hand, arity, method_ta);
+          if (!ret)
+            continue;
+
+          auto dst_loc = (stmt / LocalId)->location();
+          if (merge_env(env, dst_loc, ret, top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt->in({ArrayRef, ArrayRefConst}))
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = ((stmt / Arg) / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          if (stmt == ArrayRefConst)
+          {
+            auto index = from_chars_sep_v<size_t>(stmt / Rhs);
+            auto inner = src_it->second.type->front();
+            if (inner == TupleType && index < inner->size())
+            {
+              if (merge_env(
+                    env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
+                enqueue_if_concrete(env, dst_loc, work, in_queue);
+              continue;
+            }
+          }
+
+          if (merge_env(env, dst_loc, ref_type(clone(src_it->second.type)), top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt == ArrayRefFromEnd)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = ((stmt / Arg) / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          auto offset = from_chars_sep_v<size_t>(stmt / Rhs);
+          auto inner = src_it->second.type->front();
+          if (inner == TupleType && offset > 0 && offset <= inner->size())
+          {
+            auto index = inner->size() - offset;
+            if (merge_env(
+                  env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+          else if (
+            merge_env(env, dst_loc, ref_type(clone(src_it->second.type)), top))
+          {
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+        }
+        else if (stmt == Load)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_it = env.find((stmt / Rhs)->location());
+          if (src_it == env.end())
+            continue;
+
+          auto inner = extract_ref_inner(src_it->second.type);
+          if (inner && merge_env(env, dst_loc, inner, top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt == SplatOp)
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = ((stmt / Arg) / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it == env.end())
+            continue;
+
+          auto inner = src_it->second.type->front();
+          if (inner != TupleType)
+            continue;
+
+          auto before = from_chars_sep_v<size_t>(stmt / Lhs);
+          auto after = from_chars_sep_v<size_t>(stmt / Rhs);
+          if (before + after > inner->size())
+            continue;
+
+          auto remaining = inner->size() - before - after;
+          Node splat_type;
+          if (remaining == 0)
+            splat_type = primitive_type(None);
+          else if (remaining == 1)
+            splat_type = Type << clone(inner->at(before));
+          else
+          {
+            Node tup = TupleType;
+            for (size_t i = before; i < before + remaining; i++)
+              tup << clone(inner->at(i));
+            splat_type = Type << tup;
+          }
+
+          if (merge_env(env, dst_loc, splat_type, top))
+            enqueue_if_concrete(env, dst_loc, work, in_queue);
+        }
+        else if (stmt->in({CallDyn, TryCallDyn}))
+        {
+          auto dst_loc = (stmt / LocalId)->location();
+          auto src_loc = (stmt / Rhs)->location();
+          auto src_it = env.find(src_loc);
+          if (src_it != env.end())
+          {
+            auto call_node = stmt;
+            if (merge_env(env, dst_loc, src_it->second.type, top, call_node))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+
+          auto lookup_it = lookup_stmts.find(src_loc);
+          if (lookup_it == lookup_stmts.end())
+            continue;
+
+          auto lookup_node = lookup_it->second;
+          auto recv_loc = (lookup_node / Rhs)->location();
+          auto recv_it = env.find(recv_loc);
+          if (recv_it == env.end() || is_default_type(recv_it->second.type))
+            continue;
+
+          auto hand = (lookup_node / Lhs)->type();
+          auto method_ident = lookup_method_name(lookup_node);
+          auto method_ta = lookup_node / TypeArgs;
+          auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+          auto info = resolve_callable_method(
+            top, recv_it->second.type, method_ident, hand, arity, method_ta);
+          if (!info.func)
+            continue;
+
+          auto params = info.func / Params;
+          auto args = stmt / Args;
+          for (size_t i = 0; i < params->size() && i < args->size(); i++)
+          {
+            auto expected = apply_subst(top, params->at(i) / Type, info.subst);
+            if (!expected || expected->front() == TypeVar)
+              continue;
+
+            auto arg_loc = (args->at(i) / Rhs)->location();
+            snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+            if (merge_env(env, arg_loc, expected, top))
+              enqueue_if_concrete(env, arg_loc, work, in_queue);
+          }
+        }
+      }
+    }
+  }
+
+  // ===== Generic type inference =====
+
   NodeMap<Node>
   build_class_subst(const Node& class_def, const Node& typename_node)
   {
     NodeMap<Node> subst;
     auto tps = class_def / TypeParams;
     auto ta = typename_node->back() / TypeArgs;
-
     if (tps->size() == ta->size())
-    {
       for (size_t i = 0; i < tps->size(); i++)
         subst[tps->at(i)] = ta->at(i);
-    }
-
     return subst;
   }
 
-  // Extract TypeParam constraints by structurally matching a formal type
-  // against an actual type. For example, formal = wrapper[T] matched
-  // against actual = wrapper[i32] yields constraint TypeParam(T) -> i32.
-  // Handles algebraic types (Union, Isect, TupleType) element-wise.
   void extract_constraints(
     Node top,
-    const Node& f_inner, // wfType node from formal type
-    const Node& a_inner, // wfType node from actual type
+    const Node& f_inner,
+    const Node& a_inner,
     NodeMap<LocalTypeInfo>& constraints,
     bool is_default)
   {
-    // Case 1: formal is a TypeParam reference.
+    // Formal is a TypeParam reference.
     if (f_inner == TypeName)
     {
       auto def = find_def(top, f_inner);
-
-      if (def && (def == TypeParam))
+      if (def && def == TypeParam)
       {
         Node actual_type = Type << clone(a_inner);
         auto existing = constraints.find(def);
-
         if (existing == constraints.end())
-        {
-          constraints[def] = {actual_type, is_default, false, {}, {}};
-        }
-        else if (existing->second.is_default && !is_default)
-        {
-          existing->second = LocalTypeInfo::computed(actual_type);
-        }
-
+          constraints[def] = {actual_type, false, {}};
+        else if (is_default_type(existing->second.type) && !is_default)
+          constraints[def] = {actual_type, false, {}};
         return;
       }
     }
 
-    // Case 2: both TypeNames - match structurally by ident path,
-    // or via shape method return types if the formal is a shape.
-    if ((f_inner == TypeName) && (a_inner == TypeName))
+    // Both TypeNames: structural or shape-aware matching.
+    if (f_inner == TypeName && a_inner == TypeName)
     {
-      // Phase 1: Check if the FQ paths match structurally.
-      bool structural_match = (f_inner->size() == a_inner->size());
-
-      if (structural_match)
+      bool structural = (f_inner->size() == a_inner->size());
+      if (structural)
       {
         for (size_t i = 0; i < f_inner->size(); i++)
         {
-          auto f_elem = f_inner->at(i);
-          auto a_elem = a_inner->at(i);
-
           if (
-            (f_elem / Ident)->location().view() !=
-            (a_elem / Ident)->location().view())
+            (f_inner->at(i) / Ident)->location().view() !=
+            (a_inner->at(i) / Ident)->location().view())
           {
-            structural_match = false;
+            structural = false;
             break;
           }
-
-          if ((f_elem / TypeArgs)->size() != (a_elem / TypeArgs)->size())
+          if (
+            (f_inner->at(i) / TypeArgs)->size() !=
+            (a_inner->at(i) / TypeArgs)->size())
           {
-            structural_match = false;
+            structural = false;
             break;
           }
         }
       }
 
-      if (structural_match)
+      if (structural)
       {
-        // Paths match: extract constraints from TypeArgs at each element.
         for (size_t i = 0; i < f_inner->size(); i++)
         {
           auto f_ta = f_inner->at(i) / TypeArgs;
           auto a_ta = a_inner->at(i) / TypeArgs;
-
           for (size_t j = 0; j < f_ta->size(); j++)
-          {
             extract_constraints(
-              top,
-              f_ta->at(j)->front(),
-              a_ta->at(j)->front(),
-              constraints,
-              is_default);
-          }
+              top, f_ta->at(j)->front(), a_ta->at(j)->front(),
+              constraints, is_default);
         }
-
         return;
       }
 
-      // Phase 2: Shape-aware matching.
-      // When the formal resolves to a shape and the actual to a class,
-      // extract constraints by matching shape method return types against
-      // actual class method return types. E.g., formal = iterator[T] vs
-      // actual = range[i32]: iterator::next returns T, range::next
-      // returns i32, so T -> i32.
+      // Shape-aware matching.
       auto f_def = find_def(top, f_inner);
       auto a_def = find_def(top, a_inner);
-
       if (
-        f_def && a_def && (f_def == ClassDef) && ((f_def / Shape) == Shape) &&
-        (a_def == ClassDef))
+        f_def && a_def && f_def == ClassDef && (f_def / Shape) == Shape &&
+        a_def == ClassDef)
       {
-        // Map shape TypeParams -> formal TypeArgs (which reference the
-        // caller's TypeParams, e.g., iterator.A -> chain.A).
         auto shape_to_formal = build_class_subst(f_def, f_inner);
-
         if (!shape_to_formal.empty())
         {
-          // Map actual class TypeParams -> actual TypeArgs (concrete
-          // types, e.g., range.A -> i32). Empty for non-generic
-          // actual classes, which is fine — apply_subst clones as-is.
           auto actual_subst = build_class_subst(a_def, a_inner);
-
-          // For each shape method, find matching actual method and
-          // extract constraints from the return types.
-          auto shape_body = f_def / ClassBody;
-          auto actual_body = a_def / ClassBody;
-
-          for (auto& shape_func : *shape_body)
+          for (auto& sf : *(f_def / ClassBody))
           {
-            if (shape_func != Function)
+            if (sf != Function)
               continue;
-
-            auto shape_ret = shape_func / Type;
-            auto method_name = (shape_func / Ident)->location().view();
-            auto hand = (shape_func / Lhs)->type();
-            auto arity = (shape_func / Params)->size();
-
-            for (auto& actual_func : *actual_body)
+            auto mname = (sf / Ident)->location().view();
+            auto hand = (sf / Lhs)->type();
+            auto arity = (sf / Params)->size();
+            for (auto& af : *(a_def / ClassBody))
             {
-              if (actual_func != Function)
+              if (af != Function)
                 continue;
-
-              if ((actual_func / Ident)->location().view() != method_name)
+              if ((af / Ident)->location().view() != mname)
                 continue;
-
-              if ((actual_func / Lhs)->type() != hand)
+              if ((af / Lhs)->type() != hand)
                 continue;
-
-              if ((actual_func / Params)->size() != arity)
+              if ((af / Params)->size() != arity)
                 continue;
-
-              // Substitute shape TypeParams with the formal TypeArgs
-              // (caller's TypeParam refs). E.g., iterator.A becomes
-              // chain.A in the substituted return type.
-              auto formal_ret = apply_subst(top, shape_ret, shape_to_formal);
-
-              // Substitute actual TypeParams with concrete TypeArgs.
-              // E.g., range.A becomes i32.
-              auto actual_ret =
-                apply_subst(top, actual_func / Type, actual_subst);
-
-              // Recursively extract constraints between the
-              // transformed return types.
+              auto formal_ret = apply_subst(top, sf / Type, shape_to_formal);
+              auto actual_ret = apply_subst(top, af / Type, actual_subst);
               extract_constraints(
-                top,
-                formal_ret->front(),
-                actual_ret->front(),
-                constraints,
-                is_default);
-
+                top, formal_ret->front(), actual_ret->front(),
+                constraints, is_default);
               break;
             }
           }
         }
       }
-
       return;
     }
 
-    // Case 3: Union/Isect/TupleType - element-wise matching.
+    // Union/Isect/TupleType: element-wise.
     if (
-      (f_inner->type() == a_inner->type()) &&
-      (f_inner->size() == a_inner->size()) &&
+      f_inner->type() == a_inner->type() &&
+      f_inner->size() == a_inner->size() &&
       f_inner->in({Union, Isect, TupleType}))
     {
       for (size_t i = 0; i < f_inner->size(); i++)
-      {
-        // Children are wfType directly.
         extract_constraints(
           top, f_inner->at(i), a_inner->at(i), constraints, is_default);
-      }
-
-      return;
     }
   }
 
-  // Apply a TypeParam substitution to a Type node, returning a new Type
-  // with all TypeParam references resolved.
   Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
   {
-    if (type_node != Type)
-      return clone(type_node);
+    if (active_infer_profile != nullptr)
+      active_infer_profile->apply_subst_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->apply_subst_time
+        : nullptr);
 
-    if (subst.empty())
+    if (type_node != Type || subst.empty())
       return clone(type_node);
 
     auto inner = type_node->front();
 
     if (inner == TypeName)
     {
-      // Check if this TypeName resolves to a TypeParam in the subst.
       auto def = find_def(top, inner);
-
-      if (def && (def == TypeParam))
+      if (def && def == TypeParam)
       {
         auto it = subst.find(def);
-
         if (it != subst.end())
           return clone(it->second);
       }
 
-      // Not a TypeParam - recurse into TypeArgs of each NameElement.
       Node new_tn = TypeName;
-
       for (auto& elem : *inner)
       {
         Node new_ta = TypeArgs;
-
         for (auto& ta_child : *(elem / TypeArgs))
           new_ta << apply_subst(top, ta_child, subst);
-
         new_tn << (NameElement << clone(elem / Ident) << new_ta);
       }
-
       return Type << new_tn;
     }
 
     if (inner->in({Union, Isect, TupleType}))
     {
       Node new_inner = inner->type();
-
       for (auto& child : *inner)
-      {
-        // Children are wfType, wrap in Type for recursive call.
-        Node wrapped = Type << clone(child);
-        Node substituted = apply_subst(top, wrapped, subst);
-        new_inner << substituted->front();
-      }
-
+        new_inner << apply_subst(top, Type << clone(child), subst)->front();
       return Type << new_inner;
     }
 
-    // TypeVar, TypeSelf, etc. - return as-is.
     return clone(type_node);
   }
 
-  // Propagate method signatures from a shape type to a lambda class.
-  // When a formal param has shape type (e.g., fn$5[i32]) and the actual
-  // arg is a lambda class (e.g., lambda$0), propagate the shape's method
-  // param types and return type to the lambda's matching methods.
-  // This enables type inference for lambda parameters when the lambda is
-  // passed to a higher-order function like `each` or `pairs`.
-  void propagate_shape_to_lambda(
-    Node top, const Node& shape_type, const Node& actual_type)
-  {
-    if (shape_type != Type || actual_type != Type)
-      return;
+  // ===== Method resolution =====
 
-    auto shape_inner = shape_type->front();
-    auto actual_inner = actual_type->front();
-
-    if (shape_inner != TypeName || actual_inner != TypeName)
-      return;
-
-    auto shape_def = find_def(top, shape_inner);
-    auto actual_def = find_def(top, actual_inner);
-
-    if (!shape_def || !actual_def)
-      return;
-
-    if (shape_def != ClassDef || actual_def != ClassDef)
-      return;
-
-    if ((shape_def / Shape) != Shape)
-      return;
-
-    auto shape_subst = build_class_subst(shape_def, shape_inner);
-    auto actual_subst = build_class_subst(actual_def, actual_inner);
-    auto shape_body = shape_def / ClassBody;
-    auto actual_body = actual_def / ClassBody;
-
-    for (auto& shape_func : *shape_body)
-    {
-      if (shape_func != Function)
-        continue;
-
-      auto method_name = (shape_func / Ident)->location().view();
-      auto hand = (shape_func / Lhs)->type();
-      auto shape_params = shape_func / Params;
-      auto shape_ret = shape_func / Type;
-
-      for (auto& actual_func : *actual_body)
-      {
-        if (actual_func != Function)
-          continue;
-
-        if ((actual_func / Ident)->location().view() != method_name)
-          continue;
-
-        if ((actual_func / Lhs)->type() != hand)
-          continue;
-
-        if ((actual_func / Params)->size() != shape_params->size())
-          continue;
-
-        // Found matching method. Propagate param types.
-        auto actual_params = actual_func / Params;
-
-        for (size_t j = 0; j < shape_params->size(); j++)
-        {
-          auto actual_param = actual_params->at(j);
-          auto actual_param_type = actual_param / Type;
-
-          if (actual_param_type->front() != TypeVar)
-            continue;
-
-          auto shape_param_type =
-            apply_subst(top, shape_params->at(j) / Type, shape_subst);
-
-          if (!shape_param_type || shape_param_type->front() == TypeVar)
-            continue;
-
-          // Skip TypeSelf — the shape's self param type is not useful.
-          if (shape_param_type->front() == TypeSelf)
-            continue;
-
-          actual_param->replace(actual_param_type, clone(shape_param_type));
-        }
-
-        // Propagate return type.
-        auto actual_ret = actual_func / Type;
-
-        if (actual_ret->front() == TypeVar)
-        {
-          auto shape_ret_subst = apply_subst(top, shape_ret, shape_subst);
-
-          if (shape_ret_subst && shape_ret_subst->front() != TypeVar)
-            actual_func->replace(actual_ret, clone(shape_ret_subst));
-        }
-
-        break;
-      }
-    }
-  }
-
-  // Resolve the return type of a method on a receiver type.
-  // Given a receiver type (e.g., wrapper[i32]), a method name, hand,
-  // arity, and method-level TypeArgs, find the method definition
-  // and return the substituted return type.
-  // Information about a resolved method.
-  struct MethodInfo
-  {
-    Node func; // The matched Function node.
-    NodeMap<Node> subst; // Combined class + function TypeParam substitutions.
-  };
-
-  // Find a method on a class by receiver type, name, hand, and arity.
-  // Returns the Function node and substitution map, or empty MethodInfo
-  // if not found. If the receiver is ref[T] or cown[T] and the method
-  // is not found on the wrapper, tries the inner type T.
   MethodInfo resolve_method(
     Node top,
     const Node& receiver_type,
@@ -569,67 +1635,40 @@ namespace vc
     size_t arity,
     const Node& method_typeargs)
   {
-    if (receiver_type != Type)
-      return {};
+    if (active_infer_profile != nullptr)
+      active_infer_profile->resolve_method_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->resolve_method_time
+        : nullptr);
 
-    auto inner = receiver_type->front();
-
-    if (inner != TypeName)
-      return {};
-
-    auto class_def = find_def(top, inner);
-
-    if (!class_def || (class_def != ClassDef))
-      return {};
-
-    // Build substitution from class-level TypeArgs.
-    auto subst = build_class_subst(class_def, inner);
-
-    // Find the matching method in the class.
-    auto class_body = class_def / ClassBody;
-    auto method_name = method_ident->location().view();
-
-    for (auto& child : *class_body)
+    auto owner = resolve_method_owner(top, receiver_type);
+    if (owner.class_def)
     {
-      if (child != Function)
-        continue;
-
-      if ((child / Ident)->location().view() != method_name)
-        continue;
-
-      auto child_hand = (child / Lhs)->type();
-
-      if (child_hand != hand)
-        continue;
-
-      if ((child / Params)->size() != arity)
-        continue;
-
-      // Found the method. Add function-level TypeParam substitutions.
-      auto func_tps = child / TypeParams;
-
-      if (
-        !method_typeargs->empty() &&
-        method_typeargs->size() == func_tps->size())
+      auto subst = build_class_subst(owner.class_def, owner.subst_source);
+      auto func =
+        resolve_class_method(owner, method_ident->location().view(), hand, arity);
+      if (func)
       {
-        for (size_t i = 0; i < func_tps->size(); i++)
-          subst[func_tps->at(i)] = method_typeargs->at(i);
+        auto func_tps = func / TypeParams;
+        if (
+          !method_typeargs->empty() &&
+          method_typeargs->size() == func_tps->size())
+        {
+          for (size_t i = 0; i < func_tps->size(); i++)
+            subst[func_tps->at(i)] = method_typeargs->at(i);
+        }
+        return {func, std::move(subst)};
       }
-
-      return {child, std::move(subst)};
     }
 
-    // Method not found on the direct type. If this is ref[T] or cown[T],
-    // try the inner type T (auto-deref for method resolution).
+    // Auto-deref ref[T] / cown[T].
     auto ref_inner = extract_ref_inner(receiver_type);
-
     if (!ref_inner)
       ref_inner = extract_cown_inner(receiver_type);
-
     if (ref_inner)
       return resolve_method(
         top, ref_inner, method_ident, hand, arity, method_typeargs);
-
     return {};
   }
 
@@ -643,394 +1682,217 @@ namespace vc
   {
     auto info = resolve_method(
       top, receiver_type, method_ident, hand, arity, method_typeargs);
-
     if (!info.func)
       return {};
-
     auto ret = apply_subst(top, info.func / Type, info.subst);
 
-    // If the return type is TypeVar (e.g., auto-generated rhs wrapper
-    // not yet processed), compute the return type from the lhs
-    // counterpart: the rhs wrapper calls the lhs version (via a Call
-    // with Lhs hand) and does a Load, so the return type is the lhs
-    // version's return type with ref unwrapped.
+    // Rhs wrapper auto-gen: return type = lhs unwrapped ref.
     if (ret && ret->front() == TypeVar && hand == Rhs)
     {
       auto lhs_info = resolve_method(
         top, receiver_type, method_ident, Lhs, arity, method_typeargs);
-
       if (lhs_info.func)
       {
-        auto lhs_ret = apply_subst(top, lhs_info.func / Type, lhs_info.subst);
+        auto lhs_ret =
+          apply_subst(top, lhs_info.func / Type, lhs_info.subst);
         auto inner = extract_ref_inner(lhs_ret);
-
         if (inner)
           return inner;
       }
     }
-
     return ret;
   }
 
-  // Extract the primitive token node from a source-level Type node that
-  // references a _builtin primitive. Returns empty Node if not a
-  // primitive.
-  Node extract_primitive(const Node& type_node)
+  MethodInfo resolve_callable_method(
+    Node top,
+    const Node& receiver_type,
+    const Node& method_ident,
+    Token hand,
+    size_t arity,
+    const Node& method_typeargs)
   {
-    if (type_node != Type)
-      return {};
-
-    auto inner = type_node->front();
-
-    if (inner != TypeName)
-      return {};
-
-    auto first_ident = (inner->front() / Ident)->location().view();
-
-    if (first_ident != "_builtin")
-      return {};
-
-    // Two-element path: _builtin::name (flat primitives).
-    if (inner->size() == 2)
-    {
-      auto second_ident = (inner->back() / Ident)->location().view();
-      auto it = primitive_from_name.find(second_ident);
-
-      if (it != primitive_from_name.end())
-        return it->second;
-
-      return {};
-    }
-
-    // Three-element path: _builtin::ffi::name (ffi primitives).
-    if (inner->size() == 3)
-    {
-      auto second_ident = (inner->at(1) / Ident)->location().view();
-
-      if (second_ident != "ffi")
-        return {};
-
-      auto third_ident = (inner->at(2) / Ident)->location().view();
-      auto it = ffi_primitive_from_name.find(third_ident);
-
-      if (it != ffi_primitive_from_name.end())
-        return it->second;
-
-      return {};
-    }
-
-    return {};
+    auto info = resolve_method(
+      top, receiver_type, method_ident, hand, arity, method_typeargs);
+    if (!info.func && hand == Rhs)
+      info = resolve_method(
+        top, receiver_type, method_ident, Lhs, arity, method_typeargs);
+    return info;
   }
 
-  // Like extract_primitive but also handles union and intersection
-  // types by scanning all components for primitives. Returns empty
-  // if ambiguous (components with different primitive types found).
-  // Compare two Type nodes for equality by primitive token.
-  // For primitives, compares the _builtin type name.
-  // For non-primitives, falls back to comparing inner Token types
-  // and (for TypeName) the last NameElement's ident.
-  bool types_equal(const Node& a, const Node& b)
+  bool propagate_shape_to_lambda(
+    Node top, const Node& shape_type, const Node& actual_type)
   {
-    if (a != Type || b != Type)
+    if (shape_type != Type || actual_type != Type)
+      return false;
+    auto shape_inner = shape_type->front();
+    auto actual_inner = actual_type->front();
+    if (shape_inner != TypeName || actual_inner != TypeName)
+      return false;
+    auto shape_def = find_def(top, shape_inner);
+    auto actual_def = find_def(top, actual_inner);
+    if (!shape_def || !actual_def)
+      return false;
+    if (shape_def != ClassDef || actual_def != ClassDef)
+      return false;
+    if ((shape_def / Shape) != Shape)
       return false;
 
-    auto ia = a->front();
-    auto ib = b->front();
-
-    // Different inner Token types → not equal.
-    if (ia->type() != ib->type())
-      return false;
-
-    // Both are TypeName: compare the fully-qualified name + TypeArgs.
-    if (ia == TypeName && ib == TypeName)
+    bool changed = false;
+    auto shape_subst = build_class_subst(shape_def, shape_inner);
+    for (auto& sf : *(shape_def / ClassBody))
     {
-      if (ia->size() != ib->size())
-        return false;
-
-      for (size_t i = 0; i < ia->size(); i++)
-      {
-        auto ea = ia->at(i) / Ident;
-        auto eb = ib->at(i) / Ident;
-
-        if (ea->location().view() != eb->location().view())
-          return false;
-
-        auto ta_a = ia->at(i) / TypeArgs;
-        auto ta_b = ib->at(i) / TypeArgs;
-
-        if (ta_a->size() != ta_b->size())
-          return false;
-
-        for (size_t j = 0; j < ta_a->size(); j++)
-        {
-          if (!types_equal(ta_a->at(j), ta_b->at(j)))
-            return false;
-        }
-      }
-
-      return true;
-    }
-
-    // Same Token type (TypeVar, Dyn, etc.) — treat as equal.
-    return true;
-  }
-
-  Node extract_callable_primitive(const Node& type_node)
-  {
-    auto prim = extract_primitive(type_node);
-
-    if (prim)
-      return prim;
-
-    if (type_node != Type)
-      return {};
-
-    auto inner = type_node->front();
-
-    if (!inner->in({Union, Isect}))
-      return {};
-
-    Node candidate;
-
-    for (auto& component : *inner)
-    {
-      Node wrapped = Type << clone(component);
-      auto p = extract_primitive(wrapped);
-
-      if (!p)
+      if (sf != Function)
         continue;
+      auto mname = (sf / Ident)->location().view();
+      auto hand = (sf / Lhs)->type();
 
-      if (candidate && candidate->type() != p->type())
-        return {}; // Different primitive types — ambiguous.
-
-      candidate = p;
-    }
-
-    return candidate;
-  }
-
-  // Extract primitive from ref[T] or cown[T] wrapper's inner type.
-  Node extract_wrapper_primitive(const Node& type_node)
-  {
-    auto inner = extract_ref_inner(type_node);
-
-    if (!inner)
-      inner = extract_cown_inner(type_node);
-
-    if (inner)
-      return extract_callable_primitive(inner);
-
-    return {};
-  }
-
-  // Return the default primitive type for a literal node.
-  Node default_literal_type(const Node& lit)
-  {
-    if (lit->in({True, False}))
-      return Bool;
-
-    if (lit == None)
-      return None;
-
-    if (lit->in({Bin, Oct, Int, Hex, Char}))
-      return U64;
-
-    if (lit->in({Float, HexFloat}))
-      return F64;
-
-    assert(false && "unhandled literal type in infer");
-    return {};
-  }
-
-  // Refine a Const node's type to new_prim. Updates env entries sharing
-  // the same const_node. Does NOT mutate the AST — Const types are
-  // written to the AST once after convergence.
-  void refine_const(TypeEnv& env, Node const_node, const Token& new_prim)
-  {
-    assert(const_node == Const);
-
-    // Update all env entries referencing this Const.
-    Node new_src_type = primitive_type(new_prim);
-
-    for (auto& [loc, info] : env)
-    {
-      if (info.const_node == const_node)
+      for (auto& af : *(actual_def / ClassBody))
       {
-        info.type = clone(new_src_type);
-        info.is_default = false;
-        info.const_node = {};
+        if (af != Function)
+          continue;
+        if ((af / Ident)->location().view() != mname)
+          continue;
+        if ((af / Lhs)->type() != hand)
+          continue;
+        if ((af / Params)->size() != (sf / Params)->size())
+          continue;
+
+        auto shape_params = sf / Params;
+        auto actual_params = af / Params;
+        for (size_t j = 0; j < shape_params->size(); j++)
+        {
+          auto ap = actual_params->at(j);
+          auto apt = ap / Type;
+          if (apt->front() != TypeVar)
+            continue;
+          auto spt = apply_subst(top, shape_params->at(j) / Type, shape_subst);
+          if (!spt || spt->front() == TypeVar || spt->front() == TypeSelf)
+            continue;
+          changed |= replace_if_changed(ap, apt, clone(spt));
+        }
+
+        auto actual_ret = af / Type;
+        if (actual_ret->front() == TypeVar)
+        {
+          auto shape_ret = apply_subst(top, sf / Type, shape_subst);
+          if (shape_ret && shape_ret->front() != TypeVar)
+            changed |= replace_if_changed(af, actual_ret, clone(shape_ret));
+        }
+        break;
       }
     }
+
+    return changed;
   }
 
-  // Try to refine a default-typed Const at the given location to match
-  // expected_prim. Returns true if refinement occurred.
-  bool try_refine(TypeEnv& env, const Location& loc, const Node& expected_prim)
-  {
-    auto it = env.find(loc);
+  // ===== Cross-function propagation =====
 
-    if (it == env.end())
-      return false;
-
-    auto& info = it->second;
-
-    if (!info.is_default || !info.const_node)
-      return false;
-
-    // Use the env type to determine the current primitive, not the AST
-    // (the AST is not mutated until post-convergence).
-    auto current_prim = extract_primitive(info.type);
-
-    if (!current_prim)
-      return false;
-
-    if (current_prim->type() == expected_prim->type())
-      return false;
-
-    bool compatible =
-      (current_prim->in(integer_types) && expected_prim->in(integer_types)) ||
-      (current_prim->in(float_types) && expected_prim->in(float_types));
-
-    if (!compatible)
-      return false;
-
-    refine_const(env, info.const_node, expected_prim->type());
-    return true;
-  }
-
-  // Scope information collected during FuncName navigation.
   struct ScopeInfo
   {
-    Node name_elem; // NameElement in the FuncName
-    Node def; // ClassDef/Function definition node
+    Node name_elem;
+    Node def;
   };
 
-  // Navigate a Call node's FuncName from top, collecting scope
-  // definitions along the path. Returns the target Function def on
-  // success, or an empty Node on failure. Uses find_func_def for
-  // Function overload resolution, then rebuilds the scope path.
+  static bool is_lambda_function(const Node& func);
+  static Node retarget_numeric_type(const Node& type, const Node& expected_prim);
+  static Node extract_backward_primitive(const Node& type);
+  static bool recover_local_type_from_def(
+    const Location& loc,
+    TypeEnv& env,
+    const std::map<Location, Node>& def_stmts,
+    Node top);
+  static bool refine_function_return_consts(
+    const Node& func, const Node& expected_prim);
+
   Node navigate_call(Node call, Node top, std::vector<ScopeInfo>& scopes)
   {
-    assert(call == Call);
+    if (active_infer_profile != nullptr)
+      active_infer_profile->navigate_call_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->navigate_call_time
+        : nullptr);
+
     auto funcname = call / FuncName;
     auto args = call / Args;
     auto func_def = find_func_def(top, funcname, args->size(), call / Lhs);
-
     if (!func_def)
       return {};
 
-    // Collect scope info by re-walking the path.
     Node def = top;
-
     for (auto it = funcname->begin(); it != funcname->end(); ++it)
     {
-      auto& elem = *it;
-      auto defs = def->look((elem / Ident)->location());
-
       bool is_last = (it + 1 == funcname->end());
-
       if (is_last)
       {
-        scopes.push_back({elem, func_def});
+        scopes.push_back({*it, func_def});
       }
       else
       {
+        auto defs = def->look(((*it) / Ident)->location());
         def = defs.front();
-        scopes.push_back({elem, def});
+        scopes.push_back({*it, def});
       }
     }
-
     return func_def;
   }
 
-  // Backward-refine a prior Call whose TypeArgs were inferred entirely
-  // from default-typed literals. Given an expected type from an outer
-  // call context, re-extract TypeParam constraints and update the prior
-  // call's TypeArgs, refine its Const literals, and update the env.
   void backward_refine_call(
-    Node prior_call, const Node& expected_type, TypeEnv& env, Node top)
+    Node prior_call,
+    const Node& expected_type,
+    TypeEnv& env,
+    Node top)
   {
     std::vector<ScopeInfo> scopes;
     auto func_def = navigate_call(prior_call, top, scopes);
-
     if (!func_def)
       return;
 
     auto args = prior_call / Args;
     auto params = func_def / Params;
-
-    // Get the unsubstituted return type of the prior call's function.
     auto ret_type = func_def / Type;
-    auto ret_inner = ret_type->front();
-    auto expected_inner = expected_type->front();
 
-    // Extract TypeParam constraints by matching the function's return
-    // type (with free TypeParams) against the expected type (concrete).
+    // Extract TypeParam constraints from return type vs expected type.
     NodeMap<LocalTypeInfo> constraints;
-    extract_constraints(top, ret_inner, expected_inner, constraints, false);
+    extract_constraints(
+      top, ret_type->front(), expected_type->front(), constraints, false);
 
-    // If structural matching didn't find constraints (e.g., return type
-    // is a class and expected type is a shape), try reverse shape
-    // matching: match class method return types against shape method
-    // return types to extract class TypeParam constraints.
-    if (
-      constraints.empty() && (ret_inner == TypeName) &&
-      (expected_inner == TypeName))
+    // Reverse shape matching: concrete return → shape expected.
+    if (constraints.empty() && ret_type->front() == TypeName &&
+        expected_type->front() == TypeName)
     {
-      auto ret_def = find_def(top, ret_inner);
-      auto exp_def = find_def(top, expected_inner);
-
-      if (
-        ret_def && exp_def && (ret_def == ClassDef) &&
-        ((ret_def / Shape) != Shape) && (exp_def == ClassDef) &&
-        ((exp_def / Shape) == Shape))
+      auto ret_def = find_def(top, ret_type->front());
+      auto exp_def = find_def(top, expected_type->front());
+      if (ret_def && exp_def && ret_def == ClassDef &&
+          (ret_def / Shape) != Shape && exp_def == ClassDef &&
+          (exp_def / Shape) == Shape)
       {
-        // Build substitution: shape TypeParams -> concrete TypeArgs
-        // from the expected type.
-        auto shape_to_concrete = build_class_subst(exp_def, expected_inner);
-
+        auto shape_to_concrete =
+          build_class_subst(exp_def, expected_type->front());
         if (!shape_to_concrete.empty())
         {
-          auto shape_body = exp_def / ClassBody;
-          auto class_body = ret_def / ClassBody;
-
-          for (auto& shape_func : *shape_body)
+          for (auto& sf : *(exp_def / ClassBody))
           {
-            if (shape_func != Function)
+            if (sf != Function)
               continue;
-
-            auto method_name = (shape_func / Ident)->location().view();
-            auto mhand = (shape_func / Lhs)->type();
-            auto arity = (shape_func / Params)->size();
-
-            for (auto& class_func : *class_body)
+            auto mname = (sf / Ident)->location().view();
+            auto hand = (sf / Lhs)->type();
+            auto arity = (sf / Params)->size();
+            for (auto& cf : *(ret_def / ClassBody))
             {
-              if (class_func != Function)
+              if (cf != Function)
                 continue;
-
-              if ((class_func / Ident)->location().view() != method_name)
+              if ((cf / Ident)->location().view() != mname)
                 continue;
-
-              if ((class_func / Lhs)->type() != mhand)
+              if ((cf / Lhs)->type() != hand)
                 continue;
-
-              if ((class_func / Params)->size() != arity)
+              if ((cf / Params)->size() != arity)
                 continue;
-
-              // Class method return has free TypeParams.
-              auto class_ret = class_func / Type;
-
-              // Shape method return substituted with concrete values.
               auto concrete_ret =
-                apply_subst(top, shape_func / Type, shape_to_concrete);
-
+                apply_subst(top, sf / Type, shape_to_concrete);
               extract_constraints(
-                top,
-                class_ret->front(),
-                concrete_ret->front(),
-                constraints,
-                false);
-
+                top, (cf / Type)->front(), concrete_ret->front(),
+                constraints, false);
               break;
             }
           }
@@ -1041,799 +1903,206 @@ namespace vc
     if (constraints.empty())
       return;
 
-    LOG(Trace) << "backward_refine_call: refining TypeArgs for "
-               << (prior_call / FuncName)->location().view() << std::endl;
-
-    // Update TypeArgs in the prior call's FuncName.
+    // Update TypeArgs in the AST.
     for (auto& scope : scopes)
     {
       auto ta = scope.name_elem / TypeArgs;
       auto tps = scope.def / TypeParams;
-
       if (tps->empty())
         continue;
 
       bool all_constrained = true;
       Node new_ta = TypeArgs;
-
       for (auto& tp : *tps)
       {
         auto find = constraints.find(tp);
-
         if (find == constraints.end())
         {
           all_constrained = false;
           break;
         }
-
         new_ta << clone(find->second.type);
       }
-
       if (all_constrained)
-        scope.name_elem->replace(ta, new_ta);
+        snmalloc::UNUSED(replace_if_changed(scope.name_elem, ta, new_ta));
     }
 
-    // Rebuild substitution map from updated TypeArgs.
+    // Build substitution from updated TypeArgs.
     NodeMap<Node> subst;
-
     for (auto& scope : scopes)
     {
       auto ta = scope.name_elem / TypeArgs;
       auto tps = scope.def / TypeParams;
-
       if (!ta->empty() && ta->size() == tps->size())
-      {
         for (size_t i = 0; i < tps->size(); i++)
           subst[tps->at(i)] = ta->at(i);
-      }
     }
 
-    // Refine Const literals in the prior call's args.
-    for (size_t i = 0; i < params->size(); i++)
+    std::map<Location, Node> const_defs;
+    if (auto label = prior_call->parent(Label))
     {
-      auto param = params->at(i);
-      auto arg_node = args->at(i);
-      auto formal_type = param / Type;
+      for (auto& stmt : *(label / Body))
+        if (stmt == Const)
+          const_defs[(stmt / LocalId)->location()] = stmt;
+    }
 
+    // Refine default literal args using the newly constrained TypeArgs.
+    for (size_t i = 0; i < params->size() && i < args->size(); i++)
+    {
+      auto formal = params->at(i) / Type;
       Node expected_prim;
-      auto tp_def = direct_typeparam(top, formal_type);
-
+      auto tp_def = direct_typeparam(top, formal);
       if (tp_def)
       {
         auto find = subst.find(tp_def);
-
         if (find != subst.end())
           expected_prim = extract_primitive(find->second);
       }
       else
       {
-        expected_prim = extract_primitive(formal_type);
+        expected_prim = extract_primitive(formal);
       }
 
       if (!expected_prim)
         continue;
 
-      auto arg_src = arg_node / Rhs;
-      try_refine(env, arg_src->location(), expected_prim);
+      auto arg_loc = (args->at(i) / Rhs)->location();
+      refine_const_local(env, const_defs, arg_loc, primitive_type(expected_prim->type()));
     }
 
-    // Recompute the prior call's result type and update env.
-    auto result_type = apply_subst(top, ret_type, subst);
-
-    if (result_type)
+    // Backward: merge expected param types into arg env entries.
+    for (size_t i = 0; i < params->size() && i < args->size(); i++)
     {
-      auto dst = prior_call / LocalId;
-      env[dst->location()] = LocalTypeInfo::computed(result_type);
+      auto formal = params->at(i) / Type;
+      auto expected = apply_subst(top, formal, subst);
+      if (expected && !is_uninformative_backward_type(expected))
+      {
+        auto arg_loc = (args->at(i) / Rhs)->location();
+        merge_env(env, arg_loc, expected, top);
+      }
     }
+
+    // Update call result.
+    auto result = apply_subst(top, ret_type, subst);
+    if (result)
+      merge_env(env, (prior_call / LocalId)->location(), result, top);
   }
 
-  // Backward-refine a prior CallDyn whose result was all-default.
-  // Given an expected primitive type from a downstream Call, refine
-  // the CallDyn's Const args, re-resolve the Lookup, and update env.
   void backward_refine_calldyn(
     Node calldyn,
     const Node& expected_prim,
     TypeEnv& env,
     Node top,
-    std::map<Location, Node>& lookup_stmts)
+    std::map<Location, Node>& lookup_stmts,
+    const std::map<Location, Node>* def_stmts = nullptr)
   {
     assert(calldyn->in({CallDyn, TryCallDyn}));
     assert(expected_prim);
     auto dst = calldyn / LocalId;
     auto src = calldyn / Rhs;
     auto args = calldyn / Args;
-
-    // Find the corresponding Lookup statement.
     auto lookup_it = lookup_stmts.find(src->location());
-
     if (lookup_it == lookup_stmts.end())
       return;
 
     auto lookup_node = lookup_it->second;
+    auto refine_numeric = [&](const Location& loc) -> bool {
+      auto it = env.find(loc);
+      if (it == env.end())
+        return false;
 
-    // Refine each default-typed Const arg to match expected_prim.
+      auto current_prim = extract_primitive(it->second.type);
+      bool compatible =
+        (it->second.type->front() == DefaultInt && expected_prim->in(integer_types)) ||
+        (it->second.type->front() == DefaultFloat && expected_prim->in(float_types)) ||
+        (current_prim && current_prim->in(integer_types) &&
+         expected_prim->in(integer_types)) ||
+        (current_prim && current_prim->in(float_types) &&
+         expected_prim->in(float_types));
+      if (!compatible)
+        return false;
+
+      if (current_prim && current_prim->type() == expected_prim->type())
+        return false;
+
+      it->second.type = primitive_type(expected_prim->type());
+      return true;
+    };
+
     bool refined = false;
-
     for (auto& arg_node : *args)
-    {
-      auto arg_src = arg_node / Rhs;
+      refined = refine_numeric((arg_node / Rhs)->location()) || refined;
 
-      if (try_refine(env, arg_src->location(), expected_prim))
-        refined = true;
-    }
-
-    // Also refine the Lookup receiver if it's a default-typed Const.
     auto lookup_src = lookup_node / Rhs;
+    refined = refine_numeric(lookup_src->location()) || refined;
 
-    if (try_refine(env, lookup_src->location(), expected_prim))
-      refined = true;
+    auto recv_it = env.find(lookup_src->location());
+    if (recv_it == env.end() && def_stmts != nullptr)
+    {
+      snmalloc::UNUSED(
+        recover_local_type_from_def(lookup_src->location(), env, *def_stmts, top));
+      recv_it = env.find(lookup_src->location());
+    }
+    if (recv_it != env.end())
+    {
+      auto info = resolve_callable_method(
+        top,
+        recv_it->second.type,
+        lookup_method_name(lookup_node),
+        (lookup_node / Lhs)->type(),
+        from_chars_sep_v<size_t>(lookup_node / Int),
+        lookup_node / TypeArgs);
+      if (info.func && is_lambda_function(info.func))
+      {
+        auto new_ret = retarget_numeric_type(info.func / Type, expected_prim);
+        if (new_ret)
+        {
+          snmalloc::UNUSED(replace_if_changed(info.func, info.func / Type, new_ret));
+          refined = true;
+        }
+        if (refine_function_return_consts(info.func, expected_prim))
+          refined = true;
+      }
+    }
 
     if (!refined)
       return;
 
-    LOG(Trace) << "backward_refine_calldyn: refined to "
-               << expected_prim->type().str() << std::endl;
-
-    // Re-resolve the Lookup return type after refinement.
-    auto lookup_dst = lookup_node / LocalId;
-    auto hand = (lookup_node / Lhs)->type();
-    auto method_ident = lookup_node / Ident;
-    auto method_ta = lookup_node / TypeArgs;
-    auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
-    auto recv_it = env.find(lookup_src->location());
-
     if (recv_it != env.end())
     {
-      auto ret_type = resolve_method_return_type(
-        top, recv_it->second.type, method_ident, hand, arity, method_ta);
 
-      if (ret_type)
-        env[lookup_dst->location()] = LocalTypeInfo::computed(ret_type);
+      auto hand = (lookup_node / Lhs)->type();
+      auto method_ident = lookup_method_name(lookup_node);
+      auto method_ta = lookup_node / TypeArgs;
+      auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+      auto ret = resolve_method_return_type(
+        top, recv_it->second.type, method_ident, hand, arity, method_ta);
+      if (ret)
+      {
+        env[(lookup_node / LocalId)->location()] = {ret, false, {}};
+      }
     }
 
-    // Update the CallDyn result type from the updated Lookup.
     auto src_it = env.find(src->location());
-
     if (src_it != env.end())
     {
-      env[dst->location()] =
-        LocalTypeInfo::computed(clone(src_it->second.type));
-    }
-  }
-
-  // Check if a Type node contains TypeVar anywhere (including nested
-  // inside ref[TypeVar], cown[TypeVar], etc.).
-  static bool contains_typevar(const Node& type_node)
-  {
-    if (!type_node)
-      return false;
-
-    bool found = false;
-
-    type_node->traverse([&](auto node) {
-      if (node == TypeVar)
+      env[dst->location()] = {clone(src_it->second.type), false, {}};
+      auto lookup_dst_it = env.find((lookup_node / LocalId)->location());
+      if (lookup_dst_it != env.end())
       {
-        found = true;
-        return false;
-      }
-
-      return !found;
-    });
-
-    return found;
-  }
-
-  // Try to infer TypeArgs and refine Const types at a Call site.
-  void infer_call(
-    Node call, TypeEnv& env, Node top, std::map<Location, Node>& lookup_stmts)
-  {
-    std::vector<ScopeInfo> scopes;
-    auto func_def = navigate_call(call, top, scopes);
-
-    if (!func_def)
-      return;
-
-    auto funcname = call / FuncName;
-    auto args = call / Args;
-    auto params = func_def / Params;
-
-    // Check if any scope needs TypeArg inference.
-    bool needs_inference = false;
-
-    for (auto& scope : scopes)
-    {
-      auto ta = scope.name_elem / TypeArgs;
-      auto tps = scope.def / TypeParams;
-
-      if (ta->empty() && !tps->empty())
-      {
-        needs_inference = true;
-        break;
-      }
-    }
-
-    // Phase 2: Collect TypeParam constraints from arg types.
-    // Non-default types take priority over defaults on conflict.
-    // Key: TypeParam def node, Value: {type, is_default}.
-    bool all_default_inference = false;
-    NodeMap<LocalTypeInfo> constraints;
-
-    if (needs_inference)
-    {
-      for (size_t i = 0; i < params->size(); i++)
-      {
-        auto param = params->at(i);
-        auto arg_node = args->at(i);
-        auto formal_type = param / Type;
-
-        auto arg_src = arg_node / Rhs;
-        auto it = env.find(arg_src->location());
-
-        if (it == env.end())
-          continue;
-
-        auto& arg_info = it->second;
-
-        // Structurally match formal type against actual type to extract
-        // TypeParam constraints. Handles bare T, wrapper[T], unions, etc.
-        extract_constraints(
-          top,
-          formal_type->front(),
-          arg_info.type->front(),
-          constraints,
-          arg_info.is_default);
-      }
-
-      // Check if all constraints were from default-typed args.
-      all_default_inference = !constraints.empty();
-
-      for (auto& [tp, info] : constraints)
-      {
-        if (!info.is_default)
-        {
-          all_default_inference = false;
-          break;
-        }
-      }
-
-      // Fill TypeArgs for scopes that need inference.
-      for (auto& scope : scopes)
-      {
-        auto ta = scope.name_elem / TypeArgs;
-        auto tps = scope.def / TypeParams;
-
-        if (!ta->empty() || tps->empty())
-          continue;
-
-        bool all_constrained = true;
-        Node new_ta = TypeArgs;
-
-        for (auto& tp : *tps)
-        {
-          auto find = constraints.find(tp);
-
-          if (find == constraints.end())
-          {
-            all_constrained = false;
-            break;
-          }
-
-          // Clone when inserting into TypeArgs to avoid shared nodes.
-          new_ta << clone(find->second.type);
-        }
-
-        if (all_constrained)
-        {
-          scope.name_elem->replace(ta, new_ta);
-        }
-      }
-    }
-
-    // Build a substitution map from all TypeArgs (both pre-existing
-    // and newly inferred) for Phase 3 literal refinement.
-    NodeMap<Node> subst;
-
-    for (auto& scope : scopes)
-    {
-      auto ta = scope.name_elem / TypeArgs;
-      auto tps = scope.def / TypeParams;
-
-      if (!ta->empty() && ta->size() == tps->size())
-      {
-        for (size_t i = 0; i < tps->size(); i++)
-          subst[tps->at(i)] = ta->at(i);
-      }
-    }
-
-    // Phase 3: Refine Const types based on expected param types.
-    for (size_t i = 0; i < params->size(); i++)
-    {
-      auto param = params->at(i);
-      auto arg_node = args->at(i);
-      auto formal_type = param / Type;
-
-      // Determine the expected primitive type for this param position.
-      Node expected_prim;
-      auto tp_def = direct_typeparam(top, formal_type);
-
-      if (tp_def)
-      {
-        // TypeParam: look up in the substitution map.
-        auto find = subst.find(tp_def);
-
-        if (find != subst.end())
-          expected_prim = extract_primitive(find->second);
-      }
-      else
-      {
-        // Concrete formal param type: extract directly.
-        expected_prim = extract_primitive(formal_type);
-      }
-
-      if (!expected_prim)
-        continue;
-
-      auto arg_src = arg_node / Rhs;
-      try_refine(env, arg_src->location(), expected_prim);
-    }
-
-    // Infer TypeVar arg types from formal parameter types.
-    // When an arg has TypeVar type (e.g., an untyped lambda param),
-    // compute the expected type from the callee's formal param type
-    // after substitution and update the caller's env.
-    for (size_t i = 0; i < params->size(); i++)
-    {
-      auto param = params->at(i);
-      auto arg_node = args->at(i);
-      auto formal_type = param / Type;
-
-      auto arg_src = arg_node / Rhs;
-      auto it = env.find(arg_src->location());
-
-      if (it == env.end())
-        continue;
-
-      auto& arg_info = it->second;
-
-      if (arg_info.type->front() != TypeVar)
-        continue;
-
-      auto expected = apply_subst(top, formal_type, subst);
-
-      if (!expected || expected->front() == TypeVar)
-        continue;
-
-      assert(expected == Type);
-      arg_info.type = expected;
-      arg_info.is_fixed = true;
-    }
-
-    // Reverse propagation: when a formal param has TypeVar type,
-    // resolve it from either a matching FieldDef (if already concrete)
-    // or the actual arg type. FieldDef takes priority because it may
-    // have been resolved by a sibling method (e.g., apply inferred
-    // field types before create is called).
-    {
-      auto parent_cls = func_def->parent(ClassDef);
-
-      for (size_t i = 0; i < params->size(); i++)
-      {
-        auto param = params->at(i);
-        auto formal_type = param / Type;
-
-        if (!contains_typevar(formal_type))
-          continue;
-
-        // Check if a matching FieldDef already has a concrete type.
-        Node resolved_type;
-
-        if (parent_cls)
-        {
-          auto param_name = (param / Ident)->location().view();
-
-          for (auto& child : *(parent_cls / ClassBody))
-          {
-            if (child != FieldDef)
-              continue;
-
-            if ((child / Ident)->location().view() != param_name)
-              continue;
-
-            auto ft = child / Type;
-
-            if (!contains_typevar(ft))
-              resolved_type = ft;
-
-            break;
-          }
-        }
-
-        if (!resolved_type)
-        {
-          // Fall back to the actual arg's type, but only if the arg
-          // is not a default-typed literal. Default types (e.g., u64
-          // for integer literals) are unreliable and would poison the
-          // param type — the correct type will be resolved later when
-          // the function body is re-processed in the second pass.
-          auto arg_node = args->at(i);
-          auto arg_src = arg_node / Rhs;
-          auto it = env.find(arg_src->location());
-
-          if (
-            it == env.end() || contains_typevar(it->second.type) ||
-            it->second.is_default)
-            continue;
-
-          resolved_type = it->second.type;
-        }
-
-        // Update the callee's param type.
-        param->replace(formal_type, clone(resolved_type));
-
-        // Also refine the actual arg if it's a default-typed literal.
-        auto resolved_prim = extract_primitive(resolved_type);
-
-        if (resolved_prim)
-        {
-          auto arg_node = args->at(i);
-          auto arg_src = arg_node / Rhs;
-          try_refine(env, arg_src->location(), resolved_prim);
-        }
-
-        // Update matching FieldDef if still TypeVar.
-        if (parent_cls)
-        {
-          auto param_name = (param / Ident)->location().view();
-
-          for (auto& child : *(parent_cls / ClassBody))
-          {
-            if (child != FieldDef)
-              continue;
-
-            if ((child / Ident)->location().view() != param_name)
-              continue;
-
-            auto field_type = child / Type;
-
-            if (contains_typevar(field_type))
-              child->replace(field_type, clone(resolved_type));
-
-            break;
-          }
-        }
-      }
-    }
-
-    // Shape-to-lambda propagation: when a formal param has shape type
-    // and the actual arg is a lambda class, propagate the shape's method
-    // signatures to the lambda.
-    for (size_t i = 0; i < params->size(); i++)
-    {
-      auto param = params->at(i);
-      auto formal_type = param / Type;
-      auto param_type = apply_subst(top, formal_type, subst);
-
-      if (!param_type || param_type->front() == TypeVar)
-        continue;
-
-      auto arg_node = args->at(i);
-      auto arg_src = arg_node / Rhs;
-      auto arg_it = env.find(arg_src->location());
-
-      if (arg_it != env.end())
-        propagate_shape_to_lambda(top, param_type, arg_it->second.type);
-    }
-
-    // Record the call's result type in the env, with all TypeParam
-    // references substituted.
-    auto ret_type = func_def / Type;
-    auto result_type = apply_subst(top, ret_type, subst);
-
-    if (result_type)
-    {
-      auto dst = call / LocalId;
-      env[dst->location()] = {
-        result_type,
-        all_default_inference,
-        false,
-        {},
-        all_default_inference ? call : Node{}};
-    }
-
-    // Phase 4: Backward refinement of default-inferred call args.
-    // When a prior call's TypeArgs were inferred entirely from
-    // default-typed literals, and this call provides a non-default
-    // expected type, refine the prior call to match.
-    for (size_t i = 0; i < params->size(); i++)
-    {
-      auto param = params->at(i);
-      auto arg_node = args->at(i);
-      auto formal_type = param / Type;
-
-      auto arg_src = arg_node / Rhs;
-      auto arg_it = env.find(arg_src->location());
-
-      if (arg_it == env.end())
-        continue;
-
-      auto& arg_info = arg_it->second;
-
-      if (!arg_info.is_default)
-        continue;
-
-      if (arg_info.call_node)
-      {
-        // Backward-refine a prior Call whose TypeArgs were inferred
-        // entirely from default-typed literals.
-        auto prior_call_node = arg_info.call_node;
-
-        // Compute the expected type for this arg from formal + subst.
-        auto expected = apply_subst(top, formal_type, subst);
-
-        if (!expected)
-          continue;
-
-        if (prior_call_node == Call)
-        {
-          backward_refine_call(prior_call_node, expected, env, top);
-        }
-        else if (prior_call_node->in({CallDyn, TryCallDyn}))
-        {
-          auto expected_prim = extract_primitive(expected);
-
-          if (expected_prim)
-          {
-            backward_refine_calldyn(
-              prior_call_node, expected_prim, env, top, lookup_stmts);
-          }
-        }
-
-        // Update the arg's env entry to reflect the refined type.
-        auto prior_dst = prior_call_node / LocalId;
-        auto updated_it = env.find(prior_dst->location());
-
-        if (updated_it != env.end())
-        {
-          env[arg_src->location()] =
-            LocalTypeInfo::propagated(updated_it->second);
-        }
+        env[src->location()] = {clone(lookup_dst_it->second.type), false, {}};
+        env[dst->location()] = {clone(lookup_dst_it->second.type), false, {}};
       }
     }
   }
 
-  // Check if a function has any remaining TypeVar param or return types.
-  static bool has_typevar(Node func)
-  {
-    assert(func == Function);
+  // ===== Typetest trace =====
 
-    for (auto& pd : *(func / Params))
-    {
-      if ((pd / Type)->front() == TypeVar)
-        return true;
-    }
-
-    if ((func / Type)->front() == TypeVar)
-      return true;
-
-    // Also check FieldDefs in the parent class and any nested ClassDefs:
-    // if any field contains TypeVar (possibly nested, e.g., ref[TypeVar]),
-    // the function body may reference it and needs re-processing. Nested
-    // classes capture variables from the enclosing scope via fields, so
-    // TypeVar in a nested class's fields means the enclosing function
-    // needs to propagate types into the nested class's create call.
-    auto parent_cls = func->parent(ClassDef);
-
-    if (parent_cls)
-    {
-      bool found = false;
-
-      parent_cls->traverse([&](auto node) {
-        if (found)
-          return false;
-
-        if (node == FieldDef && contains_typevar(node / Type))
-        {
-          found = true;
-          return false;
-        }
-
-        return node == parent_cls || node == ClassBody || node == ClassDef;
-      });
-
-      if (found)
-        return true;
-    }
-
-    return false;
-  }
-
-  // Merge a type into a union, pruning subtypes. Returns the merged type.
-  // If the new type is a subtype of any existing member, returns the
-  // existing union unchanged. If any existing member is a subtype of the
-  // new type, removes it and adds the new type.
-  static Node merge_type(const Node& existing, const Node& incoming, Node top)
-  {
-    if (!existing || existing->front() == TypeVar)
-      return clone(incoming);
-
-    if (!incoming || incoming->front() == TypeVar)
-      return clone(existing);
-
-    SequentCtx ctx{top, {}, {}};
-
-    // If incoming is a subtype of existing, keep existing.
-    if (Subtype(ctx, incoming, existing))
-      return clone(existing);
-
-    // If existing is a subtype of incoming, take incoming.
-    if (Subtype(ctx, existing, incoming))
-      return clone(incoming);
-
-    // Neither is a subtype — build a union.
-    auto e_inner = existing->front();
-    auto i_inner = incoming->front();
-
-    Node union_node = Union;
-
-    // Flatten existing into union members.
-    if (e_inner == Union)
-    {
-      for (auto& child : *e_inner)
-        union_node << clone(child);
-    }
-    else
-    {
-      union_node << clone(e_inner);
-    }
-
-    // Add incoming, pruning against existing members.
-    bool already_covered = false;
-
-    for (auto& member : *union_node)
-    {
-      Node wrapped = Type << clone(member);
-
-      if (Subtype(ctx, incoming, wrapped))
-      {
-        already_covered = true;
-        break;
-      }
-    }
-
-    if (!already_covered)
-    {
-      // Remove any members that are subtypes of incoming.
-      auto it = union_node->begin();
-
-      while (it != union_node->end())
-      {
-        Node wrapped = Type << clone(*it);
-
-        if (Subtype(ctx, wrapped, incoming))
-          it = union_node->erase(it, std::next(it));
-        else
-          ++it;
-      }
-
-      union_node << clone(i_inner);
-    }
-
-    if (union_node->size() == 1)
-      return Type << clone(union_node->front());
-
-    return Type << union_node;
-  }
-
-  // Merge a source TypeEnv into a destination TypeEnv. For each variable,
-  // merges types using union with subtype pruning.
-  static void merge_env(TypeEnv& dst, const TypeEnv& src, Node top)
-  {
-    for (auto& [loc, src_info] : src)
-    {
-      auto it = dst.find(loc);
-
-      if (it == dst.end())
-      {
-        // First time seeing this location: copy all metadata.
-        dst[loc] = {
-          clone(src_info.type),
-          src_info.is_default,
-          src_info.is_fixed,
-          src_info.const_node,
-          src_info.call_node};
-      }
-      else
-      {
-        auto merged = merge_type(it->second.type, src_info.type, top);
-        it->second.type = merged;
-
-        // Once merged from multiple paths, the entry is no longer
-        // default or fixed, and loses const/call tracking — unless
-        // both sources agree on all metadata.
-        if (
-          it->second.is_default != src_info.is_default ||
-          it->second.is_fixed != src_info.is_fixed ||
-          it->second.const_node != src_info.const_node ||
-          !types_equal(it->second.type, src_info.type))
-        {
-          it->second.is_default = false;
-          it->second.is_fixed = false;
-          it->second.const_node = {};
-          it->second.call_node = {};
-        }
-      }
-    }
-  }
-
-  // Compute a fingerprint string for a type environment, for convergence
-  // detection.
-  static std::string env_fingerprint(const TypeEnv& env)
-  {
-    // Use a sorted map for deterministic ordering.
-    std::map<std::string, std::string> sorted;
-
-    for (auto& [loc, info] : env)
-    {
-      auto prim = extract_primitive(info.type);
-      std::string type_str;
-
-      if (prim)
-        type_str = std::string(prim->type().str());
-      else if (info.type->front() == TypeVar)
-        type_str = "?";
-      else if (info.type->front() == TypeName)
-      {
-        auto inner = info.type->front();
-
-        for (auto& ne : *inner)
-          type_str += std::string((ne / Ident)->location().view()) + "::";
-      }
-      else if (info.type->front() == Union)
-      {
-        type_str = "U(";
-
-        for (auto& child : *(info.type->front()))
-        {
-          Node wrapped = Type << clone(child);
-          auto p = extract_primitive(wrapped);
-
-          if (p)
-            type_str += std::string(p->type().str()) + "|";
-          else if (child == TypeName)
-          {
-            for (auto& ne : *child)
-              type_str += std::string((ne / Ident)->location().view()) + "::";
-
-            type_str += "|";
-          }
-          else
-            type_str += "?|";
-        }
-
-        type_str += ")";
-      }
-      else
-        type_str = "dyn";
-
-      sorted[std::string(loc.view())] = type_str;
-    }
-
-    std::string fp;
-
-    for (auto& [k, v] : sorted)
-      fp += k + ":" + v + ";";
-
-    return fp;
-  }
-
-  // Trace backward from a Cond operand through the label body to find a
-  // Typetest origin. Returns {typetest_src, typetest_type, negated} or
-  // empty nodes if not found.
   struct TypetestTrace
   {
-    Node src; // The variable being type-tested
-    Node type; // The type being tested against
-    bool negated; // True if through an odd number of Not operations
+    Node src;
+    Node type;
+    bool negated;
   };
 
   static std::optional<TypetestTrace>
@@ -1841,16 +2110,12 @@ namespace vc
   {
     auto target_loc = cond_local->location();
     bool negated = false;
-
-    // Scan backward through body statements.
     for (auto it = body->rbegin(); it != body->rend(); ++it)
     {
       auto& stmt = *it;
-
       if (stmt == Not)
       {
         auto dst = stmt / LocalId;
-
         if (dst->location() == target_loc)
         {
           target_loc = (stmt / Rhs)->location();
@@ -1860,1056 +2125,1400 @@ namespace vc
       else if (stmt == Typetest)
       {
         auto dst = stmt / LocalId;
-
         if (dst->location() == target_loc)
-        {
           return TypetestTrace{stmt / Rhs, stmt / Type, negated};
-        }
       }
     }
-
     return std::nullopt;
   }
 
-  // Process statements in a label body, updating the type environment.
-  // This contains all per-statement type inference logic.
-  // Cascade re-propagation: refine all remaining default Consts
-  // compatible with `expected_prim`, then propagate through
-  // Copy/Move/Lookup/CallDyn until stable. `cascade_changed` tracks
-  // affected locations to prevent oscillation.
-  static void run_cascade(
+  // ===== Propagate call_node =====
+
+  static void propagate_call_node(
     TypeEnv& env,
-    Node expected_prim,
-    const Node& labels,
+    const Location& loc,
     Node top,
-    std::map<Location, Node>& lookup_stmts)
+    std::map<Location, Node>& lookup_stmts,
+    const std::map<Location, Node>* def_stmts = nullptr)
   {
-    if (!expected_prim)
+    if (active_infer_profile != nullptr)
+      active_infer_profile->propagate_call_node_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->propagate_call_node_time
+        : nullptr);
+
+    auto it = env.find(loc);
+    if (it == env.end() || is_default_type(it->second.type) ||
+        !it->second.call_node)
       return;
 
-    // Refine ALL remaining default Consts of compatible type.
-    bool found_default = true;
-
-    while (found_default)
+    auto call = it->second.call_node;
+    if (call == Call)
+      backward_refine_call(call, it->second.type, env, top);
+    else if (call->in({CallDyn, TryCallDyn}))
     {
-      found_default = false;
+      auto prim = extract_primitive(it->second.type);
+      if (prim)
+        backward_refine_calldyn(call, prim, env, top, lookup_stmts, def_stmts);
+    }
+  }
 
-      for (auto& [loc, info] : env)
+  static void propagate_call_constraint(
+    TypeEnv& env,
+    const Location& loc,
+    const Node& expected,
+    Node top,
+    std::map<Location, Node>& lookup_stmts,
+    const std::map<Location, Node>* def_stmts = nullptr)
+  {
+    if (!expected || is_default_type(expected) || contains_default_type(expected))
+      return;
+
+    auto it = env.find(loc);
+    if (it == env.end() || !it->second.call_node)
+      return;
+
+    auto call = it->second.call_node;
+    if (call == Call)
+    {
+      backward_refine_call(call, expected, env, top);
+    }
+    else if (call->in({CallDyn, TryCallDyn}))
+    {
+      auto prim = extract_backward_primitive(expected);
+      if (prim)
+        backward_refine_calldyn(call, prim, env, top, lookup_stmts, def_stmts);
+    }
+  }
+
+  // ===== TypeArg inference for Call sites =====
+
+  // Infers TypeArgs for a Call statement. Returns true if all constraints
+  // came from default-typed args (enables call_node tracking).
+  static bool infer_typeargs(
+    Node call,
+    Node func_def,
+    std::vector<ScopeInfo>& scopes,
+    TypeEnv& env,
+    Node top)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->infer_typeargs_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->infer_typeargs_time
+        : nullptr);
+
+    auto args = call / Args;
+    auto params = func_def / Params;
+
+    bool needs_inference = false;
+    for (auto& scope : scopes)
+    {
+      auto ta = scope.name_elem / TypeArgs;
+      auto tps = scope.def / TypeParams;
+      if (ta->empty() && !tps->empty())
       {
-        if (!info.is_default || !info.const_node)
-          continue;
+        needs_inference = true;
+        break;
+      }
+    }
 
-        if (try_refine(env, loc, expected_prim))
+    if (!needs_inference)
+      return false;
+
+    // Collect constraints from arg types.
+    NodeMap<LocalTypeInfo> constraints;
+    for (size_t i = 0; i < params->size() && i < args->size(); i++)
+    {
+      auto arg_loc = (args->at(i) / Rhs)->location();
+      auto arg_it = env.find(arg_loc);
+      if (arg_it == env.end())
+        continue;
+      extract_constraints(
+        top, (params->at(i) / Type)->front(),
+        arg_it->second.type->front(), constraints,
+        is_default_type(arg_it->second.type));
+    }
+
+    bool all_default = !constraints.empty();
+    for (auto& [tp, info] : constraints)
+      if (!is_default_type(info.type))
+        all_default = false;
+
+    // Fill TypeArgs.
+    for (auto& scope : scopes)
+    {
+      auto ta = scope.name_elem / TypeArgs;
+      auto tps = scope.def / TypeParams;
+      if (tps->empty())
+        continue;
+
+      if (!ta->empty())
+      {
+        bool needs_reinfer = false;
+        for (auto& t : *ta)
+          if (direct_typeparam(top, t))
+          {
+            needs_reinfer = true;
+            break;
+          }
+        if (!needs_reinfer)
+          continue;
+      }
+
+      bool all_constrained = true;
+      Node new_ta = TypeArgs;
+      for (auto& tp : *tps)
+      {
+        auto find = constraints.find(tp);
+        if (find == constraints.end())
         {
-          found_default = true;
+          all_constrained = false;
+          break;
+        }
+        new_ta << clone(find->second.type);
+      }
+      if (all_constrained)
+        snmalloc::UNUSED(replace_if_changed(scope.name_elem, ta, new_ta));
+    }
+
+    return all_default;
+  }
+
+  // Push concrete arg types into TypeVar formal params (AST mutation).
+  static void push_arg_types_to_params(
+    Node func_def, const Node& args, TypeEnv& env, Node /*top*/)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->push_arg_types_to_params_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->push_arg_types_to_params_time
+        : nullptr);
+
+    auto params = func_def / Params;
+    auto parent_cls = func_def->parent(ClassDef);
+
+    for (size_t i = 0; i < params->size() && i < args->size(); i++)
+    {
+      auto param = params->at(i);
+      auto formal_type = param / Type;
+      if (!contains_typevar(formal_type))
+        continue;
+
+      Node resolved;
+
+      // FieldDef takes priority.
+      if (parent_cls)
+      {
+        auto pname = (param / Ident)->location().view();
+        for (auto& child : *(parent_cls / ClassBody))
+        {
+          if (child != FieldDef)
+            continue;
+          if ((child / Ident)->location().view() != pname)
+            continue;
+          if (!contains_typevar(child / Type))
+            resolved = child / Type;
+          break;
+        }
+      }
+
+      if (!resolved)
+      {
+        auto arg_loc = (args->at(i) / Rhs)->location();
+        auto arg_it = env.find(arg_loc);
+        if (
+          arg_it == env.end() || contains_typevar(arg_it->second.type) ||
+          contains_default_type(arg_it->second.type))
+          continue;
+        resolved = arg_it->second.type;
+      }
+
+      snmalloc::UNUSED(replace_if_changed(param, formal_type, clone(resolved)));
+
+      // Keep FieldDef in sync.
+      if (parent_cls)
+      {
+        auto pname = (param / Ident)->location().view();
+        for (auto& child : *(parent_cls / ClassBody))
+        {
+          if (child != FieldDef)
+            continue;
+          if ((child / Ident)->location().view() != pname)
+            continue;
+          if (contains_typevar(child / Type))
+            snmalloc::UNUSED(
+              replace_if_changed(child, child / Type, clone(resolved)));
           break;
         }
       }
     }
-
-    // Seed cascade_changed with locations that have the expected
-    // primitive type.
-    std::set<Location> cascade_changed;
-
-    for (auto& [loc, info] : env)
-    {
-      auto p = extract_primitive(info.type);
-
-      if (
-        p && p->type() == expected_prim->type() && !info.is_default &&
-        !info.is_fixed)
-      {
-        cascade_changed.insert(loc);
-      }
-    }
-
-    // Cascade: re-iterate all statements in all labels to
-    // re-propagate types through Copy/Move, Lookup, and CallDyn.
-    bool changed = true;
-
-    while (changed)
-    {
-      changed = false;
-
-      for (auto& lbl2 : *labels)
-      {
-        for (auto& stmt2 : *(lbl2 / Body))
-        {
-          if (stmt2->in({Copy, Move}))
-          {
-            auto cp_dst = stmt2 / LocalId;
-            auto cp_src = stmt2 / Rhs;
-
-            if (
-              cascade_changed.find(cp_src->location()) == cascade_changed.end())
-              continue;
-
-            auto dst_it = env.find(cp_dst->location());
-            auto src_it = env.find(cp_src->location());
-
-            if (
-              src_it != env.end() &&
-              (dst_it == env.end() || !dst_it->second.is_fixed))
-            {
-              auto new_info = LocalTypeInfo::propagated(src_it->second);
-
-              if (
-                dst_it == env.end() ||
-                !types_equal(dst_it->second.type, new_info.type))
-              {
-                env[cp_dst->location()] = new_info;
-                cascade_changed.insert(cp_dst->location());
-                changed = true;
-              }
-            }
-          }
-          else if (stmt2 == Lookup)
-          {
-            auto lk_dst = stmt2 / LocalId;
-            auto lk_src = stmt2 / Rhs;
-
-            if (
-              cascade_changed.find(lk_src->location()) == cascade_changed.end())
-              continue;
-
-            auto lk_hand = (stmt2 / Lhs)->type();
-            auto lk_ident = stmt2 / Ident;
-            auto lk_ta = stmt2 / TypeArgs;
-            auto lk_ar = from_chars_sep_v<size_t>(stmt2 / Int);
-            auto src_it = env.find(lk_src->location());
-
-            if (src_it != env.end())
-            {
-              auto rt = resolve_method_return_type(
-                top, src_it->second.type, lk_ident, lk_hand, lk_ar, lk_ta);
-
-              if (rt)
-              {
-                auto dst_it = env.find(lk_dst->location());
-
-                if (
-                  dst_it == env.end() || !types_equal(dst_it->second.type, rt))
-                {
-                  env[lk_dst->location()] = LocalTypeInfo::computed(rt);
-                  cascade_changed.insert(lk_dst->location());
-                  changed = true;
-                }
-              }
-            }
-          }
-          else if (stmt2->in({CallDyn, TryCallDyn}))
-          {
-            auto cd_dst = stmt2 / LocalId;
-            auto cd_src = stmt2 / Rhs;
-            auto cd_args = stmt2 / Args;
-
-            bool src_changed =
-              cascade_changed.find(cd_src->location()) != cascade_changed.end();
-            bool arg_changed = false;
-
-            for (auto& arg_node : *cd_args)
-            {
-              auto as = arg_node / Rhs;
-
-              if (cascade_changed.find(as->location()) != cascade_changed.end())
-              {
-                arg_changed = true;
-                break;
-              }
-            }
-
-            if (!src_changed && !arg_changed)
-              continue;
-
-            auto li = lookup_stmts.find(cd_src->location());
-
-            if (li != lookup_stmts.end())
-            {
-              auto lk = li->second;
-              auto lk_src = lk / Rhs;
-              auto ri = env.find(lk_src->location());
-
-              if (ri != env.end())
-              {
-                auto hi = (lk / Lhs)->type();
-                auto mi = lk / Ident;
-                auto ta = lk / TypeArgs;
-                auto ar = from_chars_sep_v<size_t>(lk / Int);
-
-                auto minfo =
-                  resolve_method(top, ri->second.type, mi, hi, ar, ta);
-
-                if (minfo.func)
-                {
-                  auto mparams = minfo.func / Params;
-                  size_t idx = 0;
-
-                  for (auto& arg_node : *cd_args)
-                  {
-                    if (idx >= mparams->size())
-                      break;
-
-                    auto pt =
-                      apply_subst(top, mparams->at(idx) / Type, minfo.subst);
-                    auto pp = extract_callable_primitive(pt);
-
-                    if (pp)
-                    {
-                      auto as = arg_node / Rhs;
-
-                      if (try_refine(env, as->location(), pp))
-                      {
-                        cascade_changed.insert(as->location());
-                        changed = true;
-                      }
-                    }
-
-                    idx++;
-                  }
-                }
-              }
-            }
-
-            // Re-propagate CallDyn result type.
-            if (src_changed)
-            {
-              auto src_it = env.find(cd_src->location());
-
-              if (src_it != env.end())
-              {
-                auto dst_it = env.find(cd_dst->location());
-
-                if (
-                  dst_it == env.end() ||
-                  !types_equal(dst_it->second.type, src_it->second.type))
-                {
-                  env[cd_dst->location()] =
-                    LocalTypeInfo::computed(clone(src_it->second.type));
-                  cascade_changed.insert(cd_dst->location());
-                  changed = true;
-                }
-              }
-            }
-          }
-          else if (stmt2 == RegisterRef)
-          {
-            // When the source of a RegisterRef is refined, update the
-            // ref's type to ref[new_type].
-            auto rr_dst = stmt2 / LocalId;
-            auto rr_src = stmt2 / Rhs;
-            auto rr_src_loc = rr_src->location();
-
-            if (cascade_changed.find(rr_src_loc) == cascade_changed.end())
-              continue;
-
-            auto src_it = env.find(rr_src_loc);
-
-            if (src_it != env.end())
-            {
-              auto new_ref_type = ref_type(clone(src_it->second.type));
-              auto dst_it = env.find(rr_dst->location());
-
-              if (
-                dst_it == env.end() ||
-                !types_equal(dst_it->second.type, new_ref_type))
-              {
-                env[rr_dst->location()] = LocalTypeInfo::computed(new_ref_type);
-                cascade_changed.insert(rr_dst->location());
-                changed = true;
-              }
-            }
-          }
-          else if (stmt2->in({New, Stack}))
-          {
-            // When a NewArg's source is refined, update the matching
-            // FieldDef in the class.
-            auto new_type = stmt2 / Type;
-            auto inner = new_type->front();
-
-            if (inner != TypeName)
-              continue;
-
-            auto class_def = find_def(top, inner);
-
-            if (!class_def || class_def != ClassDef)
-              continue;
-
-            auto class_body = class_def / ClassBody;
-
-            for (auto& new_arg : *(stmt2 / NewArgs))
-            {
-              auto arg_src = new_arg / Rhs;
-              auto arg_loc = arg_src->location();
-              bool in_changed =
-                cascade_changed.find(arg_loc) != cascade_changed.end();
-
-              if (!in_changed)
-                continue;
-
-              auto arg_it = env.find(arg_loc);
-
-              if (arg_it == env.end())
-                continue;
-
-              auto field_ident = new_arg / Ident;
-
-              for (auto& child : *class_body)
-              {
-                if (child != FieldDef)
-                  continue;
-
-                if (
-                  (child / Ident)->location().view() !=
-                  field_ident->location().view())
-                  continue;
-
-                auto ft = child / Type;
-
-                if (
-                  contains_typevar(ft) || !types_equal(ft, arg_it->second.type))
-                {
-                  child->replace(ft, clone(arg_it->second.type));
-                  changed = true;
-                }
-
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
   }
 
-  static void process_label_body(
+  static bool is_lambda_function(const Node& func)
+  {
+    auto class_def = func->parent(ClassBody);
+    if (!class_def)
+      return false;
+    class_def = class_def->parent(ClassDef);
+    if (!class_def)
+      return false;
+
+    auto ident = class_def / Ident;
+    auto name = ident->location().view();
+    return name.rfind("lambda$", 0) == 0;
+  }
+
+  static Node retarget_numeric_type(const Node& type, const Node& expected_prim)
+  {
+    if (!type || type != Type || !expected_prim)
+      return {};
+
+    auto inner = type->front();
+    if (inner->in({DefaultInt, DefaultFloat}))
+      return primitive_type(expected_prim->type());
+
+    if (auto prim = extract_primitive(type))
+    {
+      bool compatible =
+        (prim->in(integer_types) && expected_prim->in(integer_types)) ||
+        (prim->in(float_types) && expected_prim->in(float_types));
+      if (compatible && prim->type() != expected_prim->type())
+        return primitive_type(expected_prim->type());
+      return {};
+    }
+
+    if (inner != Union)
+      return {};
+
+    Node new_union = Union;
+    bool changed = false;
+    for (auto& member : *inner)
+    {
+      Node member_type = Type << clone(member);
+      auto refined_member = retarget_numeric_type(member_type, expected_prim);
+      if (refined_member)
+      {
+        new_union << clone(refined_member->front());
+        changed = true;
+      }
+      else
+      {
+        new_union << clone(member);
+      }
+    }
+
+    if (!changed)
+      return {};
+
+    return Type << new_union;
+  }
+
+  static Node extract_backward_primitive(const Node& type)
+  {
+    auto prim = extract_primitive(type);
+    if (prim)
+      return prim;
+
+    if (!type || type != Type || type->front() != Union)
+      return {};
+
+    Node found;
+    for (auto& member : *type->front())
+    {
+      Node member_type = Type << clone(member);
+      auto member_prim = extract_primitive(member_type);
+      if (!member_prim)
+        continue;
+
+      if (!found)
+      {
+        found = member_prim;
+        continue;
+      }
+
+      if (found->type() != member_prim->type())
+        return {};
+    }
+
+    return found;
+  }
+
+  static bool recover_local_type_from_def(
+    const Location& loc,
+    TypeEnv& env,
+    const std::map<Location, Node>& def_stmts,
+    Node top)
+  {
+    if (env.find(loc) != env.end())
+      return true;
+
+    auto it = def_stmts.find(loc);
+    if (it == def_stmts.end())
+      return false;
+
+    auto stmt = it->second;
+    Node recovered;
+
+    if (stmt == New)
+    {
+      recovered = clone(stmt / Type);
+    }
+    else if (stmt == Convert)
+    {
+      recovered = clone(stmt / Type);
+    }
+    else if (stmt->in({Copy, Move}))
+    {
+      auto src_it = env.find((stmt / Rhs)->location());
+      if (src_it != env.end())
+        recovered = clone(src_it->second.type);
+    }
+    else if (stmt == Call)
+    {
+      auto func_def =
+        find_func_def(top, stmt / FuncName, (stmt / Args)->size(), stmt / Lhs);
+      if (func_def)
+      {
+        auto ret = func_def / Type;
+        if (!contains_typevar(ret) && !is_default_type(ret))
+          recovered = clone(ret);
+      }
+    }
+
+    if (!recovered)
+      return false;
+
+    env[loc] = {clone(recovered), false, {}};
+    return true;
+  }
+
+  static bool refine_function_return_consts(
+    const Node& func, const Node& expected_prim)
+  {
+    if (!func || !expected_prim)
+      return false;
+
+    bool changed = false;
+    for (auto& label : *(func / Labels))
+    {
+      std::map<Location, Node> const_defs;
+      TypeEnv env;
+      for (auto& stmt : *(label / Body))
+      {
+        if (stmt == Const)
+        {
+          auto loc = (stmt / LocalId)->location();
+          const_defs[loc] = stmt;
+          auto type_tok =
+            (stmt->size() == 3) ? stmt->at(1) : default_literal_type(stmt->back());
+          auto type = type_tok->in({DefaultInt, DefaultFloat})
+            ? (Type << type_tok->type())
+            : primitive_type(type_tok->type());
+          env[loc] = {type, false, {}};
+        }
+      }
+
+      auto term = label / Return;
+      if (term != Return)
+        continue;
+
+      auto ret_loc = (term / LocalId)->location();
+      bool refined = refine_const_local(
+        env, const_defs, ret_loc, primitive_type(expected_prim->type()));
+      if (refined)
+        changed = true;
+    }
+
+    return changed;
+  }
+
+  // ===== Transfer functions: process_label_body =====
+
+  // Tuple tracking for NewArrayConst → ArrayRefConst → Store patterns.
+  struct TupleTracking
+  {
+    size_t size;
+    bool is_array_lit;
+    std::vector<Node> element_types;
+    std::vector<Location> element_value_locs;
+  };
+
+  static Node infer_tracked_tuple_type(const TupleTracking& tt)
+  {
+    if (tt.is_array_lit)
+    {
+      Node common;
+      bool uniform = true;
+      for (size_t i = 0; i < tt.size && uniform; i++)
+      {
+        if (tt.element_value_locs[i].view().empty())
+        {
+          uniform = false;
+          break;
+        }
+
+        auto& et = tt.element_types[i];
+        if (!et || !extract_primitive(et))
+        {
+          uniform = false;
+          break;
+        }
+
+        if (!common)
+          common = clone(et);
+        else if (et->front()->type() != common->front()->type())
+          uniform = false;
+      }
+
+      if (uniform && common && tt.size > 0)
+        return clone(common);
+      return {};
+    }
+
+    for (size_t i = 0; i < tt.size; i++)
+      if (!tt.element_types[i])
+        return {};
+
+    if (tt.size == 0)
+      return {};
+    if (tt.size == 1)
+      return Type << clone(tt.element_types[0]->front());
+
+    Node tup = TupleType;
+    for (auto& et : tt.element_types)
+      tup << clone(et->front());
+    return Type << tup;
+  }
+
+  struct LabelChanges
+  {
+    bool forward = false;
+    bool backward = false;
+  };
+
+  enum class InferStmtFamily
+  {
+    ConstLike,
+    CopyLike,
+    RefOps,
+    TupleOps,
+    NewOps,
+    CallOps,
+    FFIWhenOps,
+    TypetestOps,
+  };
+
+  struct InferStmtScope
+  {
+    InferStmtScope(InferStmtFamily family)
+    {
+      if (active_infer_profile == nullptr)
+        return;
+
+      switch (family)
+      {
+        case InferStmtFamily::ConstLike:
+          active_infer_profile->stmt_const_like++;
+          timer.emplace(&active_infer_profile->stmt_const_like_time);
+          break;
+        case InferStmtFamily::CopyLike:
+          active_infer_profile->stmt_copy_like++;
+          timer.emplace(&active_infer_profile->stmt_copy_like_time);
+          break;
+        case InferStmtFamily::RefOps:
+          active_infer_profile->stmt_ref_ops++;
+          timer.emplace(&active_infer_profile->stmt_ref_ops_time);
+          break;
+        case InferStmtFamily::TupleOps:
+          active_infer_profile->stmt_tuple_ops++;
+          timer.emplace(&active_infer_profile->stmt_tuple_ops_time);
+          break;
+        case InferStmtFamily::NewOps:
+          active_infer_profile->stmt_new_ops++;
+          timer.emplace(&active_infer_profile->stmt_new_ops_time);
+          break;
+        case InferStmtFamily::CallOps:
+          active_infer_profile->stmt_call_ops++;
+          timer.emplace(&active_infer_profile->stmt_call_ops_time);
+          break;
+        case InferStmtFamily::FFIWhenOps:
+          active_infer_profile->stmt_ffi_when_ops++;
+          timer.emplace(&active_infer_profile->stmt_ffi_when_ops_time);
+          break;
+        case InferStmtFamily::TypetestOps:
+          active_infer_profile->stmt_typetest_ops++;
+          timer.emplace(&active_infer_profile->stmt_typetest_ops_time);
+          break;
+      }
+    }
+
+    std::optional<InferScopedTimer> timer;
+  };
+
+  static LabelChanges process_label_body(
     const Node& body,
     TypeEnv& env,
+    TypeEnv& bwd,
     Node top,
-    const Node& enclosing_func,
     std::map<Location, Node>& lookup_stmts,
-    std::vector<std::pair<Location, Location>>& typevar_aliases,
-    std::map<Location, std::pair<Location, size_t>>& ref_to_tuple)
+    const std::map<Location, Node>& all_def_stmts,
+    std::set<std::pair<Location, Location>>& typevar_aliases,
+    std::map<Location, std::pair<Location, size_t>>& ref_to_tuple,
+    std::map<Location, TupleTracking>& tuple_locals)
   {
-    // Track tuple construction from NewArrayConst patterns.
-    struct TupleTracking
-    {
-      Node stmt;
-      size_t size;
-      std::vector<Node> element_types;
-      bool is_array_lit;
-      std::vector<Location> element_value_locs;
-    };
-
-    // Note: tuple_locals is local to each label processing. That's fine
-    // because tuple construction (NewArrayConst, ArrayRefConst, Store)
-    // always happens within a single label.
-    std::map<Location, TupleTracking> tuple_locals;
+    LabelChanges changes;
+    std::map<Location, Node> const_defs;
+    std::map<Location, Node> def_stmts;
 
     for (auto& stmt : *body)
     {
+      if (!stmt->empty() && stmt->front() == LocalId)
+        def_stmts[stmt->front()->location()] = stmt;
       if (stmt == Const)
-      {
-        // Determine default type from literal.
-        // Check if already processed (has 3 children: dst, type, lit).
-        auto dst = stmt->front();
-        Node type;
+        const_defs[(stmt / LocalId)->location()] = stmt;
+    }
 
-        if (stmt->size() == 3)
+    auto merge = [&](const Location& loc, const Node& type,
+                     Node call_node = {}) -> bool {
+      bool c = merge_env(env, loc, type, top, call_node);
+      if (c)
+        changes.forward = true;
+      return c;
+    };
+
+    auto refine_local_const =
+      [&](const Location& loc, const Node& expected) -> bool {
+      bool changed = refine_const_local(env, const_defs, loc, expected);
+      if (changed)
+        changes.forward = true;
+      return changed;
+    };
+
+    auto merge_bwd =
+      [&](const Location& loc, const Node& type, bool is_fixed = false) -> bool {
+      bool changed = false;
+
+      if (merge_env(env, loc, type, top))
+      {
+        changes.forward = true;
+        changed = true;
+      }
+
+      // Record backward constraints that carry a concrete primitive signal.
+      bool record_backward =
+        type && !type->empty() &&
+        !type->front()->in({TypeVar, DefaultInt, DefaultFloat}) &&
+        (type->front() != Union || extract_backward_primitive(type));
+      if (record_backward)
+      {
+        auto bit = bwd.find(loc);
+        if (bit == bwd.end())
         {
-          // Already processed on a prior iteration — read existing type.
-          type = stmt->at(1);
+          bwd[loc] = {clone(type), is_fixed, {}};
+          changes.backward = true;
+          changed = true;
         }
         else
         {
-          // First encounter: determine type from literal but don't
-          // mutate the AST yet.
-          auto lit = stmt->back();
-          type = default_literal_type(lit);
+          if (is_fixed && !bit->second.is_fixed)
+          {
+            if (!same_type_tree(bit->second.type, type))
+            {
+              bit->second.type = clone(type);
+              changed = true;
+            }
+            bit->second.is_fixed = true;
+            changes.backward = true;
+            return true;
+          }
+
+          if (bit->second.is_fixed)
+            return changed;
+
+          auto m = merge_type(bit->second.type, type, top);
+          if (m)
+          {
+            bit->second.type = m;
+            changes.backward = true;
+            changed = true;
+          }
+        }
+      }
+
+      return changed;
+    };
+
+    for (auto& stmt : *body)
+    {
+      // ----- Const -----
+      if (stmt == Const)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        auto dst = stmt->front();
+        Node type_tok;
+        if (stmt->size() == 3)
+          type_tok = stmt->at(1);
+        else
+          type_tok = default_literal_type(stmt->back());
+
+        auto type = type_tok->in({DefaultInt, DefaultFloat})
+          ? (Type << type_tok->type()) : primitive_type(type_tok->type());
+
+        if (is_default_type(type))
+        {
+          auto it = env.find(dst->location());
+          if (it != env.end() && !is_default_type(it->second.type))
+          {
+            auto prim = extract_primitive(it->second.type);
+            if (
+              prim &&
+              ((type->front() == DefaultInt && prim->in(integer_types)) ||
+               (type->front() == DefaultFloat && prim->in(float_types))))
+            {
+              type = clone(it->second.type);
+            }
+          }
         }
 
-        // Record in type env.
-        bool is_default = type->in({U64, F64});
-        env[dst->location()] = is_default ?
-          LocalTypeInfo::literal(primitive_type(type->type()), stmt) :
-          LocalTypeInfo::computed(primitive_type(type->type()));
+        merge(dst->location(), type);
       }
+      // ----- ConstStr -----
       else if (stmt == ConstStr)
       {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(string_type());
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge((stmt / LocalId)->location(), string_type());
       }
+      // ----- Convert -----
       else if (stmt == Convert)
       {
-        env[(stmt / LocalId)->location()] =
-          LocalTypeInfo::computed(primitive_type((stmt / Type)->type()));
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge((stmt / LocalId)->location(), clone(stmt / Type));
       }
+      // ----- Copy / Move -----
       else if (stmt->in({Copy, Move}))
       {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto dst_it = env.find(dst->location());
-        auto src_it = env.find(src->location());
+        InferStmtScope stmt_scope(InferStmtFamily::CopyLike);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_loc = (stmt / Rhs)->location();
+        auto src_it = env.find(src_loc);
+        auto dst_it = env.find(dst_loc);
 
-        if (
-          dst_it != env.end() && dst_it->second.is_fixed && src_it != env.end())
+        // Track TypeVar aliases for post-convergence back-prop.
+        if (src_it != env.end() && dst_it != env.end())
         {
-          // dst has a fixed type (type assertion).
-          // If src is a refinable Const, refine to match dst.
-          auto dst_prim = extract_primitive(dst_it->second.type);
-
-          if (dst_prim)
-            try_refine(env, src->location(), dst_prim);
+          bool dst_tv = dst_it->second.type->front() == TypeVar;
+          bool src_tv = src_it->second.type->front() == TypeVar;
+          if (dst_tv != src_tv)
+            if (typevar_aliases.insert({dst_loc, src_loc}).second)
+              note_infer_transfer_change();
         }
-        else if (
-          (dst_it == env.end() || !dst_it->second.is_fixed) &&
-          src_it != env.end())
-        {
-          // Propagate source type.
-          env[dst->location()] = LocalTypeInfo::propagated(src_it->second);
 
-          // Track alias for TypeVar back-propagation.
-          if (src_it->second.type->front() == TypeVar)
-            typevar_aliases.push_back({dst->location(), src->location()});
+        // Forward: dst = merge(dst, src).
+        if (src_it != env.end())
+          merge(
+            dst_loc, src_it->second.type, src_it->second.call_node);
+
+        auto tuple_ref = ref_to_tuple.find(src_loc);
+        if (tuple_ref != ref_to_tuple.end())
+          snmalloc::UNUSED(upsert_ref_to_tuple(ref_to_tuple, dst_loc, tuple_ref->second));
+
+        // Backward: src = merge(src, dst).
+        dst_it = env.find(dst_loc);
+        if (dst_it != env.end())
+        {
+          Node expected = dst_it->second.type;
+          Node call_expected = expected;
+          auto bwd_it = bwd.find(dst_loc);
+          if (
+            bwd_it != bwd.end() && bwd_it->second.type &&
+            !bwd_it->second.type->empty() &&
+            !bwd_it->second.type->front()->in(
+              {TypeVar, DefaultInt, DefaultFloat, Union}))
+          {
+            expected = bwd_it->second.type;
+          }
+          else if (
+            bwd_it != bwd.end() &&
+            extract_backward_primitive(bwd_it->second.type))
+          {
+            call_expected = bwd_it->second.type;
+          }
+
+          if ((dst_it->second.is_fixed || (bwd_it != bwd.end() && bwd_it->second.is_fixed)))
+            snmalloc::UNUSED(refine_local_const(src_loc, expected));
+          if (call_expected)
+            propagate_call_constraint(
+              env, src_loc, call_expected, top, lookup_stmts, &all_def_stmts);
+          bool expected_fixed =
+            dst_it->second.is_fixed ||
+            (bwd_it != bwd.end() && bwd_it->second.is_fixed);
+          if (is_default_type(dst_it->second.type))
+          {
+            if (merge_bwd(dst_loc, expected, expected_fixed))
+            {
+              propagate_call_constraint(
+                env, dst_loc, expected, top, lookup_stmts, &all_def_stmts);
+              propagate_call_node(
+                env, dst_loc, top, lookup_stmts, &all_def_stmts);
+            }
+          }
+          if (merge_bwd(src_loc, expected, expected_fixed))
+          {
+            propagate_call_constraint(
+              env, src_loc, expected, top, lookup_stmts, &all_def_stmts);
+            propagate_call_node(
+              env, src_loc, top, lookup_stmts, &all_def_stmts);
+          }
         }
       }
+      // ----- RegisterRef -----
       else if (stmt == RegisterRef)
       {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto src_it = env.find(src->location());
-
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
+        auto src_it = env.find((stmt / Rhs)->location());
         if (src_it != env.end())
-          env[dst->location()] =
-            LocalTypeInfo::computed(ref_type(src_it->second.type));
+          merge(
+            (stmt / LocalId)->location(),
+            ref_type(clone(src_it->second.type)));
       }
+      // ----- FieldRef -----
       else if (stmt == FieldRef)
       {
-        auto dst = stmt / LocalId;
-        auto arg = stmt / Arg;
-        auto field_id = stmt / FieldId;
-        auto arg_src = arg / Rhs;
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
+        auto arg_src = (stmt / Arg) / Rhs;
+        auto dst_loc = (stmt / LocalId)->location();
         auto obj_it = env.find(arg_src->location());
-
         if (obj_it != env.end())
         {
-          auto& obj_type = obj_it->second.type;
-          auto inner = obj_type->front();
-
+          auto inner = obj_it->second.type->front();
           if (inner == TypeName)
           {
             auto class_def = find_def(top, inner);
-
             if (class_def && class_def == ClassDef)
             {
-              auto field_subst = build_class_subst(class_def, inner);
-              auto field_name = field_id->location().view();
-
-              for (auto& child : *(class_def / ClassBody))
+              auto subst = build_class_subst(class_def, inner);
+              auto fname = (stmt / FieldId)->location().view();
+              for (auto& f : *(class_def / ClassBody))
               {
-                if (child != FieldDef)
+                if (f != FieldDef)
                   continue;
-
-                if ((child / Ident)->location().view() != field_name)
+                if ((f / Ident)->location().view() != fname)
                   continue;
+                auto ft = apply_subst(top, f / Type, subst);
+                if (ft)
+                  merge(dst_loc, ref_type(ft));
 
-                auto ft = apply_subst(top, child / Type, field_subst);
-                env[dst->location()] = LocalTypeInfo::computed(ref_type(ft));
+                auto dst_it = env.find(dst_loc);
+                auto field_inner =
+                  dst_it != env.end() ? extract_ref_inner(dst_it->second.type) : Node{};
+                auto class_ident = class_def / Ident;
+                bool lambda_field =
+                  class_ident->location().view().rfind("lambda$", 0) == 0;
+                if (
+                  lambda_field && field_inner &&
+                  !contains_typevar(field_inner) &&
+                  !contains_default_type(field_inner) &&
+                  !is_any_type(field_inner))
+                {
+                  bool should_refine =
+                    is_any_type(f / Type) || contains_typevar(f / Type);
+
+                  if (!should_refine)
+                  {
+                    auto old_prim = extract_primitive(f / Type);
+                    auto new_prim = extract_primitive(field_inner);
+                    should_refine =
+                      old_prim && new_prim &&
+                      (((old_prim->in(integer_types) &&
+                         new_prim->in(integer_types)) ||
+                        (old_prim->in(float_types) &&
+                         new_prim->in(float_types))) &&
+                       old_prim->type() != new_prim->type());
+                  }
+
+                  if (should_refine && replace_if_changed(f, f / Type, clone(field_inner)))
+                    changes.forward = true;
+                }
                 break;
               }
             }
           }
         }
       }
+      // ----- Load -----
       else if (stmt == Load)
       {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto src_it = env.find(src->location());
-
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
+        auto src_loc = (stmt / Rhs)->location();
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_it = env.find(src_loc);
         if (src_it != env.end())
         {
           auto inner = extract_ref_inner(src_it->second.type);
-
           if (inner)
-            env[dst->location()] = LocalTypeInfo::computed(inner);
+            merge(dst_loc, inner);
+        }
+
+        auto dst_it = env.find(dst_loc);
+        if (dst_it != env.end() && !is_default_type(dst_it->second.type))
+        {
+          snmalloc::UNUSED(
+            merge_bwd(src_loc, ref_type(clone(dst_it->second.type))));
         }
       }
+      // ----- Store -----
       else if (stmt == Store)
       {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto src_it = env.find(src->location());
+        InferStmtScope stmt_scope(InferStmtFamily::RefOps);
+        // WF: wfDst * wfSrc * Arg → LocalId(dst), Rhs(ref), Arg(val)
+        auto dst_loc = (stmt / LocalId)->location();
+        auto ref_loc = (stmt / Rhs)->location();
+        auto val_loc = ((stmt / Arg) / Rhs)->location();
 
-        if (src_it != env.end())
+        auto ref_it = env.find(ref_loc);
+        if (ref_it != env.end())
         {
-          auto inner = extract_ref_inner(src_it->second.type);
-
+          auto inner = extract_ref_inner(ref_it->second.type);
           if (inner)
           {
-            env[dst->location()] = LocalTypeInfo::computed(inner);
+            // Forward: dst = inner type.
+            merge(dst_loc, clone(inner));
+            // Backward: refine stored value.
+            if (!is_any_type(inner) && merge_bwd(val_loc, clone(inner)))
+              propagate_call_node(
+                env, val_loc, top, lookup_stmts, &all_def_stmts);
 
-            // Refine the stored value based on ref content type.
-            auto expected_prim = extract_primitive(inner);
-
-            if (expected_prim)
+            // Track tuple element types.
+            auto rtt = ref_to_tuple.find(ref_loc);
+            if (rtt != ref_to_tuple.end())
             {
-              auto arg = stmt / Arg;
-              auto val_src = arg / Rhs;
-              try_refine(env, val_src->location(), expected_prim);
-            }
-          }
-        }
+              auto& [tup_loc, idx] = rtt->second;
+              auto tt = tuple_locals.find(tup_loc);
+              if (tt != tuple_locals.end() && idx < tt->second.size)
+              {
+                auto val_it = env.find(val_loc);
+                if (val_it != env.end())
+                {
+                  tt->second.element_types[idx] =
+                    clone(val_it->second.type);
+                  if (tt->second.is_array_lit)
+                    tt->second.element_value_locs[idx] = val_loc;
 
-        // Track tuple element types through Store.
-        auto ref_it = ref_to_tuple.find(src->location());
-
-        if (ref_it != ref_to_tuple.end())
-        {
-          auto& [tup_loc, elem_idx] = ref_it->second;
-          auto tup_it = tuple_locals.find(tup_loc);
-
-          if (tup_it != tuple_locals.end() && elem_idx < tup_it->second.size)
-          {
-            auto arg = stmt / Arg;
-            auto val_src = arg / Rhs;
-            auto val_it = env.find(val_src->location());
-
-            if (val_it != env.end())
-            {
-              tup_it->second.element_types[elem_idx] =
-                clone(val_it->second.type);
-
-              if (tup_it->second.is_array_lit)
-                tup_it->second.element_value_locs[elem_idx] =
-                  val_src->location();
+                  auto tracked = infer_tracked_tuple_type(tt->second);
+                  if (tracked)
+                  {
+                    auto tup_it = env.find(tup_loc);
+                    if (
+                      (tup_it == env.end()) ||
+                      !same_type_tree(tup_it->second.type, tracked))
+                    {
+                      env[tup_loc] = {clone(tracked), false, {}};
+                      changes.forward = true;
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
+      // ----- ArrayRef / ArrayRefConst -----
       else if (stmt->in({ArrayRef, ArrayRefConst}))
       {
-        auto dst = stmt / LocalId;
-        auto arr_src = stmt / Arg / Rhs;
-        auto arr_it = env.find(arr_src->location());
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto arg_loc = ((stmt / Arg) / Rhs)->location();
+        auto src_it = env.find(arg_loc);
 
-        if (arr_it != env.end())
+        if (stmt == ArrayRefConst)
         {
-          auto type = arr_it->second.type;
-          auto inner = type->front();
+          auto index = from_chars_sep_v<size_t>(stmt / Rhs);
+          // Track ref_to_tuple for Store-based element tracking.
+          auto rtt = ref_to_tuple.find(arg_loc);
+          if (rtt != ref_to_tuple.end())
+            snmalloc::UNUSED(
+              upsert_ref_to_tuple(ref_to_tuple, dst_loc, {rtt->second.first, index}));
+          else
+            snmalloc::UNUSED(
+              upsert_ref_to_tuple(ref_to_tuple, dst_loc, {arg_loc, index}));
 
-          if (inner == TupleType && stmt == ArrayRefConst)
+          // Resolve element if source is TupleType.
+          if (src_it != env.end())
           {
-            auto idx_node = stmt / Rhs;
-            auto idx = from_chars_sep_v<size_t>(idx_node);
-
-            if (idx < inner->size())
+            auto inner = src_it->second.type->front();
+            if (inner == TupleType && index < inner->size())
             {
-              auto elem = Type << clone(inner->at(idx));
-              env[dst->location()] = LocalTypeInfo::computed(ref_type(elem));
+              merge(
+                dst_loc,
+                ref_type(Type << clone(inner->at(index))));
+              continue;
+            }
+          }
+        }
+
+        if (src_it != env.end())
+          merge(
+            dst_loc,
+            ref_type(clone(src_it->second.type)));
+      }
+      // ----- ArrayRefFromEnd -----
+      else if (stmt == ArrayRefFromEnd)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
+        auto arg_loc = ((stmt / Arg) / Rhs)->location();
+        auto src_it = env.find(arg_loc);
+        if (src_it != env.end())
+        {
+          auto inner = src_it->second.type->front();
+          if (inner == TupleType)
+          {
+            auto offset = from_chars_sep_v<size_t>(stmt / Rhs);
+            if (offset > 0 && offset <= inner->size())
+            {
+              auto index = inner->size() - offset;
+              merge(
+                (stmt / LocalId)->location(),
+                ref_type(Type << clone(inner->at(index))));
+              continue;
+            }
+          }
+
+          merge(
+            (stmt / LocalId)->location(),
+            ref_type(clone(src_it->second.type)));
+        }
+      }
+      // ----- SplatOp -----
+      else if (stmt == SplatOp)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
+        auto arg_loc = ((stmt / Arg) / Rhs)->location();
+        auto src_it = env.find(arg_loc);
+        if (src_it != env.end() && src_it->second.type->front() == TupleType)
+        {
+          auto inner = src_it->second.type->front();
+          auto before = from_chars_sep_v<size_t>(stmt / Lhs);
+          auto after = from_chars_sep_v<size_t>(stmt / Rhs);
+          if (before + after <= inner->size())
+          {
+            auto remaining = inner->size() - before - after;
+            if (remaining == 0)
+            {
+              merge((stmt / LocalId)->location(), primitive_type(None));
+            }
+            else if (remaining == 1)
+            {
+              merge(
+                (stmt / LocalId)->location(), Type << clone(inner->at(before)));
             }
             else
             {
-              auto dyn_type = Type << Dyn;
-              env[dst->location()] =
-                LocalTypeInfo::computed(ref_type(dyn_type));
+              Node tup = TupleType;
+              for (size_t i = before; i < before + remaining; i++)
+                tup << clone(inner->at(i));
+              merge((stmt / LocalId)->location(), Type << tup);
             }
-          }
-          else
-          {
-            env[dst->location()] =
-              LocalTypeInfo::computed(ref_type(arr_it->second.type));
-
-            if (stmt == ArrayRefConst)
-            {
-              auto tup_it = tuple_locals.find(arr_src->location());
-
-              if (tup_it != tuple_locals.end())
-              {
-                auto idx_node = stmt / Rhs;
-                auto idx = from_chars_sep_v<size_t>(idx_node);
-                ref_to_tuple[dst->location()] = {arr_src->location(), idx};
-              }
-            }
+            continue;
           }
         }
+
+        merge((stmt / LocalId)->location(), make_type());
       }
-      else if (stmt == ArrayRefFromEnd)
-      {
-        // Like ArrayRefConst but indexing from the end.
-        // Pre-reify, we don't know the concrete index, so type as
-        // ref[any].
-        auto dst = stmt / LocalId;
-        auto any_type = Type
-          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                       << (NameElement << (Ident ^ "any") << TypeArgs));
-        env[dst->location()] = LocalTypeInfo::computed(ref_type(any_type));
-      }
-      else if (stmt == SplatOp)
-      {
-        // Splat extracts a sub-range of a tuple. Post-reify, the type
-        // depends on the remaining element count (none / T / TupleType).
-        // Pre-reify, type as any.
-        auto dst = stmt / LocalId;
-        auto any_type = Type
-          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                       << (NameElement << (Ident ^ "any") << TypeArgs));
-        env[dst->location()] = LocalTypeInfo::computed(any_type);
-      }
+      // ----- NewArray / NewArrayConst -----
       else if (stmt->in({NewArray, NewArrayConst}))
       {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(clone(stmt / Type));
+        InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto init_type = stmt / Type;
+        auto dst_it = env.find(dst_loc);
+        if (
+          !(dst_it != env.end() && is_any_type(init_type) &&
+            !is_any_type(dst_it->second.type) &&
+            (dst_it->second.type->front() != TypeVar)))
+        {
+          merge(dst_loc, clone(init_type));
+        }
 
         if (stmt == NewArrayConst)
         {
-          auto sz_node = stmt / Rhs;
-          auto sz = from_chars_sep_v<size_t>(sz_node);
-          auto loc_view = dst->location().view();
-          bool is_arr =
-            loc_view.size() >= 5 && loc_view.substr(0, 5) == "array";
-          tuple_locals[dst->location()] = {stmt, sz, {}, is_arr, {}};
-          tuple_locals[dst->location()].element_types.resize(sz);
-
-          if (is_arr)
-            tuple_locals[dst->location()].element_value_locs.resize(sz);
+          auto sz = from_chars_sep_v<size_t>(stmt / Rhs);
+          bool is_lit =
+            dst_loc.view().find("array") != std::string_view::npos;
+          tuple_locals[dst_loc] =
+            {sz, is_lit, std::vector<Node>(sz), std::vector<Location>(sz)};
+          snmalloc::UNUSED(
+            upsert_ref_to_tuple(ref_to_tuple, dst_loc, {dst_loc, 0}));
         }
       }
-      else if (stmt == MakePtr)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(ffi_primitive_type(Ptr));
-      }
+      // ----- TypeAssertion -----
       else if (stmt == TypeAssertion)
       {
-        auto local_id = stmt / LocalId;
-        env[local_id->location()] = LocalTypeInfo::fixed(clone(stmt / Type));
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        auto loc = (stmt / LocalId)->location();
+        merge(loc, clone(stmt / Type));
+        auto it = env.find(loc);
+        if (it != env.end())
+          it->second.is_fixed = true;
       }
-      else if (stmt == GetRaise)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
-      }
-      else if (stmt == SetRaise)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
-      }
+      // ----- New / Stack -----
       else if (stmt->in({New, Stack}))
       {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(clone(stmt / Type));
-
-        // Refine Const literals used as New arguments based on
-        // field types.
+        InferStmtScope stmt_scope(InferStmtFamily::NewOps);
+        auto dst_loc = (stmt / LocalId)->location();
         auto new_type = stmt / Type;
-        auto inner = new_type->front();
+        merge(dst_loc, clone(new_type));
 
+        // Backward: constrain args from field types.
+        auto inner = new_type->front();
         if (inner == TypeName)
         {
           auto class_def = find_def(top, inner);
-
           if (class_def && class_def == ClassDef)
           {
-            auto new_subst = build_class_subst(class_def, inner);
-            auto class_body = class_def / ClassBody;
-
-            for (auto& new_arg : *(stmt / NewArgs))
+            auto subst = build_class_subst(class_def, inner);
+            for (auto& na : *(stmt / NewArgs))
             {
-              assert(new_arg == NewArg);
-              auto field_ident = new_arg / Ident;
-              auto arg_src = new_arg / Rhs;
-              auto it = env.find(arg_src->location());
-
-              if (it == env.end())
-                continue;
-
-              for (auto& child : *class_body)
+              auto arg_loc = (na / Rhs)->location();
+              auto fname = (na / Ident)->location().view();
+              for (auto& f : *(class_def / ClassBody))
               {
-                if (child != FieldDef)
+                if (f != FieldDef)
                   continue;
-
-                if (
-                  (child / Ident)->location().view() !=
-                  field_ident->location().view())
+                if ((f / Ident)->location().view() != fname)
                   continue;
-
-                auto ft = apply_subst(top, child / Type, new_subst);
-
-                if (
-                  it->second.type->front() == TypeVar && ft &&
-                  ft->front() != TypeVar)
+                auto ft = apply_subst(top, f / Type, subst);
+                if (ft && !contains_typevar(ft))
                 {
-                  it->second.type = clone(ft);
-                  it->second.is_fixed = true;
+                  snmalloc::UNUSED(refine_local_const(arg_loc, ft));
+                  if (merge_bwd(arg_loc, ft))
+                    propagate_call_node(
+                      env, arg_loc, top, lookup_stmts, &all_def_stmts);
                 }
-
-                auto expected_prim = extract_primitive(ft);
-
-                if (expected_prim)
-                  try_refine(env, arg_src->location(), expected_prim);
-
-                // Reverse propagation: when the FieldDef contains
-                // TypeVar (possibly nested, e.g., ref[TypeVar]) and
-                // the arg has a concrete type, update the FieldDef.
+                // Reverse: push concrete arg into TypeVar FieldDef.
+                auto arg_it = env.find(arg_loc);
                 if (
-                  contains_typevar(child / Type) &&
-                  !contains_typevar(it->second.type))
-                {
-                  child->replace(child / Type, clone(it->second.type));
-                }
-
+                  arg_it != env.end() && contains_typevar(f / Type) &&
+                  !contains_typevar(arg_it->second.type) &&
+                  !contains_default_type(arg_it->second.type))
+                  snmalloc::UNUSED(replace_if_changed(
+                    f, f / Type, clone(arg_it->second.type)));
                 break;
               }
             }
           }
         }
       }
-      else if (stmt->in(
-                 {Add,
-                  Sub,
-                  Mul,
-                  Div,
-                  Mod,
-                  Pow,
-                  And,
-                  Or,
-                  Xor,
-                  Shl,
-                  Shr,
-                  Min,
-                  Max,
-                  LogBase,
-                  Atan2}))
+      // ----- Binary ops (result = LHS type) -----
+      else if (stmt->in(propagate_lhs_ops))
       {
-        auto dst = stmt / LocalId;
-        auto lhs = stmt / Lhs;
-        auto it = env.find(lhs->location());
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto lhs_loc = (stmt / Lhs)->location();
+        auto rhs_loc = (stmt / Rhs)->location();
 
-        if (it != env.end())
-          env[dst->location()] =
-            LocalTypeInfo::computed(clone(it->second.type));
-      }
-      else if (stmt->in({Eq, Ne, Lt, Le, Gt, Ge}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(Bool));
-      }
-      else if (stmt->in({Neg,  Abs,  Ceil, Floor, Exp,   Log,   Sqrt,
-                         Cbrt, Sin,  Cos,  Tan,   Asin,  Acos,  Atan,
-                         Sinh, Cosh, Tanh, Asinh, Acosh, Atanh, Read}))
-      {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto it = env.find(src->location());
+        auto lhs_it = env.find(lhs_loc);
+        auto rhs_it = env.find(rhs_loc);
 
-        if (it != env.end())
-          env[dst->location()] =
-            LocalTypeInfo::computed(clone(it->second.type));
-      }
-      else if (stmt->in({IsInf, IsNaN, Not}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(Bool));
-      }
-      else if (stmt == Bits)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(U64));
-      }
-      else if (stmt == Len)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(USize));
-      }
-      else if (stmt->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(F64));
-      }
-      else if (stmt == MakeCallback)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] =
-          LocalTypeInfo::computed(ffi_primitive_type(Callback));
-      }
-      else if (stmt == CallbackPtr)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(ffi_primitive_type(Ptr));
-      }
-      else if (stmt == FreeCallback)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt->in({AddExternal, RemoveExternal}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt == RegisterExternalNotify)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt == Freeze)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt->in({ArrayCopy, ArrayFill}))
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(None));
-      }
-      else if (stmt == ArrayCompare)
-      {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(I64));
-      }
-      else if (stmt == Call)
-      {
-        infer_call(stmt, env, top, lookup_stmts);
-      }
-      else if (stmt == Lookup)
-      {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto hand = (stmt / Lhs)->type();
-        auto method_ident = stmt / Ident;
-        auto method_ta = stmt / TypeArgs;
-        auto arity = from_chars_sep_v<size_t>(stmt / Int);
-        auto src_it = env.find(src->location());
-
-        if (src_it != env.end())
+        // If the lhs is still a default numeric, use a concrete rhs
+        // numeric type to pin the expression to that family.
+        if (
+          lhs_it != env.end() && rhs_it != env.end() &&
+          is_default_type(lhs_it->second.type))
         {
-          auto ret_type = resolve_method_return_type(
-            top, src_it->second.type, method_ident, hand, arity, method_ta);
-
-          if (ret_type)
-            env[dst->location()] = LocalTypeInfo::computed(ret_type);
+          auto rhs_prim = extract_callable_primitive(rhs_it->second.type);
+          bool compatible =
+            rhs_prim &&
+            ((lhs_it->second.type->front() == DefaultInt &&
+              rhs_prim->in(integer_types)) ||
+             (lhs_it->second.type->front() == DefaultFloat &&
+              rhs_prim->in(float_types)));
+          if (compatible)
+          {
+            auto refined = primitive_type(rhs_prim->type());
+            snmalloc::UNUSED(refine_local_const(lhs_loc, refined));
+            if (merge_bwd(lhs_loc, clone(refined)))
+              propagate_call_node(
+                env, lhs_loc, top, lookup_stmts, &all_def_stmts);
+            merge(dst_loc, clone(refined));
+            lhs_it = env.find(lhs_loc);
+          }
         }
 
-        lookup_stmts[dst->location()] = stmt;
-      }
-      else if (stmt->in({CallDyn, TryCallDyn}))
-      {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto args = stmt / Args;
-        bool refined = false;
-
-        auto lookup_it = lookup_stmts.find(src->location());
-
-        // Phase 1: Parameter-type-based refinement.
-        if (lookup_it != lookup_stmts.end())
+        if (lhs_it != env.end())
         {
-          auto lookup_node = lookup_it->second;
-          auto lookup_src = lookup_node / Rhs;
-          auto recv_it = env.find(lookup_src->location());
+          // Forward: result = lhs type.
+          merge(dst_loc, clone(lhs_it->second.type));
+          // Backward: refine rhs from lhs.
+          if (merge_bwd(rhs_loc, clone(lhs_it->second.type)))
+            propagate_call_node(
+              env, rhs_loc, top, lookup_stmts, &all_def_stmts);
+        }
 
-          if (recv_it != env.end())
+        // Backward from dst: refine lhs and rhs from dst (from prior
+        // iteration's backward flow, e.g., Call backward refined dst).
+        auto dst_it = env.find(dst_loc);
+        if (dst_it != env.end() && !is_default_type(dst_it->second.type))
+        {
+          if (merge_bwd(lhs_loc, clone(dst_it->second.type)))
+            propagate_call_node(
+              env, lhs_loc, top, lookup_stmts, &all_def_stmts);
+          if (merge_bwd(rhs_loc, clone(dst_it->second.type)))
+            propagate_call_node(
+              env, rhs_loc, top, lookup_stmts, &all_def_stmts);
+        }
+      }
+      // ----- Unary ops (result = operand type) -----
+      else if (stmt->in(propagate_rhs_ops))
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_loc = (stmt / Rhs)->location();
+
+        auto src_it = env.find(src_loc);
+        if (src_it != env.end())
+          merge(dst_loc, clone(src_it->second.type));
+
+        // Backward from dst.
+        auto dst_it = env.find(dst_loc);
+        if (dst_it != env.end() && !is_default_type(dst_it->second.type))
+        {
+          if (merge_bwd(src_loc, clone(dst_it->second.type)))
+            propagate_call_node(
+              env, src_loc, top, lookup_stmts, &all_def_stmts);
+        }
+      }
+      // ----- Fixed result types -----
+      else if (auto frt = fixed_result_type.find(stmt->type());
+               frt != fixed_result_type.end())
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge(
+          (stmt / LocalId)->location(),
+          primitive_type(frt->second));
+      }
+      else if (auto ffrt = fixed_ffi_result_type.find(stmt->type());
+               ffrt != fixed_ffi_result_type.end())
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge(
+          (stmt / LocalId)->location(),
+          ffi_primitive_type(ffrt->second));
+      }
+      // ----- Call -----
+      else if (stmt == Call)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        std::vector<ScopeInfo> scopes;
+        auto func_def = navigate_call(stmt, top, scopes);
+        if (!func_def)
+          continue;
+
+        auto args = stmt / Args;
+        auto params = func_def / Params;
+
+        // TypeArg inference.
+        bool all_default = infer_typeargs(stmt, func_def, scopes, env, top);
+
+        // Build substitution.
+        NodeMap<Node> subst;
+        for (auto& scope : scopes)
+        {
+          auto ta = scope.name_elem / TypeArgs;
+          auto tps = scope.def / TypeParams;
+          if (!ta->empty() && ta->size() == tps->size())
+            for (size_t i = 0; i < tps->size(); i++)
+              subst[tps->at(i)] = ta->at(i);
+        }
+
+        // Forward: return type.
+        auto ret = apply_subst(top, func_def / Type, subst);
+        if (ret)
+          merge(
+            (stmt / LocalId)->location(), ret,
+            all_default ? stmt : Node{});
+
+        // Shape-to-lambda propagation.
+        for (size_t i = 0; i < params->size() && i < args->size(); i++)
+        {
+          auto pt = apply_subst(top, params->at(i) / Type, subst);
+          if (pt && pt->front() != TypeVar)
           {
-            auto hand = (lookup_node / Lhs)->type();
-            auto method_ident = lookup_node / Ident;
-            auto method_ta = lookup_node / TypeArgs;
-            auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+            auto arg_it = env.find((args->at(i) / Rhs)->location());
+            if (arg_it != env.end())
+              changes.forward |=
+                propagate_shape_to_lambda(top, pt, arg_it->second.type);
+          }
+        }
 
-            auto info = resolve_method(
-              top, recv_it->second.type, method_ident, hand, arity, method_ta);
-
-            if (info.func)
+        // Backward: param types into args.
+        for (size_t i = 0; i < params->size() && i < args->size(); i++)
+        {
+          auto expected = apply_subst(top, params->at(i) / Type, subst);
+          if (
+            expected && expected->front() != TypeVar &&
+            !is_uninformative_backward_type(expected))
+          {
+            auto arg_loc = (args->at(i) / Rhs)->location();
+            snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+            if (merge_bwd(arg_loc, expected))
             {
-              auto params = info.func / Params;
-              bool recv_confirmed = !recv_it->second.is_default;
-              size_t i = 0;
+              propagate_call_constraint(
+                env, arg_loc, expected, top, lookup_stmts, &all_def_stmts);
+              propagate_call_node(
+                env, arg_loc, top, lookup_stmts, &all_def_stmts);
+            }
 
-              for (auto& arg_node : *args)
-              {
-                if (i >= params->size())
-                  break;
-
-                auto param_type =
-                  apply_subst(top, params->at(i) / Type, info.subst);
-                auto prim = extract_callable_primitive(param_type);
-
-                if (prim)
-                {
-                  auto arg_src = arg_node / Rhs;
-
-                  if (try_refine(env, arg_src->location(), prim))
-                    refined = true;
-                  else if (recv_confirmed)
-                  {
-                    auto arg_it = env.find(arg_src->location());
-
-                    if (arg_it != env.end() && arg_it->second.is_default)
-                    {
-                      auto arg_prim = extract_primitive(arg_it->second.type);
-
-                      if (arg_prim && arg_prim->type() == prim->type())
-                      {
-                        arg_it->second.is_default = false;
-                        arg_it->second.const_node = {};
-                      }
-                    }
-                  }
-                }
-
-                if (param_type && param_type->front() != TypeVar)
-                {
-                  auto arg_src = arg_node / Rhs;
-                  auto arg_it = env.find(arg_src->location());
-
-                  if (
-                    arg_it != env.end() &&
-                    arg_it->second.type->front() == TypeVar)
-                  {
-                    arg_it->second.type = clone(param_type);
-                    arg_it->second.is_fixed = true;
-                  }
-                }
-
-                i++;
-              }
-
-              // Reverse propagation: TypeVar params from FieldDef or
-              // actual args.
-              auto parent_cls = info.func->parent(ClassDef);
-              i = 0;
-
-              for (auto& arg_node : *args)
-              {
-                if (i >= params->size())
-                  break;
-
-                auto param = params->at(i);
-                auto formal_type = param / Type;
-
-                if (contains_typevar(formal_type))
-                {
-                  Node resolved_type;
-
-                  if (parent_cls)
-                  {
-                    auto pname = (param / Ident)->location().view();
-
-                    for (auto& child : *(parent_cls / ClassBody))
-                    {
-                      if (child != FieldDef)
-                        continue;
-
-                      if ((child / Ident)->location().view() != pname)
-                        continue;
-
-                      auto ft = child / Type;
-
-                      if (!contains_typevar(ft))
-                        resolved_type = ft;
-
-                      break;
-                    }
-                  }
-
-                  if (!resolved_type)
-                  {
-                    auto arg_src = arg_node / Rhs;
-                    auto arg_it = env.find(arg_src->location());
-
-                    if (
-                      arg_it != env.end() &&
-                      !contains_typevar(arg_it->second.type) &&
-                      !arg_it->second.is_default)
-                    {
-                      resolved_type = arg_it->second.type;
-                    }
-                  }
-
-                  if (resolved_type)
-                  {
-                    param->replace(formal_type, clone(resolved_type));
-
-                    auto resolved_prim = extract_primitive(resolved_type);
-
-                    if (resolved_prim)
-                    {
-                      auto arg_src = arg_node / Rhs;
-                      try_refine(env, arg_src->location(), resolved_prim);
-                    }
-
-                    if (parent_cls)
-                    {
-                      auto pname = (param / Ident)->location().view();
-
-                      for (auto& child : *(parent_cls / ClassBody))
-                      {
-                        if (child != FieldDef)
-                          continue;
-
-                        if ((child / Ident)->location().view() != pname)
-                          continue;
-
-                        auto ft = child / Type;
-
-                        if (contains_typevar(ft))
-                          child->replace(ft, clone(resolved_type));
-
-                        break;
-                      }
-                    }
-                  }
-                }
-
-                i++;
-              }
-
-              // Shape-to-lambda propagation: when a formal param
-              // has shape type and the actual arg is a lambda class,
-              // propagate the shape's method signatures to the lambda.
-              i = 0;
-
-              for (auto& arg_node : *args)
-              {
-                if (i >= params->size())
-                  break;
-
-                auto param_type =
-                  apply_subst(top, params->at(i) / Type, info.subst);
-
-                if (param_type && param_type->front() != TypeVar)
-                {
-                  auto arg_src = arg_node / Rhs;
-                  auto arg_it = env.find(arg_src->location());
-
-                  if (arg_it != env.end())
-                    propagate_shape_to_lambda(
-                      top, param_type, arg_it->second.type);
-                }
-
-                i++;
-              }
+            auto expected_prim = extract_primitive(expected);
+            auto def_it = def_stmts.find(arg_loc);
+            if (
+              expected_prim && def_it != def_stmts.end() &&
+              def_it->second->in({CallDyn, TryCallDyn}))
+            {
+              backward_refine_calldyn(
+                def_it->second, expected_prim, env, top, lookup_stmts,
+                &all_def_stmts);
+              changes.forward = true;
             }
           }
         }
 
-        // Phase 2: Fallback arg-to-arg refinement.
+        // Forward into callee: push arg types into TypeVar params.
+        push_arg_types_to_params(func_def, args, env, top);
+      }
+      // ----- Lookup -----
+      else if (stmt == Lookup)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_it = env.find((stmt / Rhs)->location());
+        if (src_it != env.end())
+        {
+          // When receiver is default-typed, propagate the default type
+          // as the Lookup result. This makes the CallDyn result default,
+          // enabling call_node tracking for backward refinement.
+          if (is_default_type(src_it->second.type))
+          {
+            merge(dst_loc, clone(src_it->second.type));
+          }
+          else
+          {
+            auto hand = (stmt / Lhs)->type();
+            auto method_ident = lookup_method_name(stmt);
+            auto method_ta = stmt / TypeArgs;
+            auto arity = from_chars_sep_v<size_t>(stmt / Int);
+            auto ret = resolve_method_return_type(
+              top, src_it->second.type, method_ident, hand, arity,
+              method_ta);
+            if (ret)
+              merge(dst_loc, ret);
+          }
+        }
+        snmalloc::UNUSED(upsert_lookup_stmt(lookup_stmts, dst_loc, stmt));
+      }
+      // ----- CallDyn / TryCallDyn -----
+      else if (stmt->in({CallDyn, TryCallDyn}))
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_loc = (stmt / Rhs)->location();
+        auto args = stmt / Args;
+        bool refined = false;
+
+        // Forward: result from Lookup.
+        auto src_it = env.find(src_loc);
+        if (src_it != env.end())
+          merge(dst_loc, clone(src_it->second.type));
+
+        // Preserve the producing dynamic call so later backward constraints
+        // can still reach it after the result becomes concrete or a union.
+        auto dst_it = env.find(dst_loc);
+        if (dst_it != env.end() && !dst_it->second.call_node)
+          dst_it->second.call_node = stmt;
+
+        // Resolve method for backward refinement.
+        // Skip when receiver is default-typed — the method resolution
+        // would use the fallback type (u64/f64), pushing wrong types
+        // into args. The correct type will be determined by backward
+        // refinement from downstream constraints.
+        auto lookup_it = lookup_stmts.find(src_loc);
+        if (lookup_it != lookup_stmts.end())
+        {
+          auto lookup_node = lookup_it->second;
+          auto recv_it = env.find((lookup_node / Rhs)->location());
+          if (recv_it != env.end() && !is_default_type(recv_it->second.type))
+          {
+            auto hand = (lookup_node / Lhs)->type();
+            auto method_ident = lookup_method_name(lookup_node);
+            auto method_ta = lookup_node / TypeArgs;
+            auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+            auto info = resolve_callable_method(
+              top, recv_it->second.type, method_ident, hand, arity,
+              method_ta);
+            if (info.func)
+            {
+              auto params = info.func / Params;
+
+              // Shape-to-lambda propagation.
+              for (size_t i = 0; i < params->size() && i < args->size(); i++)
+              {
+                auto pt =
+                  apply_subst(top, params->at(i) / Type, info.subst);
+                if (pt && pt->front() != TypeVar)
+                {
+                  auto arg_it = env.find((args->at(i) / Rhs)->location());
+                  if (arg_it != env.end())
+                    refined |=
+                      propagate_shape_to_lambda(top, pt, arg_it->second.type);
+                }
+              }
+
+              // Backward: param types into args.
+              for (size_t i = 0; i < params->size() && i < args->size(); i++)
+              {
+                auto expected =
+                  apply_subst(top, params->at(i) / Type, info.subst);
+                if (
+                  expected && expected->front() != TypeVar &&
+                  !is_uninformative_backward_type(expected))
+                {
+                  auto arg_loc = (args->at(i) / Rhs)->location();
+                  snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+                  if (merge_bwd(arg_loc, expected))
+                  {
+                    refined = true;
+                    propagate_call_constraint(
+                      env, arg_loc, expected, top, lookup_stmts, &all_def_stmts);
+                    propagate_call_node(
+                      env, arg_loc, top, lookup_stmts, &all_def_stmts);
+                  }
+                }
+              }
+
+              // Forward into callee: TypeVar params.
+              push_arg_types_to_params(info.func, args, env, top);
+            }
+          }
+        }
+
         if (!refined)
         {
           Node target_prim;
 
           for (auto& arg_node : *args)
           {
-            auto arg_src = arg_node / Rhs;
-            auto it = env.find(arg_src->location());
-
-            if (it == env.end() || it->second.is_default)
+            auto arg_it = env.find((arg_node / Rhs)->location());
+            if (
+              arg_it == env.end() ||
+              contains_default_type(arg_it->second.type))
               continue;
 
-            auto prim = extract_callable_primitive(it->second.type);
-
+            auto prim = extract_callable_primitive(arg_it->second.type);
             if (!prim)
-              prim = extract_wrapper_primitive(it->second.type);
-
+              prim = extract_wrapper_primitive(arg_it->second.type);
             if (prim)
             {
               target_prim = prim;
@@ -2917,179 +3526,157 @@ namespace vc
             }
           }
 
-          if (!target_prim && lookup_it != lookup_stmts.end())
+          if (!target_prim)
           {
-            auto lookup_node = lookup_it->second;
-            auto lookup_src = lookup_node / Rhs;
-            auto recv_it = env.find(lookup_src->location());
-
-            if (recv_it != env.end() && !recv_it->second.is_default)
+            auto lookup_it = lookup_stmts.find(src_loc);
+            if (lookup_it != lookup_stmts.end())
             {
-              auto prim = extract_callable_primitive(recv_it->second.type);
-
-              if (!prim)
-                prim = extract_wrapper_primitive(recv_it->second.type);
-
-              if (prim)
-                target_prim = prim;
+              auto recv_it = env.find((lookup_it->second / Rhs)->location());
+              if (recv_it != env.end() && !is_default_type(recv_it->second.type))
+              {
+                auto prim = extract_callable_primitive(recv_it->second.type);
+                if (!prim)
+                  prim = extract_wrapper_primitive(recv_it->second.type);
+                if (prim)
+                  target_prim = prim;
+              }
             }
           }
 
           if (target_prim)
           {
+            auto lookup_it = lookup_stmts.find(src_loc);
+            if (lookup_it != lookup_stmts.end())
+            {
+              auto recv_loc = (lookup_it->second / Rhs)->location();
+              bool local_refined = refine_local_const(recv_loc, target_prim);
+              bool bwd_refined = merge_bwd(recv_loc, target_prim);
+              if (bwd_refined)
+                propagate_call_node(
+                  env, recv_loc, top, lookup_stmts, &all_def_stmts);
+              refined = refined || local_refined || bwd_refined;
+            }
+
             for (auto& arg_node : *args)
             {
-              auto arg_src = arg_node / Rhs;
-
-              if (try_refine(env, arg_src->location(), target_prim))
-                refined = true;
+              auto arg_loc = (arg_node / Rhs)->location();
+              bool local_refined = refine_local_const(arg_loc, target_prim);
+              bool bwd_refined = merge_bwd(arg_loc, target_prim);
+              if (bwd_refined)
+                propagate_call_node(
+                  env, arg_loc, top, lookup_stmts, &all_def_stmts);
+              refined = refined || local_refined || bwd_refined;
             }
-          }
-        }
 
-        // Re-resolve the Lookup return type after refinement.
-        if (refined && lookup_it != lookup_stmts.end())
-        {
-          auto lookup_node = lookup_it->second;
-          auto lookup_src = lookup_node / Rhs;
-          auto lookup_dst = lookup_node / LocalId;
-          auto hand = (lookup_node / Lhs)->type();
-          auto method_ident = lookup_node / Ident;
-          auto method_ta = lookup_node / TypeArgs;
-          auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
-          auto recv_it = env.find(lookup_src->location());
-
-          if (recv_it != env.end())
-          {
-            auto ret_type = resolve_method_return_type(
-              top, recv_it->second.type, method_ident, hand, arity, method_ta);
-
-            if (ret_type)
-              env[lookup_dst->location()] = LocalTypeInfo::computed(ret_type);
-          }
-        }
-
-        // Propagate the Lookup result type to CallDyn result.
-        auto src_it = env.find(src->location());
-
-        if (src_it != env.end())
-        {
-          auto info = LocalTypeInfo::computed(clone(src_it->second.type));
-
-          if (lookup_it != lookup_stmts.end())
-          {
-            auto recv_loc = (lookup_it->second / Rhs)->location();
-            auto recv_it = env.find(recv_loc);
-
-            if (recv_it != env.end() && recv_it->second.is_default)
+            if (lookup_it != lookup_stmts.end())
             {
-              info.is_default = true;
-              info.call_node = stmt;
+              auto lookup_node = lookup_it->second;
+              auto recv_it = env.find((lookup_node / Rhs)->location());
+              if (recv_it != env.end() && !contains_default_type(recv_it->second.type))
+              {
+                auto hand = (lookup_node / Lhs)->type();
+                auto method_ident = lookup_method_name(lookup_node);
+                auto method_ta = lookup_node / TypeArgs;
+                auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+                auto ret = resolve_method_return_type(
+                  top, recv_it->second.type, method_ident, hand, arity,
+                  method_ta);
+                if (ret)
+                {
+                  env[(lookup_node / LocalId)->location()] = {clone(ret), false, {}};
+                  env[dst_loc] = {clone(ret), false, {}};
+                }
+              }
             }
           }
-
-          env[dst->location()] = info;
         }
       }
+      // ----- FFI -----
       else if (stmt == FFI)
       {
-        auto dst = stmt / LocalId;
-        auto sym_id = stmt / SymbolId;
-        auto sym_name = sym_id->location();
+        InferStmtScope stmt_scope(InferStmtFamily::FFIWhenOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto sym_name = (stmt / SymbolId)->location();
         auto cls = body->parent(Function)->parent(ClassDef);
-        bool found = false;
 
-        while (cls && !found)
+        while (cls)
         {
+          bool found = false;
           for (auto& child : *(cls / ClassBody))
           {
             if (child != Lib)
               continue;
-
             for (auto& sym : *(child / Symbols))
             {
               if (sym != Symbol)
                 continue;
+              if ((sym / SymbolId)->location() != sym_name)
+                continue;
 
-              if ((sym / SymbolId)->location() == sym_name)
+              // Forward: return type.
+              auto ret_type = sym / Type;
+              if (!ret_type->empty())
+                merge(dst_loc, clone(ret_type));
+
+              // Backward: param types into args.
+              auto ffi_params = sym / FFIParams;
+              auto ffi_args = stmt / Args;
+              auto fp = ffi_params->begin();
+              auto fa = ffi_args->begin();
+              while (fp != ffi_params->end() && fa != ffi_args->end())
               {
-                auto ret_type = sym / Type;
-
-                if (!ret_type->empty())
-                  env[dst->location()] =
-                    LocalTypeInfo::computed(clone(ret_type));
-
-                // Refine FFI arguments against declared parameter types.
-                auto ffi_params = sym / FFIParams;
-                auto args = stmt / Args;
-                auto fp_it = ffi_params->begin();
-                auto ar_it = args->begin();
-
-                while (fp_it != ffi_params->end() && ar_it != args->end())
-                {
-                  auto expected_prim = extract_primitive(*fp_it);
-
-                  if (expected_prim)
-                    try_refine(env, (*ar_it)->location(), expected_prim);
-
-                  ++fp_it;
-                  ++ar_it;
-                }
-
-                found = true;
-                break;
+                snmalloc::UNUSED(refine_local_const((*fa)->location(), clone(*fp)));
+                if (merge_bwd((*fa)->location(), clone(*fp)))
+                  propagate_call_node(
+                    env, (*fa)->location(), top, lookup_stmts, &all_def_stmts);
+                ++fp;
+                ++fa;
               }
+              found = true;
+              break;
             }
-
             if (found)
               break;
           }
-
+          if (found)
+            break;
           cls = cls->parent(ClassDef);
         }
       }
+      // ----- When -----
       else if (stmt == When)
       {
-        auto dst = stmt / LocalId;
-        auto src = stmt / Rhs;
-        auto src_it = env.find(src->location());
+        InferStmtScope stmt_scope(InferStmtFamily::FFIWhenOps);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_it = env.find((stmt / Rhs)->location());
 
         if (src_it != env.end())
         {
           auto apply_ret = src_it->second.type;
-
-          auto old_type = stmt / Type;
-          stmt->replace(old_type, clone(apply_ret));
-
-          env[dst->location()] = LocalTypeInfo::computed(cown_type(apply_ret));
+          snmalloc::UNUSED(
+            replace_if_changed(stmt, stmt / Type, clone(apply_ret)));
+          merge(dst_loc, cown_type(apply_ret));
         }
 
-        auto lookup_it = lookup_stmts.find(src->location());
-
+        // Set lambda params from cown types.
+        auto lookup_it = lookup_stmts.find((stmt / Rhs)->location());
         if (lookup_it != lookup_stmts.end())
         {
-          auto lookup_node = lookup_it->second;
-          auto recv_local = lookup_node / Rhs;
-          auto recv_it = env.find(recv_local->location());
-
+          auto recv_it =
+            env.find((lookup_it->second / Rhs)->location());
           if (recv_it != env.end())
           {
-            auto recv_type = recv_it->second.type;
-            auto recv_inner = recv_type->front();
-
+            auto recv_inner = recv_it->second.type->front();
             if (recv_inner == TypeName)
             {
               auto class_def = find_def(top, recv_inner);
-
               if (class_def && class_def == ClassDef)
               {
                 Node apply_func;
-
                 for (auto& child : *(class_def / ClassBody))
                 {
-                  if (
-                    child == Function &&
-                    (child / Ident)->location().view() == "apply")
+                  if (child == Function &&
+                      (child / Ident)->location().view() == "apply")
                   {
                     apply_func = child;
                     break;
@@ -3099,43 +3686,23 @@ namespace vc
                 if (apply_func)
                 {
                   auto params = apply_func / Params;
-                  auto args = stmt / Args;
-
-                  for (size_t i = 1; i < args->size() && i < params->size();
-                       ++i)
+                  auto when_args = stmt / Args;
+                  for (size_t i = 1;
+                       i < when_args->size() && i < params->size(); ++i)
                   {
-                    auto param = params->at(i);
-                    auto param_type = param / Type;
-
-                    if (param_type->front() != TypeVar)
-                      continue;
-
-                    auto arg_local = args->at(i) / Rhs;
-                    auto arg_it = env.find(arg_local->location());
-
+                    auto arg_it =
+                      env.find((when_args->at(i) / Rhs)->location());
                     if (arg_it == env.end())
                       continue;
-
-                    auto cown_inner = extract_cown_inner(arg_it->second.type);
-
-                    if (!cown_inner)
+                    auto ci = extract_cown_inner(arg_it->second.type);
+                    if (!ci)
                       continue;
-
-                    auto new_type = ref_type(cown_inner);
-                    param->replace(param_type, new_type);
-                  }
-
-                  // Propagate return type: if the lambda's apply has
-                  // TypeVar return and the enclosing function has a
-                  // concrete return type, use that.
-                  auto apply_ret = apply_func / Type;
-
-                  if (apply_ret->front() == TypeVar)
-                  {
-                    auto enclosing_ret = enclosing_func / Type;
-
-                    if (enclosing_ret->front() != TypeVar)
-                      apply_func->replace(apply_ret, clone(enclosing_ret));
+                    auto new_type = ref_type(ci);
+                    auto param = params->at(i);
+                    snmalloc::UNUSED(
+                      replace_if_changed(param, param / Type, new_type));
+                    env[(param / Ident)->location()] =
+                      {clone(new_type), true, {}};
                   }
                 }
               }
@@ -3143,656 +3710,959 @@ namespace vc
           }
         }
       }
+      // ----- Typetest -----
       else if (stmt == Typetest)
       {
-        auto dst = stmt / LocalId;
-        env[dst->location()] = LocalTypeInfo::computed(primitive_type(Bool));
+        InferStmtScope stmt_scope(InferStmtFamily::TypetestOps);
+        merge(
+          (stmt / LocalId)->location(), primitive_type(Bool));
       }
     }
 
-    // Finalize tuple types and array literal types within this label.
-    for (auto& [loc, tracking] : tuple_locals)
+    // Finalize tuple/array-lit types within this label.
+    for (auto& [loc, tt] : tuple_locals)
     {
-      if (tracking.is_array_lit)
+      InferScopedTimer tuple_finalize_timer(
+        (active_infer_profile != nullptr)
+          ? &active_infer_profile->tuple_finalize_time
+          : nullptr);
+      if (active_infer_profile != nullptr)
+        active_infer_profile->tuple_finalize_ops++;
+      if (tt.is_array_lit)
       {
-        Node dominant_prim;
-
-        for (size_t i = 0; i < tracking.size; i++)
+        // Sibling refinement: find dominant non-default type.
+        Node dom_prim;
+        for (size_t i = 0; i < tt.size; i++)
         {
-          if (i >= tracking.element_value_locs.size())
+          if (tt.element_value_locs[i].view().empty())
             continue;
-
-          auto& elem_loc = tracking.element_value_locs[i];
-
-          if (elem_loc.view().empty())
+          auto it = env.find(tt.element_value_locs[i]);
+          if (it == env.end() || is_default_type(it->second.type))
             continue;
-
-          auto it = env.find(elem_loc);
-
-          if (it == env.end())
-            continue;
-
-          if (!it->second.is_default)
+          dom_prim = extract_primitive(it->second.type);
+          if (dom_prim)
+            break;
+        }
+        if (dom_prim)
+        {
+          auto dom_type = primitive_type(dom_prim->type());
+          for (size_t i = 0; i < tt.size; i++)
           {
-            dominant_prim = extract_primitive(it->second.type);
-
-            if (dominant_prim)
-              break;
+            if (!tt.element_value_locs[i].view().empty())
+              merge(tt.element_value_locs[i], dom_type);
           }
         }
 
-        if (dominant_prim)
+        // Determine homogeneous type.
+        Node common;
+        bool uniform = true;
+        for (size_t i = 0; i < tt.size && uniform; i++)
         {
-          for (size_t i = 0; i < tracking.size; i++)
+          if (tt.element_value_locs[i].view().empty())
           {
-            if (i >= tracking.element_value_locs.size())
-              continue;
-
-            auto& elem_loc = tracking.element_value_locs[i];
-
-            if (!elem_loc.view().empty())
-              try_refine(env, elem_loc, dominant_prim);
-          }
-        }
-
-        Node common_type;
-        bool all_same = true;
-
-        for (size_t i = 0; i < tracking.size; i++)
-        {
-          if (i >= tracking.element_value_locs.size())
-          {
-            all_same = false;
+            uniform = false;
             break;
           }
-
-          auto& elem_loc = tracking.element_value_locs[i];
-
-          if (elem_loc.view().empty())
+          auto it = env.find(tt.element_value_locs[i]);
+          if (it == env.end() || !extract_primitive(it->second.type))
           {
-            all_same = false;
+            uniform = false;
             break;
           }
-
-          auto it = env.find(elem_loc);
-
-          if (it == env.end())
-          {
-            all_same = false;
-            break;
-          }
-
-          auto elem_prim = extract_primitive(it->second.type);
-
-          if (!elem_prim)
-          {
-            all_same = false;
-            break;
-          }
-
-          if (!common_type)
-            common_type = clone(it->second.type);
+          if (!common)
+            common = clone(it->second.type);
           else if (
-            it->second.type->front()->type() != common_type->front()->type())
+            it->second.type->front()->type() != common->front()->type())
+            uniform = false;
+        }
+        if (uniform && common && tt.size > 0)
+          env[loc] = {clone(common), false, {}};
+      }
+      else
+      {
+        auto tracked = infer_tracked_tuple_type(tt);
+        if (tracked)
+          env[loc] = {tracked, false, {}};
+      }
+    }
+
+    return changes;
+  }
+
+  // ===== Fixpoint algorithm =====
+
+  static bool process_function(Node node, Node top, bool check_errors)
+  {
+    auto labels = node / Labels;
+    size_t n = labels->size();
+    if (n == 0)
+      return true;
+
+    InferProfileStats profile;
+    profile.function_name = infer_function_name(node);
+    profile.labels = n;
+    InferProfileStats* prev_profile = active_infer_profile;
+    MethodLookupCache method_cache;
+    MethodLookupCache* prev_method_cache = active_method_cache;
+    size_t transfer_epoch = 0;
+    size_t* prev_transfer_epoch = active_infer_transfer_epoch;
+    bool profile_enabled = infer_profile_enabled();
+    if (profile_enabled)
+      active_infer_profile = &profile;
+    active_method_cache = &method_cache;
+    active_infer_transfer_epoch = &transfer_epoch;
+    InferProcessScope process_scope(
+      profile_enabled ? &profile : nullptr, prev_profile, prev_method_cache,
+      prev_transfer_epoch);
+    InferScopedTimer function_timer(
+      (active_infer_profile != nullptr)
+        ? &active_infer_profile->process_function_time
+        : nullptr);
+
+    // Build label graph.
+    std::map<std::string, size_t> label_idx;
+    for (size_t i = 0; i < n; i++)
+      label_idx[std::string((labels->at(i) / LabelId)->location().view())] = i;
+
+    std::vector<std::vector<size_t>> succ(n), pred(n);
+    for (size_t i = 0; i < n; i++)
+    {
+      auto term = labels->at(i) / Return;
+      if (term == Cond)
+      {
+        auto t = label_idx.find(std::string((term / Lhs)->location().view()));
+        auto f = label_idx.find(std::string((term / Rhs)->location().view()));
+        if (t != label_idx.end())
+          succ[i].push_back(t->second);
+        if (f != label_idx.end())
+          succ[i].push_back(f->second);
+      }
+      else if (term == Jump)
+      {
+        auto t =
+          label_idx.find(std::string((term / LabelId)->location().view()));
+        if (t != label_idx.end())
+          succ[i].push_back(t->second);
+      }
+    }
+    for (size_t i = 0; i < n; i++)
+      for (auto s : succ[i])
+        pred[s].push_back(i);
+
+    // Initialize exit envs.
+    std::vector<TypeEnv> exit_envs(n);
+    std::map<std::pair<size_t, size_t>, TypeEnv> branch_exits;
+    std::vector<TypeEnv> prior_entry_envs(n);
+    std::vector<bool> prior_entry_valid(n, false);
+    std::vector<size_t> prior_transfer_epochs(n, 0);
+
+    for (auto& pd : *(node / Params))
+    {
+      auto type = pd / Type;
+      bool fixed = type->front() != TypeVar;
+      exit_envs[0][(pd / Ident)->location()] =
+        {clone(type), fixed, {}};
+    }
+
+    // Backward envs: carry type expectations from downstream.
+    std::vector<TypeEnv> bwd_envs(n);
+    std::vector<std::set<Location>> label_defs(n);
+    std::vector<std::set<Location>> label_uses(n);
+    std::vector<std::set<Location>> label_kills(n);
+    std::vector<std::set<Location>> label_live_in(n);
+    std::vector<std::set<Location>> label_live_out(n);
+    for (size_t j = 0; j < n; j++)
+    {
+      label_defs[j] = collect_label_defs(labels->at(j) / Body);
+      label_uses[j] = collect_label_uses(
+        labels->at(j) / Body, labels->at(j) / Return, label_defs[j]);
+      label_kills[j] = collect_label_kills(labels->at(j) / Body);
+    }
+
+    bool live_changed = true;
+    while (live_changed)
+    {
+      live_changed = false;
+      for (size_t j = n; j-- > 0;)
+      {
+        std::set<Location> next_out;
+        for (auto s : succ[j])
+          next_out.insert(label_live_in[s].begin(), label_live_in[s].end());
+
+        std::set<Location> next_in = label_uses[j];
+        for (auto& loc : next_out)
+        {
+          if (label_kills[j].count(loc) == 0)
+            next_in.insert(loc);
+        }
+
+        if (next_out != label_live_out[j] || next_in != label_live_in[j])
+        {
+          label_live_out[j] = std::move(next_out);
+          label_live_in[j] = std::move(next_in);
+          live_changed = true;
+        }
+      }
+    }
+    // Initialize backward env for Return labels with declared return type.
+    {
+      auto func_ret = node / Type;
+      if (!contains_typevar(func_ret) && !is_default_type(func_ret))
+      {
+        for (size_t j = 0; j < n; j++)
+        {
+          auto term = labels->at(j) / Return;
+          if (term == Return)
           {
-            all_same = false;
-            break;
+            auto ret_loc = (term / LocalId)->location();
+            bwd_envs[j][ret_loc] = {clone(func_ret), true, {}};
+          }
+        }
+      }
+    }
+
+    // Shared state.
+    std::map<Location, Node> all_def_stmts;
+    for (auto& label : *labels)
+      for (auto& stmt : *(label / Body))
+        if (!stmt->empty() && stmt->front() == LocalId)
+          all_def_stmts[stmt->front()->location()] = stmt;
+
+    std::map<Location, Node> lookup_stmts;
+    std::set<std::pair<Location, Location>> typevar_aliases;
+    std::map<Location, std::pair<Location, size_t>> ref_to_tuple;
+
+    // Worklist algorithm.
+    std::set<size_t> worklist;
+    for (size_t i = 0; i < n; i++)
+      worklist.insert(i);
+
+    size_t wl_iters = 0;
+    while (!worklist.empty())
+    {
+      wl_iters++;
+      if (wl_iters > n * 100)
+        break;
+
+      auto wit = worklist.begin();
+      size_t i = *wit;
+      worklist.erase(wit);
+
+      prune_bwd_env(bwd_envs[i], label_live_in[i], label_defs[i]);
+
+      // Build the working env directly from predecessor exit envs.
+      TypeEnv env;
+      {
+        InferScopedTimer entry_timer(
+          (active_infer_profile != nullptr)
+            ? &active_infer_profile->entry_build_time
+            : nullptr);
+        if (i == 0)
+        {
+          env = exit_envs[0];
+        }
+        else
+        {
+          InferScopedTimer pred_timer(
+            (active_infer_profile != nullptr)
+              ? &active_infer_profile->entry_pred_time
+              : nullptr);
+          for (auto p : pred[i])
+          {
+            auto bk = std::make_pair(p, i);
+            auto bi = branch_exits.find(bk);
+            const auto& pe = (bi != branch_exits.end()) ? bi->second
+                                                        : exit_envs[p];
+            for (auto& [loc, info] : pe)
+            {
+              if (label_live_in[i].count(loc) == 0)
+                continue;
+              if (active_infer_profile != nullptr)
+                active_infer_profile->entry_pred_merge_count++;
+              auto eit = env.find(loc);
+              if (eit == env.end())
+                env[loc] = {clone(info.type), info.is_fixed, info.call_node};
+              else
+              {
+                if (same_type_tree(eit->second.type, info.type))
+                {
+                  eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
+                  if (!eit->second.call_node && info.call_node)
+                    eit->second.call_node = info.call_node;
+                  continue;
+                }
+
+                if (eit->second.is_fixed && !info.is_fixed)
+                {
+                  if (!eit->second.call_node && info.call_node)
+                    eit->second.call_node = info.call_node;
+                  continue;
+                }
+
+                if (!eit->second.is_fixed && info.is_fixed)
+                {
+                  eit->second.type = clone(info.type);
+                  eit->second.is_fixed = true;
+                  if (!eit->second.call_node && info.call_node)
+                    eit->second.call_node = info.call_node;
+                  continue;
+                }
+
+                auto m = merge_type(eit->second.type, info.type, top);
+                if (m)
+                  eit->second.type = m;
+                eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
+                if (!eit->second.call_node && info.call_node)
+                  eit->second.call_node = info.call_node;
+              }
+            }
           }
         }
 
-        if (all_same && common_type && tracking.size > 0)
+        // Merge backward envs for this label and its successors into entry.
+        // Including bwd_envs[i] lets same-label requeueing expose new local
+        // backward facts to earlier statements on the next iteration.
         {
-          env[loc] = LocalTypeInfo::computed(clone(common_type));
+          InferScopedTimer self_bwd_timer(
+            (active_infer_profile != nullptr)
+              ? &active_infer_profile->entry_self_bwd_time
+              : nullptr);
+          for (auto& [loc, info] : bwd_envs[i])
+          {
+            if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+              continue;
+            if (active_infer_profile != nullptr)
+              active_infer_profile->entry_self_bwd_merge_count++;
+            auto eit = env.find(loc);
+            if (eit == env.end())
+            {
+              if (label_defs[i].count(loc) > 0)
+                env[loc] = {clone(info.type), info.is_fixed, {}};
+            }
+            else
+            {
+              if (same_type_tree(eit->second.type, info.type))
+              {
+                eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
+                continue;
+              }
+              if (eit->second.is_fixed && !info.is_fixed)
+                continue;
+              if (!eit->second.is_fixed && info.is_fixed)
+              {
+                eit->second.type = clone(info.type);
+                eit->second.is_fixed = true;
+                continue;
+              }
+              auto m = merge_type(eit->second.type, info.type, top);
+              if (m)
+                eit->second.type = m;
+            }
+          }
+        }
+
+        // Merge backward envs from successors into entry.
+        {
+          InferScopedTimer succ_bwd_timer(
+            (active_infer_profile != nullptr)
+              ? &active_infer_profile->entry_succ_bwd_time
+              : nullptr);
+          for (auto s : succ[i])
+          {
+            for (auto& [loc, info] : bwd_envs[s])
+            {
+              if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+                continue;
+              if (active_infer_profile != nullptr)
+                active_infer_profile->entry_succ_bwd_merge_count++;
+              auto eit = env.find(loc);
+              if (eit == env.end())
+              {
+                if (label_defs[i].count(loc) > 0)
+                  env[loc] = {clone(info.type), info.is_fixed, {}};
+              }
+              else
+              {
+                if (same_type_tree(eit->second.type, info.type))
+                {
+                  eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
+                  continue;
+                }
+                if (eit->second.is_fixed && !info.is_fixed)
+                  continue;
+                if (!eit->second.is_fixed && info.is_fixed)
+                {
+                  eit->second.type = clone(info.type);
+                  eit->second.is_fixed = true;
+                  continue;
+                }
+                auto m = merge_type(eit->second.type, info.type, top);
+                if (m)
+                  eit->second.type = m;
+              }
+            }
+          }
+        }
+      }
+      bool incoming_bwd_changed = false;
+      for (auto s : succ[i])
+      {
+        for (auto& [loc, info] : bwd_envs[s])
+        {
+          if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+            continue;
+          auto bit = bwd_envs[i].find(loc);
+          if (bit == bwd_envs[i].end())
+          {
+            incoming_bwd_changed = true;
+            break;
+          }
+          if (same_type_tree(bit->second.type, info.type))
+          {
+            if (!bit->second.is_fixed && info.is_fixed)
+              incoming_bwd_changed = true;
+            continue;
+          }
+          if (bit->second.is_fixed && !info.is_fixed)
+            continue;
+          incoming_bwd_changed = true;
+          break;
+        }
+        if (incoming_bwd_changed)
+          break;
+      }
+
+      if (active_infer_profile != nullptr)
+        active_infer_profile->entry_bindings += env.size();
+      bool same_entry = prior_entry_valid[i] && same_type_env(prior_entry_envs[i], env);
+      if (same_entry)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->entry_env_unchanged++;
+        if (!incoming_bwd_changed && prior_transfer_epochs[i] == transfer_epoch)
+        {
+          if (active_infer_profile != nullptr)
+            active_infer_profile->labels_skipped++;
+          continue;
         }
       }
       else
       {
-        bool all_typed = true;
-
-        for (size_t i = 0; i < tracking.size; i++)
-        {
-          if (!tracking.element_types[i])
-          {
-            all_typed = false;
-            break;
-          }
-        }
-
-        if (all_typed && tracking.size > 0)
-        {
-          if (tracking.size == 1)
-          {
-            auto& elem = tracking.element_types[0];
-            env[loc] = LocalTypeInfo::computed(Type << clone(elem->front()));
-          }
-          else
-          {
-            Node tuple_type = TupleType;
-
-            for (size_t i = 0; i < tracking.size; i++)
-            {
-              auto& elem = tracking.element_types[i];
-              tuple_type << clone(elem->front());
-            }
-
-            env[loc] = LocalTypeInfo::computed(Type << clone(tuple_type));
-          }
-        }
+        if (active_infer_profile != nullptr)
+          active_infer_profile->entry_env_changed++;
       }
-    }
-  }
+      prior_entry_envs[i] = env;
+      prior_entry_valid[i] = true;
 
-  // Process a single function for type inference.
-  // Returns true if the function was processed without error.
-  static bool process_function(Node node, Node top, bool check_errors)
-  {
-    auto labels = node / Labels;
-    size_t n_labels = labels->size();
+      // Per-label state.
+      std::map<Location, TupleTracking> tuple_locals;
 
-    if (n_labels == 0)
-      return true;
+      // Process body.
+      if (active_infer_profile != nullptr)
+      {
+        active_infer_profile->labels_processed++;
+        active_infer_profile->process_label_body_calls++;
+      }
+      LabelChanges label_changes;
+      {
+        InferScopedTimer body_timer(
+          (active_infer_profile != nullptr)
+            ? &active_infer_profile->process_label_body_time
+            : nullptr);
+        label_changes = process_label_body(
+          labels->at(i) / Body, env, bwd_envs[i], top, lookup_stmts,
+          all_def_stmts, typevar_aliases, ref_to_tuple, tuple_locals);
+      }
+      bool forward_out_changed = false;
 
-    // ---------- Label indexing and pred/succ graph ----------
-
-    // Map label name → index.
-    std::map<std::string, size_t> label_index;
-
-    for (size_t i = 0; i < n_labels; i++)
-    {
-      auto name = std::string((labels->at(i) / LabelId)->location().view());
-      label_index[name] = i;
-    }
-
-    // Build successor lists from terminators.
-    std::vector<std::vector<size_t>> succ(n_labels);
-    std::vector<std::vector<size_t>> pred(n_labels);
-
-    for (size_t i = 0; i < n_labels; i++)
-    {
+      // Return terminator: backward merge.
       auto term = labels->at(i) / Return;
-
-      if (term == Cond)
-      {
-        auto true_name = std::string((term / Lhs)->location().view());
-        auto false_name = std::string((term / Rhs)->location().view());
-        auto t_it = label_index.find(true_name);
-        auto f_it = label_index.find(false_name);
-
-        if (t_it != label_index.end())
-          succ[i].push_back(t_it->second);
-
-        if (f_it != label_index.end())
-          succ[i].push_back(f_it->second);
-      }
-      else if (term == Jump)
-      {
-        auto target = std::string((term / LabelId)->location().view());
-        auto it = label_index.find(target);
-
-        if (it != label_index.end())
-          succ[i].push_back(it->second);
-      }
-      // Return and Raise have no successors.
-    }
-
-    // Build predecessor lists from successors.
-    for (size_t i = 0; i < n_labels; i++)
-    {
-      for (auto s : succ[i])
-        pred[s].push_back(i);
-    }
-
-    // ---------- Phase A: Forward pass (type inference + refinement) ----------
-
-    // Single accumulated env, process all labels in order. This handles
-    // type inference, call-arg refinement, return-value refinement, etc.
-    // Same as the old single-pass approach.
-    TypeEnv env;
-    auto params = node / Params;
-
-    for (auto& pd : *params)
-    {
-      assert(pd == ParamDef);
-      auto ident = pd / Ident;
-      auto type = pd / Type;
-      bool is_fixed = type->front() != TypeVar;
-      env[ident->location()] = is_fixed ? LocalTypeInfo::fixed(clone(type)) :
-                                          LocalTypeInfo::computed(clone(type));
-    }
-
-    // Shared state across labels.
-    std::map<Location, Node> lookup_stmts;
-    std::vector<std::pair<Location, Location>> typevar_aliases;
-    std::map<Location, std::pair<Location, size_t>> ref_to_tuple;
-
-    for (auto& lbl : *labels)
-    {
-      process_label_body(
-        lbl / Body, env, top, node, lookup_stmts, typevar_aliases, ref_to_tuple);
-
-      // Refine return values against the function's declared return type.
-      auto term = lbl / Return;
-
       if (term == Return)
       {
         auto func_ret = node / Type;
-        auto ret_prim = extract_primitive(func_ret);
-
-        if (ret_prim)
+        if (func_ret->front() != TypeVar && !is_default_type(func_ret))
         {
-          auto ret_src = term / LocalId;
-          try_refine(env, ret_src->location(), ret_prim);
+          std::map<Location, Node> const_defs;
+          for (auto& stmt : *(labels->at(i) / Body))
+            if (stmt == Const)
+              const_defs[(stmt / LocalId)->location()] = stmt;
+
+          auto ret_loc = (term / LocalId)->location();
+          auto ret_prim = extract_backward_primitive(func_ret);
+          if (ret_prim)
+            snmalloc::UNUSED(refine_const_local(
+              env, const_defs, ret_loc, primitive_type(ret_prim->type())));
+          bool changed = merge_env(env, ret_loc, clone(func_ret), top);
+          auto ret_it = env.find(ret_loc);
+          if (ret_it != env.end())
+            ret_it->second.is_fixed = true;
+          bwd_envs[i][ret_loc] = {clone(func_ret), true, {}};
+          if (changed)
+          {
+            propagate_call_node(
+              env, ret_loc, top, lookup_stmts, &all_def_stmts);
+          }
         }
       }
       else if (term == Raise)
       {
-        // Raise carries the enclosing function's return type as its Type
-        // child. Refine the raised value's literal against this type.
+        std::map<Location, Node> const_defs;
+        for (auto& stmt : *(labels->at(i) / Body))
+          if (stmt == Const)
+            const_defs[(stmt / LocalId)->location()] = stmt;
+
         auto raise_ret = term / Type;
-        auto ret_prim = extract_primitive(raise_ret);
-
-        if (ret_prim)
-        {
-          auto ret_src = term / LocalId;
-          try_refine(env, ret_src->location(), ret_prim);
-        }
+        auto ret_loc = (term / LocalId)->location();
+        if (refine_const_local(env, const_defs, ret_loc, raise_ret))
+          label_changes.forward = true;
       }
-    }
-
-    // ---------- Phase A.5: Pre-Phase B cascade ----------
-    // Run the cascade BEFORE Phase B so that init_env has correctly
-    // refined types. Without this, Phase B uses default u64/f64 types,
-    // causing wrong method resolution and incorrect arg refinement.
-    {
-      auto func_ret = node / Type;
-      auto expected_prim = extract_primitive(func_ret);
-      run_cascade(env, expected_prim, labels, top, lookup_stmts);
-    }
-
-    // ---------- Phase B: Convergence loop (typetest narrowing) ----------
-
-    // Per-label environments for tracking narrowed types at Cond/Typetest.
-    // Only needed if there are Cond terminators with Typetest traces.
-    std::vector<TypeEnv> exit_envs(n_labels);
-    std::vector<std::string> fingerprints(n_labels);
-    std::vector<std::map<std::string, TypeEnv>> branch_exits(n_labels);
-
-    // Initialize exit envs: copy the Phase A env for all labels.
-    // Per-label narrowing will refine from this baseline.
-    TypeEnv init_env = env;
-
-    // Check if we actually need the convergence loop.
-    bool has_typetest_conds = false;
-
-    for (size_t i = 0; i < n_labels; i++)
-    {
-      auto term = labels->at(i) / Return;
-
+      // Cond: branch exits with typetest narrowing.
       if (term == Cond)
       {
         auto trace = trace_typetest(term / LocalId, labels->at(i) / Body);
-
         if (trace)
         {
-          has_typetest_conds = true;
-          break;
-        }
-      }
-    }
+          auto t_it =
+            label_idx.find(std::string((term / Lhs)->location().view()));
+          auto f_it =
+            label_idx.find(std::string((term / Rhs)->location().view()));
 
-    if (has_typetest_conds)
-    {
-      std::queue<size_t> worklist;
-      std::vector<bool> in_worklist(n_labels, true);
+          auto make_clone = [&]() {
+            TypeEnv c;
+            for (auto& [loc, info] : env)
+              c[loc] = {clone(info.type), info.is_fixed, info.call_node};
+            return c;
+          };
+          auto update_branch_exit = [&](size_t succ_idx, TypeEnv&& next_env) {
+            auto key = std::make_pair(i, succ_idx);
+            auto it = branch_exits.find(key);
+            if (it != branch_exits.end() && same_type_env(it->second, next_env))
+              return;
+            branch_exits[key] = std::move(next_env);
+            forward_out_changed = true;
+          };
 
-      for (size_t i = 0; i < n_labels; i++)
-        worklist.push(i);
-
-      bool made_progress = true;
-
-      while (!worklist.empty())
-      {
-        if (!made_progress)
-        {
-          assert(false && "infer: worklist not converging");
-          break;
-        }
-
-        made_progress = false;
-        size_t wl_size = worklist.size();
-
-        for (size_t wl_iter = 0; wl_iter < wl_size; wl_iter++)
-        {
-          auto idx = worklist.front();
-          worklist.pop();
-          in_worklist[idx] = false;
-
-          auto lbl = labels->at(idx);
-
-          // Build entry env: start from Phase A baseline, then apply
-          // branch-specific narrowing from predecessors. Branch exits
-          // represent intersection constraints (use-site demands from
-          // typetests), so narrowed entries OVERRIDE the baseline
-          // rather than being unioned with it.
-          TypeEnv label_env = init_env;
-
-          for (auto p_idx : pred[idx])
+          if (!trace->negated)
           {
-            auto label_name = std::string((lbl / LabelId)->location().view());
-            auto& be = branch_exits[p_idx];
-            auto be_it = be.find(label_name);
-
-            if (be_it != be.end())
+            if (t_it != label_idx.end())
             {
-              // Apply branch-specific narrowing: overwrite entries
-              // that the branch exit narrowed (typetest constraints).
-              for (auto& [loc, binfo] : be_it->second)
-              {
-                auto it = label_env.find(loc);
-
-                if (it == label_env.end())
-                {
-                  label_env[loc] = {
-                    clone(binfo.type),
-                    binfo.is_default,
-                    binfo.is_fixed,
-                    binfo.const_node,
-                    binfo.call_node};
-                }
-                else
-                {
-                  // Overwrite with narrowed type. This is correct
-                  // because the branch exit represents the type
-                  // AFTER the typetest passed — it's a demand, not
-                  // a possible assignment.
-                  it->second = {
-                    clone(binfo.type),
-                    binfo.is_default,
-                    binfo.is_fixed,
-                    binfo.const_node,
-                    binfo.call_node};
-                }
-              }
+              auto ne = make_clone();
+              ne[trace->src->location()] =
+                {clone(trace->type), true, {}};
+              update_branch_exit(t_it->second, std::move(ne));
             }
-            else if (!exit_envs[p_idx].empty())
-              merge_env(label_env, exit_envs[p_idx], top);
-          }
-
-          // Re-process label body with narrowed types.
-          process_label_body(
-            lbl / Body,
-            label_env,
-            top,
-            node,
-            lookup_stmts,
-            typevar_aliases,
-            ref_to_tuple);
-
-          // Handle Typetest narrowing at Cond terminators.
-          branch_exits[idx].clear();
-          auto term = lbl / Return;
-
-          if (term == Cond)
-          {
-            auto cond_local = term / LocalId;
-            auto trace = trace_typetest(cond_local, lbl / Body);
-
-            if (trace)
+            if (f_it != label_idx.end())
             {
-              auto src_loc = trace->src->location();
-              auto true_name = std::string((term / Lhs)->location().view());
-              auto false_name = std::string((term / Rhs)->location().view());
-
-              auto narrowed_type = clone(trace->type);
-
-              if (!trace->negated)
+              auto ne = make_clone();
+              auto src_it = ne.find(trace->src->location());
+              if (src_it != ne.end())
               {
-                TypeEnv true_env = label_env;
-                true_env[src_loc] =
-                  LocalTypeInfo::computed(clone(narrowed_type));
-                branch_exits[idx][true_name] = std::move(true_env);
-                branch_exits[idx][false_name] = label_env;
+                auto excluded =
+                  exclude_tested_type(top, src_it->second.type, trace->type);
+                if (excluded)
+                  src_it->second = {std::move(excluded), true, {}};
               }
-              else
-              {
-                TypeEnv false_env = label_env;
-                false_env[src_loc] =
-                  LocalTypeInfo::computed(clone(narrowed_type));
-                branch_exits[idx][false_name] = std::move(false_env);
-                branch_exits[idx][true_name] = label_env;
-              }
+              update_branch_exit(f_it->second, std::move(ne));
             }
           }
-
-          // Check convergence.
-          auto fp = env_fingerprint(label_env);
-
-          if (fp != fingerprints[idx])
-          {
-            fingerprints[idx] = fp;
-            exit_envs[idx] = std::move(label_env);
-            made_progress = true;
-
-            for (auto s : succ[idx])
-            {
-              if (!in_worklist[s])
-              {
-                in_worklist[s] = true;
-                worklist.push(s);
-              }
-            }
-          }
-        }
-      }
-
-      // No merge-back: Phase B exit envs are used directly for
-      // per-label Const finalization. Merging would union Phase B's
-      // fresh Const defaults (u64) with the cascaded env (i32),
-      // producing incorrect Union(i32, u64) types.
-    }
-
-    // ---------- Cascade re-propagation ----------
-    // After all type inference (including Phase B narrowing), propagate
-    // refined types through ALL remaining default Consts of compatible
-    // type, then cascade through Copy/Move/Lookup/CallDyn until stable.
-    {
-      auto func_ret = node / Type;
-      auto expected_prim = extract_primitive(func_ret);
-      run_cascade(env, expected_prim, labels, top, lookup_stmts);
-    }
-
-    // ---------- Post-convergence: finalize Const AST nodes ----------
-
-    // Now that types are converged, write final types to Const nodes.
-    // For each Const, check both the per-label exit env (which captures
-    // use-site demands like CallDyn arg refinement after typetest
-    // narrowing) and the global env (which captures cascade refinement
-    // from return type). Prefer the one that's non-default (refined).
-    for (size_t lbl_idx = 0; lbl_idx < n_labels; lbl_idx++)
-    {
-      auto& lbl = labels->at(lbl_idx);
-      bool have_label_env = has_typetest_conds && !exit_envs[lbl_idx].empty();
-
-      for (auto& stmt : *(lbl / Body))
-      {
-        if (stmt != Const)
-          continue;
-
-        // Find the best type for this Const: check per-label env
-        // first (captures use-site demands), then global env
-        // (captures cascade). Prefer the non-default refined entry.
-        auto dst = (stmt->size() == 3) ? stmt->front() : stmt->front();
-        Node final_type;
-        auto loc = dst->location();
-
-        // Check per-label env.
-        if (have_label_env)
-        {
-          auto it = exit_envs[lbl_idx].find(loc);
-
-          if (it != exit_envs[lbl_idx].end() && !it->second.is_default)
-          {
-            auto p = extract_primitive(it->second.type);
-
-            if (p)
-              final_type = p;
-          }
-        }
-
-        // If per-label didn't refine, check global env.
-        if (!final_type)
-        {
-          auto it = env.find(loc);
-
-          if (it != env.end())
-          {
-            auto p = extract_primitive(it->second.type);
-
-            if (p)
-              final_type = p;
-          }
-        }
-
-        if (stmt->size() == 3)
-        {
-          if (final_type)
-          {
-            auto old_type = stmt->at(1);
-
-            if (old_type->type() != final_type->type())
-              stmt->replace(old_type, final_type->type());
-          }
-        }
-        else if (stmt->size() == 2)
-        {
-          auto lit = stmt->back();
-          Node type_token;
-
-          if (final_type)
-            type_token = final_type->type();
           else
-            type_token = default_literal_type(lit);
-
-          stmt->erase(stmt->begin(), stmt->end());
-          stmt << dst << type_token << lit;
+          {
+            if (f_it != label_idx.end())
+            {
+              auto ne = make_clone();
+              ne[trace->src->location()] =
+                {clone(trace->type), true, {}};
+              update_branch_exit(f_it->second, std::move(ne));
+            }
+            if (t_it != label_idx.end())
+            {
+              auto ne = make_clone();
+              auto src_it = ne.find(trace->src->location());
+              if (src_it != ne.end())
+              {
+                auto excluded =
+                  exclude_tested_type(top, src_it->second.type, trace->type);
+                if (excluded)
+                  src_it->second = {std::move(excluded), true, {}};
+              }
+              update_branch_exit(t_it->second, std::move(ne));
+            }
+          }
         }
       }
+
+      // Update forward exit env. Re-queue successors if forward changed.
+      bool exit_changed = !same_type_env(exit_envs[i], env);
+      if (exit_changed)
+      {
+        exit_envs[i] = env;
+        forward_out_changed = true;
+      }
+      else
+      {
+        exit_envs[i] = env;
+      }
+      if (forward_out_changed)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->requeue_succ += succ[i].size();
+        for (auto s : succ[i])
+          worklist.insert(s);
+      }
+
+      // Body-local backward refinement can improve earlier statements in the
+      // same label (for example, a later comparison refining an earlier
+      // CallDyn result), so re-run this label until its local backward facts
+      // stabilize.
+      if (label_changes.backward)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->requeue_self_bwd++;
+        worklist.insert(i);
+      }
+
+      // Propagate backward constraints from successors.
+      bool bwd_changed = label_changes.backward;
+      for (auto s : succ[i])
+      {
+        for (auto& [loc, info] : bwd_envs[s])
+        {
+          if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+            continue;
+          auto note_succ_bwd_change = [&]() {
+            bwd_changed = true;
+          };
+          auto bit = bwd_envs[i].find(loc);
+          if (bit == bwd_envs[i].end())
+          {
+            bwd_envs[i][loc] = {clone(info.type), info.is_fixed, {}};
+            note_succ_bwd_change();
+          }
+          else
+          {
+            if (same_type_tree(bit->second.type, info.type))
+            {
+              bool fixed_changed = !bit->second.is_fixed && info.is_fixed;
+              bit->second.is_fixed = bit->second.is_fixed || info.is_fixed;
+              if (fixed_changed)
+                note_succ_bwd_change();
+              continue;
+            }
+            if (bit->second.is_fixed && !info.is_fixed)
+              continue;
+            if (!bit->second.is_fixed && info.is_fixed)
+            {
+              bit->second.type = clone(info.type);
+              bit->second.is_fixed = true;
+              note_succ_bwd_change();
+              continue;
+            }
+            auto m = merge_type(bit->second.type, info.type, top);
+            if (m)
+            {
+              bit->second.type = m;
+              note_succ_bwd_change();
+            }
+          }
+        }
+      }
+
+      // Re-queue predecessors if backward changed.
+      if (bwd_changed)
+      {
+        if (active_infer_profile != nullptr)
+          active_infer_profile->requeue_pred_bwd += pred[i].size();
+        for (auto p : pred[i])
+          worklist.insert(p);
+      }
+
+      prior_transfer_epochs[i] = transfer_epoch;
     }
 
-    // ---------- Post-convergence: finalize tuple/array types ----------
+    profile.worklist_iterations = wl_iters;
 
-    // Re-process labels once more to finalize NewArrayConst types
-    // using the converged env.
-    for (auto& lbl : *labels)
+    for (size_t i = 0; i < n; i++)
     {
-      for (auto& stmt : *(lbl / Body))
+      if (active_infer_profile != nullptr)
+        active_infer_profile->dependency_cascade_calls++;
+      InferScopedTimer cascade_timer(
+        (active_infer_profile != nullptr)
+          ? &active_infer_profile->dependency_cascade_time
+          : nullptr);
+      run_dependency_cascade(
+        exit_envs[i], labels->at(i) / Body, top, lookup_stmts);
+    }
+
+    // ===== Finalization =====
+
+    // 1. Consts: write inferred types to AST.
+    for (size_t i = 0; i < n; i++)
+    {
+      struct FinalTupleInfo
       {
-        if (stmt != NewArrayConst)
-          continue;
+        size_t size;
+        bool is_array_lit;
+      };
 
-        auto dst = stmt / LocalId;
-        auto it = env.find(dst->location());
+      auto body = labels->at(i) / Body;
+      std::map<Location, FinalTupleInfo> final_tuple_info;
+      std::map<Location, std::pair<Location, size_t>> final_tuple_refs;
+      std::map<Location, std::vector<Location>> final_tuple_values;
+      std::map<Location, Node> final_newarray_types;
 
-        if (it == env.end())
-          continue;
-
-        auto inner = it->second.type->front();
-
-        if (inner == TupleType)
+      for (auto& stmt : *body)
+      {
+        if (stmt == NewArrayConst)
         {
-          auto old_type = stmt / Type;
-          stmt->replace(old_type, clone(it->second.type));
+          auto loc = (stmt / LocalId)->location();
+          auto size = from_chars_sep_v<size_t>(stmt / Rhs);
+          bool is_array_lit =
+            loc.view().find("array") != std::string_view::npos;
+          final_tuple_info.emplace(loc, FinalTupleInfo{size, is_array_lit});
+          final_tuple_values.emplace(loc, std::vector<Location>(size));
+        }
+        else if (stmt == ArrayRefConst)
+        {
+          auto arg_loc = ((stmt / Arg) / Rhs)->location();
+          auto info = final_tuple_info.find(arg_loc);
+          if (info == final_tuple_info.end())
+            continue;
+          auto index = from_chars_sep_v<size_t>(stmt / Rhs);
+          if (index < info->second.size)
+            final_tuple_refs[(stmt / LocalId)->location()] = {arg_loc, index};
+        }
+        else if (stmt == Store)
+        {
+          auto ref_it = final_tuple_refs.find((stmt / Rhs)->location());
+          if (ref_it == final_tuple_refs.end())
+            continue;
+          auto& [tuple_loc, index] = ref_it->second;
+          auto values_it = final_tuple_values.find(tuple_loc);
+          if (values_it != final_tuple_values.end() && index < values_it->second.size())
+            values_it->second[index] = ((stmt / Arg) / Rhs)->location();
+        }
+      }
+
+      for (auto& [tuple_loc, info] : final_tuple_info)
+      {
+        auto values_it = final_tuple_values.find(tuple_loc);
+        if (values_it == final_tuple_values.end())
+          continue;
+
+        if (info.is_array_lit)
+        {
+          Node common;
+          bool uniform = true;
+          for (auto& value_loc : values_it->second)
+          {
+            if (value_loc.view().empty())
+            {
+              uniform = false;
+              break;
+            }
+            auto env_it = exit_envs[i].find(value_loc);
+            if (env_it == exit_envs[i].end())
+            {
+              uniform = false;
+              break;
+            }
+            auto prim = extract_primitive(env_it->second.type);
+            if (!prim)
+            {
+              uniform = false;
+              break;
+            }
+            if (!common)
+              common = clone(env_it->second.type);
+            else if (env_it->second.type->front()->type() != common->front()->type())
+            {
+              uniform = false;
+              break;
+            }
+          }
+
+          if (uniform && common && info.size > 0)
+            final_newarray_types[tuple_loc] = clone(common);
+          continue;
+        }
+
+        bool complete = true;
+        std::vector<Node> elems;
+        elems.reserve(info.size);
+        for (auto& value_loc : values_it->second)
+        {
+          if (value_loc.view().empty())
+          {
+            complete = false;
+            break;
+          }
+          auto env_it = exit_envs[i].find(value_loc);
+          if (env_it == exit_envs[i].end())
+          {
+            complete = false;
+            break;
+          }
+          elems.push_back(clone(env_it->second.type));
+        }
+
+        if (!complete || elems.empty())
+          continue;
+
+        if (elems.size() == 1)
+        {
+          final_newarray_types[tuple_loc] =
+            Type << clone(elems.front()->front());
         }
         else
         {
-          // Array literal or homogeneous tuple.
-          auto prim = extract_primitive(it->second.type);
+          Node tup = TupleType;
+          for (auto& elem : elems)
+            tup << clone(elem->front());
+          final_newarray_types[tuple_loc] = Type << tup;
+        }
+      }
 
-          if (prim)
+      auto it = body->begin();
+      while (it != body->end())
+      {
+        // 2. TypeAssertion: remove.
+        if (*it == TypeAssertion)
+        {
+          it = body->erase(it, std::next(it));
+          continue;
+        }
+
+        if (*it == Const)
+        {
+          auto dst = (*it)->front();
+          auto loc = dst->location();
+          auto env_it = exit_envs[i].find(loc);
+          Node final_type;
+          if (env_it != exit_envs[i].end() && !is_default_type(env_it->second.type))
+            final_type = env_it->second.type;
+          if (!final_type)
           {
-            auto old_type = stmt / Type;
+            auto bwd_it = bwd_envs[i].find(loc);
+            if (bwd_it != bwd_envs[i].end() && !is_default_type(bwd_it->second.type))
+              final_type = bwd_it->second.type;
+          }
+          Node final_prim;
+          if (final_type)
+            final_prim = extract_primitive(final_type);
 
-            if (!types_equal(old_type, it->second.type))
-              stmt->replace(old_type, clone(it->second.type));
+          if (final_prim)
+          {
+            if ((*it)->size() == 3)
+            {
+              auto old_type = (*it)->at(1);
+              if (old_type->type() != final_prim->type())
+                (*it)->replace(old_type, final_prim->type());
+            }
+            else if ((*it)->size() == 2)
+            {
+              auto lit = (*it)->back();
+              (*it)->erase((*it)->begin(), (*it)->end());
+              *it << dst << final_prim->type() << lit;
+            }
+          }
+          else if ((*it)->size() == 2)
+          {
+            auto lit = (*it)->back();
+            auto type_tok = default_literal_type(lit);
+            (*it)->erase((*it)->begin(), (*it)->end());
+            *it << dst << type_tok << lit;
           }
         }
+        // 3. NewArrayConst: update Type from env.
+        else if (*it == NewArrayConst)
+        {
+          auto nloc = ((*it) / LocalId)->location();
+          auto final_it = final_newarray_types.find(nloc);
+          if (final_it != final_newarray_types.end())
+          {
+            (*it)->replace((*it) / Type, clone(final_it->second));
+          }
+
+          auto env_it = exit_envs[i].find(nloc);
+          if (env_it != exit_envs[i].end())
+          {
+            auto inner = env_it->second.type->front();
+            if (inner == TupleType)
+              (*it)->replace((*it) / Type, clone(env_it->second.type));
+            else
+            {
+              auto prim = extract_primitive(env_it->second.type);
+              if (prim && !Subtype.invariant(
+                            top, (*it) / Type, env_it->second.type))
+                (*it)->replace((*it) / Type, clone(env_it->second.type));
+            }
+          }
+        }
+
+        ++it;
       }
     }
 
-    // ---------- Post-convergence: TypeVar back-propagation ----------
-
+    // 5. TypeVar back-prop.
     {
-      bool changed = true;
-
-      while (changed)
+      bool tv_changed = true;
+      while (tv_changed)
       {
-        changed = false;
-
+        tv_changed = false;
         for (auto& [dst_loc, src_loc] : typevar_aliases)
         {
-          auto dst_it = env.find(dst_loc);
-          auto src_it = env.find(src_loc);
-
-          if (dst_it == env.end() || src_it == env.end())
-            continue;
-
-          bool dst_tv = dst_it->second.type->front() == TypeVar;
-          bool src_tv = src_it->second.type->front() == TypeVar;
-
-          if (!dst_tv && src_tv)
+          for (auto& ee : exit_envs)
           {
-            src_it->second.type = clone(dst_it->second.type);
-            src_it->second.is_fixed = true;
-            changed = true;
-          }
-          else if (dst_tv && !src_tv)
-          {
-            dst_it->second.type = clone(src_it->second.type);
-            changed = true;
+            auto d = ee.find(dst_loc);
+            auto s = ee.find(src_loc);
+            if (d == ee.end() || s == ee.end())
+              continue;
+            bool dtv = d->second.type->front() == TypeVar;
+            bool stv = s->second.type->front() == TypeVar;
+            if (!dtv && stv)
+            {
+              s->second.type = clone(d->second.type);
+              s->second.is_fixed = true;
+              tv_changed = true;
+            }
+            else if (dtv && !stv)
+            {
+              d->second.type = clone(s->second.type);
+              tv_changed = true;
+            }
           }
         }
       }
     }
 
-    // ---------- Post-convergence: update params and fields ----------
-
+    // 6. Update params and fields.
     auto parent_cls = node->parent(ClassDef);
-
-    for (auto& pd : *params)
+    for (auto& pd : *(node / Params))
     {
       auto type = pd / Type;
-
       if (type->front() != TypeVar)
         continue;
-
       auto ident = pd / Ident;
-      auto it = env.find(ident->location());
-
-      if (it == env.end())
-        continue;
-
-      if (it->second.type->front() == TypeVar)
-        continue;
-
-      pd->replace(type, clone(it->second.type));
-
-      if (parent_cls)
+      for (auto& ee : exit_envs)
       {
-        auto pname = ident->location().view();
-
-        for (auto& child : *(parent_cls / ClassBody))
+        auto it = ee.find(ident->location());
+        if (it != ee.end() && it->second.type->front() != TypeVar)
         {
-          if (child != FieldDef)
-            continue;
-
-          if ((child / Ident)->location().view() != pname)
-            continue;
-
-          auto ft = child / Type;
-
-          if (contains_typevar(ft))
-            child->replace(ft, clone(it->second.type));
-
+          pd->replace(type, clone(it->second.type));
+          if (parent_cls)
+          {
+            for (auto& child : *(parent_cls / ClassBody))
+            {
+              if (child != FieldDef)
+                continue;
+              if ((child / Ident)->location().view() !=
+                  ident->location().view())
+                continue;
+              if (contains_typevar(child / Type))
+                child->replace(child / Type, clone(it->second.type));
+              break;
+            }
+          }
           break;
         }
       }
@@ -3802,298 +4672,217 @@ namespace vc
     {
       for (auto& child : *(parent_cls / ClassBody))
       {
-        if (child != FieldDef)
+        if (child != FieldDef || (child / Type)->front() != TypeVar)
           continue;
-
-        auto ft = child / Type;
-
-        if (ft->front() != TypeVar)
-          continue;
-
         auto fname = (child / Ident)->location();
-        auto it = env.find(fname);
-
-        if (it == env.end())
-          continue;
-
-        if (it->second.type->front() == TypeVar)
-          continue;
-
-        child->replace(ft, clone(it->second.type));
+        for (auto& ee : exit_envs)
+        {
+          auto it = ee.find(fname);
+          if (it != ee.end() && it->second.type->front() != TypeVar)
+          {
+            child->replace(child / Type, clone(it->second.type));
+            break;
+          }
+        }
       }
     }
 
-    // ---------- Post-convergence: return type inference ----------
-
-    bool in_generic_context = (node / TypeParams)->size() > 0 ||
-      ((node->parent({ClassDef}) != nullptr) &&
+    // 4. Return type inference.
+    bool in_generic = (node / TypeParams)->size() > 0 ||
+      (node->parent({ClassDef}) != nullptr &&
        (node->parent({ClassDef}) / TypeParams)->size() > 0);
 
-    auto func_ret_type = node / Type;
-
-    if (func_ret_type->front() == TypeVar)
+    auto func_ret = node / Type;
+    if (func_ret->front() == TypeVar)
     {
       SequentCtx ctx{top, {}, {}};
       Nodes ret_types;
-      bool has_unresolved_return = false;
+      bool unresolved = false;
 
-      // In a generic context, check if any CallDyn result is missing
-      // from env. This indicates a method call on a type parameter that
-      // couldn't be resolved. If so, downstream variables (including
-      // the return value) may have partial types, and we should leave
-      // the return type as TypeVar for the reify pass to handle.
-      if (in_generic_context)
+      if (in_generic)
       {
         for (auto& lbl : *labels)
-        {
           for (auto& stmt : *(lbl / Body))
-          {
             if (stmt->in({CallDyn, TryCallDyn}))
             {
-              auto dst = stmt / LocalId;
-
-              if (env.find(dst->location()) == env.end())
-              {
-                has_unresolved_return = true;
-                break;
-              }
+              auto loc = (stmt / LocalId)->location();
+              bool found = false;
+              for (auto& ee : exit_envs)
+                if (ee.find(loc) != ee.end())
+                {
+                  found = true;
+                  break;
+                }
+              if (!found)
+                unresolved = true;
             }
-          }
-
-          if (has_unresolved_return)
-            break;
-        }
       }
 
-      for (size_t i = 0; i < n_labels; i++)
+      for (size_t i = 0; i < n; i++)
       {
         auto term = labels->at(i) / Return;
-
         if (term != Return)
           continue;
-
-        auto ret_src = term / LocalId;
-
-        // Prefer per-label exit env (has typetest narrowing from Phase B)
-        // over the global env. This matches how Const finalization works:
-        // exit_envs capture the narrowed type at the return point (e.g.,
-        // after a typetest narrows x: any → x: i32), while the global
-        // env only has the un-narrowed type.
-        Node ret_type_node;
-
-        if (has_typetest_conds && !exit_envs[i].empty())
+        auto ret_loc = (term / LocalId)->location();
+        auto eit = exit_envs[i].find(ret_loc);
+        if (eit == exit_envs[i].end() || eit->second.type->front() == TypeVar)
         {
-          auto eit = exit_envs[i].find(ret_src->location());
-
-          if (eit != exit_envs[i].end() && eit->second.type->front() != TypeVar)
-            ret_type_node = eit->second.type;
-        }
-
-        if (!ret_type_node)
-        {
-          auto it = env.find(ret_src->location());
-
-          if (it != env.end() && it->second.type->front() != TypeVar)
-            ret_type_node = it->second.type;
-        }
-
-        if (!ret_type_node)
-        {
-          // In a generic context, unresolved return types mean the
-          // method calls on type parameters couldn't be resolved.
-          // Leave the return type as TypeVar for the reify pass.
-          if (in_generic_context)
-            has_unresolved_return = true;
-
+          if (in_generic)
+            unresolved = true;
           continue;
         }
-
-        bool already_covered = false;
-
-        for (auto& existing : ret_types)
-        {
-          if (Subtype(ctx, ret_type_node, existing))
-          {
-            already_covered = true;
-            break;
-          }
-        }
-
-        if (!already_covered)
-          ret_types.push_back(clone(ret_type_node));
-      }
-
-      // In a generic context, if any return path has an unresolved type
-      // (e.g., a method call on a type parameter), leave the return type
-      // as TypeVar. The reify pass will determine the concrete type after
-      // monomorphization.
-      if (has_unresolved_return)
-      {
-        // Don't set the return type — leave as TypeVar.
-      }
-      else if (ret_types.size() == 1)
-      {
-        node->replace(func_ret_type, ret_types.front());
-      }
-      else if (ret_types.size() > 1)
-      {
-        Node union_node = Union;
-
+        bool covered = false;
         for (auto& rt : ret_types)
-          union_node << clone(rt->front());
-
-        node->replace(func_ret_type, Type << union_node);
-      }
-      else
-      {
-        bool all_nonlocal = true;
-
-        for (auto& lbl : *labels)
-        {
-          auto term = lbl / Return;
-
-          if (term->in({Jump, Cond}))
-            continue;
-
-          if (term != Raise)
+          if (Subtype(ctx, eit->second.type, rt))
           {
-            all_nonlocal = false;
+            covered = true;
             break;
           }
-        }
+        if (!covered)
+          ret_types.push_back(clone(eit->second.type));
+      }
 
-        if (all_nonlocal)
+      if (!unresolved)
+      {
+        if (ret_types.size() == 1)
+          node->replace(func_ret, ret_types.front());
+        else if (ret_types.size() > 1)
         {
-          node->replace(
-            func_ret_type,
-            Type
-              << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                           << (NameElement << (Ident ^ "none") << TypeArgs)));
+          Node u = Union;
+          for (auto& rt : ret_types)
+            u << clone(rt->front());
+          node->replace(func_ret, Type << u);
+        }
+        else
+        {
+          bool all_nonlocal = true;
+          for (auto& lbl : *labels)
+          {
+            auto term = lbl / Return;
+            if (term->in({Jump, Cond}))
+              continue;
+            if (term != Raise)
+            {
+              all_nonlocal = false;
+              break;
+            }
+          }
+          if (all_nonlocal)
+            node->replace(
+              func_ret,
+              Type
+                << (TypeName
+                      << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                      << (NameElement << (Ident ^ "none") << TypeArgs)));
         }
       }
     }
 
-    // ---------- Post-convergence: error checking ----------
-
-    if (check_errors && !in_generic_context)
+    // Error checking.
+    if (check_errors && !in_generic)
     {
-      for (auto& pd : *params)
+      for (auto& pd : *(node / Params))
       {
-        auto type = pd / Type;
-
-        if (type->front() == TypeVar)
+        if ((pd / Type)->front() == TypeVar)
         {
           node->parent()->replace(
             node, err(pd / Ident, "Cannot infer type of parameter"));
           return false;
         }
       }
-
-      func_ret_type = node / Type;
-
-      if (func_ret_type->front() == TypeVar)
+      func_ret = node / Type;
+      if (func_ret->front() == TypeVar)
       {
         node->parent()->replace(
           node, err(node / Ident, "Cannot infer return type of function"));
         return false;
       }
     }
-
-    // ---------- Post-convergence: cleanup ----------
-
-    for (auto& lbl : *labels)
-    {
-      auto body = lbl / Body;
-      auto it = body->begin();
-
-      while (it != body->end())
-      {
-        if (*it == TypeAssertion)
-          it = body->erase(it, std::next(it));
-        else
-          ++it;
-      }
-    }
-
     return true;
   }
+
+  // ===== has_typevar (simplified) =====
+
+  static bool has_typevar(Node func)
+  {
+    for (auto& pd : *(func / Params))
+      if ((pd / Type)->front() == TypeVar)
+        return true;
+    auto ret = (func / Type)->front();
+    if (ret == TypeVar || ret->in({DefaultInt, DefaultFloat}))
+      return true;
+    if (ret == Union)
+      for (auto& child : *ret)
+        if (child->in({DefaultInt, DefaultFloat}))
+          return true;
+    return false;
+  }
+
+  // ===== Pass definition =====
 
   PassDef infer()
   {
     PassDef p{"infer", wfPassInfer, dir::once, {}};
 
     p.post([](auto top) {
-      // First pass: process all functions, skip TypeVar error checks.
-      // Caller-side type propagation fills TypeVar params/fields in
-      // anonymous class methods.
       Nodes deferred;
 
       top->traverse([&](auto node) {
         if (node != Function)
           return node == Top || node == ClassDef || node == ClassBody ||
             node == Lib || node == Symbols;
-
         process_function(node, top, false);
-
-        // Collect functions that still have unresolved TypeVar types.
         if (has_typevar(node))
           deferred.push_back(node);
-
         return false;
       });
 
-      // Second pass: iteratively re-process deferred functions until
-      // no more progress is made. Each iteration may resolve FieldDef
-      // types that allow sibling methods to resolve in the next
-      // iteration (e.g., apply resolves field types from the callee's
-      // signature, then create resolves its params from FieldDefs).
-      // We reset return types to TypeVar before each re-process so
-      // that return type inference runs fresh with updated env data.
-      //
-      // Progress is tracked by counting how many functions still have
-      // unresolved TypeVar types (params, fields, or return). The loop
-      // terminates when no further resolution occurs or after at most
-      // N iterations (bounded by the deferred list size).
-      size_t prev_tv_count = deferred.size();
-
+      size_t prev = deferred.size();
       for (size_t iter = 0; iter < deferred.size(); iter++)
       {
         for (auto& func : deferred)
         {
-          // Reset the return type to TypeVar so inference re-runs
-          // with the latest FieldDef/param types. But don't reset
-          // if the return type was already resolved (e.g., by shape
-          // propagation) — that's the declared contract.
-          auto old_ret = func / Type;
-          if (old_ret->front() == TypeVar)
-            func->replace(old_ret, make_type());
-
+          if (has_typevar(func))
+            func->replace(func / Type, make_type());
           process_function(func, top, false);
         }
-
-        // Count functions that still have unresolved TypeVars.
-        size_t tv_count = 0;
-
+        size_t count = 0;
         for (auto& func : deferred)
-        {
           if (has_typevar(func))
-            tv_count++;
-        }
-
-        if (tv_count == 0 || tv_count >= prev_tv_count)
+            count++;
+        if (count == 0 || count >= prev)
           break;
-
-        prev_tv_count = tv_count;
+        prev = count;
       }
 
-      // Final check: error on any remaining unresolved TypeVars.
+      top->traverse([&](auto node) {
+        if (node != Function)
+          return node == Top || node == ClassDef || node == ClassBody ||
+            node == Lib || node == Symbols;
+        process_function(node, top, false);
+        return false;
+      });
+
       for (auto& func : deferred)
-      {
-        if (!has_typevar(func))
-          continue;
+        if (has_typevar(func))
+          process_function(func, top, true);
 
-        process_function(func, top, true);
-      }
+      // Sweep: DefaultInt → u64, DefaultFloat → f64.
+      top->traverse([](Node& node) {
+        if (node->in({DefaultInt, DefaultFloat}))
+        {
+          auto parent = node->parent();
+          bool is_int = (node == DefaultInt);
+          if (parent == Const)
+            parent->replace(node, is_int ? Node{U64} : Node{F64});
+          else
+            parent->replace(
+              node, is_int ? primitive_type(U64)->front()
+                           : primitive_type(F64)->front());
+          return false;
+        }
+        return true;
+      });
 
       return 0;
     });

@@ -323,7 +323,7 @@ dot
             (calldyn
               (expr
                 (localid 6:u8_dst))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -402,29 +402,30 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:i32)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:4))
-                  (expr
-                    (int 2:10))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:i32)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:4))
+                    (expr
+                      (int 2:10)))))))
           (expr
             (=
               (expr
@@ -456,7 +457,7 @@ dot
             (calldyn
               (expr
                 (localid 7:i32_dst))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -668,29 +669,30 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:i32)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (int 1:5))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:i32)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (int 1:5)))))))
           (expr
             (=
               (expr
@@ -699,29 +701,30 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:i32)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (int 1:5))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:i32)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (int 1:5)))))))
           (expr
             (if
               (expr
@@ -774,29 +777,30 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:f64)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (float 3:1.5))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:f64)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (float 3:1.5)))))))
           (expr
             (=
               (expr
@@ -805,34 +809,35 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:f64)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (float 3:0.0))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:f64)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (float 3:0.0)))))))
           (expr
             (calldyn
               (expr
                 (localid 7:f64_dst))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -1004,39 +1009,40 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 8:_builtin)
-                            (typeargs))
-                          (nameelement
-                            (ident 5:usize)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 8:_builtin)
-                        (typeargs))
-                      (nameelement
-                        (ident 5:usize)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs)))
-                    (int 2:42))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:usize)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (funcname
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:usize)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (int 2:42)))))))
           (expr
             (=
               (expr
@@ -1068,7 +1074,7 @@ dot
             (calldyn
               (expr
                 (localid 9:usize_dst))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -1280,7 +1286,7 @@ dot
             (calldyn
               (expr
                 (localid 7:overlap))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -1502,7 +1508,7 @@ dot
             (calldyn
               (expr
                 (localid 8:overlap2))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -1611,41 +1617,42 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 10:array_bulk)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:box)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 10:array_bulk)
-                        (typeargs))
-                      (nameelement
-                        (ident 3:box)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs)))
-                    (exprseq
-                      (expr
-                        (int 1:0))))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 10:array_bulk)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:box)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (funcname
+                        (nameelement
+                          (ident 10:array_bulk)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:box)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
           (expr
             (=
               (expr
@@ -1735,46 +1742,47 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 10:array_bulk)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:box)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 10:array_bulk)
-                        (typeargs))
-                      (nameelement
-                        (ident 3:box)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs)))
-                    (exprseq
-                      (expr
-                        (int 1:0))))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 10:array_bulk)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:box)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (funcname
+                        (nameelement
+                          (ident 10:array_bulk)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:box)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
           (expr
             (calldyn
               (expr
                 (localid 7:obj_dst))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -1933,41 +1941,42 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 10:array_bulk)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:box)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:3))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 10:array_bulk)
-                        (typeargs))
-                      (nameelement
-                        (ident 3:box)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs)))
-                    (exprseq
-                      (expr
-                        (int 1:0))))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 10:array_bulk)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:box)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:3))
+                    (expr
+                      (funcname
+                        (nameelement
+                          (ident 10:array_bulk)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:box)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
           (expr
             (calldyn
               (expr
@@ -2067,7 +2076,7 @@ dot
             (calldyn
               (expr
                 (localid 6:u8_dst))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -2160,41 +2169,42 @@ dot
                   (type
                     (typevar))))
               (expr
-                (funcname
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:array)
-                    (typeargs
-                      (type
-                        (typename
-                          (nameelement
-                            (ident 10:array_bulk)
-                            (typeargs))
-                          (nameelement
-                            (ident 3:box)
-                            (typeargs))))))
-                  (nameelement
-                    (ident 4:fill)
-                    (typeargs)))
-                (tuple
-                  (expr
-                    (int 1:5))
-                  (expr
-                    (funcname
-                      (nameelement
-                        (ident 10:array_bulk)
-                        (typeargs))
-                      (nameelement
-                        (ident 3:box)
-                        (typeargs))
-                      (nameelement
-                        (ident 6:create)
-                        (typeargs)))
-                    (exprseq
-                      (expr
-                        (int 1:0))))))))
+                (call
+                  (funcname
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 10:array_bulk)
+                              (typeargs))
+                            (nameelement
+                              (ident 3:box)
+                              (typeargs))))))
+                    (nameelement
+                      (ident 4:fill)
+                      (typeargs)))
+                  (args
+                    (expr
+                      (int 1:5))
+                    (expr
+                      (funcname
+                        (nameelement
+                          (ident 10:array_bulk)
+                          (typeargs))
+                        (nameelement
+                          (ident 3:box)
+                          (typeargs))
+                        (nameelement
+                          (ident 6:create)
+                          (typeargs)))
+                      (exprseq
+                        (expr
+                          (int 1:0)))))))))
           (expr
             (=
               (expr
@@ -2334,7 +2344,7 @@ dot
             (calldyn
               (expr
                 (localid 11:obj_overlap))
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs)
               (args
                 (expr
@@ -3237,6 +3247,7 @@ dot
             function
           compare = function
           copy = function
+          copy_from = function
           create = function
           each = function
           fill =
@@ -4133,13 +4144,152 @@ dot
                     (localid 4:self))))))
           (function
             {
+              a = let
+              len = paramdef
+              n = let
+              offset = paramdef
+              self = paramdef}
+            (rhs)
+            (ident 4:copy)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 8:_builtin)
+                              (typeargs))
+                            (nameelement
+                              (ident 5:array)
+                              (typeargs))
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs)))))))))
+              (paramdef
+                (ident 6:offset)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs)))))
+              (paramdef
+                (ident 3:len)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 8:_builtin)
+                      (typeargs))
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 8:_builtin)
+                          (typeargs))
+                        (nameelement
+                          (ident 5:array)
+                          (typeargs))
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:n)
+                      (type
+                        (typevar))))
+                  (expr
+                    (exprseq
+                      (expr
+                        (calldyn
+                          (expr
+                            (localid 4:self))
+                          (ident 4:size)
+                          (typeargs)
+                          (args))
+                        (methodname
+                          (symbolid 1:-)
+                          (typeargs))
+                        (localid 6:offset)))
+                    (methodname
+                      (ident 3:min)
+                      (typeargs))
+                    (localid 3:len))))
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:a)
+                      (type
+                        (typevar))))
+                  (expr
+                    (newarray
+                      (type
+                        (typename
+                          (nameelement
+                            (ident 8:_builtin)
+                            (typeargs))
+                          (nameelement
+                            (ident 5:array)
+                            (typeargs))
+                          (nameelement
+                            (ident 1:T)
+                            (typeargs))))
+                      (args
+                        (expr
+                          (exprseq
+                            (expr
+                              (localid 1:n)))))))))
+              (expr
+                (calldyn
+                  (expr
+                    (localid 1:a))
+                  (ident 9:copy_from)
+                  (typeargs)
+                  (args
+                    (expr
+                      (int 1:0))
+                    (expr
+                      (localid 4:self))
+                    (expr
+                      (localid 6:offset))
+                    (expr
+                      (localid 1:n)))))
+              (expr
+                (localid 1:a))))
+          (function
+            {
               dst_offset = paramdef
               len = paramdef
               self = paramdef
               src = paramdef
               src_offset = paramdef}
             (rhs)
-            (ident 4:copy)
+            (ident 9:copy_from)
             (typeparams)
             (params
               (paramdef
@@ -21221,7 +21371,7 @@ dot
                 (calldyn
                   (expr
                     (localid 6:result))
-                  (ident 4:copy)
+                  (ident 9:copy_from)
                   (typeargs)
                   (args
                     (expr
@@ -21246,7 +21396,7 @@ dot
                 (calldyn
                   (expr
                     (localid 6:result))
-                  (ident 4:copy)
+                  (ident 9:copy_from)
                   (typeargs)
                   (args
                     (expr

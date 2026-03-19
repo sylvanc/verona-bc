@@ -282,16 +282,18 @@ namespace vbcc
           auto undef_registers = label.in & ~params;
           if (undef_registers)
           {
-            for (size_t r = 0; r < func_state.register_names.size(); r++)
+            size_t first_undef = 0;
+            while (
+              first_undef < func_state.register_names.size() &&
+              !undef_registers.test(first_undef))
             {
-              if (undef_registers.test(r))
-              {
-                state->error = true;
-                node << err(
-                  clone(label.first_use.at(r)), "use of undefined register");
-                return true;
-              }
+              first_undef++;
             }
+            state->error = true;
+            node << err(
+              clone(label.first_use.at(first_undef)),
+              "use of undefined register");
+            return true;
           }
 
           // Check for multiple assignment to non-variable params.

@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 4:$913)
+            (localid 4:$925)
             (functionid 26:infer_backward::main::0::0)
             (args)))
         (ret
-          (localid 4:$913)))))
+          (localid 4:$925)))))
   (func
     (functionid 26:infer_backward::main::0::0)
     (params)
@@ -27,7 +27,7 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$113)
+            (localid 9:local$114)
             (i32)
             (int 2:42))
           (call
@@ -36,9 +36,9 @@ reify
             (args
               (arg
                 (argcopy)
-                (localid 9:local$113))))
+                (localid 9:local$114))))
           (copy
-            (localid 9:local$505)
+            (localid 9:local$510)
             (localid 1:w))
           (copy
             (localid 1:w)
@@ -52,9 +52,6 @@ reify
                 (localid 1:w)))))
         (ret
           (localid 7:local$9)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 26:infer_backward::wrap::1::0)
     (params
@@ -89,18 +86,18 @@ reify
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$111)
+            (localid 9:local$112)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
+            (localid 9:local$113)
             (localid 9:local$112)
-            (localid 9:local$111)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 9:local$112)))))
+          (localid 9:local$113)))))
   (class
     (classid 26:infer_backward::wrapper::0)
     (fields
@@ -127,18 +124,18 @@ reify
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$109)
+            (localid 9:local$110)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
+            (localid 9:local$111)
             (localid 9:local$110)
-            (localid 9:local$109)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 9:local$110)))))
+          (localid 9:local$111)))))
   (func
     (functionid 34:infer_backward::wrapper::val::1::0)
     (params
@@ -159,10 +156,10 @@ reify
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$504)
+            (localid 9:local$509)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$504)))))
+          (localid 9:local$509)))))
   (func
     (functionid 39:infer_backward::wrapper::val::1::ref::0)
     (params
@@ -177,17 +174,13 @@ reify
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$108)
+            (localid 9:local$109)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$108)))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
+          (localid 9:local$109)))))
   (func
     (functionid 37:infer_backward::wrapper::create::1::0)
     (params
@@ -208,4 +201,11 @@ reify
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$6))))))
+          (localid 7:local$6)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (ref
+      (i32))
+    (methods)))

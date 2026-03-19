@@ -2,7 +2,7 @@
 
 - **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump-clean` and `ninja update-dump` to regenerate golden test files.
 - **Running vc**: Always run `vc` from the `build` directory, passing the path to the source directory on the command line (e.g., `dist/vc/vc build ../testsuite/v/hello`). Do NOT `cd` into the source directory — the `.vbc` output name is derived from the directory name, so building with `.` produces a hidden `..vbc` file.
-- **Debugging**: Use `lldb-20` for debugging segfaults and crashes.
+- **Debugging**: Use `gdb` for debugging.
 - **Pass-limited testing**: `-p <passname>` stops after a specific pass (e.g., `-p ident`). `--dump_passes=<dir>` dumps intermediate ASTs.
 - **`_builtin` resolution**: The parser's postparse hook looks for `_builtin` at `executable.parent_path() / "_builtin"`. Only the installed binary has it.
 - **`use` semantics**: `use X` imports X's contents for unqualified lookup within the current scope, but NOT for qualified lookdown from outside. A `Use` node with `[Include]` creates an include entry in the parent's symtab, which is followed by `lookup()` but not `lookdown()`.
@@ -89,3 +89,4 @@
   - **freeze_local**: Freezes frame-local objects in place, then delegates heap sub-regions to `freeze()` in phase 2. `freeze()` delegates frame-local roots to `freeze_local()`.
   - **Use-after-move in write barrier**: When `apply_in` needs the header for `set_parent`, save it BEFORE the register is cleared (move semantics). Use `content.get_header()` not `next->get_header()` after extract.
   - **clear_cown_owner auto-free**: `clear_cown_owner()` now auto-frees like `clear_parent()` (calls `free_region()` if `stack_rc == 0`). Callers that need to prevent premature free must `stack_inc()` first (cown destructor and exchange already do this).
+- **Type system**: `Dyn` is a top type (`anything <: Dyn`). The bottom type is an empty `Union` (no members). In IRSubtype, the axiom table is keyed by the right operand's type (`r->type()` lookup in `reduce()`).

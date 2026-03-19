@@ -23,11 +23,11 @@ liveness
                 (argmove)
                 (localid 6:$opt_3))))
           (const
-            (localid 4:$908)
+            (localid 4:$920)
             (i32)
             (int 1:0)))
         (ret
-          (localid 4:$908)))))
+          (localid 4:$920)))))
   (func
     (functionid 26:infer_newfield::main::0::0)
     (params)
@@ -54,9 +54,6 @@ liveness
             (int 1:0)))
         (ret
           (localid 7:local$8)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 37:infer_newfield::counter::create::0::0)
     (params)
@@ -67,7 +64,7 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$108)
+            (localid 9:local$109)
             (usize)
             (int 1:0))
           (new
@@ -76,7 +73,7 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$108)))))
+                (localid 9:local$109)))))
         (ret
           (localid 7:local$6)))))
   (class
@@ -85,6 +82,9 @@ liveness
       (field
         (fieldid 5:count)
         (usize)))
+    (methods))
+  (primitive
+    (i32)
     (methods))
   (primitive
     (usize)

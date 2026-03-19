@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$917)
+            (localid 4:$929)
             (functionid 23:rhs_default::main::0::0)
             (args)))
         (ret
-          (localid 4:$917)))))
+          (localid 4:$929)))))
   (func
     (functionid 23:rhs_default::main::0::0)
     (params)
@@ -31,36 +31,24 @@ typecheck
             (functionid 34:rhs_default::myclass::create::0::0)
             (args))
           (copy
-            (localid 9:local$505)
+            (localid 9:local$510)
             (localid 3:obj))
           (copy
             (localid 3:obj)
             (localid 7:local$9))
           (lookup
-            (localid 9:local$109)
+            (localid 9:local$110)
             (localid 3:obj)
             (methodid 9:get::1::0))
           (calldyn
+            (localid 9:local$111)
             (localid 9:local$110)
-            (localid 9:local$109)
             (args
               (arg
                 (argcopy)
                 (localid 3:obj)))))
         (ret
-          (localid 9:local$110)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 9:i32::1::0)
-        (functionid 24:_builtin::i32::i32::1::0))
-      (method
-        (methodid 9:i32::1::0)
-        (functionid 24:_builtin::i32::i32::1::1))
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
+          (localid 9:local$111)))))
   (func
     (functionid 34:rhs_default::myclass::create::0::0)
     (params)
@@ -96,20 +84,20 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$108)
+            (localid 9:local$109)
             (i32)
             (int 2:10))
           (lookup
-            (localid 9:local$839)
-            (localid 9:local$108)
+            (localid 9:local$845)
+            (localid 9:local$109)
             (methodid 9:i32::1::0))
           (calldyn
-            (localid 9:local$840)
-            (localid 9:local$839)
+            (localid 9:local$846)
+            (localid 9:local$845)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$108))))
+                (localid 9:local$109))))
           (call
             (localid 7:local$7)
             (functionid 31:rhs_default::myclass::get::2::0)
@@ -119,7 +107,7 @@ typecheck
                 (localid 4:self))
               (arg
                 (argcopy)
-                (localid 9:local$840)))))
+                (localid 9:local$846)))))
         (ret
           (localid 7:local$7)))))
   (func
@@ -139,51 +127,76 @@ typecheck
         (body
           (const
             (localid 7:local$8)
-            (i32)
+            (u64)
             (int 2:42))
           (lookup
-            (localid 9:local$503)
+            (localid 9:local$508)
             (localid 7:local$8)
             (methodid 9:i32::1::0))
           (calldyn
-            (localid 9:local$504)
-            (localid 9:local$503)
+            (localid 9:local$509)
+            (localid 9:local$508)
             (args
               (arg
                 (argcopy)
                 (localid 7:local$8))))
           (lookup
-            (localid 9:local$889)
-            (localid 9:local$504)
+            (localid 9:local$897)
+            (localid 9:local$509)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 9:local$890)
-            (localid 9:local$889)
+            (localid 9:local$898)
+            (localid 9:local$897)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$504))
+                (localid 9:local$509))
               (arg
                 (argcopy)
                 (localid 6:offset)))))
         (ret
-          (localid 9:local$890)))))
+          (localid 9:local$898)))))
   (func
-    (functionid 24:_builtin::i32::i32::1::0)
+    (functionid 24:_builtin::u64::i32::1::0)
     (params
       (param
         (localid 4:self)
-        (i32)))
+        (u64)))
     (i32)
     (vars)
     (labels
       (label
         (labelid 5:start)
-        (body)
+        (body
+          (convert
+            (localid 9:local$789)
+            (i32)
+            (localid 4:self)))
         (ret
-          (localid 4:self)))))
+          (localid 9:local$789)))))
   (func
-    (functionid 24:_builtin::i32::i32::1::1)
+    (functionid 22:_builtin::u64::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u64))
+      (param
+        (localid 5:other)
+        (u64)))
+    (u64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$423)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$423)))))
+  (func
+    (functionid 24:_builtin::i32::i32::1::0)
     (params
       (param
         (localid 4:self)
@@ -212,8 +225,26 @@ typecheck
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$218)
+            (localid 9:local$223)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$218))))))
+          (localid 9:local$223)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 24:_builtin::i32::i32::1::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (u64)
+    (methods
+      (method
+        (methodid 9:i32::1::0)
+        (functionid 24:_builtin::u64::i32::1::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::u64::+::2::0)))))

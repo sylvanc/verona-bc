@@ -68,10 +68,10 @@ liveness
             (i32)
             (int 1:0))
           (move
-            (localid 4:$925)
+            (localid 4:$937)
             (localid 6:$opt_3)))
         (ret
-          (localid 4:$925)))))
+          (localid 4:$937)))))
   (func
     (functionid 23:raise_block::main::0::0)
     (params)
@@ -82,15 +82,15 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$117)
+            (localid 9:local$118)
             (i32)
             (int 2:10))
           (const
-            (localid 9:local$118)
+            (localid 9:local$119)
             (i32)
             (int 2:42))
           (const
-            (localid 9:local$119)
+            (localid 9:local$120)
             (i32)
             (int 2:42))
           (getraise
@@ -104,7 +104,7 @@ liveness
                 (localid 7:$opt_13))
               (arg
                 (argmove)
-                (localid 9:local$119))))
+                (localid 9:local$120))))
           (lookup
             (localid 7:$opt_17)
             (localid 7:$opt_14)
@@ -118,7 +118,7 @@ liveness
                 (localid 7:$opt_14))
               (arg
                 (argmove)
-                (localid 9:local$117))))
+                (localid 9:local$118))))
           (lookup
             (localid 7:$opt_19)
             (localid 7:$opt_14)
@@ -132,7 +132,7 @@ liveness
                 (localid 7:$opt_14))
               (arg
                 (argmove)
-                (localid 9:local$118))))
+                (localid 9:local$119))))
           (const
             (localid 7:local$9)
             (i32)
@@ -142,12 +142,6 @@ liveness
             (localid 7:local$9)))
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 8:==::2::0)
-        (functionid 23:_builtin::i32::==::2::0))))
   (func
     (functionid 29:raise_block::find_first::3::0)
     (params
@@ -167,19 +161,19 @@ liveness
         (labelid 5:start)
         (body
           (getraise
-            (localid 9:local$112))
+            (localid 9:local$113))
           (stack
             (localid 7:local$7)
             (classid 24:raise_block::lambda$0::0)
             (args
               (arg
                 (argmove)
-                (localid 9:local$112))
+                (localid 9:local$113))
               (arg
                 (argmove)
                 (localid 6:target))))
           (call
-            (localid 9:local$114)
+            (localid 9:local$115)
             (functionid 34:raise_block::lambda$0::apply::2::0)
             (args
               (arg
@@ -189,7 +183,7 @@ liveness
                 (argmove)
                 (localid 1:a))))
           (call
-            (localid 9:local$116)
+            (localid 9:local$117)
             (functionid 34:raise_block::lambda$0::apply::2::0)
             (args
               (arg
@@ -217,9 +211,6 @@ liveness
       (method
         (methodid 11:apply::2::0)
         (functionid 34:raise_block::lambda$0::apply::2::0))))
-  (primitive
-    (u64)
-    (methods))
   (func
     (functionid 34:raise_block::lambda$0::apply::2::0)
     (params
@@ -237,60 +228,52 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$110)
+            (localid 9:local$111)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 13:$raise_target))
           (load
-            (localid 9:local$847)
-            (localid 9:local$110))
+            (localid 9:local$853)
+            (localid 9:local$111))
           (setraise
-            (localid 9:local$111)
-            (localid 9:local$847))
+            (localid 9:local$112)
+            (localid 9:local$853))
           (new
             (localid 7:local$6)
             (classid 20:_builtin::nomatch::0)
             (args))
           (fieldref
-            (localid 9:local$848)
+            (localid 9:local$854)
             (arg
               (argmove)
               (localid 5:$self))
             (fieldid 6:target))
           (load
-            (localid 9:local$917)
-            (localid 9:local$848))
+            (localid 9:local$926)
+            (localid 9:local$854))
           (eq
-            (localid 9:local$511)
+            (localid 9:local$516)
             (localid 1:x)
-            (localid 9:local$917)))
+            (localid 9:local$926)))
         (cond
-          (localid 9:local$511)
-          (labelid 8:body$108)
-          (labelid 8:join$109)))
+          (localid 9:local$516)
+          (labelid 8:body$109)
+          (labelid 8:join$110)))
       (label
-        (labelid 8:body$108)
+        (labelid 8:body$109)
         (body)
         (raise
           (localid 1:x)
           (i32)))
       (label
-        (labelid 8:join$109)
+        (labelid 8:join$110)
         (body)
         (ret
           (localid 7:local$6)))))
   (class
     (classid 20:_builtin::nomatch::0)
     (fields)
-    (methods))
-  (primitive
-    (ref
-      (u64))
-    (methods))
-  (primitive
-    (ref
-      (i32))
     (methods))
   (func
     (functionid 31:_builtin::nomatch::create::0::0)
@@ -302,11 +285,11 @@ liveness
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$74)
+            (localid 8:local$75)
             (classid 20:_builtin::nomatch::0)
             (args)))
         (ret
-          (localid 8:local$74)))))
+          (localid 8:local$75)))))
   (func
     (functionid 23:_builtin::i32::==::2::0)
     (params
@@ -323,11 +306,28 @@ liveness
         (labelid 5:start)
         (body
           (eq
-            (localid 9:local$237)
+            (localid 9:local$242)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$237)))))
+          (localid 9:local$242)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:==::2::0)
+        (functionid 23:_builtin::i32::==::2::0))))
+  (primitive
+    (u64)
+    (methods))
+  (primitive
+    (ref
+      (u64))
+    (methods))
+  (primitive
+    (ref
+      (i32))
+    (methods))
   (primitive
     (bool)
     (methods)))

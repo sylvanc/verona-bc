@@ -874,10 +874,9 @@ namespace vbci
         break;
 
       case ValueType::CownRef:
-      {
-        v = cown->load();
-        break;
-      }
+        // Loading a cown from a readonly reference isn't readonly.
+        return cown->load();
+
       default:
         Value::error(Error::BadLoadTarget);
     }

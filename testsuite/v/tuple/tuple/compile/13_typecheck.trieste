@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$921)
+            (localid 4:$933)
             (functionid 17:tuple::main::0::0)
             (args)))
         (ret
-          (localid 4:$921)))))
+          (localid 4:$933)))))
   (func
     (functionid 17:tuple::main::0::0)
     (params)
@@ -27,7 +27,7 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$105)
+            (localid 9:local$106)
             (i32)
             (int 1:3))
           (call
@@ -36,9 +36,9 @@ typecheck
             (args
               (arg
                 (argcopy)
-                (localid 9:local$105))))
+                (localid 9:local$106))))
           (const
-            (localid 9:local$106)
+            (localid 9:local$107)
             (i32)
             (int 1:5))
           (call
@@ -47,104 +47,104 @@ typecheck
             (args
               (arg
                 (argcopy)
-                (localid 9:local$106))))
+                (localid 9:local$107))))
           (newarrayconst
-            (localid 9:local$499)
+            (localid 9:local$504)
             (tupletype
               (i32)
               (i32))
             (int 1:2))
           (arrayrefconst
-            (localid 9:local$500)
+            (localid 9:local$505)
             (arg
               (argcopy)
-              (localid 9:local$499))
+              (localid 9:local$504))
             (int 1:0))
           (store
-            (localid 9:local$501)
-            (localid 9:local$500)
+            (localid 9:local$506)
+            (localid 9:local$505)
             (arg
               (argcopy)
               (localid 7:local$5)))
           (arrayrefconst
-            (localid 9:local$502)
+            (localid 9:local$507)
             (arg
               (argcopy)
-              (localid 9:local$499))
+              (localid 9:local$504))
             (int 1:1))
           (store
-            (localid 9:local$503)
-            (localid 9:local$502)
+            (localid 9:local$508)
+            (localid 9:local$507)
             (arg
               (argcopy)
               (localid 7:local$6)))
           (copy
-            (localid 9:local$894)
+            (localid 9:local$902)
             (localid 1:t))
           (copy
             (localid 1:t)
-            (localid 9:local$499))
+            (localid 9:local$504))
           (arrayrefconst
-            (localid 9:local$504)
+            (localid 9:local$509)
             (arg
               (argcopy)
               (localid 1:t))
             (int 1:0))
           (load
-            (localid 9:local$505)
-            (localid 9:local$504))
+            (localid 9:local$510)
+            (localid 9:local$509))
           (copy
             (localid 1:a)
-            (localid 9:local$505))
+            (localid 9:local$510))
           (arrayrefconst
-            (localid 9:local$506)
+            (localid 9:local$511)
             (arg
               (argcopy)
               (localid 1:t))
             (int 1:1))
           (load
-            (localid 9:local$507)
-            (localid 9:local$506))
+            (localid 9:local$512)
+            (localid 9:local$511))
           (copy
             (localid 1:b)
-            (localid 9:local$507))
+            (localid 9:local$512))
           (newarrayconst
-            (localid 9:local$508)
+            (localid 9:local$513)
             (tupletype
-              (dyn)
-              (dyn))
+              (i32)
+              (i32))
             (int 1:2))
           (arrayrefconst
-            (localid 9:local$509)
+            (localid 9:local$514)
             (arg
               (argcopy)
-              (localid 9:local$508))
+              (localid 9:local$513))
             (int 1:0))
           (store
-            (localid 9:local$510)
-            (localid 9:local$509)
+            (localid 9:local$515)
+            (localid 9:local$514)
             (arg
               (argcopy)
-              (localid 9:local$505)))
+              (localid 9:local$510)))
           (arrayrefconst
-            (localid 9:local$511)
+            (localid 9:local$516)
             (arg
               (argcopy)
-              (localid 9:local$508))
+              (localid 9:local$513))
             (int 1:1))
           (store
-            (localid 9:local$512)
-            (localid 9:local$511)
+            (localid 9:local$517)
+            (localid 9:local$516)
             (arg
               (argcopy)
-              (localid 9:local$507)))
+              (localid 9:local$512)))
           (lookup
-            (localid 9:local$107)
+            (localid 9:local$108)
             (localid 1:a)
             (methodid 7:+::2::0))
           (calldyn
+            (localid 9:local$109)
             (localid 9:local$108)
-            (localid 9:local$107)
             (args
               (arg
                 (argcopy)
@@ -153,13 +153,7 @@ typecheck
                 (argcopy)
                 (localid 1:b)))))
         (ret
-          (localid 9:local$108)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
+          (localid 9:local$109)))))
   (func
     (functionid 27:_builtin::i32::create::1::0)
     (params
@@ -174,10 +168,6 @@ typecheck
         (body)
         (ret
           (localid 4:some)))))
-  (primitive
-    (ref
-      (i32))
-    (methods))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -194,8 +184,18 @@ typecheck
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$216)
+            (localid 9:local$221)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$216))))))
+          (localid 9:local$221)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (ref
+      (i32))
+    (methods)))

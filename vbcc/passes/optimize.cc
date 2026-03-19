@@ -417,6 +417,15 @@ namespace vbcc
               inlined_stmts.push_back(cloned);
             }
 
+            auto ret_it = param_map.find(ret_name);
+
+            if (ret_it != param_map.end())
+            {
+              Node copy =
+                Copy << (LocalId ^ call_dst_name) << (LocalId ^ ret_it->second);
+              inlined_stmts.push_back(copy);
+            }
+
             // Replace the Call with the inlined statements.
             // Insert all statements at the Call's position, then remove
             // the Call.

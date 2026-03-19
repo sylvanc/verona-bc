@@ -179,6 +179,12 @@ namespace vc
                        << _(Dot);
           },
 
+        // Prefix function call with parens at expression start: f(args)
+        // Must be before juxtaposition rules so that the Tuple binds to
+        // the FuncName rather than being consumed by ValuePat * ValuePat.
+        In(Expr) * Start * T(FuncName)[FuncName] * T(Tuple)[Tuple] >>
+          [](Match& _) { return Call << _(FuncName) << (Args << *_(Tuple)); },
+
         // Qualified zero-arg function call followed by dot: Ns::f.method
         In(Expr) * T(FuncName)[FuncName] * T(Dot)[Dot] >>
           [](Match& _) {
@@ -197,6 +203,15 @@ namespace vc
           [](Match& _) {
             return CallDyn << (Expr << _(Lhs)) << (_(Dot) / Ident)
                            << (_(Dot) / TypeArgs) << (Args << (Expr << _(Rhs)));
+          },
+
+        // Dot with RHS FuncName at end of expression: a.method FuncName
+        // Safe to convert FuncName to a zero-arg call because nothing follows.
+        In(Expr) * ValuePat[Lhs] * T(Dot)[Dot] * T(FuncName)[Rhs] * End >>
+          [](Match& _) {
+            return CallDyn << (Expr << _(Lhs)) << (_(Dot) / Ident)
+                           << (_(Dot) / TypeArgs)
+                           << (Args << (Expr << (Call << _(Rhs) << Args)));
           },
 
         // Dot without arguments.

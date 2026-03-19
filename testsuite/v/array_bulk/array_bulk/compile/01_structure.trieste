@@ -253,7 +253,7 @@ structure
                 (ident 6:u8_dst)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -389,7 +389,7 @@ structure
                 (ident 7:i32_dst)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -785,7 +785,7 @@ structure
                 (ident 7:f64_dst)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -1018,7 +1018,7 @@ structure
                 (ident 9:usize_dst)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -1209,7 +1209,7 @@ structure
                 (ident 7:overlap)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -1427,7 +1427,7 @@ structure
                 (ident 8:overlap2)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -1668,7 +1668,7 @@ structure
                 (ident 7:obj_dst)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -1968,7 +1968,7 @@ structure
                 (ident 6:u8_dst)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -2195,7 +2195,7 @@ structure
                 (ident 11:obj_overlap)
                 (typeargs)))
             (dot
-              (ident 4:copy)
+              (ident 9:copy_from)
               (typeargs))
             (tuple
               (expr
@@ -2836,6 +2836,7 @@ structure
           apply = function
           compare = function
           copy = function
+          copy_from = function
           create = function
           each = function
           fill = function
@@ -3345,13 +3346,152 @@ structure
                         (typeargs))))))))
           (function
             {
+              a = let
+              len = paramdef
+              n = let
+              offset = paramdef
+              self = paramdef}
+            (rhs)
+            (ident 4:copy)
+            (typeparams)
+            (params
+              (paramdef
+                (ident 4:self)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 5:array)
+                      (typeargs
+                        (type
+                          (typename
+                            (nameelement
+                              (ident 1:T)
+                              (typeargs))))))))
+                (body))
+              (paramdef
+                (ident 6:offset)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))
+                (body))
+              (paramdef
+                (ident 3:len)
+                (type
+                  (typename
+                    (nameelement
+                      (ident 5:usize)
+                      (typeargs))))
+                (body)))
+            (type
+              (typename
+                (nameelement
+                  (ident 5:array)
+                  (typeargs
+                    (type
+                      (typename
+                        (nameelement
+                          (ident 1:T)
+                          (typeargs))))))))
+            (where)
+            (body
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:n)
+                      (type
+                        (typevar))))
+                  (expr
+                    (exprseq
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 4:self)
+                            (typeargs)))
+                        (dot
+                          (ident 4:size)
+                          (typeargs))
+                        (funcname
+                          (nameelement
+                            (symbolid 1:-)
+                            (typeargs)))
+                        (funcname
+                          (nameelement
+                            (ident 6:offset)
+                            (typeargs)))))
+                    (funcname
+                      (nameelement
+                        (ident 3:min)
+                        (typeargs)))
+                    (funcname
+                      (nameelement
+                        (ident 3:len)
+                        (typeargs))))))
+              (expr
+                (=
+                  (expr
+                    (let
+                      (ident 1:a)
+                      (type
+                        (typevar))))
+                  (expr
+                    (triplecolon
+                      (nameelement
+                        (ident 8:newarray)
+                        (typeargs
+                          (type
+                            (typename
+                              (nameelement
+                                (ident 1:T)
+                                (typeargs)))))))
+                    (exprseq
+                      (expr
+                        (funcname
+                          (nameelement
+                            (ident 1:n)
+                            (typeargs))))))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:a)
+                    (typeargs)))
+                (dot
+                  (ident 9:copy_from)
+                  (typeargs))
+                (tuple
+                  (expr
+                    (int 1:0))
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 4:self)
+                        (typeargs))))
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 6:offset)
+                        (typeargs))))
+                  (expr
+                    (funcname
+                      (nameelement
+                        (ident 1:n)
+                        (typeargs))))))
+              (expr
+                (funcname
+                  (nameelement
+                    (ident 1:a)
+                    (typeargs))))))
+          (function
+            {
               dst_offset = paramdef
               len = paramdef
               self = paramdef
               src = paramdef
               src_offset = paramdef}
             (rhs)
-            (ident 4:copy)
+            (ident 9:copy_from)
             (typeparams)
             (params
               (paramdef
@@ -19187,7 +19327,7 @@ structure
                     (ident 6:result)
                     (typeargs)))
                 (dot
-                  (ident 4:copy)
+                  (ident 9:copy_from)
                   (typeargs))
                 (tuple
                   (expr
@@ -19216,7 +19356,7 @@ structure
                     (ident 6:result)
                     (typeargs)))
                 (dot
-                  (ident 4:copy)
+                  (ident 9:copy_from)
                   (typeargs))
                 (tuple
                   (expr

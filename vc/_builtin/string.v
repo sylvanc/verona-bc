@@ -77,8 +77,8 @@ string
   +(self: string, other: string): string
   {
     let result = array[u8]::fill(self.size + other.size);
-    result.copy(0, self.data, 0, self.size);
-    result.copy(self.size, other.data, 0, other.size);
+    result.copy_from(0, self.data, 0, self.size);
+    result.copy_from(self.size, other.data, 0, other.size);
     string(result)
   }
 }

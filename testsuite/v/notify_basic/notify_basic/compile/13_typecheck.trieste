@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 4:$916)
+            (localid 4:$928)
             (functionid 24:notify_basic::main::0::0)
             (args)))
         (ret
-          (localid 4:$916)))))
+          (localid 4:$928)))))
   (func
     (functionid 24:notify_basic::main::0::0)
     (params)
@@ -32,12 +32,12 @@ typecheck
             (functionid 37:_builtin::ffi::external::create::0::0)
             (args))
           (lookup
-            (localid 9:local$504)
+            (localid 9:local$509)
             (localid 7:local$9)
             (methodid 9:add::1::0))
           (calldyn
-            (localid 9:local$505)
-            (localid 9:local$504)
+            (localid 9:local$510)
+            (localid 9:local$509)
             (args
               (arg
                 (argcopy)
@@ -47,12 +47,12 @@ typecheck
             (functionid 37:_builtin::ffi::external::create::0::0)
             (args))
           (lookup
-            (localid 9:local$506)
+            (localid 9:local$511)
             (localid 8:local$10)
             (methodid 12:remove::1::0))
           (calldyn
-            (localid 9:local$507)
-            (localid 9:local$506)
+            (localid 9:local$512)
+            (localid 9:local$511)
             (args
               (arg
                 (argcopy)
@@ -62,7 +62,7 @@ typecheck
             (i32)
             (int 1:0))
           (copy
-            (localid 9:local$508)
+            (localid 9:local$513)
             (localid 1:x))
           (copy
             (localid 1:x)
@@ -80,9 +80,6 @@ typecheck
             (int 1:0)))
         (ret
           (localid 8:local$13)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 37:_builtin::ffi::external::create::0::0)
     (params)
@@ -108,23 +105,23 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 9:local$513)
+            (localid 9:local$518)
             (functionid 28:_builtin::none::create::0::0)
             (args))
           (call
-            (localid 9:local$115)
+            (localid 9:local$116)
             (functionid 28:_builtin::cown::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$513))))
+                (localid 9:local$518))))
           (new
             (localid 8:local$17)
             (classid 26:_builtin::ffi::external::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$115)))))
+                (localid 9:local$116)))))
         (ret
           (localid 8:local$17)))))
   (func
@@ -137,7 +134,7 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 9:local$113)
+            (localid 9:local$114)
             (functionid 36:notify_basic::lambda$0::create::0::0)
             (args))
           (call
@@ -146,12 +143,9 @@ typecheck
             (args
               (arg
                 (argcopy)
-                (localid 9:local$113)))))
+                (localid 9:local$114)))))
         (ret
           (localid 7:local$8)))))
-  (primitive
-    (none)
-    (methods))
   (func
     (functionid 36:notify_basic::lambda$0::create::0::0)
     (params)
@@ -187,14 +181,14 @@ typecheck
                 (argcopy)
                 (localid 1:f))))
           (registerexternalnotify
-            (localid 9:local$842)
+            (localid 9:local$848)
             (localid 8:local$15))
           (const
-            (localid 8:none$917)
+            (localid 8:none$929)
             (none)
             (none)))
         (ret
-          (localid 8:none$917)))))
+          (localid 8:none$929)))))
   (class
     (classid 16:_builtin::ffi::0)
     (fields)
@@ -222,16 +216,10 @@ typecheck
         (labelid 5:start)
         (body
           (makecallback
-            (localid 9:local$509)
+            (localid 9:local$514)
             (localid 8:callable)))
         (ret
-          (localid 9:local$509)))))
-  (primitive
-    (callback)
-    (methods
-      (method
-        (methodid 11:apply::1::0)
-        (functionid 36:_builtin::ffi::callback::apply::1::0))))
+          (localid 9:local$514)))))
   (func
     (functionid 35:notify_basic::lambda$0::apply::1::0)
     (params
@@ -245,7 +233,7 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$112)
+            (localid 9:local$113)
             (u64)
             (int 1:0))
           (ffi
@@ -254,16 +242,13 @@ typecheck
             (args
               (arg
                 (argcopy)
-                (localid 9:local$112))))
+                (localid 9:local$113))))
           (const
-            (localid 8:none$918)
+            (localid 8:none$930)
             (none)
             (none)))
         (ret
-          (localid 8:none$918)))))
-  (primitive
-    (u64)
-    (methods))
+          (localid 8:none$930)))))
   (class
     (classid 26:_builtin::ffi::external::0)
     (fields
@@ -291,15 +276,15 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$79)
+            (localid 8:local$80)
             (none)
             (none))
           (const
-            (localid 8:none$920)
+            (localid 8:none$932)
             (none)
             (none)))
         (ret
-          (localid 8:none$920)))))
+          (localid 8:none$932)))))
   (func
     (functionid 28:_builtin::cown::create::1::0)
     (params
@@ -314,31 +299,27 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 8:local$53)
+            (localid 8:local$54)
             (functionid 38:_builtin::cown::lambda$3::create::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:some))))
           (lookup
-            (localid 9:local$555)
-            (localid 8:local$53)
+            (localid 9:local$561)
+            (localid 8:local$54)
             (methodid 11:apply::1::0))
           (whendyn
-            (localid 9:local$556)
-            (localid 9:local$555)
+            (localid 9:local$562)
+            (localid 9:local$561)
             (args
               (arg
                 (argcopy)
-                (localid 8:local$53)))
+                (localid 8:local$54)))
             (cown
               (none))))
         (ret
-          (localid 9:local$556)))))
-  (primitive
-    (cown
-      (none))
-    (methods))
+          (localid 9:local$562)))))
   (func
     (functionid 38:_builtin::cown::lambda$3::create::1::0)
     (params
@@ -352,14 +333,14 @@ typecheck
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$52)
+            (localid 8:local$53)
             (classid 27:_builtin::cown::lambda$3::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:some)))))
         (ret
-          (localid 8:local$52)))))
+          (localid 8:local$53)))))
   (func
     (functionid 36:_builtin::ffi::callback::apply::1::0)
     (params
@@ -373,13 +354,10 @@ typecheck
         (labelid 5:start)
         (body
           (callbackptr
-            (localid 9:local$510)
+            (localid 9:local$515)
             (localid 4:self)))
         (ret
-          (localid 9:local$510)))))
-  (primitive
-    (ptr)
-    (methods))
+          (localid 9:local$515)))))
   (class
     (classid 27:_builtin::cown::lambda$3::0)
     (fields
@@ -403,29 +381,20 @@ typecheck
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$156)
+            (localid 9:local$161)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 4:some))
           (load
-            (localid 9:local$866)
-            (localid 9:local$156))
+            (localid 9:local$874)
+            (localid 9:local$161))
           (const
-            (localid 8:none$919)
+            (localid 8:none$931)
             (none)
             (none)))
         (ret
-          (localid 8:none$919)))))
-  (primitive
-    (ref
-      (none))
-    (methods))
-  (primitive
-    (ref
-      (cown
-        (none)))
-    (methods))
+          (localid 8:none$931)))))
   (func
     (functionid 34:_builtin::ffi::external::add::1::0)
     (params
@@ -443,38 +412,38 @@ typecheck
             (functionid 47:_builtin::ffi::external::lambda$1::create::0::0)
             (args))
           (lookup
-            (localid 9:local$116)
+            (localid 9:local$117)
             (localid 4:self)
             (methodid 7:c::1::0))
           (calldyn
+            (localid 9:local$118)
             (localid 9:local$117)
-            (localid 9:local$116)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (lookup
-            (localid 9:local$514)
+            (localid 9:local$519)
             (localid 8:local$20)
             (methodid 11:apply::2::0))
           (whendyn
-            (localid 9:local$515)
-            (localid 9:local$514)
+            (localid 9:local$520)
+            (localid 9:local$519)
             (args
               (arg
                 (argcopy)
                 (localid 8:local$20))
               (arg
                 (argcopy)
-                (localid 9:local$117)))
+                (localid 9:local$118)))
             (cown
               (none)))
           (const
-            (localid 8:none$923)
+            (localid 8:none$935)
             (none)
             (none)))
         (ret
-          (localid 8:none$923)))))
+          (localid 8:none$935)))))
   (func
     (functionid 37:_builtin::ffi::external::remove::1::0)
     (params
@@ -492,38 +461,38 @@ typecheck
             (functionid 47:_builtin::ffi::external::lambda$2::create::0::0)
             (args))
           (lookup
-            (localid 9:local$118)
+            (localid 9:local$119)
             (localid 4:self)
             (methodid 7:c::1::0))
           (calldyn
+            (localid 9:local$120)
             (localid 9:local$119)
-            (localid 9:local$118)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (lookup
-            (localid 9:local$516)
+            (localid 9:local$521)
             (localid 8:local$23)
             (methodid 11:apply::2::0))
           (whendyn
-            (localid 9:local$517)
-            (localid 9:local$516)
+            (localid 9:local$522)
+            (localid 9:local$521)
             (args
               (arg
                 (argcopy)
                 (localid 8:local$23))
               (arg
                 (argcopy)
-                (localid 9:local$119)))
+                (localid 9:local$120)))
             (cown
               (none)))
           (const
-            (localid 8:none$921)
+            (localid 8:none$933)
             (none)
             (none)))
         (ret
-          (localid 8:none$921)))))
+          (localid 8:none$933)))))
   (func
     (functionid 47:_builtin::ffi::external::lambda$2::create::0::0)
     (params)
@@ -560,10 +529,10 @@ typecheck
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$512)
+            (localid 9:local$517)
             (localid 8:local$16)))
         (ret
-          (localid 9:local$512)))))
+          (localid 9:local$517)))))
   (func
     (functionid 37:_builtin::ffi::external::c::1::ref::0)
     (params
@@ -579,13 +548,13 @@ typecheck
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$114)
+            (localid 9:local$115)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 1:c)))
         (ret
-          (localid 9:local$114)))))
+          (localid 9:local$115)))))
   (class
     (classid 36:_builtin::ffi::external::lambda$2::0)
     (fields)
@@ -612,11 +581,11 @@ typecheck
           (removeexternal
             (localid 8:local$22))
           (const
-            (localid 8:none$922)
+            (localid 8:none$934)
             (none)
             (none)))
         (ret
-          (localid 8:none$922)))))
+          (localid 8:none$934)))))
   (func
     (functionid 47:_builtin::ffi::external::lambda$1::create::0::0)
     (params)
@@ -658,11 +627,42 @@ typecheck
           (addexternal
             (localid 8:local$19))
           (const
-            (localid 8:none$924)
+            (localid 8:none$936)
             (none)
             (none)))
         (ret
-          (localid 8:none$924)))))
+          (localid 8:none$936)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (none)
+    (methods))
+  (primitive
+    (callback)
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 36:_builtin::ffi::callback::apply::1::0))))
+  (primitive
+    (u64)
+    (methods))
+  (primitive
+    (cown
+      (none))
+    (methods))
+  (primitive
+    (ptr)
+    (methods))
+  (primitive
+    (ref
+      (none))
+    (methods))
+  (primitive
+    (ref
+      (cown
+        (none)))
+    (methods))
   (lib
     (string 0:)
     (symbols

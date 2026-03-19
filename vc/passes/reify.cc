@@ -1,6 +1,8 @@
 #include "../lang.h"
 #include "../subtype.h"
 
+#include <vbcc/irsubtype.h>
+
 namespace vc
 {
   const std::map<std::string_view, Token> wrapper_types = {
@@ -102,9 +104,7 @@ namespace vc
           // for a second pass when all callees are reified. The first
           // pass may have produced a partial return type (e.g., nomatch
           // from match arms when the main arm's CallDyn wasn't tracked).
-          if (
-            r->reification &&
-            (r->def / Type)->front() == TypeVar)
+          if (r->reification && (r->def / Type)->front() == TypeVar)
           {
             deferred_typevar.push_back(r);
           }
@@ -151,8 +151,7 @@ namespace vc
             }
             else if (stmt->in({New, Stack}))
             {
-              local_types[(stmt / LocalId)->location()] =
-                clone(stmt / ClassId);
+              local_types[(stmt / LocalId)->location()] = clone(stmt / ClassId);
             }
             else if (stmt == FieldRef)
             {
@@ -168,8 +167,8 @@ namespace vc
             else if (stmt == Lookup)
             {
               auto mid = (stmt / MethodId)->location().view();
-              lookup_info[(stmt / LocalId)->location()] =
-                {std::string(mid), (stmt / Rhs)->location()};
+              lookup_info[(stmt / LocalId)->location()] = {
+                std::string(mid), (stmt / Rhs)->location()};
             }
             else if (stmt == Call)
             {
@@ -327,11 +326,55 @@ namespace vc
                                << (Return << (LocalId ^ id)))));
 
       // Add reified classes, type aliases, and functions.
-      // Iterate in insertion order (not pointer order) for determinism.
+      // Emit non-Primitive entries first so that Type entries (which
+      // define TypeId resolutions) are in top before we check Primitives.
       for (auto& key : map_order)
         for (auto& r : map[key])
-          if (r.reification)
+          if (r.reification && r.reification != Primitive)
             top << r.reification;
+
+      // Emit Primitives, deduplicating wrappers whose inner types are
+      // invariantly equivalent after alias/shape resolution. Uses
+      // IRSubtype which resolves TypeId through the Type entries now in
+      // top, handles union set equality, and wrapper invariance.
+      {
+        WFContext wf_ctx(wfIR);
+        std::vector<std::pair<Token, Node>> emitted;
+
+        for (auto& key : map_order)
+        {
+          for (auto& r : map[key])
+          {
+            if (!r.reification || r.reification != Primitive)
+              continue;
+
+            auto ptype = r.reification / Type;
+
+            if (ptype->in({Array, Ref, Cown}))
+            {
+              auto wrapper = ptype->type();
+              auto inner = ptype->front();
+              bool dup = false;
+
+              for (auto& [ew, ei] : emitted)
+              {
+                if (ew == wrapper && vbcc::IRSubtype.invariant(top, inner, ei))
+                {
+                  dup = true;
+                  break;
+                }
+              }
+
+              if (dup)
+                continue;
+
+              emitted.emplace_back(wrapper, inner);
+            }
+
+            top << r.reification;
+          }
+        }
+      }
 
       // Add reified libraries.
       for (auto& [_, lib] : libs)
@@ -807,8 +850,7 @@ namespace vc
     // Given a reified receiver type (ClassId or primitive) and a MethodId
     // string, find the method's function return type by searching the
     // class's registered Methods.
-    Node find_method_return_type(
-      Node recv_type, const std::string& method_id)
+    Node find_method_return_type(Node recv_type, const std::string& method_id)
     {
       // Find the class reification matching the receiver type.
       for (auto& key : map_order)
@@ -1251,8 +1293,8 @@ namespace vc
             reify_lookup(n, r.subst);
             // After reify_lookup: Lookup << dst << src << MethodId.
             auto mid = (n / MethodId)->location().view();
-            lookup_info[(n / LocalId)->location()] =
-              {std::string(mid), recv_loc};
+            lookup_info[(n / LocalId)->location()] = {
+              std::string(mid), recv_loc};
           }
           else if (n == Call)
           {
@@ -2465,8 +2507,8 @@ namespace vc
 
           if (recv_it != local_types.end())
           {
-            auto ret = find_method_return_type(
-              recv_it->second, li->second.method_id);
+            auto ret =
+              find_method_return_type(recv_it->second, li->second.method_id);
 
             if (ret)
               inner_type = ret;

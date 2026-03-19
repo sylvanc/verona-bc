@@ -125,15 +125,26 @@ namespace vc
       ULong >> AxiomEq,
       F32 >> AxiomEq,
       F64 >> AxiomEq,
+      DefaultInt >> AxiomEq,
+      DefaultFloat >> AxiomEq,
       TypeSelf >> AxiomEq,
+      TypeVar >> AxiomEq,
     },
     {
       // TypeSelf is always bound through implications (TypeSelf <: T and
       // T <: TypeSelf). It should never trigger contradiction detection
       // because the implications may not yet be decomposed when the atom
       // is checked.
-      TypeSelf >>
-        [](const SequentCtx&, Node&, Node&) { return false; },
+      TypeSelf >> AxiomFalse,
+
+      // DefaultInt/DefaultFloat are unresolved literals that could become
+      // any primitive. They never contradict any type.
+      DefaultInt >> AxiomFalse,
+      DefaultFloat >> AxiomFalse,
+
+      // TypeVar is an unresolved type parameter. Like defaults, it
+      // never contradicts — it could become anything.
+      TypeVar >> AxiomFalse,
 
       TypeName >>
         [](const SequentCtx& ctx, Node& l, Node& r) {

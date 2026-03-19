@@ -2,14 +2,18 @@
 
 ## To Do
 
-Review `iowise`.
-- Buffer final can't call flush, that relies on mutation.
-- Dispose pattern?
+Optimization.
+- Sequent calculus optimizations.
+- Overall compile times.
+
+Compiler errors.
+- Not getting node based errors.
 
 Semantics.
-- How does `:::arraycmp` work with non-primitives?
 - Remove `arrayiter`?
 - Region creation.
+- Null terminators in `string`?
+- Fix path compression, storing rank in Pending Location.
 
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 

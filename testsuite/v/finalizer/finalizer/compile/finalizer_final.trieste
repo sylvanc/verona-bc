@@ -7,7 +7,7 @@ liveness
     (params)
     (i32)
     (vars
-      (localid 4:$915))
+      (localid 4:$927))
     (labels
       (label
         (labelid 5:start)
@@ -17,7 +17,7 @@ liveness
             (i32)
             (int 1:0))
           (move
-            (localid 4:$915)
+            (localid 4:$927)
             (localid 6:$opt_0))
           (const
             (localid 6:$opt_2)
@@ -42,7 +42,7 @@ liveness
                 (argmove)
                 (localid 6:$opt_6)))))
         (ret
-          (localid 4:$915)))))
+          (localid 4:$927)))))
   (func
     (functionid 21:finalizer::main::0::0)
     (params)
@@ -61,7 +61,7 @@ liveness
             (localid 6:result)
             (localid 7:local$8))
           (const
-            (localid 9:local$110)
+            (localid 9:local$111)
             (i32)
             (int 2:10))
           (new
@@ -70,9 +70,9 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$110))))
+                (localid 9:local$111))))
           (const
-            (localid 9:local$111)
+            (localid 9:local$112)
             (i32)
             (int 2:20))
           (new
@@ -81,12 +81,9 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$111)))))
+                (localid 9:local$112)))))
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 33:finalizer::resource::create::1::0)
     (params
@@ -140,7 +137,7 @@ liveness
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$504)
+            (localid 9:local$509)
             (localid 7:$opt_10))
           (ffi
             (localid 7:local$6)
@@ -148,16 +145,13 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$504))))
+                (localid 9:local$509))))
           (const
-            (localid 8:none$916)
+            (localid 8:none$928)
             (none)
             (none)))
         (ret
-          (localid 8:none$916)))))
-  (primitive
-    (none)
-    (methods))
+          (localid 8:none$928)))))
   (func
     (functionid 30:finalizer::resource::val::1::0)
     (params
@@ -177,10 +171,10 @@ liveness
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$502)
+            (localid 9:local$507)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$502)))))
+          (localid 9:local$507)))))
   (func
     (functionid 35:finalizer::resource::val::1::ref::0)
     (params
@@ -195,13 +189,19 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$109)
+            (localid 9:local$110)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$110)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (none)
+    (methods))
   (primitive
     (ref
       (i32))

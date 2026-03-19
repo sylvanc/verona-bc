@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$915)
+            (localid 4:$927)
             (functionid 21:finalizer::main::0::0)
             (args)))
         (ret
-          (localid 4:$915)))))
+          (localid 4:$927)))))
   (func
     (functionid 21:finalizer::main::0::0)
     (params)
@@ -32,13 +32,13 @@ validids
             (i32)
             (int 1:0))
           (copy
-            (localid 9:local$505)
+            (localid 9:local$510)
             (localid 6:result))
           (copy
             (localid 6:result)
             (localid 7:local$8))
           (const
-            (localid 9:local$110)
+            (localid 9:local$111)
             (i32)
             (int 2:10))
           (call
@@ -47,15 +47,15 @@ validids
             (args
               (arg
                 (argcopy)
-                (localid 9:local$110))))
+                (localid 9:local$111))))
           (copy
-            (localid 9:local$506)
+            (localid 9:local$511)
             (localid 1:a))
           (copy
             (localid 1:a)
             (localid 7:local$9))
           (const
-            (localid 9:local$111)
+            (localid 9:local$112)
             (i32)
             (int 2:20))
           (call
@@ -64,18 +64,15 @@ validids
             (args
               (arg
                 (argcopy)
-                (localid 9:local$111))))
+                (localid 9:local$112))))
           (copy
-            (localid 9:local$507)
+            (localid 9:local$512)
             (localid 1:b))
           (copy
             (localid 1:b)
             (localid 8:local$10)))
         (ret
           (localid 6:result)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 33:finalizer::resource::create::1::0)
     (params
@@ -123,12 +120,12 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$503)
+            (localid 9:local$508)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$504)
-            (localid 9:local$503)
+            (localid 9:local$509)
+            (localid 9:local$508)
             (args
               (arg
                 (argcopy)
@@ -139,16 +136,13 @@ validids
             (args
               (arg
                 (argcopy)
-                (localid 9:local$504))))
+                (localid 9:local$509))))
           (const
-            (localid 8:none$916)
+            (localid 8:none$928)
             (none)
             (none)))
         (ret
-          (localid 8:none$916)))))
-  (primitive
-    (none)
-    (methods))
+          (localid 8:none$928)))))
   (func
     (functionid 30:finalizer::resource::val::1::0)
     (params
@@ -169,10 +163,10 @@ validids
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$502)
+            (localid 9:local$507)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$502)))))
+          (localid 9:local$507)))))
   (func
     (functionid 35:finalizer::resource::val::1::ref::0)
     (params
@@ -187,13 +181,19 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$109)
+            (localid 9:local$110)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$110)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (none)
+    (methods))
   (primitive
     (ref
       (i32))

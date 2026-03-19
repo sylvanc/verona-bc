@@ -12,11 +12,11 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$913)
+            (localid 4:$925)
             (functionid 20:functype::main::0::0)
             (args)))
         (ret
-          (localid 4:$913)))))
+          (localid 4:$925)))))
   (func
     (functionid 20:functype::main::0::0)
     (params)
@@ -31,13 +31,13 @@ assignids
             (functionid 32:functype::lambda$0::create::0::0)
             (args))
           (copy
-            (localid 9:local$505)
+            (localid 9:local$510)
             (localid 3:inc))
           (copy
             (localid 3:inc)
             (localid 8:local$10))
           (const
-            (localid 9:local$114)
+            (localid 9:local$115)
             (i32)
             (int 2:41))
           (call
@@ -49,15 +49,9 @@ assignids
                 (localid 3:inc))
               (arg
                 (argcopy)
-                (localid 9:local$114)))))
+                (localid 9:local$115)))))
         (ret
           (localid 8:local$11)))))
-  (primitive
-    (i32)
-    (methods
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
   (func
     (functionid 32:functype::lambda$0::create::0::0)
     (params)
@@ -89,12 +83,12 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$110)
+            (localid 9:local$111)
             (localid 1:f)
             (methodid 11:apply::2::0))
           (calldyn
+            (localid 9:local$112)
             (localid 9:local$111)
-            (localid 9:local$110)
             (args
               (arg
                 (argcopy)
@@ -103,7 +97,7 @@ assignids
                 (argcopy)
                 (localid 1:x)))))
         (ret
-          (localid 9:local$111)))))
+          (localid 9:local$112)))))
   (type
     (typeid 17:functype::fn$4::0)
     (classid 21:functype::lambda$0::0))
@@ -134,12 +128,12 @@ assignids
             (i32)
             (int 1:1))
           (lookup
-            (localid 9:local$112)
+            (localid 9:local$113)
             (localid 1:x)
             (methodid 7:+::2::0))
           (calldyn
+            (localid 9:local$114)
             (localid 9:local$113)
-            (localid 9:local$112)
             (args
               (arg
                 (argcopy)
@@ -148,7 +142,7 @@ assignids
                 (argcopy)
                 (localid 7:local$9)))))
         (ret
-          (localid 9:local$113)))))
+          (localid 9:local$114)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -165,8 +159,14 @@ assignids
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$222)
+            (localid 9:local$227)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$222))))))
+          (localid 9:local$227)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0)))))

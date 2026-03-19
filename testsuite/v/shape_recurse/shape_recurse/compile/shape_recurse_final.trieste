@@ -27,14 +27,14 @@ liveness
             (localid 6:$opt_1)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 4:$914)
+            (localid 4:$926)
             (localid 6:$opt_4)
             (args
               (arg
                 (argmove)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 4:$914)))))
+          (localid 4:$926)))))
   (func
     (functionid 25:shape_recurse::main::0::0)
     (params)
@@ -45,7 +45,7 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$114)
+            (localid 9:local$115)
             (i32)
             (int 2:42))
           (new
@@ -54,7 +54,7 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$114))))
+                (localid 9:local$115))))
           (lookup
             (localid 6:$opt_5)
             (localid 7:local$9)
@@ -68,9 +68,6 @@ liveness
                 (localid 7:local$9)))))
         (ret
           (localid 8:local$10)))))
-  (primitive
-    (i32)
-    (methods))
   (func
     (functionid 32:shape_recurse::box::create::1::0)
     (params
@@ -109,14 +106,14 @@ liveness
             (localid 1:r)
             (methodid 7:v::1::0))
           (calldyn
-            (localid 9:local$113)
+            (localid 9:local$114)
             (localid 6:$opt_6)
             (args
               (arg
                 (argmove)
                 (localid 1:r)))))
         (ret
-          (localid 9:local$113)))))
+          (localid 9:local$114)))))
   (type
     (typeid 26:shape_recurse::returner::0)
     (classid 21:shape_recurse::box::0))
@@ -152,10 +149,10 @@ liveness
               (localid 4:self))
             (fieldid 1:v))
           (load
-            (localid 9:local$111)
+            (localid 9:local$112)
             (localid 6:$opt_7)))
         (ret
-          (localid 9:local$111)))))
+          (localid 9:local$112)))))
   (func
     (functionid 27:shape_recurse::box::v::1::0)
     (params
@@ -175,10 +172,10 @@ liveness
               (localid 4:self))
             (fieldid 1:v))
           (load
-            (localid 9:local$505)
+            (localid 9:local$510)
             (localid 7:local$7)))
         (ret
-          (localid 9:local$505)))))
+          (localid 9:local$510)))))
   (func
     (functionid 32:shape_recurse::box::v::1::ref::0)
     (params
@@ -193,13 +190,16 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$109)
+            (localid 9:local$110)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 1:v)))
         (ret
-          (localid 9:local$109)))))
+          (localid 9:local$110)))))
+  (primitive
+    (i32)
+    (methods))
   (primitive
     (ref
       (i32))
