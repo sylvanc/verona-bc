@@ -1908,7 +1908,7 @@ namespace vc
     {
       auto formal = params->at(i) / Type;
       auto expected = apply_subst(top, formal, subst);
-      if (expected)
+      if (expected && !is_uninformative_backward_type(expected))
       {
         auto arg_loc = (args->at(i) / Rhs)->location();
         merge_env(env, arg_loc, expected, top);
@@ -3006,7 +3006,9 @@ namespace vc
               {
                 auto expected =
                   apply_subst(top, params->at(i) / Type, info.subst);
-                if (expected && expected->front() != TypeVar)
+                if (
+                  expected && expected->front() != TypeVar &&
+                  !is_uninformative_backward_type(expected))
                 {
                   auto arg_loc = (args->at(i) / Rhs)->location();
                   snmalloc::UNUSED(refine_local_const(arg_loc, expected));
@@ -3472,18 +3474,37 @@ namespace vc
                 active_infer_profile->entry_pred_merge_count++;
               auto eit = env.find(loc);
               if (eit == env.end())
-                env[loc] = {info.type, info.is_fixed, info.call_node};
+                env[loc] = {clone(info.type), info.is_fixed, info.call_node};
               else
               {
-                if (eit->second.type == info.type)
+                if (same_type_tree(eit->second.type, info.type))
+                {
+                  eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
+                  if (!eit->second.call_node && info.call_node)
+                    eit->second.call_node = info.call_node;
+                  continue;
+                }
+
+                if (eit->second.is_fixed && !info.is_fixed)
                 {
                   if (!eit->second.call_node && info.call_node)
                     eit->second.call_node = info.call_node;
                   continue;
                 }
+
+                if (!eit->second.is_fixed && info.is_fixed)
+                {
+                  eit->second.type = clone(info.type);
+                  eit->second.is_fixed = true;
+                  if (!eit->second.call_node && info.call_node)
+                    eit->second.call_node = info.call_node;
+                  continue;
+                }
+
                 auto m = merge_type(eit->second.type, info.type, top);
                 if (m)
                   eit->second.type = m;
+                eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
                 if (!eit->second.call_node && info.call_node)
                   eit->second.call_node = info.call_node;
               }
@@ -4234,6 +4255,14 @@ namespace vc
           break;
         prev = count;
       }
+
+      top->traverse([&](auto node) {
+        if (node != Function)
+          return node == Top || node == ClassDef || node == ClassBody ||
+            node == Lib || node == Symbols;
+        process_function(node, top, false);
+        return false;
+      });
 
       for (auto& func : deferred)
         if (has_typevar(func))
