@@ -1,0 +1,400 @@
+vc
+reify
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 4:$956)
+            (functionid 27:tuple_splat_mid::main::0::0)
+            (args)))
+        (ret
+          (localid 4:$956)))))
+  (func
+    (functionid 27:tuple_splat_mid::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 9:local$108)
+            (i32)
+            (int 1:1))
+          (call
+            (localid 7:local$5)
+            (functionid 27:_builtin::i32::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$108))))
+          (const
+            (localid 9:local$109)
+            (i32)
+            (int 1:2))
+          (call
+            (localid 7:local$6)
+            (functionid 27:_builtin::i32::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$109))))
+          (const
+            (localid 9:local$110)
+            (i32)
+            (int 1:3))
+          (call
+            (localid 7:local$7)
+            (functionid 27:_builtin::i32::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$110))))
+          (const
+            (localid 9:local$111)
+            (i32)
+            (int 1:4))
+          (call
+            (localid 7:local$8)
+            (functionid 27:_builtin::i32::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$111))))
+          (newarrayconst
+            (localid 9:local$508)
+            (tupletype
+              (i32)
+              (i32)
+              (i32)
+              (i32))
+            (int 1:4))
+          (arrayrefconst
+            (localid 9:local$509)
+            (arg
+              (argcopy)
+              (localid 9:local$508))
+            (int 1:0))
+          (store
+            (localid 9:local$510)
+            (localid 9:local$509)
+            (arg
+              (argcopy)
+              (localid 7:local$5)))
+          (arrayrefconst
+            (localid 9:local$511)
+            (arg
+              (argcopy)
+              (localid 9:local$508))
+            (int 1:1))
+          (store
+            (localid 9:local$512)
+            (localid 9:local$511)
+            (arg
+              (argcopy)
+              (localid 7:local$6)))
+          (arrayrefconst
+            (localid 9:local$513)
+            (arg
+              (argcopy)
+              (localid 9:local$508))
+            (int 1:2))
+          (store
+            (localid 9:local$514)
+            (localid 9:local$513)
+            (arg
+              (argcopy)
+              (localid 7:local$7)))
+          (arrayrefconst
+            (localid 9:local$515)
+            (arg
+              (argcopy)
+              (localid 9:local$508))
+            (int 1:3))
+          (store
+            (localid 9:local$516)
+            (localid 9:local$515)
+            (arg
+              (argcopy)
+              (localid 7:local$8)))
+          (copy
+            (localid 9:local$923)
+            (localid 1:t))
+          (copy
+            (localid 1:t)
+            (localid 9:local$508))
+          (arrayrefconst
+            (localid 9:local$517)
+            (arg
+              (argcopy)
+              (localid 1:t))
+            (int 1:0))
+          (load
+            (localid 9:local$518)
+            (localid 9:local$517))
+          (copy
+            (localid 1:a)
+            (localid 9:local$518))
+          (newarrayconst
+            (localid 4:rest)
+            (tupletype
+              (i32)
+              (i32))
+            (int 1:2))
+          (arrayrefconst
+            (localid 9:splat$957)
+            (arg
+              (argcopy)
+              (localid 1:t))
+            (int 1:1))
+          (load
+            (localid 9:splat$958)
+            (localid 9:splat$957))
+          (arrayrefconst
+            (localid 9:splat$959)
+            (arg
+              (argcopy)
+              (localid 4:rest))
+            (int 1:0))
+          (store
+            (localid 9:splat$960)
+            (localid 9:splat$959)
+            (arg
+              (argcopy)
+              (localid 9:splat$958)))
+          (arrayrefconst
+            (localid 9:splat$961)
+            (arg
+              (argcopy)
+              (localid 1:t))
+            (int 1:2))
+          (load
+            (localid 9:splat$962)
+            (localid 9:splat$961))
+          (arrayrefconst
+            (localid 9:splat$963)
+            (arg
+              (argcopy)
+              (localid 4:rest))
+            (int 1:1))
+          (store
+            (localid 9:splat$964)
+            (localid 9:splat$963)
+            (arg
+              (argcopy)
+              (localid 9:splat$962)))
+          (arrayrefconst
+            (localid 9:local$519)
+            (arg
+              (argcopy)
+              (localid 1:t))
+            (int 1:3))
+          (load
+            (localid 9:local$520)
+            (localid 9:local$519))
+          (copy
+            (localid 1:d)
+            (localid 9:local$520))
+          (newarrayconst
+            (localid 9:local$521)
+            (tupletype
+              (i32)
+              (tupletype
+                (i32)
+                (i32))
+              (i32))
+            (int 1:3))
+          (arrayrefconst
+            (localid 9:local$522)
+            (arg
+              (argcopy)
+              (localid 9:local$521))
+            (int 1:0))
+          (store
+            (localid 9:local$523)
+            (localid 9:local$522)
+            (arg
+              (argcopy)
+              (localid 9:local$518)))
+          (arrayrefconst
+            (localid 9:local$524)
+            (arg
+              (argcopy)
+              (localid 9:local$521))
+            (int 1:1))
+          (store
+            (localid 9:local$525)
+            (localid 9:local$524)
+            (arg
+              (argcopy)
+              (localid 4:rest)))
+          (arrayrefconst
+            (localid 9:local$526)
+            (arg
+              (argcopy)
+              (localid 9:local$521))
+            (int 1:2))
+          (store
+            (localid 9:local$527)
+            (localid 9:local$526)
+            (arg
+              (argcopy)
+              (localid 9:local$520)))
+          (arrayrefconst
+            (localid 9:local$528)
+            (arg
+              (argcopy)
+              (localid 4:rest))
+            (int 1:0))
+          (load
+            (localid 9:local$529)
+            (localid 9:local$528))
+          (copy
+            (localid 1:b)
+            (localid 9:local$529))
+          (arrayrefconst
+            (localid 9:local$530)
+            (arg
+              (argcopy)
+              (localid 4:rest))
+            (int 1:1))
+          (load
+            (localid 9:local$531)
+            (localid 9:local$530))
+          (copy
+            (localid 1:c)
+            (localid 9:local$531))
+          (newarrayconst
+            (localid 9:local$532)
+            (tupletype
+              (i32)
+              (i32))
+            (int 1:2))
+          (arrayrefconst
+            (localid 9:local$533)
+            (arg
+              (argcopy)
+              (localid 9:local$532))
+            (int 1:0))
+          (store
+            (localid 9:local$534)
+            (localid 9:local$533)
+            (arg
+              (argcopy)
+              (localid 9:local$529)))
+          (arrayrefconst
+            (localid 9:local$535)
+            (arg
+              (argcopy)
+              (localid 9:local$532))
+            (int 1:1))
+          (store
+            (localid 9:local$536)
+            (localid 9:local$535)
+            (arg
+              (argcopy)
+              (localid 9:local$531)))
+          (lookup
+            (localid 9:local$112)
+            (localid 1:a)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$113)
+            (localid 9:local$112)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:a))
+              (arg
+                (argcopy)
+                (localid 1:b))))
+          (lookup
+            (localid 9:local$871)
+            (localid 9:local$113)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$872)
+            (localid 9:local$871)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$113))
+              (arg
+                (argcopy)
+                (localid 1:c))))
+          (lookup
+            (localid 9:local$944)
+            (localid 9:local$872)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$945)
+            (localid 9:local$944)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$872))
+              (arg
+                (argcopy)
+                (localid 1:d)))))
+        (ret
+          (localid 9:local$945)))))
+  (func
+    (functionid 27:_builtin::i32::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:some)))))
+  (func
+    (functionid 22:_builtin::i32::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$225)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$225)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))))
+  (primitive
+    (ref
+      (i32))
+    (methods))
+  (primitive
+    (ref
+      (tupletype
+        (i32)
+        (i32)))
+    (methods)))

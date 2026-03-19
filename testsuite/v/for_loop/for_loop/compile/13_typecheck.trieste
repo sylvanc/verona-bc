@@ -164,7 +164,7 @@ typecheck
         (body
           (const
             (localid 7:local$9)
-            (u64)
+            (i32)
             (int 1:0))
           (copy
             (localid 9:local$524)
@@ -285,8 +285,8 @@ typecheck
       (label
         (labelid 8:join$117)
         (body)
-        (error
-          (errormsg 71:return: value type 'dyn' is not a subtype of function return type 'i32')))))
+        (ret
+          (localid 3:sum)))))
   (func
     (functionid 27:_builtin::array::fill::1::0)
     (params
@@ -354,27 +354,6 @@ typecheck
             (none)))
         (ret
           (localid 8:none$958)))))
-  (func
-    (functionid 22:_builtin::u64::+::2::0)
-    (params
-      (param
-        (localid 4:self)
-        (u64))
-      (param
-        (localid 5:other)
-        (u64)))
-    (u64)
-    (vars)
-    (labels
-      (label
-        (labelid 5:start)
-        (body
-          (add
-            (localid 9:local$431)
-            (localid 4:self)
-            (localid 5:other)))
-        (ret
-          (localid 9:local$431)))))
   (func
     (functionid 27:_builtin::i32::create::0::0)
     (params)
@@ -883,27 +862,6 @@ typecheck
         (ret
           (localid 9:local$559)))))
   (func
-    (functionid 22:_builtin::u64::<::2::0)
-    (params
-      (param
-        (localid 4:self)
-        (u64))
-      (param
-        (localid 5:other)
-        (u64)))
-    (bool)
-    (vars)
-    (labels
-      (label
-        (labelid 5:start)
-        (body
-          (lt
-            (localid 9:local$443)
-            (localid 4:self)
-            (localid 5:other)))
-        (ret
-          (localid 9:local$443)))))
-  (func
     (functionid 23:_builtin::bool::<::2::0)
     (params
       (param
@@ -1059,27 +1017,6 @@ typecheck
         (ret
           (localid 9:local$494)))))
   (func
-    (functionid 22:_builtin::i32::<::2::0)
-    (params
-      (param
-        (localid 4:self)
-        (i32))
-      (param
-        (localid 5:other)
-        (i32)))
-    (bool)
-    (vars)
-    (labels
-      (label
-        (labelid 5:start)
-        (body
-          (lt
-            (localid 9:local$243)
-            (localid 4:self)
-            (localid 5:other)))
-        (ret
-          (localid 9:local$243)))))
-  (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
       (param
@@ -1100,15 +1037,36 @@ typecheck
             (localid 5:other)))
         (ret
           (localid 9:local$231)))))
+  (func
+    (functionid 22:_builtin::i32::<::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lt
+            (localid 9:local$243)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$243)))))
   (primitive
     (i32)
     (methods
       (method
-        (methodid 7:<::2::0)
-        (functionid 22:_builtin::i32::<::2::0))
-      (method
         (methodid 7:+::2::0)
-        (functionid 22:_builtin::i32::+::2::0))))
+        (functionid 22:_builtin::i32::+::2::0))
+      (method
+        (methodid 7:<::2::0)
+        (functionid 22:_builtin::i32::<::2::0))))
   (primitive
     (usize)
     (methods
@@ -1121,15 +1079,6 @@ typecheck
       (method
         (methodid 7:+::2::0)
         (functionid 24:_builtin::usize::+::2::0))))
-  (primitive
-    (u64)
-    (methods
-      (method
-        (methodid 7:+::2::0)
-        (functionid 22:_builtin::u64::+::2::0))
-      (method
-        (methodid 7:<::2::0)
-        (functionid 22:_builtin::u64::<::2::0))))
   (primitive
     (bool)
     (methods

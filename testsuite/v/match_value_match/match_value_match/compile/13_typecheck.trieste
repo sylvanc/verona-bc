@@ -189,8 +189,9 @@ typecheck
               (arg
                 (argcopy)
                 (localid 1:a))
-              (error
-                (errormsg 66:call: argument type 'i32' is not a subtype of parameter type 'u64'))))
+              (arg
+                (argcopy)
+                (localid 9:local$147))))
           (lookup
             (localid 9:local$976)
             (localid 9:local$553)
@@ -511,7 +512,7 @@ typecheck
         (dyn)))
     (union
       (classid 20:_builtin::nomatch::0)
-      (u64))
+      (i32))
     (vars
       (localid 8:local$12)
       (localid 8:local$13)
@@ -648,7 +649,7 @@ typecheck
         (body
           (const
             (localid 8:local$15)
-            (u64)
+            (i32)
             (int 3:100)))
         (ret
           (localid 8:local$15)))))
