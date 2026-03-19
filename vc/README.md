@@ -6,9 +6,6 @@ Optimization.
 - Sequent calculus optimizations.
 - Overall compile times.
 
-Compiler errors.
-- Not getting node based errors.
-
 Semantics.
 - Remove `arrayiter`?
 - Region creation.

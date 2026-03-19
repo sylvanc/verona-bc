@@ -425,6 +425,7 @@ namespace vc
     std::vector<Node> map_order;
     std::vector<Reification*> worklist;
     std::map<Location, Node> libs;
+    NodeMap<Node> init_sources;
     std::set<Node> processed_initfini;
     Nodes errors;
     std::vector<MethodInvocation> method_invocations;
@@ -2443,17 +2444,19 @@ namespace vc
           auto msg = std::format(
             "Conflicting 'init' for library \"{}\"",
             (source_lib / String)->location().view());
+          auto prev = init_sources.at(reified_lib);
 
           errors.push_back(
             err(child / Ident, msg)
             << errmsg("Previous declaration resolved here:")
-            << errloc(existing));
+            << errloc(prev / Ident));
           continue;
         }
 
         // Reify the init function.
         auto funcid = find_or_push(child, r.subst);
         reified_lib->replace(existing, clone(funcid));
+        init_sources[reified_lib] = child;
       }
     }
 
