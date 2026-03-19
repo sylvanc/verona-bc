@@ -123,6 +123,24 @@ namespace vc
     return (inner->back() / Ident)->location().view() == "any";
   }
 
+  bool is_dyn_type(const Node& type)
+  {
+    if (type != Type)
+      return false;
+    auto inner = type->front();
+    if (inner != TypeName || inner->size() != 2)
+      return false;
+    if ((inner->front() / Ident)->location().view() != "_builtin")
+      return false;
+    return (inner->back() / Ident)->location().view() == "dyn";
+  }
+
+  bool is_uninformative_backward_type(const Node& type)
+  {
+    return is_any_type(type) || is_dyn_type(type) ||
+      (type == Type && !type->empty() && type->front() == TypeSelf);
+  }
+
   Node extract_wrapper_inner(const Node& type_node, std::string_view wrapper)
   {
     if (type_node != Type)
@@ -2873,7 +2891,9 @@ namespace vc
         for (size_t i = 0; i < params->size() && i < args->size(); i++)
         {
           auto expected = apply_subst(top, params->at(i) / Type, subst);
-          if (expected && expected->front() != TypeVar)
+          if (
+            expected && expected->front() != TypeVar &&
+            !is_uninformative_backward_type(expected))
           {
             auto arg_loc = (args->at(i) / Rhs)->location();
             snmalloc::UNUSED(refine_local_const(arg_loc, expected));
