@@ -2,10 +2,9 @@
 
 ## To Do
 
-Inference.
-- Are we allowing arguments to refine the receiver?
-
-Sequent calculus optimizations.
+Optimization.
+- Sequent calculus optimizations.
+- Overall compile times.
 
 Compiler errors.
 - Not getting node based errors.

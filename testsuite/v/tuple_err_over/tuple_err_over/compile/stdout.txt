@@ -1,4 +1,20 @@
 Errors:
-return: value type 'dyn' is not a subtype of function return type 'i32'
-Pass typecheck failed with 1 error!
+tuple index 2 out of range for tuple with 2 elements
+-- tuple_err_over.v:6:3
+  (let a, let b, let c) = t;
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+----------------
+store: value type 'dyn' is not a subtype of reference content type 'Union(Tuple(i32, i32), i32)'
+-- tuple_err_over.v:6:3
+  (let a, let b, let c) = t;
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+----------------
+call: argument type 'dyn' is not a subtype of parameter type 'i32'
+-- tuple_err_over.v:7:11
+  a + b + c
+          ~
+
+Pass typecheck failed with 3 errors!
 
