@@ -100,6 +100,23 @@ namespace vc
       type->front()->in({DefaultInt, DefaultFloat});
   }
 
+  bool contains_default_type(const Node& type)
+  {
+    if (!type)
+      return false;
+
+    bool found = false;
+    type->traverse([&](auto node) {
+      if (node->in({DefaultInt, DefaultFloat}))
+      {
+        found = true;
+        return false;
+      }
+      return !found;
+    });
+    return found;
+  }
+
   Node resolve_default(const Node& type)
   {
     if (!type || type->empty())
@@ -1697,24 +1714,25 @@ namespace vc
     return info;
   }
 
-  void propagate_shape_to_lambda(
+  bool propagate_shape_to_lambda(
     Node top, const Node& shape_type, const Node& actual_type)
   {
     if (shape_type != Type || actual_type != Type)
-      return;
+      return false;
     auto shape_inner = shape_type->front();
     auto actual_inner = actual_type->front();
     if (shape_inner != TypeName || actual_inner != TypeName)
-      return;
+      return false;
     auto shape_def = find_def(top, shape_inner);
     auto actual_def = find_def(top, actual_inner);
     if (!shape_def || !actual_def)
-      return;
+      return false;
     if (shape_def != ClassDef || actual_def != ClassDef)
-      return;
+      return false;
     if ((shape_def / Shape) != Shape)
-      return;
+      return false;
 
+    bool changed = false;
     auto shape_subst = build_class_subst(shape_def, shape_inner);
     for (auto& sf : *(shape_def / ClassBody))
     {
@@ -1745,7 +1763,7 @@ namespace vc
           auto spt = apply_subst(top, shape_params->at(j) / Type, shape_subst);
           if (!spt || spt->front() == TypeVar || spt->front() == TypeSelf)
             continue;
-          snmalloc::UNUSED(replace_if_changed(ap, apt, clone(spt)));
+          changed |= replace_if_changed(ap, apt, clone(spt));
         }
 
         auto actual_ret = af / Type;
@@ -1753,12 +1771,13 @@ namespace vc
         {
           auto shape_ret = apply_subst(top, sf / Type, shape_subst);
           if (shape_ret && shape_ret->front() != TypeVar)
-            snmalloc::UNUSED(
-              replace_if_changed(af, actual_ret, clone(shape_ret)));
+            changed |= replace_if_changed(af, actual_ret, clone(shape_ret));
         }
         break;
       }
     }
+
+    return changed;
   }
 
   // ===== Cross-function propagation =====
@@ -1901,6 +1920,38 @@ namespace vc
       if (!ta->empty() && ta->size() == tps->size())
         for (size_t i = 0; i < tps->size(); i++)
           subst[tps->at(i)] = ta->at(i);
+    }
+
+    std::map<Location, Node> const_defs;
+    if (auto label = prior_call->parent(Label))
+    {
+      for (auto& stmt : *(label / Body))
+        if (stmt == Const)
+          const_defs[(stmt / LocalId)->location()] = stmt;
+    }
+
+    // Refine default literal args using the newly constrained TypeArgs.
+    for (size_t i = 0; i < params->size() && i < args->size(); i++)
+    {
+      auto formal = params->at(i) / Type;
+      Node expected_prim;
+      auto tp_def = direct_typeparam(top, formal);
+      if (tp_def)
+      {
+        auto find = subst.find(tp_def);
+        if (find != subst.end())
+          expected_prim = extract_primitive(find->second);
+      }
+      else
+      {
+        expected_prim = extract_primitive(formal);
+      }
+
+      if (!expected_prim)
+        continue;
+
+      auto arg_loc = (args->at(i) / Rhs)->location();
+      refine_const_local(env, const_defs, arg_loc, primitive_type(expected_prim->type()));
     }
 
     // Backward: merge expected param types into arg env entries.
@@ -2196,8 +2247,9 @@ namespace vc
       {
         auto arg_loc = (args->at(i) / Rhs)->location();
         auto arg_it = env.find(arg_loc);
-        if (arg_it == env.end() || contains_typevar(arg_it->second.type) ||
-            is_default_type(arg_it->second.type))
+        if (
+          arg_it == env.end() || contains_typevar(arg_it->second.type) ||
+          contains_default_type(arg_it->second.type))
           continue;
         resolved = arg_it->second.type;
       }
@@ -2720,7 +2772,15 @@ namespace vc
       {
         InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
         auto dst_loc = (stmt / LocalId)->location();
-        merge(dst_loc, clone(stmt / Type));
+        auto init_type = stmt / Type;
+        auto dst_it = env.find(dst_loc);
+        if (
+          !(dst_it != env.end() && is_any_type(init_type) &&
+            !is_any_type(dst_it->second.type) &&
+            (dst_it->second.type->front() != TypeVar)))
+        {
+          merge(dst_loc, clone(init_type));
+        }
 
         if (stmt == NewArrayConst)
         {
@@ -2778,9 +2838,10 @@ namespace vc
                 }
                 // Reverse: push concrete arg into TypeVar FieldDef.
                 auto arg_it = env.find(arg_loc);
-                if (arg_it != env.end() && contains_typevar(f / Type) &&
-                    !contains_typevar(arg_it->second.type) &&
-                    !is_default_type(arg_it->second.type))
+                if (
+                  arg_it != env.end() && contains_typevar(f / Type) &&
+                  !contains_typevar(arg_it->second.type) &&
+                  !contains_default_type(arg_it->second.type))
                   snmalloc::UNUSED(replace_if_changed(
                     f, f / Type, clone(arg_it->second.type)));
                 break;
@@ -2798,6 +2859,32 @@ namespace vc
         auto rhs_loc = (stmt / Rhs)->location();
 
         auto lhs_it = env.find(lhs_loc);
+        auto rhs_it = env.find(rhs_loc);
+
+        // If the lhs is still a default numeric, use a concrete rhs
+        // numeric type to pin the expression to that family.
+        if (
+          lhs_it != env.end() && rhs_it != env.end() &&
+          is_default_type(lhs_it->second.type))
+        {
+          auto rhs_prim = extract_callable_primitive(rhs_it->second.type);
+          bool compatible =
+            rhs_prim &&
+            ((lhs_it->second.type->front() == DefaultInt &&
+              rhs_prim->in(integer_types)) ||
+             (lhs_it->second.type->front() == DefaultFloat &&
+              rhs_prim->in(float_types)));
+          if (compatible)
+          {
+            auto refined = primitive_type(rhs_prim->type());
+            snmalloc::UNUSED(refine_local_const(lhs_loc, refined));
+            if (merge_bwd(lhs_loc, clone(refined)))
+              propagate_call_node(env, lhs_loc, top, lookup_stmts);
+            merge(dst_loc, clone(refined));
+            lhs_it = env.find(lhs_loc);
+          }
+        }
+
         if (lhs_it != env.end())
         {
           // Forward: result = lhs type.
@@ -2887,6 +2974,19 @@ namespace vc
             (stmt / LocalId)->location(), ret,
             all_default ? stmt : Node{});
 
+        // Shape-to-lambda propagation.
+        for (size_t i = 0; i < params->size() && i < args->size(); i++)
+        {
+          auto pt = apply_subst(top, params->at(i) / Type, subst);
+          if (pt && pt->front() != TypeVar)
+          {
+            auto arg_it = env.find((args->at(i) / Rhs)->location());
+            if (arg_it != env.end())
+              changes.forward |=
+                propagate_shape_to_lambda(top, pt, arg_it->second.type);
+          }
+        }
+
         // Backward: param types into args.
         for (size_t i = 0; i < params->size() && i < args->size(); i++)
         {
@@ -2915,18 +3015,6 @@ namespace vc
 
         // Forward into callee: push arg types into TypeVar params.
         push_arg_types_to_params(func_def, args, env, top);
-
-        // Shape-to-lambda propagation.
-        for (size_t i = 0; i < params->size() && i < args->size(); i++)
-        {
-          auto pt = apply_subst(top, params->at(i) / Type, subst);
-          if (pt && pt->front() != TypeVar)
-          {
-            auto arg_it = env.find((args->at(i) / Rhs)->location());
-            if (arg_it != env.end())
-              propagate_shape_to_lambda(top, pt, arg_it->second.type);
-          }
-        }
       }
       // ----- Lookup -----
       else if (stmt == Lookup)
@@ -2996,10 +3084,23 @@ namespace vc
             auto info = resolve_callable_method(
               top, recv_it->second.type, method_ident, hand, arity,
               method_ta);
-
             if (info.func)
             {
               auto params = info.func / Params;
+
+              // Shape-to-lambda propagation.
+              for (size_t i = 0; i < params->size() && i < args->size(); i++)
+              {
+                auto pt =
+                  apply_subst(top, params->at(i) / Type, info.subst);
+                if (pt && pt->front() != TypeVar)
+                {
+                  auto arg_it = env.find((args->at(i) / Rhs)->location());
+                  if (arg_it != env.end())
+                    refined |=
+                      propagate_shape_to_lambda(top, pt, arg_it->second.type);
+                }
+              }
 
               // Backward: param types into args.
               for (size_t i = 0; i < params->size() && i < args->size(); i++)
@@ -3022,19 +3123,6 @@ namespace vc
 
               // Forward into callee: TypeVar params.
               push_arg_types_to_params(info.func, args, env, top);
-
-              // Shape-to-lambda propagation.
-              for (size_t i = 0; i < params->size() && i < args->size(); i++)
-              {
-                auto pt =
-                  apply_subst(top, params->at(i) / Type, info.subst);
-                if (pt && pt->front() != TypeVar)
-                {
-                  auto arg_it = env.find((args->at(i) / Rhs)->location());
-                  if (arg_it != env.end())
-                    propagate_shape_to_lambda(top, pt, arg_it->second.type);
-                }
-              }
             }
           }
         }
@@ -3046,7 +3134,9 @@ namespace vc
           for (auto& arg_node : *args)
           {
             auto arg_it = env.find((arg_node / Rhs)->location());
-            if (arg_it == env.end() || is_default_type(arg_it->second.type))
+            if (
+              arg_it == env.end() ||
+              contains_default_type(arg_it->second.type))
               continue;
 
             auto prim = extract_callable_primitive(arg_it->second.type);
@@ -3078,6 +3168,17 @@ namespace vc
 
           if (target_prim)
           {
+            auto lookup_it = lookup_stmts.find(src_loc);
+            if (lookup_it != lookup_stmts.end())
+            {
+              auto recv_loc = (lookup_it->second / Rhs)->location();
+              bool local_refined = refine_local_const(recv_loc, target_prim);
+              bool bwd_refined = merge_bwd(recv_loc, target_prim);
+              if (bwd_refined)
+                propagate_call_node(env, recv_loc, top, lookup_stmts);
+              refined = refined || local_refined || bwd_refined;
+            }
+
             for (auto& arg_node : *args)
             {
               auto arg_loc = (arg_node / Rhs)->location();
@@ -3086,6 +3187,27 @@ namespace vc
               if (bwd_refined)
                 propagate_call_node(env, arg_loc, top, lookup_stmts);
               refined = refined || local_refined || bwd_refined;
+            }
+
+            if (lookup_it != lookup_stmts.end())
+            {
+              auto lookup_node = lookup_it->second;
+              auto recv_it = env.find((lookup_node / Rhs)->location());
+              if (recv_it != env.end() && !contains_default_type(recv_it->second.type))
+              {
+                auto hand = (lookup_node / Lhs)->type();
+                auto method_ident = lookup_method_name(lookup_node);
+                auto method_ta = lookup_node / TypeArgs;
+                auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+                auto ret = resolve_method_return_type(
+                  top, recv_it->second.type, method_ident, hand, arity,
+                  method_ta);
+                if (ret)
+                {
+                  env[(lookup_node / LocalId)->location()] = {clone(ret), false, {}};
+                  env[dst_loc] = {clone(ret), false, {}};
+                }
+              }
             }
           }
         }
@@ -3530,12 +3652,23 @@ namespace vc
             if (eit == env.end())
             {
               if (label_defs[i].count(loc) > 0)
-                env[loc] = {clone(info.type), false, {}};
+                env[loc] = {clone(info.type), info.is_fixed, {}};
             }
             else
             {
-              if (eit->second.type == info.type)
+              if (same_type_tree(eit->second.type, info.type))
+              {
+                eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
                 continue;
+              }
+              if (eit->second.is_fixed && !info.is_fixed)
+                continue;
+              if (!eit->second.is_fixed && info.is_fixed)
+              {
+                eit->second.type = clone(info.type);
+                eit->second.is_fixed = true;
+                continue;
+              }
               auto m = merge_type(eit->second.type, info.type, top);
               if (m)
                 eit->second.type = m;
@@ -3561,12 +3694,23 @@ namespace vc
               if (eit == env.end())
               {
                 if (label_defs[i].count(loc) > 0)
-                  env[loc] = {clone(info.type), false, {}};
+                  env[loc] = {clone(info.type), info.is_fixed, {}};
               }
               else
               {
-                if (eit->second.type == info.type)
+                if (same_type_tree(eit->second.type, info.type))
+                {
+                  eit->second.is_fixed = eit->second.is_fixed || info.is_fixed;
                   continue;
+                }
+                if (eit->second.is_fixed && !info.is_fixed)
+                  continue;
+                if (!eit->second.is_fixed && info.is_fixed)
+                {
+                  eit->second.type = clone(info.type);
+                  eit->second.is_fixed = true;
+                  continue;
+                }
                 auto m = merge_type(eit->second.type, info.type, top);
                 if (m)
                   eit->second.type = m;
@@ -3626,10 +3770,14 @@ namespace vc
         if (func_ret->front() != TypeVar && !is_default_type(func_ret))
         {
           auto ret_loc = (term / LocalId)->location();
-          if (merge_env(env, ret_loc, clone(func_ret), top))
+          bool changed = merge_env(env, ret_loc, clone(func_ret), top);
+          auto ret_it = env.find(ret_loc);
+          if (ret_it != env.end())
+            ret_it->second.is_fixed = true;
+          bwd_envs[i][ret_loc] = {clone(func_ret), true, {}};
+          if (changed)
           {
             propagate_call_node(env, ret_loc, top, lookup_stmts);
-            bwd_envs[i][ret_loc] = {clone(func_ret), false, {}};
           }
         }
       }
