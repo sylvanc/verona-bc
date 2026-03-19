@@ -36,6 +36,12 @@ namespace vbcc
 
   void Bitset::resize(size_t size)
   {
+    if (size == 0)
+    {
+      bits.clear();
+      return;
+    }
+
     bits.resize(idx(size - 1) + 1);
   }
 

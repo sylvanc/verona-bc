@@ -149,6 +149,8 @@ namespace vbcc
       // edges[a] = {b, c, ...} means once-function a depends on
       // once-functions b, c, ...
       std::unordered_map<std::string, std::set<std::string>> edges;
+      std::unordered_map<std::string, std::unordered_map<std::string, Node>>
+        edge_sites;
 
       for (auto& id : memo_ids)
         edges[id] = {};
@@ -194,6 +196,7 @@ namespace vbcc
               if (memo_ids.count(target))
               {
                 edges[root].insert(target);
+                edge_sites[root].try_emplace(target, stmt);
               }
               else
               {
@@ -221,6 +224,7 @@ namespace vbcc
                 if (memo_ids.count(func_id_str))
                 {
                   edges[root].insert(func_id_str);
+                  edge_sites[root].try_emplace(func_id_str, stmt);
                 }
                 else
                 {
@@ -308,8 +312,25 @@ namespace vbcc
             msg += " -> ";
           msg += cycle_path[i];
         }
-        auto first_func = func_map.at(cycle_path.back());
-        top << err(first_func / FunctionId, msg);
+
+        Node site;
+        if (cycle_path.size() > 1)
+        {
+          auto root = cycle_path.front();
+          auto target = cycle_path[1];
+          auto root_it = edge_sites.find(root);
+          if (root_it != edge_sites.end())
+          {
+            auto site_it = root_it->second.find(target);
+            if (site_it != root_it->second.end())
+              site = site_it->second;
+          }
+        }
+
+        if (site)
+          top << err(site, msg);
+        else
+          top << err(func_map.at(cycle_path.back()) / FunctionId, msg);
         return 1;
       }
 
