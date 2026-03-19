@@ -117,158 +117,166 @@ namespace vc
       // return fell back to Dyn. Now all callees are reified, so method
       // return types are available. We rebuild local_types from the
       // already-reified body without re-running mutations.
-      for (auto r : deferred_typevar)
+      bool changed;
+      do
       {
-        auto func = r->reification;
-        auto labels = func / Labels;
+        changed = false;
 
-        // Rebuild local_types by scanning the reified body.
-        local_types.clear();
-        lookup_info.clear();
-
-        // Track param types.
-        for (auto& p : *(func / Params))
-          local_types[(p / LocalId)->location()] = clone(p / Type);
-
-        for (auto& lbl : *labels)
+        for (auto r : deferred_typevar)
         {
-          for (auto& stmt : *(lbl / Body))
+          auto func = r->reification;
+          auto labels = func / Labels;
+
+          // Rebuild local_types by scanning the reified body.
+          local_types.clear();
+          lookup_info.clear();
+
+          // Track param types.
+          for (auto& p : *(func / Params))
+            local_types[(p / LocalId)->location()] = clone(p / Type);
+
+          for (auto& lbl : *labels)
           {
-            if (stmt->in({Const, Convert}))
+            for (auto& stmt : *(lbl / Body))
             {
-              local_types[(stmt / LocalId)->location()] = clone(stmt / Type);
-            }
-            else if (stmt == ConstStr)
-            {
-              local_types[(stmt / LocalId)->location()] = Array << clone(U8);
-            }
-            else if (stmt->in({Copy, Move}))
-            {
-              auto src_it = local_types.find((stmt / Rhs)->location());
-              if (src_it != local_types.end())
-                local_types[(stmt / LocalId)->location()] =
-                  clone(src_it->second);
-            }
-            else if (stmt->in({New, Stack}))
-            {
-              local_types[(stmt / LocalId)->location()] = clone(stmt / ClassId);
-            }
-            else if (stmt == FieldRef)
-            {
-              auto obj_loc = (stmt / Arg / Rhs)->location();
-              auto obj_it = local_types.find(obj_loc);
-              if (obj_it != local_types.end() && (obj_it->second == ClassId))
+              if (stmt->in({Const, Convert}))
               {
-                auto ft = find_field_type(obj_it->second, stmt / FieldId);
-                if (ft)
-                  local_types[(stmt / LocalId)->location()] = Ref << ft;
+                local_types[(stmt / LocalId)->location()] = clone(stmt / Type);
               }
-            }
-            else if (stmt == Lookup)
-            {
-              auto mid = (stmt / MethodId)->location().view();
-              lookup_info[(stmt / LocalId)->location()] = {
-                std::string(mid), (stmt / Rhs)->location()};
-            }
-            else if (stmt == Call)
-            {
-              auto ret = find_func_return_type(stmt / FunctionId);
-              if (ret)
-                local_types[(stmt / LocalId)->location()] = ret;
-            }
-            else if (stmt->in({CallDyn, TryCallDyn}))
-            {
-              auto src_loc = (stmt / Rhs)->location();
-              auto li = lookup_info.find(src_loc);
-              if (li != lookup_info.end())
+              else if (stmt == ConstStr)
               {
-                auto recv_it = local_types.find(li->second.recv_loc);
-                if (recv_it != local_types.end())
+                local_types[(stmt / LocalId)->location()] = Array << clone(U8);
+              }
+              else if (stmt->in({Copy, Move}))
+              {
+                auto src_it = local_types.find((stmt / Rhs)->location());
+                if (src_it != local_types.end())
+                  local_types[(stmt / LocalId)->location()] =
+                    clone(src_it->second);
+              }
+              else if (stmt->in({New, Stack}))
+              {
+                local_types[(stmt / LocalId)->location()] =
+                  clone(stmt / ClassId);
+              }
+              else if (stmt == FieldRef)
+              {
+                auto obj_loc = (stmt / Arg / Rhs)->location();
+                auto obj_it = local_types.find(obj_loc);
+                if (obj_it != local_types.end() && (obj_it->second == ClassId))
                 {
-                  auto ret = find_method_return_type(
-                    recv_it->second, li->second.method_id);
-
-                  if (!ret && recv_it->second == Ref)
-                  {
-                    auto& mid = li->second.method_id;
-                    if (mid.starts_with("*::"))
-                      ret = clone(recv_it->second->front());
-                  }
-
-                  if (ret)
-                    local_types[(stmt / LocalId)->location()] = ret;
+                  auto ft = find_field_type(obj_it->second, stmt / FieldId);
+                  if (ft)
+                    local_types[(stmt / LocalId)->location()] = Ref << ft;
                 }
               }
-            }
-            else if (stmt == Load)
-            {
-              auto src_it = local_types.find((stmt / Rhs)->location());
-              if (src_it != local_types.end() && (src_it->second == Ref))
-                local_types[(stmt / LocalId)->location()] =
-                  clone(src_it->second->front());
-            }
-            else if (stmt == WhenDyn)
-            {
-              auto cown_type = stmt / Cown;
-              local_types[(stmt / LocalId)->location()] = clone(cown_type);
+              else if (stmt == Lookup)
+              {
+                auto mid = (stmt / MethodId)->location().view();
+                lookup_info[(stmt / LocalId)->location()] = {
+                  std::string(mid), (stmt / Rhs)->location()};
+              }
+              else if (stmt == Call)
+              {
+                auto ret = find_func_return_type(stmt / FunctionId);
+                if (ret)
+                  local_types[(stmt / LocalId)->location()] = ret;
+              }
+              else if (stmt->in({CallDyn, TryCallDyn}))
+              {
+                auto src_loc = (stmt / Rhs)->location();
+                auto li = lookup_info.find(src_loc);
+                if (li != lookup_info.end())
+                {
+                  auto recv_it = local_types.find(li->second.recv_loc);
+                  if (recv_it != local_types.end())
+                  {
+                    auto ret = find_method_return_type(
+                      recv_it->second, li->second.method_id);
+
+                    if (!ret && recv_it->second == Ref)
+                    {
+                      auto& mid = li->second.method_id;
+                      if (mid.starts_with("*::"))
+                        ret = clone(recv_it->second->front());
+                    }
+
+                    if (ret)
+                      local_types[(stmt / LocalId)->location()] = ret;
+                  }
+                }
+              }
+              else if (stmt == Load)
+              {
+                auto src_it = local_types.find((stmt / Rhs)->location());
+                if (src_it != local_types.end() && (src_it->second == Ref))
+                  local_types[(stmt / LocalId)->location()] =
+                    clone(src_it->second->front());
+              }
+              else if (stmt == WhenDyn)
+              {
+                auto cown_type = stmt / Cown;
+                local_types[(stmt / LocalId)->location()] = clone(cown_type);
+              }
             }
           }
-        }
 
-        // Now try to infer the return type from Return locals.
-        // Collect all distinct return types to build a union if needed.
-        Nodes ret_types;
+          // Now try to infer the return type from Return locals.
+          // Collect all distinct return types to build a union if needed.
+          Nodes ret_types;
 
-        for (auto& lbl : *labels)
-        {
-          auto term = lbl / Return;
-          if (term != Return)
-            continue;
-
-          auto ret_loc = (term / LocalId)->location();
-          auto it = local_types.find(ret_loc);
-          if (it == local_types.end())
-            continue;
-
-          bool dup = false;
-
-          for (auto& existing : ret_types)
+          for (auto& lbl : *labels)
           {
-            if (existing->equals(it->second))
+            auto term = lbl / Return;
+            if (term != Return)
+              continue;
+
+            auto ret_loc = (term / LocalId)->location();
+            auto it = local_types.find(ret_loc);
+            if (it == local_types.end())
+              continue;
+
+            bool dup = false;
+
+            for (auto& existing : ret_types)
             {
-              dup = true;
-              break;
+              if (existing->equals(it->second))
+              {
+                dup = true;
+                break;
+              }
             }
+
+            if (!dup)
+              ret_types.push_back(clone(it->second));
           }
 
-          if (!dup)
-            ret_types.push_back(clone(it->second));
-        }
+          Node new_ret;
 
-        Node new_ret;
+          if (ret_types.size() == 1)
+            new_ret = ret_types.front();
+          else if (ret_types.size() > 1)
+          {
+            Node union_node = Union;
 
-        if (ret_types.size() == 1)
-          new_ret = ret_types.front();
-        else if (ret_types.size() > 1)
-        {
-          Node union_node = Union;
+            for (auto& rt : ret_types)
+              union_node << clone(rt);
 
-          for (auto& rt : ret_types)
-            union_node << clone(rt);
+            new_ret = union_node;
+          }
 
-          new_ret = union_node;
-        }
-
-        if (new_ret && new_ret->type() != Dyn)
-        {
-          // Replace the Dyn return type with the resolved type.
-          auto old_type = func / Type;
-          func->replace(old_type, new_ret);
-
-          // Also update the WhenDyn Cown types in calling functions
-          // that reference this function's return type.
+          if (new_ret && new_ret->type() != Dyn)
+          {
+            auto old_type = func / Type;
+            if (!old_type->equals(new_ret))
+            {
+              func->replace(old_type, new_ret);
+              changed = true;
+            }
+          }
         }
       }
+      while (changed);
 
       // Resolve shapes: each shape becomes a Type node mapping its TypeId
       // to a Union of all reified concrete classes that satisfy it.
@@ -847,12 +855,15 @@ namespace vc
       return {};
     }
 
-    // Given a reified receiver type (ClassId or primitive) and a MethodId
-    // string, find the method's function return type by searching the
-    // class's registered Methods.
+    // Given a reified receiver type (possibly a union) and a MethodId string,
+    // find the method's function return type by searching matching class
+    // reifications. If multiple receivers contribute distinct return types,
+    // return their union.
     Node find_method_return_type(Node recv_type, const std::string& method_id)
     {
-      // Find the class reification matching the receiver type.
+      Nodes recv_types = extract_receivers(recv_type);
+      Nodes ret_types;
+
       for (auto& key : map_order)
       {
         if (key != ClassDef)
@@ -863,23 +874,63 @@ namespace vc
           if (!r.reification || !r.id)
             continue;
 
-          if (!r.id->equals(recv_type))
+          bool matches = recv_types.empty();
+
+          for (auto& recv : recv_types)
+          {
+            if (r.id->equals(recv))
+            {
+              matches = true;
+              break;
+            }
+          }
+
+          if (!matches)
             continue;
 
-          // Search the Methods for the matching MethodId.
           auto methods = r.reification / Methods;
 
           for (auto& m : *methods)
           {
             if ((m / MethodId)->location().view() == method_id)
-              return find_func_return_type(m / FunctionId);
-          }
+            {
+              auto ret = find_func_return_type(m / FunctionId);
 
-          return {};
+              if (!ret)
+                break;
+
+              bool dup = false;
+
+              for (auto& existing : ret_types)
+              {
+                if (existing->equals(ret))
+                {
+                  dup = true;
+                  break;
+                }
+              }
+
+              if (!dup)
+                ret_types.push_back(ret);
+
+              break;
+            }
+          }
         }
       }
 
-      return {};
+      if (ret_types.empty())
+        return {};
+
+      if (ret_types.size() == 1)
+        return clone(ret_types.front());
+
+      Node union_node = Union;
+
+      for (auto& ret : ret_types)
+        union_node << clone(ret);
+
+      return union_node;
     }
 
     bool reify_function(Reification& r)
