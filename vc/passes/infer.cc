@@ -2175,21 +2175,55 @@ namespace vc
     if (!expected || is_default_type(expected) || contains_default_type(expected))
       return;
 
-    auto it = env.find(loc);
-    if (it == env.end() || !it->second.call_node)
-      return;
+    std::set<std::string> seen;
+    auto recurse = [&](auto&& self, const Location& cur_loc) -> void {
+      auto [_, inserted] = seen.insert(std::string(cur_loc.view()));
+      if (!inserted)
+        return;
 
-    auto call = it->second.call_node;
-    if (call == Call)
-    {
-      backward_refine_call(call, expected, env, top);
-    }
-    else if (call->in({CallDyn, TryCallDyn}))
-    {
-      auto prim = extract_backward_primitive(expected);
-      if (prim)
-        backward_refine_calldyn(call, prim, env, top, lookup_stmts, def_stmts);
-    }
+      auto it = env.find(cur_loc);
+      if (it != env.end() && it->second.call_node)
+      {
+        auto call = it->second.call_node;
+        if (call == Call)
+        {
+          backward_refine_call(call, expected, env, top);
+          return;
+        }
+        if (call->in({CallDyn, TryCallDyn}))
+        {
+          auto prim = extract_backward_primitive(expected);
+          if (prim)
+            backward_refine_calldyn(call, prim, env, top, lookup_stmts, def_stmts);
+          return;
+        }
+      }
+
+      if (def_stmts == nullptr)
+        return;
+
+      auto def_it = def_stmts->find(cur_loc);
+      if (def_it == def_stmts->end())
+        return;
+
+      auto def = def_it->second;
+      if (def == Call)
+      {
+        backward_refine_call(def, expected, env, top);
+      }
+      else if (def->in({CallDyn, TryCallDyn}))
+      {
+        auto prim = extract_backward_primitive(expected);
+        if (prim)
+          backward_refine_calldyn(def, prim, env, top, lookup_stmts, def_stmts);
+      }
+      else if (def->in({Copy, Move}))
+      {
+        self(self, (def / Rhs)->location());
+      }
+    };
+
+    recurse(recurse, loc);
   }
 
   // ===== TypeArg inference for Call sites =====
@@ -3372,7 +3406,7 @@ namespace vc
                 env, arg_loc, top, lookup_stmts, &all_def_stmts);
             }
 
-            auto expected_prim = extract_primitive(expected);
+            auto expected_prim = extract_backward_primitive(expected);
             auto def_it = def_stmts.find(arg_loc);
             if (
               expected_prim && def_it != def_stmts.end() &&
@@ -4101,6 +4135,35 @@ namespace vc
                   eit->second.type = m;
               }
             }
+          }
+        }
+
+        // Restore forward metadata for locals defined in this label when the
+        // entry env was reconstructed mostly from backward facts.
+        for (auto& loc : label_defs[i])
+        {
+          auto eit = env.find(loc);
+          if (eit == env.end())
+            continue;
+
+          auto def_it = all_def_stmts.find(loc);
+          if (def_it == all_def_stmts.end())
+            continue;
+
+          if (!eit->second.call_node && def_it->second->in({Call, CallDyn, TryCallDyn}))
+            eit->second.call_node = def_it->second;
+
+          if (
+            eit->second.type && !eit->second.type->empty() &&
+            eit->second.type->front() != TypeVar && !is_default_type(eit->second.type))
+            continue;
+
+          TypeEnv recovered;
+          if (recover_local_type_from_def(loc, recovered, all_def_stmts, top))
+          {
+            auto rit = recovered.find(loc);
+            if (rit != recovered.end())
+              eit->second.type = clone(rit->second.type);
           }
         }
       }
