@@ -111,6 +111,18 @@ namespace vc
     return type;
   }
 
+  bool is_any_type(const Node& type)
+  {
+    if (type != Type)
+      return false;
+    auto inner = type->front();
+    if (inner != TypeName || inner->size() != 2)
+      return false;
+    if ((inner->front() / Ident)->location().view() != "_builtin")
+      return false;
+    return (inner->back() / Ident)->location().view() == "any";
+  }
+
   Node extract_wrapper_inner(const Node& type_node, std::string_view wrapper)
   {
     if (type_node != Type)
@@ -2168,6 +2180,53 @@ namespace vc
     std::vector<Location> element_value_locs;
   };
 
+  static Node infer_tracked_tuple_type(const TupleTracking& tt)
+  {
+    if (tt.is_array_lit)
+    {
+      Node common;
+      bool uniform = true;
+      for (size_t i = 0; i < tt.size && uniform; i++)
+      {
+        if (tt.element_value_locs[i].view().empty())
+        {
+          uniform = false;
+          break;
+        }
+
+        auto& et = tt.element_types[i];
+        if (!et || !extract_primitive(et))
+        {
+          uniform = false;
+          break;
+        }
+
+        if (!common)
+          common = clone(et);
+        else if (et->front()->type() != common->front()->type())
+          uniform = false;
+      }
+
+      if (uniform && common && tt.size > 0)
+        return clone(common);
+      return {};
+    }
+
+    for (size_t i = 0; i < tt.size; i++)
+      if (!tt.element_types[i])
+        return {};
+
+    if (tt.size == 0)
+      return {};
+    if (tt.size == 1)
+      return Type << clone(tt.element_types[0]->front());
+
+    Node tup = TupleType;
+    for (auto& et : tt.element_types)
+      tup << clone(et->front());
+    return Type << tup;
+  }
+
   struct LabelChanges
   {
     bool forward = false;
@@ -2412,6 +2471,10 @@ namespace vc
           merge(
             dst_loc, src_it->second.type, src_it->second.call_node);
 
+        auto tuple_ref = ref_to_tuple.find(src_loc);
+        if (tuple_ref != ref_to_tuple.end())
+          snmalloc::UNUSED(upsert_ref_to_tuple(ref_to_tuple, dst_loc, tuple_ref->second));
+
         // Backward: src = merge(src, dst).
         dst_it = env.find(dst_loc);
         if (dst_it != env.end())
@@ -2494,7 +2557,7 @@ namespace vc
             // Forward: dst = inner type.
             merge(dst_loc, clone(inner));
             // Backward: refine stored value.
-            if (merge_bwd(val_loc, clone(inner)))
+            if (!is_any_type(inner) && merge_bwd(val_loc, clone(inner)))
               propagate_call_node(env, val_loc, top, lookup_stmts);
 
             // Track tuple element types.
@@ -2512,6 +2575,19 @@ namespace vc
                     clone(val_it->second.type);
                   if (tt->second.is_array_lit)
                     tt->second.element_value_locs[idx] = val_loc;
+
+                  auto tracked = infer_tracked_tuple_type(tt->second);
+                  if (tracked)
+                  {
+                    auto tup_it = env.find(tup_loc);
+                    if (
+                      (tup_it == env.end()) ||
+                      !same_type_tree(tup_it->second.type, tracked))
+                    {
+                      env[tup_loc] = {clone(tracked), false, {}};
+                      changes.forward = true;
+                    }
+                  }
                 }
               }
             }
@@ -3114,24 +3190,9 @@ namespace vc
       }
       else
       {
-        // Heterogeneous tuple.
-        bool complete = true;
-        for (size_t i = 0; i < tt.size && complete; i++)
-          if (!tt.element_types[i])
-            complete = false;
-        if (complete && tt.size > 0)
-        {
-          if (tt.size == 1)
-            env[loc] = {
-              Type << clone(tt.element_types[0]->front()), false, {}};
-          else
-          {
-            Node tup = TupleType;
-            for (auto& et : tt.element_types)
-              tup << clone(et->front());
-            env[loc] = {Type << clone(tup), false, {}};
-          }
-        }
+        auto tracked = infer_tracked_tuple_type(tt);
+        if (tracked)
+          env[loc] = {tracked, false, {}};
       }
     }
 
@@ -3627,7 +3688,130 @@ namespace vc
     // 1. Consts: write inferred types to AST.
     for (size_t i = 0; i < n; i++)
     {
+      struct FinalTupleInfo
+      {
+        size_t size;
+        bool is_array_lit;
+      };
+
       auto body = labels->at(i) / Body;
+      std::map<Location, FinalTupleInfo> final_tuple_info;
+      std::map<Location, std::pair<Location, size_t>> final_tuple_refs;
+      std::map<Location, std::vector<Location>> final_tuple_values;
+      std::map<Location, Node> final_newarray_types;
+
+      for (auto& stmt : *body)
+      {
+        if (stmt == NewArrayConst)
+        {
+          auto loc = (stmt / LocalId)->location();
+          auto size = from_chars_sep_v<size_t>(stmt / Rhs);
+          bool is_array_lit =
+            loc.view().find("array") != std::string_view::npos;
+          final_tuple_info.emplace(loc, FinalTupleInfo{size, is_array_lit});
+          final_tuple_values.emplace(loc, std::vector<Location>(size));
+        }
+        else if (stmt == ArrayRefConst)
+        {
+          auto arg_loc = ((stmt / Arg) / Rhs)->location();
+          auto info = final_tuple_info.find(arg_loc);
+          if (info == final_tuple_info.end())
+            continue;
+          auto index = from_chars_sep_v<size_t>(stmt / Rhs);
+          if (index < info->second.size)
+            final_tuple_refs[(stmt / LocalId)->location()] = {arg_loc, index};
+        }
+        else if (stmt == Store)
+        {
+          auto ref_it = final_tuple_refs.find((stmt / Rhs)->location());
+          if (ref_it == final_tuple_refs.end())
+            continue;
+          auto& [tuple_loc, index] = ref_it->second;
+          auto values_it = final_tuple_values.find(tuple_loc);
+          if (values_it != final_tuple_values.end() && index < values_it->second.size())
+            values_it->second[index] = ((stmt / Arg) / Rhs)->location();
+        }
+      }
+
+      for (auto& [tuple_loc, info] : final_tuple_info)
+      {
+        auto values_it = final_tuple_values.find(tuple_loc);
+        if (values_it == final_tuple_values.end())
+          continue;
+
+        if (info.is_array_lit)
+        {
+          Node common;
+          bool uniform = true;
+          for (auto& value_loc : values_it->second)
+          {
+            if (value_loc.view().empty())
+            {
+              uniform = false;
+              break;
+            }
+            auto env_it = exit_envs[i].find(value_loc);
+            if (env_it == exit_envs[i].end())
+            {
+              uniform = false;
+              break;
+            }
+            auto prim = extract_primitive(env_it->second.type);
+            if (!prim)
+            {
+              uniform = false;
+              break;
+            }
+            if (!common)
+              common = clone(env_it->second.type);
+            else if (env_it->second.type->front()->type() != common->front()->type())
+            {
+              uniform = false;
+              break;
+            }
+          }
+
+          if (uniform && common && info.size > 0)
+            final_newarray_types[tuple_loc] = clone(common);
+          continue;
+        }
+
+        bool complete = true;
+        std::vector<Node> elems;
+        elems.reserve(info.size);
+        for (auto& value_loc : values_it->second)
+        {
+          if (value_loc.view().empty())
+          {
+            complete = false;
+            break;
+          }
+          auto env_it = exit_envs[i].find(value_loc);
+          if (env_it == exit_envs[i].end())
+          {
+            complete = false;
+            break;
+          }
+          elems.push_back(clone(env_it->second.type));
+        }
+
+        if (!complete || elems.empty())
+          continue;
+
+        if (elems.size() == 1)
+        {
+          final_newarray_types[tuple_loc] =
+            Type << clone(elems.front()->front());
+        }
+        else
+        {
+          Node tup = TupleType;
+          for (auto& elem : elems)
+            tup << clone(elem->front());
+          final_newarray_types[tuple_loc] = Type << tup;
+        }
+      }
+
       auto it = body->begin();
       while (it != body->end())
       {
@@ -3675,6 +3859,12 @@ namespace vc
         else if (*it == NewArrayConst)
         {
           auto nloc = ((*it) / LocalId)->location();
+          auto final_it = final_newarray_types.find(nloc);
+          if (final_it != final_newarray_types.end())
+          {
+            (*it)->replace((*it) / Type, clone(final_it->second));
+          }
+
           auto env_it = exit_envs[i].find(nloc);
           if (env_it != exit_envs[i].end())
           {
