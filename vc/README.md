@@ -7,10 +7,11 @@ Optimization.
 - Overall compile times.
 
 Semantics.
-- Remove `arrayiter`?
 - Region creation.
-- Null terminators in `string`?
+- Null terminators in `string`? UTF-8 handling?
 - Fix path compression, storing rank in Pending Location.
+- For values in match cases, make it so that it's only a parameter if it has a type annotation, otherwise it's a value.
+  - What about destructuring a pair?
 
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 
@@ -20,11 +21,9 @@ FFI.
 
 Reviews.
 - A Verona writing skill? `vc` project scaffold that adds the skill and a project-specific CLAUDE.md?
-- Can we review and improve compiler error messages?
 
 Tuples.
 - Flatten a tuple into another tuple.
-- Allow a splat in a for loop lambda signature?
 
 Names.
 - Allow looking down a type parameter.
@@ -51,6 +50,8 @@ Packages:
 
 Software engineering:
 - Public, private.
+- Proposal: `_` means private, public shapes can't have private methods.
+- Can't `use` a private name, nor a public name inside a private name.
 
 Security:
 - Integrate package management with signed and transparent statements and policies?

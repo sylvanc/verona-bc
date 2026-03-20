@@ -238,7 +238,6 @@ String literals (`"hello"`) produce `string` values.
 |--------|-----------|-------------|
 | `size` | `size(self): usize` | Length in bytes |
 | `ref apply` | `ref apply(self, index: usize): ref[u8]` | Ref to byte at index |
-| `values` | `values(self): arrayiter[u8]` | Byte iterator |
 | `bool` | `bool(self): bool` | Non-empty? |
 | `+` | `+(self, other: string): string` | Concatenation |
 | `==`, `!=` | Equality/inequality | Byte-by-byte comparison |
@@ -266,13 +265,6 @@ array[i32]::fill(3, 42)              // 3 elements, each 42
 | `size` | `size(self): usize` | Number of elements |
 | `each` | `each(self, f: T -> none): none` | Call `f` on each element |
 | `pairs` | `pairs(self, f: (usize, T) -> none): none` | Call `f` with index and element |
-| `values` | `values(self): arrayiter[T]` | Get iterator |
-
-### `arrayiter[T]`
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `next` | `next(self): T \| nomatch` | Next element or nomatch |
 
 ---
 

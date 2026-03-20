@@ -582,68 +582,6 @@ namespace vc
                          << (Block << lambda_body(_(Brace), {}));
           },
 
-        // For.
-        In(Expr) * T(For) * (!T(Lambda) * (!T(Lambda))++)[For] *
-            T(Lambda)[Lambda] >>
-          [](Match& _) {
-            // for e (a, b, ...) -> { body }
-            // desugars to:
-            // let it = e;
-            // while true {
-            //   let (a, b, ...) = it.next() else { break }
-            //   body
-            // }
-            auto params = _(Lambda) / Params;
-            auto type = _(Lambda) / Type;
-            auto body = _(Lambda) / Body;
-            auto id = _.fresh(Location("it"));
-
-            if (params->empty())
-              return err(_(Lambda), "For loop must have parameters");
-
-            // Unpack arguments.
-            Node lhs = Tuple;
-
-            for (auto& p : *params)
-            {
-              if (!(p / Body)->empty())
-                return err(p, "For loop parameter can't have a default value");
-
-              lhs << (Expr << (Let << (p / Ident) << (p / Type)));
-            }
-
-            if (type->front() != TypeVar)
-              return err(type, "For loop can't specify a type");
-
-            if (lhs->size() == 1)
-              lhs = lhs->front();
-            else
-              lhs = Expr << lhs;
-
-            // On each iteration, call `next` on the iterator and assign the
-            // result to the loop variable(s). Break if it's nomatch.
-            body->push_front(
-              Expr
-              << (Equals
-                  << lhs
-                  << (Expr
-                      << (Else
-                          << (Expr << (Ident ^ id)
-                                   << (Dot << (Ident ^ "next") << TypeArgs))
-                          << (Block
-                              << (Body
-                                  << (Break
-                                      << (Expr << (Ident ^ "none")))))))));
-
-            return ExprSeq << (Expr
-                               << (Equals
-                                   << (Expr
-                                       << (Let << (Ident ^ id) << make_type()))
-                                   << (Expr << _[For])))
-                           << (Expr
-                               << (While << (Expr << True) << (Block << body)));
-          },
-
         // When.
         In(Expr) * (T(When) << End) * (!T(Lambda))++[Expr] *
             T(Lambda)[Lambda] >>

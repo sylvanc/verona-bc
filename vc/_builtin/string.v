@@ -17,11 +17,6 @@ string
     ref self.data.apply(index)
   }
 
-  values(self: string): arrayiter[u8]
-  {
-    self.data.values
-  }
-
   bool(self: string): bool
   {
     self.size != 0

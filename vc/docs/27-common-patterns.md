@@ -113,12 +113,14 @@ arr.each elem ->
 }
 ```
 
-If you need the iterator directly (e.g., for `for` loops), use `values()`:
+If you need explicit loop control, write an index-based `while` loop:
 
 ```verona
-for arr.values() elem ->
+var index = 0;
+while index < arr.size
 {
-  // break/continue work here
+  process(arr(index));
+  index = index + 1
 }
 ```
 
@@ -131,13 +133,9 @@ Use `raise` inside a block lambda for early exit from a loop or repeated operati
 ```verona
 find(arr: array[i32], target: i32): i32
 {
-  let check = (x: i32) -> {
-    if x == target { raise x }
-  }
-
-  for arr.values() elem ->
+  arr.each elem ->
   {
-    check(elem)
+    if x == target { raise x }
   }
 
   0                                    // not found — default return
@@ -155,9 +153,12 @@ Use `T | nomatch` for functions that may not find a result:
 ```verona
 find_positive(arr: array[i32]): i32 | nomatch
 {
-  for arr.values() elem ->
+  var index = 0;
+  while index < arr.size
   {
+    let elem = arr(index);
     if elem > 0 { return elem }
+    index = index + 1
   }
   nomatch
 }

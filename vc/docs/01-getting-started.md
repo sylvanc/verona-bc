@@ -195,7 +195,7 @@ The compiler ships with a `_builtin` directory containing the standard library:
 ```
 _builtin/
   any.v           shape any {} — universal interface
-  array.v         array[T] — generic arrays and arrayiter[T]
+  array.v         array[T] — generic fixed-size arrays
   bool.v          bool — with short-circuit & and |
   cown.v          cown[T] — concurrent ownership
   f32.v           f32 — 32-bit float
@@ -246,7 +246,7 @@ The `.vbc` file is a self-contained bytecode bundle that can be executed on any 
 
 ## 1.5 A Larger Example
 
-This program creates an array, fills it with values, sums them with a `for` loop, and returns the sum as the exit code:
+This program creates an array, fills it with values, sums them with `each`, and returns the sum as the exit code:
 
 ```verona
 main(): i32
@@ -262,9 +262,9 @@ main(): i32
 
   var sum = 0;
 
-  for arr.values() i ->
+  arr.each i ->
   {
-    sum = sum + i
+    sum = sum + i;
   }
 
   sum
@@ -278,7 +278,7 @@ Key features demonstrated:
 - **Type inference**: `var index = 0` — the literal `0` is inferred as `usize` from context (used with `arr.size` and as an array index).
 - **Indexing**: `arr(index)` reads or writes via juxtaposition — this calls `arr.apply(index)` (or `arr.ref apply(index)` for writes). Verona uses juxtaposition instead of `[ ]` brackets for indexing. See [Expressions](05-expressions.md).
 - **Type conversion**: `index.i32` converts `usize` to `i32`. See [Types](03-types.md).
-- **Iterators and `->` blocks**: `for arr.values() i -> { ... }` calls `.next()` on the iterator, binding each element to `i`. The `->` introduces a lambda body — `i` is the parameter, and the `{ ... }` is the body. See [Arrays](12-arrays.md), [Lambdas](13-lambdas.md), and [Control Flow](06-control-flow.md).
+- **Higher-order iteration and `->` blocks**: `arr.each i -> { ... }` passes each element to a lambda. The `->` introduces a lambda body — `i` is the parameter, and the `{ ... }` is the body. See [Arrays](12-arrays.md), [Lambdas](13-lambdas.md), and [Control Flow](06-control-flow.md).
 - **Semicolons**: Required between sequential statements (`let arr = ...;` before `var index = 0;`), and after field definitions. Not required after the last expression in a block, or after closing `}` of control flow. See [Program Structure §2.5](02-program-structure.md).
 
 ---
@@ -319,7 +319,7 @@ sum_scores[T](items: array[T]): i32
 {
   var total = 0;
 
-  for items.values() item ->
+  items.each item ->
   {
     // You will get a compile error if T doesn't satisfy scorable (i.e., doesn't have score(self): i32)
     total = total + item.score

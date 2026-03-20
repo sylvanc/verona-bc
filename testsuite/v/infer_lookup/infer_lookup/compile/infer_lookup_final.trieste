@@ -34,10 +34,10 @@ liveness
                 (argmove)
                 (localid 6:$opt_1))))
           (move
-            (localid 4:$925)
+            (localid 4:$875)
             (localid 6:$opt_5)))
         (ret
-          (localid 4:$925)))))
+          (localid 4:$875)))))
   (func
     (functionid 24:infer_lookup::main::0::0)
     (params)
@@ -48,7 +48,7 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$111)
+            (localid 9:local$104)
             (i32)
             (int 1:1))
           (new
@@ -57,13 +57,13 @@ liveness
             (args
               (arg
                 (argmove)
-                (localid 9:local$111))))
+                (localid 9:local$104))))
           (lookup
             (localid 6:$opt_8)
             (localid 7:local$7)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$113)
+            (localid 9:local$106)
             (localid 6:$opt_8)
             (args
               (arg
@@ -71,7 +71,7 @@ liveness
                 (localid 7:local$7))))
           (move
             (localid 7:local$8)
-            (localid 9:local$113)))
+            (localid 9:local$106)))
         (ret
           (localid 7:local$8)))))
   (func
@@ -141,10 +141,10 @@ liveness
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$110)
+            (localid 9:local$103)
             (localid 6:$opt_9)))
         (ret
-          (localid 9:local$110)))))
+          (localid 9:local$103)))))
   (func
     (functionid 32:infer_lookup::wrapper::val::1::0)
     (params
@@ -164,10 +164,10 @@ liveness
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$508)
+            (localid 9:local$491)
             (localid 7:local$5)))
         (ret
-          (localid 9:local$508)))))
+          (localid 9:local$491)))))
   (func
     (functionid 37:infer_lookup::wrapper::val::1::ref::0)
     (params
@@ -182,13 +182,13 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$108)
+            (localid 9:local$101)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$108)))))
+          (localid 9:local$101)))))
   (primitive
     (i32)
     (methods))

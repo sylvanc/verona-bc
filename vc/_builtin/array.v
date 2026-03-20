@@ -44,11 +44,6 @@ array[T]
     }
   }
 
-  values(self: array[T]): arrayiter[T]
-  {
-    arrayiter[T](self)
-  }
-
   copy(self: array[T], offset: usize, len: usize): array[T]
   {
     let n = (self.size - offset) min len;
@@ -72,36 +67,5 @@ array[T]
     other: array[T], other_offset: usize, len: usize): i64
   {
     :::arraycmp(self, self_offset, other, other_offset, len)
-  }
-}
-
-arrayiter[T]
-{
-  index: usize;
-  arr: array[T];
-
-  create(arr: array[T]): arrayiter[T]
-  {
-    new { index = 0, arr }
-  }
-
-  next(self: arrayiter[T]): T | nomatch
-  {
-    if self.index < self.arr.size
-    {
-      let a = self.arr;
-      let item = a(self.index);
-      self.index = self.index + 1;
-      item
-    }
-    else
-    {
-      nomatch
-    }
-  }
-
-  rewind(self: arrayiter[T])
-  {
-    self.index = 0
   }
 }
