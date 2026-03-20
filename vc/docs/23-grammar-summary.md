@@ -96,8 +96,6 @@ Expr          ::= Literal
                  | '(' Args ')'                       // tuple / grouping
                  | 'if' Expr '{' Body '}' ElseChain?
                  | 'while' Expr '{' Body '}'
-                 | 'for' Expr Ident '->' '{' Body '}'
-                 | 'for' Expr '(' DestrElem (',' DestrElem)* ')' '->' '{' Body '}'
                  | 'when' '(' Args ')' '(' Params ')' '->' '{' Body '}'
                  | MatchExpr
                  | LambdaExpr

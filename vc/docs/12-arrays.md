@@ -65,26 +65,43 @@ The `each` and `pairs` methods iterate over elements using a lambda callback:
 let arr = array[i32]::fill(10);
 
 // each: calls f(element) for each element
-arr.each i -> { process(i); none }
+arr.each i -> { process(i) }
 
 // pairs: calls f(index, element) for each element
-arr.pairs (i, v) -> { arr(i) = i.i32; none }
+arr.pairs (i, v) -> { arr(i) = i.i32 }
 ```
 
 Lambda parameter types are inferred from the method signature — no type annotations needed. See [Lambdas §13.2](13-lambdas.md) for trailing lambda syntax.
 
-### Iterator-Based (`for` loop)
+### Early Exit and Manual Iteration
 
-The `values()` method returns an `arrayiter[T]` iterator:
+When you need to stop an `each` or `pairs` traversal early, use `raise` inside the callback. `raise` is a non-local return: it exits the enclosing function, not just the lambda.
 
 ```verona
-for arr.values() elem ->
+find_first(arr: array[i32], target: i32): i32 | nomatch
 {
-  // elem is bound to each element in order
+  arr.each x ->
+  {
+    if x == target { raise x }
+  }
+
+  nomatch
 }
 ```
 
-The iterator's `next()` method returns `T | nomatch`. The `for` loop calls `next()` each iteration and stops when it returns `nomatch`.
+If you need explicit index manipulation, iterate with `while` and `size`:
+
+```verona
+var index = 0;
+while index < arr.size
+{
+  let elem = arr(index);
+  process(elem);
+  index = index + 1
+}
+```
+
+See [Control Flow §6.5](06-control-flow.md) and [Error Handling §24.2](24-error-handling.md) for the full `raise` semantics.
 
 ---
 
@@ -136,7 +153,6 @@ main(): i32
 | `size` | `size(self: array[T]): usize` | Number of elements |
 | `each` | `each(self: array[T], f: T -> none): none` | Call `f` on each element |
 | `pairs` | `pairs(self: array[T], f: (usize, T) -> none): none` | Call `f` with index and element |
-| `values` | `values(self: array[T]): arrayiter[T]` | Get iterator |
 
 ---
 

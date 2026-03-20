@@ -141,18 +141,34 @@ Usually you don't need annotations — lambda parameter types are inferred from 
 
 ---
 
-## 26.7 For Loops Need `->`
+## 26.7 No `for` Loops
 
-The `for` loop requires the arrow `->` after the element binding:
+Verona does not have a language-level `for` loop. Use `each` or `pairs` for array iteration, or write an explicit `while` loop when you need `break`, `continue`, or manual control:
 
 ```verona
-for arr.values() elem ->
+arr.each elem ->
 {
-  // body
+  if !should_skip(elem)
+  {
+    process(elem);
+  }
 }
 ```
 
-Forgetting `->` is a common syntax error. The arrow separates the lambda parameter from the body — `for` loop bodies are lambdas under the hood.
+```verona
+var index = 0;
+while index < arr.size
+{
+  if should_skip(index)
+  {
+    index = index + 1;
+    continue
+  }
+
+  process(arr(index));
+  index = index + 1
+}
+```
 
 ---
 

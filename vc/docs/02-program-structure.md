@@ -156,7 +156,7 @@ The goal is that Verona is usable across the full spectrum — from bare-metal e
 
 ## 2.7 Keywords
 
-The following words are reserved: `use`, `where`, `let`, `var`, `if`, `else`, `while`, `for`, `match`, `when`, `break`, `continue`, `return`, `raise`, `new`, `shape`, `true`, `false`.
+The following words are reserved: `use`, `where`, `let`, `var`, `if`, `else`, `while`, `match`, `when`, `break`, `continue`, `return`, `raise`, `new`, `shape`, `true`, `false`.
 
 ---
 

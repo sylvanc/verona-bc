@@ -12,7 +12,7 @@ Verona does not have exceptions or `try`/`catch`. Instead, it provides:
 
 - **`raise`** — non-local return from a block lambda to the enclosing function.
 - **`nomatch`** — a sentinel type for signaling the absence of a result.
-- **`else` on expressions** — handling the `nomatch` case in iterators and `for` loops.
+- **`else` on expressions** — handling the `nomatch` case in `if`, `match` and other fallible expressions.
 - **Runtime errors** — fatal to the current behavior (not recoverable).
 
 ---
@@ -92,7 +92,7 @@ find_in_array(arr: array[i32], target: i32): i32
     if x == target { raise x }
   }
 
-  for arr.values() elem ->
+  arr.each elem ->
   {
     check(elem)
   }
@@ -105,18 +105,21 @@ find_in_array(arr: array[i32], target: i32): i32
 
 ## 24.3 Signaling Failure with `nomatch`
 
-For recoverable "not found" or "no result" cases, functions return `T | nomatch`:
+For recoverable "not found" or "no result" cases, functions return `T | nomatch`. A common pattern is to use `raise` for the success path during traversal, and fall through to `nomatch` when nothing matched:
 
 ```verona
 find(arr: array[i32], target: i32): i32 | nomatch
 {
-  for arr.values() elem ->
+  arr.each elem ->
   {
-    if elem == target { return elem }
+    if elem == target { raise elem }
   }
+
   nomatch
 }
 ```
+
+Here `raise elem` returns immediately from `find`, while `nomatch` handles the ordinary "not found" case.
 
 `nomatch` is also the sentinel for failed match arms — when a `match` expression's type test or value test arm doesn't match, it returns `nomatch`, which the `else` fallback handles:
 
@@ -127,17 +130,9 @@ let result = match x { (n: i32) -> n + 1; } else (0);
 
 See [Control Flow §6.8](06-control-flow.md) for the full match expression syntax.
 
-The caller handles `nomatch` through iterators or the `else` mechanism:
+Callers typically handle `nomatch` with `else`, which is covered in the next section.
 
-```verona
-// Using for to handle T | nomatch implicitly:
-for arr.values() elem ->
-{
-  // elem is T, not T | nomatch — the for loop strips nomatch
-}
-```
-
-See [Types §3.3](03-types.md) for union type discrimination patterns and [Control Flow §6.8](06-control-flow.md) for match expressions.
+See [Types §3.3](03-types.md) for union type discrimination patterns, [Control Flow §6.8](06-control-flow.md) for match expressions, and [Else on Expressions §24.4](24-error-handling.md#244-else-on-expressions) for `else`.
 
 ---
 
@@ -146,10 +141,10 @@ See [Types §3.3](03-types.md) for union type discrimination patterns and [Contr
 The `else` keyword after an expression handles the `nomatch` case:
 
 ```verona
-let elem = it.next() else { break }
+let elem = find(arr, target) else { default_value }
 ```
 
-If `it.next()` returns `nomatch`, the `else` branch executes. Otherwise, the value is bound with `nomatch` stripped from the type. This is the mechanism underlying `for` loop desugaring.
+If `find(arr, target)` returns `nomatch`, the `else` branch executes. Otherwise, the value is bound with `nomatch` stripped from the type. This is the core pattern for consuming fallible expressions.
 
 See [Control Flow §6.7](06-control-flow.md) for details.
 
@@ -220,7 +215,7 @@ process_all(items: array[string]): i32 | parse_error
   }
 
   var sum: i32 = 0;
-  for items.values() item ->
+  items.each item ->
   {
     sum = sum + check(item)
   }

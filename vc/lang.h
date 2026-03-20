@@ -88,7 +88,6 @@ namespace vc
   inline const auto If = TokenDef("if");
   inline const auto Else = TokenDef("else");
   inline const auto While = TokenDef("while");
-  inline const auto For = TokenDef("for");
   inline const auto Break = TokenDef("break");
   inline const auto Continue = TokenDef("continue");
   inline const auto MatchExpr = TokenDef("match");

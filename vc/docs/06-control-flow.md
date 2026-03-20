@@ -73,55 +73,43 @@ while i < 10
 
 ---
 
-## 6.3 For Loops
+## 6.3 No `for` Loop Syntax
 
-`for` iterates over an iterator:
+Verona does not have a language-level `for` loop. Use one of these supported patterns instead:
 
-```verona
-for iterator element -> { body }
-```
-
-The iterator must have a `next()` method returning `T | nomatch`. The loop calls `.next()` each iteration and binds the result to `element`. When `.next()` returns `nomatch`, the loop exits.
+- `each` for element iteration
+- `pairs` for index-and-element iteration
+- `while` plus `else` on `next()` when consuming a custom iterator that returns `T | nomatch`
 
 ```verona
-for arr.values() i ->
+arr.each i ->
 {
   sum = sum + i
 }
 ```
 
-### How It Desugars
-
 ```verona
-for iter elem -> { body }
-```
-
-is equivalent to:
-
-```verona
+var index = 0;
+while index < arr.size
 {
-  let it = iter;
-  while true
-  {
-    let elem = it.next() else { break }
-    body
-  }
+  process(index, arr(index));
+  index = index + 1
 }
 ```
 
-### Multiple Parameters
-
-For loop parameters can destructure tuples:
-
 ```verona
-for iter (a, b) -> { body }
+while true
+{
+  let elem = it.next() else { break }
+  process(elem)
+}
 ```
 
 ---
 
 ## 6.4 Break and Continue
 
-`break` exits the innermost loop:
+`break` exits the innermost `while` loop:
 
 ```verona
 while true
@@ -130,7 +118,7 @@ while true
 }
 ```
 
-`continue` skips to the next iteration:
+`continue` skips to the next `while` iteration:
 
 ```verona
 while i < 10
@@ -193,11 +181,10 @@ when (c1, c2) (ref1, ref2) ->
 
 ## 6.7 Else on Expressions
 
-The `else` keyword can follow an expression to handle the `nomatch` case. This is the mechanism underlying `for` loops and `match` expressions:
+The `else` keyword can follow an expression to handle the `nomatch` case. This is the mechanism used by `match` expressions and explicit consumers of `T | nomatch` results:
 
 ```verona
-// Inside the for loop desugaring:
-let elem = it.next() else { break }
+let elem = if false { 0 } else { 1 }
 ```
 
 If `it.next()` returns `nomatch`, the `else` branch executes. Otherwise, the value is bound to `elem` with the `nomatch` alternative stripped from the type.

@@ -80,9 +80,9 @@ log(msg: string): none
 ```
 
 **`nomatch`** is a sentinel that signals "this operation did not produce a result." It is used by:
-- **Iterators**: `next()` returns `T | nomatch` — `nomatch` means the iterator is exhausted.
-- **Match expressions**: A failed match arm returns `nomatch`, which flows to the next arm or the `else` fallback.
+- **If expressions**: `if cond { ... }` returns `nomatch` if the condition is false.
 - **The `else` mechanism**: `expr else { fallback }` handles the `nomatch` case.
+- **Match expressions**: A failed match arm returns `nomatch`, which flows to the next arm or the `else` fallback.
 
 ```verona
 // none: "I did something, here's the unit value"
@@ -92,7 +92,7 @@ let x: none = log("hello");
 let result: i32 | nomatch = match v { (n: i32) -> n; }
 ```
 
-Key difference: `none` is a successful return with no data. `nomatch` is a signal that the operation failed to match or find something. The `for` loop depends on this distinction — it stops when `next()` returns `nomatch`, but a `none`-returning iterator would be an infinite loop of unit values.
+Key difference: `none` is a successful return with no data. `nomatch` is a signal that the operation failed to match or find something. Code that consumes `T | nomatch` uses `else` to branch on exhaustion or failure; a `none`-returning helper would not trigger that fallback.
 
 ---
 
@@ -101,7 +101,7 @@ Key difference: `none` is a successful return with no data. `nomatch` is a signa
 A union type `A | B` represents a value that is either of type `A` or type `B`:
 
 ```verona
-next(self: arrayiter[T]): T | nomatch
+next(self: pair_iter): (usize, i32) | nomatch
 ```
 
 Union types are left-associative and can have more than two alternatives:
@@ -110,25 +110,26 @@ Union types are left-associative and can have more than two alternatives:
 A | B | C       // a value that is A, B, or C
 ```
 
-Union types are used extensively in iterators (returning `T | nomatch`) and in `when` blocks.
+Union types are used extensively in fallible operations (returning `T | nomatch`) and in `when` blocks.
 
 ### Discriminating Union Types
 
-Union type discrimination is done through `match` expressions and the `for`/`else` mechanism:
+Union type discrimination is done through `match` expressions and `else` on expressions:
 
 - **`match` expressions** test a value against type patterns and value patterns. Each arm is a case lambda — type test arms bind the value to a typed parameter, value test arms compare using `==`. See [Control Flow §6.8](06-control-flow.md) for full details.
-- **`for` loops** automatically handle `T | nomatch`: when the iterator's `.next()` returns `nomatch`, the loop exits. The user never sees the `nomatch` case.
 - **`else` on expressions**: `expr else { fallback }` handles the `nomatch` case — the `else` branch runs when the expression evaluates to `nomatch`.
 
 ```verona
 // Type discrimination with match:
 let x: i32 | string = get_value();
-let result = match x { (n: i32) -> n + 1; (s: string) -> s.size; } else (0);
-
-// Iterator discrimination with for:
-for arr.values() elem ->
+let result = match x
 {
-  // elem is T, not T | nomatch — the for loop strips nomatch
+  (n: i32) -> n + 1;
+  (s: string) -> s.size;
+}
+else
+{
+  0
 }
 ```
 
@@ -272,7 +273,7 @@ Multiple constraints can be combined to require a type parameter to satisfy seve
 format_sorted[T](arr: array[T]) where T < comparable & T < printable
 {
   sort(arr);
-  for arr.values() elem ->
+  arr.each elem ->
   {
     print_it(elem)
   }
