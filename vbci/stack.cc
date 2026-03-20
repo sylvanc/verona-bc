@@ -4,7 +4,7 @@
 #include "header.h"
 #include "object.h"
 #include "program.h"
- namespace vbci
+namespace vbci
 {
   Stack::Idx Stack::save()
   {

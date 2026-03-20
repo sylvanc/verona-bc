@@ -14,7 +14,8 @@ namespace vc
     Node name; // The FQ TypeName referencing it.
   };
 
-  std::vector<FuncTypeFreeTP> collect_functype_free_typeparams(Node ft, Node top)
+  std::vector<FuncTypeFreeTP>
+  collect_functype_free_typeparams(Node ft, Node top)
   {
     std::vector<FuncTypeFreeTP> result;
     std::set<Node> seen;

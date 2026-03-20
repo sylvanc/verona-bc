@@ -469,7 +469,6 @@ namespace vbci
     RegionArena
   };
 
-
   enum class DIOp : uint8_t
   {
     File,

@@ -918,11 +918,11 @@ namespace vbci
             (vr->get_frame_depth() > (ref_loc.stack_index() + 1)))
           {
             // Find the target frame's region by matching stack index.
-            auto target_region =
-              Thread::frame_region_for_stack(ref_loc);
+            auto target_region = Thread::frame_region_for_stack(ref_loc);
 
-            if (!target_region ||
-                !drag_allocation<is_move>(target_region, v->get_header()))
+            if (
+              !target_region ||
+              !drag_allocation<is_move>(target_region, v->get_header()))
               Value::error(Error::BadStoreTarget);
           }
         }

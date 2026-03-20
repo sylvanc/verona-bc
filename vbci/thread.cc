@@ -446,8 +446,7 @@ namespace vbci
       visit_value(reg);
     }
 
-    auto visit_header = [&](Header* h)
-    {
+    auto visit_header = [&](Header* h) {
       if (!h->location().is_region())
         return;
 
@@ -1689,7 +1688,8 @@ namespace vbci
           auto off = off_reg->get_size();
           auto len = len_reg->get_size();
 
-          dst_arr->bulk_fill(off, len, static_cast<const Value&>(val_reg.borrow()));
+          dst_arr->bulk_fill(
+            off, len, static_cast<const Value&>(val_reg.borrow()));
           self.drop_args();
           dst = ValueImmortal(Value::none());
         });
@@ -1831,9 +1831,7 @@ namespace vbci
       // The return value can't be stack allocated in this frame.
       Value::error(Error::BadStackEscape);
     }
-    else if (
-      retloc.is_region() &&
-      retloc.to_region() == frame->region)
+    else if (retloc.is_region() && retloc.to_region() == frame->region)
     {
       if (frames.size() > 1)
       {
@@ -1900,8 +1898,7 @@ namespace vbci
     }
 
     if (
-      retloc.is_region() &&
-      retloc.to_region()->is_frame_local() &&
+      retloc.is_region() && retloc.to_region()->is_frame_local() &&
       (retloc.to_region()->get_frame_depth() > (target.stack_index() + 1)))
     {
       // Frame-local in a frame younger than the target. Drag it to the

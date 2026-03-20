@@ -29,7 +29,7 @@ FetchContent_MakeAvailable(cmake_utils)
 FetchContent_Declare(
   verona-rt
   GIT_REPOSITORY https://github.com/microsoft/verona-rt
-  GIT_TAG 9f325779e07df8ffdc913d0aaaf0deebd4ebb0a2
+  GIT_TAG 380e91f5e3378400d28bf7de8a480fd08cb758c0
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
@@ -65,8 +65,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable_ExcludeFromAll(zstd)
 
-# Use snmalloc clangformat target
-clangformat_targets()
+# Use snmalloc clangformat function (verona-rt has a stale copy).
+# Override the version to find whatever is installed, and set the include
+# patterns to match our source layout.
+clangformat_targets(
+  VERSION 20
+  INCLUDE_PATTERNS vc/*.cc vc/*.h vbcc/*.cc vbcc/*.h vbci/*.cc vbci/*.h include/*.h
+)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 

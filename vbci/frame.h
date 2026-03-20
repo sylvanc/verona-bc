@@ -1,9 +1,9 @@
 #pragma once
 
-#include "stack.h"
-#include "value.h"
 #include "region.h"
 #include "register.h"
+#include "stack.h"
+#include "value.h"
 
 #include <span>
 #include <vector>

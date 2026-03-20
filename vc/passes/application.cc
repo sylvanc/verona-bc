@@ -84,36 +84,34 @@ namespace vc
     {
       apply_body
         << (Expr
-            << (Equals
-                << (Expr
-                    << (Let << (Ident ^ field.name) << clone(field.type)))
-                << (Expr
-                    << (Load
-                        << (Expr
-                            << (FieldRef << (Expr << (LocalId ^ "$self"))
-                                         << (FieldId ^ field.name)))))));
+            << (Equals << (Expr
+                           << (Let << (Ident ^ field.name)
+                                   << clone(field.type)))
+                       << (Expr
+                           << (Load
+                               << (Expr
+                                   << (FieldRef << (Expr << (LocalId ^ "$self"))
+                                                << (FieldId ^ field.name)))))));
     }
 
     if (call->type() == Call)
     {
-      apply_body
-        << (Expr << (Call << clone(call / FuncName) << new_call_args));
+      apply_body << (Expr << (Call << clone(call / FuncName) << new_call_args));
     }
     else if (call->type() == TryCallDyn)
     {
       apply_body
         << (Expr
             << (TryCallDyn << (Expr << (LocalId ^ "$recv"))
-                        << clone(call / Ident) << clone(call / TypeArgs)
-                        << new_call_args));
+                           << clone(call / Ident) << clone(call / TypeArgs)
+                           << new_call_args));
     }
     else
     {
       apply_body
         << (Expr
-            << (CallDyn << (Expr << (LocalId ^ "$recv"))
-                        << clone(call / Ident) << clone(call / TypeArgs)
-                        << new_call_args));
+            << (CallDyn << (Expr << (LocalId ^ "$recv")) << clone(call / Ident)
+                        << clone(call / TypeArgs) << new_call_args));
     }
 
     rewrite_typeparam_refs(apply_body, free_tps, cls_path, id);
@@ -121,8 +119,7 @@ namespace vc
     auto result = make_anon_class(
       id, call, free_tps, fields, apply_params, ret_type, apply_body);
 
-    return Seq << (Lift << ClassBody << result.class_def)
-               << result.create_call;
+    return Seq << (Lift << ClassBody << result.class_def) << result.create_call;
   }
 
   PassDef application()

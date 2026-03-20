@@ -95,12 +95,12 @@ namespace vbci
 
     bool is_primitive() const
     {
-      return value_type != ValueType::Object && value_type != ValueType::Array &&
-        value_type != ValueType::Invalid && value_type != ValueType::Cown;
+      return value_type != ValueType::Object &&
+        value_type != ValueType::Array && value_type != ValueType::Invalid &&
+        value_type != ValueType::Cown;
     }
 
-    void bulk_copy(
-      size_t dst_off, Array* src, size_t src_off, size_t len)
+    void bulk_copy(size_t dst_off, Array* src, size_t src_off, size_t len)
     {
       if (len == 0)
         return;
@@ -110,9 +110,9 @@ namespace vbci
       assert(value_type == src->value_type);
       assert(stride == src->stride);
 
-      auto* dst_data = reinterpret_cast<uint8_t*>(this + 1) + (stride * dst_off);
-      auto* src_data =
-        reinterpret_cast<uint8_t*>(src + 1) + (stride * src_off);
+      auto* dst_data =
+        reinterpret_cast<uint8_t*>(this + 1) + (stride * dst_off);
+      auto* src_data = reinterpret_cast<uint8_t*>(src + 1) + (stride * src_off);
 
       if (is_primitive())
       {
@@ -181,8 +181,7 @@ namespace vbci
       }
     }
 
-    int bulk_compare(
-      size_t a_off, Array* other, size_t b_off, size_t len) const
+    int bulk_compare(size_t a_off, Array* other, size_t b_off, size_t len) const
     {
       if (len == 0)
         return 0;

@@ -8,8 +8,8 @@
 
 #include <cstdint>
 #include <iostream>
-#include <vector>
 #include <vbci.h>
+#include <vector>
 
 namespace vbci
 {
@@ -32,7 +32,12 @@ namespace vbci
 
   protected:
     Region(RegionType type, size_t frame_depth = 0)
-    : parent(nullptr), entry_point(nullptr), stack_rc(0), type(type), cown_owned(false), frame_depth(frame_depth)
+    : parent(nullptr),
+      entry_point(nullptr),
+      stack_rc(0),
+      type(type),
+      cown_owned(false),
+      frame_depth(frame_depth)
     {}
 
   public:
@@ -168,7 +173,7 @@ namespace vbci
         r->stack_inc();
       }
     }
-    
+
     void clear_parent()
     {
       auto p = parent;

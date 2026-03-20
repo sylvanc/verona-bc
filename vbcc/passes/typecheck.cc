@@ -796,8 +796,7 @@ namespace vbcc
             auto idx_node = node / Rhs;
             auto idx = from_chars_sep_v<size_t>(idx_node);
             if (idx < src_type->size())
-              set_type(
-                env, node / LocalId, Ref << clone(src_type->at(idx)));
+              set_type(env, node / LocalId, Ref << clone(src_type->at(idx)));
             else
             {
               type_err(
@@ -1187,8 +1186,7 @@ namespace vbcc
                 auto param_type = resolve_type((*p_it) / Type);
                 auto arg_type = typed((*a_it) / Rhs);
 
-                if (
-                  arg_type && !IRSubtype(top, arg_type, param_type))
+                if (arg_type && !IRSubtype(top, arg_type, param_type))
                 {
                   type_err(
                     *a_it,
@@ -1216,8 +1214,7 @@ namespace vbcc
               auto resolved_src = resolve_type(info.src_type);
 
               if (
-                resolved_src && resolved_src == Union &&
-                resolved_src->empty())
+                resolved_src && resolved_src == Union && resolved_src->empty())
                 set_type(env, node / LocalId, Union);
               else
                 set_type(env, node / LocalId, Dyn);
@@ -1848,8 +1845,7 @@ namespace vbcc
           }
           else if (
             last == Not &&
-            (last / LocalId)->location() ==
-              (term_node / LocalId)->location() &&
+            (last / LocalId)->location() == (term_node / LocalId)->location() &&
             body_node->size() > 1)
           {
             auto prev = body_node->at(body_node->size() - 2);
@@ -1925,8 +1921,7 @@ namespace vbcc
           // labels (narrowed to an empty shape type).
           auto this_label_name =
             std::string((label_vec[idx] / LabelId)->location().view());
-          bool is_unreachable =
-            unreachable_labels.count(this_label_name) > 0;
+          bool is_unreachable = unreachable_labels.count(this_label_name) > 0;
 
           auto body = label_vec[idx] / Body;
 
@@ -2086,8 +2081,8 @@ namespace vbcc
 
         std::unordered_map<std::string, LookupInfo> li_copy;
         for (auto& [k, v] : lookup_info)
-          li_copy[k] = {v.src_type ? clone(v.src_type) : Node{},
-                        clone(v.method_id)};
+          li_copy[k] = {
+            v.src_type ? clone(v.src_type) : Node{}, clone(v.method_id)};
         state->func_lookups[func_key] = std::move(li_copy);
       }
 

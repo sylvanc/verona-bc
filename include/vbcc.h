@@ -248,8 +248,8 @@ namespace vbcc
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
     StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
-    RegionArrayConst | Copy | Move | Drop | Freeze | RegisterRef | FieldRef | ArrayRef |
-    ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
+    RegionArrayConst | Copy | Move | Drop | Freeze | RegisterRef | FieldRef |
+    ArrayRef | ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
     wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
     RegisterExternalNotify | MemoSlot | ArrayCopy | ArrayFill | ArrayCompare;

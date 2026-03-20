@@ -63,8 +63,24 @@ namespace vbcc
         if (type_node == ClassId)
           return find_class(type_node);
         if (type_node->type().in(
-              {None, Bool, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64,
-               ILong, ULong, ISize, USize, Ptr, Callback}))
+              {None,
+               Bool,
+               I8,
+               I16,
+               I32,
+               I64,
+               U8,
+               U16,
+               U32,
+               U64,
+               F32,
+               F64,
+               ILong,
+               ULong,
+               ISize,
+               USize,
+               Ptr,
+               Callback}))
           return find_primitive(type_node);
         if (type_node->type().in({Array, Cown, Ref}))
         {
@@ -87,8 +103,7 @@ namespace vbcc
         for (auto& method : *(cls / Methods))
         {
           if ((method / MethodId)->location() == method_id->location())
-            return std::string(
-              (method / FunctionId)->location().view());
+            return std::string((method / FunctionId)->location().view());
         }
         return {};
       };
@@ -133,8 +148,8 @@ namespace vbcc
             else if (stmt == Call)
             {
               auto name = std::string((stmt / LocalId)->location().view());
-              auto target = find_func(
-                std::string((stmt / FunctionId)->location().view()));
+              auto target =
+                find_func(std::string((stmt / FunctionId)->location().view()));
               if (target)
                 env[name] = target / Type;
             }
@@ -159,13 +174,10 @@ namespace vbcc
       // infinite recursion through non-once mutual recursion.
       std::unordered_map<std::string, std::set<std::string>> visited_per_root;
 
-      auto find_deps_with_visited = [&](
-                                      const std::string& root,
-                                      Node func_node,
-                                      auto& self) -> void {
+      auto find_deps_with_visited =
+        [&](const std::string& root, Node func_node, auto& self) -> void {
         auto& visited = visited_per_root[root];
-        auto func_id =
-          std::string((func_node / FunctionId)->location().view());
+        auto func_id = std::string((func_node / FunctionId)->location().view());
 
         if (!visited.insert(func_id).second)
           return; // Already explored this function for this root.
@@ -182,8 +194,7 @@ namespace vbcc
           {
             if (stmt == Lookup)
             {
-              auto dst_name =
-                std::string((stmt / LocalId)->location().view());
+              auto dst_name = std::string((stmt / LocalId)->location().view());
               auto src_name = std::string((stmt / Rhs)->location().view());
               auto src_it = env.find(src_name);
               Node src_type = src_it != env.end() ? src_it->second : Node{};
@@ -191,8 +202,7 @@ namespace vbcc
             }
             else if (stmt == Call)
             {
-              auto target =
-                std::string((stmt / FunctionId)->location().view());
+              auto target = std::string((stmt / FunctionId)->location().view());
               if (memo_ids.count(target))
               {
                 edges[root].insert(target);
@@ -207,8 +217,7 @@ namespace vbcc
             }
             else if (stmt->in({CallDyn, TryCallDyn}))
             {
-              auto fn_ptr_name =
-                std::string((stmt / Rhs)->location().view());
+              auto fn_ptr_name = std::string((stmt / Rhs)->location().view());
               auto it = lookup_info.find(fn_ptr_name);
               if (it == lookup_info.end())
                 continue;
@@ -349,8 +358,7 @@ namespace vbcc
       for (auto& func_once : to_replace)
       {
         auto orig_id = func_once / FunctionId;
-        auto orig_id_str =
-          std::string(orig_id->location().view());
+        auto orig_id_str = std::string(orig_id->location().view());
         auto init_id_str = orig_id_str + "$once";
         auto r_type = func_once / Type;
         auto params = func_once / Params;
@@ -362,15 +370,15 @@ namespace vbcc
                               << clone(r_type) << vars << labels;
 
         // Stub function: original id, MemoSlot load.
-        Node stub_func =
-          Func << (FunctionId ^ orig_id_str) << Params << clone(r_type)
-               << (Vars << (LocalId ^ "$memo"))
-               << (Labels
-                   << (Label << (LabelId ^ "entry")
-                             << (Body
-                                 << (MemoSlot << (LocalId ^ "$memo")
-                                              << (FunctionId ^ init_id_str)))
-                             << (Return << (LocalId ^ "$memo"))));
+        Node stub_func = Func
+          << (FunctionId ^ orig_id_str) << Params << clone(r_type)
+          << (Vars << (LocalId ^ "$memo"))
+          << (Labels
+              << (Label << (LabelId ^ "entry")
+                        << (Body
+                            << (MemoSlot << (LocalId ^ "$memo")
+                                         << (FunctionId ^ init_id_str)))
+                        << (Return << (LocalId ^ "$memo"))));
 
         // Replace FuncOnce with both Func nodes.
         auto it = top->find(func_once);

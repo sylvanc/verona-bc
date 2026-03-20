@@ -195,7 +195,7 @@ namespace vbcc
 
         // Character literal.
         "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
- 
+
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},
       });

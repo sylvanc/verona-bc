@@ -1,10 +1,9 @@
 #include "../lang.h"
 
-#include <trieste/nodeworker.h>
-
 #include <map>
 #include <set>
 #include <string>
+#include <trieste/nodeworker.h>
 
 #define STEP(x) \
   switch (x) \
@@ -616,8 +615,7 @@ namespace vc
           // Stop at nested Lambdas, but not the scope itself.
           if ((node != scope) && (node == Lambda))
             return false;
-          if ((node == LocalId) &&
-              (node->location().view() == name))
+          if ((node == LocalId) && (node->location().view() == name))
           {
             auto replacement = LocalId ^ new_name;
             node->parent()->replace(node, replacement);

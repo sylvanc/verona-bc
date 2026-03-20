@@ -272,18 +272,20 @@ namespace vc
           // Write: replace with Ref(Expr(FieldRef)) — ANF handles Store.
           parent->replace(
             node,
-            Ref << (Expr
-                    << (FieldRef << (Expr << (LocalId ^ "$self"))
-                                 << (FieldId ^ node->location()))));
+            Ref
+              << (Expr
+                  << (FieldRef << (Expr << (LocalId ^ "$self"))
+                               << (FieldId ^ node->location()))));
         }
         else
         {
           // Read: replace with Load(FieldRef).
           parent->replace(
             node,
-            Load << (Expr
-                     << (FieldRef << (Expr << (LocalId ^ "$self"))
-                                  << (FieldId ^ node->location()))));
+            Load
+              << (Expr
+                  << (FieldRef << (Expr << (LocalId ^ "$self"))
+                               << (FieldId ^ node->location()))));
         }
       }
     }
@@ -421,24 +423,21 @@ namespace vc
         auto case_name = _.fresh(l_local);
         callsite
           << (Expr
-              << (Equals
-                  << (Expr << (Let << (Ident ^ case_name) << type_any()))
-                  << clone(param)));
+              << (Equals << (Expr << (Let << (Ident ^ case_name) << type_any()))
+                         << clone(param)));
 
         // Try calling == on the destructured value with the case value.
         // If == doesn't exist or returns non-bool, we get nomatch.
         auto eq_name = _.fresh(l_local);
         type_checks
           << (Expr
-              << (Equals
-                  << (Expr << (Let << (Ident ^ eq_name) << make_type()))
-                  << (Expr
-                      << (TryCallDyn
-                              << (Expr << (LocalId ^ dest_name))
-                              << (SymbolId ^ "==") << TypeArgs
-                              << (Args
-                                  << (Expr
-                                      << (LocalId ^ case_name)))))));
+              << (Equals << (Expr << (Let << (Ident ^ eq_name) << make_type()))
+                         << (Expr
+                             << (TryCallDyn
+                                 << (Expr << (LocalId ^ dest_name))
+                                 << (SymbolId ^ "==") << TypeArgs
+                                 << (Args
+                                     << (Expr << (LocalId ^ case_name)))))));
 
         // If the result is not a bool, return nomatch.
         auto bool_type = Type
@@ -447,13 +446,12 @@ namespace vc
         type_checks
           << (Expr
               << (If << (Expr
-                         << (Unop
-                             << Not
-                             << (Args
-                                 << (Expr
-                                     << (Typetest
-                                             << (Expr << (LocalId ^ eq_name))
-                                             << bool_type)))))
+                         << (Unop << Not
+                                  << (Args
+                                      << (Expr
+                                          << (Typetest
+                                              << (Expr << (LocalId ^ eq_name))
+                                              << bool_type)))))
                      << clone(nomatch_block)));
 
         // If the bool is false (values not equal), return nomatch.
@@ -461,8 +459,7 @@ namespace vc
           << (Expr
               << (If << (Expr
                          << (Unop << Not
-                                  << (Args
-                                      << (Expr << (LocalId ^ eq_name)))))
+                                  << (Args << (Expr << (LocalId ^ eq_name)))))
                      << clone(nomatch_block)));
       }
     }

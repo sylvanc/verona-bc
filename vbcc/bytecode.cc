@@ -1030,12 +1030,10 @@ namespace vbcc
           }
           else if (stmt == MemoSlot)
           {
-            auto fid_str =
-              std::string((stmt / FunctionId)->location().view());
+            auto fid_str = std::string((stmt / FunctionId)->location().view());
             auto slot_it = memo_slot_map.find(fid_str);
             assert(slot_it != memo_slot_map.end());
-            code << uleb(+Op::MemoLoad) << dst(stmt)
-                 << uleb(slot_it->second);
+            code << uleb(+Op::MemoLoad) << dst(stmt) << uleb(slot_it->second);
           }
           else if (stmt == CallDyn)
           {
@@ -1310,8 +1308,7 @@ namespace vbcc
           }
           else if (stmt == RegisterExternalNotify)
           {
-            code << uleb(+Op::RegisterExternalNotify) << dst(stmt)
-                 << src(stmt);
+            code << uleb(+Op::RegisterExternalNotify) << dst(stmt) << src(stmt);
           }
           else if (stmt == Typetest)
           {
