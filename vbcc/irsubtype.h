@@ -87,9 +87,7 @@ namespace vbcc
                    l->end(),
                    r->begin(),
                    r->end(),
-                   [&](auto& t, auto& u) {
-                     return IRSubtype(ctx, t, u);
-                   });
+                   [&](auto& t, auto& u) { return IRSubtype(ctx, t, u); });
         },
 
       TypeId >>

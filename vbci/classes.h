@@ -34,7 +34,7 @@ namespace vbci
     // Default constructor
     Class() = default;
 
-    //Remove copy constructors
+    // Remove copy constructors
     Class(const Class&) = delete;
     Class& operator=(const Class&) = delete;
 

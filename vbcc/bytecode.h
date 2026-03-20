@@ -91,13 +91,13 @@ namespace vbcc
 
     // Per-function type environments from typecheck.
     // Outer key: FunctionId string. Inner key: register name.
-    std::unordered_map<std::string,
-      std::unordered_map<std::string, Node>> func_types;
+    std::unordered_map<std::string, std::unordered_map<std::string, Node>>
+      func_types;
 
     // Per-function lookup info from typecheck.
     // Outer key: FunctionId string. Inner key: lookup dst register name.
-    std::unordered_map<std::string,
-      std::unordered_map<std::string, LookupInfo>> func_lookups;
+    std::unordered_map<std::string, std::unordered_map<std::string, LookupInfo>>
+      func_lookups;
 
     Bytecode();
 

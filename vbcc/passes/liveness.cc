@@ -78,48 +78,59 @@ namespace vbcc
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({Convert,  Copy,     HeapArrayConst,
-                             ArrayRef, Load,     Store,
-                             Lookup,   Neg,      Not,
-                             Abs,      Ceil,     Floor,
-                             Exp,      Log,      Sqrt,
-                             Cbrt,     IsInf,    IsNaN,
-                             Sin,      Cos,      Tan,
-                             Asin,     Acos,     Atan,
-                             Sinh,     Cosh,     Tanh,
-                             Asinh,    Acosh,    Atanh,
-                             Bits,     Len,      MakePtr,
-                             Read,     SetRaise, Typetest,
-                             MakeCallback, CallbackPtr, FreeCallback,
-                             RegisterExternalNotify}))
+          else if (node->in(
+                     {Convert,
+                      Copy,
+                      HeapArrayConst,
+                      ArrayRef,
+                      Load,
+                      Store,
+                      Lookup,
+                      Neg,
+                      Not,
+                      Abs,
+                      Ceil,
+                      Floor,
+                      Exp,
+                      Log,
+                      Sqrt,
+                      Cbrt,
+                      IsInf,
+                      IsNaN,
+                      Sin,
+                      Cos,
+                      Tan,
+                      Asin,
+                      Acos,
+                      Atan,
+                      Sinh,
+                      Cosh,
+                      Tanh,
+                      Asinh,
+                      Acosh,
+                      Atanh,
+                      Bits,
+                      Len,
+                      MakePtr,
+                      Read,
+                      SetRaise,
+                      Typetest,
+                      MakeCallback,
+                      CallbackPtr,
+                      FreeCallback,
+                      RegisterExternalNotify}))
           {
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in(
-                     {Const,
-                      ConstStr,
-                      NewArray,
-                      NewArrayConst,
-                      StackArray,
-                      StackArrayConst,
-                      RegionArray,
-                      RegionArrayConst,
-                      RegisterRef,
-                      FieldRef,
-                      ArrayRefConst,
-                      FFI,
-                      GetRaise,
-                      Const_E,
-                      Const_Pi,
-                      Const_Inf,
-                      Const_NaN,
-                      AddExternal,
-                      RemoveExternal,
-                      MemoSlot,
-                      ArrayCopy,
-                      ArrayFill,
-                      ArrayCompare}))
+          else if (node->in({Const,          ConstStr,         NewArray,
+                             NewArrayConst,  StackArray,       StackArrayConst,
+                             RegionArray,    RegionArrayConst, RegisterRef,
+                             FieldRef,       ArrayRefConst,    FFI,
+                             GetRaise,       Const_E,          Const_Pi,
+                             Const_Inf,      Const_NaN,        AddExternal,
+                             RemoveExternal, MemoSlot,         ArrayCopy,
+                             ArrayFill,      ArrayCompare}))
           {
             def(node / LocalId);
           }
@@ -283,9 +294,8 @@ namespace vbcc
           if (undef_registers)
           {
             size_t first_undef = 0;
-            while (
-              first_undef < func_state.register_names.size() &&
-              !undef_registers.test(first_undef))
+            while (first_undef < func_state.register_names.size() &&
+                   !undef_registers.test(first_undef))
             {
               first_undef++;
             }

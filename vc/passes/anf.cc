@@ -71,8 +71,7 @@ namespace vc
     auto arity = _(Args) ? _(Args)->size() + 1 : 1;
     return Seq << (Lift << Body
                         << (Lookup << (LocalId ^ fn) << (LocalId ^ _(LocalId))
-                                   << Rhs << _(Ident)
-                                   << _(TypeArgs)
+                                   << Rhs << _(Ident) << _(TypeArgs)
                                    << (Int ^ std::to_string(arity))))
                << (Lift << Body
                         << (TryCallDyn
@@ -259,9 +258,13 @@ namespace vc
 
         // Destructuring assignment.
         T(Equals)
-            << ((T(TupleLHS)[Lhs]
-                 << (T(TupleLHS, LocalId, Let, DontCare, SplatLet,
-                      SplatDontCare)++)) *
+            << ((T(TupleLHS)[Lhs] << (T(
+                   TupleLHS,
+                   LocalId,
+                   Let,
+                   DontCare,
+                   SplatLet,
+                   SplatDontCare)++)) *
                 T(LocalId)[Rhs]) >>
           [](Match& _) {
             auto lhs = _(Lhs);
@@ -292,14 +295,13 @@ namespace vc
               {
                 auto ref = _.fresh(l_local);
                 auto val = _.fresh(l_local);
-                seq
-                  << (Lift << Body
-                           << (ArrayRefConst
-                               << (LocalId ^ ref)
-                               << (Arg << ArgCopy << (LocalId ^ rhs_loc))
-                               << (Int ^ std::to_string(idx++))))
-                  << (Lift << Body
-                           << (Load << (LocalId ^ val) << (LocalId ^ ref)));
+                seq << (Lift << Body
+                             << (ArrayRefConst
+                                 << (LocalId ^ ref)
+                                 << (Arg << ArgCopy << (LocalId ^ rhs_loc))
+                                 << (Int ^ std::to_string(idx++))))
+                    << (Lift << Body
+                             << (Load << (LocalId ^ val) << (LocalId ^ ref)));
 
                 if (l->type() == DontCare)
                 {
@@ -308,9 +310,9 @@ namespace vc
                 else if (l->type() == Let)
                 {
                   auto name = (l / Ident)->location();
-                  seq << (Lift << Body
-                               << (Copy << (LocalId ^ name)
-                                        << (LocalId ^ val)));
+                  seq
+                    << (Lift << Body
+                             << (Copy << (LocalId ^ name) << (LocalId ^ val)));
                   tuple << (LocalId ^ val);
                 }
                 else
@@ -332,14 +334,13 @@ namespace vc
               auto& l = lhs->at(i);
               auto ref = _.fresh(l_local);
               auto val = _.fresh(l_local);
-              seq
-                << (Lift << Body
-                         << (ArrayRefConst
-                             << (LocalId ^ ref)
-                             << (Arg << ArgCopy << (LocalId ^ rhs_loc))
-                             << (Int ^ std::to_string(i))))
-                << (Lift << Body
-                         << (Load << (LocalId ^ val) << (LocalId ^ ref)));
+              seq << (Lift << Body
+                           << (ArrayRefConst
+                               << (LocalId ^ ref)
+                               << (Arg << ArgCopy << (LocalId ^ rhs_loc))
+                               << (Int ^ std::to_string(i))))
+                  << (Lift << Body
+                           << (Load << (LocalId ^ val) << (LocalId ^ ref)));
 
               if (l->type() == DontCare)
               {
@@ -348,9 +349,9 @@ namespace vc
               else if (l->type() == Let)
               {
                 auto name = (l / Ident)->location();
-                seq << (Lift << Body
-                             << (Copy << (LocalId ^ name)
-                                      << (LocalId ^ val)));
+                seq
+                  << (Lift << Body
+                           << (Copy << (LocalId ^ name) << (LocalId ^ val)));
                 tuple << (LocalId ^ val);
               }
               else
@@ -364,12 +365,12 @@ namespace vc
             if (splat_node->type() == SplatLet)
             {
               auto name = (splat_node / Ident)->location();
-              seq << (Lift << Body
-                           << (SplatOp << (LocalId ^ name)
-                                       << (Arg << ArgCopy
-                                                << (LocalId ^ rhs_loc))
-                                       << (Int ^ std::to_string(before_count))
-                                       << (Int ^ std::to_string(after_count))));
+              seq
+                << (Lift << Body
+                         << (SplatOp << (LocalId ^ name)
+                                     << (Arg << ArgCopy << (LocalId ^ rhs_loc))
+                                     << (Int ^ std::to_string(before_count))
+                                     << (Int ^ std::to_string(after_count))));
               tuple << (LocalId ^ name);
             }
             else
@@ -377,12 +378,12 @@ namespace vc
               // SplatDontCare: still emit SplatOp so type checking
               // can validate arity, but the result is unused.
               auto splat_id = _.fresh(l_local);
-              seq << (Lift << Body
-                           << (SplatOp << (LocalId ^ splat_id)
-                                       << (Arg << ArgCopy
-                                                << (LocalId ^ rhs_loc))
-                                       << (Int ^ std::to_string(before_count))
-                                       << (Int ^ std::to_string(after_count))));
+              seq
+                << (Lift << Body
+                         << (SplatOp << (LocalId ^ splat_id)
+                                     << (Arg << ArgCopy << (LocalId ^ rhs_loc))
+                                     << (Int ^ std::to_string(before_count))
+                                     << (Int ^ std::to_string(after_count))));
               tuple << (LocalId ^ splat_id);
             }
 
@@ -395,14 +396,13 @@ namespace vc
               auto val = _.fresh(l_local);
               // from-end index: after_count - i (last element = 1)
               size_t from_end = after_count - i;
-              seq
-                << (Lift << Body
-                         << (ArrayRefFromEnd
-                             << (LocalId ^ ref)
-                             << (Arg << ArgCopy << (LocalId ^ rhs_loc))
-                             << (Int ^ std::to_string(from_end))))
-                << (Lift << Body
-                         << (Load << (LocalId ^ val) << (LocalId ^ ref)));
+              seq << (Lift << Body
+                           << (ArrayRefFromEnd
+                               << (LocalId ^ ref)
+                               << (Arg << ArgCopy << (LocalId ^ rhs_loc))
+                               << (Int ^ std::to_string(from_end))))
+                  << (Lift << Body
+                           << (Load << (LocalId ^ val) << (LocalId ^ ref)));
 
               if (l->type() == DontCare)
               {
@@ -411,9 +411,9 @@ namespace vc
               else if (l->type() == Let)
               {
                 auto name = (l / Ident)->location();
-                seq << (Lift << Body
-                             << (Copy << (LocalId ^ name)
-                                      << (LocalId ^ val)));
+                seq
+                  << (Lift << Body
+                           << (Copy << (LocalId ^ name) << (LocalId ^ val)));
                 tuple << (LocalId ^ val);
               }
               else
@@ -706,8 +706,7 @@ namespace vc
           [](Match& _) { return make_calldyn(_, true, true); },
 
         // Try dynamic call.
-        In(Expr) * TryCallDynPat >>
-          [](Match& _) { return make_trycalldyn(_); },
+        In(Expr) * TryCallDynPat >> [](Match& _) { return make_trycalldyn(_); },
 
         // Static call.
         In(Expr) * (T(Ref) << (T(Expr) << CallPat)) >>
@@ -847,18 +846,20 @@ namespace vc
         // Callback operations (single arg, already a LocalId after earlier
         // rules extract expressions to locals).
         In(Expr, Lhs) *
-            T(MakeCallback, CallbackPtr, FreeCallback,
-              RegisterExternalNotify, Freeze)[Lhs]
+              T(MakeCallback,
+                CallbackPtr,
+                FreeCallback,
+                RegisterExternalNotify,
+                Freeze)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
             auto rhs = _(Rhs);
             auto op = _(Lhs)->type();
-            return Seq
-              << (Lift << Body
-                       << (NodeDef::create(op)
-                           << (LocalId ^ id) << rhs))
-              << (LocalId ^ id);
+            return Seq << (Lift
+                           << Body
+                           << (NodeDef::create(op) << (LocalId ^ id) << rhs))
+                       << (LocalId ^ id);
           },
 
         // FFI call.
@@ -872,15 +873,15 @@ namespace vc
           },
 
         // Bulk array operations.
-        In(Expr, Lhs) *
-            T(ArrayCopy, ArrayFill, ArrayCompare)[Lhs] << T(Args)[Args] >>
+        In(Expr, Lhs) * T(ArrayCopy, ArrayFill, ArrayCompare)[Lhs]
+            << T(Args)[Args] >>
           [](Match& _) {
             auto id = _.fresh(l_local);
             auto op = _(Lhs)->type();
-            return Seq
-              << (Lift << Body
-                       << (NodeDef::create(op) << (LocalId ^ id) << _(Args)))
-              << (LocalId ^ id);
+            return Seq << (Lift << Body
+                                << (NodeDef::create(op)
+                                    << (LocalId ^ id) << _(Args)))
+                       << (LocalId ^ id);
           },
 
         // Compact LocalId.

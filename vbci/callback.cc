@@ -9,8 +9,8 @@ namespace vbci
   // Universal libffi trampoline. Called by C code through the closure's
   // code_ptr. Marshals C arguments back to Verona Values and calls the
   // lambda's apply method via Thread::run_callback.
-  static void callback_handler(
-    ffi_cif* /*cif*/, void* ret, void* args[], void* user_data)
+  static void
+  callback_handler(ffi_cif* /*cif*/, void* ret, void* args[], void* user_data)
   {
     auto* cc = static_cast<CallbackClosure*>(user_data);
 

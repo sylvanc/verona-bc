@@ -275,8 +275,7 @@ namespace vc
             }
           }
         }
-      }
-      while (changed);
+      } while (changed);
 
       // Resolve shapes: each shape becomes a Type node mapping its TypeId
       // to a Union of all reified concrete classes that satisfy it.

@@ -10,15 +10,27 @@ namespace vc
   // ===== Dispatch tables =====
 
   const std::map<std::string_view, Token> primitive_from_name = {
-    {"none", None}, {"bool", Bool},
-    {"i8", I8}, {"i16", I16}, {"i32", I32}, {"i64", I64},
-    {"u8", U8}, {"u16", U16}, {"u32", U32}, {"u64", U64},
-    {"ilong", ILong}, {"ulong", ULong}, {"isize", ISize}, {"usize", USize},
-    {"f32", F32}, {"f64", F64},
+    {"none", None},
+    {"bool", Bool},
+    {"i8", I8},
+    {"i16", I16},
+    {"i32", I32},
+    {"i64", I64},
+    {"u8", U8},
+    {"u16", U16},
+    {"u32", U32},
+    {"u64", U64},
+    {"ilong", ILong},
+    {"ulong", ULong},
+    {"isize", ISize},
+    {"usize", USize},
+    {"f32", F32},
+    {"f64", F64},
   };
 
   const std::map<std::string_view, Token> ffi_primitive_from_name = {
-    {"ptr", Ptr}, {"callback", Callback},
+    {"ptr", Ptr},
+    {"callback", Callback},
   };
 
   const std::initializer_list<Token> integer_types = {
@@ -28,28 +40,60 @@ namespace vc
 
   // Binary ops: result type = LHS type.
   const std::initializer_list<Token> propagate_lhs_ops = {
-    Add, Sub, Mul, Div, Mod, Pow, And, Or, Xor, Shl, Shr, Min, Max,
-    LogBase, Atan2};
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Pow,
+    And,
+    Or,
+    Xor,
+    Shl,
+    Shr,
+    Min,
+    Max,
+    LogBase,
+    Atan2};
 
   // Unary ops: result type = operand type.
   const std::initializer_list<Token> propagate_rhs_ops = {
-    Neg, Abs, Ceil, Floor, Exp, Log, Sqrt, Cbrt, Sin, Cos, Tan,
-    Asin, Acos, Atan, Sinh, Cosh, Tanh, Asinh, Acosh, Atanh, Read};
+    Neg,  Abs,  Ceil, Floor, Exp,  Log,  Sqrt,  Cbrt,  Sin,   Cos, Tan,
+    Asin, Acos, Atan, Sinh,  Cosh, Tanh, Asinh, Acosh, Atanh, Read};
 
   // Ops with fixed result types.
   const std::map<Token, Token> fixed_result_type = {
-    {Eq, Bool}, {Ne, Bool}, {Lt, Bool}, {Le, Bool},
-    {Gt, Bool}, {Ge, Bool}, {IsInf, Bool}, {IsNaN, Bool}, {Not, Bool},
-    {Bits, U64}, {Len, USize},
-    {Const_E, F64}, {Const_Pi, F64}, {Const_Inf, F64}, {Const_NaN, F64},
-    {GetRaise, U64}, {SetRaise, U64},
-    {FreeCallback, None}, {AddExternal, None}, {RemoveExternal, None},
-    {RegisterExternalNotify, None}, {Freeze, None},
-    {ArrayCopy, None}, {ArrayFill, None}, {ArrayCompare, I64},
+    {Eq, Bool},
+    {Ne, Bool},
+    {Lt, Bool},
+    {Le, Bool},
+    {Gt, Bool},
+    {Ge, Bool},
+    {IsInf, Bool},
+    {IsNaN, Bool},
+    {Not, Bool},
+    {Bits, U64},
+    {Len, USize},
+    {Const_E, F64},
+    {Const_Pi, F64},
+    {Const_Inf, F64},
+    {Const_NaN, F64},
+    {GetRaise, U64},
+    {SetRaise, U64},
+    {FreeCallback, None},
+    {AddExternal, None},
+    {RemoveExternal, None},
+    {RegisterExternalNotify, None},
+    {Freeze, None},
+    {ArrayCopy, None},
+    {ArrayFill, None},
+    {ArrayCompare, I64},
   };
 
   const std::map<Token, Token> fixed_ffi_result_type = {
-    {MakePtr, Ptr}, {CallbackPtr, Ptr}, {MakeCallback, Callback},
+    {MakePtr, Ptr},
+    {CallbackPtr, Ptr},
+    {MakeCallback, Callback},
   };
 
   // ===== Type constructors =====
@@ -201,16 +245,16 @@ namespace vc
       return {};
     if (inner->size() == 2)
     {
-      auto it = primitive_from_name.find(
-        (inner->back() / Ident)->location().view());
+      auto it =
+        primitive_from_name.find((inner->back() / Ident)->location().view());
       return (it != primitive_from_name.end()) ? Node{it->second} : Node{};
     }
     if (inner->size() == 3)
     {
       if ((inner->at(1) / Ident)->location().view() != "ffi")
         return {};
-      auto it = ffi_primitive_from_name.find(
-        (inner->at(2) / Ident)->location().view());
+      auto it =
+        ffi_primitive_from_name.find((inner->at(2) / Ident)->location().view());
       return (it != ffi_primitive_from_name.end()) ? Node{it->second} : Node{};
     }
     return {};
@@ -261,8 +305,8 @@ namespace vc
     if (remaining->empty() || remaining->size() == inner->size())
       return {};
 
-    return (remaining->size() == 1) ? Type << clone(remaining->front())
-                                    : Type << remaining;
+    return (remaining->size() == 1) ? Type << clone(remaining->front()) :
+                                      Type << remaining;
   }
 
   Node extract_wrapper_primitive(const Node& type_node)
@@ -444,107 +488,87 @@ namespace vc
 
   static void dump_infer_profile(const InferProfileStats& stats)
   {
-    std::cerr << "infer-profile"
-              << "\tfunc=" << stats.function_name
-              << "\tlabels=" << stats.labels
-              << "\twl_iters=" << stats.worklist_iterations
-              << "\tlabel_runs=" << stats.labels_processed
-              << "\tlabel_skips=" << stats.labels_skipped
-              << "\tentry_bindings=" << stats.entry_bindings
-              << "\tmerge_type=" << stats.merge_type_calls
-              << "\tmerge_env=" << stats.merge_env_calls
-              << "\tmt_exist_tv=" << stats.merge_type_existing_typevar
-              << "\tmt_both_tv=" << stats.merge_type_both_typevar
-              << "\tmt_in_tv=" << stats.merge_type_incoming_typevar
-              << "\tmt_ptr_eq=" << stats.merge_type_pointer_equal
-              << "\tmt_struct_eq=" << stats.merge_type_structural_equal
-              << "\tmt_def_promote=" << stats.merge_type_default_promote
-              << "\tmt_def_keep=" << stats.merge_type_default_keep
-              << "\tmt_invariant=" << stats.merge_type_invariant_equal
-              << "\tmt_sub_keep=" << stats.merge_type_subtype_keep
-              << "\tmt_sub_widen=" << stats.merge_type_subtype_widen
-              << "\tmt_union=" << stats.merge_type_union_build
-              << "\tst_tree=" << stats.same_type_tree_calls
-              << "\tst_tree_eq=" << stats.same_type_tree_equal
-              << "\tst_env=" << stats.same_type_env_calls
-              << "\tst_env_eq=" << stats.same_type_env_equal
-              << "\tresolve=" << stats.resolve_method_calls
-              << "\tresolve_hit=" << stats.resolve_method_cache_hits
-              << "\tresolve_miss=" << stats.resolve_method_cache_misses
-              << "\tresolve_scan=" << stats.resolve_method_scans
-              << "\tnavigate_call=" << stats.navigate_call_calls
-              << "\tapply_subst=" << stats.apply_subst_calls
-              << "\tinfer_typeargs=" << stats.infer_typeargs_calls
-              << "\tpush_arg_types=" << stats.push_arg_types_to_params_calls
-              << "\tprop_call_node=" << stats.propagate_call_node_calls
-              << "\tbody_calls=" << stats.process_label_body_calls
-              << "\tcascade_calls=" << stats.dependency_cascade_calls
-              << "\tentry_updates=" << stats.entry_update_calls
-              << "\tstmt_const=" << stats.stmt_const_like
-              << "\tstmt_copy=" << stats.stmt_copy_like
-              << "\tstmt_ref=" << stats.stmt_ref_ops
-              << "\tstmt_tuple=" << stats.stmt_tuple_ops
-              << "\tstmt_new=" << stats.stmt_new_ops
-              << "\tstmt_call=" << stats.stmt_call_ops
-              << "\tstmt_ffi_when=" << stats.stmt_ffi_when_ops
-              << "\tstmt_typetest=" << stats.stmt_typetest_ops
-              << "\ttuple_finalize=" << stats.tuple_finalize_ops
-              << "\treq_succ=" << stats.requeue_succ
-              << "\treq_self_bwd=" << stats.requeue_self_bwd
-              << "\treq_pred_bwd=" << stats.requeue_pred_bwd
-              << "\tentry_pred_merges=" << stats.entry_pred_merge_count
-              << "\tentry_self_bwd_merges=" << stats.entry_self_bwd_merge_count
-              << "\tentry_succ_bwd_merges=" << stats.entry_succ_bwd_merge_count
-              << "\tentry_same=" << stats.entry_env_unchanged
-              << "\tentry_diff=" << stats.entry_env_changed
-              << "\ttotal_ms=" << infer_duration_ms(stats.process_function_time)
-              << "\tentry_ms=" << infer_duration_ms(stats.entry_build_time)
-              << "\tentry_pred_ms="
-              << infer_duration_ms(stats.entry_pred_time)
-              << "\tentry_self_bwd_ms="
-              << infer_duration_ms(stats.entry_self_bwd_time)
-              << "\tentry_succ_bwd_ms="
-              << infer_duration_ms(stats.entry_succ_bwd_time)
-              << "\tentry_update_ms="
-              << infer_duration_ms(stats.entry_update_time)
-              << "\tst_tree_ms="
-              << infer_duration_ms(stats.same_type_tree_time)
-              << "\tst_env_ms="
-              << infer_duration_ms(stats.same_type_env_time)
-              << "\tbody_ms="
-              << infer_duration_ms(stats.process_label_body_time)
-              << "\tconst_ms="
-              << infer_duration_ms(stats.stmt_const_like_time)
-              << "\tcopy_ms="
-              << infer_duration_ms(stats.stmt_copy_like_time)
-              << "\tref_ms="
-              << infer_duration_ms(stats.stmt_ref_ops_time)
-              << "\ttuple_ms="
-              << infer_duration_ms(stats.stmt_tuple_ops_time)
-              << "\tnew_ms="
-              << infer_duration_ms(stats.stmt_new_ops_time)
-              << "\tcall_ms="
-              << infer_duration_ms(stats.stmt_call_ops_time)
-              << "\tffi_when_ms="
-              << infer_duration_ms(stats.stmt_ffi_when_ops_time)
-              << "\ttypetest_ms="
-              << infer_duration_ms(stats.stmt_typetest_ops_time)
-              << "\ttuple_finalize_ms="
-              << infer_duration_ms(stats.tuple_finalize_time)
-              << "\tresolve_ms="
-              << infer_duration_ms(stats.resolve_method_time)
-              << "\tnavigate_call_ms="
-              << infer_duration_ms(stats.navigate_call_time)
-              << "\tapply_subst_ms="
-              << infer_duration_ms(stats.apply_subst_time)
-              << "\tinfer_typeargs_ms="
-              << infer_duration_ms(stats.infer_typeargs_time)
-              << "\tpush_arg_types_ms="
-              << infer_duration_ms(stats.push_arg_types_to_params_time)
-              << "\tprop_call_node_ms="
-              << infer_duration_ms(stats.propagate_call_node_time)
-              << "\tcascade_ms="
-              << infer_duration_ms(stats.dependency_cascade_time) << '\n';
+    std::cerr
+      << "infer-profile"
+      << "\tfunc=" << stats.function_name << "\tlabels=" << stats.labels
+      << "\twl_iters=" << stats.worklist_iterations
+      << "\tlabel_runs=" << stats.labels_processed
+      << "\tlabel_skips=" << stats.labels_skipped
+      << "\tentry_bindings=" << stats.entry_bindings
+      << "\tmerge_type=" << stats.merge_type_calls
+      << "\tmerge_env=" << stats.merge_env_calls
+      << "\tmt_exist_tv=" << stats.merge_type_existing_typevar
+      << "\tmt_both_tv=" << stats.merge_type_both_typevar
+      << "\tmt_in_tv=" << stats.merge_type_incoming_typevar
+      << "\tmt_ptr_eq=" << stats.merge_type_pointer_equal
+      << "\tmt_struct_eq=" << stats.merge_type_structural_equal
+      << "\tmt_def_promote=" << stats.merge_type_default_promote
+      << "\tmt_def_keep=" << stats.merge_type_default_keep
+      << "\tmt_invariant=" << stats.merge_type_invariant_equal
+      << "\tmt_sub_keep=" << stats.merge_type_subtype_keep
+      << "\tmt_sub_widen=" << stats.merge_type_subtype_widen
+      << "\tmt_union=" << stats.merge_type_union_build
+      << "\tst_tree=" << stats.same_type_tree_calls
+      << "\tst_tree_eq=" << stats.same_type_tree_equal
+      << "\tst_env=" << stats.same_type_env_calls
+      << "\tst_env_eq=" << stats.same_type_env_equal
+      << "\tresolve=" << stats.resolve_method_calls
+      << "\tresolve_hit=" << stats.resolve_method_cache_hits
+      << "\tresolve_miss=" << stats.resolve_method_cache_misses
+      << "\tresolve_scan=" << stats.resolve_method_scans
+      << "\tnavigate_call=" << stats.navigate_call_calls
+      << "\tapply_subst=" << stats.apply_subst_calls
+      << "\tinfer_typeargs=" << stats.infer_typeargs_calls
+      << "\tpush_arg_types=" << stats.push_arg_types_to_params_calls
+      << "\tprop_call_node=" << stats.propagate_call_node_calls
+      << "\tbody_calls=" << stats.process_label_body_calls
+      << "\tcascade_calls=" << stats.dependency_cascade_calls
+      << "\tentry_updates=" << stats.entry_update_calls
+      << "\tstmt_const=" << stats.stmt_const_like
+      << "\tstmt_copy=" << stats.stmt_copy_like
+      << "\tstmt_ref=" << stats.stmt_ref_ops
+      << "\tstmt_tuple=" << stats.stmt_tuple_ops
+      << "\tstmt_new=" << stats.stmt_new_ops
+      << "\tstmt_call=" << stats.stmt_call_ops
+      << "\tstmt_ffi_when=" << stats.stmt_ffi_when_ops
+      << "\tstmt_typetest=" << stats.stmt_typetest_ops
+      << "\ttuple_finalize=" << stats.tuple_finalize_ops
+      << "\treq_succ=" << stats.requeue_succ
+      << "\treq_self_bwd=" << stats.requeue_self_bwd
+      << "\treq_pred_bwd=" << stats.requeue_pred_bwd
+      << "\tentry_pred_merges=" << stats.entry_pred_merge_count
+      << "\tentry_self_bwd_merges=" << stats.entry_self_bwd_merge_count
+      << "\tentry_succ_bwd_merges=" << stats.entry_succ_bwd_merge_count
+      << "\tentry_same=" << stats.entry_env_unchanged
+      << "\tentry_diff=" << stats.entry_env_changed
+      << "\ttotal_ms=" << infer_duration_ms(stats.process_function_time)
+      << "\tentry_ms=" << infer_duration_ms(stats.entry_build_time)
+      << "\tentry_pred_ms=" << infer_duration_ms(stats.entry_pred_time)
+      << "\tentry_self_bwd_ms=" << infer_duration_ms(stats.entry_self_bwd_time)
+      << "\tentry_succ_bwd_ms=" << infer_duration_ms(stats.entry_succ_bwd_time)
+      << "\tentry_update_ms=" << infer_duration_ms(stats.entry_update_time)
+      << "\tst_tree_ms=" << infer_duration_ms(stats.same_type_tree_time)
+      << "\tst_env_ms=" << infer_duration_ms(stats.same_type_env_time)
+      << "\tbody_ms=" << infer_duration_ms(stats.process_label_body_time)
+      << "\tconst_ms=" << infer_duration_ms(stats.stmt_const_like_time)
+      << "\tcopy_ms=" << infer_duration_ms(stats.stmt_copy_like_time)
+      << "\tref_ms=" << infer_duration_ms(stats.stmt_ref_ops_time)
+      << "\ttuple_ms=" << infer_duration_ms(stats.stmt_tuple_ops_time)
+      << "\tnew_ms=" << infer_duration_ms(stats.stmt_new_ops_time)
+      << "\tcall_ms=" << infer_duration_ms(stats.stmt_call_ops_time)
+      << "\tffi_when_ms=" << infer_duration_ms(stats.stmt_ffi_when_ops_time)
+      << "\ttypetest_ms=" << infer_duration_ms(stats.stmt_typetest_ops_time)
+      << "\ttuple_finalize_ms=" << infer_duration_ms(stats.tuple_finalize_time)
+      << "\tresolve_ms=" << infer_duration_ms(stats.resolve_method_time)
+      << "\tnavigate_call_ms=" << infer_duration_ms(stats.navigate_call_time)
+      << "\tapply_subst_ms=" << infer_duration_ms(stats.apply_subst_time)
+      << "\tinfer_typeargs_ms=" << infer_duration_ms(stats.infer_typeargs_time)
+      << "\tpush_arg_types_ms="
+      << infer_duration_ms(stats.push_arg_types_to_params_time)
+      << "\tprop_call_node_ms="
+      << infer_duration_ms(stats.propagate_call_node_time)
+      << "\tcascade_ms=" << infer_duration_ms(stats.dependency_cascade_time)
+      << '\n';
   }
 
   // ===== Type environment =====
@@ -687,7 +711,9 @@ namespace vc
   }
 
   static Node resolve_class_method(
-    const MethodOwner& owner, std::string_view method_name, Token hand,
+    const MethodOwner& owner,
+    std::string_view method_name,
+    Token hand,
     size_t arity)
   {
     if (!owner.class_def)
@@ -742,9 +768,9 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->same_type_tree_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->same_type_tree_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->same_type_tree_time :
+        nullptr);
 
     if (left == right)
     {
@@ -776,9 +802,9 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->same_type_env_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->same_type_env_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->same_type_env_time :
+        nullptr);
 
     if (left.size() != right.size())
       return false;
@@ -839,9 +865,8 @@ namespace vc
       return false;
 
     auto current_prim = extract_primitive(env_it->second.type);
-    bool compatible =
-      (env_it->second.type->front() == DefaultInt &&
-       expected_prim->in(integer_types)) ||
+    bool compatible = (env_it->second.type->front() == DefaultInt &&
+                       expected_prim->in(integer_types)) ||
       (env_it->second.type->front() == DefaultFloat &&
        expected_prim->in(float_types)) ||
       (current_prim && current_prim->in(integer_types) &&
@@ -875,7 +900,9 @@ namespace vc
   }
 
   static bool upsert_lookup_stmt(
-    std::map<Location, Node>& lookup_stmts, const Location& loc, const Node& stmt)
+    std::map<Location, Node>& lookup_stmts,
+    const Location& loc,
+    const Node& stmt)
   {
     auto [it, inserted] = lookup_stmts.insert({loc, stmt});
     if (inserted)
@@ -913,8 +940,7 @@ namespace vc
   }
 
   // Returns the merged type, or {} if no change from existing.
-  static Node merge_type(
-    const Node& existing, const Node& incoming, Node top)
+  static Node merge_type(const Node& existing, const Node& incoming, Node top)
   {
     if (active_infer_profile != nullptr)
       active_infer_profile->merge_type_calls++;
@@ -1036,8 +1062,9 @@ namespace vc
       {
         bool is_def_int = (*it) == DefaultInt;
         bool is_def_float = (*it) == DefaultFloat;
-        if ((is_def_int && inc_prim->in(integer_types)) ||
-            (is_def_float && inc_prim->in(float_types)))
+        if (
+          (is_def_int && inc_prim->in(integer_types)) ||
+          (is_def_float && inc_prim->in(float_types)))
           it = u->erase(it, std::next(it));
         else
           ++it;
@@ -1286,7 +1313,11 @@ namespace vc
 
           auto dst_loc = (stmt / LocalId)->location();
           if (merge_env(
-                env, dst_loc, src_it->second.type, top, src_it->second.call_node))
+                env,
+                dst_loc,
+                src_it->second.type,
+                top,
+                src_it->second.call_node))
             enqueue_if_concrete(env, dst_loc, work, in_queue);
         }
         else if (stmt == Lookup)
@@ -1324,13 +1355,17 @@ namespace vc
             if (inner == TupleType && index < inner->size())
             {
               if (merge_env(
-                    env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
+                    env,
+                    dst_loc,
+                    ref_type(Type << clone(inner->at(index))),
+                    top))
                 enqueue_if_concrete(env, dst_loc, work, in_queue);
               continue;
             }
           }
 
-          if (merge_env(env, dst_loc, ref_type(clone(src_it->second.type)), top))
+          if (merge_env(
+                env, dst_loc, ref_type(clone(src_it->second.type)), top))
             enqueue_if_concrete(env, dst_loc, work, in_queue);
         }
         else if (stmt == ArrayRefFromEnd)
@@ -1350,8 +1385,8 @@ namespace vc
                   env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
               enqueue_if_concrete(env, dst_loc, work, in_queue);
           }
-          else if (
-            merge_env(env, dst_loc, ref_type(clone(src_it->second.type)), top))
+          else if (merge_env(
+                     env, dst_loc, ref_type(clone(src_it->second.type)), top))
           {
             enqueue_if_concrete(env, dst_loc, work, in_queue);
           }
@@ -1520,8 +1555,11 @@ namespace vc
           auto a_ta = a_inner->at(i) / TypeArgs;
           for (size_t j = 0; j < f_ta->size(); j++)
             extract_constraints(
-              top, f_ta->at(j)->front(), a_ta->at(j)->front(),
-              constraints, is_default);
+              top,
+              f_ta->at(j)->front(),
+              a_ta->at(j)->front(),
+              constraints,
+              is_default);
         }
         return;
       }
@@ -1557,8 +1595,11 @@ namespace vc
               auto formal_ret = apply_subst(top, sf / Type, shape_to_formal);
               auto actual_ret = apply_subst(top, af / Type, actual_subst);
               extract_constraints(
-                top, formal_ret->front(), actual_ret->front(),
-                constraints, is_default);
+                top,
+                formal_ret->front(),
+                actual_ret->front(),
+                constraints,
+                is_default);
               break;
             }
           }
@@ -1584,9 +1625,9 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->apply_subst_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->apply_subst_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->apply_subst_time :
+        nullptr);
 
     if (type_node != Type || subst.empty())
       return clone(type_node);
@@ -1638,16 +1679,16 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->resolve_method_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->resolve_method_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->resolve_method_time :
+        nullptr);
 
     auto owner = resolve_method_owner(top, receiver_type);
     if (owner.class_def)
     {
       auto subst = build_class_subst(owner.class_def, owner.subst_source);
-      auto func =
-        resolve_class_method(owner, method_ident->location().view(), hand, arity);
+      auto func = resolve_class_method(
+        owner, method_ident->location().view(), hand, arity);
       if (func)
       {
         auto func_tps = func / TypeParams;
@@ -1693,8 +1734,7 @@ namespace vc
         top, receiver_type, method_ident, Lhs, arity, method_typeargs);
       if (lhs_info.func)
       {
-        auto lhs_ret =
-          apply_subst(top, lhs_info.func / Type, lhs_info.subst);
+        auto lhs_ret = apply_subst(top, lhs_info.func / Type, lhs_info.subst);
         auto inner = extract_ref_inner(lhs_ret);
         if (inner)
           return inner;
@@ -1794,24 +1834,25 @@ namespace vc
   };
 
   static bool is_lambda_function(const Node& func);
-  static Node retarget_numeric_type(const Node& type, const Node& expected_prim);
+  static Node
+  retarget_numeric_type(const Node& type, const Node& expected_prim);
   static Node extract_backward_primitive(const Node& type);
   static bool recover_local_type_from_def(
     const Location& loc,
     TypeEnv& env,
     const std::map<Location, Node>& def_stmts,
     Node top);
-  static bool refine_function_return_consts(
-    const Node& func, const Node& expected_prim);
+  static bool
+  refine_function_return_consts(const Node& func, const Node& expected_prim);
 
   Node navigate_call(Node call, Node top, std::vector<ScopeInfo>& scopes)
   {
     if (active_infer_profile != nullptr)
       active_infer_profile->navigate_call_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->navigate_call_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->navigate_call_time :
+        nullptr);
 
     auto funcname = call / FuncName;
     auto args = call / Args;
@@ -1838,10 +1879,7 @@ namespace vc
   }
 
   void backward_refine_call(
-    Node prior_call,
-    const Node& expected_type,
-    TypeEnv& env,
-    Node top)
+    Node prior_call, const Node& expected_type, TypeEnv& env, Node top)
   {
     std::vector<ScopeInfo> scopes;
     auto func_def = navigate_call(prior_call, top, scopes);
@@ -1858,14 +1896,16 @@ namespace vc
       top, ret_type->front(), expected_type->front(), constraints, false);
 
     // Reverse shape matching: concrete return → shape expected.
-    if (constraints.empty() && ret_type->front() == TypeName &&
-        expected_type->front() == TypeName)
+    if (
+      constraints.empty() && ret_type->front() == TypeName &&
+      expected_type->front() == TypeName)
     {
       auto ret_def = find_def(top, ret_type->front());
       auto exp_def = find_def(top, expected_type->front());
-      if (ret_def && exp_def && ret_def == ClassDef &&
-          (ret_def / Shape) != Shape && exp_def == ClassDef &&
-          (exp_def / Shape) == Shape)
+      if (
+        ret_def && exp_def && ret_def == ClassDef &&
+        (ret_def / Shape) != Shape && exp_def == ClassDef &&
+        (exp_def / Shape) == Shape)
       {
         auto shape_to_concrete =
           build_class_subst(exp_def, expected_type->front());
@@ -1891,8 +1931,11 @@ namespace vc
               auto concrete_ret =
                 apply_subst(top, sf / Type, shape_to_concrete);
               extract_constraints(
-                top, (cf / Type)->front(), concrete_ret->front(),
-                constraints, false);
+                top,
+                (cf / Type)->front(),
+                concrete_ret->front(),
+                constraints,
+                false);
               break;
             }
           }
@@ -1967,7 +2010,8 @@ namespace vc
         continue;
 
       auto arg_loc = (args->at(i) / Rhs)->location();
-      refine_const_local(env, const_defs, arg_loc, primitive_type(expected_prim->type()));
+      refine_const_local(
+        env, const_defs, arg_loc, primitive_type(expected_prim->type()));
     }
 
     // Backward: merge expected param types into arg env entries.
@@ -2012,9 +2056,10 @@ namespace vc
         return false;
 
       auto current_prim = extract_primitive(it->second.type);
-      bool compatible =
-        (it->second.type->front() == DefaultInt && expected_prim->in(integer_types)) ||
-        (it->second.type->front() == DefaultFloat && expected_prim->in(float_types)) ||
+      bool compatible = (it->second.type->front() == DefaultInt &&
+                         expected_prim->in(integer_types)) ||
+        (it->second.type->front() == DefaultFloat &&
+         expected_prim->in(float_types)) ||
         (current_prim && current_prim->in(integer_types) &&
          expected_prim->in(integer_types)) ||
         (current_prim && current_prim->in(float_types) &&
@@ -2039,8 +2084,8 @@ namespace vc
     auto recv_it = env.find(lookup_src->location());
     if (recv_it == env.end() && def_stmts != nullptr)
     {
-      snmalloc::UNUSED(
-        recover_local_type_from_def(lookup_src->location(), env, *def_stmts, top));
+      snmalloc::UNUSED(recover_local_type_from_def(
+        lookup_src->location(), env, *def_stmts, top));
       recv_it = env.find(lookup_src->location());
     }
     if (recv_it != env.end())
@@ -2057,7 +2102,8 @@ namespace vc
         auto new_ret = retarget_numeric_type(info.func / Type, expected_prim);
         if (new_ret)
         {
-          snmalloc::UNUSED(replace_if_changed(info.func, info.func / Type, new_ret));
+          snmalloc::UNUSED(
+            replace_if_changed(info.func, info.func / Type, new_ret));
           refined = true;
         }
         if (refine_function_return_consts(info.func, expected_prim))
@@ -2070,7 +2116,6 @@ namespace vc
 
     if (recv_it != env.end())
     {
-
       auto hand = (lookup_node / Lhs)->type();
       auto method_ident = lookup_method_name(lookup_node);
       auto method_ta = lookup_node / TypeArgs;
@@ -2144,13 +2189,14 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->propagate_call_node_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->propagate_call_node_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->propagate_call_node_time :
+        nullptr);
 
     auto it = env.find(loc);
-    if (it == env.end() || is_default_type(it->second.type) ||
-        !it->second.call_node)
+    if (
+      it == env.end() || is_default_type(it->second.type) ||
+      !it->second.call_node)
       return;
 
     auto call = it->second.call_node;
@@ -2172,7 +2218,8 @@ namespace vc
     std::map<Location, Node>& lookup_stmts,
     const std::map<Location, Node>* def_stmts = nullptr)
   {
-    if (!expected || is_default_type(expected) || contains_default_type(expected))
+    if (
+      !expected || is_default_type(expected) || contains_default_type(expected))
       return;
 
     std::set<std::string> seen;
@@ -2194,7 +2241,8 @@ namespace vc
         {
           auto prim = extract_backward_primitive(expected);
           if (prim)
-            backward_refine_calldyn(call, prim, env, top, lookup_stmts, def_stmts);
+            backward_refine_calldyn(
+              call, prim, env, top, lookup_stmts, def_stmts);
           return;
         }
       }
@@ -2240,9 +2288,9 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->infer_typeargs_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->infer_typeargs_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->infer_typeargs_time :
+        nullptr);
 
     auto args = call / Args;
     auto params = func_def / Params;
@@ -2271,8 +2319,10 @@ namespace vc
       if (arg_it == env.end())
         continue;
       extract_constraints(
-        top, (params->at(i) / Type)->front(),
-        arg_it->second.type->front(), constraints,
+        top,
+        (params->at(i) / Type)->front(),
+        arg_it->second.type->front(),
+        constraints,
         is_default_type(arg_it->second.type));
     }
 
@@ -2328,9 +2378,9 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->push_arg_types_to_params_calls++;
     InferScopedTimer timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->push_arg_types_to_params_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->push_arg_types_to_params_time :
+        nullptr);
 
     auto params = func_def / Params;
     auto parent_cls = func_def->parent(ClassDef);
@@ -2530,8 +2580,8 @@ namespace vc
     return true;
   }
 
-  static bool refine_function_return_consts(
-    const Node& func, const Node& expected_prim)
+  static bool
+  refine_function_return_consts(const Node& func, const Node& expected_prim)
   {
     if (!func || !expected_prim)
       return false;
@@ -2547,11 +2597,12 @@ namespace vc
         {
           auto loc = (stmt / LocalId)->location();
           const_defs[loc] = stmt;
-          auto type_tok =
-            (stmt->size() == 3) ? stmt->at(1) : default_literal_type(stmt->back());
-          auto type = type_tok->in({DefaultInt, DefaultFloat})
-            ? (Type << type_tok->type())
-            : primitive_type(type_tok->type());
+          auto type_tok = (stmt->size() == 3) ?
+            stmt->at(1) :
+            default_literal_type(stmt->back());
+          auto type = type_tok->in({DefaultInt, DefaultFloat}) ?
+            (Type << type_tok->type()) :
+            primitive_type(type_tok->type());
           env[loc] = {type, false, {}};
         }
       }
@@ -2716,8 +2767,8 @@ namespace vc
         const_defs[(stmt / LocalId)->location()] = stmt;
     }
 
-    auto merge = [&](const Location& loc, const Node& type,
-                     Node call_node = {}) -> bool {
+    auto merge =
+      [&](const Location& loc, const Node& type, Node call_node = {}) -> bool {
       bool c = merge_env(env, loc, type, top, call_node);
       if (c)
         changes.forward = true;
@@ -2733,7 +2784,8 @@ namespace vc
     };
 
     auto merge_bwd =
-      [&](const Location& loc, const Node& type, bool is_fixed = false) -> bool {
+      [&](
+        const Location& loc, const Node& type, bool is_fixed = false) -> bool {
       bool changed = false;
 
       if (merge_env(env, loc, type, top))
@@ -2743,8 +2795,7 @@ namespace vc
       }
 
       // Record backward constraints that carry a concrete primitive signal.
-      bool record_backward =
-        type && !type->empty() &&
+      bool record_backward = type && !type->empty() &&
         !type->front()->in({TypeVar, DefaultInt, DefaultFloat}) &&
         (type->front() != Union || extract_backward_primitive(type));
       if (record_backward)
@@ -2799,8 +2850,9 @@ namespace vc
         else
           type_tok = default_literal_type(stmt->back());
 
-        auto type = type_tok->in({DefaultInt, DefaultFloat})
-          ? (Type << type_tok->type()) : primitive_type(type_tok->type());
+        auto type = type_tok->in({DefaultInt, DefaultFloat}) ?
+          (Type << type_tok->type()) :
+          primitive_type(type_tok->type());
 
         if (is_default_type(type))
         {
@@ -2853,12 +2905,12 @@ namespace vc
 
         // Forward: dst = merge(dst, src).
         if (src_it != env.end())
-          merge(
-            dst_loc, src_it->second.type, src_it->second.call_node);
+          merge(dst_loc, src_it->second.type, src_it->second.call_node);
 
         auto tuple_ref = ref_to_tuple.find(src_loc);
         if (tuple_ref != ref_to_tuple.end())
-          snmalloc::UNUSED(upsert_ref_to_tuple(ref_to_tuple, dst_loc, tuple_ref->second));
+          snmalloc::UNUSED(
+            upsert_ref_to_tuple(ref_to_tuple, dst_loc, tuple_ref->second));
 
         // Backward: src = merge(src, dst).
         dst_it = env.find(dst_loc);
@@ -2882,13 +2934,13 @@ namespace vc
             call_expected = bwd_it->second.type;
           }
 
-          if ((dst_it->second.is_fixed || (bwd_it != bwd.end() && bwd_it->second.is_fixed)))
+          if ((dst_it->second.is_fixed ||
+               (bwd_it != bwd.end() && bwd_it->second.is_fixed)))
             snmalloc::UNUSED(refine_local_const(src_loc, expected));
           if (call_expected)
             propagate_call_constraint(
               env, src_loc, call_expected, top, lookup_stmts, &all_def_stmts);
-          bool expected_fixed =
-            dst_it->second.is_fixed ||
+          bool expected_fixed = dst_it->second.is_fixed ||
             (bwd_it != bwd.end() && bwd_it->second.is_fixed);
           if (is_default_type(dst_it->second.type))
           {
@@ -2916,8 +2968,7 @@ namespace vc
         auto src_it = env.find((stmt / Rhs)->location());
         if (src_it != env.end())
           merge(
-            (stmt / LocalId)->location(),
-            ref_type(clone(src_it->second.type)));
+            (stmt / LocalId)->location(), ref_type(clone(src_it->second.type)));
       }
       // ----- FieldRef -----
       else if (stmt == FieldRef)
@@ -2947,8 +2998,9 @@ namespace vc
                   merge(dst_loc, ref_type(ft));
 
                 auto dst_it = env.find(dst_loc);
-                auto field_inner =
-                  dst_it != env.end() ? extract_ref_inner(dst_it->second.type) : Node{};
+                auto field_inner = dst_it != env.end() ?
+                  extract_ref_inner(dst_it->second.type) :
+                  Node{};
                 auto class_ident = class_def / Ident;
                 bool lambda_field =
                   class_ident->location().view().rfind("lambda$", 0) == 0;
@@ -2965,8 +3017,7 @@ namespace vc
                   {
                     auto old_prim = extract_primitive(f / Type);
                     auto new_prim = extract_primitive(field_inner);
-                    should_refine =
-                      old_prim && new_prim &&
+                    should_refine = old_prim && new_prim &&
                       (((old_prim->in(integer_types) &&
                          new_prim->in(integer_types)) ||
                         (old_prim->in(float_types) &&
@@ -2974,7 +3025,9 @@ namespace vc
                        old_prim->type() != new_prim->type());
                   }
 
-                  if (should_refine && replace_if_changed(f, f / Type, clone(field_inner)))
+                  if (
+                    should_refine &&
+                    replace_if_changed(f, f / Type, clone(field_inner)))
                     changes.forward = true;
                 }
                 break;
@@ -3037,8 +3090,7 @@ namespace vc
                 auto val_it = env.find(val_loc);
                 if (val_it != env.end())
                 {
-                  tt->second.element_types[idx] =
-                    clone(val_it->second.type);
+                  tt->second.element_types[idx] = clone(val_it->second.type);
                   if (tt->second.is_array_lit)
                     tt->second.element_value_locs[idx] = val_loc;
 
@@ -3074,8 +3126,8 @@ namespace vc
           // Track ref_to_tuple for Store-based element tracking.
           auto rtt = ref_to_tuple.find(arg_loc);
           if (rtt != ref_to_tuple.end())
-            snmalloc::UNUSED(
-              upsert_ref_to_tuple(ref_to_tuple, dst_loc, {rtt->second.first, index}));
+            snmalloc::UNUSED(upsert_ref_to_tuple(
+              ref_to_tuple, dst_loc, {rtt->second.first, index}));
           else
             snmalloc::UNUSED(
               upsert_ref_to_tuple(ref_to_tuple, dst_loc, {arg_loc, index}));
@@ -3086,18 +3138,14 @@ namespace vc
             auto inner = src_it->second.type->front();
             if (inner == TupleType && index < inner->size())
             {
-              merge(
-                dst_loc,
-                ref_type(Type << clone(inner->at(index))));
+              merge(dst_loc, ref_type(Type << clone(inner->at(index))));
               continue;
             }
           }
         }
 
         if (src_it != env.end())
-          merge(
-            dst_loc,
-            ref_type(clone(src_it->second.type)));
+          merge(dst_loc, ref_type(clone(src_it->second.type)));
       }
       // ----- ArrayRefFromEnd -----
       else if (stmt == ArrayRefFromEnd)
@@ -3122,8 +3170,7 @@ namespace vc
           }
 
           merge(
-            (stmt / LocalId)->location(),
-            ref_type(clone(src_it->second.type)));
+            (stmt / LocalId)->location(), ref_type(clone(src_it->second.type)));
         }
       }
       // ----- SplatOp -----
@@ -3169,10 +3216,9 @@ namespace vc
         auto dst_loc = (stmt / LocalId)->location();
         auto init_type = stmt / Type;
         auto dst_it = env.find(dst_loc);
-        if (
-          !(dst_it != env.end() && is_any_type(init_type) &&
-            !is_any_type(dst_it->second.type) &&
-            (dst_it->second.type->front() != TypeVar)))
+        if (!(dst_it != env.end() && is_any_type(init_type) &&
+              !is_any_type(dst_it->second.type) &&
+              (dst_it->second.type->front() != TypeVar)))
         {
           merge(dst_loc, clone(init_type));
         }
@@ -3180,10 +3226,9 @@ namespace vc
         if (stmt == NewArrayConst)
         {
           auto sz = from_chars_sep_v<size_t>(stmt / Rhs);
-          bool is_lit =
-            dst_loc.view().find("array") != std::string_view::npos;
-          tuple_locals[dst_loc] =
-            {sz, is_lit, std::vector<Node>(sz), std::vector<Location>(sz)};
+          bool is_lit = dst_loc.view().find("array") != std::string_view::npos;
+          tuple_locals[dst_loc] = {
+            sz, is_lit, std::vector<Node>(sz), std::vector<Location>(sz)};
           snmalloc::UNUSED(
             upsert_ref_to_tuple(ref_to_tuple, dst_loc, {dst_loc, 0}));
         }
@@ -3264,8 +3309,7 @@ namespace vc
           is_default_type(lhs_it->second.type))
         {
           auto rhs_prim = extract_callable_primitive(rhs_it->second.type);
-          bool compatible =
-            rhs_prim &&
+          bool compatible = rhs_prim &&
             ((lhs_it->second.type->front() == DefaultInt &&
               rhs_prim->in(integer_types)) ||
              (lhs_it->second.type->front() == DefaultFloat &&
@@ -3330,17 +3374,13 @@ namespace vc
                frt != fixed_result_type.end())
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
-        merge(
-          (stmt / LocalId)->location(),
-          primitive_type(frt->second));
+        merge((stmt / LocalId)->location(), primitive_type(frt->second));
       }
       else if (auto ffrt = fixed_ffi_result_type.find(stmt->type());
                ffrt != fixed_ffi_result_type.end())
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
-        merge(
-          (stmt / LocalId)->location(),
-          ffi_primitive_type(ffrt->second));
+        merge((stmt / LocalId)->location(), ffi_primitive_type(ffrt->second));
       }
       // ----- Call -----
       else if (stmt == Call)
@@ -3371,9 +3411,7 @@ namespace vc
         // Forward: return type.
         auto ret = apply_subst(top, func_def / Type, subst);
         if (ret)
-          merge(
-            (stmt / LocalId)->location(), ret,
-            all_default ? stmt : Node{});
+          merge((stmt / LocalId)->location(), ret, all_default ? stmt : Node{});
 
         // Shape-to-lambda propagation.
         for (size_t i = 0; i < params->size() && i < args->size(); i++)
@@ -3413,7 +3451,11 @@ namespace vc
               def_it->second->in({CallDyn, TryCallDyn}))
             {
               backward_refine_calldyn(
-                def_it->second, expected_prim, env, top, lookup_stmts,
+                def_it->second,
+                expected_prim,
+                env,
+                top,
+                lookup_stmts,
                 &all_def_stmts);
               changes.forward = true;
             }
@@ -3445,8 +3487,7 @@ namespace vc
             auto method_ta = stmt / TypeArgs;
             auto arity = from_chars_sep_v<size_t>(stmt / Int);
             auto ret = resolve_method_return_type(
-              top, src_it->second.type, method_ident, hand, arity,
-              method_ta);
+              top, src_it->second.type, method_ident, hand, arity, method_ta);
             if (ret)
               merge(dst_loc, ret);
           }
@@ -3490,8 +3531,7 @@ namespace vc
             auto method_ta = lookup_node / TypeArgs;
             auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
             auto info = resolve_callable_method(
-              top, recv_it->second.type, method_ident, hand, arity,
-              method_ta);
+              top, recv_it->second.type, method_ident, hand, arity, method_ta);
             if (info.func)
             {
               auto params = info.func / Params;
@@ -3499,8 +3539,7 @@ namespace vc
               // Shape-to-lambda propagation.
               for (size_t i = 0; i < params->size() && i < args->size(); i++)
               {
-                auto pt =
-                  apply_subst(top, params->at(i) / Type, info.subst);
+                auto pt = apply_subst(top, params->at(i) / Type, info.subst);
                 if (pt && pt->front() != TypeVar)
                 {
                   auto arg_it = env.find((args->at(i) / Rhs)->location());
@@ -3525,7 +3564,12 @@ namespace vc
                   {
                     refined = true;
                     propagate_call_constraint(
-                      env, arg_loc, expected, top, lookup_stmts, &all_def_stmts);
+                      env,
+                      arg_loc,
+                      expected,
+                      top,
+                      lookup_stmts,
+                      &all_def_stmts);
                     propagate_call_node(
                       env, arg_loc, top, lookup_stmts, &all_def_stmts);
                   }
@@ -3546,8 +3590,7 @@ namespace vc
           {
             auto arg_it = env.find((arg_node / Rhs)->location());
             if (
-              arg_it == env.end() ||
-              contains_default_type(arg_it->second.type))
+              arg_it == env.end() || contains_default_type(arg_it->second.type))
               continue;
 
             auto prim = extract_callable_primitive(arg_it->second.type);
@@ -3566,7 +3609,8 @@ namespace vc
             if (lookup_it != lookup_stmts.end())
             {
               auto recv_it = env.find((lookup_it->second / Rhs)->location());
-              if (recv_it != env.end() && !is_default_type(recv_it->second.type))
+              if (
+                recv_it != env.end() && !is_default_type(recv_it->second.type))
               {
                 auto prim = extract_callable_primitive(recv_it->second.type);
                 if (!prim)
@@ -3606,18 +3650,25 @@ namespace vc
             {
               auto lookup_node = lookup_it->second;
               auto recv_it = env.find((lookup_node / Rhs)->location());
-              if (recv_it != env.end() && !contains_default_type(recv_it->second.type))
+              if (
+                recv_it != env.end() &&
+                !contains_default_type(recv_it->second.type))
               {
                 auto hand = (lookup_node / Lhs)->type();
                 auto method_ident = lookup_method_name(lookup_node);
                 auto method_ta = lookup_node / TypeArgs;
                 auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
                 auto ret = resolve_method_return_type(
-                  top, recv_it->second.type, method_ident, hand, arity,
+                  top,
+                  recv_it->second.type,
+                  method_ident,
+                  hand,
+                  arity,
                   method_ta);
                 if (ret)
                 {
-                  env[(lookup_node / LocalId)->location()] = {clone(ret), false, {}};
+                  env[(lookup_node / LocalId)->location()] = {
+                    clone(ret), false, {}};
                   env[dst_loc] = {clone(ret), false, {}};
                 }
               }
@@ -3659,7 +3710,8 @@ namespace vc
               auto fa = ffi_args->begin();
               while (fp != ffi_params->end() && fa != ffi_args->end())
               {
-                snmalloc::UNUSED(refine_local_const((*fa)->location(), clone(*fp)));
+                snmalloc::UNUSED(
+                  refine_local_const((*fa)->location(), clone(*fp)));
                 if (merge_bwd((*fa)->location(), clone(*fp)))
                   propagate_call_node(
                     env, (*fa)->location(), top, lookup_stmts, &all_def_stmts);
@@ -3696,8 +3748,7 @@ namespace vc
         auto lookup_it = lookup_stmts.find((stmt / Rhs)->location());
         if (lookup_it != lookup_stmts.end())
         {
-          auto recv_it =
-            env.find((lookup_it->second / Rhs)->location());
+          auto recv_it = env.find((lookup_it->second / Rhs)->location());
           if (recv_it != env.end())
           {
             auto recv_inner = recv_it->second.type->front();
@@ -3709,8 +3760,9 @@ namespace vc
                 Node apply_func;
                 for (auto& child : *(class_def / ClassBody))
                 {
-                  if (child == Function &&
-                      (child / Ident)->location().view() == "apply")
+                  if (
+                    child == Function &&
+                    (child / Ident)->location().view() == "apply")
                   {
                     apply_func = child;
                     break;
@@ -3722,7 +3774,8 @@ namespace vc
                   auto params = apply_func / Params;
                   auto when_args = stmt / Args;
                   for (size_t i = 1;
-                       i < when_args->size() && i < params->size(); ++i)
+                       i < when_args->size() && i < params->size();
+                       ++i)
                   {
                     auto arg_it =
                       env.find((when_args->at(i) / Rhs)->location());
@@ -3735,8 +3788,8 @@ namespace vc
                     auto param = params->at(i);
                     snmalloc::UNUSED(
                       replace_if_changed(param, param / Type, new_type));
-                    env[(param / Ident)->location()] =
-                      {clone(new_type), true, {}};
+                    env[(param / Ident)->location()] = {
+                      clone(new_type), true, {}};
                   }
                 }
               }
@@ -3748,8 +3801,7 @@ namespace vc
       else if (stmt == Typetest)
       {
         InferStmtScope stmt_scope(InferStmtFamily::TypetestOps);
-        merge(
-          (stmt / LocalId)->location(), primitive_type(Bool));
+        merge((stmt / LocalId)->location(), primitive_type(Bool));
       }
     }
 
@@ -3757,9 +3809,9 @@ namespace vc
     for (auto& [loc, tt] : tuple_locals)
     {
       InferScopedTimer tuple_finalize_timer(
-        (active_infer_profile != nullptr)
-          ? &active_infer_profile->tuple_finalize_time
-          : nullptr);
+        (active_infer_profile != nullptr) ?
+          &active_infer_profile->tuple_finalize_time :
+          nullptr);
       if (active_infer_profile != nullptr)
         active_infer_profile->tuple_finalize_ops++;
       if (tt.is_array_lit)
@@ -3805,8 +3857,7 @@ namespace vc
           }
           if (!common)
             common = clone(it->second.type);
-          else if (
-            it->second.type->front()->type() != common->front()->type())
+          else if (it->second.type->front()->type() != common->front()->type())
             uniform = false;
         }
         if (uniform && common && tt.size > 0)
@@ -3846,12 +3897,14 @@ namespace vc
     active_method_cache = &method_cache;
     active_infer_transfer_epoch = &transfer_epoch;
     InferProcessScope process_scope(
-      profile_enabled ? &profile : nullptr, prev_profile, prev_method_cache,
+      profile_enabled ? &profile : nullptr,
+      prev_profile,
+      prev_method_cache,
       prev_transfer_epoch);
     InferScopedTimer function_timer(
-      (active_infer_profile != nullptr)
-        ? &active_infer_profile->process_function_time
-        : nullptr);
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->process_function_time :
+        nullptr);
 
     // Build label graph.
     std::map<std::string, size_t> label_idx;
@@ -3894,8 +3947,7 @@ namespace vc
     {
       auto type = pd / Type;
       bool fixed = type->front() != TypeVar;
-      exit_envs[0][(pd / Ident)->location()] =
-        {clone(type), fixed, {}};
+      exit_envs[0][(pd / Ident)->location()] = {clone(type), fixed, {}};
     }
 
     // Backward envs: carry type expectations from downstream.
@@ -3988,9 +4040,9 @@ namespace vc
       TypeEnv env;
       {
         InferScopedTimer entry_timer(
-          (active_infer_profile != nullptr)
-            ? &active_infer_profile->entry_build_time
-            : nullptr);
+          (active_infer_profile != nullptr) ?
+            &active_infer_profile->entry_build_time :
+            nullptr);
         if (i == 0)
         {
           env = exit_envs[0];
@@ -3998,15 +4050,15 @@ namespace vc
         else
         {
           InferScopedTimer pred_timer(
-            (active_infer_profile != nullptr)
-              ? &active_infer_profile->entry_pred_time
-              : nullptr);
+            (active_infer_profile != nullptr) ?
+              &active_infer_profile->entry_pred_time :
+              nullptr);
           for (auto p : pred[i])
           {
             auto bk = std::make_pair(p, i);
             auto bi = branch_exits.find(bk);
-            const auto& pe = (bi != branch_exits.end()) ? bi->second
-                                                        : exit_envs[p];
+            const auto& pe =
+              (bi != branch_exits.end()) ? bi->second : exit_envs[p];
             for (auto& [loc, info] : pe)
             {
               if (label_live_in[i].count(loc) == 0)
@@ -4058,12 +4110,14 @@ namespace vc
         // backward facts to earlier statements on the next iteration.
         {
           InferScopedTimer self_bwd_timer(
-            (active_infer_profile != nullptr)
-              ? &active_infer_profile->entry_self_bwd_time
-              : nullptr);
+            (active_infer_profile != nullptr) ?
+              &active_infer_profile->entry_self_bwd_time :
+              nullptr);
           for (auto& [loc, info] : bwd_envs[i])
           {
-            if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+            if (
+              (label_live_in[i].count(loc) == 0) &&
+              (label_defs[i].count(loc) == 0))
               continue;
             if (active_infer_profile != nullptr)
               active_infer_profile->entry_self_bwd_merge_count++;
@@ -4098,14 +4152,16 @@ namespace vc
         // Merge backward envs from successors into entry.
         {
           InferScopedTimer succ_bwd_timer(
-            (active_infer_profile != nullptr)
-              ? &active_infer_profile->entry_succ_bwd_time
-              : nullptr);
+            (active_infer_profile != nullptr) ?
+              &active_infer_profile->entry_succ_bwd_time :
+              nullptr);
           for (auto s : succ[i])
           {
             for (auto& [loc, info] : bwd_envs[s])
             {
-              if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+              if (
+                (label_live_in[i].count(loc) == 0) &&
+                (label_defs[i].count(loc) == 0))
                 continue;
               if (active_infer_profile != nullptr)
                 active_infer_profile->entry_succ_bwd_merge_count++;
@@ -4150,12 +4206,15 @@ namespace vc
           if (def_it == all_def_stmts.end())
             continue;
 
-          if (!eit->second.call_node && def_it->second->in({Call, CallDyn, TryCallDyn}))
+          if (
+            !eit->second.call_node &&
+            def_it->second->in({Call, CallDyn, TryCallDyn}))
             eit->second.call_node = def_it->second;
 
           if (
             eit->second.type && !eit->second.type->empty() &&
-            eit->second.type->front() != TypeVar && !is_default_type(eit->second.type))
+            eit->second.type->front() != TypeVar &&
+            !is_default_type(eit->second.type))
             continue;
 
           TypeEnv recovered;
@@ -4172,7 +4231,9 @@ namespace vc
       {
         for (auto& [loc, info] : bwd_envs[s])
         {
-          if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+          if (
+            (label_live_in[i].count(loc) == 0) &&
+            (label_defs[i].count(loc) == 0))
             continue;
           auto bit = bwd_envs[i].find(loc);
           if (bit == bwd_envs[i].end())
@@ -4197,7 +4258,8 @@ namespace vc
 
       if (active_infer_profile != nullptr)
         active_infer_profile->entry_bindings += env.size();
-      bool same_entry = prior_entry_valid[i] && same_type_env(prior_entry_envs[i], env);
+      bool same_entry =
+        prior_entry_valid[i] && same_type_env(prior_entry_envs[i], env);
       if (same_entry)
       {
         if (active_infer_profile != nullptr)
@@ -4229,12 +4291,19 @@ namespace vc
       LabelChanges label_changes;
       {
         InferScopedTimer body_timer(
-          (active_infer_profile != nullptr)
-            ? &active_infer_profile->process_label_body_time
-            : nullptr);
+          (active_infer_profile != nullptr) ?
+            &active_infer_profile->process_label_body_time :
+            nullptr);
         label_changes = process_label_body(
-          labels->at(i) / Body, env, bwd_envs[i], top, lookup_stmts,
-          all_def_stmts, typevar_aliases, ref_to_tuple, tuple_locals);
+          labels->at(i) / Body,
+          env,
+          bwd_envs[i],
+          top,
+          lookup_stmts,
+          all_def_stmts,
+          typevar_aliases,
+          ref_to_tuple,
+          tuple_locals);
       }
       bool forward_out_changed = false;
 
@@ -4310,8 +4379,7 @@ namespace vc
             if (t_it != label_idx.end())
             {
               auto ne = make_clone();
-              ne[trace->src->location()] =
-                {clone(trace->type), true, {}};
+              ne[trace->src->location()] = {clone(trace->type), true, {}};
               update_branch_exit(t_it->second, std::move(ne));
             }
             if (f_it != label_idx.end())
@@ -4333,8 +4401,7 @@ namespace vc
             if (f_it != label_idx.end())
             {
               auto ne = make_clone();
-              ne[trace->src->location()] =
-                {clone(trace->type), true, {}};
+              ne[trace->src->location()] = {clone(trace->type), true, {}};
               update_branch_exit(f_it->second, std::move(ne));
             }
             if (t_it != label_idx.end())
@@ -4390,11 +4457,11 @@ namespace vc
       {
         for (auto& [loc, info] : bwd_envs[s])
         {
-          if ((label_live_in[i].count(loc) == 0) && (label_defs[i].count(loc) == 0))
+          if (
+            (label_live_in[i].count(loc) == 0) &&
+            (label_defs[i].count(loc) == 0))
             continue;
-          auto note_succ_bwd_change = [&]() {
-            bwd_changed = true;
-          };
+          auto note_succ_bwd_change = [&]() { bwd_changed = true; };
           auto bit = bwd_envs[i].find(loc);
           if (bit == bwd_envs[i].end())
           {
@@ -4449,9 +4516,9 @@ namespace vc
       if (active_infer_profile != nullptr)
         active_infer_profile->dependency_cascade_calls++;
       InferScopedTimer cascade_timer(
-        (active_infer_profile != nullptr)
-          ? &active_infer_profile->dependency_cascade_time
-          : nullptr);
+        (active_infer_profile != nullptr) ?
+          &active_infer_profile->dependency_cascade_time :
+          nullptr);
       run_dependency_cascade(
         exit_envs[i], labels->at(i) / Body, top, lookup_stmts);
     }
@@ -4501,7 +4568,9 @@ namespace vc
             continue;
           auto& [tuple_loc, index] = ref_it->second;
           auto values_it = final_tuple_values.find(tuple_loc);
-          if (values_it != final_tuple_values.end() && index < values_it->second.size())
+          if (
+            values_it != final_tuple_values.end() &&
+            index < values_it->second.size())
             values_it->second[index] = ((stmt / Arg) / Rhs)->location();
         }
       }
@@ -4537,7 +4606,8 @@ namespace vc
             }
             if (!common)
               common = clone(env_it->second.type);
-            else if (env_it->second.type->front()->type() != common->front()->type())
+            else if (
+              env_it->second.type->front()->type() != common->front()->type())
             {
               uniform = false;
               break;
@@ -4573,8 +4643,8 @@ namespace vc
 
         if (elems.size() == 1)
         {
-          final_newarray_types[tuple_loc] =
-            Type << clone(elems.front()->front());
+          final_newarray_types[tuple_loc] = Type
+            << clone(elems.front()->front());
         }
         else
         {
@@ -4601,12 +4671,16 @@ namespace vc
           auto loc = dst->location();
           auto env_it = exit_envs[i].find(loc);
           Node final_type;
-          if (env_it != exit_envs[i].end() && !is_default_type(env_it->second.type))
+          if (
+            env_it != exit_envs[i].end() &&
+            !is_default_type(env_it->second.type))
             final_type = env_it->second.type;
           if (!final_type)
           {
             auto bwd_it = bwd_envs[i].find(loc);
-            if (bwd_it != bwd_envs[i].end() && !is_default_type(bwd_it->second.type))
+            if (
+              bwd_it != bwd_envs[i].end() &&
+              !is_default_type(bwd_it->second.type))
               final_type = bwd_it->second.type;
           }
           Node final_prim;
@@ -4655,8 +4729,9 @@ namespace vc
             else
             {
               auto prim = extract_primitive(env_it->second.type);
-              if (prim && !Subtype.invariant(
-                            top, (*it) / Type, env_it->second.type))
+              if (
+                prim &&
+                !Subtype.invariant(top, (*it) / Type, env_it->second.type))
                 (*it)->replace((*it) / Type, clone(env_it->second.type));
             }
           }
@@ -4718,8 +4793,8 @@ namespace vc
             {
               if (child != FieldDef)
                 continue;
-              if ((child / Ident)->location().view() !=
-                  ident->location().view())
+              if (
+                (child / Ident)->location().view() != ident->location().view())
                 continue;
               if (contains_typevar(child / Type))
                 child->replace(child / Type, clone(it->second.type));
@@ -4835,8 +4910,8 @@ namespace vc
               func_ret,
               Type
                 << (TypeName
-                      << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                      << (NameElement << (Ident ^ "none") << TypeArgs)));
+                    << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                    << (NameElement << (Ident ^ "none") << TypeArgs)));
         }
       }
     }
@@ -4940,8 +5015,9 @@ namespace vc
             parent->replace(node, is_int ? Node{U64} : Node{F64});
           else
             parent->replace(
-              node, is_int ? primitive_type(U64)->front()
-                           : primitive_type(F64)->front());
+              node,
+              is_int ? primitive_type(U64)->front() :
+                       primitive_type(F64)->front());
           return false;
         }
         return true;

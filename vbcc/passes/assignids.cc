@@ -29,27 +29,25 @@ namespace vbcc
             auto er = existing / Return;
             auto nr = _(Symbol) / Return;
 
-            bool compatible =
-              ((existing / Lhs)->location().view() ==
-               (_(Symbol) / Lhs)->location().view()) &&
+            bool compatible = ((existing / Lhs)->location().view() ==
+                               (_(Symbol) / Lhs)->location().view()) &&
               ((existing / Rhs)->location().view() ==
                (_(Symbol) / Rhs)->location().view()) &&
               IRSubtype.invariant(state->top, er, nr) &&
-              std::equal(
-                ep->begin(),
-                ep->end(),
-                np->begin(),
-                np->end(),
-                [&](auto& a, auto& b) {
-                  return IRSubtype.invariant(state->top, a, b);
-                });
+              std::equal(ep->begin(),
+                         ep->end(),
+                         np->begin(),
+                         np->end(),
+                         [&](auto& a, auto& b) {
+                           return IRSubtype.invariant(state->top, a, b);
+                         });
 
             if (!compatible)
             {
               state->error = true;
               return err(
-                _(Symbol) / SymbolId,
-                "incompatible FFI symbol redefinition")
+                       _(Symbol) / SymbolId,
+                       "incompatible FFI symbol redefinition")
                 << errmsg("previous definition here:")
                 << errloc(existing / SymbolId);
             }
