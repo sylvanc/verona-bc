@@ -12,11 +12,11 @@ optimize
         (labelid 5:start)
         (body
           (call
-            (localid 4:$961)
+            (localid 5:$1486)
             (functionid 23:test_freeze::main::0::0)
             (args)))
         (ret
-          (localid 4:$961)))))
+          (localid 5:$1486)))))
   (func
     (functionid 23:test_freeze::main::0::0)
     (params)
@@ -24,53 +24,53 @@ optimize
     (vars
       (localid 6:result)
       (localid 1:a)
-      (localid 8:local$14)
+      (localid 8:local$16)
       (localid 1:b)
-      (localid 8:local$18)
+      (localid 8:local$20)
       (localid 1:l)
       (localid 1:r)
       (localid 1:n)
-      (localid 8:local$23)
-      (localid 8:local$24)
-      (localid 8:local$25))
+      (localid 8:local$25)
+      (localid 8:local$26)
+      (localid 8:local$27))
     (labels
       (label
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$11)
+            (localid 8:local$13)
             (i32)
             (int 1:0))
           (copy
             (localid 6:result)
-            (localid 8:local$11))
+            (localid 8:local$13))
           (const
-            (localid 9:local$124)
+            (localid 9:local$170)
             (i32)
             (int 2:10))
           (new
-            (localid 8:local$12)
+            (localid 8:local$14)
             (classid 20:test_freeze::leaf::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$124))))
+                (localid 9:local$170))))
           (copy
             (localid 1:a)
-            (localid 8:local$12))
+            (localid 8:local$14))
           (freeze
             (localid 6:$opt_0)
             (localid 1:a))
           (const
-            (localid 8:local$13)
+            (localid 8:local$15)
             (none)
             (none))
           (new
-            (localid 8:local$14)
+            (localid 8:local$16)
             (classid 20:_builtin::nomatch::0)
             (args))
           (const
-            (localid 9:local$125)
+            (localid 9:local$171)
             (i32)
             (int 2:10))
           (fieldref
@@ -80,69 +80,69 @@ optimize
               (localid 1:a))
             (fieldid 3:val))
           (load
-            (localid 9:local$538)
+            (localid 9:local$747)
             (localid 6:$opt_1))
           (ne
-            (localid 9:local$922)
-            (localid 9:local$538)
-            (localid 9:local$125)))
+            (localid 10:local$1310)
+            (localid 9:local$747)
+            (localid 9:local$171)))
         (cond
-          (localid 9:local$922)
-          (labelid 8:body$122)
-          (labelid 8:join$123)))
+          (localid 10:local$1310)
+          (labelid 8:body$168)
+          (labelid 8:join$169)))
       (label
-        (labelid 8:body$122)
+        (labelid 8:body$168)
         (body
           (const
-            (localid 9:local$126)
+            (localid 9:local$172)
             (i32)
             (int 1:1))
           (add
-            (localid 9:local$540)
+            (localid 9:local$749)
             (localid 6:result)
-            (localid 9:local$126))
+            (localid 9:local$172))
           (copy
             (localid 6:result)
-            (localid 9:local$540)))
+            (localid 9:local$749)))
         (jump
-          (labelid 8:join$123)))
+          (labelid 8:join$169)))
       (label
-        (labelid 8:join$123)
+        (labelid 8:join$169)
         (body
           (const
-            (localid 9:local$129)
+            (localid 9:local$175)
             (i32)
             (int 2:55))
           (new
-            (localid 8:local$15)
+            (localid 8:local$17)
             (classid 20:test_freeze::leaf::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$129))))
+                (localid 9:local$175))))
           (copy
             (localid 1:b)
-            (localid 8:local$15))
+            (localid 8:local$17))
           (freeze
             (localid 6:$opt_2)
             (localid 1:b))
           (const
-            (localid 8:local$16)
+            (localid 8:local$18)
             (none)
             (none))
           (freeze
             (localid 6:$opt_3)
             (localid 1:b))
           (const
-            (localid 8:local$17)
+            (localid 8:local$19)
             (none)
             (none))
           (new
-            (localid 8:local$18)
+            (localid 8:local$20)
             (classid 20:_builtin::nomatch::0)
             (args))
           (const
-            (localid 9:local$130)
+            (localid 9:local$176)
             (i32)
             (int 2:55))
           (fieldref
@@ -152,69 +152,69 @@ optimize
               (localid 1:b))
             (fieldid 3:val))
           (load
-            (localid 9:local$543)
+            (localid 9:local$752)
             (localid 6:$opt_4))
           (ne
-            (localid 9:local$925)
-            (localid 9:local$543)
-            (localid 9:local$130)))
+            (localid 10:local$1313)
+            (localid 9:local$752)
+            (localid 9:local$176)))
         (cond
-          (localid 9:local$925)
-          (labelid 8:body$127)
-          (labelid 8:join$128)))
+          (localid 10:local$1313)
+          (labelid 8:body$173)
+          (labelid 8:join$174)))
       (label
-        (labelid 8:body$127)
+        (labelid 8:body$173)
         (body
           (const
-            (localid 9:local$131)
+            (localid 9:local$177)
             (i32)
             (int 1:2))
           (add
-            (localid 9:local$545)
+            (localid 9:local$754)
             (localid 6:result)
-            (localid 9:local$131))
+            (localid 9:local$177))
           (copy
             (localid 6:result)
-            (localid 9:local$545)))
+            (localid 9:local$754)))
         (jump
-          (labelid 8:join$128)))
+          (labelid 8:join$174)))
       (label
-        (labelid 8:join$128)
+        (labelid 8:join$174)
         (body
           (const
-            (localid 9:local$134)
+            (localid 9:local$180)
             (i32)
             (int 1:3))
           (new
-            (localid 8:local$19)
+            (localid 8:local$21)
             (classid 20:test_freeze::leaf::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$134))))
+                (localid 9:local$180))))
           (copy
             (localid 1:l)
-            (localid 8:local$19))
+            (localid 8:local$21))
           (const
-            (localid 9:local$135)
+            (localid 9:local$181)
             (i32)
             (int 1:7))
           (new
-            (localid 8:local$20)
+            (localid 8:local$22)
             (classid 20:test_freeze::leaf::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$135))))
+                (localid 9:local$181))))
           (copy
             (localid 1:r)
-            (localid 8:local$20))
+            (localid 8:local$22))
           (const
-            (localid 9:local$136)
+            (localid 9:local$182)
             (i32)
             (int 3:100))
           (new
-            (localid 8:local$21)
+            (localid 8:local$23)
             (classid 20:test_freeze::node::0)
             (args
               (arg
@@ -225,23 +225,23 @@ optimize
                 (localid 1:r))
               (arg
                 (argcopy)
-                (localid 9:local$136))))
+                (localid 9:local$182))))
           (copy
             (localid 1:n)
-            (localid 8:local$21))
+            (localid 8:local$23))
           (freeze
             (localid 6:$opt_5)
             (localid 1:n))
           (const
-            (localid 8:local$22)
+            (localid 8:local$24)
             (none)
             (none))
           (new
-            (localid 8:local$23)
+            (localid 8:local$25)
             (classid 20:_builtin::nomatch::0)
             (args))
           (const
-            (localid 9:local$137)
+            (localid 9:local$183)
             (i32)
             (int 3:100))
           (fieldref
@@ -251,41 +251,41 @@ optimize
               (localid 1:n))
             (fieldid 3:val))
           (load
-            (localid 9:local$550)
+            (localid 9:local$759)
             (localid 6:$opt_6))
           (ne
-            (localid 9:local$928)
-            (localid 9:local$550)
-            (localid 9:local$137)))
+            (localid 10:local$1316)
+            (localid 9:local$759)
+            (localid 9:local$183)))
         (cond
-          (localid 9:local$928)
-          (labelid 8:body$132)
-          (labelid 8:join$133)))
+          (localid 10:local$1316)
+          (labelid 8:body$178)
+          (labelid 8:join$179)))
       (label
-        (labelid 8:body$132)
+        (labelid 8:body$178)
         (body
           (const
-            (localid 9:local$138)
+            (localid 9:local$184)
             (i32)
             (int 1:4))
           (add
-            (localid 9:local$552)
+            (localid 9:local$761)
             (localid 6:result)
-            (localid 9:local$138))
+            (localid 9:local$184))
           (copy
             (localid 6:result)
-            (localid 9:local$552)))
+            (localid 9:local$761)))
         (jump
-          (labelid 8:join$133)))
+          (labelid 8:join$179)))
       (label
-        (labelid 8:join$133)
+        (labelid 8:join$179)
         (body
           (new
-            (localid 8:local$24)
+            (localid 8:local$26)
             (classid 20:_builtin::nomatch::0)
             (args))
           (const
-            (localid 9:local$141)
+            (localid 9:local$187)
             (i32)
             (int 1:3))
           (fieldref
@@ -295,50 +295,50 @@ optimize
               (localid 1:n))
             (fieldid 4:left))
           (load
-            (localid 9:local$554)
+            (localid 9:local$763)
             (localid 6:$opt_7))
           (fieldref
             (localid 6:$opt_8)
             (arg
               (argcopy)
-              (localid 9:local$554))
+              (localid 9:local$763))
             (fieldid 3:val))
           (load
-            (localid 9:local$931)
+            (localid 10:local$1319)
             (localid 6:$opt_8))
           (ne
-            (localid 9:local$955)
-            (localid 9:local$931)
-            (localid 9:local$141)))
+            (localid 10:local$1448)
+            (localid 10:local$1319)
+            (localid 9:local$187)))
         (cond
-          (localid 9:local$955)
-          (labelid 8:body$139)
-          (labelid 8:join$140)))
+          (localid 10:local$1448)
+          (labelid 8:body$185)
+          (labelid 8:join$186)))
       (label
-        (labelid 8:body$139)
+        (labelid 8:body$185)
         (body
           (const
-            (localid 9:local$142)
+            (localid 9:local$188)
             (i32)
             (int 1:8))
           (add
-            (localid 9:local$556)
+            (localid 9:local$765)
             (localid 6:result)
-            (localid 9:local$142))
+            (localid 9:local$188))
           (copy
             (localid 6:result)
-            (localid 9:local$556)))
+            (localid 9:local$765)))
         (jump
-          (labelid 8:join$140)))
+          (labelid 8:join$186)))
       (label
-        (labelid 8:join$140)
+        (labelid 8:join$186)
         (body
           (new
-            (localid 8:local$25)
+            (localid 8:local$27)
             (classid 20:_builtin::nomatch::0)
             (args))
           (const
-            (localid 9:local$145)
+            (localid 9:local$191)
             (i32)
             (int 1:7))
           (fieldref
@@ -348,43 +348,43 @@ optimize
               (localid 1:n))
             (fieldid 5:right))
           (load
-            (localid 9:local$558)
+            (localid 9:local$767)
             (localid 6:$opt_9))
           (fieldref
             (localid 7:$opt_10)
             (arg
               (argcopy)
-              (localid 9:local$558))
+              (localid 9:local$767))
             (fieldid 3:val))
           (load
-            (localid 9:local$934)
+            (localid 10:local$1322)
             (localid 7:$opt_10))
           (ne
-            (localid 9:local$957)
-            (localid 9:local$934)
-            (localid 9:local$145)))
+            (localid 10:local$1450)
+            (localid 10:local$1322)
+            (localid 9:local$191)))
         (cond
-          (localid 9:local$957)
-          (labelid 8:body$143)
-          (labelid 8:join$144)))
+          (localid 10:local$1450)
+          (labelid 8:body$189)
+          (labelid 8:join$190)))
       (label
-        (labelid 8:body$143)
+        (labelid 8:body$189)
         (body
           (const
-            (localid 9:local$146)
+            (localid 9:local$192)
             (i32)
             (int 2:16))
           (add
-            (localid 9:local$560)
+            (localid 9:local$769)
             (localid 6:result)
-            (localid 9:local$146))
+            (localid 9:local$192))
           (copy
             (localid 6:result)
-            (localid 9:local$560)))
+            (localid 9:local$769)))
         (jump
-          (labelid 8:join$144)))
+          (labelid 8:join$190)))
       (label
-        (labelid 8:join$144)
+        (labelid 8:join$190)
         (body)
         (ret
           (localid 6:result)))))
@@ -401,14 +401,14 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$6)
+            (localid 7:local$8)
             (classid 20:test_freeze::leaf::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$6)))))
+          (localid 7:local$8)))))
   (func
     (functionid 22:_builtin::freeze::1::0)
     (params
@@ -422,14 +422,14 @@ optimize
         (labelid 5:start)
         (body
           (freeze
-            (localid 9:local$666)
+            (localid 9:local$875)
             (localid 1:x))
           (const
-            (localid 8:none$962)
+            (localid 9:none$1487)
             (none)
             (none)))
         (ret
-          (localid 8:none$962)))))
+          (localid 9:none$1487)))))
   (func
     (functionid 31:_builtin::nomatch::create::0::0)
     (params)
@@ -440,11 +440,11 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$84)
+            (localid 8:local$86)
             (classid 20:_builtin::nomatch::0)
             (args)))
         (ret
-          (localid 8:local$84)))))
+          (localid 8:local$86)))))
   (func
     (functionid 31:test_freeze::node::create::3::0)
     (params
@@ -464,7 +464,7 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$10)
+            (localid 8:local$12)
             (classid 20:test_freeze::node::0)
             (args
               (arg
@@ -477,7 +477,7 @@ optimize
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 8:local$10)))))
+          (localid 8:local$12)))))
   (class
     (classid 20:test_freeze::node::0)
     (fields
@@ -523,16 +523,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 7:local$5)
+            (localid 7:local$7)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$531)
-            (localid 7:local$5)))
+            (localid 9:local$740)
+            (localid 7:local$7)))
         (ret
-          (localid 9:local$531)))))
+          (localid 9:local$740)))))
   (func
     (functionid 33:test_freeze::leaf::val::1::ref::0)
     (params
@@ -547,13 +547,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$118)
+            (localid 9:local$164)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$118)))))
+          (localid 9:local$164)))))
   (func
     (functionid 28:test_freeze::node::val::1::0)
     (params
@@ -567,16 +567,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 7:local$9)
+            (localid 8:local$11)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$534)
-            (localid 7:local$9)))
+            (localid 9:local$743)
+            (localid 8:local$11)))
         (ret
-          (localid 9:local$534)))))
+          (localid 9:local$743)))))
   (func
     (functionid 29:test_freeze::node::left::1::0)
     (params
@@ -590,16 +590,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 7:local$7)
+            (localid 7:local$9)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 4:left))
           (load
-            (localid 9:local$532)
-            (localid 7:local$7)))
+            (localid 9:local$741)
+            (localid 7:local$9)))
         (ret
-          (localid 9:local$532)))))
+          (localid 9:local$741)))))
   (func
     (functionid 30:test_freeze::node::right::1::0)
     (params
@@ -613,16 +613,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 7:local$8)
+            (localid 8:local$10)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 5:right))
           (load
-            (localid 9:local$533)
-            (localid 7:local$8)))
+            (localid 9:local$742)
+            (localid 8:local$10)))
         (ret
-          (localid 9:local$533)))))
+          (localid 9:local$742)))))
   (func
     (functionid 35:test_freeze::node::right::1::ref::0)
     (params
@@ -637,13 +637,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$120)
+            (localid 9:local$166)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 5:right)))
         (ret
-          (localid 9:local$120)))))
+          (localid 9:local$166)))))
   (func
     (functionid 34:test_freeze::node::left::1::ref::0)
     (params
@@ -658,13 +658,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$119)
+            (localid 9:local$165)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 4:left)))
         (ret
-          (localid 9:local$119)))))
+          (localid 9:local$165)))))
   (func
     (functionid 33:test_freeze::node::val::1::ref::0)
     (params
@@ -679,13 +679,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$121)
+            (localid 9:local$167)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$121)))))
+          (localid 9:local$167)))))
   (class
     (classid 20:_builtin::nomatch::0)
     (fields)
@@ -706,11 +706,11 @@ optimize
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$261)
+            (localid 9:local$307)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$261)))))
+          (localid 9:local$307)))))
   (func
     (functionid 22:_builtin::i32::+::2::0)
     (params
@@ -727,11 +727,11 @@ optimize
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$250)
+            (localid 9:local$296)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$250)))))
+          (localid 9:local$296)))))
   (func
     (functionid 24:_builtin::bool::!=::2::0)
     (params
@@ -748,11 +748,11 @@ optimize
         (labelid 5:start)
         (body
           (ne
-            (localid 9:local$178)
+            (localid 9:local$224)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$178)))))
+          (localid 9:local$224)))))
   (primitive
     (i32)
     (methods

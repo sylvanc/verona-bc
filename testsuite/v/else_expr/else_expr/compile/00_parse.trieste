@@ -7708,6 +7708,12 @@ parse
           (group
             (semi))
           (group
+            (ident 3:len)
+            (:)
+            (ident 5:usize))
+          (group
+            (semi))
+          (group
             (ident 6:create)
             (paren
               (group
@@ -7721,10 +7727,56 @@ parse
             (ident 6:string)
             (brace
               (group
+                (let)
+                (ident 1:d)
+                (=)
+                (ident 5:array)
+                (bracket
+                  (group
+                    (ident 2:u8)))
+                (doublecolon)
+                (ident 4:fill)
+                (paren
+                  (group
+                    (ident 4:data)
+                    (dot)
+                    (ident 4:size))))
+              (group
+                (semi))
+              (group
+                (ident 1:d)
+                (dot)
+                (ident 9:copy_from)
+                (paren
+                  (list
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 4:data))
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 4:data)
+                      (dot)
+                      (ident 4:size)))))
+              (group
+                (semi))
+              (group
                 (new)
                 (brace
-                  (group
-                    (ident 4:data))))))
+                  (list
+                    (group
+                      (ident 4:data)
+                      (=)
+                      (ident 1:d))
+                    (group
+                      (ident 3:len)
+                      (=)
+                      (ident 4:data)
+                      (dot)
+                      (ident 4:size)
+                      (symbolid 1:-)
+                      (int 1:1)))))))
           (group
             (ident 4:size)
             (paren
@@ -7738,9 +7790,7 @@ parse
               (group
                 (ident 4:self)
                 (dot)
-                (ident 4:data)
-                (dot)
-                (ident 4:size))))
+                (ident 3:len))))
           (group
             (ident 3:ref)
             (ident 5:apply)
@@ -7762,11 +7812,11 @@ parse
             (brace
               (group
                 (ident 3:ref)
-                (ident 4:self)
-                (dot)
-                (ident 4:data)
-                (dot)
-                (ident 5:apply)
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)))
                 (paren
                   (group
                     (ident 5:index))))))
@@ -7783,9 +7833,26 @@ parse
               (group
                 (ident 4:self)
                 (dot)
-                (ident 4:size)
+                (ident 3:len)
                 (symbolid 2:!=)
                 (int 1:0))))
+          (group
+            (ident 7:cstring)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 6:string)))
+            (:)
+            (ident 5:array)
+            (bracket
+              (group
+                (ident 2:u8)))
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 4:data))))
           (group
             (symbolid 2:==)
             (paren
@@ -7805,11 +7872,11 @@ parse
                 (if)
                 (ident 4:self)
                 (dot)
-                (ident 4:size)
+                (ident 3:len)
                 (symbolid 2:!=)
                 (ident 5:other)
                 (dot)
-                (ident 4:size)
+                (ident 3:len)
                 (brace
                   (group
                     (ret)
@@ -7833,7 +7900,7 @@ parse
                     (group
                       (ident 4:self)
                       (dot)
-                      (ident 4:size))))
+                      (ident 3:len))))
                 (symbolid 2:==)
                 (ident 3:i64)
                 (int 1:0))))
@@ -7876,18 +7943,18 @@ parse
             (brace
               (group
                 (let)
-                (ident 3:len)
+                (ident 1:n)
                 (=)
                 (ident 4:self)
                 (dot)
-                (ident 4:size)
+                (ident 3:len)
                 (dot)
                 (ident 3:min)
                 (paren
                   (group
                     (ident 5:other)
                     (dot)
-                    (ident 4:size))))
+                    (ident 3:len))))
               (group
                 (semi))
               (group
@@ -7910,7 +7977,7 @@ parse
                     (group
                       (int 1:0))
                     (group
-                      (ident 3:len)))))
+                      (ident 1:n)))))
               (group
                 (semi))
               (group
@@ -7937,11 +8004,11 @@ parse
               (group
                 (ident 4:self)
                 (dot)
-                (ident 4:size)
+                (ident 3:len)
                 (symbolid 1:<)
                 (ident 5:other)
                 (dot)
-                (ident 4:size))))
+                (ident 3:len))))
           (group
             (symbolid 2:<=)
             (paren
@@ -8034,11 +8101,13 @@ parse
                   (group
                     (ident 4:self)
                     (dot)
-                    (ident 4:size)
+                    (ident 3:len)
                     (symbolid 1:+)
                     (ident 5:other)
                     (dot)
-                    (ident 4:size))))
+                    (ident 3:len)
+                    (symbolid 1:+)
+                    (int 1:1))))
               (group
                 (semi))
               (group
@@ -8058,7 +8127,7 @@ parse
                     (group
                       (ident 4:self)
                       (dot)
-                      (ident 4:size)))))
+                      (ident 3:len)))))
               (group
                 (semi))
               (group
@@ -8070,7 +8139,7 @@ parse
                     (group
                       (ident 4:self)
                       (dot)
-                      (ident 4:size))
+                      (ident 3:len))
                     (group
                       (ident 5:other)
                       (dot)
@@ -8080,14 +8149,1112 @@ parse
                     (group
                       (ident 5:other)
                       (dot)
-                      (ident 4:size)))))
+                      (ident 3:len)))))
+              (group
+                (semi))
+              (group
+                (paren
+                  (group
+                    (ident 6:result)))
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)
+                    (symbolid 1:+)
+                    (ident 5:other)
+                    (dot)
+                    (ident 3:len)))
+                (=)
+                (ident 2:u8)
+                (int 1:0))
               (group
                 (semi))
               (group
                 (ident 6:string)
                 (paren
                   (group
-                    (ident 6:result)))))))))
+                    (ident 6:result))))))
+          (group
+            (ident 7:reserve)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 1:n)
+                  (:)
+                  (ident 5:usize))))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (if)
+                (ident 1:n)
+                (symbolid 1:+)
+                (int 1:1)
+                (symbolid 1:>)
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 4:size)
+                (brace
+                  (group
+                    (var)
+                    (ident 3:cap)
+                    (=)
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)
+                    (dot)
+                    (ident 4:size))
+                  (group
+                    (semi))
+                  (group
+                    (while)
+                    (ident 3:cap)
+                    (symbolid 1:<)
+                    (paren
+                      (group
+                        (ident 1:n)
+                        (symbolid 1:+)
+                        (int 1:1)))
+                    (brace
+                      (group
+                        (ident 3:cap)
+                        (=)
+                        (ident 3:cap)
+                        (symbolid 1:*)
+                        (int 1:2))))
+                  (group
+                    (let)
+                    (ident 1:d)
+                    (=)
+                    (ident 5:array)
+                    (bracket
+                      (group
+                        (ident 2:u8)))
+                    (doublecolon)
+                    (ident 4:fill)
+                    (paren
+                      (group
+                        (ident 3:cap))))
+                  (group
+                    (semi))
+                  (group
+                    (ident 1:d)
+                    (dot)
+                    (ident 9:copy_from)
+                    (paren
+                      (list
+                        (group
+                          (int 1:0))
+                        (group
+                          (ident 4:self)
+                          (dot)
+                          (ident 4:data))
+                        (group
+                          (int 1:0))
+                        (group
+                          (ident 4:self)
+                          (dot)
+                          (ident 3:len)
+                          (symbolid 1:+)
+                          (int 1:1)))))
+                  (group
+                    (semi))
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)
+                    (=)
+                    (ident 1:d))))))
+          (group
+            (ident 5:clear)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 6:string)))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (=)
+                (int 1:0))
+              (group
+                (semi))
+              (group
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)))
+                (paren
+                  (group
+                    (int 1:0)))
+                (=)
+                (ident 2:u8)
+                (int 1:0))))
+          (group
+            (ident 6:append)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 5:other)
+                  (:)
+                  (ident 6:string))))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 7:reserve)
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)
+                    (symbolid 1:+)
+                    (ident 5:other)
+                    (dot)
+                    (ident 3:len))))
+              (group
+                (semi))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 9:copy_from)
+                (paren
+                  (list
+                    (group
+                      (ident 4:self)
+                      (dot)
+                      (ident 3:len))
+                    (group
+                      (ident 5:other)
+                      (dot)
+                      (ident 4:data))
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 5:other)
+                      (dot)
+                      (ident 3:len)))))
+              (group
+                (semi))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (=)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:+)
+                (ident 5:other)
+                (dot)
+                (ident 3:len))
+              (group
+                (semi))
+              (group
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)))
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)))
+                (=)
+                (ident 2:u8)
+                (int 1:0))))
+          (group
+            (ident 6:insert)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 5:index)
+                  (:)
+                  (ident 5:usize))
+                (group
+                  (ident 5:other)
+                  (:)
+                  (ident 6:string))))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 7:reserve)
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)
+                    (symbolid 1:+)
+                    (ident 5:other)
+                    (dot)
+                    (ident 3:len))))
+              (group
+                (semi))
+              (group
+                (var)
+                (ident 1:i)
+                (=)
+                (ident 4:self)
+                (dot)
+                (ident 3:len))
+              (group
+                (semi))
+              (group
+                (while)
+                (ident 1:i)
+                (symbolid 1:>)
+                (ident 5:index)
+                (brace
+                  (group
+                    (paren
+                      (group
+                        (ident 4:self)
+                        (dot)
+                        (ident 4:data)))
+                    (paren
+                      (group
+                        (ident 1:i)
+                        (symbolid 1:+)
+                        (ident 5:other)
+                        (dot)
+                        (ident 3:len)
+                        (symbolid 1:-)
+                        (int 1:1)))
+                    (=)
+                    (paren
+                      (group
+                        (ident 4:self)
+                        (dot)
+                        (ident 4:data)))
+                    (paren
+                      (group
+                        (ident 1:i)
+                        (symbolid 1:-)
+                        (int 1:1))))
+                  (group
+                    (semi))
+                  (group
+                    (ident 1:i)
+                    (=)
+                    (ident 1:i)
+                    (symbolid 1:-)
+                    (int 1:1))))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 9:copy_from)
+                (paren
+                  (list
+                    (group
+                      (ident 5:index))
+                    (group
+                      (ident 5:other)
+                      (dot)
+                      (ident 4:data))
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 5:other)
+                      (dot)
+                      (ident 3:len)))))
+              (group
+                (semi))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (=)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:+)
+                (ident 5:other)
+                (dot)
+                (ident 3:len))
+              (group
+                (semi))
+              (group
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)))
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)))
+                (=)
+                (ident 2:u8)
+                (int 1:0))))
+          (group
+            (ident 5:erase)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 6:offset)
+                  (:)
+                  (ident 5:usize))
+                (group
+                  (ident 5:count)
+                  (:)
+                  (ident 5:usize))))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (let)
+                (ident 1:n)
+                (=)
+                (ident 5:count)
+                (dot)
+                (ident 3:min)
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)
+                    (symbolid 1:-)
+                    (ident 6:offset))))
+              (group
+                (semi))
+              (group
+                (var)
+                (ident 1:i)
+                (=)
+                (ident 6:offset))
+              (group
+                (semi))
+              (group
+                (while)
+                (ident 1:i)
+                (symbolid 1:+)
+                (ident 1:n)
+                (symbolid 1:<)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (brace
+                  (group
+                    (paren
+                      (group
+                        (ident 4:self)
+                        (dot)
+                        (ident 4:data)))
+                    (paren
+                      (group
+                        (ident 1:i)))
+                    (=)
+                    (paren
+                      (group
+                        (ident 4:self)
+                        (dot)
+                        (ident 4:data)))
+                    (paren
+                      (group
+                        (ident 1:i)
+                        (symbolid 1:+)
+                        (ident 1:n))))
+                  (group
+                    (semi))
+                  (group
+                    (ident 1:i)
+                    (=)
+                    (ident 1:i)
+                    (symbolid 1:+)
+                    (int 1:1))))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (=)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:-)
+                (ident 1:n))
+              (group
+                (semi))
+              (group
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)))
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)))
+                (=)
+                (ident 2:u8)
+                (int 1:0))))
+          (group
+            (ident 7:replace)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 6:offset)
+                  (:)
+                  (ident 5:usize))
+                (group
+                  (ident 5:count)
+                  (:)
+                  (ident 5:usize))
+                (group
+                  (ident 5:other)
+                  (:)
+                  (ident 6:string))))
+            (:)
+            (ident 4:none)
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 5:erase)
+                (paren
+                  (list
+                    (group
+                      (ident 6:offset))
+                    (group
+                      (ident 5:count)))))
+              (group
+                (semi))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 6:insert)
+                (paren
+                  (list
+                    (group
+                      (ident 6:offset))
+                    (group
+                      (ident 5:other)))))))
+          (group
+            (ident 4:find)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 5:other)
+                  (:)
+                  (ident 6:string))))
+            (:)
+            (ident 5:usize)
+            (symbolid 1:|)
+            (ident 4:none)
+            (brace
+              (group
+                (if)
+                (ident 5:other)
+                (dot)
+                (ident 3:len)
+                (symbolid 2:==)
+                (int 1:0)
+                (brace
+                  (group
+                    (ret)
+                    (ident 5:usize)
+                    (int 1:0))))
+              (group
+                (if)
+                (ident 5:other)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:>)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (brace
+                  (group
+                    (ret)
+                    (ident 4:none)
+                    (paren))))
+              (group
+                (var)
+                (ident 1:i)
+                (:)
+                (ident 5:usize)
+                (=)
+                (int 1:0))
+              (group
+                (semi))
+              (group
+                (let)
+                (ident 5:limit)
+                (=)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:-)
+                (ident 5:other)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:+)
+                (int 1:1))
+              (group
+                (semi))
+              (group
+                (while)
+                (ident 1:i)
+                (symbolid 1:<)
+                (ident 5:limit)
+                (brace
+                  (group
+                    (if)
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:data)
+                    (dot)
+                    (ident 7:compare)
+                    (paren
+                      (list
+                        (group
+                          (ident 1:i))
+                        (group
+                          (ident 5:other)
+                          (dot)
+                          (ident 4:data))
+                        (group
+                          (int 1:0))
+                        (group
+                          (ident 5:other)
+                          (dot)
+                          (ident 3:len))))
+                    (symbolid 2:==)
+                    (ident 3:i64)
+                    (int 1:0)
+                    (brace
+                      (group
+                        (let)
+                        (ident 5:found)
+                        (:)
+                        (ident 5:usize)
+                        (=)
+                        (ident 1:i))
+                      (group
+                        (semi))
+                      (group
+                        (ret)
+                        (ident 5:found))))
+                  (group
+                    (ident 1:i)
+                    (=)
+                    (ident 1:i)
+                    (symbolid 1:+)
+                    (int 1:1))))
+              (group
+                (ident 4:none)
+                (paren))))
+          (group
+            (ident 8:contains)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 5:other)
+                  (:)
+                  (ident 6:string))))
+            (:)
+            (ident 4:bool)
+            (brace
+              (group
+                (paren
+                  (group
+                    (match)
+                    (ident 4:self)
+                    (dot)
+                    (ident 4:find)
+                    (paren
+                      (group
+                        (ident 5:other)))
+                    (brace
+                      (group
+                        (paren
+                          (group
+                            (ident 1:i)
+                            (:)
+                            (ident 5:usize)))
+                        (symbolid 2:->)
+                        (true))
+                      (group
+                        (semi)))))
+                (else)
+                (paren
+                  (group
+                    (false))))))
+          (group
+            (ident 11:starts_with)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 6:prefix)
+                  (:)
+                  (ident 6:string))))
+            (:)
+            (ident 4:bool)
+            (brace
+              (group
+                (if)
+                (ident 6:prefix)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:>)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (brace
+                  (group
+                    (ret)
+                    (false))))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 7:compare)
+                (paren
+                  (list
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 6:prefix)
+                      (dot)
+                      (ident 4:data))
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 6:prefix)
+                      (dot)
+                      (ident 3:len))))
+                (symbolid 2:==)
+                (ident 3:i64)
+                (int 1:0))))
+          (group
+            (ident 9:ends_with)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 6:suffix)
+                  (:)
+                  (ident 6:string))))
+            (:)
+            (ident 4:bool)
+            (brace
+              (group
+                (if)
+                (ident 6:suffix)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:>)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (brace
+                  (group
+                    (ret)
+                    (false))))
+              (group
+                (let)
+                (ident 6:offset)
+                (=)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (symbolid 1:-)
+                (ident 6:suffix)
+                (dot)
+                (ident 3:len))
+              (group
+                (semi))
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 4:data)
+                (dot)
+                (ident 7:compare)
+                (paren
+                  (list
+                    (group
+                      (ident 6:offset))
+                    (group
+                      (ident 6:suffix)
+                      (dot)
+                      (ident 4:data))
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 6:suffix)
+                      (dot)
+                      (ident 3:len))))
+                (symbolid 2:==)
+                (ident 3:i64)
+                (int 1:0))))
+          (group
+            (ident 9:substring)
+            (paren
+              (list
+                (group
+                  (ident 4:self)
+                  (:)
+                  (ident 6:string))
+                (group
+                  (ident 6:offset)
+                  (:)
+                  (ident 5:usize))
+                (group
+                  (ident 5:count)
+                  (:)
+                  (ident 5:usize))))
+            (:)
+            (ident 6:string)
+            (brace
+              (group
+                (let)
+                (ident 1:n)
+                (=)
+                (ident 5:count)
+                (dot)
+                (ident 3:min)
+                (paren
+                  (group
+                    (ident 4:self)
+                    (dot)
+                    (ident 3:len)
+                    (symbolid 1:-)
+                    (ident 6:offset))))
+              (group
+                (semi))
+              (group
+                (let)
+                (ident 6:result)
+                (=)
+                (ident 5:array)
+                (bracket
+                  (group
+                    (ident 2:u8)))
+                (doublecolon)
+                (ident 4:fill)
+                (paren
+                  (group
+                    (ident 1:n)
+                    (symbolid 1:+)
+                    (int 1:1))))
+              (group
+                (semi))
+              (group
+                (ident 6:result)
+                (dot)
+                (ident 9:copy_from)
+                (paren
+                  (list
+                    (group
+                      (int 1:0))
+                    (group
+                      (ident 4:self)
+                      (dot)
+                      (ident 4:data))
+                    (group
+                      (ident 6:offset))
+                    (group
+                      (ident 1:n)))))
+              (group
+                (semi))
+              (group
+                (paren
+                  (group
+                    (ident 6:result)))
+                (paren
+                  (group
+                    (ident 1:n)))
+                (=)
+                (ident 2:u8)
+                (int 1:0))
+              (group
+                (semi))
+              (group
+                (ident 6:string)
+                (paren
+                  (group
+                    (ident 6:result))))))
+          (group
+            (ident 9:trim_left)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 6:string)))
+            (:)
+            (ident 6:string)
+            (brace
+              (group
+                (var)
+                (ident 1:i)
+                (:)
+                (ident 5:usize)
+                (=)
+                (int 1:0))
+              (group
+                (semi))
+              (group
+                (while)
+                (ident 1:i)
+                (symbolid 1:<)
+                (ident 4:self)
+                (dot)
+                (ident 3:len)
+                (brace
+                  (group
+                    (let)
+                    (ident 3:idx)
+                    (:)
+                    (ident 5:usize)
+                    (=)
+                    (ident 1:i))
+                  (group
+                    (semi))
+                  (group
+                    (let)
+                    (ident 1:c)
+                    (=)
+                    (paren
+                      (group
+                        (ident 4:self)
+                        (dot)
+                        (ident 4:data)))
+                    (paren
+                      (group
+                        (ident 3:idx))))
+                  (group
+                    (semi))
+                  (group
+                    (if)
+                    (ident 1:c)
+                    (symbolid 2:!=)
+                    (int 2:32)
+                    (brace
+                      (group
+                        (if)
+                        (ident 1:c)
+                        (symbolid 2:!=)
+                        (int 1:9)
+                        (brace
+                          (group
+                            (if)
+                            (ident 1:c)
+                            (symbolid 2:!=)
+                            (int 2:10)
+                            (brace
+                              (group
+                                (if)
+                                (ident 1:c)
+                                (symbolid 2:!=)
+                                (int 2:13)
+                                (brace
+                                  (group
+                                    (let)
+                                    (ident 5:count)
+                                    (=)
+                                    (ident 4:self)
+                                    (dot)
+                                    (ident 3:len)
+                                    (symbolid 1:-)
+                                    (ident 3:idx))
+                                  (group
+                                    (semi))
+                                  (group
+                                    (ret)
+                                    (ident 4:self)
+                                    (dot)
+                                    (ident 9:substring)
+                                    (paren
+                                      (list
+                                        (group
+                                          (ident 3:idx))
+                                        (group
+                                          (ident 5:count)))))))))))))
+                  (group
+                    (ident 1:i)
+                    (=)
+                    (ident 1:i)
+                    (symbolid 1:+)
+                    (int 1:1))))
+              (group
+                (ident 6:string)
+                (paren
+                  (group
+                    (ident 5:array)
+                    (bracket
+                      (group
+                        (ident 2:u8)))
+                    (doublecolon)
+                    (ident 4:fill)
+                    (paren
+                      (group
+                        (int 1:1))))))))
+          (group
+            (ident 10:trim_right)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 6:string)))
+            (:)
+            (ident 6:string)
+            (brace
+              (group
+                (var)
+                (ident 1:i)
+                (=)
+                (ident 4:self)
+                (dot)
+                (ident 3:len))
+              (group
+                (semi))
+              (group
+                (while)
+                (ident 1:i)
+                (symbolid 1:>)
+                (int 1:0)
+                (brace
+                  (group
+                    (let)
+                    (ident 1:c)
+                    (=)
+                    (paren
+                      (group
+                        (ident 4:self)
+                        (dot)
+                        (ident 4:data)))
+                    (paren
+                      (group
+                        (ident 1:i)
+                        (symbolid 1:-)
+                        (int 1:1))))
+                  (group
+                    (semi))
+                  (group
+                    (if)
+                    (ident 1:c)
+                    (symbolid 2:!=)
+                    (int 2:32)
+                    (brace
+                      (group
+                        (if)
+                        (ident 1:c)
+                        (symbolid 2:!=)
+                        (int 1:9)
+                        (brace
+                          (group
+                            (if)
+                            (ident 1:c)
+                            (symbolid 2:!=)
+                            (int 2:10)
+                            (brace
+                              (group
+                                (if)
+                                (ident 1:c)
+                                (symbolid 2:!=)
+                                (int 2:13)
+                                (brace
+                                  (group
+                                    (ret)
+                                    (ident 4:self)
+                                    (dot)
+                                    (ident 9:substring)
+                                    (paren
+                                      (list
+                                        (group
+                                          (int 1:0))
+                                        (group
+                                          (ident 1:i)))))))))))))
+                  (group
+                    (ident 1:i)
+                    (=)
+                    (ident 1:i)
+                    (symbolid 1:-)
+                    (int 1:1))))
+              (group
+                (ident 6:string)
+                (paren
+                  (group
+                    (ident 5:array)
+                    (bracket
+                      (group
+                        (ident 2:u8)))
+                    (doublecolon)
+                    (ident 4:fill)
+                    (paren
+                      (group
+                        (int 1:1))))))))
+          (group
+            (ident 4:trim)
+            (paren
+              (group
+                (ident 4:self)
+                (:)
+                (ident 6:string)))
+            (:)
+            (ident 6:string)
+            (brace
+              (group
+                (ident 4:self)
+                (dot)
+                (ident 9:trim_left)
+                (dot)
+                (ident 10:trim_right)))))))
     (file
       (group
         (ident 3:u16)

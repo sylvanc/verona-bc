@@ -1,0 +1,6463 @@
+vc
+typecheck
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 5:$1778)
+            (functionid 22:string_api::main::0::0)
+            (args)))
+        (ret
+          (localid 5:$1778)))))
+  (func
+    (functionid 22:string_api::main::0::0)
+    (params)
+    (i32)
+    (vars
+      (localid 6:result)
+      (localid 8:local$30)
+      (localid 8:local$31)
+      (localid 10:local$1736)
+      (localid 8:local$34)
+      (localid 10:local$1737)
+      (localid 8:local$37)
+      (localid 10:local$1738)
+      (localid 8:local$40)
+      (localid 10:local$1739)
+      (localid 8:local$43)
+      (localid 8:local$44)
+      (localid 8:local$45)
+      (localid 8:local$46)
+      (localid 8:local$47)
+      (localid 8:local$48)
+      (localid 8:local$49)
+      (localid 8:local$50)
+      (localid 8:local$51)
+      (localid 8:local$54)
+      (localid 8:local$55)
+      (localid 8:local$58)
+      (localid 8:local$59)
+      (localid 8:local$60)
+      (localid 8:local$61))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 8:local$27)
+            (i32)
+            (int 1:0))
+          (copy
+            (localid 9:local$894)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 8:local$27))
+          (conststr
+            (localid 8:local$28)
+            (rawstring 5:hello))
+          (call
+            (localid 8:local$29)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$28))))
+          (copy
+            (localid 9:local$895)
+            (localid 1:s))
+          (copy
+            (localid 1:s)
+            (localid 8:local$29))
+          (lookup
+            (localid 9:local$228)
+            (localid 1:s)
+            (methodid 13:cstring::1::0))
+          (calldyn
+            (localid 9:local$229)
+            (localid 9:local$228)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))))
+          (copy
+            (localid 10:local$1423)
+            (localid 2:cs))
+          (copy
+            (localid 2:cs)
+            (localid 9:local$229))
+          (call
+            (localid 8:local$30)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$230)
+            (usize)
+            (int 1:6))
+          (lookup
+            (localid 9:local$896)
+            (localid 2:cs)
+            (methodid 10:size::1::0))
+          (calldyn
+            (localid 9:local$897)
+            (localid 9:local$896)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:cs))))
+          (lookup
+            (localid 10:local$1546)
+            (localid 9:local$897)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1547)
+            (localid 10:local$1546)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$897))
+              (arg
+                (argcopy)
+                (localid 9:local$230)))))
+        (cond
+          (localid 10:local$1547)
+          (labelid 8:body$226)
+          (labelid 8:join$227)))
+      (label
+        (labelid 8:body$226)
+        (body
+          (const
+            (localid 9:local$231)
+            (i32)
+            (int 1:1))
+          (lookup
+            (localid 9:local$898)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$899)
+            (localid 9:local$898)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$231))))
+          (copy
+            (localid 10:local$1548)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$899))
+          (copy
+            (localid 8:local$30)
+            (localid 10:local$1548)))
+        (jump
+          (labelid 8:join$227)))
+      (label
+        (labelid 8:join$227)
+        (body
+          (call
+            (localid 8:local$31)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$234)
+            (usize)
+            (int 1:5))
+          (const
+            (localid 9:local$235)
+            (u8)
+            (int 1:0))
+          (lookup
+            (localid 9:local$900)
+            (localid 2:cs)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 9:local$901)
+            (localid 9:local$900)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:cs))
+              (arg
+                (argcopy)
+                (localid 9:local$234))))
+          (lookup
+            (localid 10:local$1549)
+            (localid 9:local$901)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1550)
+            (localid 10:local$1549)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$901))
+              (arg
+                (argcopy)
+                (localid 9:local$235)))))
+        (cond
+          (localid 10:local$1550)
+          (labelid 8:body$232)
+          (labelid 8:join$233)))
+      (label
+        (labelid 8:body$232)
+        (body
+          (const
+            (localid 9:local$236)
+            (i32)
+            (int 1:2))
+          (lookup
+            (localid 9:local$902)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$903)
+            (localid 9:local$902)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$236))))
+          (copy
+            (localid 10:local$1551)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$903))
+          (copy
+            (localid 8:local$31)
+            (localid 10:local$1551)))
+        (jump
+          (labelid 8:join$233)))
+      (label
+        (labelid 8:join$233)
+        (body
+          (conststr
+            (localid 9:local$239)
+            (rawstring 3:ell))
+          (call
+            (localid 9:local$240)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$239))))
+          (lookup
+            (localid 9:local$904)
+            (localid 1:s)
+            (methodid 10:find::2::0))
+          (calldyn
+            (localid 9:local$905)
+            (localid 9:local$904)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$240))))
+          (copy
+            (localid 10:local$1552)
+            (localid 7:local$0))
+          (copy
+            (localid 7:local$0)
+            (localid 9:local$905))
+          (call
+            (localid 8:local$32)
+            (functionid 34:string_api::lambda$1::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1424)
+            (localid 8:local$32)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1425)
+            (localid 10:local$1424)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$32))
+              (arg
+                (argcopy)
+                (localid 7:local$0))))
+          (typetest
+            (localid 10:local$1750)
+            (localid 10:local$1425)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
+          (localid 10:local$1750)
+          (labelid 9:body$1752)
+          (labelid 9:body$1751)))
+      (label
+        (labelid 9:body$1751)
+        (body
+          (copy
+            (localid 10:local$1736)
+            (localid 10:local$1425)))
+        (jump
+          (labelid 9:join$1753)))
+      (label
+        (labelid 9:body$1752)
+        (body
+          (const
+            (localid 8:local$33)
+            (usize)
+            (int 2:99))
+          (copy
+            (localid 10:local$1736)
+            (localid 8:local$33)))
+        (jump
+          (labelid 9:join$1753)))
+      (label
+        (labelid 9:join$1753)
+        (body
+          (copy
+            (localid 10:local$1773)
+            (localid 2:f1))
+          (copy
+            (localid 2:f1)
+            (localid 10:local$1736))
+          (call
+            (localid 8:local$34)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$241)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 9:local$906)
+            (localid 2:f1)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$907)
+            (localid 9:local$906)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:f1))
+              (arg
+                (argcopy)
+                (localid 9:local$241)))))
+        (cond
+          (localid 9:local$907)
+          (labelid 8:body$237)
+          (labelid 8:join$238)))
+      (label
+        (labelid 8:body$237)
+        (body
+          (const
+            (localid 9:local$242)
+            (i32)
+            (int 1:4))
+          (lookup
+            (localid 9:local$908)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$909)
+            (localid 9:local$908)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$242))))
+          (copy
+            (localid 10:local$1553)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$909))
+          (copy
+            (localid 8:local$34)
+            (localid 10:local$1553)))
+        (jump
+          (labelid 8:join$238)))
+      (label
+        (labelid 8:join$238)
+        (body
+          (conststr
+            (localid 9:local$245)
+            (rawstring 3:xyz))
+          (call
+            (localid 9:local$246)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$245))))
+          (lookup
+            (localid 9:local$910)
+            (localid 1:s)
+            (methodid 10:find::2::0))
+          (calldyn
+            (localid 9:local$911)
+            (localid 9:local$910)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$246))))
+          (copy
+            (localid 10:local$1554)
+            (localid 7:local$2))
+          (copy
+            (localid 7:local$2)
+            (localid 9:local$911))
+          (call
+            (localid 8:local$35)
+            (functionid 34:string_api::lambda$3::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1426)
+            (localid 8:local$35)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1427)
+            (localid 10:local$1426)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$35))
+              (arg
+                (argcopy)
+                (localid 7:local$2))))
+          (typetest
+            (localid 10:local$1754)
+            (localid 10:local$1427)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
+          (localid 10:local$1754)
+          (labelid 9:body$1756)
+          (labelid 9:body$1755)))
+      (label
+        (labelid 9:body$1755)
+        (body
+          (copy
+            (localid 10:local$1737)
+            (localid 10:local$1427)))
+        (jump
+          (labelid 9:join$1757)))
+      (label
+        (labelid 9:body$1756)
+        (body
+          (const
+            (localid 8:local$36)
+            (usize)
+            (int 2:99))
+          (copy
+            (localid 10:local$1737)
+            (localid 8:local$36)))
+        (jump
+          (labelid 9:join$1757)))
+      (label
+        (labelid 9:join$1757)
+        (body
+          (copy
+            (localid 10:local$1774)
+            (localid 2:f2))
+          (copy
+            (localid 2:f2)
+            (localid 10:local$1737))
+          (call
+            (localid 8:local$37)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$247)
+            (usize)
+            (int 2:99))
+          (lookup
+            (localid 9:local$912)
+            (localid 2:f2)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$913)
+            (localid 9:local$912)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:f2))
+              (arg
+                (argcopy)
+                (localid 9:local$247)))))
+        (cond
+          (localid 9:local$913)
+          (labelid 8:body$243)
+          (labelid 8:join$244)))
+      (label
+        (labelid 8:body$243)
+        (body
+          (const
+            (localid 9:local$248)
+            (i32)
+            (int 1:8))
+          (lookup
+            (localid 9:local$914)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$915)
+            (localid 9:local$914)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$248))))
+          (copy
+            (localid 10:local$1555)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$915))
+          (copy
+            (localid 8:local$37)
+            (localid 10:local$1555)))
+        (jump
+          (labelid 8:join$244)))
+      (label
+        (labelid 8:join$244)
+        (body
+          (conststr
+            (localid 9:local$251)
+            (rawstring 0:))
+          (call
+            (localid 9:local$252)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$251))))
+          (lookup
+            (localid 9:local$916)
+            (localid 1:s)
+            (methodid 10:find::2::0))
+          (calldyn
+            (localid 9:local$917)
+            (localid 9:local$916)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$252))))
+          (copy
+            (localid 10:local$1556)
+            (localid 7:local$4))
+          (copy
+            (localid 7:local$4)
+            (localid 9:local$917))
+          (call
+            (localid 8:local$38)
+            (functionid 34:string_api::lambda$5::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1428)
+            (localid 8:local$38)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1429)
+            (localid 10:local$1428)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$38))
+              (arg
+                (argcopy)
+                (localid 7:local$4))))
+          (typetest
+            (localid 10:local$1758)
+            (localid 10:local$1429)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
+          (localid 10:local$1758)
+          (labelid 9:body$1760)
+          (labelid 9:body$1759)))
+      (label
+        (labelid 9:body$1759)
+        (body
+          (copy
+            (localid 10:local$1738)
+            (localid 10:local$1429)))
+        (jump
+          (labelid 9:join$1761)))
+      (label
+        (labelid 9:body$1760)
+        (body
+          (const
+            (localid 8:local$39)
+            (usize)
+            (int 2:99))
+          (copy
+            (localid 10:local$1738)
+            (localid 8:local$39)))
+        (jump
+          (labelid 9:join$1761)))
+      (label
+        (labelid 9:join$1761)
+        (body
+          (copy
+            (localid 10:local$1775)
+            (localid 2:f3))
+          (copy
+            (localid 2:f3)
+            (localid 10:local$1738))
+          (call
+            (localid 8:local$40)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$253)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 9:local$918)
+            (localid 2:f3)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$919)
+            (localid 9:local$918)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:f3))
+              (arg
+                (argcopy)
+                (localid 9:local$253)))))
+        (cond
+          (localid 9:local$919)
+          (labelid 8:body$249)
+          (labelid 8:join$250)))
+      (label
+        (labelid 8:body$249)
+        (body
+          (const
+            (localid 9:local$254)
+            (i32)
+            (int 2:16))
+          (lookup
+            (localid 9:local$920)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$921)
+            (localid 9:local$920)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$254))))
+          (copy
+            (localid 10:local$1557)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$921))
+          (copy
+            (localid 8:local$40)
+            (localid 10:local$1557)))
+        (jump
+          (labelid 8:join$250)))
+      (label
+        (labelid 8:join$250)
+        (body
+          (conststr
+            (localid 9:local$257)
+            (rawstring 0:))
+          (call
+            (localid 9:local$258)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$257))))
+          (conststr
+            (localid 9:local$259)
+            (rawstring 1:a))
+          (call
+            (localid 9:local$260)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$259))))
+          (lookup
+            (localid 10:local$1430)
+            (localid 9:local$258)
+            (methodid 10:find::2::0))
+          (calldyn
+            (localid 10:local$1431)
+            (localid 10:local$1430)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$258))
+              (arg
+                (argcopy)
+                (localid 9:local$260))))
+          (copy
+            (localid 10:local$1670)
+            (localid 7:local$6))
+          (copy
+            (localid 7:local$6)
+            (localid 10:local$1431))
+          (call
+            (localid 8:local$41)
+            (functionid 34:string_api::lambda$7::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1432)
+            (localid 8:local$41)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1433)
+            (localid 10:local$1432)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$41))
+              (arg
+                (argcopy)
+                (localid 7:local$6))))
+          (typetest
+            (localid 10:local$1762)
+            (localid 10:local$1433)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
+          (localid 10:local$1762)
+          (labelid 9:body$1764)
+          (labelid 9:body$1763)))
+      (label
+        (labelid 9:body$1763)
+        (body
+          (copy
+            (localid 10:local$1739)
+            (localid 10:local$1433)))
+        (jump
+          (labelid 9:join$1765)))
+      (label
+        (labelid 9:body$1764)
+        (body
+          (const
+            (localid 8:local$42)
+            (usize)
+            (int 2:99))
+          (copy
+            (localid 10:local$1739)
+            (localid 8:local$42)))
+        (jump
+          (labelid 9:join$1765)))
+      (label
+        (labelid 9:join$1765)
+        (body
+          (copy
+            (localid 10:local$1776)
+            (localid 2:f4))
+          (copy
+            (localid 2:f4)
+            (localid 10:local$1739))
+          (call
+            (localid 8:local$43)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$261)
+            (usize)
+            (int 2:99))
+          (lookup
+            (localid 9:local$922)
+            (localid 2:f4)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$923)
+            (localid 9:local$922)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:f4))
+              (arg
+                (argcopy)
+                (localid 9:local$261)))))
+        (cond
+          (localid 9:local$923)
+          (labelid 8:body$255)
+          (labelid 8:join$256)))
+      (label
+        (labelid 8:body$255)
+        (body
+          (const
+            (localid 9:local$262)
+            (i32)
+            (int 2:32))
+          (lookup
+            (localid 9:local$924)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$925)
+            (localid 9:local$924)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$262))))
+          (copy
+            (localid 10:local$1558)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$925))
+          (copy
+            (localid 8:local$43)
+            (localid 10:local$1558)))
+        (jump
+          (labelid 8:join$256)))
+      (label
+        (labelid 8:join$256)
+        (body
+          (call
+            (localid 8:local$44)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$265)
+            (rawstring 3:llo))
+          (call
+            (localid 9:local$266)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$265))))
+          (lookup
+            (localid 9:local$926)
+            (localid 1:s)
+            (methodid 14:contains::2::0))
+          (calldyn
+            (localid 9:local$927)
+            (localid 9:local$926)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$266))))
+          (lookup
+            (localid 10:local$1559)
+            (localid 9:local$927)
+            (methodid 7:!::1::0))
+          (calldyn
+            (localid 10:local$1560)
+            (localid 10:local$1559)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$927)))))
+        (cond
+          (localid 10:local$1560)
+          (labelid 8:body$263)
+          (labelid 8:join$264)))
+      (label
+        (labelid 8:body$263)
+        (body
+          (const
+            (localid 9:local$267)
+            (i32)
+            (int 2:64))
+          (lookup
+            (localid 9:local$928)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$929)
+            (localid 9:local$928)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$267))))
+          (copy
+            (localid 10:local$1561)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$929))
+          (copy
+            (localid 8:local$44)
+            (localid 10:local$1561)))
+        (jump
+          (labelid 8:join$264)))
+      (label
+        (labelid 8:join$264)
+        (body
+          (call
+            (localid 8:local$45)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$270)
+            (rawstring 3:xyz))
+          (call
+            (localid 9:local$271)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$270))))
+          (lookup
+            (localid 9:local$930)
+            (localid 1:s)
+            (methodid 14:contains::2::0))
+          (calldyn
+            (localid 9:local$931)
+            (localid 9:local$930)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$271)))))
+        (cond
+          (localid 9:local$931)
+          (labelid 8:body$268)
+          (labelid 8:join$269)))
+      (label
+        (labelid 8:body$268)
+        (body
+          (const
+            (localid 9:local$272)
+            (i32)
+            (int 3:128))
+          (lookup
+            (localid 9:local$932)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$933)
+            (localid 9:local$932)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$272))))
+          (copy
+            (localid 10:local$1562)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$933))
+          (copy
+            (localid 8:local$45)
+            (localid 10:local$1562)))
+        (jump
+          (labelid 8:join$269)))
+      (label
+        (labelid 8:join$269)
+        (body
+          (call
+            (localid 8:local$46)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$275)
+            (rawstring 3:hel))
+          (call
+            (localid 9:local$276)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$275))))
+          (lookup
+            (localid 9:local$934)
+            (localid 1:s)
+            (methodid 17:starts_with::2::0))
+          (calldyn
+            (localid 9:local$935)
+            (localid 9:local$934)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$276))))
+          (lookup
+            (localid 10:local$1563)
+            (localid 9:local$935)
+            (methodid 7:!::1::0))
+          (calldyn
+            (localid 10:local$1564)
+            (localid 10:local$1563)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$935)))))
+        (cond
+          (localid 10:local$1564)
+          (labelid 8:body$273)
+          (labelid 8:join$274)))
+      (label
+        (labelid 8:body$273)
+        (body
+          (const
+            (localid 9:local$277)
+            (i32)
+            (int 3:256))
+          (lookup
+            (localid 9:local$936)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$937)
+            (localid 9:local$936)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$277))))
+          (copy
+            (localid 10:local$1565)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$937))
+          (copy
+            (localid 8:local$46)
+            (localid 10:local$1565)))
+        (jump
+          (labelid 8:join$274)))
+      (label
+        (labelid 8:join$274)
+        (body
+          (call
+            (localid 8:local$47)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$280)
+            (rawstring 3:elo))
+          (call
+            (localid 9:local$281)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$280))))
+          (lookup
+            (localid 9:local$938)
+            (localid 1:s)
+            (methodid 17:starts_with::2::0))
+          (calldyn
+            (localid 9:local$939)
+            (localid 9:local$938)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$281)))))
+        (cond
+          (localid 9:local$939)
+          (labelid 8:body$278)
+          (labelid 8:join$279)))
+      (label
+        (labelid 8:body$278)
+        (body
+          (const
+            (localid 9:local$282)
+            (i32)
+            (int 3:512))
+          (lookup
+            (localid 9:local$940)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$941)
+            (localid 9:local$940)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$282))))
+          (copy
+            (localid 10:local$1566)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$941))
+          (copy
+            (localid 8:local$47)
+            (localid 10:local$1566)))
+        (jump
+          (labelid 8:join$279)))
+      (label
+        (labelid 8:join$279)
+        (body
+          (call
+            (localid 8:local$48)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$285)
+            (rawstring 3:llo))
+          (call
+            (localid 9:local$286)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$285))))
+          (lookup
+            (localid 9:local$942)
+            (localid 1:s)
+            (methodid 15:ends_with::2::0))
+          (calldyn
+            (localid 9:local$943)
+            (localid 9:local$942)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$286))))
+          (lookup
+            (localid 10:local$1567)
+            (localid 9:local$943)
+            (methodid 7:!::1::0))
+          (calldyn
+            (localid 10:local$1568)
+            (localid 10:local$1567)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$943)))))
+        (cond
+          (localid 10:local$1568)
+          (labelid 8:body$283)
+          (labelid 8:join$284)))
+      (label
+        (labelid 8:body$283)
+        (body
+          (const
+            (localid 9:local$287)
+            (i32)
+            (int 4:1024))
+          (lookup
+            (localid 9:local$944)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$945)
+            (localid 9:local$944)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$287))))
+          (copy
+            (localid 10:local$1569)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$945))
+          (copy
+            (localid 8:local$48)
+            (localid 10:local$1569)))
+        (jump
+          (labelid 8:join$284)))
+      (label
+        (labelid 8:join$284)
+        (body
+          (call
+            (localid 8:local$49)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$290)
+            (rawstring 3:hel))
+          (call
+            (localid 9:local$291)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$290))))
+          (lookup
+            (localid 9:local$946)
+            (localid 1:s)
+            (methodid 15:ends_with::2::0))
+          (calldyn
+            (localid 9:local$947)
+            (localid 9:local$946)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$291)))))
+        (cond
+          (localid 9:local$947)
+          (labelid 8:body$288)
+          (labelid 8:join$289)))
+      (label
+        (labelid 8:body$288)
+        (body
+          (const
+            (localid 9:local$292)
+            (i32)
+            (int 4:2048))
+          (lookup
+            (localid 9:local$948)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$949)
+            (localid 9:local$948)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$292))))
+          (copy
+            (localid 10:local$1570)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$949))
+          (copy
+            (localid 8:local$49)
+            (localid 10:local$1570)))
+        (jump
+          (labelid 8:join$289)))
+      (label
+        (labelid 8:join$289)
+        (body
+          (call
+            (localid 8:local$50)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$295)
+            (rawstring 0:))
+          (call
+            (localid 9:local$296)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$295))))
+          (lookup
+            (localid 9:local$950)
+            (localid 1:s)
+            (methodid 17:starts_with::2::0))
+          (calldyn
+            (localid 9:local$951)
+            (localid 9:local$950)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$296))))
+          (lookup
+            (localid 10:local$1571)
+            (localid 9:local$951)
+            (methodid 7:!::1::0))
+          (calldyn
+            (localid 10:local$1572)
+            (localid 10:local$1571)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$951)))))
+        (cond
+          (localid 10:local$1572)
+          (labelid 8:body$293)
+          (labelid 8:join$294)))
+      (label
+        (labelid 8:body$293)
+        (body
+          (const
+            (localid 9:local$297)
+            (i32)
+            (int 4:4096))
+          (lookup
+            (localid 9:local$952)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$953)
+            (localid 9:local$952)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$297))))
+          (copy
+            (localid 10:local$1573)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$953))
+          (copy
+            (localid 8:local$50)
+            (localid 10:local$1573)))
+        (jump
+          (labelid 8:join$294)))
+      (label
+        (labelid 8:join$294)
+        (body
+          (call
+            (localid 8:local$51)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$300)
+            (rawstring 0:))
+          (call
+            (localid 9:local$301)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$300))))
+          (lookup
+            (localid 9:local$954)
+            (localid 1:s)
+            (methodid 15:ends_with::2::0))
+          (calldyn
+            (localid 9:local$955)
+            (localid 9:local$954)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 9:local$301))))
+          (lookup
+            (localid 10:local$1574)
+            (localid 9:local$955)
+            (methodid 7:!::1::0))
+          (calldyn
+            (localid 10:local$1575)
+            (localid 10:local$1574)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$955)))))
+        (cond
+          (localid 10:local$1575)
+          (labelid 8:body$298)
+          (labelid 8:join$299)))
+      (label
+        (labelid 8:body$298)
+        (body
+          (const
+            (localid 9:local$302)
+            (i32)
+            (int 4:8192))
+          (lookup
+            (localid 9:local$956)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$957)
+            (localid 9:local$956)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$302))))
+          (copy
+            (localid 10:local$1576)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$957))
+          (copy
+            (localid 8:local$51)
+            (localid 10:local$1576)))
+        (jump
+          (labelid 8:join$299)))
+      (label
+        (labelid 8:join$299)
+        (body
+          (const
+            (localid 8:local$52)
+            (usize)
+            (int 1:1))
+          (const
+            (localid 8:local$53)
+            (usize)
+            (int 1:3))
+          (lookup
+            (localid 9:local$305)
+            (localid 1:s)
+            (methodid 15:substring::3::0))
+          (calldyn
+            (localid 9:local$306)
+            (localid 9:local$305)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))
+              (arg
+                (argcopy)
+                (localid 8:local$52))
+              (arg
+                (argcopy)
+                (localid 8:local$53))))
+          (copy
+            (localid 10:local$1434)
+            (localid 3:sub))
+          (copy
+            (localid 3:sub)
+            (localid 9:local$306))
+          (call
+            (localid 8:local$54)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$307)
+            (rawstring 3:ell))
+          (call
+            (localid 9:local$308)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$307))))
+          (lookup
+            (localid 9:local$958)
+            (localid 3:sub)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 9:local$959)
+            (localid 9:local$958)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:sub))
+              (arg
+                (argcopy)
+                (localid 9:local$308)))))
+        (cond
+          (localid 9:local$959)
+          (labelid 8:body$303)
+          (labelid 8:join$304)))
+      (label
+        (labelid 8:body$303)
+        (body
+          (const
+            (localid 9:local$309)
+            (i32)
+            (int 5:16384))
+          (lookup
+            (localid 9:local$960)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$961)
+            (localid 9:local$960)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$309))))
+          (copy
+            (localid 10:local$1577)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$961))
+          (copy
+            (localid 8:local$54)
+            (localid 10:local$1577)))
+        (jump
+          (labelid 8:join$304)))
+      (label
+        (labelid 8:join$304)
+        (body
+          (call
+            (localid 8:local$55)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$312)
+            (usize)
+            (int 1:3))
+          (lookup
+            (localid 9:local$962)
+            (localid 3:sub)
+            (methodid 10:size::1::0))
+          (calldyn
+            (localid 9:local$963)
+            (localid 9:local$962)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:sub))))
+          (lookup
+            (localid 10:local$1578)
+            (localid 9:local$963)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1579)
+            (localid 10:local$1578)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$963))
+              (arg
+                (argcopy)
+                (localid 9:local$312)))))
+        (cond
+          (localid 10:local$1579)
+          (labelid 8:body$310)
+          (labelid 8:join$311)))
+      (label
+        (labelid 8:body$310)
+        (body
+          (const
+            (localid 9:local$313)
+            (i32)
+            (int 5:32768))
+          (lookup
+            (localid 9:local$964)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$965)
+            (localid 9:local$964)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$313))))
+          (copy
+            (localid 10:local$1580)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$965))
+          (copy
+            (localid 8:local$55)
+            (localid 10:local$1580)))
+        (jump
+          (labelid 8:join$311)))
+      (label
+        (labelid 8:join$311)
+        (body
+          (conststr
+            (localid 8:local$56)
+            (rawstring 6:  hi  ))
+          (call
+            (localid 8:local$57)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$56))))
+          (copy
+            (localid 9:local$966)
+            (localid 6:padded))
+          (copy
+            (localid 6:padded)
+            (localid 8:local$57))
+          (call
+            (localid 8:local$58)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$316)
+            (rawstring 2:hi))
+          (call
+            (localid 9:local$317)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$316))))
+          (lookup
+            (localid 9:local$967)
+            (localid 6:padded)
+            (methodid 10:trim::1::0))
+          (calldyn
+            (localid 9:local$968)
+            (localid 9:local$967)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:padded))))
+          (lookup
+            (localid 10:local$1581)
+            (localid 9:local$968)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1582)
+            (localid 10:local$1581)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$968))
+              (arg
+                (argcopy)
+                (localid 9:local$317)))))
+        (cond
+          (localid 10:local$1582)
+          (labelid 8:body$314)
+          (labelid 8:join$315)))
+      (label
+        (labelid 8:body$314)
+        (body
+          (const
+            (localid 9:local$318)
+            (i32)
+            (int 5:65536))
+          (lookup
+            (localid 9:local$969)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$970)
+            (localid 9:local$969)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$318))))
+          (copy
+            (localid 10:local$1583)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$970))
+          (copy
+            (localid 8:local$58)
+            (localid 10:local$1583)))
+        (jump
+          (labelid 8:join$315)))
+      (label
+        (labelid 8:join$315)
+        (body
+          (call
+            (localid 8:local$59)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$321)
+            (rawstring 4:hi  ))
+          (call
+            (localid 9:local$322)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$321))))
+          (lookup
+            (localid 9:local$971)
+            (localid 6:padded)
+            (methodid 15:trim_left::1::0))
+          (calldyn
+            (localid 9:local$972)
+            (localid 9:local$971)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:padded))))
+          (lookup
+            (localid 10:local$1584)
+            (localid 9:local$972)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1585)
+            (localid 10:local$1584)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$972))
+              (arg
+                (argcopy)
+                (localid 9:local$322)))))
+        (cond
+          (localid 10:local$1585)
+          (labelid 8:body$319)
+          (labelid 8:join$320)))
+      (label
+        (labelid 8:body$319)
+        (body
+          (const
+            (localid 9:local$323)
+            (i32)
+            (int 6:131072))
+          (lookup
+            (localid 9:local$973)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$974)
+            (localid 9:local$973)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$323))))
+          (copy
+            (localid 10:local$1586)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$974))
+          (copy
+            (localid 8:local$59)
+            (localid 10:local$1586)))
+        (jump
+          (labelid 8:join$320)))
+      (label
+        (labelid 8:join$320)
+        (body
+          (call
+            (localid 8:local$60)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$326)
+            (rawstring 4:  hi))
+          (call
+            (localid 9:local$327)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$326))))
+          (lookup
+            (localid 9:local$975)
+            (localid 6:padded)
+            (methodid 16:trim_right::1::0))
+          (calldyn
+            (localid 9:local$976)
+            (localid 9:local$975)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:padded))))
+          (lookup
+            (localid 10:local$1587)
+            (localid 9:local$976)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1588)
+            (localid 10:local$1587)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$976))
+              (arg
+                (argcopy)
+                (localid 9:local$327)))))
+        (cond
+          (localid 10:local$1588)
+          (labelid 8:body$324)
+          (labelid 8:join$325)))
+      (label
+        (labelid 8:body$324)
+        (body
+          (const
+            (localid 9:local$328)
+            (i32)
+            (int 6:262144))
+          (lookup
+            (localid 9:local$977)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$978)
+            (localid 9:local$977)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$328))))
+          (copy
+            (localid 10:local$1589)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$978))
+          (copy
+            (localid 8:local$60)
+            (localid 10:local$1589)))
+        (jump
+          (labelid 8:join$325)))
+      (label
+        (labelid 8:join$325)
+        (body
+          (call
+            (localid 8:local$61)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (conststr
+            (localid 9:local$331)
+            (rawstring 0:))
+          (call
+            (localid 9:local$332)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$331))))
+          (const
+            (localid 9:local$333)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 10:local$1435)
+            (localid 9:local$332)
+            (methodid 10:trim::1::0))
+          (calldyn
+            (localid 10:local$1436)
+            (localid 10:local$1435)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$332))))
+          (lookup
+            (localid 10:local$1671)
+            (localid 10:local$1436)
+            (methodid 10:size::1::0))
+          (calldyn
+            (localid 10:local$1672)
+            (localid 10:local$1671)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1436))))
+          (lookup
+            (localid 10:local$1740)
+            (localid 10:local$1672)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1741)
+            (localid 10:local$1740)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1672))
+              (arg
+                (argcopy)
+                (localid 9:local$333)))))
+        (cond
+          (localid 10:local$1741)
+          (labelid 8:body$329)
+          (labelid 8:join$330)))
+      (label
+        (labelid 8:body$329)
+        (body
+          (const
+            (localid 9:local$334)
+            (i32)
+            (int 6:524288))
+          (lookup
+            (localid 9:local$979)
+            (localid 6:result)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 9:local$980)
+            (localid 9:local$979)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$334))))
+          (copy
+            (localid 10:local$1590)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$980))
+          (copy
+            (localid 8:local$61)
+            (localid 10:local$1590)))
+        (jump
+          (labelid 8:join$330)))
+      (label
+        (labelid 8:join$330)
+        (body)
+        (ret
+          (localid 6:result)))))
+  (func
+    (functionid 30:_builtin::string::create::1::0)
+    (params
+      (param
+        (localid 4:data)
+        (array
+          (u8))))
+    (classid 19:_builtin::string::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 10:local$1187)
+            (localid 4:data)
+            (methodid 10:size::1::0))
+          (calldyn
+            (localid 10:local$1188)
+            (localid 10:local$1187)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:data))))
+          (call
+            (localid 9:local$126)
+            (functionid 27:_builtin::array::fill::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1188))))
+          (copy
+            (localid 10:local$1189)
+            (localid 1:d))
+          (copy
+            (localid 1:d)
+            (localid 9:local$126))
+          (const
+            (localid 9:local$127)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:local$128)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 9:local$546)
+            (localid 1:d)
+            (methodid 15:copy_from::5::0))
+          (lookup
+            (localid 10:local$1190)
+            (localid 4:data)
+            (methodid 10:size::1::0))
+          (calldyn
+            (localid 10:local$1191)
+            (localid 10:local$1190)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:data))))
+          (calldyn
+            (localid 9:local$547)
+            (localid 9:local$546)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:d))
+              (arg
+                (argcopy)
+                (localid 9:local$127))
+              (arg
+                (argcopy)
+                (localid 4:data))
+              (arg
+                (argcopy)
+                (localid 9:local$128))
+              (arg
+                (argcopy)
+                (localid 10:local$1191))))
+          (const
+            (localid 9:local$548)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 10:local$1192)
+            (localid 4:data)
+            (methodid 10:size::1::0))
+          (calldyn
+            (localid 10:local$1193)
+            (localid 10:local$1192)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:data))))
+          (lookup
+            (localid 10:local$1595)
+            (localid 10:local$1193)
+            (methodid 7:-::2::0))
+          (calldyn
+            (localid 10:local$1596)
+            (localid 10:local$1595)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1193))
+              (arg
+                (argcopy)
+                (localid 9:local$548))))
+          (new
+            (localid 9:local$129)
+            (classid 19:_builtin::string::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:d))
+              (arg
+                (argcopy)
+                (localid 10:local$1596)))))
+        (ret
+          (localid 9:local$129)))))
+  (func
+    (functionid 31:_builtin::nomatch::create::0::0)
+    (params)
+    (classid 20:_builtin::nomatch::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 9:local$120)
+            (classid 20:_builtin::nomatch::0)
+            (args)))
+        (ret
+          (localid 9:local$120)))))
+  (func
+    (functionid 34:string_api::lambda$1::create::0::0)
+    (params)
+    (classid 23:string_api::lambda$1::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$15)
+            (classid 23:string_api::lambda$1::0)
+            (args)))
+        (ret
+          (localid 8:local$15)))))
+  (class
+    (classid 20:_builtin::nomatch::0)
+    (fields)
+    (methods))
+  (func
+    (functionid 34:string_api::lambda$3::create::0::0)
+    (params)
+    (classid 23:string_api::lambda$3::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$18)
+            (classid 23:string_api::lambda$3::0)
+            (args)))
+        (ret
+          (localid 8:local$18)))))
+  (func
+    (functionid 34:string_api::lambda$5::create::0::0)
+    (params)
+    (classid 23:string_api::lambda$5::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$21)
+            (classid 23:string_api::lambda$5::0)
+            (args)))
+        (ret
+          (localid 8:local$21)))))
+  (func
+    (functionid 34:string_api::lambda$7::create::0::0)
+    (params)
+    (classid 23:string_api::lambda$7::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$24)
+            (classid 23:string_api::lambda$7::0)
+            (args)))
+        (ret
+          (localid 8:local$24)))))
+  (class
+    (classid 23:string_api::lambda$7::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 33:string_api::lambda$7::apply::2::0))))
+  (func
+    (functionid 33:string_api::lambda$7::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 23:string_api::lambda$7::0))
+      (param
+        (localid 4:$arg)
+        (dyn)))
+    (union
+      (classid 20:_builtin::nomatch::0)
+      (usize))
+    (vars
+      (localid 8:local$25)
+      (localid 8:local$26))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$25)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$221)
+            (usize)
+            (int 1:1))
+          (len
+            (localid 9:local$891)
+            (localid 4:$arg))
+          (lookup
+            (localid 10:local$1543)
+            (localid 9:local$891)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1544)
+            (localid 10:local$1543)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$891))
+              (arg
+                (argcopy)
+                (localid 9:local$221)))))
+        (cond
+          (localid 10:local$1544)
+          (labelid 8:body$219)
+          (labelid 8:join$220)))
+      (label
+        (labelid 8:body$219)
+        (body
+          (call
+            (localid 9:local$222)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$222)))
+      (label
+        (labelid 8:join$220)
+        (body
+          (copy
+            (localid 9:local$892)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 4:$arg))
+          (call
+            (localid 8:local$26)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (typetest
+            (localid 9:local$893)
+            (localid 1:i)
+            (usize))
+          (not
+            (localid 10:local$1545)
+            (localid 9:local$893)))
+        (cond
+          (localid 10:local$1545)
+          (labelid 8:body$223)
+          (labelid 8:join$224)))
+      (label
+        (labelid 8:body$223)
+        (body
+          (call
+            (localid 9:local$225)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$225)))
+      (label
+        (labelid 8:join$224)
+        (body)
+        (ret
+          (localid 1:i)))))
+  (class
+    (classid 23:string_api::lambda$5::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 33:string_api::lambda$5::apply::2::0))))
+  (func
+    (functionid 33:string_api::lambda$5::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 23:string_api::lambda$5::0))
+      (param
+        (localid 4:$arg)
+        (dyn)))
+    (union
+      (classid 20:_builtin::nomatch::0)
+      (usize))
+    (vars
+      (localid 8:local$22)
+      (localid 8:local$23))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$22)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$214)
+            (usize)
+            (int 1:1))
+          (len
+            (localid 9:local$888)
+            (localid 4:$arg))
+          (lookup
+            (localid 10:local$1540)
+            (localid 9:local$888)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1541)
+            (localid 10:local$1540)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$888))
+              (arg
+                (argcopy)
+                (localid 9:local$214)))))
+        (cond
+          (localid 10:local$1541)
+          (labelid 8:body$212)
+          (labelid 8:join$213)))
+      (label
+        (labelid 8:body$212)
+        (body
+          (call
+            (localid 9:local$215)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$215)))
+      (label
+        (labelid 8:join$213)
+        (body
+          (copy
+            (localid 9:local$889)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 4:$arg))
+          (call
+            (localid 8:local$23)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (typetest
+            (localid 9:local$890)
+            (localid 1:i)
+            (usize))
+          (not
+            (localid 10:local$1542)
+            (localid 9:local$890)))
+        (cond
+          (localid 10:local$1542)
+          (labelid 8:body$216)
+          (labelid 8:join$217)))
+      (label
+        (labelid 8:body$216)
+        (body
+          (call
+            (localid 9:local$218)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$218)))
+      (label
+        (labelid 8:join$217)
+        (body)
+        (ret
+          (localid 1:i)))))
+  (class
+    (classid 23:string_api::lambda$3::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 33:string_api::lambda$3::apply::2::0))))
+  (func
+    (functionid 33:string_api::lambda$3::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 23:string_api::lambda$3::0))
+      (param
+        (localid 4:$arg)
+        (dyn)))
+    (union
+      (classid 20:_builtin::nomatch::0)
+      (usize))
+    (vars
+      (localid 8:local$19)
+      (localid 8:local$20))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$19)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$207)
+            (usize)
+            (int 1:1))
+          (len
+            (localid 9:local$885)
+            (localid 4:$arg))
+          (lookup
+            (localid 10:local$1537)
+            (localid 9:local$885)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1538)
+            (localid 10:local$1537)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$885))
+              (arg
+                (argcopy)
+                (localid 9:local$207)))))
+        (cond
+          (localid 10:local$1538)
+          (labelid 8:body$205)
+          (labelid 8:join$206)))
+      (label
+        (labelid 8:body$205)
+        (body
+          (call
+            (localid 9:local$208)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$208)))
+      (label
+        (labelid 8:join$206)
+        (body
+          (copy
+            (localid 9:local$886)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 4:$arg))
+          (call
+            (localid 8:local$20)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (typetest
+            (localid 9:local$887)
+            (localid 1:i)
+            (usize))
+          (not
+            (localid 10:local$1539)
+            (localid 9:local$887)))
+        (cond
+          (localid 10:local$1539)
+          (labelid 8:body$209)
+          (labelid 8:join$210)))
+      (label
+        (labelid 8:body$209)
+        (body
+          (call
+            (localid 9:local$211)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$211)))
+      (label
+        (labelid 8:join$210)
+        (body)
+        (ret
+          (localid 1:i)))))
+  (class
+    (classid 23:string_api::lambda$1::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 33:string_api::lambda$1::apply::2::0))))
+  (func
+    (functionid 33:string_api::lambda$1::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 23:string_api::lambda$1::0))
+      (param
+        (localid 4:$arg)
+        (dyn)))
+    (union
+      (classid 20:_builtin::nomatch::0)
+      (usize))
+    (vars
+      (localid 8:local$16)
+      (localid 8:local$17))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$16)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$200)
+            (usize)
+            (int 1:1))
+          (len
+            (localid 9:local$882)
+            (localid 4:$arg))
+          (lookup
+            (localid 10:local$1534)
+            (localid 9:local$882)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1535)
+            (localid 10:local$1534)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$882))
+              (arg
+                (argcopy)
+                (localid 9:local$200)))))
+        (cond
+          (localid 10:local$1535)
+          (labelid 8:body$198)
+          (labelid 8:join$199)))
+      (label
+        (labelid 8:body$198)
+        (body
+          (call
+            (localid 9:local$201)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$201)))
+      (label
+        (labelid 8:join$199)
+        (body
+          (copy
+            (localid 9:local$883)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 4:$arg))
+          (call
+            (localid 8:local$17)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (typetest
+            (localid 9:local$884)
+            (localid 1:i)
+            (usize))
+          (not
+            (localid 10:local$1536)
+            (localid 9:local$884)))
+        (cond
+          (localid 10:local$1536)
+          (labelid 8:body$202)
+          (labelid 8:join$203)))
+      (label
+        (labelid 8:body$202)
+        (body
+          (call
+            (localid 9:local$204)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$204)))
+      (label
+        (labelid 8:join$203)
+        (body)
+        (ret
+          (localid 1:i)))))
+  (func
+    (functionid 25:_builtin::usize::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize))
+      (param
+        (localid 5:other)
+        (usize)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$873)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$873)))))
+  (func
+    (functionid 24:_builtin::usize::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize)))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 10:local$1409)
+            (localid 4:self)))
+        (ret
+          (localid 10:local$1409)))))
+  (func
+    (functionid 24:_builtin::bool::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$366)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$366)))))
+  (func
+    (functionid 23:_builtin::bool::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 10:local$1012)
+            (localid 4:self)))
+        (ret
+          (localid 10:local$1012)))))
+  (class
+    (classid 19:_builtin::string::0)
+    (fields
+      (field
+        (fieldid 4:data)
+        (array
+          (u8)))
+      (field
+        (fieldid 3:len)
+        (usize)))
+    (methods
+      (method
+        (methodid 13:cstring::1::0)
+        (functionid 31:_builtin::string::cstring::1::0))
+      (method
+        (methodid 10:size::1::0)
+        (functionid 28:_builtin::string::size::1::0))
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 26:_builtin::string::!=::2::0))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 29:_builtin::string::apply::2::0))
+      (method
+        (methodid 10:find::2::0)
+        (functionid 28:_builtin::string::find::2::0))
+      (method
+        (methodid 14:contains::2::0)
+        (functionid 32:_builtin::string::contains::2::0))
+      (method
+        (methodid 17:starts_with::2::0)
+        (functionid 35:_builtin::string::starts_with::2::0))
+      (method
+        (methodid 15:ends_with::2::0)
+        (functionid 33:_builtin::string::ends_with::2::0))
+      (method
+        (methodid 15:substring::3::0)
+        (functionid 33:_builtin::string::substring::3::0))
+      (method
+        (methodid 10:trim::1::0)
+        (functionid 28:_builtin::string::trim::1::0))
+      (method
+        (methodid 15:trim_left::1::0)
+        (functionid 33:_builtin::string::trim_left::1::0))
+      (method
+        (methodid 16:trim_right::1::0)
+        (functionid 34:_builtin::string::trim_right::1::0))
+      (method
+        (methodid 9:len::1::0)
+        (functionid 27:_builtin::string::len::1::0))
+      (method
+        (methodid 7:>::2::0)
+        (functionid 25:_builtin::string::>::2::0))
+      (method
+        (methodid 10:data::1::0)
+        (functionid 28:_builtin::string::data::1::0))
+      (method
+        (methodid 7:<::2::0)
+        (functionid 25:_builtin::string::<::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 26:_builtin::string::==::2::0))))
+  (func
+    (functionid 27:_builtin::array::fill::1::0)
+    (params
+      (param
+        (localid 4:size)
+        (usize)))
+    (array
+      (u8))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$341)
+            (functionid 26:_builtin::u8::create::0::0)
+            (args))
+          (call
+            (localid 8:local$75)
+            (functionid 27:_builtin::array::fill::2::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:size))
+              (arg
+                (argcopy)
+                (localid 9:local$341)))))
+        (ret
+          (localid 8:local$75)))))
+  (func
+    (functionid 24:_builtin::usize::-::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize))
+      (param
+        (localid 5:other)
+        (usize)))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (sub
+            (localid 9:local$863)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$863)))))
+  (func
+    (functionid 26:_builtin::u8::create::0::0)
+    (params)
+    (u8)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 9:local$819)
+            (u8)
+            (int 1:0))
+          (call
+            (localid 9:local$191)
+            (functionid 26:_builtin::u8::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$819)))))
+        (ret
+          (localid 9:local$191)))))
+  (func
+    (functionid 27:_builtin::array::fill::2::0)
+    (params
+      (param
+        (localid 4:size)
+        (usize))
+      (param
+        (localid 4:from)
+        (u8)))
+    (array
+      (u8))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (newarray
+            (localid 9:local$990)
+            (array
+              (u8))
+            (localid 4:size))
+          (copy
+            (localid 10:local$1591)
+            (localid 1:a))
+          (copy
+            (localid 1:a)
+            (localid 9:local$990))
+          (const
+            (localid 8:local$76)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 9:local$342)
+            (localid 1:a)
+            (methodid 16:fill_range::4::0))
+          (calldyn
+            (localid 9:local$343)
+            (localid 9:local$342)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:a))
+              (arg
+                (argcopy)
+                (localid 8:local$76))
+              (arg
+                (argcopy)
+                (localid 4:size))
+              (arg
+                (argcopy)
+                (localid 4:from)))))
+        (ret
+          (localid 1:a)))))
+  (func
+    (functionid 26:_builtin::u8::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (u8)))
+    (u8)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:some)))))
+  (func
+    (functionid 31:_builtin::string::cstring::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (array
+      (u8))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$555)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$556)
+            (localid 9:local$555)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self)))))
+        (ret
+          (localid 9:local$556)))))
+  (func
+    (functionid 28:_builtin::string::size::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$549)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$550)
+            (localid 9:local$549)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self)))))
+        (ret
+          (localid 9:local$550)))))
+  (func
+    (functionid 26:_builtin::string::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:other)
+        (classid 19:_builtin::string::0)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$567)
+            (localid 4:self)
+            (methodid 8:==::2::0))
+          (calldyn
+            (localid 9:local$568)
+            (localid 9:local$567)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1601)
+            (localid 9:local$568)
+            (methodid 7:!::1::0))
+          (calldyn
+            (localid 10:local$1602)
+            (localid 10:local$1601)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$568)))))
+        (ret
+          (localid 10:local$1602)))))
+  (func
+    (functionid 29:_builtin::string::apply::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:index)
+        (usize)))
+    (u8)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$130)
+            (functionid 34:_builtin::string::apply::2::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 5:index))))
+          (load
+            (localid 10:local$1194)
+            (localid 9:local$130)))
+        (ret
+          (localid 10:local$1194)))))
+  (func
+    (functionid 28:_builtin::string::find::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:other)
+        (classid 19:_builtin::string::0)))
+    (union
+      (usize)
+      (none))
+    (vars
+      (localid 9:local$157)
+      (localid 9:local$158)
+      (localid 1:i)
+      (localid 9:local$699)
+      (localid 9:local$161))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$157)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$687)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 10:local$1270)
+            (localid 5:other)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1271)
+            (localid 10:local$1270)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1639)
+            (localid 10:local$1271)
+            (methodid 8:==::2::0))
+          (calldyn
+            (localid 10:local$1640)
+            (localid 10:local$1639)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1271))
+              (arg
+                (argcopy)
+                (localid 9:local$687)))))
+        (cond
+          (localid 10:local$1640)
+          (labelid 8:body$685)
+          (labelid 8:join$686)))
+      (label
+        (labelid 8:body$685)
+        (body
+          (const
+            (localid 10:local$1272)
+            (usize)
+            (int 1:0))
+          (call
+            (localid 9:local$688)
+            (functionid 29:_builtin::usize::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1272)))))
+        (ret
+          (localid 9:local$688)))
+      (label
+        (labelid 8:join$686)
+        (body
+          (call
+            (localid 9:local$158)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1273)
+            (localid 5:other)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1274)
+            (localid 10:local$1273)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1275)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1276)
+            (localid 10:local$1275)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1641)
+            (localid 10:local$1274)
+            (methodid 7:>::2::0))
+          (calldyn
+            (localid 10:local$1642)
+            (localid 10:local$1641)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1274))
+              (arg
+                (argcopy)
+                (localid 10:local$1276)))))
+        (cond
+          (localid 10:local$1642)
+          (labelid 8:body$689)
+          (labelid 8:join$690)))
+      (label
+        (labelid 8:body$689)
+        (body
+          (call
+            (localid 9:local$691)
+            (functionid 28:_builtin::none::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$691)))
+      (label
+        (labelid 8:join$690)
+        (body
+          (const
+            (localid 9:local$159)
+            (usize)
+            (int 1:0))
+          (copy
+            (localid 10:local$1277)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 9:local$159))
+          (const
+            (localid 9:local$160)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 9:local$695)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$696)
+            (localid 9:local$695)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$697)
+            (localid 5:other)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$698)
+            (localid 9:local$697)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1498)
+            (localid 9:local$696)
+            (methodid 7:-::2::0))
+          (calldyn
+            (localid 10:local$1499)
+            (localid 10:local$1498)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$696))
+              (arg
+                (argcopy)
+                (localid 9:local$698))))
+          (lookup
+            (localid 10:local$1693)
+            (localid 10:local$1499)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 10:local$1694)
+            (localid 10:local$1693)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1499))
+              (arg
+                (argcopy)
+                (localid 9:local$160))))
+          (copy
+            (localid 10:local$1744)
+            (localid 5:limit))
+          (copy
+            (localid 5:limit)
+            (localid 10:local$1694))
+          (call
+            (localid 9:local$161)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (jump
+          (labelid 8:cond$692)))
+      (label
+        (labelid 8:cond$692)
+        (body
+          (lookup
+            (localid 10:local$1278)
+            (localid 1:i)
+            (methodid 7:<::2::0))
+          (calldyn
+            (localid 10:local$1279)
+            (localid 10:local$1278)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 5:limit)))))
+        (cond
+          (localid 10:local$1279)
+          (labelid 8:body$693)
+          (labelid 8:join$694)))
+      (label
+        (labelid 8:body$693)
+        (body
+          (call
+            (localid 9:local$699)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1282)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 10:local$1500)
+            (i64)
+            (int 1:0))
+          (call
+            (localid 10:local$1283)
+            (functionid 27:_builtin::i64::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1500))))
+          (lookup
+            (localid 10:local$1501)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 10:local$1502)
+            (localid 10:local$1501)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1503)
+            (localid 5:other)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 10:local$1504)
+            (localid 10:local$1503)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1505)
+            (localid 5:other)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1506)
+            (localid 10:local$1505)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1695)
+            (localid 10:local$1502)
+            (methodid 13:compare::5::0))
+          (calldyn
+            (localid 10:local$1696)
+            (localid 10:local$1695)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1502))
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 10:local$1504))
+              (arg
+                (argcopy)
+                (localid 10:local$1282))
+              (arg
+                (argcopy)
+                (localid 10:local$1506))))
+          (lookup
+            (localid 10:local$1745)
+            (localid 10:local$1696)
+            (methodid 8:==::2::0))
+          (calldyn
+            (localid 10:local$1746)
+            (localid 10:local$1745)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1696))
+              (arg
+                (argcopy)
+                (localid 10:local$1283)))))
+        (cond
+          (localid 10:local$1746)
+          (labelid 9:body$1280)
+          (labelid 9:join$1281)))
+      (label
+        (labelid 9:body$1280)
+        (body
+          (copy
+            (localid 10:local$1643)
+            (localid 5:found))
+          (copy
+            (localid 5:found)
+            (localid 1:i)))
+        (ret
+          (localid 5:found)))
+      (label
+        (labelid 9:join$1281)
+        (body
+          (const
+            (localid 9:local$700)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 10:local$1284)
+            (localid 1:i)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 10:local$1285)
+            (localid 10:local$1284)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 9:local$700))))
+          (copy
+            (localid 10:local$1644)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 10:local$1285))
+          (copy
+            (localid 9:local$161)
+            (localid 10:local$1644)))
+        (jump
+          (labelid 8:cond$692)))
+      (label
+        (labelid 8:join$694)
+        (body
+          (call
+            (localid 9:local$162)
+            (functionid 28:_builtin::none::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$162)))))
+  (func
+    (functionid 32:_builtin::string::contains::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:other)
+        (classid 19:_builtin::string::0)))
+    (bool)
+    (vars
+      (localid 10:local$1747))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 10:local$1289)
+            (localid 4:self)
+            (methodid 10:find::2::0))
+          (calldyn
+            (localid 10:local$1290)
+            (localid 10:local$1289)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (copy
+            (localid 10:local$1648)
+            (localid 8:local$11))
+          (copy
+            (localid 8:local$11)
+            (localid 10:local$1290))
+          (call
+            (localid 9:local$167)
+            (functionid 41:_builtin::string::lambda$12::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1507)
+            (localid 9:local$167)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1508)
+            (localid 10:local$1507)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$167))
+              (arg
+                (argcopy)
+                (localid 8:local$11))))
+          (typetest
+            (localid 10:local$1767)
+            (localid 10:local$1508)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
+          (localid 10:local$1767)
+          (labelid 9:body$1769)
+          (labelid 9:body$1768)))
+      (label
+        (labelid 9:body$1768)
+        (body
+          (copy
+            (localid 10:local$1747)
+            (localid 10:local$1508)))
+        (jump
+          (labelid 9:join$1770)))
+      (label
+        (labelid 9:body$1769)
+        (body
+          (const
+            (localid 9:local$168)
+            (bool)
+            (false))
+          (copy
+            (localid 10:local$1747)
+            (localid 9:local$168)))
+        (jump
+          (labelid 9:join$1770)))
+      (label
+        (labelid 9:join$1770)
+        (body)
+        (ret
+          (localid 10:local$1747)))))
+  (func
+    (functionid 35:_builtin::string::starts_with::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 6:prefix)
+        (classid 19:_builtin::string::0)))
+    (bool)
+    (vars
+      (localid 9:local$169))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$169)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1291)
+            (localid 6:prefix)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1292)
+            (localid 10:local$1291)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:prefix))))
+          (lookup
+            (localid 10:local$1293)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1294)
+            (localid 10:local$1293)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1649)
+            (localid 10:local$1292)
+            (methodid 7:>::2::0))
+          (calldyn
+            (localid 10:local$1650)
+            (localid 10:local$1649)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1292))
+              (arg
+                (argcopy)
+                (localid 10:local$1294)))))
+        (cond
+          (localid 10:local$1650)
+          (labelid 8:body$708)
+          (labelid 8:join$709)))
+      (label
+        (labelid 8:body$708)
+        (body
+          (const
+            (localid 9:local$710)
+            (bool)
+            (false)))
+        (ret
+          (localid 9:local$710)))
+      (label
+        (labelid 8:join$709)
+        (body
+          (const
+            (localid 9:local$170)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:local$171)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:local$711)
+            (i64)
+            (int 1:0))
+          (call
+            (localid 9:local$172)
+            (functionid 27:_builtin::i64::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$711))))
+          (lookup
+            (localid 9:local$712)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$713)
+            (localid 9:local$712)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$714)
+            (localid 6:prefix)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$715)
+            (localid 9:local$714)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:prefix))))
+          (lookup
+            (localid 9:local$716)
+            (localid 6:prefix)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$717)
+            (localid 9:local$716)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:prefix))))
+          (lookup
+            (localid 10:local$1509)
+            (localid 9:local$713)
+            (methodid 13:compare::5::0))
+          (calldyn
+            (localid 10:local$1510)
+            (localid 10:local$1509)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$713))
+              (arg
+                (argcopy)
+                (localid 9:local$170))
+              (arg
+                (argcopy)
+                (localid 9:local$715))
+              (arg
+                (argcopy)
+                (localid 9:local$171))
+              (arg
+                (argcopy)
+                (localid 9:local$717))))
+          (lookup
+            (localid 10:local$1697)
+            (localid 10:local$1510)
+            (methodid 8:==::2::0))
+          (calldyn
+            (localid 10:local$1698)
+            (localid 10:local$1697)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1510))
+              (arg
+                (argcopy)
+                (localid 9:local$172)))))
+        (ret
+          (localid 10:local$1698)))))
+  (func
+    (functionid 33:_builtin::string::ends_with::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 6:suffix)
+        (classid 19:_builtin::string::0)))
+    (bool)
+    (vars
+      (localid 9:local$173))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$173)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1295)
+            (localid 6:suffix)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1296)
+            (localid 10:local$1295)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:suffix))))
+          (lookup
+            (localid 10:local$1297)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1298)
+            (localid 10:local$1297)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1651)
+            (localid 10:local$1296)
+            (methodid 7:>::2::0))
+          (calldyn
+            (localid 10:local$1652)
+            (localid 10:local$1651)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1296))
+              (arg
+                (argcopy)
+                (localid 10:local$1298)))))
+        (cond
+          (localid 10:local$1652)
+          (labelid 8:body$718)
+          (labelid 8:join$719)))
+      (label
+        (labelid 8:body$718)
+        (body
+          (const
+            (localid 9:local$720)
+            (bool)
+            (false)))
+        (ret
+          (localid 9:local$720)))
+      (label
+        (labelid 8:join$719)
+        (body
+          (lookup
+            (localid 9:local$721)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$722)
+            (localid 9:local$721)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$723)
+            (localid 6:suffix)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$724)
+            (localid 9:local$723)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:suffix))))
+          (lookup
+            (localid 10:local$1511)
+            (localid 9:local$722)
+            (methodid 7:-::2::0))
+          (calldyn
+            (localid 10:local$1512)
+            (localid 10:local$1511)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$722))
+              (arg
+                (argcopy)
+                (localid 9:local$724))))
+          (copy
+            (localid 10:local$1699)
+            (localid 6:offset))
+          (copy
+            (localid 6:offset)
+            (localid 10:local$1512))
+          (const
+            (localid 9:local$174)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:local$725)
+            (i64)
+            (int 1:0))
+          (call
+            (localid 9:local$175)
+            (functionid 27:_builtin::i64::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$725))))
+          (lookup
+            (localid 9:local$726)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$727)
+            (localid 9:local$726)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$728)
+            (localid 6:suffix)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$729)
+            (localid 9:local$728)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:suffix))))
+          (lookup
+            (localid 9:local$730)
+            (localid 6:suffix)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$731)
+            (localid 9:local$730)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:suffix))))
+          (lookup
+            (localid 10:local$1513)
+            (localid 9:local$727)
+            (methodid 13:compare::5::0))
+          (calldyn
+            (localid 10:local$1514)
+            (localid 10:local$1513)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$727))
+              (arg
+                (argcopy)
+                (localid 6:offset))
+              (arg
+                (argcopy)
+                (localid 9:local$729))
+              (arg
+                (argcopy)
+                (localid 9:local$174))
+              (arg
+                (argcopy)
+                (localid 9:local$731))))
+          (lookup
+            (localid 10:local$1700)
+            (localid 10:local$1514)
+            (methodid 8:==::2::0))
+          (calldyn
+            (localid 10:local$1701)
+            (localid 10:local$1700)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1514))
+              (arg
+                (argcopy)
+                (localid 9:local$175)))))
+        (ret
+          (localid 10:local$1701)))))
+  (func
+    (functionid 33:_builtin::string::substring::3::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 6:offset)
+        (usize))
+      (param
+        (localid 5:count)
+        (usize)))
+    (classid 19:_builtin::string::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$732)
+            (localid 5:count)
+            (methodid 9:min::2::0))
+          (lookup
+            (localid 10:local$1299)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1300)
+            (localid 10:local$1299)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1653)
+            (localid 10:local$1300)
+            (methodid 7:-::2::0))
+          (calldyn
+            (localid 10:local$1654)
+            (localid 10:local$1653)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1300))
+              (arg
+                (argcopy)
+                (localid 6:offset))))
+          (calldyn
+            (localid 9:local$733)
+            (localid 9:local$732)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:count))
+              (arg
+                (argcopy)
+                (localid 10:local$1654))))
+          (copy
+            (localid 10:local$1515)
+            (localid 1:n))
+          (copy
+            (localid 1:n)
+            (localid 9:local$733))
+          (const
+            (localid 9:local$734)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 10:local$1301)
+            (localid 1:n)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 10:local$1302)
+            (localid 10:local$1301)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:n))
+              (arg
+                (argcopy)
+                (localid 9:local$734))))
+          (call
+            (localid 9:local$176)
+            (functionid 27:_builtin::array::fill::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1302))))
+          (copy
+            (localid 10:local$1303)
+            (localid 6:result))
+          (copy
+            (localid 6:result)
+            (localid 9:local$176))
+          (const
+            (localid 9:local$177)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 9:local$735)
+            (localid 6:result)
+            (methodid 15:copy_from::5::0))
+          (lookup
+            (localid 10:local$1304)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 10:local$1305)
+            (localid 10:local$1304)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (calldyn
+            (localid 9:local$736)
+            (localid 9:local$735)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 9:local$177))
+              (arg
+                (argcopy)
+                (localid 10:local$1305))
+              (arg
+                (argcopy)
+                (localid 6:offset))
+              (arg
+                (argcopy)
+                (localid 1:n))))
+          (const
+            (localid 9:local$737)
+            (u8)
+            (int 1:0))
+          (call
+            (localid 9:local$178)
+            (functionid 26:_builtin::u8::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$737))))
+          (lookup
+            (localid 10:local$1306)
+            (localid 6:result)
+            (methodid 16:apply::2::ref::0))
+          (calldyn
+            (localid 10:local$1307)
+            (localid 10:local$1306)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result))
+              (arg
+                (argcopy)
+                (localid 1:n))))
+          (store
+            (localid 10:local$1655)
+            (localid 10:local$1307)
+            (arg
+              (argcopy)
+              (localid 9:local$178)))
+          (call
+            (localid 9:local$179)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 6:result)))))
+        (ret
+          (localid 9:local$179)))))
+  (func
+    (functionid 28:_builtin::string::trim::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (classid 19:_builtin::string::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$754)
+            (localid 4:self)
+            (methodid 15:trim_left::1::0))
+          (calldyn
+            (localid 9:local$755)
+            (localid 9:local$754)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1532)
+            (localid 9:local$755)
+            (methodid 16:trim_right::1::0))
+          (calldyn
+            (localid 10:local$1533)
+            (localid 10:local$1532)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$755)))))
+        (ret
+          (localid 10:local$1533)))))
+  (func
+    (functionid 33:_builtin::string::trim_left::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (classid 19:_builtin::string::0)
+    (vars
+      (localid 1:i)
+      (localid 10:local$1661)
+      (localid 10:local$1524)
+      (localid 10:local$1316)
+      (localid 9:local$741)
+      (localid 9:local$181))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 9:local$180)
+            (usize)
+            (int 1:0))
+          (copy
+            (localid 10:local$1308)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 9:local$180))
+          (call
+            (localid 9:local$181)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (jump
+          (labelid 8:cond$738)))
+      (label
+        (labelid 8:cond$738)
+        (body
+          (lookup
+            (localid 10:local$1309)
+            (localid 1:i)
+            (methodid 7:<::2::0))
+          (lookup
+            (localid 10:local$1516)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1517)
+            (localid 10:local$1516)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (calldyn
+            (localid 10:local$1310)
+            (localid 10:local$1309)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 10:local$1517)))))
+        (cond
+          (localid 10:local$1310)
+          (labelid 8:body$739)
+          (labelid 8:join$740)))
+      (label
+        (labelid 8:body$739)
+        (body
+          (copy
+            (localid 10:local$1518)
+            (localid 3:idx))
+          (copy
+            (localid 3:idx)
+            (localid 1:i))
+          (lookup
+            (localid 10:local$1313)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 10:local$1314)
+            (localid 10:local$1313)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1702)
+            (localid 10:local$1314)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1703)
+            (localid 10:local$1702)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1314))
+              (arg
+                (argcopy)
+                (localid 3:idx))))
+          (copy
+            (localid 10:local$1748)
+            (localid 1:c))
+          (copy
+            (localid 1:c)
+            (localid 10:local$1703))
+          (call
+            (localid 9:local$741)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1315)
+            (u8)
+            (int 2:32))
+          (lookup
+            (localid 10:local$1519)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1520)
+            (localid 10:local$1519)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1315)))))
+        (cond
+          (localid 10:local$1520)
+          (labelid 9:body$1311)
+          (labelid 9:join$1312)))
+      (label
+        (labelid 9:body$1311)
+        (body
+          (call
+            (localid 10:local$1316)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1523)
+            (u8)
+            (int 1:9))
+          (lookup
+            (localid 10:local$1656)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1657)
+            (localid 10:local$1656)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1523)))))
+        (cond
+          (localid 10:local$1657)
+          (labelid 9:body$1521)
+          (labelid 9:join$1522)))
+      (label
+        (labelid 9:body$1521)
+        (body
+          (call
+            (localid 10:local$1524)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1660)
+            (u8)
+            (int 2:10))
+          (lookup
+            (localid 10:local$1704)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1705)
+            (localid 10:local$1704)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1660)))))
+        (cond
+          (localid 10:local$1705)
+          (labelid 9:body$1658)
+          (labelid 9:join$1659)))
+      (label
+        (labelid 9:body$1658)
+        (body
+          (call
+            (localid 10:local$1661)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1708)
+            (u8)
+            (int 2:13))
+          (lookup
+            (localid 10:local$1726)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1727)
+            (localid 10:local$1726)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1708)))))
+        (cond
+          (localid 10:local$1727)
+          (labelid 9:body$1706)
+          (labelid 9:join$1707)))
+      (label
+        (labelid 9:body$1706)
+        (body
+          (lookup
+            (localid 10:local$1728)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1729)
+            (localid 10:local$1728)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1771)
+            (localid 10:local$1729)
+            (methodid 7:-::2::0))
+          (calldyn
+            (localid 10:local$1772)
+            (localid 10:local$1771)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1729))
+              (arg
+                (argcopy)
+                (localid 3:idx))))
+          (copy
+            (localid 10:local$1777)
+            (localid 5:count))
+          (copy
+            (localid 5:count)
+            (localid 10:local$1772))
+          (lookup
+            (localid 10:local$1730)
+            (localid 4:self)
+            (methodid 15:substring::3::0))
+          (calldyn
+            (localid 10:local$1731)
+            (localid 10:local$1730)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 3:idx))
+              (arg
+                (argcopy)
+                (localid 5:count)))))
+        (ret
+          (localid 10:local$1731)))
+      (label
+        (labelid 9:join$1707)
+        (body
+          (copy
+            (localid 10:local$1524)
+            (localid 10:local$1661)))
+        (jump
+          (labelid 9:join$1659)))
+      (label
+        (labelid 9:join$1659)
+        (body
+          (copy
+            (localid 10:local$1316)
+            (localid 10:local$1524)))
+        (jump
+          (labelid 9:join$1522)))
+      (label
+        (labelid 9:join$1522)
+        (body
+          (copy
+            (localid 9:local$741)
+            (localid 10:local$1316)))
+        (jump
+          (labelid 9:join$1312)))
+      (label
+        (labelid 9:join$1312)
+        (body
+          (const
+            (localid 9:local$742)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 10:local$1317)
+            (localid 1:i)
+            (methodid 7:+::2::0))
+          (calldyn
+            (localid 10:local$1318)
+            (localid 10:local$1317)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 9:local$742))))
+          (copy
+            (localid 10:local$1662)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 10:local$1318))
+          (copy
+            (localid 9:local$181)
+            (localid 10:local$1662)))
+        (jump
+          (labelid 8:cond$738)))
+      (label
+        (labelid 8:join$740)
+        (body
+          (const
+            (localid 10:local$1319)
+            (usize)
+            (int 1:1))
+          (call
+            (localid 9:local$743)
+            (functionid 27:_builtin::array::fill::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1319))))
+          (call
+            (localid 9:local$182)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$743)))))
+        (ret
+          (localid 9:local$182)))))
+  (func
+    (functionid 34:_builtin::string::trim_right::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (classid 19:_builtin::string::0)
+    (vars
+      (localid 1:i)
+      (localid 10:local$1668)
+      (localid 10:local$1531)
+      (localid 10:local$1329)
+      (localid 9:local$751)
+      (localid 9:local$183))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$747)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$748)
+            (localid 9:local$747)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (copy
+            (localid 10:local$1525)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 9:local$748))
+          (call
+            (localid 9:local$183)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (jump
+          (labelid 8:cond$744)))
+      (label
+        (labelid 8:cond$744)
+        (body
+          (const
+            (localid 9:local$749)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 10:local$1320)
+            (localid 1:i)
+            (methodid 7:>::2::0))
+          (calldyn
+            (localid 10:local$1321)
+            (localid 10:local$1320)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 9:local$749)))))
+        (cond
+          (localid 10:local$1321)
+          (labelid 8:body$745)
+          (labelid 8:join$746)))
+      (label
+        (labelid 8:body$745)
+        (body
+          (const
+            (localid 9:local$750)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 10:local$1324)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 10:local$1325)
+            (localid 10:local$1324)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1326)
+            (localid 1:i)
+            (methodid 7:-::2::0))
+          (calldyn
+            (localid 10:local$1327)
+            (localid 10:local$1326)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 9:local$750))))
+          (lookup
+            (localid 10:local$1709)
+            (localid 10:local$1325)
+            (methodid 11:apply::2::0))
+          (calldyn
+            (localid 10:local$1710)
+            (localid 10:local$1709)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1325))
+              (arg
+                (argcopy)
+                (localid 10:local$1327))))
+          (copy
+            (localid 10:local$1749)
+            (localid 1:c))
+          (copy
+            (localid 1:c)
+            (localid 10:local$1710))
+          (call
+            (localid 9:local$751)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1328)
+            (u8)
+            (int 2:32))
+          (lookup
+            (localid 10:local$1526)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1527)
+            (localid 10:local$1526)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1328)))))
+        (cond
+          (localid 10:local$1527)
+          (labelid 9:body$1322)
+          (labelid 9:join$1323)))
+      (label
+        (labelid 9:body$1322)
+        (body
+          (call
+            (localid 10:local$1329)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1530)
+            (u8)
+            (int 1:9))
+          (lookup
+            (localid 10:local$1663)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1664)
+            (localid 10:local$1663)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1530)))))
+        (cond
+          (localid 10:local$1664)
+          (labelid 9:body$1528)
+          (labelid 9:join$1529)))
+      (label
+        (labelid 9:body$1528)
+        (body
+          (call
+            (localid 10:local$1531)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1667)
+            (u8)
+            (int 2:10))
+          (lookup
+            (localid 10:local$1711)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1712)
+            (localid 10:local$1711)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1667)))))
+        (cond
+          (localid 10:local$1712)
+          (labelid 9:body$1665)
+          (labelid 9:join$1666)))
+      (label
+        (labelid 9:body$1665)
+        (body
+          (call
+            (localid 10:local$1668)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1715)
+            (u8)
+            (int 2:13))
+          (lookup
+            (localid 10:local$1732)
+            (localid 1:c)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1733)
+            (localid 10:local$1732)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:c))
+              (arg
+                (argcopy)
+                (localid 10:local$1715)))))
+        (cond
+          (localid 10:local$1733)
+          (labelid 9:body$1713)
+          (labelid 9:join$1714)))
+      (label
+        (labelid 9:body$1713)
+        (body
+          (const
+            (localid 10:local$1716)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 10:local$1734)
+            (localid 4:self)
+            (methodid 15:substring::3::0))
+          (calldyn
+            (localid 10:local$1735)
+            (localid 10:local$1734)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 10:local$1716))
+              (arg
+                (argcopy)
+                (localid 1:i)))))
+        (ret
+          (localid 10:local$1735)))
+      (label
+        (labelid 9:join$1714)
+        (body
+          (copy
+            (localid 10:local$1531)
+            (localid 10:local$1668)))
+        (jump
+          (labelid 9:join$1666)))
+      (label
+        (labelid 9:join$1666)
+        (body
+          (copy
+            (localid 10:local$1329)
+            (localid 10:local$1531)))
+        (jump
+          (labelid 9:join$1529)))
+      (label
+        (labelid 9:join$1529)
+        (body
+          (copy
+            (localid 9:local$751)
+            (localid 10:local$1329)))
+        (jump
+          (labelid 9:join$1323)))
+      (label
+        (labelid 9:join$1323)
+        (body
+          (const
+            (localid 9:local$752)
+            (usize)
+            (int 1:1))
+          (lookup
+            (localid 10:local$1330)
+            (localid 1:i)
+            (methodid 7:-::2::0))
+          (calldyn
+            (localid 10:local$1331)
+            (localid 10:local$1330)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:i))
+              (arg
+                (argcopy)
+                (localid 9:local$752))))
+          (copy
+            (localid 10:local$1669)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 10:local$1331))
+          (copy
+            (localid 9:local$183)
+            (localid 10:local$1669)))
+        (jump
+          (labelid 8:cond$744)))
+      (label
+        (labelid 8:join$746)
+        (body
+          (const
+            (localid 10:local$1332)
+            (usize)
+            (int 1:1))
+          (call
+            (localid 9:local$753)
+            (functionid 27:_builtin::array::fill::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1332))))
+          (call
+            (localid 9:local$184)
+            (functionid 30:_builtin::string::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$753)))))
+        (ret
+          (localid 9:local$184)))))
+  (func
+    (functionid 27:_builtin::string::len::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$125)
+            (functionid 32:_builtin::string::len::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 10:local$1186)
+            (localid 9:local$125)))
+        (ret
+          (localid 10:local$1186)))))
+  (func
+    (functionid 24:_builtin::usize::>::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize))
+      (param
+        (localid 5:other)
+        (usize)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (gt
+            (localid 9:local$876)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$876)))))
+  (func
+    (functionid 23:_builtin::bool::>::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (gt
+            (localid 9:local$369)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$369)))))
+  (func
+    (functionid 25:_builtin::string::>::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:other)
+        (classid 19:_builtin::string::0)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$591)
+            (localid 5:other)
+            (methodid 7:<::2::0))
+          (calldyn
+            (localid 9:local$592)
+            (localid 9:local$591)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))
+              (arg
+                (argcopy)
+                (localid 4:self)))))
+        (ret
+          (localid 9:local$592)))))
+  (func
+    (functionid 28:_builtin::string::data::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (array
+      (u8))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$124)
+            (functionid 33:_builtin::string::data::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 10:local$1185)
+            (localid 9:local$124)))
+        (ret
+          (localid 10:local$1185)))))
+  (func
+    (functionid 33:_builtin::string::data::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (ref
+      (array
+        (u8)))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$544)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 4:data)))
+        (ret
+          (localid 9:local$544)))))
+  (func
+    (functionid 25:_builtin::string::<::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:other)
+        (classid 19:_builtin::string::0)))
+    (bool)
+    (vars
+      (localid 9:local$138)
+      (localid 9:local$139)
+      (localid 10:local$1202))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$571)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$572)
+            (localid 9:local$571)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$573)
+            (localid 5:other)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$574)
+            (localid 9:local$573)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1461)
+            (localid 9:local$572)
+            (methodid 9:min::2::0))
+          (calldyn
+            (localid 10:local$1462)
+            (localid 10:local$1461)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$572))
+              (arg
+                (argcopy)
+                (localid 9:local$574))))
+          (copy
+            (localid 10:local$1675)
+            (localid 1:n))
+          (copy
+            (localid 1:n)
+            (localid 10:local$1462))
+          (const
+            (localid 9:local$136)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:local$137)
+            (usize)
+            (int 1:0))
+          (lookup
+            (localid 9:local$575)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$576)
+            (localid 9:local$575)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$577)
+            (localid 5:other)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$578)
+            (localid 9:local$577)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1463)
+            (localid 9:local$576)
+            (methodid 13:compare::5::0))
+          (calldyn
+            (localid 10:local$1464)
+            (localid 10:local$1463)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$576))
+              (arg
+                (argcopy)
+                (localid 9:local$136))
+              (arg
+                (argcopy)
+                (localid 9:local$578))
+              (arg
+                (argcopy)
+                (localid 9:local$137))
+              (arg
+                (argcopy)
+                (localid 1:n))))
+          (copy
+            (localid 10:local$1676)
+            (localid 3:cmp))
+          (copy
+            (localid 3:cmp)
+            (localid 10:local$1464))
+          (call
+            (localid 9:local$138)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1199)
+            (i64)
+            (int 1:0))
+          (call
+            (localid 9:local$579)
+            (functionid 27:_builtin::i64::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1199))))
+          (lookup
+            (localid 10:local$1200)
+            (localid 3:cmp)
+            (methodid 7:<::2::0))
+          (calldyn
+            (localid 10:local$1201)
+            (localid 10:local$1200)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:cmp))
+              (arg
+                (argcopy)
+                (localid 9:local$579)))))
+        (cond
+          (localid 10:local$1201)
+          (labelid 8:body$569)
+          (labelid 8:join$570)))
+      (label
+        (labelid 8:body$569)
+        (body
+          (const
+            (localid 9:local$580)
+            (bool)
+            (true)))
+        (ret
+          (localid 9:local$580)))
+      (label
+        (labelid 8:join$570)
+        (body
+          (typetest
+            (localid 10:local$1465)
+            (localid 9:local$138)
+            (classid 20:_builtin::nomatch::0)))
+        (cond
+          (localid 10:local$1465)
+          (labelid 9:body$1467)
+          (labelid 9:body$1466)))
+      (label
+        (labelid 9:body$1466)
+        (body
+          (copy
+            (localid 10:local$1202)
+            (localid 9:local$138)))
+        (jump
+          (labelid 9:join$1468)))
+      (label
+        (labelid 9:body$1467)
+        (body
+          (call
+            (localid 9:local$139)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 10:local$1469)
+            (i64)
+            (int 1:0))
+          (call
+            (localid 9:local$583)
+            (functionid 27:_builtin::i64::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1469))))
+          (lookup
+            (localid 10:local$1470)
+            (localid 3:cmp)
+            (methodid 7:>::2::0))
+          (calldyn
+            (localid 10:local$1471)
+            (localid 10:local$1470)
+            (args
+              (arg
+                (argcopy)
+                (localid 3:cmp))
+              (arg
+                (argcopy)
+                (localid 9:local$583)))))
+        (cond
+          (localid 10:local$1471)
+          (labelid 8:body$581)
+          (labelid 8:join$582)))
+      (label
+        (labelid 8:body$581)
+        (body
+          (const
+            (localid 9:local$584)
+            (bool)
+            (false)))
+        (ret
+          (localid 9:local$584)))
+      (label
+        (labelid 8:join$582)
+        (body
+          (copy
+            (localid 10:local$1202)
+            (localid 9:local$139)))
+        (jump
+          (labelid 9:join$1468)))
+      (label
+        (labelid 9:join$1468)
+        (body
+          (lookup
+            (localid 9:local$585)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$586)
+            (localid 9:local$585)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$587)
+            (localid 5:other)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$588)
+            (localid 9:local$587)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1472)
+            (localid 9:local$586)
+            (methodid 7:<::2::0))
+          (calldyn
+            (localid 10:local$1473)
+            (localid 10:local$1472)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$586))
+              (arg
+                (argcopy)
+                (localid 9:local$588)))))
+        (ret
+          (localid 10:local$1473)))))
+  (func
+    (functionid 26:_builtin::usize::min::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize))
+      (param
+        (localid 5:other)
+        (usize)))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (min
+            (localid 9:local$878)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$878)))))
+  (func
+    (functionid 25:_builtin::bool::min::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (min
+            (localid 9:local$371)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$371)))))
+  (func
+    (functionid 27:_builtin::i64::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (i64)))
+    (i64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:some)))))
+  (func
+    (functionid 24:_builtin::usize::<::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize))
+      (param
+        (localid 5:other)
+        (usize)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lt
+            (localid 9:local$874)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$874)))))
+  (func
+    (functionid 23:_builtin::bool::<::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lt
+            (localid 9:local$367)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$367)))))
+  (func
+    (functionid 23:_builtin::i64::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i64))
+      (param
+        (localid 5:other)
+        (i64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$470)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$470)))))
+  (func
+    (functionid 22:_builtin::i64::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (i64)))
+    (i64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 10:local$1120)
+            (localid 4:self)))
+        (ret
+          (localid 10:local$1120)))))
+  (func
+    (functionid 22:_builtin::i64::-::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i64))
+      (param
+        (localid 5:other)
+        (i64)))
+    (i64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (sub
+            (localid 9:local$460)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$460)))))
+  (func
+    (functionid 22:_builtin::i64::>::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i64))
+      (param
+        (localid 5:other)
+        (i64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (gt
+            (localid 9:local$473)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$473)))))
+  (func
+    (functionid 24:_builtin::i64::min::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i64))
+      (param
+        (localid 5:other)
+        (i64)))
+    (i64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (min
+            (localid 9:local$475)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$475)))))
+  (func
+    (functionid 22:_builtin::i64::<::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i64))
+      (param
+        (localid 5:other)
+        (i64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lt
+            (localid 9:local$471)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$471)))))
+  (func
+    (functionid 32:_builtin::string::len::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0)))
+    (ref
+      (usize))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$545)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:len)))
+        (ret
+          (localid 9:local$545)))))
+  (func
+    (functionid 24:_builtin::usize::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize))
+      (param
+        (localid 5:other)
+        (usize)))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$862)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$862)))))
+  (func
+    (functionid 25:_builtin::usize::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (usize))
+      (param
+        (localid 5:other)
+        (usize)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (eq
+            (localid 9:local$872)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$872)))))
+  (func
+    (functionid 24:_builtin::bool::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (bool))
+      (param
+        (localid 5:other)
+        (bool)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (eq
+            (localid 9:local$365)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$365)))))
+  (func
+    (functionid 26:_builtin::string::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:other)
+        (classid 19:_builtin::string::0)))
+    (bool)
+    (vars
+      (localid 9:local$132))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$132)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (lookup
+            (localid 10:local$1195)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1196)
+            (localid 10:local$1195)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1197)
+            (localid 5:other)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 10:local$1198)
+            (localid 10:local$1197)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 10:local$1599)
+            (localid 10:local$1196)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1600)
+            (localid 10:local$1599)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1196))
+              (arg
+                (argcopy)
+                (localid 10:local$1198)))))
+        (cond
+          (localid 10:local$1600)
+          (labelid 8:body$557)
+          (labelid 8:join$558)))
+      (label
+        (labelid 8:body$557)
+        (body
+          (const
+            (localid 9:local$559)
+            (bool)
+            (false)))
+        (ret
+          (localid 9:local$559)))
+      (label
+        (labelid 8:join$558)
+        (body
+          (const
+            (localid 9:local$133)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:local$134)
+            (usize)
+            (int 1:0))
+          (const
+            (localid 9:local$560)
+            (i64)
+            (int 1:0))
+          (call
+            (localid 9:local$135)
+            (functionid 27:_builtin::i64::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$560))))
+          (lookup
+            (localid 9:local$561)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$562)
+            (localid 9:local$561)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 9:local$563)
+            (localid 5:other)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$564)
+            (localid 9:local$563)
+            (args
+              (arg
+                (argcopy)
+                (localid 5:other))))
+          (lookup
+            (localid 9:local$565)
+            (localid 4:self)
+            (methodid 9:len::1::0))
+          (calldyn
+            (localid 9:local$566)
+            (localid 9:local$565)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1459)
+            (localid 9:local$562)
+            (methodid 13:compare::5::0))
+          (calldyn
+            (localid 10:local$1460)
+            (localid 10:local$1459)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$562))
+              (arg
+                (argcopy)
+                (localid 9:local$133))
+              (arg
+                (argcopy)
+                (localid 9:local$564))
+              (arg
+                (argcopy)
+                (localid 9:local$134))
+              (arg
+                (argcopy)
+                (localid 9:local$566))))
+          (lookup
+            (localid 10:local$1673)
+            (localid 10:local$1460)
+            (methodid 8:==::2::0))
+          (calldyn
+            (localid 10:local$1674)
+            (localid 10:local$1673)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1460))
+              (arg
+                (argcopy)
+                (localid 9:local$135)))))
+        (ret
+          (localid 10:local$1674)))))
+  (func
+    (functionid 23:_builtin::i64::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i64))
+      (param
+        (localid 5:other)
+        (i64)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (eq
+            (localid 9:local$469)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$469)))))
+  (func
+    (functionid 41:_builtin::string::lambda$12::create::0::0)
+    (params)
+    (classid 30:_builtin::string::lambda$12::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 9:local$163)
+            (classid 30:_builtin::string::lambda$12::0)
+            (args)))
+        (ret
+          (localid 9:local$163)))))
+  (class
+    (classid 30:_builtin::string::lambda$12::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 40:_builtin::string::lambda$12::apply::2::0))))
+  (func
+    (functionid 40:_builtin::string::lambda$12::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 30:_builtin::string::lambda$12::0))
+      (param
+        (localid 4:$arg)
+        (dyn)))
+    (union
+      (classid 20:_builtin::nomatch::0)
+      (bool))
+    (vars
+      (localid 9:local$164)
+      (localid 9:local$165))
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$164)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (const
+            (localid 9:local$703)
+            (usize)
+            (int 1:1))
+          (len
+            (localid 10:local$1286)
+            (localid 4:$arg))
+          (lookup
+            (localid 10:local$1645)
+            (localid 10:local$1286)
+            (methodid 8:!=::2::0))
+          (calldyn
+            (localid 10:local$1646)
+            (localid 10:local$1645)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1286))
+              (arg
+                (argcopy)
+                (localid 9:local$703)))))
+        (cond
+          (localid 10:local$1646)
+          (labelid 8:body$701)
+          (labelid 8:join$702)))
+      (label
+        (labelid 8:body$701)
+        (body
+          (call
+            (localid 9:local$704)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$704)))
+      (label
+        (labelid 8:join$702)
+        (body
+          (copy
+            (localid 10:local$1287)
+            (localid 1:i))
+          (copy
+            (localid 1:i)
+            (localid 4:$arg))
+          (call
+            (localid 9:local$165)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args))
+          (typetest
+            (localid 10:local$1288)
+            (localid 1:i)
+            (usize))
+          (not
+            (localid 10:local$1647)
+            (localid 10:local$1288)))
+        (cond
+          (localid 10:local$1647)
+          (labelid 8:body$705)
+          (labelid 8:join$706)))
+      (label
+        (labelid 8:body$705)
+        (body
+          (call
+            (localid 9:local$707)
+            (functionid 31:_builtin::nomatch::create::0::0)
+            (args)))
+        (ret
+          (localid 9:local$707)))
+      (label
+        (labelid 8:join$706)
+        (body
+          (const
+            (localid 9:local$166)
+            (bool)
+            (true)))
+        (ret
+          (localid 9:local$166)))))
+  (func
+    (functionid 29:_builtin::usize::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (usize)))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body)
+        (ret
+          (localid 4:some)))))
+  (func
+    (functionid 28:_builtin::none::create::0::0)
+    (params)
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 9:local$121)
+            (none)
+            (none))
+          (const
+            (localid 9:none$1779)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1779)))))
+  (func
+    (functionid 34:_builtin::string::apply::2::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 19:_builtin::string::0))
+      (param
+        (localid 5:index)
+        (usize)))
+    (ref
+      (u8))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$551)
+            (localid 4:self)
+            (methodid 10:data::1::0))
+          (calldyn
+            (localid 9:local$552)
+            (localid 9:local$551)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (lookup
+            (localid 10:local$1597)
+            (localid 9:local$552)
+            (methodid 16:apply::2::ref::0))
+          (calldyn
+            (localid 10:local$1598)
+            (localid 10:local$1597)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$552))
+              (arg
+                (argcopy)
+                (localid 5:index)))))
+        (ret
+          (localid 10:local$1598)))))
+  (func
+    (functionid 27:_builtin::array::size::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (array
+          (u8))))
+    (usize)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (len
+            (localid 9:local$991)
+            (localid 4:self)))
+        (ret
+          (localid 9:local$991)))))
+  (func
+    (functionid 28:_builtin::array::apply::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (array
+          (u8)))
+      (param
+        (localid 5:index)
+        (usize)))
+    (u8)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$78)
+            (functionid 33:_builtin::array::apply::2::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 5:index))))
+          (load
+            (localid 9:local$992)
+            (localid 8:local$78)))
+        (ret
+          (localid 9:local$992)))))
+  (func
+    (functionid 32:_builtin::array::copy_from::5::0)
+    (params
+      (param
+        (localid 4:self)
+        (array
+          (u8)))
+      (param
+        (localid 10:dst_offset)
+        (usize))
+      (param
+        (localid 3:src)
+        (array
+          (u8)))
+      (param
+        (localid 10:src_offset)
+        (usize))
+      (param
+        (localid 3:len)
+        (usize)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (arraycopy
+            (localid 8:local$86)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 10:dst_offset))
+              (arg
+                (argcopy)
+                (localid 3:src))
+              (arg
+                (argcopy)
+                (localid 10:src_offset))
+              (arg
+                (argcopy)
+                (localid 3:len))))
+          (const
+            (localid 9:none$1781)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1781)))))
+  (func
+    (functionid 33:_builtin::array::fill_range::4::0)
+    (params
+      (param
+        (localid 4:self)
+        (array
+          (u8)))
+      (param
+        (localid 6:offset)
+        (usize))
+      (param
+        (localid 3:len)
+        (usize))
+      (param
+        (localid 5:value)
+        (u8)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (arrayfill
+            (localid 8:local$87)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 6:offset))
+              (arg
+                (argcopy)
+                (localid 3:len))
+              (arg
+                (argcopy)
+                (localid 5:value))))
+          (const
+            (localid 9:none$1780)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1780)))))
+  (func
+    (functionid 30:_builtin::array::compare::5::0)
+    (params
+      (param
+        (localid 4:self)
+        (array
+          (u8)))
+      (param
+        (localid 11:self_offset)
+        (usize))
+      (param
+        (localid 5:other)
+        (array
+          (u8)))
+      (param
+        (localid 12:other_offset)
+        (usize))
+      (param
+        (localid 3:len)
+        (usize)))
+    (i64)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (arraycmp
+            (localid 8:local$88)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))
+              (arg
+                (argcopy)
+                (localid 11:self_offset))
+              (arg
+                (argcopy)
+                (localid 5:other))
+              (arg
+                (argcopy)
+                (localid 12:other_offset))
+              (arg
+                (argcopy)
+                (localid 3:len)))))
+        (ret
+          (localid 8:local$88)))))
+  (func
+    (functionid 33:_builtin::array::apply::2::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (array
+          (u8)))
+      (param
+        (localid 5:index)
+        (usize)))
+    (ref
+      (u8))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (arrayref
+            (localid 8:local$77)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (localid 5:index)))
+        (ret
+          (localid 8:local$77)))))
+  (func
+    (functionid 22:_builtin::u8::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u8))
+      (param
+        (localid 5:other)
+        (u8)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$831)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$831)))))
+  (func
+    (functionid 21:_builtin::u8::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (u8)))
+    (u8)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 10:local$1379)
+            (localid 4:self)))
+        (ret
+          (localid 10:local$1379)))))
+  (func
+    (functionid 21:_builtin::u8::-::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u8))
+      (param
+        (localid 5:other)
+        (u8)))
+    (u8)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (sub
+            (localid 9:local$821)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$821)))))
+  (func
+    (functionid 21:_builtin::u8::>::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u8))
+      (param
+        (localid 5:other)
+        (u8)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (gt
+            (localid 9:local$834)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$834)))))
+  (func
+    (functionid 23:_builtin::u8::min::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u8))
+      (param
+        (localid 5:other)
+        (u8)))
+    (u8)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (min
+            (localid 9:local$836)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$836)))))
+  (func
+    (functionid 21:_builtin::u8::<::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u8))
+      (param
+        (localid 5:other)
+        (u8)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lt
+            (localid 9:local$832)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$832)))))
+  (func
+    (functionid 22:_builtin::u8::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (u8))
+      (param
+        (localid 5:other)
+        (u8)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (eq
+            (localid 9:local$830)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$830)))))
+  (func
+    (functionid 23:_builtin::i32::!=::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (ne
+            (localid 9:local$449)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$449)))))
+  (func
+    (functionid 22:_builtin::i32::+::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (add
+            (localid 9:local$438)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$438)))))
+  (func
+    (functionid 22:_builtin::i32::!::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (not
+            (localid 10:local$1104)
+            (localid 4:self)))
+        (ret
+          (localid 10:local$1104)))))
+  (func
+    (functionid 22:_builtin::i32::-::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (sub
+            (localid 9:local$439)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$439)))))
+  (func
+    (functionid 22:_builtin::i32::>::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (gt
+            (localid 9:local$452)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$452)))))
+  (func
+    (functionid 24:_builtin::i32::min::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (min
+            (localid 9:local$454)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$454)))))
+  (func
+    (functionid 22:_builtin::i32::<::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lt
+            (localid 9:local$450)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$450)))))
+  (func
+    (functionid 23:_builtin::i32::==::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (i32))
+      (param
+        (localid 5:other)
+        (i32)))
+    (bool)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (eq
+            (localid 9:local$448)
+            (localid 4:self)
+            (localid 5:other)))
+        (ret
+          (localid 9:local$448)))))
+  (primitive
+    (i32)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i32::!=::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 22:_builtin::i32::+::2::0))
+      (method
+        (methodid 7:!::1::0)
+        (functionid 22:_builtin::i32::!::1::0))
+      (method
+        (methodid 7:-::2::0)
+        (functionid 22:_builtin::i32::-::2::0))
+      (method
+        (methodid 7:>::2::0)
+        (functionid 22:_builtin::i32::>::2::0))
+      (method
+        (methodid 9:min::2::0)
+        (functionid 24:_builtin::i32::min::2::0))
+      (method
+        (methodid 7:<::2::0)
+        (functionid 22:_builtin::i32::<::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 23:_builtin::i32::==::2::0))))
+  (primitive
+    (array
+      (u8))
+    (methods
+      (method
+        (methodid 10:size::1::0)
+        (functionid 27:_builtin::array::size::1::0))
+      (method
+        (methodid 11:apply::2::0)
+        (functionid 28:_builtin::array::apply::2::0))
+      (method
+        (methodid 15:copy_from::5::0)
+        (functionid 32:_builtin::array::copy_from::5::0))
+      (method
+        (methodid 16:fill_range::4::0)
+        (functionid 33:_builtin::array::fill_range::4::0))
+      (method
+        (methodid 13:compare::5::0)
+        (functionid 30:_builtin::array::compare::5::0))
+      (method
+        (methodid 16:apply::2::ref::0)
+        (functionid 33:_builtin::array::apply::2::ref::0))))
+  (primitive
+    (u8)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 22:_builtin::u8::!=::2::0))
+      (method
+        (methodid 7:!::1::0)
+        (functionid 21:_builtin::u8::!::1::0))
+      (method
+        (methodid 7:-::2::0)
+        (functionid 21:_builtin::u8::-::2::0))
+      (method
+        (methodid 7:>::2::0)
+        (functionid 21:_builtin::u8::>::2::0))
+      (method
+        (methodid 9:min::2::0)
+        (functionid 23:_builtin::u8::min::2::0))
+      (method
+        (methodid 7:<::2::0)
+        (functionid 21:_builtin::u8::<::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 22:_builtin::u8::==::2::0))))
+  (primitive
+    (usize)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 25:_builtin::usize::!=::2::0))
+      (method
+        (methodid 7:!::1::0)
+        (functionid 24:_builtin::usize::!::1::0))
+      (method
+        (methodid 7:-::2::0)
+        (functionid 24:_builtin::usize::-::2::0))
+      (method
+        (methodid 7:>::2::0)
+        (functionid 24:_builtin::usize::>::2::0))
+      (method
+        (methodid 9:min::2::0)
+        (functionid 26:_builtin::usize::min::2::0))
+      (method
+        (methodid 7:<::2::0)
+        (functionid 24:_builtin::usize::<::2::0))
+      (method
+        (methodid 7:+::2::0)
+        (functionid 24:_builtin::usize::+::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 25:_builtin::usize::==::2::0))))
+  (primitive
+    (bool)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 24:_builtin::bool::!=::2::0))
+      (method
+        (methodid 7:!::1::0)
+        (functionid 23:_builtin::bool::!::1::0))
+      (method
+        (methodid 7:>::2::0)
+        (functionid 23:_builtin::bool::>::2::0))
+      (method
+        (methodid 9:min::2::0)
+        (functionid 25:_builtin::bool::min::2::0))
+      (method
+        (methodid 7:<::2::0)
+        (functionid 23:_builtin::bool::<::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 24:_builtin::bool::==::2::0))))
+  (primitive
+    (ref
+      (array
+        (u8)))
+    (methods))
+  (primitive
+    (ref
+      (usize))
+    (methods))
+  (primitive
+    (ref
+      (u8))
+    (methods))
+  (primitive
+    (i64)
+    (methods
+      (method
+        (methodid 8:!=::2::0)
+        (functionid 23:_builtin::i64::!=::2::0))
+      (method
+        (methodid 7:!::1::0)
+        (functionid 22:_builtin::i64::!::1::0))
+      (method
+        (methodid 7:-::2::0)
+        (functionid 22:_builtin::i64::-::2::0))
+      (method
+        (methodid 7:>::2::0)
+        (functionid 22:_builtin::i64::>::2::0))
+      (method
+        (methodid 9:min::2::0)
+        (functionid 24:_builtin::i64::min::2::0))
+      (method
+        (methodid 7:<::2::0)
+        (functionid 22:_builtin::i64::<::2::0))
+      (method
+        (methodid 8:==::2::0)
+        (functionid 23:_builtin::i64::==::2::0))))
+  (primitive
+    (none)
+    (methods)))

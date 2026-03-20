@@ -12,11 +12,11 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$877)
+            (localid 5:$1402)
             (functionid 21:finalizer::main::0::0)
             (args)))
         (ret
-          (localid 4:$877)))))
+          (localid 5:$1402)))))
   (func
     (functionid 21:finalizer::main::0::0)
     (params)
@@ -28,49 +28,49 @@ assignids
         (labelid 5:start)
         (body
           (const
-            (localid 7:local$8)
+            (localid 8:local$10)
             (i32)
             (int 1:0))
           (copy
-            (localid 9:local$493)
+            (localid 9:local$702)
             (localid 6:result))
           (copy
             (localid 6:result)
-            (localid 7:local$8))
+            (localid 8:local$10))
           (const
-            (localid 9:local$104)
+            (localid 9:local$150)
             (i32)
             (int 2:10))
           (call
-            (localid 7:local$9)
+            (localid 8:local$11)
             (functionid 33:finalizer::resource::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$104))))
+                (localid 9:local$150))))
           (copy
-            (localid 9:local$494)
+            (localid 9:local$703)
             (localid 1:a))
           (copy
             (localid 1:a)
-            (localid 7:local$9))
+            (localid 8:local$11))
           (const
-            (localid 9:local$105)
+            (localid 9:local$151)
             (i32)
             (int 2:20))
           (call
-            (localid 8:local$10)
+            (localid 8:local$12)
             (functionid 33:finalizer::resource::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$105))))
+                (localid 9:local$151))))
           (copy
-            (localid 9:local$495)
+            (localid 9:local$704)
             (localid 1:b))
           (copy
             (localid 1:b)
-            (localid 8:local$10)))
+            (localid 8:local$12)))
         (ret
           (localid 6:result)))))
   (func
@@ -86,14 +86,14 @@ assignids
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$7)
+            (localid 7:local$9)
             (classid 22:finalizer::resource::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$7)))))
+          (localid 7:local$9)))))
   (class
     (classid 22:finalizer::resource::0)
     (fields
@@ -120,29 +120,29 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$491)
+            (localid 9:local$700)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$492)
-            (localid 9:local$491)
+            (localid 9:local$701)
+            (localid 9:local$700)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (ffi
-            (localid 7:local$6)
+            (localid 7:local$8)
             (symbolid 8:printval)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$492))))
+                (localid 9:local$701))))
           (const
-            (localid 8:none$878)
+            (localid 9:none$1403)
             (none)
             (none)))
         (ret
-          (localid 8:none$878)))))
+          (localid 9:none$1403)))))
   (func
     (functionid 30:finalizer::resource::val::1::0)
     (params
@@ -156,17 +156,17 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$5)
+            (localid 7:local$7)
             (functionid 35:finalizer::resource::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$490)
-            (localid 7:local$5)))
+            (localid 9:local$699)
+            (localid 7:local$7)))
         (ret
-          (localid 9:local$490)))))
+          (localid 9:local$699)))))
   (func
     (functionid 35:finalizer::resource::val::1::ref::0)
     (params
@@ -181,13 +181,13 @@ assignids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$103)
+            (localid 9:local$149)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$103)))))
+          (localid 9:local$149)))))
   (primitive
     (i32)
     (methods))

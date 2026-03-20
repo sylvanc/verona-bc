@@ -12,11 +12,11 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 4:$871)
+            (localid 5:$1396)
             (functionid 24:infer_newarg::main::0::0)
             (args)))
         (ret
-          (localid 4:$871)))))
+          (localid 5:$1396)))))
   (func
     (functionid 24:infer_newarg::main::0::0)
     (params)
@@ -27,35 +27,35 @@ reify
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$101)
+            (localid 9:local$147)
             (i32)
             (int 1:1))
           (call
-            (localid 7:local$7)
+            (localid 7:local$9)
             (functionid 32:infer_newarg::cell::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$101))))
+                (localid 9:local$147))))
           (copy
-            (localid 9:local$489)
+            (localid 9:local$698)
             (localid 1:c))
           (copy
             (localid 1:c)
-            (localid 7:local$7))
+            (localid 7:local$9))
           (lookup
-            (localid 9:local$102)
+            (localid 9:local$148)
             (localid 1:c)
             (methodid 7:f::1::0))
           (calldyn
-            (localid 9:local$103)
-            (localid 9:local$102)
+            (localid 9:local$149)
+            (localid 9:local$148)
             (args
               (arg
                 (argcopy)
                 (localid 1:c)))))
         (ret
-          (localid 9:local$103)))))
+          (localid 9:local$149)))))
   (func
     (functionid 32:infer_newarg::cell::create::1::0)
     (params
@@ -69,14 +69,14 @@ reify
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$6)
+            (localid 7:local$8)
             (classid 21:infer_newarg::cell::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:f)))))
         (ret
-          (localid 7:local$6)))))
+          (localid 7:local$8)))))
   (class
     (classid 21:infer_newarg::cell::0)
     (fields
@@ -100,17 +100,17 @@ reify
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$5)
+            (localid 7:local$7)
             (functionid 32:infer_newarg::cell::f::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$488)
-            (localid 7:local$5)))
+            (localid 9:local$697)
+            (localid 7:local$7)))
         (ret
-          (localid 9:local$488)))))
+          (localid 9:local$697)))))
   (func
     (functionid 32:infer_newarg::cell::f::1::ref::0)
     (params
@@ -125,13 +125,13 @@ reify
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$100)
+            (localid 9:local$146)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 1:f)))
         (ret
-          (localid 9:local$100)))))
+          (localid 9:local$146)))))
   (primitive
     (i32)
     (methods))

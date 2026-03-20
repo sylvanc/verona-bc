@@ -12,11 +12,11 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$875)
+            (localid 5:$1400)
             (functionid 26:infer_backward::main::0::0)
             (args)))
         (ret
-          (localid 4:$875)))))
+          (localid 5:$1400)))))
   (func
     (functionid 26:infer_backward::main::0::0)
     (params)
@@ -27,31 +27,31 @@ validids
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$107)
+            (localid 9:local$153)
             (i32)
             (int 2:42))
           (call
-            (localid 7:local$8)
+            (localid 8:local$10)
             (functionid 26:infer_backward::wrap::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$107))))
+                (localid 9:local$153))))
           (copy
-            (localid 9:local$493)
+            (localid 9:local$702)
             (localid 1:w))
           (copy
             (localid 1:w)
-            (localid 7:local$8))
+            (localid 8:local$10))
           (call
-            (localid 7:local$9)
+            (localid 8:local$11)
             (functionid 32:infer_backward::unwrap_i32::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 7:local$9)))))
+          (localid 8:local$11)))))
   (func
     (functionid 26:infer_backward::wrap::1::0)
     (params
@@ -65,14 +65,14 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$7)
+            (localid 7:local$9)
             (functionid 37:infer_backward::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$7)))))
+          (localid 7:local$9)))))
   (func
     (functionid 32:infer_backward::unwrap_i32::1::0)
     (params
@@ -86,18 +86,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$105)
+            (localid 9:local$151)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 9:local$106)
-            (localid 9:local$105)
+            (localid 9:local$152)
+            (localid 9:local$151)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 9:local$106)))))
+          (localid 9:local$152)))))
   (class
     (classid 26:infer_backward::wrapper::0)
     (fields
@@ -124,18 +124,18 @@ validids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$103)
+            (localid 9:local$149)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$104)
-            (localid 9:local$103)
+            (localid 9:local$150)
+            (localid 9:local$149)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 9:local$104)))))
+          (localid 9:local$150)))))
   (func
     (functionid 34:infer_backward::wrapper::val::1::0)
     (params
@@ -149,17 +149,17 @@ validids
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$5)
+            (localid 7:local$7)
             (functionid 39:infer_backward::wrapper::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$492)
-            (localid 7:local$5)))
+            (localid 9:local$701)
+            (localid 7:local$7)))
         (ret
-          (localid 9:local$492)))))
+          (localid 9:local$701)))))
   (func
     (functionid 39:infer_backward::wrapper::val::1::ref::0)
     (params
@@ -174,13 +174,13 @@ validids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$102)
+            (localid 9:local$148)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$102)))))
+          (localid 9:local$148)))))
   (func
     (functionid 37:infer_backward::wrapper::create::1::0)
     (params
@@ -194,14 +194,14 @@ validids
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$6)
+            (localid 7:local$8)
             (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$6)))))
+          (localid 7:local$8)))))
   (primitive
     (i32)
     (methods))

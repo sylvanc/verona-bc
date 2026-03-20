@@ -57,25 +57,25 @@ optimize
                 (argcopy)
                 (localid 6:$opt_8))))
           (const
-            (localid 4:$878)
+            (localid 5:$1403)
             (i32)
             (int 1:0)))
         (ret
-          (localid 4:$878)))))
+          (localid 5:$1403)))))
   (func
     (functionid 24:notify_basic::main::0::0)
     (params)
     (i32)
     (vars
       (localid 1:x)
-      (localid 7:local$9)
-      (localid 8:local$10))
+      (localid 8:local$11)
+      (localid 8:local$12))
     (labels
       (label
         (labelid 5:start)
         (body
           (memoslot
-            (localid 7:local$9)
+            (localid 8:local$11)
             (functionid 42:_builtin::ffi::external::create::0::0$once))
           (new
             (localid 7:$opt_10)
@@ -83,7 +83,7 @@ optimize
             (args))
           (lookup
             (localid 7:$opt_11)
-            (localid 7:local$9)
+            (localid 8:local$11)
             (methodid 7:c::1::0))
           (calldyn
             (localid 7:$opt_12)
@@ -91,7 +91,7 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 7:local$9))))
+                (localid 8:local$11))))
           (lookup
             (localid 7:$opt_13)
             (localid 7:$opt_10)
@@ -109,11 +109,11 @@ optimize
             (cown
               (none)))
           (const
-            (localid 9:local$493)
+            (localid 9:local$702)
             (none)
             (none))
           (memoslot
-            (localid 8:local$10)
+            (localid 8:local$12)
             (functionid 42:_builtin::ffi::external::create::0::0$once))
           (new
             (localid 7:$opt_15)
@@ -121,7 +121,7 @@ optimize
             (args))
           (lookup
             (localid 7:$opt_16)
-            (localid 8:local$10)
+            (localid 8:local$12)
             (methodid 7:c::1::0))
           (calldyn
             (localid 7:$opt_17)
@@ -129,7 +129,7 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 8:local$10))))
+                (localid 8:local$12))))
           (lookup
             (localid 7:$opt_18)
             (localid 7:$opt_15)
@@ -147,29 +147,29 @@ optimize
             (cown
               (none)))
           (const
-            (localid 9:local$495)
+            (localid 9:local$704)
             (none)
             (none))
           (const
-            (localid 8:local$11)
+            (localid 8:local$13)
             (i32)
             (int 1:0))
           (copy
             (localid 1:x)
-            (localid 8:local$11))
+            (localid 8:local$13))
           (ffi
-            (localid 8:local$12)
+            (localid 8:local$14)
             (symbolid 8:printval)
             (args
               (arg
                 (argcopy)
                 (localid 1:x))))
           (const
-            (localid 8:local$13)
+            (localid 8:local$15)
             (i32)
             (int 1:0)))
         (ret
-          (localid 8:local$13)))))
+          (localid 8:local$15)))))
   (func
     (functionid 37:_builtin::ffi::external::create::0::0)
     (params)
@@ -199,7 +199,7 @@ optimize
             (none)
             (none))
           (const
-            (localid 9:local$501)
+            (localid 9:local$710)
             (none)
             (none))
           (new
@@ -208,13 +208,13 @@ optimize
             (args
               (arg
                 (argcopy)
-                (localid 9:local$501))))
+                (localid 9:local$710))))
           (lookup
             (localid 7:$opt_22)
             (localid 7:$opt_21)
             (methodid 11:apply::1::0))
           (whendyn
-            (localid 9:local$109)
+            (localid 9:local$155)
             (localid 7:$opt_22)
             (args
               (arg
@@ -223,14 +223,14 @@ optimize
             (cown
               (none)))
           (new
-            (localid 8:local$17)
+            (localid 8:local$19)
             (classid 26:_builtin::ffi::external::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$109)))))
+                (localid 9:local$155)))))
         (ret
-          (localid 8:local$17)))))
+          (localid 8:local$19)))))
   (func
     (functionid 24:notify_basic::init::0::0)
     (params)
@@ -241,21 +241,21 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 9:local$107)
+            (localid 9:local$153)
             (classid 25:notify_basic::lambda$0::0)
             (args))
           (makecallback
             (localid 7:$opt_23)
-            (localid 9:local$107))
+            (localid 9:local$153))
           (registerexternalnotify
             (localid 7:$opt_24)
             (localid 7:$opt_23))
           (const
-            (localid 7:local$8)
+            (localid 8:local$10)
             (none)
             (none)))
         (ret
-          (localid 7:local$8)))))
+          (localid 8:local$10)))))
   (func
     (functionid 36:notify_basic::lambda$0::create::0::0)
     (params)
@@ -266,11 +266,11 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$6)
+            (localid 7:local$8)
             (classid 25:notify_basic::lambda$0::0)
             (args)))
         (ret
-          (localid 7:local$6)))))
+          (localid 7:local$8)))))
   (func
     (functionid 45:_builtin::ffi::register_external_notify::1::0)
     (params
@@ -284,17 +284,17 @@ optimize
         (labelid 5:start)
         (body
           (makecallback
-            (localid 8:local$15)
+            (localid 8:local$17)
             (localid 1:f))
           (registerexternalnotify
-            (localid 9:local$816)
-            (localid 8:local$15))
+            (localid 10:local$1148)
+            (localid 8:local$17))
           (const
-            (localid 8:none$879)
+            (localid 9:none$1404)
             (none)
             (none)))
         (ret
-          (localid 8:none$879)))))
+          (localid 9:none$1404)))))
   (class
     (classid 16:_builtin::ffi::0)
     (fields)
@@ -322,10 +322,10 @@ optimize
         (labelid 5:start)
         (body
           (makecallback
-            (localid 9:local$497)
+            (localid 9:local$706)
             (localid 8:callable)))
         (ret
-          (localid 9:local$497)))))
+          (localid 9:local$706)))))
   (func
     (functionid 35:notify_basic::lambda$0::apply::1::0)
     (params
@@ -339,22 +339,22 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$106)
+            (localid 9:local$152)
             (u64)
             (int 1:0))
           (ffi
-            (localid 7:local$7)
+            (localid 7:local$9)
             (symbolid 8:printval)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$106))))
+                (localid 9:local$152))))
           (const
-            (localid 8:none$880)
+            (localid 9:none$1405)
             (none)
             (none)))
         (ret
-          (localid 8:none$880)))))
+          (localid 9:none$1405)))))
   (class
     (classid 26:_builtin::ffi::external::0)
     (fields
@@ -382,15 +382,15 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$73)
+            (localid 8:local$75)
             (none)
             (none))
           (const
-            (localid 8:none$882)
+            (localid 9:none$1407)
             (none)
             (none)))
         (ret
-          (localid 8:none$882)))))
+          (localid 9:none$1407)))))
   (func
     (functionid 28:_builtin::cown::create::1::0)
     (params
@@ -405,23 +405,23 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$47)
+            (localid 8:local$49)
             (classid 27:_builtin::cown::lambda$3::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:some))))
           (when
-            (localid 9:local$530)
+            (localid 9:local$739)
             (functionid 37:_builtin::cown::lambda$3::apply::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 8:local$47)))
+                (localid 8:local$49)))
             (cown
               (none))))
         (ret
-          (localid 9:local$530)))))
+          (localid 9:local$739)))))
   (func
     (functionid 38:_builtin::cown::lambda$3::create::1::0)
     (params
@@ -435,14 +435,14 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$46)
+            (localid 8:local$48)
             (classid 27:_builtin::cown::lambda$3::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:some)))))
         (ret
-          (localid 8:local$46)))))
+          (localid 8:local$48)))))
   (func
     (functionid 36:_builtin::ffi::callback::apply::1::0)
     (params
@@ -456,10 +456,10 @@ optimize
         (labelid 5:start)
         (body
           (callbackptr
-            (localid 9:local$498)
+            (localid 9:local$707)
             (localid 4:self)))
         (ret
-          (localid 9:local$498)))))
+          (localid 9:local$707)))))
   (class
     (classid 27:_builtin::cown::lambda$3::0)
     (fields
@@ -483,20 +483,20 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$146)
+            (localid 9:local$192)
             (arg
               (argcopy)
               (localid 5:$self))
             (fieldid 4:some))
           (load
-            (localid 9:local$835)
-            (localid 9:local$146))
+            (localid 10:local$1167)
+            (localid 9:local$192))
           (const
-            (localid 8:none$881)
+            (localid 9:none$1406)
             (none)
             (none)))
         (ret
-          (localid 8:none$881)))))
+          (localid 9:none$1406)))))
   (func
     (functionid 34:_builtin::ffi::external::add::1::0)
     (params
@@ -510,7 +510,7 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$20)
+            (localid 8:local$22)
             (classid 36:_builtin::ffi::external::lambda$1::0)
             (args))
           (fieldref
@@ -520,26 +520,26 @@ optimize
               (localid 4:self))
             (fieldid 1:c))
           (load
-            (localid 9:local$111)
+            (localid 9:local$157)
             (localid 7:$opt_25))
           (when
-            (localid 9:local$503)
+            (localid 9:local$712)
             (functionid 46:_builtin::ffi::external::lambda$1::apply::2::0)
             (args
               (arg
                 (argcopy)
-                (localid 8:local$20))
+                (localid 8:local$22))
               (arg
                 (argcopy)
-                (localid 9:local$111)))
+                (localid 9:local$157)))
             (cown
               (none)))
           (const
-            (localid 8:none$885)
+            (localid 9:none$1410)
             (none)
             (none)))
         (ret
-          (localid 8:none$885)))))
+          (localid 9:none$1410)))))
   (func
     (functionid 37:_builtin::ffi::external::remove::1::0)
     (params
@@ -553,7 +553,7 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$23)
+            (localid 8:local$25)
             (classid 36:_builtin::ffi::external::lambda$2::0)
             (args))
           (fieldref
@@ -563,26 +563,26 @@ optimize
               (localid 4:self))
             (fieldid 1:c))
           (load
-            (localid 9:local$113)
+            (localid 9:local$159)
             (localid 7:$opt_26))
           (when
-            (localid 9:local$505)
+            (localid 9:local$714)
             (functionid 46:_builtin::ffi::external::lambda$2::apply::2::0)
             (args
               (arg
                 (argcopy)
-                (localid 8:local$23))
+                (localid 8:local$25))
               (arg
                 (argcopy)
-                (localid 9:local$113)))
+                (localid 9:local$159)))
             (cown
               (none)))
           (const
-            (localid 8:none$883)
+            (localid 9:none$1408)
             (none)
             (none)))
         (ret
-          (localid 8:none$883)))))
+          (localid 9:none$1408)))))
   (func
     (functionid 47:_builtin::ffi::external::lambda$2::create::0::0)
     (params)
@@ -593,11 +593,11 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$21)
+            (localid 8:local$23)
             (classid 36:_builtin::ffi::external::lambda$2::0)
             (args)))
         (ret
-          (localid 8:local$21)))))
+          (localid 8:local$23)))))
   (func
     (functionid 32:_builtin::ffi::external::c::1::0)
     (params
@@ -612,16 +612,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 8:local$16)
+            (localid 8:local$18)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 1:c))
           (load
-            (localid 9:local$500)
-            (localid 8:local$16)))
+            (localid 9:local$709)
+            (localid 8:local$18)))
         (ret
-          (localid 9:local$500)))))
+          (localid 9:local$709)))))
   (func
     (functionid 37:_builtin::ffi::external::c::1::ref::0)
     (params
@@ -637,13 +637,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$108)
+            (localid 9:local$154)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 1:c)))
         (ret
-          (localid 9:local$108)))))
+          (localid 9:local$154)))))
   (class
     (classid 36:_builtin::ffi::external::lambda$2::0)
     (fields)
@@ -668,13 +668,13 @@ optimize
         (labelid 5:start)
         (body
           (removeexternal
-            (localid 8:local$22))
+            (localid 8:local$24))
           (const
-            (localid 8:none$884)
+            (localid 9:none$1409)
             (none)
             (none)))
         (ret
-          (localid 8:none$884)))))
+          (localid 9:none$1409)))))
   (func
     (functionid 47:_builtin::ffi::external::lambda$1::create::0::0)
     (params)
@@ -685,11 +685,11 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 8:local$18)
+            (localid 8:local$20)
             (classid 36:_builtin::ffi::external::lambda$1::0)
             (args)))
         (ret
-          (localid 8:local$18)))))
+          (localid 8:local$20)))))
   (class
     (classid 36:_builtin::ffi::external::lambda$1::0)
     (fields)
@@ -714,13 +714,13 @@ optimize
         (labelid 5:start)
         (body
           (addexternal
-            (localid 8:local$19))
+            (localid 8:local$21))
           (const
-            (localid 8:none$886)
+            (localid 9:none$1411)
             (none)
             (none)))
         (ret
-          (localid 8:none$886)))))
+          (localid 9:none$1411)))))
   (primitive
     (i32)
     (methods))
