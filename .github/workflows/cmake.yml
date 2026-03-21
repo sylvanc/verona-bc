@@ -30,19 +30,19 @@ jobs:
         include:
           - platform: "ubuntu-latest"
             cmake-flags: "-G Ninja"
-            dependencies: "sudo apt install ninja-build lldb"
+            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
 
           - variant: "Clang"
             platform: "ubuntu-latest"
             build-type: "Release"
             cmake-flags: "-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
-            dependencies: "sudo apt install ninja-build lldb"
+            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
 
           - variant: "Sanitizer"
             platform: "ubuntu-latest"
             build-type: "Release"
             cmake-flags: "-G Ninja -DSANITIZER=address,undefined -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
-            dependencies: "sudo apt install ninja-build"
+            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
 
           # - platform: "windows-latest"
           #   build-type: "Debug"
@@ -84,7 +84,7 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt update
-        sudo apt install clang-format-20
+        sudo apt install clang-format-20 libzstd-dev libffi-dev libgit2-dev
 
     # We don't need to do the build for this job, but we need to configure it to get the clangformat
     # and copyright targets

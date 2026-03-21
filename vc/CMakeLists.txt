@@ -26,8 +26,7 @@ target_link_libraries(vc
   OpenSSL::Crypto
   OpenSSL::SSL
   CLI11::CLI11
-  libgit2
-  libgit2package
+  deps::libgit2
 )
 
 # Copy the stdlib to the install directory

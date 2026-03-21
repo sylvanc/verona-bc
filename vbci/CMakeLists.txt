@@ -51,10 +51,10 @@ target_link_libraries(vbci
   Threads::Threads
   snmallocshim-static
   verona_rt
-  PkgConfig::LIBFFI
+  deps::libffi
+  deps::zstd
   CLI11::CLI11
   vbc::include
-  libzstd_static
 )
 
 install(TARGETS vbci RUNTIME DESTINATION vbci)
