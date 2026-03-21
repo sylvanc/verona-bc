@@ -1,14 +1,14 @@
-find_first_non_space(data: array[u8]): usize
+has_non_space(data: array[u8]): bool
 {
   data.pairs (i, c) ->
   {
     if !string::is_space(c)
     {
-      raise i
+      raise true
     }
   }
 
-  data.size
+  false
 }
 
 main(): i32
@@ -17,6 +17,18 @@ main(): i32
   padded(0) = 32;
   padded(1) = 32;
   padded(2) = 97;
-  lambda_context_none::find_first_non_space(padded);
-  i32 0
+  if !lambda_context_none::has_non_space(padded)
+  {
+    return 1
+  }
+
+  let blank = array[u8]::fill(2);
+  blank(0) = 32;
+  blank(1) = 32;
+  if lambda_context_none::has_non_space(blank)
+  {
+    return 2
+  }
+
+  0
 }

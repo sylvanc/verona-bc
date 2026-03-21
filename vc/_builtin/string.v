@@ -251,8 +251,6 @@ string
       {
         raise self.substring(i, self.len - i)
       }
-
-      none
     }
 
     string(array[u8]::fill(1))

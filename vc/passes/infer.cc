@@ -4,9 +4,19 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <unordered_set>
 
 namespace vc
 {
+  static bool is_lambda_function(const Node& func);
+
+  std::unordered_set<const void*> lambda_returns_omitted;
+
+  static bool lambda_return_was_omitted(const Node& func)
+  {
+    return lambda_returns_omitted.count(func.get()) > 0;
+  }
+
   // ===== Dispatch tables =====
 
   const std::map<std::string_view, Token> primitive_from_name = {
@@ -1811,11 +1821,19 @@ namespace vc
         }
 
         auto actual_ret = af / Type;
-        if (actual_ret->front() == TypeVar)
+        auto shape_ret = apply_subst(top, sf / Type, shape_subst);
+        if (shape_ret && shape_ret->front() != TypeVar)
         {
-          auto shape_ret = apply_subst(top, sf / Type, shape_subst);
-          if (shape_ret && shape_ret->front() != TypeVar)
+          if (
+            actual_ret->front() == TypeVar ||
+            (is_lambda_function(af) && lambda_return_was_omitted(af)))
+          {
+            // For lambdas without an explicit return annotation, callable
+            // context supplies the return obligation. Any concrete return
+            // inferred in isolation is provisional until checked against that
+            // context.
             changed |= replace_if_changed(af, actual_ret, clone(shape_ret));
+          }
         }
         break;
       }
@@ -4963,6 +4981,17 @@ namespace vc
 
     p.post([](auto top) {
       Nodes deferred;
+
+      lambda_returns_omitted.clear();
+      top->traverse([&](auto node) {
+        if (
+          node == Function && is_lambda_function(node) &&
+          (node / Type)->front() == TypeVar)
+        {
+          lambda_returns_omitted.insert(node.get());
+        }
+        return true;
+      });
 
       top->traverse([&](auto node) {
         if (node != Function)
