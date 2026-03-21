@@ -1,7 +1,7 @@
 # Arguments for testing vc compile
 macro(toolinvoke ARGS testfile outputdir)
   get_filename_component(test_name ${testfile} NAME_WE)
-  set(${ARGS} build . -b ${outputdir}/${test_name}.vbc -o ${outputdir}/${test_name}_final.trieste --dump_passes ${outputdir})
+  set(${ARGS} build . -b ${outputdir}/${test_name}.vbc -o ${outputdir}/${test_name}_final.trieste)
 endmacro()
 
 # Regular expression to match test files
@@ -9,6 +9,7 @@ set(TESTSUITE_REGEX ".*\\.v$")
 
 # Use the installed binary which has _builtin next to it
 set(TESTSUITE_EXE "${CMAKE_INSTALL_PREFIX}/vc/vc")
+set(TESTSUITE_RESULT_FILES exit_code.txt stderr.txt stdout.txt)
 
 function (test_output_dir out test)
   get_filename_component(test_dir ${test} DIRECTORY)
