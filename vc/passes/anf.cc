@@ -681,6 +681,7 @@ namespace vc
           [](Match& _) {
             auto arr_id = _.fresh(l_local);
             auto str_id = _.fresh(l_local);
+            auto frz_id = _.fresh(l_local);
             Node funcname = FuncName
               << (NameElement << (Ident ^ "_builtin") << TypeArgs)
               << (NameElement << (Ident ^ "string") << TypeArgs)
@@ -692,7 +693,11 @@ namespace vc
                            << Body
                            << (Call << (LocalId ^ str_id) << Rhs << funcname
                                     << (Args << (LocalId ^ arr_id))))
-                       << (LocalId ^ str_id);
+                       << (Lift
+                           << Body
+                           << (Freeze << (LocalId ^ frz_id)
+                                      << (LocalId ^ str_id)))
+                       << (LocalId ^ frz_id);
           },
 
         // Dynamic call.

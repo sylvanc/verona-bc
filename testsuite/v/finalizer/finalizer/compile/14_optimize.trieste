@@ -7,7 +7,7 @@ optimize
     (params)
     (i32)
     (vars
-      (localid 5:$1402))
+      (localid 5:$1456))
     (labels
       (label
         (labelid 5:start)
@@ -17,7 +17,7 @@ optimize
             (i32)
             (int 1:0))
           (copy
-            (localid 5:$1402)
+            (localid 5:$1456)
             (localid 6:$opt_0))
           (const
             (localid 6:$opt_2)
@@ -42,7 +42,7 @@ optimize
                 (argcopy)
                 (localid 6:$opt_6)))))
         (ret
-          (localid 5:$1402)))))
+          (localid 5:$1456)))))
   (func
     (functionid 21:finalizer::main::0::0)
     (params)
@@ -54,34 +54,34 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 8:local$10)
+            (localid 8:local$11)
             (i32)
             (int 1:0))
           (copy
             (localid 6:result)
-            (localid 8:local$10))
+            (localid 8:local$11))
           (const
-            (localid 9:local$150)
+            (localid 9:local$161)
             (i32)
             (int 2:10))
-          (new
-            (localid 8:local$11)
-            (classid 22:finalizer::resource::0)
-            (args
-              (arg
-                (argcopy)
-                (localid 9:local$150))))
-          (const
-            (localid 9:local$151)
-            (i32)
-            (int 2:20))
           (new
             (localid 8:local$12)
             (classid 22:finalizer::resource::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$151)))))
+                (localid 9:local$161))))
+          (const
+            (localid 9:local$162)
+            (i32)
+            (int 2:20))
+          (new
+            (localid 8:local$13)
+            (classid 22:finalizer::resource::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$162)))))
         (ret
           (localid 6:result)))))
   (func
@@ -97,14 +97,14 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$9)
+            (localid 8:local$10)
             (classid 22:finalizer::resource::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$9)))))
+          (localid 8:local$10)))))
   (class
     (classid 22:finalizer::resource::0)
     (fields
@@ -137,21 +137,21 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$701)
+            (localid 9:local$748)
             (localid 7:$opt_10))
           (ffi
-            (localid 7:local$8)
+            (localid 7:local$9)
             (symbolid 8:printval)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$701))))
+                (localid 9:local$748))))
           (const
-            (localid 9:none$1403)
+            (localid 9:none$1457)
             (none)
             (none)))
         (ret
-          (localid 9:none$1403)))))
+          (localid 9:none$1457)))))
   (func
     (functionid 30:finalizer::resource::val::1::0)
     (params
@@ -165,16 +165,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 7:local$7)
+            (localid 7:local$8)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$699)
-            (localid 7:local$7)))
+            (localid 9:local$746)
+            (localid 7:local$8)))
         (ret
-          (localid 9:local$699)))))
+          (localid 9:local$746)))))
   (func
     (functionid 35:finalizer::resource::val::1::ref::0)
     (params
@@ -189,13 +189,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$149)
+            (localid 9:local$160)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$149)))))
+          (localid 9:local$160)))))
   (primitive
     (i32)
     (methods))

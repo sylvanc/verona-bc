@@ -1,3 +1,8 @@
+# STOP — Read Global AGENTS.md First
+
+Read `~/.config/agents/AGENTS.md` for user preferences, workflow rules, and
+irreversible-action guardrails (git commit/push/PR require explicit permission).
+
 # Verona Compiler (vc) Specifics
 
 - **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump-clean` and `ninja update-dump` to regenerate golden test files.

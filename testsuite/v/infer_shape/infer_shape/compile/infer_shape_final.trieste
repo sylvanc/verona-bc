@@ -27,14 +27,14 @@ liveness
             (localid 6:$opt_1)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 5:$1400)
+            (localid 5:$1454)
             (localid 6:$opt_4)
             (args
               (arg
                 (argmove)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 5:$1400)))))
+          (localid 5:$1454)))))
   (func
     (functionid 23:infer_shape::main::0::0)
     (params)
@@ -45,29 +45,29 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$153)
+            (localid 9:local$164)
             (i32)
             (int 2:42))
           (new
-            (localid 8:local$10)
+            (localid 8:local$11)
             (classid 19:infer_shape::box::0)
             (args
               (arg
                 (argmove)
-                (localid 9:local$153))))
+                (localid 9:local$164))))
           (lookup
             (localid 6:$opt_5)
-            (localid 8:local$10)
+            (localid 8:local$11)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 8:local$11)
+            (localid 8:local$12)
             (localid 6:$opt_5)
             (args
               (arg
                 (argmove)
-                (localid 8:local$10)))))
+                (localid 8:local$11)))))
         (ret
-          (localid 8:local$11)))))
+          (localid 8:local$12)))))
   (func
     (functionid 30:infer_shape::box::create::1::0)
     (params
@@ -81,14 +81,14 @@ liveness
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$9)
+            (localid 8:local$10)
             (classid 19:infer_shape::box::0)
             (args
               (arg
                 (argmove)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$9)))))
+          (localid 8:local$10)))))
   (func
     (functionid 26:infer_shape::extract::1::0)
     (params
@@ -106,14 +106,14 @@ liveness
             (localid 1:g)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$152)
+            (localid 9:local$163)
             (localid 6:$opt_6)
             (args
               (arg
                 (argmove)
                 (localid 1:g)))))
         (ret
-          (localid 9:local$152)))))
+          (localid 9:local$163)))))
   (type
     (typeid 22:infer_shape::getter::0)
     (classid 19:infer_shape::box::0))
@@ -149,10 +149,10 @@ liveness
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$150)
+            (localid 9:local$161)
             (localid 6:$opt_7)))
         (ret
-          (localid 9:local$150)))))
+          (localid 9:local$161)))))
   (func
     (functionid 27:infer_shape::box::val::1::0)
     (params
@@ -166,16 +166,16 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 7:local$8)
+            (localid 7:local$9)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$701)
-            (localid 7:local$8)))
+            (localid 9:local$748)
+            (localid 7:local$9)))
         (ret
-          (localid 9:local$701)))))
+          (localid 9:local$748)))))
   (func
     (functionid 32:infer_shape::box::val::1::ref::0)
     (params
@@ -190,13 +190,13 @@ liveness
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$148)
+            (localid 9:local$159)
             (arg
               (argmove)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$148)))))
+          (localid 9:local$159)))))
   (primitive
     (i32)
     (methods))

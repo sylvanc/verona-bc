@@ -1153,8 +1153,11 @@ namespace vc
           }
           else if (n == Freeze)
           {
-            reify_primitive(None);
-            local_types[(n / LocalId)->location()] = clone(None);
+            // Propagate type from source to destination.
+            auto src_it = local_types.find((n / Rhs)->location());
+
+            if (src_it != local_types.end())
+              local_types[(n / LocalId)->location()] = clone(src_it->second);
           }
           else if (n->in({ArrayCopy, ArrayFill}))
           {
@@ -1676,7 +1679,7 @@ namespace vc
 
           auto none_loc = top->fresh(Location("none"));
           auto body = l / Body;
-          body << (Const << (LocalId ^ none_loc) << clone(None) << clone(None));
+          body << (Const << (LocalId ^ none_loc) << None << None);
           term->replace(term->front(), LocalId ^ none_loc);
         }
       }

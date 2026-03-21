@@ -12,11 +12,11 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 5:$1400)
+            (localid 5:$1454)
             (functionid 25:infer_calldyn::main::0::0)
             (args)))
         (ret
-          (localid 5:$1400)))))
+          (localid 5:$1454)))))
   (func
     (functionid 25:infer_calldyn::main::0::0)
     (params)
@@ -27,48 +27,48 @@ typecheck
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$150)
+            (localid 9:local$161)
             (i32)
             (int 1:1))
           (call
-            (localid 7:local$9)
+            (localid 8:local$10)
             (functionid 36:infer_calldyn::wrapper::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$150))))
+                (localid 9:local$161))))
           (copy
-            (localid 9:local$701)
+            (localid 9:local$748)
             (localid 1:w))
           (copy
             (localid 1:w)
-            (localid 7:local$9))
+            (localid 8:local$10))
           (lookup
-            (localid 9:local$151)
+            (localid 9:local$162)
             (localid 1:w)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 9:local$152)
-            (localid 9:local$151)
+            (localid 9:local$163)
+            (localid 9:local$162)
             (args
               (arg
                 (argcopy)
                 (localid 1:w))))
           (copy
-            (localid 10:local$1144)
+            (localid 10:local$1173)
             (localid 1:v))
           (copy
             (localid 1:v)
-            (localid 9:local$152))
+            (localid 9:local$163))
           (call
-            (localid 8:local$10)
+            (localid 8:local$11)
             (functionid 29:infer_calldyn::identity::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:v)))))
         (ret
-          (localid 8:local$10)))))
+          (localid 8:local$11)))))
   (func
     (functionid 36:infer_calldyn::wrapper::create::1::0)
     (params
@@ -82,14 +82,14 @@ typecheck
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$8)
+            (localid 7:local$9)
             (classid 25:infer_calldyn::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$8)))))
+          (localid 7:local$9)))))
   (func
     (functionid 29:infer_calldyn::identity::1::0)
     (params
@@ -130,18 +130,18 @@ typecheck
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$148)
+            (localid 9:local$159)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$149)
-            (localid 9:local$148)
+            (localid 9:local$160)
+            (localid 9:local$159)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 9:local$149)))))
+          (localid 9:local$160)))))
   (func
     (functionid 33:infer_calldyn::wrapper::val::1::0)
     (params
@@ -155,17 +155,17 @@ typecheck
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$7)
+            (localid 7:local$8)
             (functionid 38:infer_calldyn::wrapper::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$700)
-            (localid 7:local$7)))
+            (localid 9:local$747)
+            (localid 7:local$8)))
         (ret
-          (localid 9:local$700)))))
+          (localid 9:local$747)))))
   (func
     (functionid 38:infer_calldyn::wrapper::val::1::ref::0)
     (params
@@ -180,13 +180,13 @@ typecheck
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$147)
+            (localid 9:local$158)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$147)))))
+          (localid 9:local$158)))))
   (primitive
     (i32)
     (methods))

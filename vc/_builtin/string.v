@@ -7,9 +7,14 @@ string
 
   create(data: array[u8]): string
   {
-    let d = array[u8]::fill(data.size);
-    d.copy_from(0, data, 0, data.size);
-    new { data = d, len = data.size - 1 }
+    new { data, len = data.size - 1 }
+  }
+
+  copy(self: string): string
+  {
+    let d = array[u8]::fill(self.len + 1);
+    d.copy_from(0, self.data, 0, self.len + 1);
+    new { data = d, len = self.len }
   }
 
   size(self: string): usize
@@ -19,7 +24,7 @@ string
 
   ref apply(self: string, index: usize): ref[u8]
   {
-    ref (self.data)(index)
+    ref self.data()(index)
   }
 
   bool(self: string): bool
@@ -41,7 +46,7 @@ string
       return false
     }
 
-    self.data.compare(0, other.data, 0, self.len) == i64 0
+    self.data.compare(0, other.data, 0, self.len) == 0
   }
 
   !=(self: string, other: string): bool
@@ -54,11 +59,11 @@ string
     let n = self.len.min(other.len);
     let cmp = self.data.compare(0, other.data, 0, n);
 
-    if cmp < i64 0
+    if cmp < 0
     {
       return true
     }
-    else if cmp > i64 0
+    else if cmp > 0
     {
       return false
     }
@@ -88,7 +93,7 @@ string
     let result = array[u8]::fill(self.len + other.len + 1);
     result.copy_from(0, self.data, 0, self.len);
     result.copy_from(self.len, other.data, 0, other.len);
-    (result)(self.len + other.len) = u8 0;
+    result(self.len + other.len) = 0;
     string(result)
   }
 
@@ -113,7 +118,7 @@ string
   clear(self: string): none
   {
     self.len = 0;
-    (self.data)(0) = u8 0
+    self.data()(0) = 0
   }
 
   // --- Mutation ---
@@ -123,40 +128,38 @@ string
     self.reserve(self.len + other.len);
     self.data.copy_from(self.len, other.data, 0, other.len);
     self.len = self.len + other.len;
-    (self.data)(self.len) = u8 0
+    self.data()(self.len) = 0
   }
 
   insert(self: string, index: usize, other: string): none
   {
     self.reserve(self.len + other.len);
-    var i = self.len;
-    while i > index
-    {
-      (self.data)(i + other.len - 1) = (self.data)(i - 1);
-      i = i - 1
-    }
+    // shift tail right using bulk copy (handles overlap)
+    self.data.copy_from(index + other.len, self.data, index, self.len - index);
     self.data.copy_from(index, other.data, 0, other.len);
     self.len = self.len + other.len;
-    (self.data)(self.len) = u8 0
+    self.data()(self.len) = 0
   }
 
   erase(self: string, offset: usize, count: usize): none
   {
     let n = count.min(self.len - offset);
-    var i = offset;
-    while i + n < self.len
-    {
-      (self.data)(i) = (self.data)(i + n);
-      i = i + 1
-    }
+    // shift tail left using bulk copy (handles overlap)
+    self.data.copy_from(offset, self.data, offset + n, self.len - offset - n);
     self.len = self.len - n;
-    (self.data)(self.len) = u8 0
+    self.data()(self.len) = 0
   }
 
   replace(self: string, offset: usize, count: usize, other: string): none
   {
-    self.erase(offset, count);
-    self.insert(offset, other)
+    let n = count.min(self.len - offset);
+    let new_len = self.len - n + other.len;
+    self.reserve(new_len);
+    // shift tail to final position, then copy replacement in
+    self.data.copy_from(offset + other.len, self.data, offset + n, self.len - offset - n);
+    self.data.copy_from(offset, other.data, 0, other.len);
+    self.len = new_len;
+    self.data()(self.len) = 0
   }
 
   // --- Search ---
@@ -170,7 +173,7 @@ string
 
     if other.len > self.len
     {
-      return none()
+      return none
     }
 
     var i: usize = 0;
@@ -178,7 +181,7 @@ string
 
     while i < limit
     {
-      if self.data.compare(i, other.data, 0, other.len) == i64 0
+      if self.data.compare(i, other.data, 0, other.len) == 0
       {
         let found: usize = i;
         return found
@@ -186,12 +189,19 @@ string
       i = i + 1
     }
 
-    none()
+    none
   }
 
   contains(self: string, other: string): bool
   {
-    (match self.find(other) { (i: usize) -> true; }) else (false)
+    match self.find(other)
+    {
+      (i: usize) -> true;
+    }
+    else
+    {
+      false
+    }
   }
 
   starts_with(self: string, prefix: string): bool
@@ -201,7 +211,7 @@ string
       return false
     }
 
-    self.data.compare(0, prefix.data, 0, prefix.len) == i64 0
+    self.data.compare(0, prefix.data, 0, prefix.len) == 0
   }
 
   ends_with(self: string, suffix: string): bool
@@ -212,7 +222,7 @@ string
     }
 
     let offset = self.len - suffix.len;
-    self.data.compare(offset, suffix.data, 0, suffix.len) == i64 0
+    self.data.compare(offset, suffix.data, 0, suffix.len) == 0
   }
 
   // --- Slicing ---
@@ -222,25 +232,27 @@ string
     let n = count.min(self.len - offset);
     let result = array[u8]::fill(n + 1);
     result.copy_from(0, self.data, offset, n);
-    (result)(n) = u8 0;
+    result(n) = 0;
     string(result)
   }
 
   // --- Trimming ---
 
+  is_space(c: u8): bool
+  {
+    (c == 32) | (c == 9) | (c == 10) | (c == 13)
+  }
+
   trim_left(self: string): string
   {
-    var i: usize = 0;
-    while i < self.len
+    self.data.pairs (i, c) ->
     {
-      let idx: usize = i;
-      let c = (self.data)(idx);
-      if c != 32 { if c != 9 { if c != 10 { if c != 13
+      if !string::is_space(c)
       {
-        let count = self.len - idx;
-        return self.substring(idx, count)
-      } } } }
-      i = i + 1
+        raise self.substring(i, self.len - i)
+      }
+
+      none
     }
 
     string(array[u8]::fill(1))
@@ -251,11 +263,10 @@ string
     var i = self.len;
     while i > 0
     {
-      let c = (self.data)(i - 1);
-      if c != 32 { if c != 9 { if c != 10 { if c != 13
+      if !string::is_space(self.data()(i - 1))
       {
         return self.substring(0, i)
-      } } } }
+      }
       i = i - 1
     }
 
@@ -264,6 +275,27 @@ string
 
   trim(self: string): string
   {
-    self.trim_left.trim_right
+    var start: usize = 0;
+    while start < self.len
+    {
+      let s: usize = start;
+      if !string::is_space(self.data()(s))
+      {
+        var end = self.len;
+        while end > s
+        {
+          if !string::is_space(self.data()(end - 1))
+          {
+            return self.substring(s, end - s)
+          }
+          end = end - 1
+        }
+
+        return self.substring(s, 0)
+      }
+      start = start + 1
+    }
+
+    string(array[u8]::fill(1))
   }
 }

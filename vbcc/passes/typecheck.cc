@@ -1248,8 +1248,8 @@ namespace vbcc
         }
         else if (node == Freeze)
         {
-          // Freeze returns none.
-          set_type(env, node / LocalId, None);
+          // Freeze returns the frozen object (same type as src).
+          set_type(env, node / LocalId, typed(node / Rhs));
         }
         else if (node->type().in(
                    {Add, Sub, Mul, Div, Mod, And, Or, Xor, Shl, Shr, Min, Max}))

@@ -9,16 +9,44 @@ main(): i32
   if cs(5) != 0 { result = result + 2 }
 
   // --- find ---
-  let f1 = (match s.find("ell") { (i: usize) -> i; }) else (99);
+  let f1 = match s.find("ell")
+  {
+    (i: usize) -> i;
+  }
+  else
+  {
+    99
+  };
   if f1 != 1 { result = result + 4 }
 
-  let f2 = (match s.find("xyz") { (i: usize) -> i; }) else (99);
+  let f2 = match s.find("xyz")
+  {
+    (i: usize) -> i;
+  }
+  else
+  {
+    99
+  };
   if f2 != 99 { result = result + 8 }
 
-  let f3 = (match s.find("") { (i: usize) -> i; }) else (99);
+  let f3 = match s.find("")
+  {
+    (i: usize) -> i;
+  }
+  else
+  {
+    99
+  };
   if f3 != 0 { result = result + 16 }
 
-  let f4 = (match "".find("a") { (i: usize) -> i; }) else (99);
+  let f4 = match "".find("a")
+  {
+    (i: usize) -> i;
+  }
+  else
+  {
+    99
+  };
   if f4 != 99 { result = result + 32 }
 
   // --- contains ---

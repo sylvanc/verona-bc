@@ -59,7 +59,7 @@ namespace vc
   // Unary ops: result type = operand type.
   const std::initializer_list<Token> propagate_rhs_ops = {
     Neg,  Abs,  Ceil, Floor, Exp,  Log,  Sqrt,  Cbrt,  Sin,   Cos, Tan,
-    Asin, Acos, Atan, Sinh,  Cosh, Tanh, Asinh, Acosh, Atanh, Read};
+    Asin, Acos, Atan, Sinh,  Cosh, Tanh, Asinh, Acosh, Atanh, Read, Freeze};
 
   // Ops with fixed result types.
   const std::map<Token, Token> fixed_result_type = {
@@ -84,7 +84,6 @@ namespace vc
     {AddExternal, None},
     {RemoveExternal, None},
     {RegisterExternalNotify, None},
-    {Freeze, None},
     {ArrayCopy, None},
     {ArrayFill, None},
     {ArrayCompare, I64},
