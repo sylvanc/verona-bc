@@ -12,11 +12,11 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 4:$875)
+            (localid 5:$1453)
             (functionid 23:infer_shape::main::0::0)
             (args)))
         (ret
-          (localid 4:$875)))))
+          (localid 5:$1453)))))
   (func
     (functionid 23:infer_shape::main::0::0)
     (params)
@@ -27,31 +27,31 @@ assignids
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$107)
+            (localid 9:local$163)
             (i32)
             (int 2:42))
           (call
-            (localid 7:local$8)
+            (localid 8:local$11)
             (functionid 30:infer_shape::box::create::1::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$107))))
+                (localid 9:local$163))))
           (copy
-            (localid 9:local$493)
+            (localid 9:local$748)
             (localid 1:b))
           (copy
             (localid 1:b)
-            (localid 7:local$8))
+            (localid 8:local$11))
           (call
-            (localid 7:local$9)
+            (localid 8:local$12)
             (functionid 26:infer_shape::extract::1::0)
             (args
               (arg
                 (argcopy)
                 (localid 1:b)))))
         (ret
-          (localid 7:local$9)))))
+          (localid 8:local$12)))))
   (func
     (functionid 30:infer_shape::box::create::1::0)
     (params
@@ -65,14 +65,14 @@ assignids
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$7)
+            (localid 8:local$10)
             (classid 19:infer_shape::box::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$7)))))
+          (localid 8:local$10)))))
   (func
     (functionid 26:infer_shape::extract::1::0)
     (params
@@ -86,18 +86,18 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$105)
+            (localid 9:local$161)
             (localid 1:g)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 9:local$106)
-            (localid 9:local$105)
+            (localid 9:local$162)
+            (localid 9:local$161)
             (args
               (arg
                 (argcopy)
                 (localid 1:g)))))
         (ret
-          (localid 9:local$106)))))
+          (localid 9:local$162)))))
   (type
     (typeid 22:infer_shape::getter::0)
     (classid 19:infer_shape::box::0))
@@ -127,18 +127,18 @@ assignids
         (labelid 5:start)
         (body
           (lookup
-            (localid 9:local$103)
+            (localid 9:local$159)
             (localid 4:self)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$104)
-            (localid 9:local$103)
+            (localid 9:local$160)
+            (localid 9:local$159)
             (args
               (arg
                 (argcopy)
                 (localid 4:self)))))
         (ret
-          (localid 9:local$104)))))
+          (localid 9:local$160)))))
   (func
     (functionid 27:infer_shape::box::val::1::0)
     (params
@@ -152,17 +152,17 @@ assignids
         (labelid 5:start)
         (body
           (call
-            (localid 7:local$6)
+            (localid 7:local$9)
             (functionid 32:infer_shape::box::val::1::ref::0)
             (args
               (arg
                 (argcopy)
                 (localid 4:self))))
           (load
-            (localid 9:local$492)
-            (localid 7:local$6)))
+            (localid 9:local$747)
+            (localid 7:local$9)))
         (ret
-          (localid 9:local$492)))))
+          (localid 9:local$747)))))
   (func
     (functionid 32:infer_shape::box::val::1::ref::0)
     (params
@@ -177,13 +177,13 @@ assignids
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$102)
+            (localid 9:local$158)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$102)))))
+          (localid 9:local$158)))))
   (primitive
     (i32)
     (methods))

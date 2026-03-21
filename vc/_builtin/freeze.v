@@ -1,4 +1,4 @@
-freeze(x: any): none
+freeze[T](x: T): T
 {
   :::freeze(x)
 }

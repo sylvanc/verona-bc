@@ -27,14 +27,14 @@ optimize
             (localid 6:$opt_1)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 4:$875)
+            (localid 5:$1453)
             (localid 6:$opt_4)
             (args
               (arg
                 (argcopy)
                 (localid 6:$opt_1)))))
         (ret
-          (localid 4:$875)))))
+          (localid 5:$1453)))))
   (func
     (functionid 26:infer_backward::main::0::0)
     (params)
@@ -45,29 +45,29 @@ optimize
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$107)
+            (localid 9:local$163)
             (i32)
             (int 2:42))
           (new
-            (localid 7:local$8)
+            (localid 8:local$11)
             (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
-                (localid 9:local$107))))
+                (localid 9:local$163))))
           (lookup
             (localid 6:$opt_5)
-            (localid 7:local$8)
+            (localid 8:local$11)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 7:local$9)
+            (localid 8:local$12)
             (localid 6:$opt_5)
             (args
               (arg
                 (argcopy)
-                (localid 7:local$8)))))
+                (localid 8:local$11)))))
         (ret
-          (localid 7:local$9)))))
+          (localid 8:local$12)))))
   (func
     (functionid 26:infer_backward::wrap::1::0)
     (params
@@ -81,14 +81,14 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$7)
+            (localid 8:local$10)
             (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$7)))))
+          (localid 8:local$10)))))
   (func
     (functionid 32:infer_backward::unwrap_i32::1::0)
     (params
@@ -106,14 +106,14 @@ optimize
             (localid 1:w)
             (methodid 9:val::1::0))
           (calldyn
-            (localid 9:local$106)
+            (localid 9:local$162)
             (localid 6:$opt_6)
             (args
               (arg
                 (argcopy)
                 (localid 1:w)))))
         (ret
-          (localid 9:local$106)))))
+          (localid 9:local$162)))))
   (class
     (classid 26:infer_backward::wrapper::0)
     (fields
@@ -146,10 +146,10 @@ optimize
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$104)
+            (localid 9:local$160)
             (localid 6:$opt_7)))
         (ret
-          (localid 9:local$104)))))
+          (localid 9:local$160)))))
   (func
     (functionid 34:infer_backward::wrapper::val::1::0)
     (params
@@ -163,16 +163,16 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 7:local$5)
+            (localid 7:local$8)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val))
           (load
-            (localid 9:local$492)
-            (localid 7:local$5)))
+            (localid 9:local$747)
+            (localid 7:local$8)))
         (ret
-          (localid 9:local$492)))))
+          (localid 9:local$747)))))
   (func
     (functionid 39:infer_backward::wrapper::val::1::ref::0)
     (params
@@ -187,13 +187,13 @@ optimize
         (labelid 5:start)
         (body
           (fieldref
-            (localid 9:local$102)
+            (localid 9:local$158)
             (arg
               (argcopy)
               (localid 4:self))
             (fieldid 3:val)))
         (ret
-          (localid 9:local$102)))))
+          (localid 9:local$158)))))
   (func
     (functionid 37:infer_backward::wrapper::create::1::0)
     (params
@@ -207,14 +207,14 @@ optimize
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$6)
+            (localid 7:local$9)
             (classid 26:infer_backward::wrapper::0)
             (args
               (arg
                 (argcopy)
                 (localid 3:val)))))
         (ret
-          (localid 7:local$6)))))
+          (localid 7:local$9)))))
   (primitive
     (i32)
     (methods))

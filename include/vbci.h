@@ -141,7 +141,8 @@ namespace vbci
     Drop,
 
     // Freeze the reachable subgraph from the value, making it immutable.
-    // Arg0 = src.
+    // Arg0 = dst.
+    // Arg1 = src.
     Freeze,
 
     // Create a reference to a register.

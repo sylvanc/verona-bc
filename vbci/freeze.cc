@@ -92,6 +92,88 @@ namespace vbci
     return frozen_edges;
   }
 
+  void freeze_local(Header* root)
+  {
+    assert(root);
+    assert(root->location().is_region());
+    assert(root->location().to_region()->is_frame_local());
+
+    std::vector<Header*> dfs;
+    std::vector<Header*> pending;
+    std::vector<Header*> heap_roots;
+
+    dfs.push_back(root);
+
+    while (!dfs.empty())
+    {
+      Header* h_mark = dfs.back();
+      dfs.pop_back();
+
+      if (is_post_order(h_mark))
+      {
+        Header* h = remove_post_order_mark(h_mark);
+
+        if (!pending.empty() && (pending.back() == h))
+        {
+          pending.pop_back();
+          auto rep = Header::find(h);
+          rep->set_location(Location::immutable());
+          rep->set_arc(rep->get_rc());
+        }
+        continue;
+      }
+
+      Header* h = h_mark;
+      auto rep = Header::find(h);
+      auto rep_loc = rep->location();
+
+      if (rep_loc.is_pending())
+      {
+        // Back edge: subtract this intra-SCC edge from rep's rc.
+        rep->set_rc(rep->get_rc() - 1);
+
+        // Collapse everything on the pending stack into this SCC.
+        while (!pending.empty() && pending.back() != rep)
+        {
+          scc_union(pending.back(), rep);
+          pending.pop_back();
+        }
+      }
+      else if (rep_loc.is_immutable())
+      {
+        // Cross edge to a completed SCC. Already counted in target's rc.
+      }
+      else if (rep_loc.is_region())
+      {
+        auto obj_region = rep_loc.to_region();
+
+        if (!obj_region->is_frame_local())
+        {
+          // Heap-region object — collect for phase 2 freeze.
+          heap_roots.push_back(h);
+          continue;
+        }
+
+        // Remove from the frame-local region before marking pending.
+        obj_region->remove(h);
+
+        h->set_location(Location::from_raw(Location::Pending));
+
+        pending.push_back(h);
+        dfs.push_back(post_order_mark(h));
+
+        // Push all region-located children (filtering happens in this loop).
+        trace_fields(h, dfs);
+      }
+    }
+
+    // Phase 2: freeze any heap-region objects discovered during the
+    // frame-local DFS. Duplicates and already-frozen objects are handled
+    // by freeze() (immutable check returns true early).
+    for (auto h : heap_roots)
+      freeze(h);
+  }
+
   bool freeze(Header* root)
   {
     assert(root);
@@ -232,87 +314,5 @@ namespace vbci
     }
 
     return true;
-  }
-
-  void freeze_local(Header* root)
-  {
-    assert(root);
-    assert(root->location().is_region());
-    assert(root->location().to_region()->is_frame_local());
-
-    std::vector<Header*> dfs;
-    std::vector<Header*> pending;
-    std::vector<Header*> heap_roots;
-
-    dfs.push_back(root);
-
-    while (!dfs.empty())
-    {
-      Header* h_mark = dfs.back();
-      dfs.pop_back();
-
-      if (is_post_order(h_mark))
-      {
-        Header* h = remove_post_order_mark(h_mark);
-
-        if (!pending.empty() && (pending.back() == h))
-        {
-          pending.pop_back();
-          auto rep = Header::find(h);
-          rep->set_location(Location::immutable());
-          rep->set_arc(rep->get_rc());
-        }
-        continue;
-      }
-
-      Header* h = h_mark;
-      auto rep = Header::find(h);
-      auto rep_loc = rep->location();
-
-      if (rep_loc.is_pending())
-      {
-        // Back edge: subtract this intra-SCC edge from rep's rc.
-        rep->set_rc(rep->get_rc() - 1);
-
-        // Collapse everything on the pending stack into this SCC.
-        while (!pending.empty() && pending.back() != rep)
-        {
-          scc_union(pending.back(), rep);
-          pending.pop_back();
-        }
-      }
-      else if (rep_loc.is_immutable())
-      {
-        // Cross edge to a completed SCC. Already counted in target's rc.
-      }
-      else if (rep_loc.is_region())
-      {
-        auto obj_region = rep_loc.to_region();
-
-        if (!obj_region->is_frame_local())
-        {
-          // Heap-region object — collect for phase 2 freeze.
-          heap_roots.push_back(h);
-          continue;
-        }
-
-        // Remove from the frame-local region before marking pending.
-        obj_region->remove(h);
-
-        h->set_location(Location::from_raw(Location::Pending));
-
-        pending.push_back(h);
-        dfs.push_back(post_order_mark(h));
-
-        // Push all region-located children (filtering happens in this loop).
-        trace_fields(h, dfs);
-      }
-    }
-
-    // Phase 2: freeze any heap-region objects discovered during the
-    // frame-local DFS. Duplicates and already-frozen objects are handled
-    // by freeze() (immutable check returns true early).
-    for (auto h : heap_roots)
-      freeze(h);
   }
 }

@@ -623,7 +623,8 @@ namespace vbci
 
       auto p = arr->get_pointer();
       std::memcpy(p, str.c_str(), str_size);
-      arr->set_size(str_size - 1);
+      // Array size honestly includes the null terminator.
+      // The string wrapper (in Verona) sets len = data.size - 1.
       arr->immortalize();
       string_arrays[i] = arr;
     }

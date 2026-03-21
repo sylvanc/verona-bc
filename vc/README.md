@@ -2,13 +2,16 @@
 
 ## To Do
 
+Character literals.
+- Test in `string::is_space`.
+
 Optimization.
+- Allow inline of `raise` lambdas.
 - Sequent calculus optimizations.
 - Overall compile times.
 
 Semantics.
 - Region creation.
-- Null terminators in `string`? UTF-8 handling?
 - Fix path compression, storing rank in Pending Location.
 - For values in match cases, make it so that it's only a parameter if it has a type annotation, otherwise it's a value.
   - What about destructuring a pair?

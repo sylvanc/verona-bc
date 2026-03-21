@@ -34,11 +34,14 @@ user-invocable: false
 ## Build & Test
 
 - Build in `build/` directory. `ninja install` to build. Use `dist/vc/vc` and `dist/vbci/vbci` (installed binaries have `_builtin`).
+- Rebuild with `ninja install` before debugging or validating compiler/runtime behavior on the current branch.
 - Run `vc` from `build/`: `dist/vc/vc build ../testsuite/v/hello`. Do NOT cd into source dir.
+- Debug with the binaries under the active build directory's `dist/` tree. Do not use non-installed build outputs when validating behavior.
 - `ctest --output-on-failure -j$(nproc)` for full test suite.
 - `-p <passname>` stops after a pass. `--dump_passes=<dir>` dumps intermediate ASTs.
 - Golden files: `ninja update-dump-clean && ninja update-dump && cmake ..`
 - `exit_code.txt` has NO trailing newline (`printf '0'`, not `echo`).
+- Treat compile-time and runtime test failures as real regressions until they are investigated on the current baseline. Do not assume a failure predates your change without verification.
 
 ## Test Conventions
 
@@ -97,3 +100,5 @@ Missing items 5 or 6 causes "undefined register" errors in later passes, not at 
 - "Bad type" runtime errors usually mean unrefined default literals in compiler output. Check infer pass dump.
 - `node->type() == other->type()` for token comparison, NOT `node == other_node`.
 - Write targeted tests that expose the bug before fixing.
+- Runtime failures matter as much as compile-time failures. Investigate both with the current branch's `dist/` binaries.
+- Do not describe runtime behavior as flaky or dismiss it as harness noise without first reproducing and tracing it to a concrete cause.

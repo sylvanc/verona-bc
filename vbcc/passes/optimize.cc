@@ -72,6 +72,21 @@ namespace vbcc
         return {};
       };
 
+      // Helper: functions that capture a raise target are not safe to inline,
+      // because moving their body changes which frame a block lambda captures.
+      auto captures_raise_target = [](const Node& func) {
+        bool found = false;
+        func->traverse([&](Node& n) {
+          if (n->type() == GetRaise)
+          {
+            found = true;
+            return false;
+          }
+          return true;
+        });
+        return found;
+      };
+
       // Helper: resolve a receiver type + method_id to a FunctionId node.
       // Returns empty Node if unresolvable.
       auto resolve_method =
@@ -246,6 +261,15 @@ namespace vbcc
 
               // Don't inline FuncOnce (has memoization semantics).
               if (target == FuncOnce)
+                continue;
+
+              // Don't inline functions that capture a raise target into an
+              // ordinary caller. Inlining would move block-lambda creation
+              // and change the captured frame. The synthetic @main wrapper is
+              // safe because it immediately delegates to main and returns.
+              if (
+                captures_raise_target(target) &&
+                (func_node / FunctionId)->location().view() != "@main")
                 continue;
 
               // Don't inline self-recursive calls.

@@ -20,14 +20,14 @@ liveness
             (localid 6:$opt_0)
             (methodid 9:get::1::0))
           (calldyn
-            (localid 4:$879)
+            (localid 5:$1457)
             (localid 6:$opt_3)
             (args
               (arg
                 (argmove)
                 (localid 6:$opt_0)))))
         (ret
-          (localid 4:$879)))))
+          (localid 5:$1457)))))
   (func
     (functionid 23:rhs_default::main::0::0)
     (params)
@@ -38,7 +38,7 @@ liveness
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$9)
+            (localid 8:local$12)
             (classid 23:rhs_default::myclass::0)
             (args))
           (const
@@ -76,7 +76,7 @@ liveness
             (localid 6:$opt_9)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 9:local$104)
+            (localid 9:local$160)
             (localid 7:$opt_10)
             (args
               (arg
@@ -86,7 +86,7 @@ liveness
                 (argmove)
                 (localid 6:$opt_6)))))
         (ret
-          (localid 9:local$104)))))
+          (localid 9:local$160)))))
   (func
     (functionid 34:rhs_default::myclass::create::0::0)
     (params)
@@ -97,11 +97,11 @@ liveness
         (labelid 5:start)
         (body
           (new
-            (localid 7:local$5)
+            (localid 7:local$8)
             (classid 23:rhs_default::myclass::0)
             (args)))
         (ret
-          (localid 7:local$5)))))
+          (localid 7:local$8)))))
   (class
     (classid 23:rhs_default::myclass::0)
     (fields)
@@ -122,7 +122,7 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 9:local$102)
+            (localid 9:local$158)
             (i32)
             (int 2:10))
           (const
@@ -145,7 +145,7 @@ liveness
             (localid 7:$opt_13)
             (methodid 7:+::2::0))
           (calldyn
-            (localid 7:local$7)
+            (localid 8:local$10)
             (localid 7:$opt_14)
             (args
               (arg
@@ -153,9 +153,9 @@ liveness
                 (localid 7:$opt_13))
               (arg
                 (argmove)
-                (localid 9:local$102)))))
+                (localid 9:local$158)))))
         (ret
-          (localid 7:local$7)))))
+          (localid 8:local$10)))))
   (func
     (functionid 31:rhs_default::myclass::get::2::0)
     (params
@@ -172,19 +172,19 @@ liveness
         (labelid 5:start)
         (body
           (const
-            (localid 7:local$8)
+            (localid 8:local$11)
             (u64)
             (int 2:42))
           (convert
-            (localid 9:local$492)
+            (localid 9:local$747)
             (i32)
-            (localid 7:local$8))
+            (localid 8:local$11))
           (add
-            (localid 9:local$857)
-            (localid 9:local$492)
+            (localid 10:local$1297)
+            (localid 9:local$747)
             (localid 6:offset)))
         (ret
-          (localid 9:local$857)))))
+          (localid 10:local$1297)))))
   (func
     (functionid 24:_builtin::u64::i32::1::0)
     (params
@@ -198,11 +198,11 @@ liveness
         (labelid 5:start)
         (body
           (convert
-            (localid 9:local$757)
+            (localid 10:local$1117)
             (i32)
             (localid 4:self)))
         (ret
-          (localid 9:local$757)))))
+          (localid 10:local$1117)))))
   (func
     (functionid 22:_builtin::u64::+::2::0)
     (params
@@ -219,11 +219,11 @@ liveness
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$406)
+            (localid 9:local$661)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$406)))))
+          (localid 9:local$661)))))
   (func
     (functionid 24:_builtin::i32::i32::1::0)
     (params
@@ -254,11 +254,11 @@ liveness
         (labelid 5:start)
         (body
           (add
-            (localid 9:local$208)
+            (localid 9:local$264)
             (localid 4:self)
             (localid 5:other)))
         (ret
-          (localid 9:local$208)))))
+          (localid 9:local$264)))))
   (primitive
     (i32)
     (methods
