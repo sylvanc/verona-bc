@@ -2,9 +2,6 @@
 
 ## To Do
 
-Character literals.
-- Test in `string::is_space`.
-
 Optimization.
 - Allow inline of `raise` lambdas.
 - Sequent calculus optimizations.

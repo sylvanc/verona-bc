@@ -240,7 +240,7 @@ string
 
   is_space(c: u8): bool
   {
-    (c == 32) | (c == 9) | (c == 10) | (c == 13)
+    (c == ' ') | (c == '\t') | (c == '\n') | (c == '\r')
   }
 
   trim_left(self: string): string
