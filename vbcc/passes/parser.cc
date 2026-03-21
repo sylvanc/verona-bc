@@ -191,10 +191,10 @@ namespace vbcc
         "[-]?[[:digit:]][_[:digit:]]*\\b" >> [](auto& m) { m.add(Int); },
 
         // Escaped string.
-        "\"((?:\\\"|[^\"])*?)\"" >> [](auto& m) { m.add(String, 1); },
+        R"re("((?:\\"|[^"])*?)")re" >> [](auto& m) { m.add(String, 1); },
 
         // Character literal.
-        "'((?:\\'|[^'])*)'" >> [](auto& m) { m.add(Char, 1); },
+        R"('((?:\\'|[^'])*)')" >> [](auto& m) { m.add(Char, 1); },
 
         // Line comment.
         "//[^\r\n]*" >> [](auto&) {},
