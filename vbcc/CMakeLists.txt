@@ -21,7 +21,7 @@ target_link_libraries(libvbcc PUBLIC
   snmalloc-new-override
   trieste::trieste
   vbc::include
-  libzstd_static
+  deps::zstd
 )
 
 add_library(vbc::vbcc ALIAS libvbcc)

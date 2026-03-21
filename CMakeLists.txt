@@ -12,9 +12,32 @@ set(SNMALLOC_BUILD_TESTING OFF CACHE INTERNAL "Turn off snmalloc tests")
 set(SNMALLOC_STATIC_LIBRARY_PREFIX OFF CACHE INTERNAL "")
 set(VERONA_RT_ONLY_HEADER_LIBRARY OFF CACHE INTERNAL "Verona RT header library")
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBFFI REQUIRED IMPORTED_TARGET libffi)
 find_package(OpenSSL REQUIRED)
+add_library(deps::libffi INTERFACE IMPORTED)
+add_library(deps::libgit2 INTERFACE IMPORTED)
+add_library(deps::zstd INTERFACE IMPORTED)
+
+find_package(PkgConfig QUIET)
+
+if(PkgConfig_FOUND)
+  pkg_check_modules(LIBFFI REQUIRED IMPORTED_TARGET libffi)
+  target_link_libraries(deps::libffi INTERFACE PkgConfig::LIBFFI)
+
+  pkg_check_modules(LIBGIT2 REQUIRED IMPORTED_TARGET libgit2)
+  target_link_libraries(deps::libgit2 INTERFACE PkgConfig::LIBGIT2)
+
+  pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
+  target_link_libraries(deps::zstd INTERFACE PkgConfig::ZSTD)
+else()
+  find_package(libffi REQUIRED CONFIG)
+  target_link_libraries(deps::libffi INTERFACE libffi::libffi)
+
+  find_package(libgit2 REQUIRED CONFIG)
+  target_link_libraries(deps::libgit2 INTERFACE libgit2::libgit2)
+
+  find_package(zstd REQUIRED CONFIG)
+  target_link_libraries(deps::zstd INTERFACE zstd::libzstd)
+endif()
 
 # Used to provide
 #  FetchContent_MakeAvailable_ExcludeFromAll
@@ -40,30 +63,10 @@ set(TRIESTE_BUILD_PARSERS Off)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 6c751a5e10ffc85f3650aecc23d23a454be05437
+  GIT_TAG 2818ab9ccc4e10b95782162a3da26f122851de33
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
-
-# This isn't detecting correctly on WSL2.
-set(GIT_USE_STAT_MTIM 1)
-set(BUILD_TESTS OFF CACHE INTERNAL "Disable libgit2 tests")
-
-FetchContent_Declare(
-  libgit2
-  GIT_REPOSITORY https://github.com/libgit2/libgit2
-  GIT_TAG        0060d9cf5666f015b1067129bd874c6cc4c9c7ac
-)
-
-FetchContent_MakeAvailable_ExcludeFromAll(libgit2)
-
-FetchContent_Declare(
-  zstd
-  GIT_REPOSITORY https://github.com/facebook/zstd
-  GIT_TAG        ae9f20ca2716f2605822ca375995b7d876389b64
-)
-
-FetchContent_MakeAvailable_ExcludeFromAll(zstd)
 
 # Use snmalloc clangformat function (verona-rt has a stale copy).
 # Override the version to find whatever is installed, and set the include
