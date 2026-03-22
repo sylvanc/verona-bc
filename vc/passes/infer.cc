@@ -3526,6 +3526,7 @@ namespace vc
         auto src_loc = (stmt / Rhs)->location();
         auto args = stmt / Args;
         bool refined = false;
+        bool resolved_callable = false;
 
         // Forward: result from Lookup.
         auto src_it = env.find(src_loc);
@@ -3558,6 +3559,7 @@ namespace vc
               top, recv_it->second.type, method_ident, hand, arity, method_ta);
             if (info.func)
             {
+              resolved_callable = true;
               auto params = info.func / Params;
 
               // Shape-to-lambda propagation.
@@ -3606,7 +3608,7 @@ namespace vc
           }
         }
 
-        if (!refined)
+        if (!refined && !resolved_callable)
         {
           Node target_prim;
 
@@ -3647,12 +3649,13 @@ namespace vc
 
           if (target_prim)
           {
+            auto target_type = primitive_or_ffi_type(target_prim->type());
             auto lookup_it = lookup_stmts.find(src_loc);
             if (lookup_it != lookup_stmts.end())
             {
               auto recv_loc = (lookup_it->second / Rhs)->location();
-              bool local_refined = refine_local_const(recv_loc, target_prim);
-              bool bwd_refined = merge_bwd(recv_loc, target_prim);
+              bool local_refined = refine_local_const(recv_loc, target_type);
+              bool bwd_refined = merge_bwd(recv_loc, target_type);
               if (bwd_refined)
                 propagate_call_node(
                   env, recv_loc, top, lookup_stmts, &all_def_stmts);
@@ -3662,8 +3665,8 @@ namespace vc
             for (auto& arg_node : *args)
             {
               auto arg_loc = (arg_node / Rhs)->location();
-              bool local_refined = refine_local_const(arg_loc, target_prim);
-              bool bwd_refined = merge_bwd(arg_loc, target_prim);
+              bool local_refined = refine_local_const(arg_loc, target_type);
+              bool bwd_refined = merge_bwd(arg_loc, target_type);
               if (bwd_refined)
                 propagate_call_node(
                   env, arg_loc, top, lookup_stmts, &all_def_stmts);
