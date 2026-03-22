@@ -45,6 +45,53 @@ namespace vbci
     }
   };
 
+  static bool ffi_ptr_compatible(const Register& arg)
+  {
+    switch (arg->type())
+    {
+      case ValueType::None:
+      case ValueType::Ptr:
+      case ValueType::Object:
+      case ValueType::Array:
+      case ValueType::Callback:
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  static void marshal_ffi_ptr_arg(
+    const Register& arg, const void*& ffi_arg_addr, const void*& ffi_arg_val)
+  {
+    switch (arg->type())
+    {
+      case ValueType::None:
+        ffi_arg_val = nullptr;
+        ffi_arg_addr = &ffi_arg_val;
+        return;
+
+      case ValueType::Object:
+        ffi_arg_val = arg->get_object()->get_pointer();
+        ffi_arg_addr = &ffi_arg_val;
+        return;
+
+      case ValueType::Array:
+        ffi_arg_val = arg->get_array()->get_pointer();
+        ffi_arg_addr = &ffi_arg_val;
+        return;
+
+      case ValueType::Callback:
+        ffi_arg_val = callback_ptr(arg->get_callback());
+        ffi_arg_addr = &ffi_arg_val;
+        return;
+
+      default:
+        ffi_arg_addr = arg->to_ffi();
+        return;
+    }
+  }
+
   struct ConstantBase
   {};
   template<typename T_>
@@ -1248,7 +1295,33 @@ namespace vbci
           auto& symbol = program.symbol(symbol_id);
           auto& params = symbol.params();
           auto& paramvals = symbol.paramvals();
-          self.check_args(params, symbol.varargs());
+
+          if ((num_args < params.size()) || (!symbol.varargs() && (num_args > params.size())))
+          {
+            self.drop_args();
+            Value::error(Error::BadArgs);
+          }
+
+          for (size_t i = 0; i < params.size(); i++)
+          {
+            auto& arg = frame.arg(i);
+
+            if (params.at(i) == +ValueType::Ptr)
+            {
+              if (!ffi_ptr_compatible(arg))
+              {
+                self.drop_args();
+                Value::error(Error::BadType);
+              }
+            }
+            else if (!program.subtype(arg->type_id(), params.at(i)))
+            {
+              self.drop_args();
+              Value::error(Error::BadType);
+            }
+          }
+
+          self.args = 0;
 
           // A Value must be passed as a pointer, not as a struct, since it
           // is a C++ non-trivally constructed type.
@@ -1283,6 +1356,11 @@ namespace vbci
               // Dynamic type: pass a pointer to the Value.
               ffi_arg_vals.at(i) = &arg;
               ffi_arg_addrs.at(i) = &ffi_arg_vals.at(i);
+            }
+            else if (vt == ValueType::Ptr)
+            {
+              marshal_ffi_ptr_arg(
+                arg, ffi_arg_addrs.at(i), ffi_arg_vals.at(i));
             }
             else if (vt == ValueType::Object)
             {

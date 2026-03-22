@@ -492,20 +492,42 @@ namespace vc
     // return the substituted value. Otherwise, return the original TypeArg.
     Node resolve_typearg(const Node& arg, const NodeMap<Node>& subst)
     {
+      bool wrapped = (arg == Type);
       auto inner = arg;
 
       // Unwrap Type node.
-      if (inner == Type)
+      if (wrapped)
         inner = inner->front();
 
       if (inner == Union)
       {
         Node r = Union;
+        bool has_non_dyn = false;
 
         for (auto& child : *inner)
-          r << resolve_typearg(child, subst);
+        {
+          auto resolved = resolve_typearg(child, subst);
+          auto resolved_inner = (resolved == Type) ? resolved->front() : resolved;
+          if (resolved_inner != Dyn)
+            has_non_dyn = true;
+          r << clone(resolved_inner);
+        }
 
-        return r;
+        if (has_non_dyn)
+        {
+          Node filtered = Union;
+          for (auto& child : *r)
+          {
+            if (child != Dyn)
+              filtered << clone(child);
+          }
+          r = filtered;
+        }
+
+        if (r->size() == 1)
+          return wrapped ? (Type << clone(r->front())) : clone(r->front());
+
+        return wrapped ? (Type << r) : r;
       }
 
       if (inner != TypeName)
@@ -530,12 +552,18 @@ namespace vc
         auto find = subst.find(def);
 
         if (find != subst.end())
-          return find->second;
+        {
+          if (wrapped)
+            return clone(find->second);
+
+          return (find->second == Type) ? clone(find->second->front()) :
+                                          clone(find->second);
+        }
 
         // TypeParam not in subst — return Dyn to prevent self-referential
         // substitution cycles (where a TypeParam maps to a reference to
         // itself, causing infinite recursion in reify_type).
-        return Type << Dyn;
+        return wrapped ? (Type << Dyn) : Dyn;
       }
 
       // Not a bare TypeParam. Recursively resolve TypeParams in any nested
@@ -572,7 +600,7 @@ namespace vc
         return arg;
 
       // Re-wrap in Type if the original was wrapped.
-      if (arg == Type)
+      if (wrapped)
         return Type << resolved_name;
 
       return resolved_name;
@@ -674,6 +702,9 @@ namespace vc
                 }
               }
 
+              if (!existing.resolved_name && resolved_name)
+                existing.resolved_name = resolved_name;
+
               return clone(existing.id);
             }
           }
@@ -740,7 +771,11 @@ namespace vc
         }
 
         if (match)
+        {
+          if (!existing.resolved_name && resolved_name)
+            existing.resolved_name = resolved_name;
           return clone(existing.id);
+        }
       }
 
       auto id = make_id(def, r_vec.size(), subst);
@@ -2630,7 +2665,7 @@ namespace vc
               if (find != resolve_subst.end())
                 return reify_type(find->second, resolve_subst);
 
-              return err(elem, "TypeParam has no substitution");
+              return Dyn;
             }
           }
 

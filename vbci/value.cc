@@ -166,6 +166,10 @@ namespace vbci
         value.ptr = *reinterpret_cast<void**>(v);
         break;
 
+      case ValueType::Callback:
+        value.callback = *reinterpret_cast<CallbackClosure**>(v);
+        break;
+
       case ValueType::Object:
         // Object pointers are stored as one past the object, pointing to the
         // fields, for FFI compatibility.
@@ -269,6 +273,10 @@ namespace vbci
 
       case ValueType::Ptr:
         *reinterpret_cast<void**>(v) = ptr;
+        break;
+
+      case ValueType::Callback:
+        *reinterpret_cast<CallbackClosure**>(v) = callback;
         break;
 
       case ValueType::Object:

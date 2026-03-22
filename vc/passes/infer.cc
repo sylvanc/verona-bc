@@ -1776,6 +1776,27 @@ namespace vc
                 continue;
               if ((af / Params)->size() != arity)
                 continue;
+              auto formal_params = sf / Params;
+              auto actual_params = af / Params;
+              for (size_t j = 0; j < formal_params->size(); j++)
+              {
+                auto formal_param =
+                  apply_subst(top, formal_params->at(j) / Type, shape_to_formal);
+                auto actual_param =
+                  apply_subst(top, actual_params->at(j) / Type, actual_subst);
+                if (
+                  !formal_param || !actual_param ||
+                  actual_param->front() == TypeVar)
+                {
+                  continue;
+                }
+                extract_constraints(
+                  top,
+                  formal_param->front(),
+                  actual_param->front(),
+                  constraints,
+                  is_default);
+              }
               auto formal_ret = apply_subst(top, sf / Type, shape_to_formal);
               auto actual_ret = apply_subst(top, af / Type, actual_subst);
               extract_constraints(
@@ -3822,27 +3843,44 @@ namespace vc
         if (!refined && !resolved_callable)
         {
           Node target_prim;
+          auto lookup_it = lookup_stmts.find(src_loc);
+          bool allow_arg_fallback = false;
 
-          for (auto& arg_node : *args)
+          if (lookup_it != lookup_stmts.end())
           {
-            auto arg_it = env.find((arg_node / Rhs)->location());
+            auto recv_it = env.find((lookup_it->second / Rhs)->location());
             if (
-              arg_it == env.end() || contains_default_type(arg_it->second.type))
-              continue;
-
-            auto prim = extract_callable_primitive(arg_it->second.type);
-            if (!prim)
-              prim = extract_wrapper_primitive(arg_it->second.type);
-            if (prim)
+              recv_it != env.end() && is_default_type(recv_it->second.type))
             {
-              target_prim = prim;
-              break;
+              allow_arg_fallback = true;
+            }
+          }
+
+          if (allow_arg_fallback)
+          {
+            for (auto& arg_node : *args)
+            {
+              auto arg_it = env.find((arg_node / Rhs)->location());
+              if (
+                arg_it == env.end() ||
+                contains_default_type(arg_it->second.type))
+              {
+                continue;
+              }
+
+              auto prim = extract_callable_primitive(arg_it->second.type);
+              if (!prim)
+                prim = extract_wrapper_primitive(arg_it->second.type);
+              if (prim)
+              {
+                target_prim = prim;
+                break;
+              }
             }
           }
 
           if (!target_prim)
           {
-            auto lookup_it = lookup_stmts.find(src_loc);
             if (lookup_it != lookup_stmts.end())
             {
               auto recv_it = env.find((lookup_it->second / Rhs)->location());

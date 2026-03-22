@@ -115,7 +115,14 @@ use "mylib"
 
 Primitive types (`i32`, `f64`, `bool`, `ptr`, `usize`, etc.) are passed directly — they correspond to their C equivalents. The `ptr` type is an opaque raw pointer (see [Built-in Types §22.11](22-builtin-types.md)).
 
-Strings and arrays are **not** directly passable as C data structures. Strings are Verona objects containing a `data: array[u8]` field; arrays are Verona objects with a header. To pass string data to C, use the `ptr` and `len` builtins from within `_builtin` to extract a raw pointer and length.
+For FFI parameters declared as `ptr`, Verona also passes pointer-like runtime values by their underlying C representation:
+
+- `none` becomes `NULL`
+- arrays are passed as a pointer to their element storage
+- objects are passed as a pointer to their fields (like a C `struct`)
+- `callback` values are passed as their C function pointer
+
+Strings are Verona objects containing a `data: array[u8]` field, so to pass string bytes to C, pass `my_string.data` (and usually `my_string.size`) rather than the string object itself.
 
 ### Memory Ownership
 
@@ -229,7 +236,7 @@ use "eventlib"
 main(): i32
 {
   let handler = callback((): none -> { /* handle event */ });
-  :::register_handler(handler.apply);
+  :::register_handler(handler);
   // ... later:
   handler.free;
   0
