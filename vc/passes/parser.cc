@@ -39,7 +39,7 @@ namespace vc
       size_t str_end;
       Location loc;
 
-      ParseState() : re_dir("[_[:alpha:]][_[:alnum:]]*?")
+      ParseState() : re_dir("[_[:alpha:]][-_[:alnum:]]*?")
       {
         reset();
       }

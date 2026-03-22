@@ -216,4 +216,4 @@ double_val[T](v: T): i32 where T < valued
 
 ## 8.8 Classes as Modules
 
-Each directory is an implicit class scope (a module). Files within a directory contribute their declarations to the module — the file's name is not semantically significant. Because classes and modules are the same construct, top-level declarations in a project directory are accessed as `module::name`. See [Modules and Imports](16-modules.md).
+Each directory is an implicit class scope (a module). Files within a directory contribute their declarations to the module — the file's name is not semantically significant. If a directory name contains `-`, the Verona module name normalizes it to `_`. Because classes and modules are the same construct, top-level declarations in a project directory are accessed as `module::name`. See [Modules and Imports](16-modules.md).

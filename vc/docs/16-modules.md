@@ -8,7 +8,7 @@ This chapter covers the module system, imports, and name resolution.
 
 ## 16.1 Module Structure
 
-A project directory is a module. Each `.v` file inside it defines declarations that become part of that module — the file name does not create a separate module scope. Subdirectories create nested module scopes:
+A project directory is a module. Each `.v` file inside it defines declarations that become part of that module — the file name does not create a separate module scope. If a directory name contains `-`, the Verona module name normalizes it to `_`. Subdirectories create nested module scopes:
 
 ```
 my_project/

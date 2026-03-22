@@ -105,8 +105,13 @@ namespace vc
         // Treat a directory as a class.
         T(Directory)[Directory] >>
           [](Match& _) {
+            auto ident = std::string(_(Directory)->location().view());
+            for (auto& c : ident)
+              if (c == '-')
+                c = '_';
+
             return (ClassDef ^ _(Directory))
-              << None << (Ident ^ _(Directory)) << TypeParams << Where
+              << None << (Ident ^ ident) << TypeParams << Where
               << (ClassBody << (Group << Use << (Ident ^ "_builtin"))
                             << *_[Directory]);
           },
