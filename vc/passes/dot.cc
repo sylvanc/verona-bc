@@ -221,22 +221,17 @@ namespace vc
           },
 
         // TripleColon with RHS tuple.
-        In(Expr) * T(TripleColon)[TripleColon] * T(Tuple)[Args] >>
-          [](Match& _) -> Node {
-          return resolve_triplecolon(_(TripleColon), Args << *_(Args));
-        },
+        In(Expr) * T(TripleColon)[TripleColon] * T(Tuple, ExprSeq)[Args] >>
+          [](Match& _) {
+            return resolve_triplecolon(_(TripleColon), Args << *_(Args));
+          },
 
-        // TripleColon with RHS value.
-        In(Expr) * T(TripleColon)[TripleColon] * ValuePat[Rhs] >>
-          [](Match& _) -> Node {
-          return resolve_triplecolon(_(TripleColon), Args << (Expr << _(Rhs)));
-        },
-
-        // TripleColon without arguments.
-        In(Expr) * T(TripleColon)[TripleColon] * End >> [](Match& _) -> Node {
-          Node args = Args;
-          return resolve_triplecolon(_(TripleColon), args);
-        },
+        In(Expr) * T(TripleColon)[TripleColon] >>
+          [](Match& _) {
+            return err(
+              _(TripleColon),
+              "Builtins and FFIs must have parenthesized arguments");
+          },
 
         // Application with RHS tuple.
         In(Expr) * ValuePat[Lhs] * T(Tuple)[Tuple] >>

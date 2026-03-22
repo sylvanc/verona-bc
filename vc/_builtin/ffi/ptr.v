@@ -2,6 +2,6 @@ ptr
 {
   create(): ptr
   {
-    :::ptr none
+    :::ptr(none)
   }
 }

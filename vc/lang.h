@@ -414,6 +414,7 @@ namespace vc
     | (RemoveExternal <<= wfDst)
     | (Bits <<= wfDst * wfSrc)
     | (Len <<= wfDst * wfSrc)
+    | (MakePtr <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)
     | (FFI <<= wfDst * SymbolId * Args)
     | (ArrayCopy <<= wfDst * Args)
