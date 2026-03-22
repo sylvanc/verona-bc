@@ -89,16 +89,6 @@ namespace vbci
     return &ffi_type_value;
   }
 
-  bool Program::is_scheduler_running() const
-  {
-    return scheduler_running;
-  }
-
-  std::vector<CallbackClosure*>& Program::notify_callbacks()
-  {
-    return external_notify_callbacks;
-  }
-
   Register& Program::memo_slot(size_t index)
   {
     return memo_slots.at(index);
@@ -180,9 +170,7 @@ namespace vbci
 
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
-    scheduler_running = true;
     sched.run();
-    scheduler_running = false;
 
     auto ret_val = ret.get_cown()->load();
     ret.field_dec();
@@ -211,11 +199,6 @@ namespace vbci
     for (auto& slot : memo_slots)
       slot = ValueTransfer(Value());
     memo_slots.clear();
-
-    for (auto* cc : external_notify_callbacks)
-      free_callback(cc);
-
-    external_notify_callbacks.clear();
 
     cleanup_strings();
 

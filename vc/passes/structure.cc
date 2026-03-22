@@ -199,7 +199,7 @@ namespace vc
         // Dependency alias.
         T(Group)
             << (T(Use) * T(Ident)[Ident] * T(Equals) * T(String)[Lhs] *
-                ~T(String)[Rhs] * ~T(String)[Directory]) >>
+                ~T(String)[Rhs] * ~T(String)[Directory] * End) >>
           [](Match& _) {
             return Use << _(Ident) << _(Lhs) << _(Rhs) << _(Directory);
           },
@@ -207,7 +207,7 @@ namespace vc
         // Dependency import.
         T(Group)
             << (T(Use) * T(String)[Lhs] * ~T(String)[Rhs] *
-                ~T(String)[Directory]) >>
+                ~T(String)[Directory] * End) >>
           [](Match& _) { return Use << _(Lhs) << _(Rhs) << _(Directory); },
 
         // Type alias.

@@ -153,7 +153,6 @@ namespace vbcc
   inline const auto FreeCallback = TokenDef("freecallback");
   inline const auto AddExternal = TokenDef("addexternal");
   inline const auto RemoveExternal = TokenDef("removeexternal");
-  inline const auto RegisterExternalNotify = TokenDef("registerexternalnotify");
 
   // Bulk array operations.
   inline const auto ArrayCopy = TokenDef("arraycopy");
@@ -251,8 +250,8 @@ namespace vbcc
     RegionArrayConst | Copy | Move | Drop | Freeze | RegisterRef | FieldRef |
     ArrayRef | ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
-    wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback |
-    RegisterExternalNotify | MemoSlot | ArrayCopy | ArrayFill | ArrayCompare;
+    wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback | MemoSlot |
+    ArrayCopy | ArrayFill | ArrayCompare;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -301,7 +300,7 @@ namespace vbcc
     | (Body <<= wfStatement++)
     | (Source <<= String)
     | (Offset <<= Int)
-    | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
+    | (Const <<= wfDst * (Type >>= (wfPrimitiveType | Ptr | Callback)) * (Rhs >>= wfLiteral))
     | (ConstStr <<= wfDst * (String >>= String | RawString))
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
     | (New <<= wfDst * ClassId * Args)
@@ -403,7 +402,6 @@ namespace vbcc
     | (MakeCallback <<= wfDst * wfSrc)
     | (CallbackPtr <<= wfDst * wfSrc)
     | (FreeCallback <<= wfDst * wfSrc)
-    | (RegisterExternalNotify <<= wfDst * wfSrc)
     | (ArrayCopy <<= wfDst * Args)
     | (ArrayFill <<= wfDst * Args)
     | (ArrayCompare <<= wfDst * Args)

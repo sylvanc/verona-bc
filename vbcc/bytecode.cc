@@ -1306,10 +1306,6 @@ namespace vbcc
           {
             code << uleb(+Op::RemoveExternal) << dst(stmt);
           }
-          else if (stmt == RegisterExternalNotify)
-          {
-            code << uleb(+Op::RegisterExternalNotify) << dst(stmt) << src(stmt);
-          }
           else if (stmt == Typetest)
           {
             code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)

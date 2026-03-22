@@ -850,7 +850,6 @@ namespace vc
               T(MakeCallback,
                 CallbackPtr,
                 FreeCallback,
-                RegisterExternalNotify,
                 Freeze)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
           [](Match& _) {

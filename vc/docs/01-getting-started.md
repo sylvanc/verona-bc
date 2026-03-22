@@ -202,7 +202,7 @@ _builtin/
   f64.v           f64 — 64-bit float
   ffi/            FFI wrappers — callback, external notify, ptr
     callback.v    callback — C-compatible function pointer wrapper
-    notify.v      external class (singleton via once), register_external_notify
+    external.v    external class (singleton via once).
     ptr.v         ptr — opaque raw pointer type
   i8.v            i8 — 8-bit signed integer
   i16.v           i16 — 16-bit signed integer

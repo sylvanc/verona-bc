@@ -299,7 +299,6 @@ Key points:
 - `callback(lambda)` creates a C-compatible closure (constructor sugar for `callback::create`).
 - `.apply` returns the `ptr` to pass to C.
 - `.free` must be called when the callback is no longer needed to release `libffi` resources.
-- Callbacks registered via `ffi::register_external_notify` are automatically freed at program exit.
 
 See [FFI §17.7](17-ffi.md) for full callback documentation.
 

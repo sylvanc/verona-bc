@@ -64,3 +64,12 @@ VBCI_FFI bool write_all(int fd, const uint8_t* data, size_t size)
 
   return true;
 }
+
+VBCI_FFI size_t platform_thread_size()
+{
+#ifdef PLATFORM_IS_WINDOWS
+  return sizeof(HANDLE);
+#else
+  return sizeof(pthread_t);
+#endif
+}

@@ -52,6 +52,7 @@ Software engineering:
 - Public, private.
 - Proposal: `_` means private, public shapes can't have private methods.
 - Can't `use` a private name, nor a public name inside a private name.
+- Is `final` private?
 
 Security:
 - Integrate package management with signed and transparent statements and policies?

@@ -722,8 +722,6 @@ namespace vbci
         return os << "AddExternal";
       case Op::RemoveExternal:
         return os << "RemoveExternal";
-      case Op::RegisterExternalNotify:
-        return os << "RegisterExternalNotify";
       case Op::MemoLoad:
         return os << "MemoLoad";
       case Op::ArrayCopy:
@@ -1605,13 +1603,6 @@ namespace vbci
       {
         process([](Register& dst) INLINE {
           verona::rt::Scheduler::add_external_event_source();
-
-          for (auto* cc : Program::get().notify_callbacks())
-          {
-            auto fn = (void (*)(void))callback_ptr(cc);
-            fn();
-          }
-
           dst = ValueImmortal(Value::none());
         });
         break;
@@ -1621,30 +1612,6 @@ namespace vbci
       {
         process([](Register& dst) INLINE {
           verona::rt::Scheduler::remove_external_event_source();
-
-          for (auto* cc : Program::get().notify_callbacks())
-          {
-            auto fn = (void (*)(void))callback_ptr(cc);
-            fn();
-          }
-
-          dst = ValueImmortal(Value::none());
-        });
-        break;
-      }
-
-      case Op::RegisterExternalNotify:
-      {
-        process([](Register& dst, const Register& src) INLINE {
-          if (Program::get().is_scheduler_running())
-            Value::error(Error::SchedulerAlreadyRunning);
-
-          auto* cc = src->get_callback();
-
-          if (!cc)
-            Value::error(Error::BadOperand);
-
-          Program::get().notify_callbacks().push_back(cc);
           dst = ValueImmortal(Value::none());
         });
         break;

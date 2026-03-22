@@ -93,7 +93,6 @@ namespace vc
     {FreeCallback, None},
     {AddExternal, None},
     {RemoveExternal, None},
-    {RegisterExternalNotify, None},
     {ArrayCopy, None},
     {ArrayFill, None},
     {ArrayCompare, I64},
@@ -120,6 +119,14 @@ namespace vc
       << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
                    << (NameElement << (Ident ^ "ffi") << TypeArgs)
                    << (NameElement << (Ident ^ tok.str()) << TypeArgs));
+  }
+
+  Node primitive_or_ffi_type(const Token& tok)
+  {
+    if (tok == Ptr || tok == Callback)
+      return ffi_primitive_type(tok);
+
+    return primitive_type(tok);
   }
 
   Node string_type()
@@ -885,7 +892,7 @@ namespace vc
     if (!compatible)
       return false;
 
-    env_it->second.type = primitive_type(expected_prim->type());
+    env_it->second.type = primitive_or_ffi_type(expected_prim->type());
     auto const_stmt = const_it->second;
     if (const_stmt->size() == 3)
     {
@@ -2028,7 +2035,7 @@ namespace vc
 
       auto arg_loc = (args->at(i) / Rhs)->location();
       refine_const_local(
-        env, const_defs, arg_loc, primitive_type(expected_prim->type()));
+        env, const_defs, arg_loc, primitive_or_ffi_type(expected_prim->type()));
     }
 
     // Backward: merge expected param types into arg env entries.
@@ -2087,7 +2094,7 @@ namespace vc
       if (current_prim && current_prim->type() == expected_prim->type())
         return false;
 
-      it->second.type = primitive_type(expected_prim->type());
+      it->second.type = primitive_or_ffi_type(expected_prim->type());
       return true;
     };
 
@@ -2480,7 +2487,7 @@ namespace vc
 
     auto inner = type->front();
     if (inner->in({DefaultInt, DefaultFloat}))
-      return primitive_type(expected_prim->type());
+      return primitive_or_ffi_type(expected_prim->type());
 
     if (auto prim = extract_primitive(type))
     {
@@ -2488,7 +2495,7 @@ namespace vc
         (prim->in(integer_types) && expected_prim->in(integer_types)) ||
         (prim->in(float_types) && expected_prim->in(float_types));
       if (compatible && prim->type() != expected_prim->type())
-        return primitive_type(expected_prim->type());
+        return primitive_or_ffi_type(expected_prim->type());
       return {};
     }
 
@@ -2619,7 +2626,7 @@ namespace vc
             default_literal_type(stmt->back());
           auto type = type_tok->in({DefaultInt, DefaultFloat}) ?
             (Type << type_tok->type()) :
-            primitive_type(type_tok->type());
+            primitive_or_ffi_type(type_tok->type());
           env[loc] = {type, false, {}};
         }
       }
@@ -2630,7 +2637,7 @@ namespace vc
 
       auto ret_loc = (term / LocalId)->location();
       bool refined = refine_const_local(
-        env, const_defs, ret_loc, primitive_type(expected_prim->type()));
+        env, const_defs, ret_loc, primitive_or_ffi_type(expected_prim->type()));
       if (refined)
         changed = true;
     }
@@ -2869,7 +2876,7 @@ namespace vc
 
         auto type = type_tok->in({DefaultInt, DefaultFloat}) ?
           (Type << type_tok->type()) :
-          primitive_type(type_tok->type());
+          primitive_or_ffi_type(type_tok->type());
 
         if (is_default_type(type))
         {
@@ -3333,7 +3340,7 @@ namespace vc
               rhs_prim->in(float_types)));
           if (compatible)
           {
-            auto refined = primitive_type(rhs_prim->type());
+            auto refined = primitive_or_ffi_type(rhs_prim->type());
             snmalloc::UNUSED(refine_local_const(lhs_loc, refined));
             if (merge_bwd(lhs_loc, clone(refined)))
               propagate_call_node(
@@ -3848,7 +3855,7 @@ namespace vc
         }
         if (dom_prim)
         {
-          auto dom_type = primitive_type(dom_prim->type());
+          auto dom_type = primitive_or_ffi_type(dom_prim->type());
           for (size_t i = 0; i < tt.size; i++)
           {
             if (!tt.element_value_locs[i].view().empty())
@@ -4340,7 +4347,7 @@ namespace vc
           auto ret_prim = extract_backward_primitive(func_ret);
           if (ret_prim)
             snmalloc::UNUSED(refine_const_local(
-              env, const_defs, ret_loc, primitive_type(ret_prim->type())));
+              env, const_defs, ret_loc, primitive_or_ffi_type(ret_prim->type())));
           bool changed = merge_env(env, ret_loc, clone(func_ret), top);
           auto ret_it = env.find(ret_loc);
           if (ret_it != env.end())

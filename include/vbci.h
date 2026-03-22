@@ -385,12 +385,6 @@ namespace vbci
     // Arg0 = dst (none).
     RemoveExternal,
 
-    // Registers a callback to be called on every add/remove external event.
-    // Must be called before the scheduler starts (e.g., from init).
-    // Arg0 = dst (none).
-    // Arg1 = src (callback handle).
-    RegisterExternalNotify,
-
     // Load a memoized value from a once-function slot.
     // Arg0 = dst.
     // Arg1 = memo slot index.
