@@ -1,8 +1,10 @@
 #include "../lang.h"
 #include "../subtype.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <format>
 #include <iostream>
 #include <unordered_set>
 
@@ -360,6 +362,19 @@ namespace vc
     return found;
   }
 
+  static bool contains_self_type(const Node& type_node)
+  {
+    if (!type_node)
+      return false;
+    bool found = false;
+    type_node->traverse([&](auto node) {
+      if (node == TypeSelf)
+        found = true;
+      return !found;
+    });
+    return found;
+  }
+
   Node direct_typeparam(Node top, const Node& type_node)
   {
     if (type_node != Type)
@@ -435,6 +450,15 @@ namespace vc
     size_t entry_succ_bwd_merge_count = 0;
     size_t entry_env_unchanged = 0;
     size_t entry_env_changed = 0;
+    size_t cascade_env_bindings = 0;
+    size_t cascade_body_statements = 0;
+    size_t cascade_src_entries = 0;
+    size_t cascade_const_defs = 0;
+    size_t cascade_seed_locs = 0;
+    size_t cascade_seed_type_nodes = 0;
+    size_t cascade_max_type_nodes = 0;
+    size_t cascade_work_pops = 0;
+    size_t cascade_stmt_visits = 0;
     InferClock::duration process_function_time{};
     InferClock::duration entry_build_time{};
     InferClock::duration entry_pred_time{};
@@ -460,6 +484,10 @@ namespace vc
     InferClock::duration stmt_ffi_when_ops_time{};
     InferClock::duration stmt_typetest_ops_time{};
     InferClock::duration tuple_finalize_time{};
+    InferClock::duration cascade_index_time{};
+    InferClock::duration cascade_const_scan_time{};
+    InferClock::duration cascade_seed_time{};
+    InferClock::duration cascade_loop_time{};
   };
 
   static InferProfileStats* active_infer_profile = nullptr;
@@ -496,10 +524,37 @@ namespace vc
 
   static std::string infer_function_name(const Node& func)
   {
-    Node ident = func / Ident;
-    if (ident)
-      return std::string(ident->location().view());
-    return "<function>";
+    std::string result;
+
+    for (auto& scope : scope_path(func))
+    {
+      Node ident = scope / Ident;
+      if (!ident)
+        continue;
+
+      if (!result.empty())
+        result += "::";
+      result += std::string(ident->location().view());
+    }
+
+    if (result.empty())
+      result = "<function>";
+
+    auto loc = func->location();
+    if (loc.source && !loc.source->origin().empty())
+      result += std::format("@{}", loc.source->origin());
+    return result;
+  }
+
+  static size_t infer_tree_size(const Node& node)
+  {
+    if (!node)
+      return 0;
+
+    size_t count = 1;
+    for (auto& child : *node)
+      count += infer_tree_size(child);
+    return count;
   }
 
   static void dump_infer_profile(const InferProfileStats& stats)
@@ -557,6 +612,15 @@ namespace vc
       << "\tentry_succ_bwd_merges=" << stats.entry_succ_bwd_merge_count
       << "\tentry_same=" << stats.entry_env_unchanged
       << "\tentry_diff=" << stats.entry_env_changed
+      << "\tcascade_env=" << stats.cascade_env_bindings
+      << "\tcascade_body=" << stats.cascade_body_statements
+      << "\tcascade_src=" << stats.cascade_src_entries
+      << "\tcascade_consts=" << stats.cascade_const_defs
+      << "\tcascade_seed=" << stats.cascade_seed_locs
+      << "\tcascade_seed_nodes=" << stats.cascade_seed_type_nodes
+      << "\tcascade_max_nodes=" << stats.cascade_max_type_nodes
+      << "\tcascade_pops=" << stats.cascade_work_pops
+      << "\tcascade_visits=" << stats.cascade_stmt_visits
       << "\ttotal_ms=" << infer_duration_ms(stats.process_function_time)
       << "\tentry_ms=" << infer_duration_ms(stats.entry_build_time)
       << "\tentry_pred_ms=" << infer_duration_ms(stats.entry_pred_time)
@@ -575,6 +639,11 @@ namespace vc
       << "\tffi_when_ms=" << infer_duration_ms(stats.stmt_ffi_when_ops_time)
       << "\ttypetest_ms=" << infer_duration_ms(stats.stmt_typetest_ops_time)
       << "\ttuple_finalize_ms=" << infer_duration_ms(stats.tuple_finalize_time)
+      << "\tcascade_index_ms=" << infer_duration_ms(stats.cascade_index_time)
+      << "\tcascade_const_scan_ms="
+      << infer_duration_ms(stats.cascade_const_scan_time)
+      << "\tcascade_seed_ms=" << infer_duration_ms(stats.cascade_seed_time)
+      << "\tcascade_loop_ms=" << infer_duration_ms(stats.cascade_loop_time)
       << "\tresolve_ms=" << infer_duration_ms(stats.resolve_method_time)
       << "\tnavigate_call_ms=" << infer_duration_ms(stats.navigate_call_time)
       << "\tapply_subst_ms=" << infer_duration_ms(stats.apply_subst_time)
@@ -597,6 +666,14 @@ namespace vc
   };
 
   using TypeEnv = std::map<Location, LocalTypeInfo>;
+
+  struct PendingError
+  {
+    Node site;
+    std::string msg;
+  };
+
+  static std::map<Location, PendingError> deferred_param_errors;
 
   // ===== Type lattice: merge =====
 
@@ -693,6 +770,39 @@ namespace vc
       key += std::string((elem / Ident)->location().view());
     }
     return key;
+  }
+
+  static std::string infer_type_name(const Node& type)
+  {
+    if (!type)
+      return "<unknown>";
+    if (type == Type)
+    {
+      if (!type->empty())
+        return infer_type_name(type->front());
+      return "type";
+    }
+    if (type == TypeName)
+    {
+      auto key = typename_path_key(type);
+      if (!key.empty())
+        return key;
+    }
+    if (type == Union)
+    {
+      std::string result = "Union(";
+      bool first = true;
+      for (auto& child : *type)
+      {
+        if (!first)
+          result += ", ";
+        result += infer_type_name(child);
+        first = false;
+      }
+      result += ")";
+      return result;
+    }
+    return std::string(type->type().str());
   }
 
   static MethodOwner resolve_method_owner(Node top, const Node& receiver_type)
@@ -1032,6 +1142,15 @@ namespace vc
       }
     }
 
+    bool existing_has_self = contains_self_type(existing);
+    bool incoming_has_self = contains_self_type(incoming);
+    if (existing_has_self != incoming_has_self)
+    {
+      if (existing_has_self)
+        return clone(incoming);
+      return {};
+    }
+
     SequentCtx ctx{top, {}, {}};
 
     if (Subtype.invariant(ctx, existing, incoming))
@@ -1291,210 +1410,259 @@ namespace vc
     Node top,
     std::map<Location, Node>& lookup_stmts)
   {
-    auto src_index = build_src_index(body);
+    auto* profile = active_infer_profile;
+    SrcIndex src_index;
+    {
+      InferScopedTimer timer(
+        (profile != nullptr) ? &profile->cascade_index_time : nullptr);
+      src_index = build_src_index(body);
+    }
+    if (profile != nullptr)
+    {
+      profile->cascade_env_bindings += env.size();
+      profile->cascade_body_statements += body->size();
+      profile->cascade_src_entries += src_index.size();
+    }
+
     std::map<Location, Node> const_defs;
     std::deque<Location> work;
     std::set<Location> in_queue;
 
-    for (auto& stmt : *body)
-      if (stmt == Const)
-        const_defs[(stmt / LocalId)->location()] = stmt;
+    {
+      InferScopedTimer timer(
+        (profile != nullptr) ? &profile->cascade_const_scan_time : nullptr);
+      for (auto& stmt : *body)
+        if (stmt == Const)
+          const_defs[(stmt / LocalId)->location()] = stmt;
+    }
+    if (profile != nullptr)
+      profile->cascade_const_defs += const_defs.size();
 
     auto refine_local_const =
       [&](const Location& loc, const Node& expected) -> bool {
       return refine_const_local(env, const_defs, loc, expected);
     };
 
-    for (auto& [loc, info] : env)
-      if (is_cascade_concrete(info.type))
-        enqueue_if_concrete(env, loc, work, in_queue);
-
-    while (!work.empty())
     {
-      auto loc = work.front();
-      work.pop_front();
-      in_queue.erase(loc);
-
-      auto [begin, end] = src_index.equal_range(loc);
-      for (auto it = begin; it != end; ++it)
+      InferScopedTimer timer(
+        (profile != nullptr) ? &profile->cascade_seed_time : nullptr);
+      for (auto& [loc, info] : env)
       {
-        auto stmt = it->second;
+        if (!is_cascade_concrete(info.type))
+          continue;
 
-        if (stmt->in({Copy, Move}))
+        if (profile != nullptr)
         {
-          auto src_loc = (stmt / Rhs)->location();
-          auto src_it = env.find(src_loc);
-          if (src_it == env.end())
-            continue;
-
-          auto dst_loc = (stmt / LocalId)->location();
-          if (merge_env(
-                env,
-                dst_loc,
-                src_it->second.type,
-                top,
-                src_it->second.call_node))
-            enqueue_if_concrete(env, dst_loc, work, in_queue);
+          auto type_nodes = infer_tree_size(info.type);
+          profile->cascade_seed_locs++;
+          profile->cascade_seed_type_nodes += type_nodes;
+          profile->cascade_max_type_nodes =
+            std::max(profile->cascade_max_type_nodes, type_nodes);
         }
-        else if (stmt == Lookup)
+        enqueue_if_concrete(env, loc, work, in_queue);
+      }
+    }
+
+    {
+      InferScopedTimer timer(
+        (profile != nullptr) ? &profile->cascade_loop_time : nullptr);
+
+      while (!work.empty())
+      {
+        auto loc = work.front();
+        work.pop_front();
+        in_queue.erase(loc);
+        if (profile != nullptr)
+          profile->cascade_work_pops++;
+
+        auto [begin, end] = src_index.equal_range(loc);
+        for (auto it = begin; it != end; ++it)
         {
-          auto src_loc = (stmt / Rhs)->location();
-          auto src_it = env.find(src_loc);
-          if (src_it == env.end() || is_default_type(src_it->second.type))
-            continue;
+          if (profile != nullptr)
+            profile->cascade_stmt_visits++;
 
-          auto hand = (stmt / Lhs)->type();
-          auto method_ident = lookup_method_name(stmt);
-          auto method_ta = stmt / TypeArgs;
-          auto arity = from_chars_sep_v<size_t>(stmt / Int);
-          auto ret = resolve_method_return_type(
-            top, src_it->second.type, method_ident, hand, arity, method_ta);
-          if (!ret)
-            continue;
+          auto stmt = it->second;
 
-          auto dst_loc = (stmt / LocalId)->location();
-          if (merge_env(env, dst_loc, ret, top))
-            enqueue_if_concrete(env, dst_loc, work, in_queue);
-        }
-        else if (stmt->in({ArrayRef, ArrayRefConst}))
-        {
-          auto dst_loc = (stmt / LocalId)->location();
-          auto src_loc = ((stmt / Arg) / Rhs)->location();
-          auto src_it = env.find(src_loc);
-          if (src_it == env.end())
-            continue;
-
-          if (stmt == ArrayRefConst)
+          if (stmt->in({Copy, Move}))
           {
-            auto index = from_chars_sep_v<size_t>(stmt / Rhs);
-            auto inner = src_it->second.type->front();
-            if (inner == TupleType && index < inner->size())
+            auto src_loc = (stmt / Rhs)->location();
+            auto src_it = env.find(src_loc);
+            if (src_it == env.end())
+              continue;
+
+            auto dst_loc = (stmt / LocalId)->location();
+            if (merge_env(
+                  env,
+                  dst_loc,
+                  src_it->second.type,
+                  top,
+                  src_it->second.call_node))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+          else if (stmt == Lookup)
+          {
+            auto src_loc = (stmt / Rhs)->location();
+            auto src_it = env.find(src_loc);
+            if (src_it == env.end() || is_default_type(src_it->second.type))
+              continue;
+
+            auto hand = (stmt / Lhs)->type();
+            auto method_ident = lookup_method_name(stmt);
+            auto method_ta = stmt / TypeArgs;
+            auto arity = from_chars_sep_v<size_t>(stmt / Int);
+            auto ret = resolve_method_return_type(
+              top, src_it->second.type, method_ident, hand, arity, method_ta);
+            if (!ret)
+              continue;
+
+            auto dst_loc = (stmt / LocalId)->location();
+            if (merge_env(env, dst_loc, ret, top))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+          else if (stmt->in({ArrayRef, ArrayRefConst}))
+          {
+            auto dst_loc = (stmt / LocalId)->location();
+            auto src_loc = ((stmt / Arg) / Rhs)->location();
+            auto src_it = env.find(src_loc);
+            if (src_it == env.end())
+              continue;
+
+            if (stmt == ArrayRefConst)
             {
+              auto index = from_chars_sep_v<size_t>(stmt / Rhs);
+              auto inner = src_it->second.type->front();
+              if (inner == TupleType && index < inner->size())
+              {
+                if (merge_env(
+                      env,
+                      dst_loc,
+                      ref_type(Type << clone(inner->at(index))),
+                      top))
+                  enqueue_if_concrete(env, dst_loc, work, in_queue);
+                continue;
+              }
+            }
+
+            if (merge_env(
+                  env, dst_loc, ref_type(clone(src_it->second.type)), top))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+          else if (stmt == ArrayRefFromEnd)
+          {
+            auto dst_loc = (stmt / LocalId)->location();
+            auto src_loc = ((stmt / Arg) / Rhs)->location();
+            auto src_it = env.find(src_loc);
+            if (src_it == env.end())
+              continue;
+
+            auto offset = from_chars_sep_v<size_t>(stmt / Rhs);
+            auto inner = src_it->second.type->front();
+            if (inner == TupleType && offset > 0 && offset <= inner->size())
+            {
+              auto index = inner->size() - offset;
               if (merge_env(
                     env,
                     dst_loc,
                     ref_type(Type << clone(inner->at(index))),
                     top))
                 enqueue_if_concrete(env, dst_loc, work, in_queue);
-              continue;
+            }
+            else if (merge_env(
+                       env, dst_loc, ref_type(clone(src_it->second.type)), top))
+            {
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
             }
           }
-
-          if (merge_env(
-                env, dst_loc, ref_type(clone(src_it->second.type)), top))
-            enqueue_if_concrete(env, dst_loc, work, in_queue);
-        }
-        else if (stmt == ArrayRefFromEnd)
-        {
-          auto dst_loc = (stmt / LocalId)->location();
-          auto src_loc = ((stmt / Arg) / Rhs)->location();
-          auto src_it = env.find(src_loc);
-          if (src_it == env.end())
-            continue;
-
-          auto offset = from_chars_sep_v<size_t>(stmt / Rhs);
-          auto inner = src_it->second.type->front();
-          if (inner == TupleType && offset > 0 && offset <= inner->size())
+          else if (stmt == Load)
           {
-            auto index = inner->size() - offset;
-            if (merge_env(
-                  env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
-              enqueue_if_concrete(env, dst_loc, work, in_queue);
-          }
-          else if (merge_env(
-                     env, dst_loc, ref_type(clone(src_it->second.type)), top))
-          {
-            enqueue_if_concrete(env, dst_loc, work, in_queue);
-          }
-        }
-        else if (stmt == Load)
-        {
-          auto dst_loc = (stmt / LocalId)->location();
-          auto src_it = env.find((stmt / Rhs)->location());
-          if (src_it == env.end())
-            continue;
-
-          auto inner = extract_ref_inner(src_it->second.type);
-          if (inner && merge_env(env, dst_loc, inner, top))
-            enqueue_if_concrete(env, dst_loc, work, in_queue);
-        }
-        else if (stmt == SplatOp)
-        {
-          auto dst_loc = (stmt / LocalId)->location();
-          auto src_loc = ((stmt / Arg) / Rhs)->location();
-          auto src_it = env.find(src_loc);
-          if (src_it == env.end())
-            continue;
-
-          auto inner = src_it->second.type->front();
-          if (inner != TupleType)
-            continue;
-
-          auto before = from_chars_sep_v<size_t>(stmt / Lhs);
-          auto after = from_chars_sep_v<size_t>(stmt / Rhs);
-          if (before + after > inner->size())
-            continue;
-
-          auto remaining = inner->size() - before - after;
-          Node splat_type;
-          if (remaining == 0)
-            splat_type = primitive_type(None);
-          else if (remaining == 1)
-            splat_type = Type << clone(inner->at(before));
-          else
-          {
-            Node tup = TupleType;
-            for (size_t i = before; i < before + remaining; i++)
-              tup << clone(inner->at(i));
-            splat_type = Type << tup;
-          }
-
-          if (merge_env(env, dst_loc, splat_type, top))
-            enqueue_if_concrete(env, dst_loc, work, in_queue);
-        }
-        else if (stmt->in({CallDyn, TryCallDyn}))
-        {
-          auto dst_loc = (stmt / LocalId)->location();
-          auto src_loc = (stmt / Rhs)->location();
-          auto src_it = env.find(src_loc);
-          if (src_it != env.end())
-          {
-            auto call_node = stmt;
-            if (merge_env(env, dst_loc, src_it->second.type, top, call_node))
-              enqueue_if_concrete(env, dst_loc, work, in_queue);
-          }
-
-          auto lookup_it = lookup_stmts.find(src_loc);
-          if (lookup_it == lookup_stmts.end())
-            continue;
-
-          auto lookup_node = lookup_it->second;
-          auto recv_loc = (lookup_node / Rhs)->location();
-          auto recv_it = env.find(recv_loc);
-          if (recv_it == env.end() || is_default_type(recv_it->second.type))
-            continue;
-
-          auto hand = (lookup_node / Lhs)->type();
-          auto method_ident = lookup_method_name(lookup_node);
-          auto method_ta = lookup_node / TypeArgs;
-          auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
-          auto info = resolve_callable_method(
-            top, recv_it->second.type, method_ident, hand, arity, method_ta);
-          if (!info.func)
-            continue;
-
-          auto params = info.func / Params;
-          auto args = stmt / Args;
-          for (size_t i = 0; i < params->size() && i < args->size(); i++)
-          {
-            auto expected = apply_subst(top, params->at(i) / Type, info.subst);
-            if (!expected || expected->front() == TypeVar)
+            auto dst_loc = (stmt / LocalId)->location();
+            auto src_it = env.find((stmt / Rhs)->location());
+            if (src_it == env.end())
               continue;
 
-            auto arg_loc = (args->at(i) / Rhs)->location();
-            snmalloc::UNUSED(refine_local_const(arg_loc, expected));
-            if (merge_env(env, arg_loc, expected, top))
-              enqueue_if_concrete(env, arg_loc, work, in_queue);
+            auto inner = extract_ref_inner(src_it->second.type);
+            if (inner && merge_env(env, dst_loc, inner, top))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+          else if (stmt == SplatOp)
+          {
+            auto dst_loc = (stmt / LocalId)->location();
+            auto src_loc = ((stmt / Arg) / Rhs)->location();
+            auto src_it = env.find(src_loc);
+            if (src_it == env.end())
+              continue;
+
+            auto inner = src_it->second.type->front();
+            if (inner != TupleType)
+              continue;
+
+            auto before = from_chars_sep_v<size_t>(stmt / Lhs);
+            auto after = from_chars_sep_v<size_t>(stmt / Rhs);
+            if (before + after > inner->size())
+              continue;
+
+            auto remaining = inner->size() - before - after;
+            Node splat_type;
+            if (remaining == 0)
+              splat_type = primitive_type(None);
+            else if (remaining == 1)
+              splat_type = Type << clone(inner->at(before));
+            else
+            {
+              Node tup = TupleType;
+              for (size_t i = before; i < before + remaining; i++)
+                tup << clone(inner->at(i));
+              splat_type = Type << tup;
+            }
+
+            if (merge_env(env, dst_loc, splat_type, top))
+              enqueue_if_concrete(env, dst_loc, work, in_queue);
+          }
+          else if (stmt->in({CallDyn, TryCallDyn}))
+          {
+            auto dst_loc = (stmt / LocalId)->location();
+            auto src_loc = (stmt / Rhs)->location();
+            auto src_it = env.find(src_loc);
+            if (src_it != env.end())
+            {
+              auto call_node = stmt;
+              if (merge_env(env, dst_loc, src_it->second.type, top, call_node))
+                enqueue_if_concrete(env, dst_loc, work, in_queue);
+            }
+
+            auto lookup_it = lookup_stmts.find(src_loc);
+            if (lookup_it == lookup_stmts.end())
+              continue;
+
+            auto lookup_node = lookup_it->second;
+            auto recv_loc = (lookup_node / Rhs)->location();
+            auto recv_it = env.find(recv_loc);
+            if (recv_it == env.end() || is_default_type(recv_it->second.type))
+              continue;
+
+            auto hand = (lookup_node / Lhs)->type();
+            auto method_ident = lookup_method_name(lookup_node);
+            auto method_ta = lookup_node / TypeArgs;
+            auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+            auto info = resolve_callable_method(
+              top, recv_it->second.type, method_ident, hand, arity, method_ta);
+            if (!info.func)
+              continue;
+
+            auto params = info.func / Params;
+            auto args = stmt / Args;
+            for (size_t i = 0; i < params->size() && i < args->size(); i++)
+            {
+              auto expected =
+                apply_subst(top, params->at(i) / Type, info.subst);
+              if (!expected || expected->front() == TypeVar)
+                continue;
+
+              auto arg_loc = (args->at(i) / Rhs)->location();
+              snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+              if (merge_env(env, arg_loc, expected, top))
+                enqueue_if_concrete(env, arg_loc, work, in_queue);
+            }
           }
         }
       }
@@ -2417,6 +2585,7 @@ namespace vc
         continue;
 
       Node resolved;
+      bool allow_default_arg = false;
 
       // FieldDef takes priority.
       if (parent_cls)
@@ -2430,6 +2599,8 @@ namespace vc
             continue;
           if (!contains_typevar(child / Type))
             resolved = child / Type;
+          else if (is_lambda_function(func_def))
+            allow_default_arg = true;
           break;
         }
       }
@@ -2438,9 +2609,10 @@ namespace vc
       {
         auto arg_loc = (args->at(i) / Rhs)->location();
         auto arg_it = env.find(arg_loc);
+        if (arg_it == env.end() || contains_typevar(arg_it->second.type))
+          continue;
         if (
-          arg_it == env.end() || contains_typevar(arg_it->second.type) ||
-          contains_default_type(arg_it->second.type))
+          contains_default_type(arg_it->second.type) && !allow_default_arg)
           continue;
         resolved = arg_it->second.type;
       }
@@ -2858,7 +3030,46 @@ namespace vc
         }
       }
 
-      return changed;
+        return changed;
+      };
+
+    auto pending_when_lookup_error = [&](const Node& when_arg) -> PendingError {
+      auto def_it = all_def_stmts.find((when_arg / Rhs)->location());
+      if (
+        def_it == all_def_stmts.end() ||
+        !def_it->second->in({CallDyn, TryCallDyn}))
+      {
+        return {};
+      }
+
+      auto lookup_it = lookup_stmts.find((def_it->second / Rhs)->location());
+      if (lookup_it == lookup_stmts.end())
+        return {};
+
+      auto lookup_node = lookup_it->second;
+      auto recv_it = env.find((lookup_node / Rhs)->location());
+      if (
+        recv_it == env.end() || contains_typevar(recv_it->second.type) ||
+        contains_default_type(recv_it->second.type))
+      {
+        return {};
+      }
+
+      auto method_ident = lookup_method_name(lookup_node);
+      auto hand = (lookup_node / Lhs)->type();
+      auto method_ta = lookup_node / TypeArgs;
+      auto arity = from_chars_sep_v<size_t>(lookup_node / Int);
+      auto info = resolve_callable_method(
+        top, recv_it->second.type, method_ident, hand, arity, method_ta);
+      if (info.func)
+        return {};
+
+      return {
+        method_ident,
+        std::format(
+          "lookup: type '{}' does not have method '{}'",
+          infer_type_name(recv_it->second.type),
+          std::string(method_ident->location().view()))};
     };
 
     for (auto& stmt : *body)
@@ -3804,15 +4015,37 @@ namespace vc
                        i < when_args->size() && i < params->size();
                        ++i)
                   {
+                    auto param = params->at(i);
                     auto arg_it =
                       env.find((when_args->at(i) / Rhs)->location());
                     if (arg_it == env.end())
+                    {
+                      auto pending = pending_when_lookup_error(when_args->at(i));
+                      if (
+                        pending.site &&
+                        deferred_param_errors.find((param / Ident)->location()) ==
+                          deferred_param_errors.end())
+                      {
+                        deferred_param_errors[(param / Ident)->location()] =
+                          std::move(pending);
+                      }
                       continue;
+                    }
                     auto ci = extract_cown_inner(arg_it->second.type);
                     if (!ci)
+                    {
+                      auto pending = pending_when_lookup_error(when_args->at(i));
+                      if (
+                        pending.site &&
+                        deferred_param_errors.find((param / Ident)->location()) ==
+                          deferred_param_errors.end())
+                      {
+                        deferred_param_errors[(param / Ident)->location()] =
+                          std::move(pending);
+                      }
                       continue;
+                    }
                     auto new_type = ref_type(ci);
-                    auto param = params->at(i);
                     snmalloc::UNUSED(
                       replace_if_changed(param, param / Type, new_type));
                     env[(param / Ident)->location()] = {
@@ -4950,8 +5183,13 @@ namespace vc
       {
         if ((pd / Type)->front() == TypeVar)
         {
-          node->parent()->replace(
-            node, err(pd / Ident, "Cannot infer type of parameter"));
+          auto pending = deferred_param_errors.find((pd / Ident)->location());
+          if (pending != deferred_param_errors.end())
+            node->parent()->replace(
+              node, err(pending->second.site, pending->second.msg));
+          else
+            node->parent()->replace(
+              node, err(pd / Ident, "Cannot infer type of parameter"));
           return false;
         }
       }
@@ -4993,6 +5231,7 @@ namespace vc
       Nodes deferred;
 
       lambda_returns_omitted.clear();
+      deferred_param_errors.clear();
       top->traverse([&](auto node) {
         if (
           node == Function && is_lambda_function(node) &&
