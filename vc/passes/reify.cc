@@ -333,14 +333,22 @@ namespace vc
 
                   if (recv_it != local_types.end())
                   {
+                    bool needs_refresh =
+                      (cown_type == Cown) && (cown_type->front() == Dyn);
+
                     for (auto* target : find_method_targets(
                            recv_it->second, li->second.method_id))
                     {
                       changed |=
                         refine_function_params(*target, stmt->at(2), true);
+                      needs_refresh |= ((target->def / Type)->front() == TypeVar);
                     }
 
-                    if ((cown_type == Cown) && (cown_type->front() == Dyn))
+                    // TypeVar-returning behaviors may have been reified with a
+                    // provisional return (for example just nomatch) before the
+                    // deferred return-type pass converges. Refresh the result
+                    // cown type for those inferred returns as well as Dyn.
+                    if ((cown_type == Cown) && needs_refresh)
                     {
                       auto ret = find_method_return_type(
                         recv_it->second, li->second.method_id);
@@ -371,7 +379,12 @@ namespace vc
                 {
                   changed |= refine_function_params(*target, stmt->at(2), true);
 
-                  if ((cown_type == Cown) && (cown_type->front() == Dyn))
+                  bool needs_refresh =
+                    (cown_type == Cown) &&
+                    ((cown_type->front() == Dyn) ||
+                     ((target->def / Type)->front() == TypeVar));
+
+                  if (needs_refresh)
                   {
                     Node ret = target->reification / Type;
 
