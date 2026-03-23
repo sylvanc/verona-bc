@@ -3524,7 +3524,12 @@ namespace vc
                   if (merge_bwd(arg_loc, ft))
                   {
                     propagate_call_constraint(
-                      env, arg_loc, expected, top, lookup_stmts, &all_def_stmts);
+                      env,
+                      arg_loc,
+                      expected,
+                      top,
+                      lookup_stmts,
+                      &all_def_stmts);
                     propagate_call_node(
                       env, arg_loc, top, lookup_stmts, &all_def_stmts);
                   }

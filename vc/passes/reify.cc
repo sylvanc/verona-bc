@@ -341,7 +341,8 @@ namespace vc
                     {
                       changed |=
                         refine_function_params(*target, stmt->at(2), true);
-                      needs_refresh |= ((target->def / Type)->front() == TypeVar);
+                      needs_refresh |=
+                        ((target->def / Type)->front() == TypeVar);
                     }
 
                     // TypeVar-returning behaviors may have been reified with a
@@ -379,8 +380,7 @@ namespace vc
                 {
                   changed |= refine_function_params(*target, stmt->at(2), true);
 
-                  bool needs_refresh =
-                    (cown_type == Cown) &&
+                  bool needs_refresh = (cown_type == Cown) &&
                     ((cown_type->front() == Dyn) ||
                      ((target->def / Type)->front() == TypeVar));
 
@@ -586,7 +586,8 @@ namespace vc
       Node typeargs; // cloned TypeArgs from the Lookup
       NodeMap<Node> call_subst; // substitution context at the call site
       bool all_receivers; // true = all classes/primitives may receive the call
-      Nodes receivers; // concrete possible receivers when all_receivers is false
+      Nodes
+        receivers; // concrete possible receivers when all_receivers is false
     };
 
     struct PendingCallback
@@ -1678,11 +1679,12 @@ namespace vc
                       break;
                   }
 
-                   // Trigger class reification AFTER the map_order loop
-                   // to avoid iterator invalidation (find_or_push may
-                   // append to map_order).
-                   if (call_enc)
-                    callback_type = find_or_push(call_enc, std::move(class_subst));
+                  // Trigger class reification AFTER the map_order loop
+                  // to avoid iterator invalidation (find_or_push may
+                  // append to map_order).
+                  if (call_enc)
+                    callback_type =
+                      find_or_push(call_enc, std::move(class_subst));
                 }
               }
             }
@@ -3081,7 +3083,8 @@ namespace vc
       }
     }
 
-    bool register_callback_type(const Node& type, Node site = {}, bool required = false)
+    bool register_callback_type(
+      const Node& type, Node site = {}, bool required = false)
     {
       auto targets = resolve_callback_targets(type);
 

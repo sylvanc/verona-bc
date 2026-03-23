@@ -853,8 +853,7 @@ namespace vc
             auto id = _.fresh(l_local);
             auto rhs = _(Rhs);
             Node op = _(Lhs)->type();
-            return Seq << (Lift << Body
-                                << (op << (LocalId ^ id) << rhs))
+            return Seq << (Lift << Body << (op << (LocalId ^ id) << rhs))
                        << (LocalId ^ id);
           },
 
