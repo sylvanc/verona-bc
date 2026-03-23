@@ -33,7 +33,6 @@ namespace vc
   // Primitive types nested under _builtin::ffi.
   const std::map<std::string_view, Node> ffi_primitive_types = {
     {"ptr", Ptr},
-    {"callback", Callback},
   };
 
   struct Reifier
@@ -63,6 +62,112 @@ namespace vc
       return false;
     }
 
+    bool contains_dyn(const Node& type) const
+    {
+      if (!type)
+        return false;
+
+      if (type == Dyn)
+        return true;
+
+      for (auto& child : *type)
+      {
+        if (contains_dyn(child))
+          return true;
+      }
+
+      return false;
+    }
+
+    bool has_unresolved_type(const Node& type, const NodeMap<Node>& subst) const
+    {
+      std::set<Node> seen;
+      return has_unresolved_type(type, subst, seen);
+    }
+
+    bool has_unresolved_type(
+      const Node& type, const NodeMap<Node>& subst, std::set<Node>& seen) const
+    {
+      if (!type)
+        return false;
+
+      if (type == Type)
+        return has_unresolved_type(type->front(), subst, seen);
+
+      if (type == TypeVar)
+        return true;
+
+      if (type == TypeName)
+      {
+        auto def = top;
+
+        for (auto& elem : *type)
+        {
+          for (auto& arg : *(elem / TypeArgs))
+          {
+            if (has_unresolved_type(arg, subst, seen))
+              return true;
+          }
+
+          auto defs = def->look((elem / Ident)->location());
+
+          if (defs.empty())
+            return false;
+
+          def = defs.front();
+
+          if (def == TypeParam)
+          {
+            if (!seen.insert(def).second)
+              return true;
+
+            auto find = subst.find(def);
+
+            if (find == subst.end())
+            {
+              seen.erase(def);
+              return true;
+            }
+
+            auto unresolved = has_unresolved_type(find->second, subst, seen);
+            seen.erase(def);
+            return unresolved;
+          }
+        }
+
+        return false;
+      }
+
+      for (auto& child : *type)
+      {
+        if (has_unresolved_type(child, subst, seen))
+          return true;
+      }
+
+      return false;
+    }
+
+    void emit_unresolved_type_error(const Node& blame, std::string_view context)
+    {
+      errors.push_back(err(
+        blame,
+        std::format("Could not resolve {} during monomorphization", context)));
+    }
+
+    Node reify_emitted_type(
+      const Node& source,
+      const NodeMap<Node>& subst,
+      const Node& blame,
+      std::string_view context)
+    {
+      auto ir_type = reify_type(source, subst);
+
+      if (contains_dyn(ir_type) && has_unresolved_type(source, subst))
+        emit_unresolved_type_error(blame, context);
+
+      return ir_type;
+    }
+
     void run(Node& top_)
     {
       top = top_;
@@ -86,43 +191,36 @@ namespace vc
       // happen inline: reify_class registers all existing MIs on the new
       // class, and reify_lookup registers the new MI on all existing classes.
       std::vector<Reification*> deferred_typevar;
+      drain_worklist(deferred_typevar);
+      resolve_shapes();
+      process_pending_callbacks(false);
+      drain_worklist(deferred_typevar);
+      resolve_shapes();
+      process_pending_callbacks(true);
+      drain_worklist(deferred_typevar);
 
-      while (!worklist.empty())
+      std::vector<Reification*> reified_functions;
+
+      for (auto& key : map_order)
       {
-        auto r = worklist.back();
-        worklist.pop_back();
+        if (key != Function)
+          continue;
 
-        if (r->def == ClassDef)
-          reify_class(*r);
-        else if (r->def == TypeAlias)
-          reify_typealias(*r);
-        else if (r->def == Function)
+        for (auto& r : map[key])
         {
-          reify_function(*r);
-
-          // If the function had a TypeVar return in the def, defer it
-          // for a second pass when all callees are reified. The first
-          // pass may have produced a partial return type (e.g., nomatch
-          // from match arms when the main arm's CallDyn wasn't tracked).
-          if (r->reification && (r->def / Type)->front() == TypeVar)
-          {
-            deferred_typevar.push_back(r);
-          }
+          if (r.reification)
+            reified_functions.push_back(&r);
         }
-        else
-          assert(false);
       }
 
-      // Second pass: re-resolve return types for functions whose TypeVar
-      // return fell back to Dyn. Now all callees are reified, so method
-      // return types are available. We rebuild local_types from the
-      // already-reified body without re-running mutations.
+      // Second pass: refine unresolved parameter and return types from the
+      // already-reified bodies now that all callees and methods are available.
       bool changed;
       do
       {
         changed = false;
 
-        for (auto r : deferred_typevar)
+        for (auto r : reified_functions)
         {
           auto func = r->reification;
           auto labels = func / Labels;
@@ -178,6 +276,10 @@ namespace vc
               }
               else if (stmt == Call)
               {
+                if (auto* target = find_function_reification(stmt / FunctionId))
+                  changed |=
+                    refine_function_params(*target, stmt->at(2), false);
+
                 auto ret = find_func_return_type(stmt / FunctionId);
                 if (ret)
                   local_types[(stmt / LocalId)->location()] = ret;
@@ -191,6 +293,13 @@ namespace vc
                   auto recv_it = local_types.find(li->second.recv_loc);
                   if (recv_it != local_types.end())
                   {
+                    for (auto* target : find_method_targets(
+                           recv_it->second, li->second.method_id))
+                    {
+                      changed |=
+                        refine_function_params(*target, stmt->at(2), false);
+                    }
+
                     auto ret = find_method_return_type(
                       recv_it->second, li->second.method_id);
 
@@ -216,111 +325,172 @@ namespace vc
               else if (stmt == WhenDyn)
               {
                 auto cown_type = stmt / Cown;
+                auto li = lookup_info.find((stmt / Rhs)->location());
+
+                if (li != lookup_info.end())
+                {
+                  auto recv_it = local_types.find(li->second.recv_loc);
+
+                  if (recv_it != local_types.end())
+                  {
+                    bool needs_refresh =
+                      (cown_type == Cown) && (cown_type->front() == Dyn);
+
+                    for (auto* target : find_method_targets(
+                           recv_it->second, li->second.method_id))
+                    {
+                      changed |=
+                        refine_function_params(*target, stmt->at(2), true);
+                      needs_refresh |=
+                        ((target->def / Type)->front() == TypeVar);
+                    }
+
+                    // TypeVar-returning behaviors may have been reified with a
+                    // provisional return (for example just nomatch) before the
+                    // deferred return-type pass converges. Refresh the result
+                    // cown type for those inferred returns as well as Dyn.
+                    if ((cown_type == Cown) && needs_refresh)
+                    {
+                      auto ret = find_method_return_type(
+                        recv_it->second, li->second.method_id);
+
+                      if (ret && (ret != Dyn))
+                      {
+                        Node new_cown = Cown << clone(ret);
+
+                        if (!cown_type->equals(new_cown))
+                        {
+                          stmt->replace(cown_type, new_cown);
+                          changed = true;
+                        }
+
+                        cown_type = stmt / Cown;
+                      }
+                    }
+                  }
+                }
+
+                local_types[(stmt / LocalId)->location()] = clone(cown_type);
+              }
+              else if (stmt == When)
+              {
+                auto cown_type = stmt / Cown;
+
+                if (auto* target = find_function_reification(stmt / FunctionId))
+                {
+                  changed |= refine_function_params(*target, stmt->at(2), true);
+
+                  bool needs_refresh = (cown_type == Cown) &&
+                    ((cown_type->front() == Dyn) ||
+                     ((target->def / Type)->front() == TypeVar));
+
+                  if (needs_refresh)
+                  {
+                    Node ret = target->reification / Type;
+
+                    if (ret && (ret != Dyn))
+                    {
+                      Node new_cown = Cown << clone(ret);
+
+                      if (!cown_type->equals(new_cown))
+                      {
+                        stmt->replace(cown_type, new_cown);
+                        changed = true;
+                      }
+
+                      cown_type = stmt / Cown;
+                    }
+                  }
+                }
+
                 local_types[(stmt / LocalId)->location()] = clone(cown_type);
               }
             }
           }
 
-          // Now try to infer the return type from Return locals.
-          // Collect all distinct return types to build a union if needed.
-          Nodes ret_types;
-
-          for (auto& lbl : *labels)
+          if ((r->def / Type)->front() == TypeVar)
           {
-            auto term = lbl / Return;
-            if (term != Return)
-              continue;
+            // Now try to infer the return type from Return locals.
+            // Collect all distinct return types to build a union if needed.
+            Nodes ret_types;
 
-            auto ret_loc = (term / LocalId)->location();
-            auto it = local_types.find(ret_loc);
-            if (it == local_types.end())
-              continue;
-
-            bool dup = false;
-
-            for (auto& existing : ret_types)
+            for (auto& lbl : *labels)
             {
-              if (existing->equals(it->second))
+              auto term = lbl / Return;
+              if (term != Return)
+                continue;
+
+              auto ret_loc = (term / LocalId)->location();
+              auto it = local_types.find(ret_loc);
+              if (it == local_types.end())
+                continue;
+
+              bool dup = false;
+
+              for (auto& existing : ret_types)
               {
-                dup = true;
-                break;
+                if (existing->equals(it->second))
+                {
+                  dup = true;
+                  break;
+                }
               }
+
+              if (!dup)
+                ret_types.push_back(clone(it->second));
             }
 
-            if (!dup)
-              ret_types.push_back(clone(it->second));
-          }
+            Node new_ret;
 
-          Node new_ret;
-
-          if (ret_types.size() == 1)
-            new_ret = ret_types.front();
-          else if (ret_types.size() > 1)
-          {
-            Node union_node = Union;
-
-            for (auto& rt : ret_types)
-              union_node << clone(rt);
-
-            new_ret = union_node;
-          }
-
-          if (new_ret && new_ret->type() != Dyn)
-          {
-            auto old_type = func / Type;
-            if (!old_type->equals(new_ret))
+            if (ret_types.size() == 1)
+              new_ret = ret_types.front();
+            else if (ret_types.size() > 1)
             {
-              func->replace(old_type, new_ret);
-              changed = true;
+              Node union_node = Union;
+
+              for (auto& rt : ret_types)
+                union_node << clone(rt);
+
+              new_ret = union_node;
+            }
+
+            if (new_ret && new_ret->type() != Dyn)
+            {
+              auto old_type = func / Type;
+              if (!old_type->equals(new_ret))
+              {
+                func->replace(old_type, new_ret);
+                changed = true;
+              }
             }
           }
         }
       } while (changed);
 
-      // Resolve shapes: each shape becomes a Type node mapping its TypeId
-      // to a Union of all reified concrete classes that satisfy it.
+      for (auto r : deferred_typevar)
       {
-        SequentCtx ctx{top, {}, {}};
+        if (r->reification && ((r->reification / Type) == Dyn))
+          emit_unresolved_type_error(r->def / Ident, "return type");
+      }
 
-        for (auto& key : map_order)
+      for (auto r : reified_functions)
+      {
+        auto params = r->reification / Params;
+        auto def_params = r->def / Params;
+
+        for (size_t i = 0; i < params->size(); i++)
         {
-          for (auto& r : map[key])
+          if (
+            contains_dyn(params->at(i) / Type) &&
+            has_unresolved_type((def_params->at(i) / Type), r->subst))
           {
-            if (r.def != ClassDef || (r.def / Shape) != Shape)
-              continue;
-
-            assert(r.resolved_name);
-            Node union_node = Union;
-
-            for (auto& ckey : map_order)
-            {
-              for (auto& cr : map[ckey])
-              {
-                if (cr.def != ClassDef || (cr.def / Shape) == Shape)
-                  continue;
-                if (!cr.resolved_name)
-                  continue;
-
-                if (check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
-                  union_node << clone(cr.id);
-              }
-            }
-
-            if (union_node->empty())
-            {
-              // No concrete classes implement this shape. Emit an empty
-              // Type entry so TypeId references are valid. The typetest
-              // for this shape will always fail at runtime (no value of
-              // this type can exist), making the code path unreachable.
-              r.reification = Type << clone(r.id) << Union;
-            }
-            else if (union_node->size() == 1)
-              r.reification = Type << clone(r.id) << union_node->front();
-            else
-              r.reification = Type << clone(r.id) << union_node;
+            emit_unresolved_type_error(
+              def_params->at(i) / Ident, "parameter type");
           }
         }
       }
+
+      resolve_shapes();
 
       // Remove existing contents.
       top->erase(top->begin(), top->end());
@@ -415,7 +585,16 @@ namespace vc
       Token hand; // Lhs (ref) or Rhs
       Node typeargs; // cloned TypeArgs from the Lookup
       NodeMap<Node> call_subst; // substitution context at the call site
-      Nodes receivers; // reified type ids of possible receivers; empty = all
+      bool all_receivers; // true = all classes/primitives may receive the call
+      Nodes
+        receivers; // concrete possible receivers when all_receivers is false
+    };
+
+    struct PendingCallback
+    {
+      Node site;
+      Node type;
+      bool required;
     };
 
     Node top;
@@ -428,6 +607,7 @@ namespace vc
     std::set<Node> processed_initfini;
     Nodes errors;
     std::vector<MethodInvocation> method_invocations;
+    std::vector<PendingCallback> pending_callbacks;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
 
     // Per-function local type map: LocalId location -> reified type.
@@ -444,38 +624,191 @@ namespace vc
     };
     std::map<Location, LookupInfo> lookup_info;
 
-    // Extract individual type ids from a reified type. For Union, extracts
-    // each member. For Dyn, returns empty (meaning all classes). For
-    // ClassId/primitive, returns just that type.
-    Nodes extract_receivers(const Node& reified_type)
+    void drain_worklist(std::vector<Reification*>& deferred_typevar)
     {
-      // Dyn means "all classes". TypeId means a shape type whose concrete
-      // implementations aren't resolved yet (post-worklist), so treat as all.
-      if (!reified_type || (reified_type == Dyn) || (reified_type == TypeId))
+      while (!worklist.empty())
+      {
+        auto r = worklist.back();
+        worklist.pop_back();
+
+        if (r->def == ClassDef)
+          reify_class(*r);
+        else if (r->def == TypeAlias)
+          reify_typealias(*r);
+        else if (r->def == Function)
+        {
+          reify_function(*r);
+
+          // If the function had a TypeVar return in the def, defer it
+          // for a second pass when all callees are reified. The first
+          // pass may have produced a partial return type (e.g., nomatch
+          // from match arms when the main arm's CallDyn wasn't tracked).
+          if (r->reification && (r->def / Type)->front() == TypeVar)
+            deferred_typevar.push_back(r);
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+    }
+
+    void resolve_shapes()
+    {
+      SequentCtx ctx{top, {}, {}};
+
+      for (auto& key : map_order)
+      {
+        for (auto& r : map[key])
+        {
+          if (r.def != ClassDef || (r.def / Shape) != Shape)
+            continue;
+
+          assert(r.resolved_name);
+          Node union_node = Union;
+
+          for (auto& ckey : map_order)
+          {
+            for (auto& cr : map[ckey])
+            {
+              if (cr.def != ClassDef || (cr.def / Shape) == Shape)
+                continue;
+              if (!cr.resolved_name)
+                continue;
+
+              if (check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
+                union_node << clone(cr.id);
+            }
+          }
+
+          if (union_node->empty())
+          {
+            // No concrete classes implement this shape. Emit an empty
+            // Type entry so TypeId references are valid. The typetest
+            // for this shape will always fail at runtime (no value of
+            // this type can exist), making the code path unreachable.
+            r.reification = Type << clone(r.id) << Union;
+          }
+          else if (union_node->size() == 1)
+            r.reification = Type << clone(r.id) << union_node->front();
+          else
+            r.reification = Type << clone(r.id) << union_node;
+        }
+      }
+    }
+
+    struct ReceiverSet
+    {
+      bool all;
+      Nodes types;
+    };
+
+    Node resolve_receiver_typeid(const Node& type_id)
+    {
+      if (!type_id || (type_id != TypeId))
         return {};
 
-      if (reified_type == Union)
+      auto type_id_loc = type_id->location().view();
+
+      for (auto& key : map_order)
       {
-        Nodes result;
-
-        for (auto& child : *reified_type)
+        for (auto& r : map[key])
         {
-          if (child == Dyn)
-            return {}; // union containing Dyn = all
+          if (!r.id || (r.id->location().view() != type_id_loc))
+            continue;
 
-          result.push_back(clone(child));
+          if (!r.reification && (r.def == TypeAlias))
+            reify_typealias(r);
+
+          if (r.reification && (r.reification == Type))
+            return clone(r.reification->back());
+
+          return {};
         }
-
-        return result;
       }
 
-      return {clone(reified_type)};
+      return {};
+    }
+
+    // Extract individual type ids from a reified type. Dyn (or an unresolved
+    // shape TypeId) means "all classes/primitives". A resolved shape TypeId is
+    // expanded to its concrete implementations. Wrapper receivers are expanded
+    // across the resolved inner receiver set.
+    ReceiverSet extract_receivers(const Node& reified_type)
+    {
+      std::function<ReceiverSet(const Node&)> collect = [&](const Node& type) {
+        if (!type || (type == Dyn))
+          return ReceiverSet{true, {}};
+
+        if (type == Type)
+          return collect(type->front());
+
+        if (type == TypeId)
+        {
+          auto resolved = resolve_receiver_typeid(type);
+          return resolved ? collect(resolved) : ReceiverSet{true, {}};
+        }
+
+        if (type == Union)
+        {
+          ReceiverSet result{false, {}};
+
+          for (auto& child : *type)
+          {
+            auto child_set = collect(child);
+
+            if (child_set.all)
+              return ReceiverSet{true, {}};
+
+            for (auto& recv : child_set.types)
+            {
+              bool dup = false;
+
+              for (auto& existing : result.types)
+              {
+                if (existing->equals(recv))
+                {
+                  dup = true;
+                  break;
+                }
+              }
+
+              if (!dup)
+                result.types.push_back(clone(recv));
+            }
+          }
+
+          return result;
+        }
+
+        if (type->in({Ref, Array, Cown}))
+        {
+          auto inner_set = collect(type->front());
+
+          if (inner_set.all)
+            return ReceiverSet{true, {}};
+
+          ReceiverSet result{false, {}};
+
+          for (auto& inner : inner_set.types)
+          {
+            Node wrapper = type->type() << clone(inner);
+            result.types.push_back(wrapper);
+          }
+
+          return result;
+        }
+
+        return ReceiverSet{false, {clone(type)}};
+      };
+
+      return collect(reified_type);
     }
 
     // Check if a MethodInvocation targets a specific class reification.
     bool mi_targets(const MethodInvocation& mi, Node class_id)
     {
-      if (mi.receivers.empty())
+      if (mi.all_receivers)
         return true; // all classes
 
       for (auto r : mi.receivers)
@@ -492,20 +825,43 @@ namespace vc
     // return the substituted value. Otherwise, return the original TypeArg.
     Node resolve_typearg(const Node& arg, const NodeMap<Node>& subst)
     {
+      bool wrapped = (arg == Type);
       auto inner = arg;
 
       // Unwrap Type node.
-      if (inner == Type)
+      if (wrapped)
         inner = inner->front();
 
       if (inner == Union)
       {
         Node r = Union;
+        bool has_non_dyn = false;
 
         for (auto& child : *inner)
-          r << resolve_typearg(child, subst);
+        {
+          auto resolved = resolve_typearg(child, subst);
+          auto resolved_inner =
+            (resolved == Type) ? resolved->front() : resolved;
+          if (resolved_inner != Dyn)
+            has_non_dyn = true;
+          r << clone(resolved_inner);
+        }
 
-        return r;
+        if (has_non_dyn)
+        {
+          Node filtered = Union;
+          for (auto& child : *r)
+          {
+            if (child != Dyn)
+              filtered << clone(child);
+          }
+          r = filtered;
+        }
+
+        if (r->size() == 1)
+          return wrapped ? (Type << clone(r->front())) : clone(r->front());
+
+        return wrapped ? (Type << r) : r;
       }
 
       if (inner != TypeName)
@@ -530,12 +886,18 @@ namespace vc
         auto find = subst.find(def);
 
         if (find != subst.end())
-          return find->second;
+        {
+          if (wrapped)
+            return clone(find->second);
+
+          return (find->second == Type) ? clone(find->second->front()) :
+                                          clone(find->second);
+        }
 
         // TypeParam not in subst — return Dyn to prevent self-referential
         // substitution cycles (where a TypeParam maps to a reference to
         // itself, causing infinite recursion in reify_type).
-        return Type << Dyn;
+        return wrapped ? (Type << Dyn) : Dyn;
       }
 
       // Not a bare TypeParam. Recursively resolve TypeParams in any nested
@@ -572,7 +934,7 @@ namespace vc
         return arg;
 
       // Re-wrap in Type if the original was wrapped.
-      if (arg == Type)
+      if (wrapped)
         return Type << resolved_name;
 
       return resolved_name;
@@ -674,6 +1036,9 @@ namespace vc
                 }
               }
 
+              if (!existing.resolved_name && resolved_name)
+                existing.resolved_name = resolved_name;
+
               return clone(existing.id);
             }
           }
@@ -740,7 +1105,11 @@ namespace vc
         }
 
         if (match)
+        {
+          if (!existing.resolved_name && resolved_name)
+            existing.resolved_name = resolved_name;
           return clone(existing.id);
+        }
       }
 
       auto id = make_id(def, r_vec.size(), subst);
@@ -780,7 +1149,8 @@ namespace vc
 
             fields
               << (Field << (FieldId ^ (f / Ident))
-                        << reify_type(f / Type, r.subst));
+                        << reify_emitted_type(
+                             f / Type, r.subst, f / Ident, "field type"));
           }
 
           r.reification = Class << r.id << fields << Methods;
@@ -824,7 +1194,10 @@ namespace vc
     {
       // Store the reified type alias as a Type entry (TypeAlias is
       // resolved during reification; the IR uses Type for lookups).
-      r.reification = Type << r.id << reify_type(r.def / Type, r.subst);
+      r.reification =
+        Type << r.id
+             << reify_emitted_type(
+                  r.def / Type, r.subst, r.def / Ident, "type alias");
     }
 
     // Find a function reification by FunctionId and return its reified
@@ -855,13 +1228,202 @@ namespace vc
       return {};
     }
 
+    Reification* find_function_reification(const Node& funcid)
+    {
+      auto funcid_loc = funcid->location().view();
+
+      for (auto& key : map_order)
+      {
+        if (key != Function)
+          continue;
+
+        for (auto& reif : map[key])
+        {
+          if (reif.id && (reif.id->location().view() == funcid_loc))
+            return &reif;
+        }
+      }
+
+      return nullptr;
+    }
+
+    std::vector<Reification*>
+    find_method_targets(Node recv_type, const std::string& method_id)
+    {
+      auto recv_set = extract_receivers(recv_type);
+      std::vector<Reification*> targets;
+
+      for (auto& key : map_order)
+      {
+        if (key != ClassDef)
+          continue;
+
+        for (auto& r : map[key])
+        {
+          if (!r.reification || !r.id)
+            continue;
+
+          if ((r.def / Shape) == Shape)
+            continue;
+
+          bool matches = recv_set.all;
+
+          for (auto& recv : recv_set.types)
+          {
+            if (r.id->equals(recv))
+            {
+              matches = true;
+              break;
+            }
+          }
+
+          if (!matches)
+            continue;
+
+          auto methods = r.reification / Methods;
+
+          for (auto& m : *methods)
+          {
+            if ((m / MethodId)->location().view() != method_id)
+              continue;
+
+            auto* target = find_function_reification(m / FunctionId);
+
+            if (
+              target &&
+              std::none_of(targets.begin(), targets.end(), [&](auto* existing) {
+                return existing == target;
+              }))
+            {
+              targets.push_back(target);
+            }
+
+            break;
+          }
+        }
+      }
+
+      return targets;
+    }
+
+    Node merge_refined_type(Node current, Node actual)
+    {
+      if (!current)
+        return clone(actual);
+
+      if (!actual)
+        return clone(current);
+
+      if (current->equals(actual))
+        return clone(current);
+
+      if (current == Dyn)
+        return clone(actual);
+
+      if (actual == Dyn)
+        return clone(current);
+
+      Node merged = Union;
+
+      auto add_type = [&](Node type) {
+        auto add_one = [&](Node single) {
+          for (auto& existing : *merged)
+          {
+            if (existing->equals(single))
+              return;
+          }
+
+          merged << clone(single);
+        };
+
+        if (type == Union)
+        {
+          for (auto& child : *type)
+            add_one(child);
+        }
+        else
+        {
+          add_one(type);
+        }
+      };
+
+      add_type(current);
+      add_type(actual);
+
+      if (merged->size() == 1)
+        return clone(merged->front());
+
+      return merged;
+    }
+
+    Node actual_arg_type(const Node& arg, bool behavior_arg)
+    {
+      auto src = arg->back();
+      auto it = local_types.find(src->location());
+
+      if (it == local_types.end())
+        return {};
+
+      if (!behavior_arg || (it->second != Cown))
+        return clone(it->second);
+
+      auto inner = clone(it->second->front());
+
+      if (inner != Dyn)
+        ensure_ref_reified(inner);
+
+      return Ref << inner;
+    }
+
+    bool refine_function_params(
+      Reification& target, const Node& args, bool behavior_args)
+    {
+      if (!target.reification)
+        return false;
+
+      auto params = target.reification / Params;
+      auto def_params = target.def / Params;
+
+      if (params->size() != args->size())
+        return false;
+
+      bool changed = false;
+
+      for (size_t i = 0; i < args->size(); i++)
+      {
+        auto actual = actual_arg_type(args->at(i), behavior_args);
+
+        if (!actual)
+          continue;
+
+        auto param = params->at(i);
+        auto def_param = def_params->at(i);
+        auto current = param / Type;
+
+        if (!has_unresolved_type(def_param / Type, target.subst))
+          continue;
+
+        Node merged = contains_dyn(current) ?
+          clone(actual) :
+          merge_refined_type(current, actual);
+
+        if (!current->equals(merged))
+        {
+          param->replace(current, merged);
+          changed = true;
+        }
+      }
+
+      return changed;
+    }
+
     // Given a reified receiver type (possibly a union) and a MethodId string,
     // find the method's function return type by searching matching class
     // reifications. If multiple receivers contribute distinct return types,
     // return their union.
     Node find_method_return_type(Node recv_type, const std::string& method_id)
     {
-      Nodes recv_types = extract_receivers(recv_type);
+      auto recv_set = extract_receivers(recv_type);
       Nodes ret_types;
 
       for (auto& key : map_order)
@@ -874,9 +1436,12 @@ namespace vc
           if (!r.reification || !r.id)
             continue;
 
-          bool matches = recv_types.empty();
+          if ((r.def / Shape) == Shape)
+            continue;
 
-          for (auto& recv : recv_types)
+          bool matches = recv_set.all;
+
+          for (auto& recv : recv_set.types)
           {
             if (r.id->equals(recv))
             {
@@ -945,7 +1510,8 @@ namespace vc
       Node r_type;
 
       if (!typevar_return)
-        r_type = reify_type(def_type, r.subst);
+        r_type =
+          reify_emitted_type(def_type, r.subst, r.def / Ident, "return type");
       else
         r_type = {}; // Will be inferred from Return terminals after body.
       Node params = Params;
@@ -986,49 +1552,49 @@ namespace vc
               << (NameElement << (Ident ^ "_builtin") << TypeArgs)
               << (NameElement << (Ident ^ "u8") << TypeArgs);
             ensure_array_reified(u8_type, {});
-            local_types[(n / LocalId)->location()] = Array << clone(U8);
+            local_types[(n / LocalId)->location()] = Array << U8;
           }
           else if (n->in({Eq, Ne, Lt, Le, Gt, Ge}))
           {
             reify_primitive(Bool);
-            local_types[(n / LocalId)->location()] = clone(Bool);
+            local_types[(n / LocalId)->location()] = Bool;
           }
           else if (n->in({Const_E, Const_Pi, Const_Inf, Const_NaN}))
           {
             reify_primitive(F64);
-            local_types[(n / LocalId)->location()] = clone(F64);
+            local_types[(n / LocalId)->location()] = F64;
           }
           else if (n == Bits)
           {
             reify_primitive(U64);
-            local_types[(n / LocalId)->location()] = clone(U64);
+            local_types[(n / LocalId)->location()] = U64;
           }
           else if (n == Len)
           {
             reify_primitive(USize);
-            local_types[(n / LocalId)->location()] = clone(USize);
+            local_types[(n / LocalId)->location()] = USize;
           }
           else if (n == MakePtr)
           {
             reify_primitive(Ptr);
-            local_types[(n / LocalId)->location()] = clone(Ptr);
+            local_types[(n / LocalId)->location()] = Ptr;
           }
           else if (n == MakeCallback)
           {
-            reify_primitive(Callback);
-            local_types[(n / LocalId)->location()] = clone(Callback);
+            reify_primitive(Ptr);
+            local_types[(n / LocalId)->location()] = Ptr;
 
             // Find the lambda's type and register its @callback method.
-            // First check local_types (works when source was from New).
+            // First check local_types (works when source was from New or from a
+            // typed function wrapper that may need deferred shape resolution).
             auto src_loc = (n / Rhs)->location();
             auto src_it = local_types.find(src_loc);
-            Node class_id;
+            Node callback_type;
 
-            if (src_it != local_types.end() && (src_it->second == ClassId))
-            {
-              class_id = src_it->second;
-            }
-            else
+            if (src_it != local_types.end())
+              callback_type = clone(src_it->second);
+
+            if (!callback_type)
             {
               // local_types doesn't have it (e.g., assigned via Call).
               // Trace back through Copy/Move to find the original source.
@@ -1069,7 +1635,7 @@ namespace vc
                   stmt->in({New, Stack}) &&
                   ((stmt / LocalId)->location() == trace_loc))
                 {
-                  class_id = stmt / ClassId;
+                  callback_type = clone(stmt / ClassId);
                 }
                 else if (
                   (stmt == Call) && ((stmt / LocalId)->location() == trace_loc))
@@ -1117,39 +1683,27 @@ namespace vc
                   // to avoid iterator invalidation (find_or_push may
                   // append to map_order).
                   if (call_enc)
-                    class_id = find_or_push(call_enc, std::move(class_subst));
+                    callback_type =
+                      find_or_push(call_enc, std::move(class_subst));
                 }
               }
             }
 
-            if (class_id)
-              reify_make_callback(n, class_id);
+            if (callback_type)
+              reify_make_callback(n, callback_type);
             else
               n->parent()->replace(
                 n, err(n, "make_callback: cannot determine lambda type"));
           }
-          else if (n->in({CallbackPtr, FreeCallback}))
+          else if (n == CodePtrCallback)
           {
-            if (n == CallbackPtr)
-            {
-              reify_primitive(Ptr);
-              local_types[(n / LocalId)->location()] = clone(Ptr);
-            }
-            else
-            {
-              reify_primitive(None);
-              local_types[(n / LocalId)->location()] = clone(None);
-            }
+            reify_primitive(Ptr);
+            local_types[(n / LocalId)->location()] = Ptr;
           }
-          else if (n->in({AddExternal, RemoveExternal}))
+          else if (n->in({FreeCallback, AddExternal, RemoveExternal}))
           {
             reify_primitive(None);
-            local_types[(n / LocalId)->location()] = clone(None);
-          }
-          else if (n == RegisterExternalNotify)
-          {
-            reify_primitive(None);
-            local_types[(n / LocalId)->location()] = clone(None);
+            local_types[(n / LocalId)->location()] = None;
           }
           else if (n == Freeze)
           {
@@ -1162,12 +1716,12 @@ namespace vc
           else if (n->in({ArrayCopy, ArrayFill}))
           {
             reify_primitive(None);
-            local_types[(n / LocalId)->location()] = clone(None);
+            local_types[(n / LocalId)->location()] = None;
           }
           else if (n == ArrayCompare)
           {
             reify_primitive(I64);
-            local_types[(n / LocalId)->location()] = clone(I64);
+            local_types[(n / LocalId)->location()] = I64;
           }
           else if (n->in({Copy, Move}))
           {
@@ -1335,7 +1889,8 @@ namespace vc
           else if (n->in({New, Stack}))
           {
             // Save the type before reify_new transforms the node.
-            auto new_type = reify_type(n / Type, r.subst);
+            auto new_type = reify_emitted_type(
+              n / Type, r.subst, n / Type, "constructed type");
             reify_new(n, r.subst);
             // After reify_new, dst is first child.
             local_types[(n / LocalId)->location()] = new_type;
@@ -1390,13 +1945,16 @@ namespace vc
           }
           else if (n == NewArray)
           {
-            auto arr_type = Array << reify_type(n / Type, r.subst);
+            auto arr_type =
+              Array << reify_emitted_type(
+                n / Type, r.subst, n / Type, "array element type");
             local_types[(n / LocalId)->location()] = clone(arr_type);
             n / Type = arr_type;
           }
           else if (n == NewArrayConst)
           {
-            auto inner = reify_type(n / Type, r.subst);
+            auto inner = reify_emitted_type(
+              n / Type, r.subst, n / Type, "array element type");
 
             if (inner == TupleType)
             {
@@ -1659,7 +2217,8 @@ namespace vc
           }
         }
 
-        // Last resort: mark as Dyn and report error later.
+        // Last resort: mark as Dyn and let the deferred second pass try to
+        // refine it once all callees are reified.
         if (!r_type)
           r_type = Dyn;
       }
@@ -1730,13 +2289,16 @@ namespace vc
             }
           }
 
-          // Check local_types first (works for New/Stack).
+          // Check local_types first (works for New/Stack and typed function
+          // wrappers that resolve to a concrete lambda class).
           auto it = local_types.find(ret_loc);
 
-          if (it != local_types.end() && (it->second->type() == ClassId))
+          if (it != local_types.end())
           {
-            ensure_callback_method(it->second);
-            break;
+            if (register_callback_type(it->second))
+            {
+              break;
+            }
           }
 
           // Check if the return value comes from a Call (e.g., create).
@@ -1784,7 +2346,7 @@ namespace vc
               if (call_enc)
               {
                 auto class_id = find_or_push(call_enc, std::move(class_subst));
-                ensure_callback_method(class_id);
+                register_callback_type(class_id);
               }
 
               break;
@@ -1805,10 +2367,43 @@ namespace vc
       if (type == Type)
         return reify_type(type->front(), subst);
 
-      // Already-reified IR type (e.g., from Dyn fallback for missing
-      // TypeArgs). Return as-is.
+      // Already-reified IR type. Return a clone so the caller can safely
+      // insert it into a new part of the AST.
       if (type == Dyn)
-        return Dyn;
+        return clone(type);
+
+      if (type->in(
+            {ClassId,
+             TypeId,
+             None,
+             Bool,
+             I8,
+             I16,
+             I32,
+             I64,
+             U8,
+             U16,
+             U32,
+             U64,
+             ILong,
+             ULong,
+             ISize,
+             USize,
+             F32,
+             F64,
+             Ptr}))
+      {
+        return clone(type);
+      }
+
+      if (type == Array)
+        return Array << reify_type(type->front(), subst);
+
+      if (type == Ref)
+        return Ref << reify_type(type->front(), subst);
+
+      if (type == Cown)
+        return Cown << reify_type(type->front(), subst);
 
       // TypeVar that wasn't resolved during inference (e.g., in a generic
       // context). Return Dyn as a fallback — the caller should handle this
@@ -2028,7 +2623,12 @@ namespace vc
       auto ref_defs = builtin->look(Location("ref"));
       assert(!ref_defs.empty());
       auto ref_def = ref_defs.front();
+      auto tps = ref_def / TypeParams;
+      assert(tps->size() == 1);
+
       Node expected_id = Ref << clone(inner_ir_type);
+      NodeMap<Node> subst;
+      subst[tps->at(0)] = clone(inner_ir_type);
 
       auto it = map.find(ref_def);
       bool is_new_key = (it == map.end());
@@ -2039,11 +2639,28 @@ namespace vc
 
       for (auto& existing : r_vec)
       {
-        if (existing.id->equals(expected_id))
-          return;
+        if (!existing.id->equals(expected_id))
+          continue;
+
+        if (existing.subst.empty())
+        {
+          existing.subst = subst;
+
+          if (existing.reification)
+          {
+            for (auto& mi : method_invocations)
+            {
+              if (mi_targets(mi, existing.id))
+                register_method(mi, existing);
+            }
+          }
+        }
+
+        return;
       }
 
-      r_vec.push_back({ref_def, {}, std::move(expected_id), {}, {}});
+      r_vec.push_back(
+        {ref_def, std::move(subst), std::move(expected_id), {}, {}});
       worklist.push_back(&r_vec.back());
     }
 
@@ -2119,7 +2736,8 @@ namespace vc
       }
 
       // Reify the type to get a ClassId.
-      auto classid = reify_type(type_node, subst);
+      auto classid =
+        reify_emitted_type(type_node, subst, type_node, "constructed type");
 
       // Convert NewArgs to Args, ordered by field position in the class.
       Node args = Args;
@@ -2175,7 +2793,7 @@ namespace vc
       auto method_id_str = std::format("{}::{}", base_id, index);
 
       // Determine receiver types from the source local's tracked type.
-      Nodes receivers;
+      ReceiverSet receivers{true, {}};
       auto src_it = local_types.find(src->location());
 
       if (src_it != local_types.end())
@@ -2189,7 +2807,8 @@ namespace vc
          hand->type(),
          clone(typeargs),
          call_subst,
-         std::move(receivers)});
+         receivers.all,
+         std::move(receivers.types)});
 
       // Register this new MI on existing class reifications that match.
       // Iterate via map_order (insertion order) rather than map (pointer order)
@@ -2222,6 +2841,9 @@ namespace vc
     void register_method(const MethodInvocation& mi, Reification& r)
     {
       assert(r.def == ClassDef);
+
+      if ((r.def / Shape) == Shape)
+        return;
 
       // Skip method registration if the class has TypeParams but the
       // subst doesn't include them (e.g., wrapper classes created by
@@ -2292,6 +2914,55 @@ namespace vc
         if (!already)
           methods << (Method << clone(mid_node) << funcid);
       }
+    }
+
+    Nodes resolve_callback_targets(Node type)
+    {
+      if (!type)
+        return {};
+
+      if (type == Type)
+        type = type->front();
+
+      if (type == ClassId)
+        return {clone(type)};
+
+      if (type == Union)
+      {
+        Nodes targets;
+
+        for (auto& child : *type)
+        {
+          auto resolved = resolve_callback_targets(child);
+          targets.insert(targets.end(), resolved.begin(), resolved.end());
+        }
+
+        return targets;
+      }
+
+      if (type != TypeId)
+        return {};
+
+      auto type_id_loc = type->location().view();
+
+      for (auto& key : map_order)
+      {
+        for (auto& r : map[key])
+        {
+          if (!r.id || (r.id->location().view() != type_id_loc))
+            continue;
+
+          if (!r.reification && (r.def == TypeAlias))
+            reify_typealias(r);
+
+          if (r.reification && (r.reification == Type))
+            return resolve_callback_targets(r.reification->back());
+
+          return {};
+        }
+      }
+
+      return {};
     }
 
     // Core logic for registering @callback on a class. Returns true if
@@ -2393,14 +3064,9 @@ namespace vc
       return true;
     }
 
-    void reify_make_callback(Node& n, const Node& class_id)
+    void emit_make_callback_error(
+      Node& n, size_t match_count, bool has_generic) const
     {
-      size_t match_count = 0;
-      bool has_generic = false;
-
-      if (ensure_callback_method(class_id, &match_count, &has_generic))
-        return;
-
       if (match_count == 0)
       {
         auto msg = has_generic ?
@@ -2414,8 +3080,104 @@ namespace vc
       {
         n->parent()->replace(
           n, err(n, "make_callback requires exactly one 'apply' overload"));
-        return;
       }
+    }
+
+    bool register_callback_type(
+      const Node& type, Node site = {}, bool required = false)
+    {
+      auto targets = resolve_callback_targets(type);
+
+      if (targets.empty())
+      {
+        auto inner = type;
+
+        if (inner && (inner == Type))
+          inner = inner->front();
+
+        if (inner && (inner == TypeId))
+        {
+          pending_callbacks.push_back({site, clone(type), required});
+          return true;
+        }
+
+        if (required && site)
+        {
+          site->parent()->replace(
+            site, err(site, "make_callback: cannot determine lambda type"));
+        }
+
+        return false;
+      }
+
+      size_t match_count = 0;
+      bool has_generic = false;
+
+      for (auto& class_id : targets)
+      {
+        if (ensure_callback_method(class_id, &match_count, &has_generic))
+          continue;
+
+        if (required && site)
+          emit_make_callback_error(site, match_count, has_generic);
+
+        return false;
+      }
+
+      return true;
+    }
+
+    void process_pending_callbacks(bool final_pass)
+    {
+      std::vector<PendingCallback> remaining;
+
+      for (auto& pending : pending_callbacks)
+      {
+        auto targets = resolve_callback_targets(pending.type);
+
+        if (targets.empty())
+        {
+          if (final_pass && pending.required && pending.site)
+          {
+            pending.site->parent()->replace(
+              pending.site,
+              err(pending.site, "make_callback: cannot determine lambda type"));
+          }
+          else
+          {
+            remaining.push_back(
+              {pending.site, clone(pending.type), pending.required});
+          }
+
+          continue;
+        }
+
+        size_t match_count = 0;
+        bool has_generic = false;
+        bool ok = true;
+
+        for (auto& class_id : targets)
+        {
+          if (!ensure_callback_method(class_id, &match_count, &has_generic))
+          {
+            ok = false;
+            break;
+          }
+        }
+
+        if (ok)
+          continue;
+
+        if (final_pass && pending.required && pending.site)
+          emit_make_callback_error(pending.site, match_count, has_generic);
+      }
+
+      pending_callbacks = std::move(remaining);
+    }
+
+    void reify_make_callback(Node& n, const Node& type)
+    {
+      register_callback_type(type, n, true);
     }
 
     // Reify init functions from a source Lib onto a reified Lib.
@@ -2519,9 +3281,11 @@ namespace vc
               Node ffi_params = FFIParams;
 
               for (auto& p : *(sym / FFIParams))
-                ffi_params << reify_type(p, r.subst);
+                ffi_params << reify_emitted_type(
+                  p, r.subst, sym / SymbolId, "FFI parameter type");
 
-              auto ret_type = reify_type(sym / Type, r.subst);
+              auto ret_type = reify_emitted_type(
+                sym / Type, r.subst, sym / SymbolId, "FFI return type");
 
               // Add the reified symbol. Duplicate detection and type
               // compatibility checking is done in the vbcc assignids pass.
@@ -2635,7 +3399,7 @@ namespace vc
               if (find != resolve_subst.end())
                 return reify_type(find->second, resolve_subst);
 
-              return err(elem, "TypeParam has no substitution");
+              return Dyn;
             }
           }
 
@@ -2833,6 +3597,12 @@ namespace vc
           auto tp_find = subst.find(tps->at(0));
           Node elem_type =
             (tp_find != subst.end()) ? reify_type(tp_find->second, subst) : Dyn;
+
+          if (
+            (tp_find == subst.end()) ||
+            has_unresolved_type(tp_find->second, subst))
+            emit_unresolved_type_error(def / Ident, "wrapper element type");
+
           return wrap_find->second << elem_type;
         }
       }

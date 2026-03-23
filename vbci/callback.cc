@@ -1,6 +1,7 @@
 #include "callback.h"
 
 #include "program.h"
+#include "region.h"
 #include "thread.h"
 #include "value.h"
 
@@ -57,7 +58,7 @@ namespace vbci
     }
   }
 
-  CallbackClosure* make_callback(Register& lambda, Function* func)
+  CallbackClosure* make_callback(const Register& lambda, Function* func)
   {
     auto* cc = new CallbackClosure();
 
@@ -119,22 +120,8 @@ namespace vbci
       Value::error(Error::BadArgs);
     }
 
-    // Store the function and move the lambda into the closure.
     cc->func = func;
-    cc->lambda = std::move(lambda);
-
+    cc->lambda = lambda;
     return cc;
-  }
-
-  void* callback_ptr(CallbackClosure* cc)
-  {
-    return cc->code_ptr;
-  }
-
-  void free_callback(CallbackClosure* cc)
-  {
-    ffi_closure_free(cc->closure);
-    cc->lambda.clear();
-    delete cc;
   }
 }

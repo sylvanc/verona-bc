@@ -79,8 +79,7 @@ namespace vbcc
                ULong,
                ISize,
                USize,
-               Ptr,
-               Callback}))
+               Ptr}))
           return find_primitive(type_node);
         if (type_node->type().in({Array, Cown, Ref}))
         {

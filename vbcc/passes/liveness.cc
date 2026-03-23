@@ -116,9 +116,8 @@ namespace vbcc
                       SetRaise,
                       Typetest,
                       MakeCallback,
-                      CallbackPtr,
-                      FreeCallback,
-                      RegisterExternalNotify}))
+                      CodePtrCallback,
+                      FreeCallback}))
           {
             use(node / Rhs);
             def(node / LocalId);

@@ -10,6 +10,5 @@ main(): i32
 {
   var obj = genmethod;
   var cb = ffi::callback(obj);
-  cb.free;
   0
 }

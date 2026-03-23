@@ -95,8 +95,7 @@ namespace vbcc
                   USize,
                   F32,
                   F64,
-                  Ptr,
-                  Callback)[Type] *
+                  Ptr)[Type] *
                 T(Methods)) >>
           [state](Match& _) -> Node {
           auto& slot = state->primitives.at(+val(_(Type)));

@@ -82,9 +82,8 @@ namespace vc
     {"arrayref", {0, 2, ArrayRef}},
     {"newarray", {1, 1, NewArray}},
     {"make_callback", {0, 1, MakeCallback}},
-    {"callback_ptr", {0, 1, CallbackPtr}},
+    {"codeptr_callback", {0, 1, CodePtrCallback}},
     {"free_callback", {0, 1, FreeCallback}},
-    {"register_external_notify", {0, 1, RegisterExternalNotify}},
     {"freeze", {0, 1, Freeze}},
     {"arraycopy", {0, 5, ArrayCopy}},
     {"arrayfill", {0, 4, ArrayFill}},
@@ -222,22 +221,17 @@ namespace vc
           },
 
         // TripleColon with RHS tuple.
-        In(Expr) * T(TripleColon)[TripleColon] * T(Tuple)[Args] >>
-          [](Match& _) -> Node {
-          return resolve_triplecolon(_(TripleColon), Args << *_(Args));
-        },
+        In(Expr) * T(TripleColon)[TripleColon] * T(Tuple, ExprSeq)[Args] >>
+          [](Match& _) {
+            return resolve_triplecolon(_(TripleColon), Args << *_(Args));
+          },
 
-        // TripleColon with RHS value.
-        In(Expr) * T(TripleColon)[TripleColon] * ValuePat[Rhs] >>
-          [](Match& _) -> Node {
-          return resolve_triplecolon(_(TripleColon), Args << (Expr << _(Rhs)));
-        },
-
-        // TripleColon without arguments.
-        In(Expr) * T(TripleColon)[TripleColon] * End >> [](Match& _) -> Node {
-          Node args = Args;
-          return resolve_triplecolon(_(TripleColon), args);
-        },
+        In(Expr) * T(TripleColon)[TripleColon] >>
+          [](Match& _) {
+            return err(
+              _(TripleColon),
+              "Builtins and FFIs must have parenthesized arguments");
+          },
 
         // Application with RHS tuple.
         In(Expr) * ValuePat[Lhs] * T(Tuple)[Tuple] >>

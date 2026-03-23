@@ -186,7 +186,7 @@ my_project/
   types.v         # additional module (optional)
 ```
 
-Each directory defines a module named after the directory. Files within a directory aren't semantically significant — their contents are just part of the module. Modules can reference each other's declarations using qualified names (`ModuleName::item`), by importing with `use ModuleName`, or by importing them with a name with `use m = ModuleName`. Subdirectories are supported — they create nested module scopes (e.g., `module1/module2/` is accessible as `module1::module2`). See [Modules and Imports](16-modules.md).
+Each directory defines a module named after the directory. If a directory name contains `-`, the Verona module name normalizes it to `_` (for example, `asio-uv/` becomes `asio_uv`). Files within a directory aren't semantically significant — their contents are just part of the module. Modules can reference each other's declarations using qualified names (`ModuleName::item`), by importing with `use ModuleName`, or by importing them with a name with `use m = ModuleName`. Subdirectories are supported — they create nested module scopes (for example, `module-1/sub-dir/` is accessible as `module_1::sub_dir`). See [Modules and Imports](16-modules.md).
 
 ### The `_builtin` Standard Library
 
@@ -202,7 +202,7 @@ _builtin/
   f64.v           f64 — 64-bit float
   ffi/            FFI wrappers — callback, external notify, ptr
     callback.v    callback — C-compatible function pointer wrapper
-    notify.v      external class (singleton via once), register_external_notify
+    external.v    external class (singleton via once).
     ptr.v         ptr — opaque raw pointer type
   i8.v            i8 — 8-bit signed integer
   i16.v           i16 — 16-bit signed integer

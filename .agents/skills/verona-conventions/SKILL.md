@@ -97,8 +97,11 @@ Missing items 5 or 6 causes "undefined register" errors in later passes, not at 
 ## Debugging
 
 - Trace data flow, not just error sites. Root cause is often upstream.
+- For tricky compiler/runtime/FFI bugs, do principled analysis first: reproduce, trace, inspect dumps, and localize the fault before changing semantics.
+- Before speculative interpreter/runtime changes, explain the evidence and proposed fix and get feedback.
 - "Bad type" runtime errors usually mean unrefined default literals in compiler output. Check infer pass dump.
 - `node->type() == other->type()` for token comparison, NOT `node == other_node`.
 - Write targeted tests that expose the bug before fixing.
 - Runtime failures matter as much as compile-time failures. Investigate both with the current branch's `dist/` binaries.
 - Do not describe runtime behavior as flaky or dismiss it as harness noise without first reproducing and tracing it to a concrete cause.
+- Durable Verona-specific workflow rules belong in this skill or the repo `AGENTS.md`, not in agent-specific memory stores.

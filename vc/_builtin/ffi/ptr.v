@@ -1,1 +1,7 @@
-ptr {}
+ptr
+{
+  create(): ptr
+  {
+    :::ptr(none)
+  }
+}

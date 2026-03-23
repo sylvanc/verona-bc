@@ -274,7 +274,6 @@ The scheduler tracks external resources — things outside Verona's control (fil
 
 - `ffi::external.add` increments the count (method on the `external` singleton).
 - `ffi::external.remove` decrements the count.
-- `ffi::register_external_notify(lambda)` registers a lambda that fires on each add/remove event.
 
 See [FFI §17.8](17-ffi.md) for details.
 

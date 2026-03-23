@@ -16,7 +16,6 @@ Semantics.
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 
 FFI.
-- Can `ffi::callback` interact with reference counting better?
 - Platform dependent code for dealing with libraries?
 
 Reviews.
@@ -52,6 +51,7 @@ Software engineering:
 - Public, private.
 - Proposal: `_` means private, public shapes can't have private methods.
 - Can't `use` a private name, nor a public name inside a private name.
+- Is `final` private?
 
 Security:
 - Integrate package management with signed and transparent statements and policies?

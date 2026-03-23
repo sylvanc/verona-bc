@@ -81,8 +81,8 @@ Built-in operations can only appear in the `_builtin` package.
 | **Identity** | `eq` (pointer), `ne` (pointer), `bits` |
 | **Constants** | `none`, `e`, `pi`, `inf`, `nan` |
 | **Memory** | `len`, `ptr`, `read`, `arrayref`, `newarray` |
-| **Callback** | `make_callback`, `callback_ptr`, `free_callback` |
-| **External** | `add_external`, `remove_external`, `register_external_notify` |
+| **Callback** | `make_callback`, `free_callback` |
+| **External** | `add_external`, `remove_external` |
 
 ---
 
@@ -115,7 +115,14 @@ use "mylib"
 
 Primitive types (`i32`, `f64`, `bool`, `ptr`, `usize`, etc.) are passed directly — they correspond to their C equivalents. The `ptr` type is an opaque raw pointer (see [Built-in Types §22.11](22-builtin-types.md)).
 
-Strings and arrays are **not** directly passable as C data structures. Strings are Verona objects containing a `data: array[u8]` field; arrays are Verona objects with a header. To pass string data to C, use the `ptr` and `len` builtins from within `_builtin` to extract a raw pointer and length.
+For FFI parameters declared as `ptr`, Verona also passes pointer-like runtime values by their underlying C representation:
+
+- `none` becomes `NULL`
+- arrays are passed as a pointer to their element storage
+- objects are passed as a pointer to their fields (like a C `struct`)
+- `callback` values are passed as their C function pointer
+
+Strings are Verona objects containing a `data: array[u8]` field, so to pass string bytes to C, pass `my_string.data` (and usually `my_string.size`) rather than the string object itself.
 
 ### Memory Ownership
 
@@ -200,10 +207,7 @@ The `callback` class (defined in `_builtin/ffi/callback.v`) wraps a Verona calla
 let cb = callback(my_lambda);
 
 // Get the C function pointer (as ptr)
-let fptr = cb.apply;
-
-// Free the callback when done (releases the closure)
-cb.free;
+let fptr = cb.raw;
 ```
 
 ### API
@@ -211,8 +215,7 @@ cb.free;
 | Operation | Description |
 |-----------|-------------|
 | `callback(callable)` | Create a callback wrapping `callable` (constructor sugar for `callback::create`) |
-| `cb.apply` | Get the C function pointer as `ptr` |
-| `cb.free` | Free the underlying closure resources |
+| `cb.raw` | Get the C function pointer as `ptr` |
 
 ### Under the Hood
 
@@ -229,9 +232,7 @@ use "eventlib"
 main(): i32
 {
   let handler = callback((): none -> { /* handle event */ });
-  :::register_handler(handler.apply);
-  // ... later:
-  handler.free;
+  :::register_handler(handler.raw);
   0
 }
 ```
@@ -246,7 +247,6 @@ The `_builtin/ffi/` directory contains Verona wrapper functions for common FFI o
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on every `add`/`remove` |
 | `ffi::external.add` | `(self: external): none` | Add an external resource (increments the external event count) |
 | `ffi::external.remove` | `(self: external): none` | Remove an external resource (decrements the external event count) |
 
@@ -259,43 +259,11 @@ The runtime tracks "external resources" — things outside the Verona scheduler'
 
 The `external` class is a singleton (using `once create()`) that serializes add/remove operations through an internal cown. The dot syntax `ffi::external.add` auto-calls `create()` to get the singleton and then dispatches `.add` on it. See [Functions §7.10](07-functions.md) for more on `once` functions.
 
-### External Notify Callbacks
-
-`ffi::register_external_notify[T](f)` registers a lambda that fires every time `add_external` or `remove_external` runs. This is useful for monitoring resource lifecycle or triggering actions when external state changes. The wrapper internally creates a `callback(f)` from the lambda and passes it to `:::register_external_notify`.
-
-**Rules:**
-- `register_external_notify` must be called **before the scheduler starts** (i.e., during `init`, not from `main` or `when` blocks). Calling it after the scheduler starts is a runtime error.
-- The callback is automatically freed when the program exits (after finalizers run).
-- Multiple notify callbacks can be registered — they all fire on each event.
-
-### Example: Monitoring External Resources
-
-```verona
-use
-{
-  init(): any
-  {
-    // Register a notify lambda during init (before scheduler starts)
-    ffi::register_external_notify((): none -> { :::printval(0) })
-  }
-
-  printval = "printval"(any): none;
-}
-
-main(): i32
-{
-  ffi::external.add;                  // notify callback fires
-  ffi::external.remove;               // notify callback fires
-  0
-}
-```
-
 ### How `_builtin/ffi` Works
 
-Each `.v` file in `_builtin/ffi/` defines either a class (like `callback`, `external`) or free functions (like `register_external_notify`). Because `_builtin` is always implicitly imported, and `_builtin/ffi/` is a nested scope, these are accessible via `ffi::function_name(args)` or `ffi::class_name.method`.
+Each `.v` file in `_builtin/ffi/` defines either a class (like `callback`, `external`) or free functions. Because `_builtin` is always implicitly imported, and `_builtin/ffi/` is a nested scope, these are accessible via `ffi::function_name(args)` or `ffi::class_name.method`.
 
 The wrappers internally use `:::` builtins:
 - `callback::create[T]` uses `:::make_callback`
-- `register_external_notify[T]` creates a `callback(f)` and calls `:::register_external_notify`
 - `external` uses `once create()` for singleton initialization and serializes `:::add_external`/`:::remove_external` through an internal cown
 - `add_external` and `remove_external` call their corresponding `:::` builtins

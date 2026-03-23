@@ -365,7 +365,6 @@ Free functions in `_builtin/ffi/`:
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `ffi::register_external_notify[T]` | `(f: T): none` | Register a lambda that fires on each external add/remove event |
 | `ffi::external.add` | `(self: external): none` | Increment the external resource count |
 | `ffi::external.remove` | `(self: external): none` | Decrement the external resource count |
 

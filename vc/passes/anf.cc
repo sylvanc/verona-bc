@@ -847,19 +847,13 @@ namespace vc
         // Callback operations (single arg, already a LocalId after earlier
         // rules extract expressions to locals).
         In(Expr, Lhs) *
-              T(MakeCallback,
-                CallbackPtr,
-                FreeCallback,
-                RegisterExternalNotify,
-                Freeze)[Lhs]
+              T(MakeCallback, CodePtrCallback, FreeCallback, Freeze)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
             auto rhs = _(Rhs);
-            auto op = _(Lhs)->type();
-            return Seq << (Lift
-                           << Body
-                           << (NodeDef::create(op) << (LocalId ^ id) << rhs))
+            Node op = _(Lhs)->type();
+            return Seq << (Lift << Body << (op << (LocalId ^ id) << rhs))
                        << (LocalId ^ id);
           },
 

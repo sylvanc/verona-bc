@@ -105,8 +105,13 @@ namespace vc
         // Treat a directory as a class.
         T(Directory)[Directory] >>
           [](Match& _) {
+            auto ident = std::string(_(Directory)->location().view());
+            for (auto& c : ident)
+              if (c == '-')
+                c = '_';
+
             return (ClassDef ^ _(Directory))
-              << None << (Ident ^ _(Directory)) << TypeParams << Where
+              << None << (Ident ^ ident) << TypeParams << Where
               << (ClassBody << (Group << Use << (Ident ^ "_builtin"))
                             << *_[Directory]);
           },
@@ -199,7 +204,7 @@ namespace vc
         // Dependency alias.
         T(Group)
             << (T(Use) * T(Ident)[Ident] * T(Equals) * T(String)[Lhs] *
-                ~T(String)[Rhs] * ~T(String)[Directory]) >>
+                ~T(String)[Rhs] * ~T(String)[Directory] * End) >>
           [](Match& _) {
             return Use << _(Ident) << _(Lhs) << _(Rhs) << _(Directory);
           },
@@ -207,7 +212,7 @@ namespace vc
         // Dependency import.
         T(Group)
             << (T(Use) * T(String)[Lhs] * ~T(String)[Rhs] *
-                ~T(String)[Directory]) >>
+                ~T(String)[Directory] * End) >>
           [](Match& _) { return Use << _(Lhs) << _(Rhs) << _(Directory); },
 
         // Type alias.
