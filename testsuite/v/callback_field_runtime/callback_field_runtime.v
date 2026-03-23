@@ -1,16 +1,11 @@
 holder
 {
-  cb: ffi::callback;
+  cb: ffi::callback[() -> none];
 
   create(): holder
   {
     let cb = ffi::callback (): none -> {}
     new {cb}
-  }
-
-  final(self: holder): none
-  {
-    self.cb.free
   }
 }
 

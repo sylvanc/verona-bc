@@ -51,7 +51,6 @@ namespace vbcc
   inline const auto ISize = TokenDef("isize");
   inline const auto USize = TokenDef("usize");
   inline const auto Ptr = TokenDef("ptr");
-  inline const auto Callback = TokenDef("callback");
   inline const auto Dyn = TokenDef("dyn");
   inline const auto Array = TokenDef("array");
   inline const auto Ref = TokenDef("ref");
@@ -149,7 +148,7 @@ namespace vbcc
 
   // Callback operations.
   inline const auto MakeCallback = TokenDef("makecallback");
-  inline const auto CallbackPtr = TokenDef("callbackptr");
+  inline const auto CodePtrCallback = TokenDef("codeptrcallback");
   inline const auto FreeCallback = TokenDef("freecallback");
   inline const auto AddExternal = TokenDef("addexternal");
   inline const auto RemoveExternal = TokenDef("removeexternal");
@@ -224,9 +223,9 @@ namespace vbcc
   inline const auto wfIntType =
     I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64 | ILong | ULong | ISize | USize;
   inline const auto wfFloatType = F32 | F64;
-  inline const auto wfPrimitiveType = None | Bool | wfIntType | wfFloatType;
-  inline const auto wfBuiltinType =
-    wfPrimitiveType | Ptr | Callback | Array | Ref | Cown;
+  inline const auto wfPrimitiveType =
+    None | Bool | wfIntType | wfFloatType | Ptr;
+  inline const auto wfBuiltinType = wfPrimitiveType | Array | Ref | Cown;
   inline const auto wfType =
     wfBuiltinType | Dyn | ClassId | TypeId | Union | TupleType;
 
@@ -250,8 +249,8 @@ namespace vbcc
     RegionArrayConst | Copy | Move | Drop | Freeze | RegisterRef | FieldRef |
     ArrayRef | ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
     TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
-    wfConst | Typetest | MakeCallback | CallbackPtr | FreeCallback | MemoSlot |
-    ArrayCopy | ArrayFill | ArrayCompare;
+    wfConst | Typetest | MakeCallback | CodePtrCallback | FreeCallback |
+    MemoSlot | ArrayCopy | ArrayFill | ArrayCompare;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -300,7 +299,7 @@ namespace vbcc
     | (Body <<= wfStatement++)
     | (Source <<= String)
     | (Offset <<= Int)
-    | (Const <<= wfDst * (Type >>= (wfPrimitiveType | Ptr | Callback)) * (Rhs >>= wfLiteral))
+    | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     | (ConstStr <<= wfDst * (String >>= String | RawString))
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
     | (New <<= wfDst * ClassId * Args)
@@ -400,7 +399,7 @@ namespace vbcc
     | (AddExternal <<= wfDst)
     | (RemoveExternal <<= wfDst)
     | (MakeCallback <<= wfDst * wfSrc)
-    | (CallbackPtr <<= wfDst * wfSrc)
+    | (CodePtrCallback <<= wfDst * wfSrc)
     | (FreeCallback <<= wfDst * wfSrc)
     | (ArrayCopy <<= wfDst * Args)
     | (ArrayFill <<= wfDst * Args)

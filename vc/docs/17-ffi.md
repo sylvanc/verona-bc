@@ -81,7 +81,7 @@ Built-in operations can only appear in the `_builtin` package.
 | **Identity** | `eq` (pointer), `ne` (pointer), `bits` |
 | **Constants** | `none`, `e`, `pi`, `inf`, `nan` |
 | **Memory** | `len`, `ptr`, `read`, `arrayref`, `newarray` |
-| **Callback** | `make_callback`, `callback_ptr`, `free_callback` |
+| **Callback** | `make_callback`, `free_callback` |
 | **External** | `add_external`, `remove_external` |
 
 ---
@@ -207,10 +207,7 @@ The `callback` class (defined in `_builtin/ffi/callback.v`) wraps a Verona calla
 let cb = callback(my_lambda);
 
 // Get the C function pointer (as ptr)
-let fptr = cb.apply;
-
-// Free the callback when done (releases the closure)
-cb.free;
+let fptr = cb.raw;
 ```
 
 ### API
@@ -218,8 +215,7 @@ cb.free;
 | Operation | Description |
 |-----------|-------------|
 | `callback(callable)` | Create a callback wrapping `callable` (constructor sugar for `callback::create`) |
-| `cb.apply` | Get the C function pointer as `ptr` |
-| `cb.free` | Free the underlying closure resources |
+| `cb.raw` | Get the C function pointer as `ptr` |
 
 ### Under the Hood
 
@@ -236,9 +232,7 @@ use "eventlib"
 main(): i32
 {
   let handler = callback((): none -> { /* handle event */ });
-  :::register_handler(handler);
-  // ... later:
-  handler.free;
+  :::register_handler(handler.raw);
   0
 }
 ```

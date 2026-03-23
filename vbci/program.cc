@@ -255,8 +255,6 @@ namespace vbci
             sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64};
         case ValueType::Ptr:
           return {ValueType::Ptr, &ffi_type_pointer};
-        case ValueType::Callback:
-          return {ValueType::Callback, &ffi_type_pointer};
         default:
           break;
       }

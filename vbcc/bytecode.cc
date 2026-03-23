@@ -1290,9 +1290,9 @@ namespace vbcc
           {
             code << uleb(+Op::MakeCallback) << dst(stmt) << src(stmt);
           }
-          else if (stmt == CallbackPtr)
+          else if (stmt == CodePtrCallback)
           {
-            code << uleb(+Op::CallbackPtr) << dst(stmt) << src(stmt);
+            code << uleb(+Op::CodePtrCallback) << dst(stmt) << src(stmt);
           }
           else if (stmt == FreeCallback)
           {
@@ -1456,8 +1456,7 @@ namespace vbcc
                 USize,
                 F32,
                 F64,
-                Ptr,
-                Callback}))
+                Ptr}))
     {
       return +val(type);
     }

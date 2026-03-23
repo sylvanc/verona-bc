@@ -16,7 +16,6 @@ Semantics.
 Parser issue: `{}, ...` terminates the group the `{}` are in before the `,` starts a List, creating a weird structure.
 
 FFI.
-- Can `ffi::callback` interact with reference counting better?
 - Platform dependent code for dealing with libraries?
 
 Reviews.

@@ -367,14 +367,14 @@ namespace vbci
     // Arg1 = src (lambda object).
     MakeCallback,
 
-    // Reads the C function pointer from a callback handle.
-    // Arg0 = dst (C function pointer, ptr).
-    // Arg1 = src (callback handle).
-    CallbackPtr,
+    // Gets the raw C function pointer from a callback.
+    // Arg0 = dst (code pointer, ptr).
+    // Arg1 = src (callback handle, ptr).
+    CodePtrCallback,
 
     // Frees a callback closure.
     // Arg0 = dst (none).
-    // Arg1 = src (callback handle).
+    // Arg1 = src (callback handle, ptr).
     FreeCallback,
 
     // Adds an external event source to keep the scheduler alive.
@@ -436,7 +436,6 @@ namespace vbci
     F32,
     F64,
     Ptr,
-    Callback,
     Object,
     Array,
     Cown,
@@ -496,5 +495,5 @@ namespace vbci
     return static_cast<size_t>(c);
   }
 
-  inline const auto NumPrimitiveClasses = +ValueType::Callback + 1;
+  inline const auto NumPrimitiveClasses = +ValueType::Ptr + 1;
 }

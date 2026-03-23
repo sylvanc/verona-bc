@@ -107,7 +107,7 @@ namespace vbcc
       SetRaise,
       Typetest,
       MakeCallback,
-      CallbackPtr,
+      CodePtrCallback,
       FreeCallback,
       AddExternal,
       RemoveExternal,

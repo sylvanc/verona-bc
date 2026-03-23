@@ -3,6 +3,13 @@
 Read `~/.config/agents/AGENTS.md` for user preferences, workflow rules, and
 irreversible-action guardrails (git commit/push/PR require explicit permission).
 
+## Workflow & Knowledge Storage
+
+- Durable Verona guidance belongs in this `AGENTS.md` or `.agents/skills/`, not in agent-specific memory interfaces.
+- Cross-project workflow rules belong in `~/.config/agents/AGENTS.md`.
+- For tricky compiler/runtime/FFI bugs, do principled analysis first: reproduce, trace, inspect dumps, and localize the fault before changing semantics.
+- Before speculative interpreter/runtime changes, explain the evidence and proposed fix and get feedback.
+
 # Verona Compiler (vc) Specifics
 
 - **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump-clean` and `ninja update-dump` to regenerate golden test files.

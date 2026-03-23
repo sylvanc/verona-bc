@@ -17,9 +17,9 @@ main(): i32
   let cb = ffi::callback (x: u64): u64 ->
   {
     x + 1
-  };
-  let value = :::call_fn_ptr_ret_u64(cb, 41);
-  cb.free;
+  }
+
+  let value = :::call_fn_ptr_ret_u64(cb.raw, 41);
 
   if value != 42
   {

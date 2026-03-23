@@ -15,6 +15,5 @@ main(): i32
 {
   var obj = multiapply;
   var cb = ffi::callback(obj);
-  cb.free;
   0
 }

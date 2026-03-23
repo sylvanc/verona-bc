@@ -56,8 +56,7 @@ namespace vbcc
            USize,
            F32,
            F64,
-           Ptr,
-           Callback});
+           Ptr});
       };
 
       // Helper: find a Func definition by FunctionId.

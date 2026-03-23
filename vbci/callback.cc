@@ -1,6 +1,7 @@
 #include "callback.h"
 
 #include "program.h"
+#include "region.h"
 #include "thread.h"
 #include "value.h"
 
@@ -59,6 +60,27 @@ namespace vbci
 
   CallbackClosure* make_callback(Register& lambda, Function* func)
   {
+    auto loc = lambda->location();
+
+    if (loc.is_stack())
+      Value::error(Error::BadStackEscape);
+
+    if (loc.is_region())
+    {
+      auto r = loc.to_region();
+
+      if (r->is_frame_local())
+      {
+        auto nr = Region::create(RegionType::RegionRC);
+
+        if (!drag_allocation<true>(nr, lambda->get_header()))
+        {
+          nr->free_region();
+          Value::error(Error::BadStackEscape);
+        }
+      }
+    }
+
     auto* cc = new CallbackClosure();
 
     // Allocate the ffi_closure.
@@ -124,17 +146,5 @@ namespace vbci
     cc->lambda = std::move(lambda);
 
     return cc;
-  }
-
-  void* callback_ptr(CallbackClosure* cc)
-  {
-    return cc->code_ptr;
-  }
-
-  void free_callback(CallbackClosure* cc)
-  {
-    ffi_closure_free(cc->closure);
-    cc->lambda.clear();
-    delete cc;
   }
 }

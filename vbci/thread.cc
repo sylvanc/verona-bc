@@ -53,7 +53,6 @@ namespace vbci
       case ValueType::Ptr:
       case ValueType::Object:
       case ValueType::Array:
-      case ValueType::Callback:
         return true;
 
       default:
@@ -78,11 +77,6 @@ namespace vbci
 
       case ValueType::Array:
         ffi_arg_val = arg->get_array()->get_pointer();
-        ffi_arg_addr = &ffi_arg_val;
-        return;
-
-      case ValueType::Callback:
-        ffi_arg_val = callback_ptr(arg->get_callback());
         ffi_arg_addr = &ffi_arg_val;
         return;
 
@@ -761,8 +755,8 @@ namespace vbci
         return os << "Const_NaN";
       case Op::MakeCallback:
         return os << "MakeCallback";
-      case Op::CallbackPtr:
-        return os << "CallbackPtr";
+      case Op::CodePtrCallback:
+        return os << "CodePtrCallback";
       case Op::FreeCallback:
         return os << "FreeCallback";
       case Op::AddExternal:
@@ -1296,7 +1290,9 @@ namespace vbci
           auto& params = symbol.params();
           auto& paramvals = symbol.paramvals();
 
-          if ((num_args < params.size()) || (!symbol.varargs() && (num_args > params.size())))
+          if (
+            (num_args < params.size()) ||
+            (!symbol.varargs() && (num_args > params.size())))
           {
             self.drop_args();
             Value::error(Error::BadArgs);
@@ -1359,8 +1355,7 @@ namespace vbci
             }
             else if (vt == ValueType::Ptr)
             {
-              marshal_ffi_ptr_arg(
-                arg, ffi_arg_addrs.at(i), ffi_arg_vals.at(i));
+              marshal_ffi_ptr_arg(arg, ffi_arg_addrs.at(i), ffi_arg_vals.at(i));
             }
             else if (vt == ValueType::Object)
             {
@@ -1644,21 +1639,21 @@ namespace vbci
           if (!func)
             Value::error(Error::MethodNotFound);
 
-          auto* cc = make_callback(src, func);
-          dst = ValueImmortal(Value(cc));
+          auto cc = make_callback(src, func);
+          dst = ValueTransfer(Value(cc));
         });
         break;
       }
 
-      case Op::CallbackPtr:
+      case Op::CodePtrCallback:
       {
-        process([](Register& dst, const Register& src) INLINE {
-          auto* cc = src->get_callback();
+        process([](Register& dst, Register& src) INLINE {
+          auto* cc = static_cast<CallbackClosure*>(src->get_ptr());
 
           if (!cc)
             Value::error(Error::BadOperand);
 
-          dst = ValueImmortal(Value(callback_ptr(cc)));
+          dst = ValueTransfer(Value(cc->code_ptr));
         });
         break;
       }
@@ -1666,12 +1661,12 @@ namespace vbci
       case Op::FreeCallback:
       {
         process([](Register& dst, const Register& src) INLINE {
-          auto* cc = src->get_callback();
+          auto* cc = static_cast<CallbackClosure*>(src->get_ptr());
 
           if (!cc)
             Value::error(Error::BadOperand);
 
-          free_callback(cc);
+          cc->free();
           dst = ValueImmortal(Value::none());
         });
         break;

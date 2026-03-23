@@ -95,9 +95,7 @@ namespace vbci
 
     bool is_primitive() const
     {
-      return value_type != ValueType::Object &&
-        value_type != ValueType::Array && value_type != ValueType::Invalid &&
-        value_type != ValueType::Cown;
+      return value_type <= ValueType::Ptr;
     }
 
     void bulk_copy(size_t dst_off, Array* src, size_t src_off, size_t len)

@@ -82,7 +82,7 @@ namespace vc
     {"arrayref", {0, 2, ArrayRef}},
     {"newarray", {1, 1, NewArray}},
     {"make_callback", {0, 1, MakeCallback}},
-    {"callback_ptr", {0, 1, CallbackPtr}},
+    {"codeptr_callback", {0, 1, CodePtrCallback}},
     {"free_callback", {0, 1, FreeCallback}},
     {"freeze", {0, 1, Freeze}},
     {"arraycopy", {0, 5, ArrayCopy}},

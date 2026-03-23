@@ -273,8 +273,8 @@ namespace vc
 
   inline const auto wfExprDot =
     (wfExprSugar | CallDyn | TryCallDyn | Convert | Binop | Nulop | FFI |
-     NewArray | ArrayRef | MakeCallback | CallbackPtr | FreeCallback | Freeze |
-     ArrayCopy | ArrayFill | ArrayCompare) -
+     NewArray | ArrayRef | MakeCallback | CodePtrCallback | FreeCallback |
+     Freeze | ArrayCopy | ArrayFill | ArrayCompare) -
     Dot - TripleColon;
 
   // clang-format off
@@ -287,7 +287,7 @@ namespace vc
     | (Binop <<= (MethodId >>= wfBinop) * Args)
     | (Nulop <<= (MethodId >>= wfNulop) * Args)
     | (MakeCallback <<= Args)
-    | (CallbackPtr <<= Args)
+    | (CodePtrCallback <<= Args)
     | (FreeCallback <<= Args)
     | (Freeze <<= Args)
     | (ArrayCopy <<= Args)
@@ -316,7 +316,8 @@ namespace vc
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
     When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
     GetRaise | SetRaise | SplatOp | ArrayRefFromEnd | MakeCallback |
-    CallbackPtr | FreeCallback | Freeze | ArrayCopy | ArrayFill | ArrayCompare;
+    CodePtrCallback | FreeCallback | Freeze | ArrayCopy | ArrayFill |
+    ArrayCompare;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -421,7 +422,7 @@ namespace vc
     | (ArrayFill <<= wfDst * Args)
     | (ArrayCompare <<= wfDst * Args)
     | (MakeCallback <<= wfDst * wfSrc)
-    | (CallbackPtr <<= wfDst * wfSrc)
+    | (CodePtrCallback <<= wfDst * wfSrc)
     | (FreeCallback <<= wfDst * wfSrc)
     | (Freeze <<= wfDst * wfSrc)
     ;
@@ -434,7 +435,7 @@ namespace vc
   inline const auto wfPassInfer =
       wfPassANF
     | (Body <<= wfBodyInfer++)
-    | (Const <<= wfDst * (Type >>= (wfPrimitiveType | Ptr | Callback)) * (Rhs >>= wfLiteral))
+    | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     | (Type <<= wfTypeInfer)
     | (Union <<= wfTypeInfer++[2])
     | (Isect <<= wfTypeInfer++[2])

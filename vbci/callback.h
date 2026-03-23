@@ -20,15 +20,17 @@ namespace vbci
     ValueType return_value_type;
     Function* func;
     Register lambda;
+
+    // Free a callback closure and release the lambda.
+    void free()
+    {
+      ffi_closure_free(closure);
+      lambda.clear();
+      delete this;
+    }
   };
 
   // Create a callback closure from a lambda and its apply function.
   // The lambda is moved into the closure.
   CallbackClosure* make_callback(Register& lambda, Function* func);
-
-  // Get the C function pointer from a callback closure.
-  void* callback_ptr(CallbackClosure* cc);
-
-  // Free a callback closure and release the lambda.
-  void free_callback(CallbackClosure* cc);
 }

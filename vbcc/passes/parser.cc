@@ -5,7 +5,7 @@ namespace vbcc
   const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Vars |
     Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |
     LBracket | RBracket | Comma | Colon | Union | TupleType | Vararg |
-    wfRegionType | wfPrimitiveType | Ptr | Dyn | Ref | Cown | wfStatement |
+    wfRegionType | wfPrimitiveType | Dyn | Ref | Cown | wfStatement |
     wfTerminator | wfLiteral | String | RawString;
 
   // clang-format off

@@ -55,8 +55,7 @@ namespace vbcc
        USize,
        F32,
        F64,
-       Ptr,
-       Callback});
+       Ptr});
   }
 
   static bool is_numeric(const Node& t)
@@ -1610,14 +1609,9 @@ namespace vbcc
           // ArrayCompare produces I64.
           set_type(env, node / LocalId, I64);
         }
-        else if (node->type().in({MakeCallback}))
+        else if (node->type().in({MakeCallback, CodePtrCallback}))
         {
-          // MakeCallback produces Callback.
-          set_type(env, node / LocalId, Callback);
-        }
-        else if (node->type().in({CallbackPtr}))
-        {
-          // CallbackPtr produces Ptr.
+          // MakeCallback and CodePtrCallback produce Ptr.
           set_type(env, node / LocalId, Ptr);
         }
         else if (node == GetRaise)

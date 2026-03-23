@@ -41,9 +41,7 @@ namespace vc
   };
 
   const std::map<std::string_view, Token> ffi_primitive_from_name = {
-    {"ptr", Ptr},
-    {"callback", Callback},
-  };
+    {"ptr", Ptr}};
 
   const std::initializer_list<Token> integer_types = {
     I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize};
@@ -75,35 +73,24 @@ namespace vc
 
   // Ops with fixed result types.
   const std::map<Token, Token> fixed_result_type = {
-    {Eq, Bool},
-    {Ne, Bool},
-    {Lt, Bool},
-    {Le, Bool},
-    {Gt, Bool},
-    {Ge, Bool},
-    {IsInf, Bool},
-    {IsNaN, Bool},
-    {Not, Bool},
-    {Bits, U64},
-    {Len, USize},
-    {Const_E, F64},
-    {Const_Pi, F64},
-    {Const_Inf, F64},
-    {Const_NaN, F64},
-    {GetRaise, U64},
-    {SetRaise, U64},
-    {FreeCallback, None},
-    {AddExternal, None},
-    {RemoveExternal, None},
-    {ArrayCopy, None},
-    {ArrayFill, None},
+    {Eq, Bool},          {Ne, Bool},
+    {Lt, Bool},          {Le, Bool},
+    {Gt, Bool},          {Ge, Bool},
+    {IsInf, Bool},       {IsNaN, Bool},
+    {Not, Bool},         {Bits, U64},
+    {Len, USize},        {Const_E, F64},
+    {Const_Pi, F64},     {Const_Inf, F64},
+    {Const_NaN, F64},    {GetRaise, U64},
+    {SetRaise, U64},     {FreeCallback, None},
+    {AddExternal, None}, {RemoveExternal, None},
+    {ArrayCopy, None},   {ArrayFill, None},
     {ArrayCompare, I64},
   };
 
   const std::map<Token, Token> fixed_ffi_result_type = {
     {MakePtr, Ptr},
-    {CallbackPtr, Ptr},
-    {MakeCallback, Callback},
+    {MakeCallback, Ptr},
+    {CodePtrCallback, Ptr},
   };
 
   // ===== Type constructors =====
@@ -125,7 +112,7 @@ namespace vc
 
   Node primitive_or_ffi_type(const Token& tok)
   {
-    if (tok == Ptr || tok == Callback)
+    if (tok == Ptr)
       return ffi_primitive_type(tok);
 
     return primitive_type(tok);
@@ -1780,8 +1767,8 @@ namespace vc
               auto actual_params = af / Params;
               for (size_t j = 0; j < formal_params->size(); j++)
               {
-                auto formal_param =
-                  apply_subst(top, formal_params->at(j) / Type, shape_to_formal);
+                auto formal_param = apply_subst(
+                  top, formal_params->at(j) / Type, shape_to_formal);
                 auto actual_param =
                   apply_subst(top, actual_params->at(j) / Type, actual_subst);
                 if (
@@ -2632,8 +2619,7 @@ namespace vc
         auto arg_it = env.find(arg_loc);
         if (arg_it == env.end() || contains_typevar(arg_it->second.type))
           continue;
-        if (
-          contains_default_type(arg_it->second.type) && !allow_default_arg)
+        if (contains_default_type(arg_it->second.type) && !allow_default_arg)
           continue;
         resolved = arg_it->second.type;
       }
@@ -3051,8 +3037,8 @@ namespace vc
         }
       }
 
-        return changed;
-      };
+      return changed;
+    };
 
     auto pending_when_lookup_error = [&](const Node& when_arg) -> PendingError {
       auto def_it = all_def_stmts.find((when_arg / Rhs)->location());
@@ -3849,8 +3835,7 @@ namespace vc
           if (lookup_it != lookup_stmts.end())
           {
             auto recv_it = env.find((lookup_it->second / Rhs)->location());
-            if (
-              recv_it != env.end() && is_default_type(recv_it->second.type))
+            if (recv_it != env.end() && is_default_type(recv_it->second.type))
             {
               allow_arg_fallback = true;
             }
@@ -4058,10 +4043,12 @@ namespace vc
                       env.find((when_args->at(i) / Rhs)->location());
                     if (arg_it == env.end())
                     {
-                      auto pending = pending_when_lookup_error(when_args->at(i));
+                      auto pending =
+                        pending_when_lookup_error(when_args->at(i));
                       if (
                         pending.site &&
-                        deferred_param_errors.find((param / Ident)->location()) ==
+                        deferred_param_errors.find(
+                          (param / Ident)->location()) ==
                           deferred_param_errors.end())
                       {
                         deferred_param_errors[(param / Ident)->location()] =
@@ -4072,10 +4059,12 @@ namespace vc
                     auto ci = extract_cown_inner(arg_it->second.type);
                     if (!ci)
                     {
-                      auto pending = pending_when_lookup_error(when_args->at(i));
+                      auto pending =
+                        pending_when_lookup_error(when_args->at(i));
                       if (
                         pending.site &&
-                        deferred_param_errors.find((param / Ident)->location()) ==
+                        deferred_param_errors.find(
+                          (param / Ident)->location()) ==
                           deferred_param_errors.end())
                       {
                         deferred_param_errors[(param / Ident)->location()] =
@@ -4621,7 +4610,10 @@ namespace vc
           auto ret_prim = extract_backward_primitive(func_ret);
           if (ret_prim)
             snmalloc::UNUSED(refine_const_local(
-              env, const_defs, ret_loc, primitive_or_ffi_type(ret_prim->type())));
+              env,
+              const_defs,
+              ret_loc,
+              primitive_or_ffi_type(ret_prim->type())));
           bool changed = merge_env(env, ret_loc, clone(func_ret), top);
           auto ret_it = env.find(ret_loc);
           if (ret_it != env.end())
