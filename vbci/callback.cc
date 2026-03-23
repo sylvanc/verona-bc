@@ -60,27 +60,6 @@ namespace vbci
 
   CallbackClosure* make_callback(const Register& lambda, Function* func)
   {
-    auto loc = lambda->location();
-
-    if (loc.is_stack())
-      Value::error(Error::BadStackEscape);
-
-    if (loc.is_region())
-    {
-      auto r = loc.to_region();
-
-      if (r->is_frame_local())
-      {
-        auto nr = Region::create(RegionType::RegionRC);
-
-        if (!drag_allocation<false>(nr, lambda->get_header()))
-        {
-          nr->free_region();
-          Value::error(Error::BadStackEscape);
-        }
-      }
-    }
-
     auto* cc = new CallbackClosure();
 
     // Allocate the ffi_closure.

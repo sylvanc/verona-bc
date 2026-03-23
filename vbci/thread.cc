@@ -384,6 +384,7 @@ namespace vbci
       // Runtime error is fatal to the behavior. Clean up all frames and store
       // the error in the result cown.
       teardown_all();
+      LOG(Error) << error_value.to_string();
       Register r = result->exchange<true>(ValueImmortal(error_value));
     }
 
