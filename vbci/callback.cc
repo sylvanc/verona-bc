@@ -58,7 +58,7 @@ namespace vbci
     }
   }
 
-  CallbackClosure* make_callback(Register& lambda, Function* func)
+  CallbackClosure* make_callback(const Register& lambda, Function* func)
   {
     auto loc = lambda->location();
 
@@ -73,7 +73,7 @@ namespace vbci
       {
         auto nr = Region::create(RegionType::RegionRC);
 
-        if (!drag_allocation<true>(nr, lambda->get_header()))
+        if (!drag_allocation<false>(nr, lambda->get_header()))
         {
           nr->free_region();
           Value::error(Error::BadStackEscape);
@@ -143,7 +143,7 @@ namespace vbci
 
     // Store the function and move the lambda into the closure.
     cc->func = func;
-    cc->lambda = std::move(lambda);
+    cc->lambda = lambda;
 
     return cc;
   }

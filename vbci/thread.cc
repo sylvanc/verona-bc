@@ -1633,7 +1633,7 @@ namespace vbci
 
       case Op::MakeCallback:
       {
-        process([](Register& dst, Register& src) INLINE {
+        process([](Register& dst, const Register& src) INLINE {
           auto* func = src->method(CallbackMethodId);
 
           if (!func)
@@ -1647,7 +1647,7 @@ namespace vbci
 
       case Op::CodePtrCallback:
       {
-        process([](Register& dst, Register& src) INLINE {
+        process([](Register& dst, const Register& src) INLINE {
           auto* cc = static_cast<CallbackClosure*>(src->get_ptr());
 
           if (!cc)

@@ -32,5 +32,5 @@ namespace vbci
 
   // Create a callback closure from a lambda and its apply function.
   // The lambda is moved into the closure.
-  CallbackClosure* make_callback(Register& lambda, Function* func);
+  CallbackClosure* make_callback(const Register& lambda, Function* func);
 }
