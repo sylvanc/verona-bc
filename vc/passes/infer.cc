@@ -3314,12 +3314,17 @@ namespace vc
           auto inner = extract_ref_inner(ref_it->second.type);
           if (inner)
           {
+            auto expected = clone(inner);
             // Forward: dst = inner type.
-            merge(dst_loc, clone(inner));
+            merge(dst_loc, expected);
             // Backward: refine stored value.
             if (!is_any_type(inner) && merge_bwd(val_loc, clone(inner)))
+            {
+              propagate_call_constraint(
+                env, val_loc, expected, top, lookup_stmts, &all_def_stmts);
               propagate_call_node(
                 env, val_loc, top, lookup_stmts, &all_def_stmts);
+            }
 
             // Track tuple element types.
             auto rtt = ref_to_tuple.find(ref_loc);
@@ -3514,10 +3519,15 @@ namespace vc
                 auto ft = apply_subst(top, f / Type, subst);
                 if (ft && !contains_typevar(ft))
                 {
+                  auto expected = clone(ft);
                   snmalloc::UNUSED(refine_local_const(arg_loc, ft));
                   if (merge_bwd(arg_loc, ft))
+                  {
+                    propagate_call_constraint(
+                      env, arg_loc, expected, top, lookup_stmts, &all_def_stmts);
                     propagate_call_node(
                       env, arg_loc, top, lookup_stmts, &all_def_stmts);
+                  }
                 }
                 // Reverse: push concrete arg into TypeVar FieldDef.
                 auto arg_it = env.find(arg_loc);
