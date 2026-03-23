@@ -26,7 +26,7 @@ runner
 
 main(): i32
 {
-  let h = holder(new {value = 42});
+  let h = holder(state 42);
   runner::run(h, s -> none);
   0
 }

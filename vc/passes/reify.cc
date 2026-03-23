@@ -191,32 +191,13 @@ namespace vc
       // happen inline: reify_class registers all existing MIs on the new
       // class, and reify_lookup registers the new MI on all existing classes.
       std::vector<Reification*> deferred_typevar;
-
-      while (!worklist.empty())
-      {
-        auto r = worklist.back();
-        worklist.pop_back();
-
-        if (r->def == ClassDef)
-          reify_class(*r);
-        else if (r->def == TypeAlias)
-          reify_typealias(*r);
-        else if (r->def == Function)
-        {
-          reify_function(*r);
-
-          // If the function had a TypeVar return in the def, defer it
-          // for a second pass when all callees are reified. The first
-          // pass may have produced a partial return type (e.g., nomatch
-          // from match arms when the main arm's CallDyn wasn't tracked).
-          if (r->reification && (r->def / Type)->front() == TypeVar)
-          {
-            deferred_typevar.push_back(r);
-          }
-        }
-        else
-          assert(false);
-      }
+      drain_worklist(deferred_typevar);
+      resolve_shapes();
+      process_pending_callbacks(false);
+      drain_worklist(deferred_typevar);
+      resolve_shapes();
+      process_pending_callbacks(true);
+      drain_worklist(deferred_typevar);
 
       std::vector<Reification*> reified_functions;
 
@@ -496,50 +477,7 @@ namespace vc
         }
       }
 
-      // Resolve shapes: each shape becomes a Type node mapping its TypeId
-      // to a Union of all reified concrete classes that satisfy it.
-      {
-        SequentCtx ctx{top, {}, {}};
-
-        for (auto& key : map_order)
-        {
-          for (auto& r : map[key])
-          {
-            if (r.def != ClassDef || (r.def / Shape) != Shape)
-              continue;
-
-            assert(r.resolved_name);
-            Node union_node = Union;
-
-            for (auto& ckey : map_order)
-            {
-              for (auto& cr : map[ckey])
-              {
-                if (cr.def != ClassDef || (cr.def / Shape) == Shape)
-                  continue;
-                if (!cr.resolved_name)
-                  continue;
-
-                if (check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
-                  union_node << clone(cr.id);
-              }
-            }
-
-            if (union_node->empty())
-            {
-              // No concrete classes implement this shape. Emit an empty
-              // Type entry so TypeId references are valid. The typetest
-              // for this shape will always fail at runtime (no value of
-              // this type can exist), making the code path unreachable.
-              r.reification = Type << clone(r.id) << Union;
-            }
-            else if (union_node->size() == 1)
-              r.reification = Type << clone(r.id) << union_node->front();
-            else
-              r.reification = Type << clone(r.id) << union_node;
-          }
-        }
-      }
+      resolve_shapes();
 
       // Remove existing contents.
       top->erase(top->begin(), top->end());
@@ -634,7 +572,15 @@ namespace vc
       Token hand; // Lhs (ref) or Rhs
       Node typeargs; // cloned TypeArgs from the Lookup
       NodeMap<Node> call_subst; // substitution context at the call site
-      Nodes receivers; // reified type ids of possible receivers; empty = all
+      bool all_receivers; // true = all classes/primitives may receive the call
+      Nodes receivers; // concrete possible receivers when all_receivers is false
+    };
+
+    struct PendingCallback
+    {
+      Node site;
+      Node type;
+      bool required;
     };
 
     Node top;
@@ -647,6 +593,7 @@ namespace vc
     std::set<Node> processed_initfini;
     Nodes errors;
     std::vector<MethodInvocation> method_invocations;
+    std::vector<PendingCallback> pending_callbacks;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
 
     // Per-function local type map: LocalId location -> reified type.
@@ -663,38 +610,191 @@ namespace vc
     };
     std::map<Location, LookupInfo> lookup_info;
 
-    // Extract individual type ids from a reified type. For Union, extracts
-    // each member. For Dyn, returns empty (meaning all classes). For
-    // ClassId/primitive, returns just that type.
-    Nodes extract_receivers(const Node& reified_type)
+    void drain_worklist(std::vector<Reification*>& deferred_typevar)
     {
-      // Dyn means "all classes". TypeId means a shape type whose concrete
-      // implementations aren't resolved yet (post-worklist), so treat as all.
-      if (!reified_type || (reified_type == Dyn) || (reified_type == TypeId))
+      while (!worklist.empty())
+      {
+        auto r = worklist.back();
+        worklist.pop_back();
+
+        if (r->def == ClassDef)
+          reify_class(*r);
+        else if (r->def == TypeAlias)
+          reify_typealias(*r);
+        else if (r->def == Function)
+        {
+          reify_function(*r);
+
+          // If the function had a TypeVar return in the def, defer it
+          // for a second pass when all callees are reified. The first
+          // pass may have produced a partial return type (e.g., nomatch
+          // from match arms when the main arm's CallDyn wasn't tracked).
+          if (r->reification && (r->def / Type)->front() == TypeVar)
+            deferred_typevar.push_back(r);
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+    }
+
+    void resolve_shapes()
+    {
+      SequentCtx ctx{top, {}, {}};
+
+      for (auto& key : map_order)
+      {
+        for (auto& r : map[key])
+        {
+          if (r.def != ClassDef || (r.def / Shape) != Shape)
+            continue;
+
+          assert(r.resolved_name);
+          Node union_node = Union;
+
+          for (auto& ckey : map_order)
+          {
+            for (auto& cr : map[ckey])
+            {
+              if (cr.def != ClassDef || (cr.def / Shape) == Shape)
+                continue;
+              if (!cr.resolved_name)
+                continue;
+
+              if (check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
+                union_node << clone(cr.id);
+            }
+          }
+
+          if (union_node->empty())
+          {
+            // No concrete classes implement this shape. Emit an empty
+            // Type entry so TypeId references are valid. The typetest
+            // for this shape will always fail at runtime (no value of
+            // this type can exist), making the code path unreachable.
+            r.reification = Type << clone(r.id) << Union;
+          }
+          else if (union_node->size() == 1)
+            r.reification = Type << clone(r.id) << union_node->front();
+          else
+            r.reification = Type << clone(r.id) << union_node;
+        }
+      }
+    }
+
+    struct ReceiverSet
+    {
+      bool all;
+      Nodes types;
+    };
+
+    Node resolve_receiver_typeid(const Node& type_id)
+    {
+      if (!type_id || (type_id != TypeId))
         return {};
 
-      if (reified_type == Union)
+      auto type_id_loc = type_id->location().view();
+
+      for (auto& key : map_order)
       {
-        Nodes result;
-
-        for (auto& child : *reified_type)
+        for (auto& r : map[key])
         {
-          if (child == Dyn)
-            return {}; // union containing Dyn = all
+          if (!r.id || (r.id->location().view() != type_id_loc))
+            continue;
 
-          result.push_back(clone(child));
+          if (!r.reification && (r.def == TypeAlias))
+            reify_typealias(r);
+
+          if (r.reification && (r.reification == Type))
+            return clone(r.reification->back());
+
+          return {};
         }
-
-        return result;
       }
 
-      return {clone(reified_type)};
+      return {};
+    }
+
+    // Extract individual type ids from a reified type. Dyn (or an unresolved
+    // shape TypeId) means "all classes/primitives". A resolved shape TypeId is
+    // expanded to its concrete implementations. Wrapper receivers are expanded
+    // across the resolved inner receiver set.
+    ReceiverSet extract_receivers(const Node& reified_type)
+    {
+      std::function<ReceiverSet(const Node&)> collect = [&](const Node& type) {
+        if (!type || (type == Dyn))
+          return ReceiverSet{true, {}};
+
+        if (type == Type)
+          return collect(type->front());
+
+        if (type == TypeId)
+        {
+          auto resolved = resolve_receiver_typeid(type);
+          return resolved ? collect(resolved) : ReceiverSet{true, {}};
+        }
+
+        if (type == Union)
+        {
+          ReceiverSet result{false, {}};
+
+          for (auto& child : *type)
+          {
+            auto child_set = collect(child);
+
+            if (child_set.all)
+              return ReceiverSet{true, {}};
+
+            for (auto& recv : child_set.types)
+            {
+              bool dup = false;
+
+              for (auto& existing : result.types)
+              {
+                if (existing->equals(recv))
+                {
+                  dup = true;
+                  break;
+                }
+              }
+
+              if (!dup)
+                result.types.push_back(clone(recv));
+            }
+          }
+
+          return result;
+        }
+
+        if (type->in({Ref, Array, Cown}))
+        {
+          auto inner_set = collect(type->front());
+
+          if (inner_set.all)
+            return ReceiverSet{true, {}};
+
+          ReceiverSet result{false, {}};
+
+          for (auto& inner : inner_set.types)
+          {
+            Node wrapper = type->type() << clone(inner);
+            result.types.push_back(wrapper);
+          }
+
+          return result;
+        }
+
+        return ReceiverSet{false, {clone(type)}};
+      };
+
+      return collect(reified_type);
     }
 
     // Check if a MethodInvocation targets a specific class reification.
     bool mi_targets(const MethodInvocation& mi, Node class_id)
     {
-      if (mi.receivers.empty())
+      if (mi.all_receivers)
         return true; // all classes
 
       for (auto r : mi.receivers)
@@ -1136,7 +1236,7 @@ namespace vc
     std::vector<Reification*>
     find_method_targets(Node recv_type, const std::string& method_id)
     {
-      Nodes recv_types = extract_receivers(recv_type);
+      auto recv_set = extract_receivers(recv_type);
       std::vector<Reification*> targets;
 
       for (auto& key : map_order)
@@ -1149,9 +1249,12 @@ namespace vc
           if (!r.reification || !r.id)
             continue;
 
-          bool matches = recv_types.empty();
+          if ((r.def / Shape) == Shape)
+            continue;
 
-          for (auto& recv : recv_types)
+          bool matches = recv_set.all;
+
+          for (auto& recv : recv_set.types)
           {
             if (r.id->equals(recv))
             {
@@ -1306,7 +1409,7 @@ namespace vc
     // return their union.
     Node find_method_return_type(Node recv_type, const std::string& method_id)
     {
-      Nodes recv_types = extract_receivers(recv_type);
+      auto recv_set = extract_receivers(recv_type);
       Nodes ret_types;
 
       for (auto& key : map_order)
@@ -1319,9 +1422,12 @@ namespace vc
           if (!r.reification || !r.id)
             continue;
 
-          bool matches = recv_types.empty();
+          if ((r.def / Shape) == Shape)
+            continue;
 
-          for (auto& recv : recv_types)
+          bool matches = recv_set.all;
+
+          for (auto& recv : recv_set.types)
           {
             if (r.id->equals(recv))
             {
@@ -1465,16 +1571,16 @@ namespace vc
             local_types[(n / LocalId)->location()] = Ptr;
 
             // Find the lambda's type and register its @callback method.
-            // First check local_types (works when source was from New).
+            // First check local_types (works when source was from New or from a
+            // typed function wrapper that may need deferred shape resolution).
             auto src_loc = (n / Rhs)->location();
             auto src_it = local_types.find(src_loc);
-            Node class_id;
+            Node callback_type;
 
-            if (src_it != local_types.end() && (src_it->second == ClassId))
-            {
-              class_id = src_it->second;
-            }
-            else
+            if (src_it != local_types.end())
+              callback_type = clone(src_it->second);
+
+            if (!callback_type)
             {
               // local_types doesn't have it (e.g., assigned via Call).
               // Trace back through Copy/Move to find the original source.
@@ -1515,7 +1621,7 @@ namespace vc
                   stmt->in({New, Stack}) &&
                   ((stmt / LocalId)->location() == trace_loc))
                 {
-                  class_id = stmt / ClassId;
+                  callback_type = clone(stmt / ClassId);
                 }
                 else if (
                   (stmt == Call) && ((stmt / LocalId)->location() == trace_loc))
@@ -1559,17 +1665,17 @@ namespace vc
                       break;
                   }
 
-                  // Trigger class reification AFTER the map_order loop
-                  // to avoid iterator invalidation (find_or_push may
-                  // append to map_order).
-                  if (call_enc)
-                    class_id = find_or_push(call_enc, std::move(class_subst));
+                   // Trigger class reification AFTER the map_order loop
+                   // to avoid iterator invalidation (find_or_push may
+                   // append to map_order).
+                   if (call_enc)
+                    callback_type = find_or_push(call_enc, std::move(class_subst));
                 }
               }
             }
 
-            if (class_id)
-              reify_make_callback(n, class_id);
+            if (callback_type)
+              reify_make_callback(n, callback_type);
             else
               n->parent()->replace(
                 n, err(n, "make_callback: cannot determine lambda type"));
@@ -2168,13 +2274,16 @@ namespace vc
             }
           }
 
-          // Check local_types first (works for New/Stack).
+          // Check local_types first (works for New/Stack and typed function
+          // wrappers that resolve to a concrete lambda class).
           auto it = local_types.find(ret_loc);
 
-          if (it != local_types.end() && (it->second->type() == ClassId))
+          if (it != local_types.end())
           {
-            ensure_callback_method(it->second);
-            break;
+            if (register_callback_type(it->second))
+            {
+              break;
+            }
           }
 
           // Check if the return value comes from a Call (e.g., create).
@@ -2222,7 +2331,7 @@ namespace vc
               if (call_enc)
               {
                 auto class_id = find_or_push(call_enc, std::move(class_subst));
-                ensure_callback_method(class_id);
+                register_callback_type(class_id);
               }
 
               break;
@@ -2243,9 +2352,10 @@ namespace vc
       if (type == Type)
         return reify_type(type->front(), subst);
 
-      // Already-reified IR type. Return as-is.
+      // Already-reified IR type. Return a clone so the caller can safely
+      // insert it into a new part of the AST.
       if (type == Dyn)
-        return Dyn;
+        return clone(type);
 
       if (type->in(
             {ClassId,
@@ -2268,7 +2378,7 @@ namespace vc
              F64,
              Ptr}))
       {
-        return type;
+        return clone(type);
       }
 
       if (type == Array)
@@ -2668,7 +2778,7 @@ namespace vc
       auto method_id_str = std::format("{}::{}", base_id, index);
 
       // Determine receiver types from the source local's tracked type.
-      Nodes receivers;
+      ReceiverSet receivers{true, {}};
       auto src_it = local_types.find(src->location());
 
       if (src_it != local_types.end())
@@ -2682,7 +2792,8 @@ namespace vc
          hand->type(),
          clone(typeargs),
          call_subst,
-         std::move(receivers)});
+         receivers.all,
+         std::move(receivers.types)});
 
       // Register this new MI on existing class reifications that match.
       // Iterate via map_order (insertion order) rather than map (pointer order)
@@ -2715,6 +2826,9 @@ namespace vc
     void register_method(const MethodInvocation& mi, Reification& r)
     {
       assert(r.def == ClassDef);
+
+      if ((r.def / Shape) == Shape)
+        return;
 
       // Skip method registration if the class has TypeParams but the
       // subst doesn't include them (e.g., wrapper classes created by
@@ -2785,6 +2899,55 @@ namespace vc
         if (!already)
           methods << (Method << clone(mid_node) << funcid);
       }
+    }
+
+    Nodes resolve_callback_targets(Node type)
+    {
+      if (!type)
+        return {};
+
+      if (type == Type)
+        type = type->front();
+
+      if (type == ClassId)
+        return {clone(type)};
+
+      if (type == Union)
+      {
+        Nodes targets;
+
+        for (auto& child : *type)
+        {
+          auto resolved = resolve_callback_targets(child);
+          targets.insert(targets.end(), resolved.begin(), resolved.end());
+        }
+
+        return targets;
+      }
+
+      if (type != TypeId)
+        return {};
+
+      auto type_id_loc = type->location().view();
+
+      for (auto& key : map_order)
+      {
+        for (auto& r : map[key])
+        {
+          if (!r.id || (r.id->location().view() != type_id_loc))
+            continue;
+
+          if (!r.reification && (r.def == TypeAlias))
+            reify_typealias(r);
+
+          if (r.reification && (r.reification == Type))
+            return resolve_callback_targets(r.reification->back());
+
+          return {};
+        }
+      }
+
+      return {};
     }
 
     // Core logic for registering @callback on a class. Returns true if
@@ -2886,14 +3049,9 @@ namespace vc
       return true;
     }
 
-    void reify_make_callback(Node& n, const Node& class_id)
+    void emit_make_callback_error(
+      Node& n, size_t match_count, bool has_generic) const
     {
-      size_t match_count = 0;
-      bool has_generic = false;
-
-      if (ensure_callback_method(class_id, &match_count, &has_generic))
-        return;
-
       if (match_count == 0)
       {
         auto msg = has_generic ?
@@ -2907,8 +3065,103 @@ namespace vc
       {
         n->parent()->replace(
           n, err(n, "make_callback requires exactly one 'apply' overload"));
-        return;
       }
+    }
+
+    bool register_callback_type(const Node& type, Node site = {}, bool required = false)
+    {
+      auto targets = resolve_callback_targets(type);
+
+      if (targets.empty())
+      {
+        auto inner = type;
+
+        if (inner && (inner == Type))
+          inner = inner->front();
+
+        if (inner && (inner == TypeId))
+        {
+          pending_callbacks.push_back({site, clone(type), required});
+          return true;
+        }
+
+        if (required && site)
+        {
+          site->parent()->replace(
+            site, err(site, "make_callback: cannot determine lambda type"));
+        }
+
+        return false;
+      }
+
+      size_t match_count = 0;
+      bool has_generic = false;
+
+      for (auto& class_id : targets)
+      {
+        if (ensure_callback_method(class_id, &match_count, &has_generic))
+          continue;
+
+        if (required && site)
+          emit_make_callback_error(site, match_count, has_generic);
+
+        return false;
+      }
+
+      return true;
+    }
+
+    void process_pending_callbacks(bool final_pass)
+    {
+      std::vector<PendingCallback> remaining;
+
+      for (auto& pending : pending_callbacks)
+      {
+        auto targets = resolve_callback_targets(pending.type);
+
+        if (targets.empty())
+        {
+          if (final_pass && pending.required && pending.site)
+          {
+            pending.site->parent()->replace(
+              pending.site,
+              err(pending.site, "make_callback: cannot determine lambda type"));
+          }
+          else
+          {
+            remaining.push_back(
+              {pending.site, clone(pending.type), pending.required});
+          }
+
+          continue;
+        }
+
+        size_t match_count = 0;
+        bool has_generic = false;
+        bool ok = true;
+
+        for (auto& class_id : targets)
+        {
+          if (!ensure_callback_method(class_id, &match_count, &has_generic))
+          {
+            ok = false;
+            break;
+          }
+        }
+
+        if (ok)
+          continue;
+
+        if (final_pass && pending.required && pending.site)
+          emit_make_callback_error(pending.site, match_count, has_generic);
+      }
+
+      pending_callbacks = std::move(remaining);
+    }
+
+    void reify_make_callback(Node& n, const Node& type)
+    {
+      register_callback_type(type, n, true);
     }
 
     // Reify init functions from a source Lib onto a reified Lib.
