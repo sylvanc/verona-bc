@@ -120,10 +120,8 @@ namespace vbci
       Value::error(Error::BadArgs);
     }
 
-    // Store the function and move the lambda into the closure.
     cc->func = func;
     cc->lambda = lambda;
-
     return cc;
   }
 }
