@@ -1298,6 +1298,14 @@ namespace vbcc
           {
             code << uleb(+Op::FreeCallback) << dst(stmt) << src(stmt);
           }
+          else if (stmt == Pin)
+          {
+            code << uleb(+Op::Pin) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == Unpin)
+          {
+            code << uleb(+Op::Unpin) << dst(stmt) << src(stmt);
+          }
           else if (stmt == AddExternal)
           {
             code << uleb(+Op::AddExternal) << dst(stmt);

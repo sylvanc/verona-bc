@@ -18,3 +18,13 @@ callback[T]
     :::free_callback(self._cb)
   }
 }
+
+pin(some: any): none
+{
+  :::pin(some)
+}
+
+unpin(some: any): none
+{
+  :::unpin(some)
+}

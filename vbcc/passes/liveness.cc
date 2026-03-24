@@ -117,7 +117,9 @@ namespace vbcc
                       Typetest,
                       MakeCallback,
                       CodePtrCallback,
-                      FreeCallback}))
+                      FreeCallback,
+                      Pin,
+                      Unpin}))
           {
             use(node / Rhs);
             def(node / LocalId);

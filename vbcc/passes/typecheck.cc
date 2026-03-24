@@ -1250,6 +1250,11 @@ namespace vbcc
           // Freeze returns the frozen object (same type as src).
           set_type(env, node / LocalId, typed(node / Rhs));
         }
+        else if (node->type().in({Pin, Unpin}))
+        {
+          // Pin/unpin return None.
+          set_type(env, node / LocalId, None);
+        }
         else if (node->type().in(
                    {Add, Sub, Mul, Div, Mod, And, Or, Xor, Shl, Shr, Min, Max}))
         {
@@ -1594,7 +1599,8 @@ namespace vbcc
           // Math constants are F64.
           set_type(env, node / LocalId, F64);
         }
-        else if (node->type().in({AddExternal, RemoveExternal, FreeCallback}))
+        else if (node->type().in(
+                   {AddExternal, RemoveExternal, FreeCallback, Pin, Unpin}))
         {
           // These produce None.
           set_type(env, node / LocalId, None);

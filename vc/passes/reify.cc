@@ -1722,7 +1722,8 @@ namespace vc
             reify_primitive(Ptr);
             local_types[(n / LocalId)->location()] = Ptr;
           }
-          else if (n->in({FreeCallback, AddExternal, RemoveExternal}))
+          else if (n->in(
+                     {FreeCallback, Pin, Unpin, AddExternal, RemoveExternal}))
           {
             reify_primitive(None);
             local_types[(n / LocalId)->location()] = None;

@@ -346,6 +346,10 @@ namespace vbci
     // done on cowns.
     Read,
 
+    // Pin or unpin a refcounted value for external use. Returns None.
+    Pin,
+    Unpin,
+
     // Get the current frame's raise target.
     // Arg0 = dst.
     GetRaise,

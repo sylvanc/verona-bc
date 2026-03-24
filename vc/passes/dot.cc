@@ -85,6 +85,8 @@ namespace vc
     {"codeptr_callback", {0, 1, CodePtrCallback}},
     {"free_callback", {0, 1, FreeCallback}},
     {"freeze", {0, 1, Freeze}},
+    {"pin", {0, 1, Pin}},
+    {"unpin", {0, 1, Unpin}},
     {"arraycopy", {0, 5, ArrayCopy}},
     {"arrayfill", {0, 4, ArrayFill}},
     {"arraycmp", {0, 5, ArrayCompare}},

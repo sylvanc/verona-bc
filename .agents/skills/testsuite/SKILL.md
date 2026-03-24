@@ -1,4 +1,3 @@
-```skill
 ---
 name: testsuite
 description: Verona compiler test suite infrastructure — running tests, updating golden files, verifying pass completeness, checking error codes. Use when debugging test failures, regenerating golden files, or understanding the test framework.
@@ -23,7 +22,6 @@ Each test produces `exit_code.txt`, `stdout.txt`, and `stderr.txt` in its output
 ### Full test suite
 ```bash
 cd build && ctest --output-on-failure -j$(nproc)
-```
 
 ### Run specific test(s) by name
 ```bash

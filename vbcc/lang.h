@@ -109,6 +109,8 @@ namespace vbcc
       MakeCallback,
       CodePtrCallback,
       FreeCallback,
+      Pin,
+      Unpin,
       AddExternal,
       RemoveExternal,
       Freeze,

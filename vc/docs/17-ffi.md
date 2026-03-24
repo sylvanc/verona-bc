@@ -249,6 +249,8 @@ The `_builtin/ffi/` directory contains Verona wrapper functions for common FFI o
 |----------|-----------|-------------|
 | `ffi::external.add` | `(self: external): none` | Add an external resource (increments the external event count) |
 | `ffi::external.remove` | `(self: external): none` | Remove an external resource (decrements the external event count) |
+| `ffi::pin(x)` | `(x: A): none` | Pin a refcounted Verona value (object, array, or cown) for external use. Pinning a readonly object or array is a runtime error. |
+| `ffi::unpin(x)` | `(x: A): none` | Release a prior external pin |
 
 ### External Resource Management
 
@@ -256,6 +258,7 @@ The runtime tracks "external resources" — things outside the Verona scheduler'
 
 - **`ffi::external.add`** — Tells the scheduler an external resource exists. The scheduler will not shut down while external resources remain.
 - **`ffi::external.remove`** — Tells the scheduler an external resource has been released.
+- **`ffi::pin(x)` / `ffi::unpin(x)`** — Add or remove an external root for a refcounted Verona value. This is intended for low-level FFI wrappers that hand Verona-managed memory to external code. Objects, arrays, and cowns can be pinned. Pinning a frame-local object or array first drags it to a fresh heap region. Pinning a stack allocation is an error.
 
 The `external` class is a singleton (using `once create()`) that serializes add/remove operations through an internal cown. The dot syntax `ffi::external.add` auto-calls `create()` to get the singleton and then dispatches `.add` on it. See [Functions §7.10](07-functions.md) for more on `once` functions.
 

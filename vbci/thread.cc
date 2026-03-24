@@ -592,6 +592,10 @@ namespace vbci
         return os << "Drop";
       case Op::Freeze:
         return os << "Freeze";
+      case Op::Pin:
+        return os << "Pin";
+      case Op::Unpin:
+        return os << "Unpin";
       case Op::RegisterRef:
         return os << "RegisterRef";
       case Op::FieldRefMove:
@@ -1668,6 +1672,24 @@ namespace vbci
             Value::error(Error::BadOperand);
 
           cc->free();
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::Pin:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          src->pin();
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::Unpin:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          src->unpin();
           dst = ValueImmortal(Value::none());
         });
         break;

@@ -1,0 +1,9 @@
+class @Box
+    @val : i32
+
+func @main() : i32
+    $zero = const i32 0
+    $box = region rc @Box($zero)
+    $p = pin $box
+    $u = unpin $box
+    ret $zero

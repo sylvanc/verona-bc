@@ -844,10 +844,15 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        // Callback operations (single arg, already a LocalId after earlier
-        // rules extract expressions to locals).
+        // Single-arg builtin operations (already a LocalId after earlier rules
+        // extract expressions to locals).
         In(Expr, Lhs) *
-              T(MakeCallback, CodePtrCallback, FreeCallback, Freeze)[Lhs]
+              T(MakeCallback,
+                CodePtrCallback,
+                FreeCallback,
+                Freeze,
+                Pin,
+                Unpin)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);

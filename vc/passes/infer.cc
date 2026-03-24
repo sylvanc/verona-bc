@@ -82,6 +82,7 @@ namespace vc
     {Const_Pi, F64},     {Const_Inf, F64},
     {Const_NaN, F64},    {GetRaise, U64},
     {SetRaise, U64},     {FreeCallback, None},
+    {Pin, None},         {Unpin, None},
     {AddExternal, None}, {RemoveExternal, None},
     {ArrayCopy, None},   {ArrayFill, None},
     {ArrayCompare, I64},

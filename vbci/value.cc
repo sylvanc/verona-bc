@@ -768,6 +768,63 @@ namespace vbci
     }
   }
 
+  void Value::pin() const
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::Array:
+      {
+        if (readonly)
+          Value::error(Error::BadOperand);
+
+        auto h = get_header();
+        auto loc = h->location();
+
+        if (loc.is_stack())
+          Value::error(Error::BadStackEscape);
+
+        if (loc.is_region() && loc.to_region()->is_frame_local())
+        {
+          auto nr = Region::create(RegionType::RegionRC);
+          LOG(Trace) << "Pin: dragging frame-local allocation to new region @"
+                     << nr;
+
+          if (!drag_allocation<false>(nr, h))
+          {
+            nr->free_region();
+            Value::error(Error::BadStackEscape);
+          }
+        }
+
+        reg_inc();
+        return;
+      }
+
+      case ValueType::Cown:
+        reg_inc();
+        return;
+
+      default:
+        return;
+    }
+  }
+
+  void Value::unpin() const
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::Array:
+      case ValueType::Cown:
+        reg_dec();
+        return;
+
+      default:
+        return;
+    }
+  }
+
   Location Value::location() const
   {
     switch (tag)

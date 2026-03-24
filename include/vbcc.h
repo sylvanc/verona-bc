@@ -75,6 +75,8 @@ namespace vbcc
   inline const auto Move = TokenDef("move");
   inline const auto Drop = TokenDef("drop");
   inline const auto Freeze = TokenDef("freeze");
+  inline const auto Pin = TokenDef("pin");
+  inline const auto Unpin = TokenDef("unpin");
   inline const auto RegisterRef = TokenDef("registerref");
   inline const auto FieldRef = TokenDef("fieldref");
   inline const auto ArrayRef = TokenDef("arrayref");
@@ -246,11 +248,11 @@ namespace vbcc
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
     StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
-    RegionArrayConst | Copy | Move | Drop | Freeze | RegisterRef | FieldRef |
-    ArrayRef | ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn |
-    TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop |
-    wfConst | Typetest | MakeCallback | CodePtrCallback | FreeCallback |
-    MemoSlot | ArrayCopy | ArrayFill | ArrayCompare;
+    RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | RegisterRef |
+    FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup | Arg | Call |
+    CallDyn | TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise |
+    wfBinop | wfUnop | wfConst | Typetest | MakeCallback | CodePtrCallback |
+    FreeCallback | MemoSlot | ArrayCopy | ArrayFill | ArrayCompare;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -318,6 +320,8 @@ namespace vbcc
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
     | (Freeze <<= wfDst * wfSrc)
+    | (Pin <<= wfDst * wfSrc)
+    | (Unpin <<= wfDst * wfSrc)
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)

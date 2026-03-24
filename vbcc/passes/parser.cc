@@ -71,6 +71,8 @@ namespace vbcc
         "move\\b" >> [](auto& m) { m.add(Move); },
         "drop\\b" >> [](auto& m) { m.add(Drop); },
         "freeze\\b" >> [](auto& m) { m.add(Freeze); },
+        "pin\\b" >> [](auto& m) { m.add(Pin); },
+        "unpin\\b" >> [](auto& m) { m.add(Unpin); },
         "ref\\b" >> [](auto& m) { m.add(Ref); },
         "load\\b" >> [](auto& m) { m.add(Load); },
         "store\\b" >> [](auto& m) { m.add(Store); },

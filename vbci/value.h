@@ -566,6 +566,10 @@ namespace vbci
     // Adjusts object RC only — no stack_rc change. Collects if RC hits 0.
     void field_dec() const;
 
+    // Pin or unpin a refcounted value for external use.
+    void pin() const;
+    void unpin() const;
+
   public:
     struct nounop
     {

@@ -1,4 +1,5 @@
 ---
+name: verona-coding
 description: Patterns, pitfalls, and idioms for writing Verona source code (.v files). Use when writing library code, _builtin types, or user programs.
 ---
 
