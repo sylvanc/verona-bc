@@ -1,38 +1,38 @@
-// use
-// {
-//   malloc = "malloc"(usize): ffi::ptr;
-//   free = "free"(ffi::ptr): none;
-// }
+use
+{
+  malloc = "malloc"(usize): ffi::ptr;
+  free = "free"(ffi::ptr): none;
+}
 
-// struct[A]
-// {
-//   size: usize;
-//   offsets: array[usize];
-//   sizes: array[usize];
+struct[A]
+{
+  size: usize;
+  offsets: array[usize];
+  kinds: array[u8];
 
-//   once create(): struct[A]
-//   {
-//     (let size, let offsets, let sizes) = :::ffistruct[A]();
-//     new {size, offsets, sizes}
-//   }
+  once create(): struct[A]
+  {
+    (let size, let offsets, let kinds) = :::ffistruct[A]();
+    new {size, offsets, kinds}
+  }
 
-//   load[B](self: struct, from: ffi::ptr, index: usize): B
-//   {
-//     :::ffiload[B](from, self.offsets()(index), self.sizes()(index))
-//   }
+  load[B](self: struct[A], from: ffi::ptr, index: usize): B
+  {
+    :::ffiload[B](from, (self.offsets)(index), (self.kinds)(index))
+  }
 
-//   store[B](self: struct, to: ffi::ptr, index: usize, value: B): none
-//   {
-//     :::ffistore[B](to, self.offsets()(index), self.sizes()(index), value)
-//   }
+  store[B](self: struct[A], to: ffi::ptr, index: usize, value: B): none
+  {
+    :::ffistore[B](to, (self.offsets)(index), (self.kinds)(index), value)
+  }
 
-//   alloc(self: struct): ffi::ptr
-//   {
-//     :::malloc(self.size)
-//   }
+  alloc(self: struct[A]): ffi::ptr
+  {
+    :::malloc(self.size)
+  }
 
-//   free(self: struct, ptr: ffi::ptr): none
-//   {
-//     :::free(ptr)
-//   }
-// }
+  free(self: struct[A], ptr: ffi::ptr): none
+  {
+    :::free(ptr)
+  }
+}

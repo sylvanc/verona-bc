@@ -54,6 +54,8 @@ namespace vbci
     uint32_t typeid_arg;
     uint32_t typeid_argv;
     uint32_t typeid_ref_dyn;
+    uint32_t typeid_array_usize;
+    uint32_t typeid_ffi_struct_result;
     Array* argv = nullptr;
 
     PC di = PC(-1);
@@ -117,6 +119,8 @@ namespace vbci
 
     uint32_t get_typeid_arg();
     uint32_t get_typeid_argv();
+    uint32_t get_typeid_array_usize();
+    uint32_t get_typeid_ffi_struct_result();
     Array* get_argv();
     Array* get_string(size_t idx);
 

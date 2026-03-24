@@ -77,6 +77,11 @@ namespace vbcc
     return ValueType::Invalid;
   }
 
+  Node ffi_struct_result_type()
+  {
+    return TupleType << USize << (Array << USize) << (Array << U8);
+  }
+
   static bool append_utf8(uint32_t cp, std::string& out)
   {
     if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))

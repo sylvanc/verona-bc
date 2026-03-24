@@ -77,6 +77,9 @@ namespace vbcc
   inline const auto Freeze = TokenDef("freeze");
   inline const auto Pin = TokenDef("pin");
   inline const auto Unpin = TokenDef("unpin");
+  inline const auto FFIStruct = TokenDef("ffistruct");
+  inline const auto FFILoad = TokenDef("ffiload");
+  inline const auto FFIStore = TokenDef("ffistore");
   inline const auto RegisterRef = TokenDef("registerref");
   inline const auto FieldRef = TokenDef("fieldref");
   inline const auto ArrayRef = TokenDef("arrayref");
@@ -219,6 +222,8 @@ namespace vbcc
   inline const auto Lhs = TokenDef("lhs");
   inline const auto Rhs = TokenDef("rhs");
   inline const auto Once = TokenDef("once");
+  inline const auto Kind = TokenDef("kind");
+  inline const auto ValueSrc = TokenDef("valuesrc");
 
   inline const auto wfRegionType = RegionRC | RegionArena;
 
@@ -248,11 +253,12 @@ namespace vbcc
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
     StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
-    RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | RegisterRef |
-    FieldRef | ArrayRef | ArrayRefConst | Load | Store | Lookup | Arg | Call |
-    CallDyn | TryCallDyn | FFI | When | WhenDyn | GetRaise | SetRaise |
-    wfBinop | wfUnop | wfConst | Typetest | MakeCallback | CodePtrCallback |
-    FreeCallback | MemoSlot | ArrayCopy | ArrayFill | ArrayCompare;
+    RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | FFIStruct |
+    FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef | ArrayRefConst |
+    Load | Store | Lookup | Arg | Call | CallDyn | TryCallDyn | FFI | When |
+    WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop | wfConst | Typetest |
+    MakeCallback | CodePtrCallback | FreeCallback | MemoSlot | ArrayCopy |
+    ArrayFill | ArrayCompare;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -263,6 +269,8 @@ namespace vbcc
   inline const auto wfRhs = (Rhs >>= LocalId);
   inline const auto wfRgn = (Region >>= wfRegionType);
   inline const auto wfLit = (Rhs >>= wfIntLiteral);
+  inline const auto wfKind = (Kind >>= LocalId);
+  inline const auto wfValueSrc = (ValueSrc >>= LocalId);
 
   // Any language that can meet the wfIR definition can be compiled to byte
   // code. A trieste file with the pass name "VIR" can be passed to `vbcc` as an
@@ -322,6 +330,10 @@ namespace vbcc
     | (Freeze <<= wfDst * wfSrc)
     | (Pin <<= wfDst * wfSrc)
     | (Unpin <<= wfDst * wfSrc)
+    | (FFIStruct <<= wfDst * (Type >>= wfType))
+    | (FFILoad <<= wfDst * wfLhs * wfRhs * wfKind * (Type >>= wfType))
+    | (FFIStore <<=
+        wfDst * wfLhs * wfRhs * wfKind * wfValueSrc * (Type >>= wfType))
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)

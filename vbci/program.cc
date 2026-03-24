@@ -104,6 +104,16 @@ namespace vbci
     return typeid_argv;
   }
 
+  uint32_t Program::get_typeid_array_usize()
+  {
+    return typeid_array_usize;
+  }
+
+  uint32_t Program::get_typeid_ffi_struct_result()
+  {
+    return typeid_ffi_struct_result;
+  }
+
   Array* Program::get_argv()
   {
     return argv;
@@ -855,6 +865,22 @@ namespace vbci
     typeid_ref_dyn = min_complex_type_id + 3;
     assert(complex_type(typeid_ref_dyn).tag == TypeTag::Ref);
     assert(complex_type(typeid_ref_dyn).children.at(0) == DynId);
+
+    typeid_array_usize = min_complex_type_id + 4;
+    assert(complex_type(typeid_array_usize).tag == TypeTag::Array);
+    assert(
+      complex_type(typeid_array_usize).children.at(0) == +ValueType::USize);
+
+    typeid_ffi_struct_result = min_complex_type_id + 5;
+    assert(complex_type(typeid_ffi_struct_result).tag == TypeTag::Tuple);
+    assert(complex_type(typeid_ffi_struct_result).children.size() == 3);
+    assert(
+      complex_type(typeid_ffi_struct_result).children.at(0) ==
+      +ValueType::USize);
+    assert(
+      complex_type(typeid_ffi_struct_result).children.at(1) ==
+      typeid_array_usize);
+    assert(complex_type(typeid_ffi_struct_result).children.at(2) == typeid_arg);
 
     // Prepare symbols now that all type information is available.
     for (auto& symbol : symbols)

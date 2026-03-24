@@ -124,14 +124,29 @@ namespace vbcc
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({Const,          ConstStr,         NewArray,
-                             NewArrayConst,  StackArray,       StackArrayConst,
-                             RegionArray,    RegionArrayConst, RegisterRef,
-                             FieldRef,       ArrayRefConst,    FFI,
-                             GetRaise,       Const_E,          Const_Pi,
-                             Const_Inf,      Const_NaN,        AddExternal,
-                             RemoveExternal, MemoSlot,         ArrayCopy,
-                             ArrayFill,      ArrayCompare}))
+          else if (node == FFILoad)
+          {
+            use(node / Lhs);
+            use(node / Rhs);
+            use(node / Kind);
+            def(node / LocalId);
+          }
+          else if (node == FFIStore)
+          {
+            use(node / Lhs);
+            use(node / Rhs);
+            use(node / Kind);
+            use(node / ValueSrc);
+            def(node / LocalId);
+          }
+          else if (node->in({Const,         ConstStr,         NewArray,
+                             NewArrayConst, StackArray,       StackArrayConst,
+                             RegionArray,   RegionArrayConst, RegisterRef,
+                             FieldRef,      ArrayRefConst,    FFI,
+                             FFIStruct,     GetRaise,         Const_E,
+                             Const_Pi,      Const_Inf,        Const_NaN,
+                             AddExternal,   RemoveExternal,   MemoSlot,
+                             ArrayCopy,     ArrayFill,        ArrayCompare}))
           {
             def(node / LocalId);
           }

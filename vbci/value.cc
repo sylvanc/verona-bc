@@ -417,6 +417,14 @@ namespace vbci
     return i32;
   }
 
+  uint8_t Value::get_u8() const
+  {
+    if (tag != ValueType::U8)
+      Value::error(Error::BadConversion);
+
+    return u8;
+  }
+
   uint64_t Value::get_u64() const
   {
     if (tag != ValueType::U64)

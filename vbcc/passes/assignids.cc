@@ -280,13 +280,16 @@ namespace vbcc
         }
       }
 
-      // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv), and
-      // `ref dyn` (unknown RegisterRef types). This has to happen after all
+      // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv),
+      // `ref dyn` (unknown RegisterRef types), [usize] (FFI struct offsets),
+      // and the fixed FFIStruct result tuple. This has to happen after all
       // classes have been added, but before any complex primitives.
       state->typ(Cown << I32);
       state->typ(Array << U8);
       state->typ(Array << (Array << U8));
       state->typ(Ref << Dyn);
+      state->typ(Array << USize);
+      state->typ(ffi_struct_result_type());
       return 0;
     });
 

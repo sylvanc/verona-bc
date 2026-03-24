@@ -350,6 +350,24 @@ namespace vbci
     Pin,
     Unpin,
 
+    // Compute FFI struct layout metadata for a leaf type or flat tuple type.
+    // Arg0 = dst.
+    // Arg1 = layout type ID.
+    FFIStruct,
+
+    // Load a raw field from memory using validated layout metadata.
+    // Arg0 = dst.
+    // Arg1 = base pointer.
+    // Arg2 = byte offset.
+    // Arg3 = runtime kind tag.
+    // Arg4 = expected type ID.
+    FFILoad,
+
+    // Store a raw field to memory using validated layout metadata. Returns
+    // None. Arg0 = dst. Arg1 = base pointer. Arg2 = byte offset. Arg3 = runtime
+    // kind tag. Arg4 = src value. Arg5 = expected type ID.
+    FFIStore,
+
     // Get the current frame's raise target.
     // Arg0 = dst.
     GetRaise,

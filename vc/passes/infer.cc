@@ -73,18 +73,31 @@ namespace vc
 
   // Ops with fixed result types.
   const std::map<Token, Token> fixed_result_type = {
-    {Eq, Bool},          {Ne, Bool},
-    {Lt, Bool},          {Le, Bool},
-    {Gt, Bool},          {Ge, Bool},
-    {IsInf, Bool},       {IsNaN, Bool},
-    {Not, Bool},         {Bits, U64},
-    {Len, USize},        {Const_E, F64},
-    {Const_Pi, F64},     {Const_Inf, F64},
-    {Const_NaN, F64},    {GetRaise, U64},
-    {SetRaise, U64},     {FreeCallback, None},
-    {Pin, None},         {Unpin, None},
-    {AddExternal, None}, {RemoveExternal, None},
-    {ArrayCopy, None},   {ArrayFill, None},
+    {Eq, Bool},
+    {Ne, Bool},
+    {Lt, Bool},
+    {Le, Bool},
+    {Gt, Bool},
+    {Ge, Bool},
+    {IsInf, Bool},
+    {IsNaN, Bool},
+    {Not, Bool},
+    {Bits, U64},
+    {Len, USize},
+    {Const_E, F64},
+    {Const_Pi, F64},
+    {Const_Inf, F64},
+    {Const_NaN, F64},
+    {GetRaise, U64},
+    {SetRaise, U64},
+    {FreeCallback, None},
+    {Pin, None},
+    {Unpin, None},
+    {FFIStore, None},
+    {AddExternal, None},
+    {RemoveExternal, None},
+    {ArrayCopy, None},
+    {ArrayFill, None},
     {ArrayCompare, I64},
   };
 
@@ -2759,6 +2772,14 @@ namespace vc
     {
       recovered = clone(stmt / Type);
     }
+    else if (stmt == FFIStruct)
+    {
+      recovered = ffi_struct_result_type();
+    }
+    else if (stmt == FFILoad)
+    {
+      recovered = clone(stmt / Type);
+    }
     else if (stmt->in({Copy, Move}))
     {
       auto src_it = env.find((stmt / Rhs)->location());
@@ -3639,6 +3660,26 @@ namespace vc
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), ffi_primitive_type(ffrt->second));
+      }
+      else if (stmt == FFIStruct)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge((stmt / LocalId)->location(), ffi_struct_result_type());
+      }
+      else if (stmt == FFILoad)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge((stmt / LocalId)->location(), clone(stmt / Type));
+      }
+      else if (stmt == FFIStore)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        auto value_loc = (stmt / ValueSrc)->location();
+        auto expected = clone(stmt / Type);
+        snmalloc::UNUSED(refine_local_const(value_loc, expected));
+        if (merge_bwd(value_loc, expected))
+          propagate_call_node(
+            env, value_loc, top, lookup_stmts, &all_def_stmts);
       }
       // ----- Call -----
       else if (stmt == Call)

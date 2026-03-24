@@ -1722,8 +1722,13 @@ namespace vc
             reify_primitive(Ptr);
             local_types[(n / LocalId)->location()] = Ptr;
           }
-          else if (n->in(
-                     {FreeCallback, Pin, Unpin, AddExternal, RemoveExternal}))
+          else if (n->in({
+                     FreeCallback,
+                     Pin,
+                     Unpin,
+                     AddExternal,
+                     RemoveExternal,
+                   }))
           {
             reify_primitive(None);
             local_types[(n / LocalId)->location()] = None;
@@ -2007,6 +2012,33 @@ namespace vc
           else if (n == FFI)
           {
             reify_ffi(n, r);
+          }
+          else if (n == FFIStruct)
+          {
+            auto layout_type = reify_emitted_type(
+              n / Type, r.subst, n / Type, "FFI layout type");
+            auto result_type = reify_emitted_type(
+              ffi_struct_result_type(),
+              r.subst,
+              n / Type,
+              "FFI struct result type");
+            n / Type = layout_type;
+            local_types[(n / LocalId)->location()] = clone(result_type);
+          }
+          else if (n == FFILoad)
+          {
+            auto field_type =
+              reify_emitted_type(n / Type, r.subst, n / Type, "FFI field type");
+            n / Type = field_type;
+            local_types[(n / LocalId)->location()] = clone(field_type);
+          }
+          else if (n == FFIStore)
+          {
+            auto field_type =
+              reify_emitted_type(n / Type, r.subst, n / Type, "FFI field type");
+            reify_primitive(None);
+            n / Type = field_type;
+            local_types[(n / LocalId)->location()] = None;
           }
           else if (n == When)
           {

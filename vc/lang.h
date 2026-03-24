@@ -274,7 +274,8 @@ namespace vc
   inline const auto wfExprDot =
     (wfExprSugar | CallDyn | TryCallDyn | Convert | Binop | Nulop | FFI |
      NewArray | ArrayRef | MakeCallback | CodePtrCallback | FreeCallback |
-     Freeze | Pin | Unpin | ArrayCopy | ArrayFill | ArrayCompare) -
+     Freeze | Pin | Unpin | FFIStruct | FFILoad | FFIStore | ArrayCopy |
+     ArrayFill | ArrayCompare) -
     Dot - TripleColon;
 
   // clang-format off
@@ -292,6 +293,9 @@ namespace vc
     | (Freeze <<= Args)
     | (Pin <<= Args)
     | (Unpin <<= Args)
+    | (FFIStruct <<= Type * Args)
+    | (FFILoad <<= Type * Args)
+    | (FFIStore <<= Type * Args)
     | (ArrayCopy <<= Args)
     | (ArrayFill <<= Args)
     | (ArrayCompare <<= Args)
@@ -318,8 +322,8 @@ namespace vc
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
     When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
     GetRaise | SetRaise | SplatOp | ArrayRefFromEnd | MakeCallback |
-    CodePtrCallback | FreeCallback | Freeze | Pin | Unpin | ArrayCopy |
-    ArrayFill | ArrayCompare;
+    CodePtrCallback | FreeCallback | Freeze | Pin | Unpin | FFIStruct |
+    FFILoad | FFIStore | ArrayCopy | ArrayFill | ArrayCompare;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -429,6 +433,10 @@ namespace vc
     | (Freeze <<= wfDst * wfSrc)
     | (Pin <<= wfDst * wfSrc)
     | (Unpin <<= wfDst * wfSrc)
+    | (FFIStruct <<= wfDst * (Type >>= wfType))
+    | (FFILoad <<= wfDst * wfLhs * wfRhs * wfKind * (Type >>= wfType))
+    | (FFIStore <<=
+        wfDst * wfLhs * wfRhs * wfKind * wfValueSrc * (Type >>= wfType))
     ;
   // clang-format on
 
@@ -459,6 +467,7 @@ namespace vc
   Node make_selftype(Node node, bool fq = false);
   Node type_any();
   Node type_nomatch();
+  Node ffi_struct_result_type();
   Node make_nomatch(Node localid);
 
   // Free type parameter from an enclosing scope.

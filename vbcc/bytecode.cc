@@ -1051,6 +1051,23 @@ namespace vbcc
             code << uleb(+Op::FFI) << dst(stmt)
                  << uleb(*get_symbol_id(stmt / SymbolId));
           }
+          else if (stmt == FFIStruct)
+          {
+            code << uleb(+Op::FFIStruct) << dst(stmt) << uleb(typ(stmt / Type));
+          }
+          else if (stmt == FFILoad)
+          {
+            code << uleb(+Op::FFILoad) << dst(stmt) << lhs(stmt) << rhs(stmt)
+                 << uleb(*func_state.get_register_id(stmt / Kind))
+                 << uleb(typ(stmt / Type));
+          }
+          else if (stmt == FFIStore)
+          {
+            code << uleb(+Op::FFIStore) << dst(stmt) << lhs(stmt) << rhs(stmt)
+                 << uleb(*func_state.get_register_id(stmt / Kind))
+                 << uleb(*func_state.get_register_id(stmt / ValueSrc))
+                 << uleb(typ(stmt / Type));
+          }
           else if (stmt == ArrayCopy)
           {
             args(stmt / Args);
@@ -1491,9 +1508,6 @@ namespace vbcc
     }
     else if (type == Union)
     {
-      b << uleb(+TypeTag::Union);
-      b << uleb(type->size());
-
       std::vector<size_t> child_types;
 
       for (auto& child : *type)
@@ -1502,6 +1516,9 @@ namespace vbcc
       std::sort(child_types.begin(), child_types.end());
       child_types.erase(
         std::unique(child_types.begin(), child_types.end()), child_types.end());
+
+      b << uleb(+TypeTag::Union);
+      b << uleb(child_types.size());
 
       for (auto t : child_types)
         b << uleb(t);

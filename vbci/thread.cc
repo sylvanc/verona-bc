@@ -86,6 +86,104 @@ namespace vbci
     }
   }
 
+  static bool ffi_struct_leaf_type(
+    Program& program, uint32_t type_id, ValueType& kind, ffi_type*& rep)
+  {
+    if (
+      (type_id == DynId) || program.is_tuple(type_id) ||
+      program.is_ref(type_id) || program.is_union(type_id))
+      return false;
+
+    auto layout = program.layout_type_id(type_id);
+    kind = layout.first;
+    rep = layout.second;
+
+    switch (kind)
+    {
+      case ValueType::Bool:
+      case ValueType::I8:
+      case ValueType::I16:
+      case ValueType::I32:
+      case ValueType::I64:
+      case ValueType::U8:
+      case ValueType::U16:
+      case ValueType::U32:
+      case ValueType::U64:
+      case ValueType::ILong:
+      case ValueType::ULong:
+      case ValueType::ISize:
+      case ValueType::USize:
+      case ValueType::F32:
+      case ValueType::F64:
+      case ValueType::Ptr:
+      case ValueType::Object:
+      case ValueType::Array:
+      case ValueType::Cown:
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  static bool ffi_struct_members(
+    Program& program,
+    uint32_t layout_type_id,
+    std::vector<ValueType>& kinds,
+    std::vector<ffi_type*>& reps)
+  {
+    auto add_leaf = [&](uint32_t field_type_id) {
+      ValueType kind;
+      ffi_type* rep;
+      if (!ffi_struct_leaf_type(program, field_type_id, kind, rep))
+        return false;
+      kinds.push_back(kind);
+      reps.push_back(rep);
+      return true;
+    };
+
+    if (program.is_tuple(layout_type_id))
+    {
+      auto& tuple = program.complex_type(layout_type_id);
+
+      if (tuple.children.empty())
+        return false;
+
+      for (auto field_type_id : tuple.children)
+      {
+        if (program.is_tuple(field_type_id) || !add_leaf(field_type_id))
+          return false;
+      }
+
+      return true;
+    }
+
+    return add_leaf(layout_type_id);
+  }
+
+  static ValueType
+  ffi_expected_kind(Program& program, uint32_t expected_type_id)
+  {
+    ValueType kind;
+    ffi_type* rep;
+    snmalloc::UNUSED(rep);
+
+    if (!ffi_struct_leaf_type(program, expected_type_id, kind, rep))
+      Value::error(Error::BadType);
+
+    return kind;
+  }
+
+  static void* ffi_field_addr(const Register& base, const Register& offset)
+  {
+    auto* ptr = static_cast<uint8_t*>(base->get_ptr());
+
+    if (ptr == nullptr)
+      Value::error(Error::BadOperand);
+
+    return ptr + offset->get_size();
+  }
+
   struct ConstantBase
   {};
   template<typename T_>
@@ -596,6 +694,12 @@ namespace vbci
         return os << "Pin";
       case Op::Unpin:
         return os << "Unpin";
+      case Op::FFIStruct:
+        return os << "FFIStruct";
+      case Op::FFILoad:
+        return os << "FFILoad";
+      case Op::FFIStore:
+        return os << "FFIStore";
       case Op::RegisterRef:
         return os << "RegisterRef";
       case Op::FieldRefMove:
@@ -1690,6 +1794,127 @@ namespace vbci
       {
         process([](Register& dst, const Register& src) INLINE {
           src->unpin();
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::FFIStruct:
+      {
+        process([](
+                  Register& dst,
+                  Constant<size_t> layout_type_id,
+                  Frame& frame,
+                  Program& program) INLINE {
+          std::vector<ValueType> kinds;
+          std::vector<ffi_type*> reps;
+
+          if (!ffi_struct_members(program, layout_type_id, kinds, reps))
+            Value::error(Error::BadType);
+
+          std::vector<ffi_type*> struct_elements = reps;
+          struct_elements.push_back(nullptr);
+
+          std::vector<size_t> offsets(kinds.size());
+          ffi_type struct_type;
+          struct_type.size = 0;
+          struct_type.alignment = 0;
+          struct_type.type = FFI_TYPE_STRUCT;
+          struct_type.elements = struct_elements.data();
+
+          if (
+            ffi_get_struct_offsets(
+              FFI_DEFAULT_ABI, &struct_type, offsets.data()) != FFI_OK)
+          {
+            Value::error(Error::BadType);
+          }
+
+          auto result_type_id = program.get_typeid_ffi_struct_result();
+          auto offsets_type_id = program.get_typeid_array_usize();
+          auto kinds_type_id = program.get_typeid_arg();
+
+          auto* offsets_arr =
+            frame.region->array(offsets_type_id, offsets.size());
+          auto* kinds_arr = frame.region->array(kinds_type_id, kinds.size());
+          auto* tuple_arr = frame.region->array(result_type_id, 3);
+
+          for (size_t i = 0; i < offsets.size(); i++)
+          {
+            Register off_reg =
+              ValueTransfer(Value(ValueType::USize, offsets.at(i)));
+            Register kind_reg = ValueTransfer(
+              Value(ValueType::U8, static_cast<uint8_t>(kinds.at(i))));
+            snmalloc::UNUSED(offsets_arr->exchange<false>(i, off_reg));
+            snmalloc::UNUSED(kinds_arr->exchange<false>(i, kind_reg));
+          }
+
+          Register size_reg =
+            ValueTransfer(Value(ValueType::USize, struct_type.size));
+          Register offsets_reg = ValueTransfer(offsets_arr);
+          Register kinds_reg = ValueTransfer(kinds_arr);
+
+          snmalloc::UNUSED(tuple_arr->exchange<false>(0, size_reg));
+          snmalloc::UNUSED(tuple_arr->exchange<false>(1, offsets_reg));
+          snmalloc::UNUSED(tuple_arr->exchange<false>(2, kinds_reg));
+
+          if (!freeze(tuple_arr))
+            Value::error(Error::BadType);
+
+          dst = ValueTransfer(tuple_arr);
+        });
+        break;
+      }
+
+      case Op::FFILoad:
+      {
+        process([](
+                  Register& dst,
+                  const Register& base,
+                  const Register& offset,
+                  const Register& kind_reg,
+                  Constant<size_t> expected_type_id,
+                  Program& program) INLINE {
+          auto actual_kind = static_cast<ValueType>(kind_reg->get_u8());
+          auto expected_kind = ffi_expected_kind(program, expected_type_id);
+
+          if (actual_kind != expected_kind)
+            Value::error(Error::BadType);
+
+          auto value =
+            Value::from_addr(actual_kind, ffi_field_addr(base, offset));
+
+          if (
+            (value.is_header() || value.is_cown()) &&
+            !program.subtype(value.type_id(), expected_type_id))
+          {
+            Value::error(Error::BadType);
+          }
+
+          dst = value;
+        });
+        break;
+      }
+
+      case Op::FFIStore:
+      {
+        process([](
+                  Register& dst,
+                  const Register& base,
+                  const Register& offset,
+                  const Register& kind_reg,
+                  const Register& value,
+                  Constant<size_t> expected_type_id,
+                  Program& program) INLINE {
+          auto actual_kind = static_cast<ValueType>(kind_reg->get_u8());
+          auto expected_kind = ffi_expected_kind(program, expected_type_id);
+
+          if (actual_kind != expected_kind)
+            Value::error(Error::BadType);
+
+          if (!program.subtype(value->type_id(), expected_type_id))
+            Value::error(Error::BadType);
+
+          value->to_addr(actual_kind, ffi_field_addr(base, offset));
           dst = ValueImmortal(Value::none());
         });
         break;
