@@ -442,6 +442,23 @@ namespace vbcc
         Dst * T(Unpin) * T(LocalId)[Rhs] >>
           [](Match& _) { return Unpin << _(LocalId) << _(Rhs); },
 
+        Dst * T(FFIStruct) * TypePat[Type] >>
+          [](Match& _) { return FFIStruct << _(LocalId) << _(Type); },
+
+        Dst * T(FFILoad) * T(LocalId)[Lhs] * T(LocalId)[Rhs] *
+            T(LocalId)[Kind] * TypePat[Type] >>
+          [](Match& _) {
+            return FFILoad << _(LocalId) << _(Lhs) << _(Rhs) << _(Kind)
+                           << _(Type);
+          },
+
+        Dst * T(FFIStore) * T(LocalId)[Lhs] * T(LocalId)[Rhs] *
+            T(LocalId)[Kind] * T(LocalId)[ValueSrc] * TypePat[Type] >>
+          [](Match& _) {
+            return FFIStore << _(LocalId) << _(Lhs) << _(Rhs) << _(Kind)
+                            << _(ValueSrc) << _(Type);
+          },
+
         // Reference operations.
         Dst * T(Ref) * T(LocalId)[Rhs] * T(GlobalId)[GlobalId] >>
           [](Match& _) {

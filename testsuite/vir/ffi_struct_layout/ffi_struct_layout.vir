@@ -1,0 +1,91 @@
+lib
+  @malloc = "malloc"(usize): ptr
+  @free = "free"(ptr): none
+
+func @main(): i32
+  $pair_layout = ffistruct tuple(u8, i32, usize)
+  $single_layout = ffistruct u64
+
+  $pair_size_ref = ref $pair_layout 0
+  $pair_size = load $pair_size_ref
+  $pair_offsets_ref = ref $pair_layout 1
+  $pair_offsets = load $pair_offsets_ref
+  $pair_kinds_ref = ref $pair_layout 2
+  $pair_kinds = load $pair_kinds_ref
+
+  $single_size_ref = ref $single_layout 0
+  $single_size = load $single_size_ref
+  $single_offsets_ref = ref $single_layout 1
+  $single_offsets = load $single_offsets_ref
+  $single_kinds_ref = ref $single_layout 2
+  $single_kinds = load $single_kinds_ref
+
+  $pair_ptr = ffi @malloc($pair_size)
+  $single_ptr = ffi @malloc($single_size)
+
+  $pair_off0_ref = ref $pair_offsets 0
+  $pair_off0 = load $pair_off0_ref
+  $pair_off1_ref = ref $pair_offsets 1
+  $pair_off1 = load $pair_off1_ref
+  $pair_off2_ref = ref $pair_offsets 2
+  $pair_off2 = load $pair_off2_ref
+
+  $pair_kind0_ref = ref $pair_kinds 0
+  $pair_kind0 = load $pair_kind0_ref
+  $pair_kind1_ref = ref $pair_kinds 1
+  $pair_kind1 = load $pair_kind1_ref
+  $pair_kind2_ref = ref $pair_kinds 2
+  $pair_kind2 = load $pair_kind2_ref
+
+  $single_off0_ref = ref $single_offsets 0
+  $single_off0 = load $single_off0_ref
+  $single_kind0_ref = ref $single_kinds 0
+  $single_kind0 = load $single_kind0_ref
+
+  $u8v = const u8 7
+  $i32v = const i32 5
+  $usizev = const usize 1234
+  $u64v = const u64 99
+  $zero = const usize 0
+
+  $store0 = ffistore $pair_ptr $pair_off0 $pair_kind0 $u8v u8
+  $store1 = ffistore $pair_ptr $pair_off1 $pair_kind1 $i32v i32
+  $store2 = ffistore $pair_ptr $pair_off2 $pair_kind2 $usizev usize
+  $store3 = ffistore $single_ptr $single_off0 $single_kind0 $u64v u64
+
+  $got0 = ffiload $pair_ptr $pair_off0 $pair_kind0 u8
+  $got1 = ffiload $pair_ptr $pair_off1 $pair_kind1 i32
+  $got2 = ffiload $pair_ptr $pair_off2 $pair_kind2 usize
+  $got3 = ffiload $single_ptr $single_off0 $single_kind0 u64
+
+  $ok0 = eq $got0 $u8v
+  $ok1 = eq $got1 $i32v
+  $ok2 = eq $got2 $usizev
+  $ok3 = eq $got3 $u64v
+  $ok4 = eq $pair_off0 $zero
+  $ok5 = gt $pair_off1 $pair_off0
+  $ok6 = gt $pair_off2 $pair_off1
+  $ok7 = gt $pair_size $pair_off2
+  $ok8 = eq $single_off0 $zero
+  $ok9 = gt $single_size $zero
+
+  $ok01 = and $ok0 $ok1
+  $ok23 = and $ok2 $ok3
+  $ok45 = and $ok4 $ok5
+  $ok67 = and $ok6 $ok7
+  $ok89 = and $ok8 $ok9
+  $ok0123 = and $ok01 $ok23
+  $ok4567 = and $ok45 $ok67
+  $ok01234567 = and $ok0123 $ok4567
+  $ok = and $ok01234567 $ok89
+
+  $free_pair = ffi @free($pair_ptr)
+  $free_single = ffi @free($single_ptr)
+
+  cond $ok ^ok ^fail
+^ok
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 1
+  ret $ret
