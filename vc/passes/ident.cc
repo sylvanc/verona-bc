@@ -411,7 +411,8 @@ namespace vc
 
     // Substitute TypeParams in `name` (the alias body, fully qualified) using
     // type arguments from `prefix` (the path that led to the alias).
-    Node substitute(const Node& prefix, const Node& name)
+    Node substitute(
+      const Node& prefix, const Node& name, bool preserve_prefix_type = true)
     {
       assert(prefix->in({FuncName, TypeName}));
       assert(name->in({FuncName, TypeName}));
@@ -421,7 +422,7 @@ namespace vc
 
       rhs->traverse([&](Node& node) {
         if ((node != rhs) && node->in({FuncName, TypeName}))
-          node->parent()->replace(node, substitute(prefix, node));
+          node->parent()->replace(node, substitute(prefix, node, false));
         return true;
       });
 
@@ -440,8 +441,10 @@ namespace vc
       }
 
       // Walk through rhs, substituting TypeParams and carrying type args
-      // from the prefix where the scopes match.
-      Node result = prefix->type();
+      // from the prefix where the scopes match. Preserve the caller's
+      // FuncName/TypeName kind only at the alias root; nested names inside
+      // type arguments must keep their own kind.
+      Node result = preserve_prefix_type ? prefix->type() : name->type();
       auto curr = top;
 
       for (auto& elem : *rhs)
