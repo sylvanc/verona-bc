@@ -533,11 +533,14 @@ namespace vc
             top << r.reification;
 
       // Emit Primitives, deduplicating wrappers whose inner types are
-      // invariantly equivalent after alias/shape resolution. Uses
-      // IRSubtype which resolves TypeId through the Type entries now in
-      // top, handles union set equality, and wrapper invariance.
+      // invariantly equivalent after alias/shape resolution. Rebuild the
+      // wfIR symbol table after populating top so IRSubtype can resolve
+      // TypeId through Top::look(), then use it for union set equality and
+      // wrapper invariance.
       {
         WFContext wf_ctx(wfIR);
+        auto ok = wfIR.build_st(top);
+        assert(ok);
         std::vector<std::pair<Token, Node>> emitted;
 
         for (auto& key : map_order)

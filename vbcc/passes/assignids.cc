@@ -23,6 +23,8 @@ namespace vbcc
             // Duplicate name. Check type compatibility.
             auto existing = state->get_symbol(_(Symbol) / SymbolId);
             assert(existing);
+            auto top = _(Symbol)->scope();
+            assert(top);
 
             auto ep = existing / FFIParams;
             auto np = _(Symbol) / FFIParams;
@@ -33,13 +35,13 @@ namespace vbcc
                                (_(Symbol) / Lhs)->location().view()) &&
               ((existing / Rhs)->location().view() ==
                (_(Symbol) / Rhs)->location().view()) &&
-              IRSubtype.invariant(state->top, er, nr) &&
+              IRSubtype.invariant(top, er, nr) &&
               std::equal(ep->begin(),
                          ep->end(),
                          np->begin(),
                          np->end(),
                          [&](auto& a, auto& b) {
-                           return IRSubtype.invariant(state->top, a, b);
+                           return IRSubtype.invariant(top, a, b);
                          });
 
             if (!compatible)

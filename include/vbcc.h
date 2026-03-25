@@ -290,15 +290,15 @@ namespace vbcc
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *
         (Vararg >>= Vararg | None) * FFIParams * (Return >>= wfType))
     | (FFIParams <<= wfType++)
-    | (Type <<= TypeId * (Type >>= wfType))
+    | (Type <<= TypeId * (Type >>= wfType))[TypeId]
     | (Primitive <<= (Type >>= wfBuiltinType) * Methods)
-    | (Class <<= ClassId * Fields * Methods)
+    | (Class <<= ClassId * Fields * Methods)[ClassId]
     | (Fields <<= Field++)
     | (Field <<= FieldId * (Type >>= wfType))
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
-    | (Func <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)
-    | (FuncOnce <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)
+    | (Func <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
+    | (FuncOnce <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
     | (MemoInit <<= FunctionId++)
     | (MemoSlot <<= wfDst * FunctionId)
     | (Params <<= Param++)

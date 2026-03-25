@@ -388,20 +388,20 @@ namespace vbcc
         errors.push_back({node, msg});
       };
 
-      // Resolve TypeId to its definition (typically a Union).
-      // Type entries in the IR are: Type <<= TypeId * (Type >>= wfType).
-      // Recursively resolves through Union, Array, Cown, and Ref.
+      // Resolve TypeId to its definition (typically a Union) through the
+      // assignids-built Bytecode map. Recursively resolves through Union,
+      // Array, Cown, and Ref.
       std::function<Node(const Node&)> resolve_type =
         [&](const Node& t) -> Node {
         if (!t)
           return t;
         if (t == TypeId)
         {
-          for (auto& child : *top)
-          {
-            if (child == Type && (child / TypeId)->location() == t->location())
-              return resolve_type(child / Type);
-          }
+          auto id = state->get_typealias_id(t);
+
+          if (id)
+            return resolve_type(state->get_typealias(t) / Type);
+
           return t; // Unresolved TypeId - leave as-is
         }
         if (t == Union)

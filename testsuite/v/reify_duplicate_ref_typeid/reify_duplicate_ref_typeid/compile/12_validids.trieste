@@ -1,0 +1,448 @@
+vc
+validids
+(top
+  {}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 5:$1550)
+            (functionid 38:reify_duplicate_ref_typeid::main::0::0)
+            (args)))
+        (ret
+          (localid 5:$1550)))))
+  (func
+    (functionid 38:reify_duplicate_ref_typeid::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$34)
+            (functionid 50:reify_duplicate_ref_typeid::lambda$2::create::0::0)
+            (args))
+          (copy
+            (localid 10:local$1069)
+            (localid 1:h))
+          (copy
+            (localid 1:h)
+            (localid 8:local$34))
+          (call
+            (localid 8:local$35)
+            (functionid 47:reify_duplicate_ref_typeid::maker::create::0::0)
+            (args))
+          (copy
+            (localid 10:local$1070)
+            (localid 1:m))
+          (copy
+            (localid 1:m)
+            (localid 8:local$35))
+          (lookup
+            (localid 9:local$194)
+            (localid 1:m)
+            (methodid 9:one::2::0))
+          (calldyn
+            (localid 9:local$195)
+            (localid 9:local$194)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:m))
+              (arg
+                (argcopy)
+                (localid 1:h))))
+          (copy
+            (localid 10:local$1252)
+            (localid 2:f1))
+          (copy
+            (localid 2:f1)
+            (localid 9:local$195))
+          (lookup
+            (localid 9:local$196)
+            (localid 1:m)
+            (methodid 9:two::2::0))
+          (calldyn
+            (localid 9:local$197)
+            (localid 9:local$196)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:m))
+              (arg
+                (argcopy)
+                (localid 1:h))))
+          (copy
+            (localid 10:local$1253)
+            (localid 2:f2))
+          (copy
+            (localid 2:f2)
+            (localid 9:local$197))
+          (lookup
+            (localid 9:local$198)
+            (localid 2:f1)
+            (methodid 11:apply::1::0))
+          (calldyn
+            (localid 9:local$199)
+            (localid 9:local$198)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:f1))))
+          (lookup
+            (localid 9:local$200)
+            (localid 2:f2)
+            (methodid 11:apply::1::0))
+          (calldyn
+            (localid 9:local$201)
+            (localid 9:local$200)
+            (args
+              (arg
+                (argcopy)
+                (localid 2:f2))))
+          (const
+            (localid 8:local$36)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 8:local$36)))))
+  (func
+    (functionid 50:reify_duplicate_ref_typeid::lambda$2::create::0::0)
+    (params)
+    (classid 39:reify_duplicate_ref_typeid::lambda$2::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$32)
+            (classid 39:reify_duplicate_ref_typeid::lambda$2::0)
+            (args)))
+        (ret
+          (localid 8:local$32)))))
+  (func
+    (functionid 47:reify_duplicate_ref_typeid::maker::create::0::0)
+    (params)
+    (classid 36:reify_duplicate_ref_typeid::maker::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$19)
+            (classid 36:reify_duplicate_ref_typeid::maker::0)
+            (args)))
+        (ret
+          (localid 8:local$19)))))
+  (class
+    (classid 36:reify_duplicate_ref_typeid::maker::0)
+    (fields)
+    (methods
+      (method
+        (methodid 9:one::2::0)
+        (functionid 44:reify_duplicate_ref_typeid::maker::one::2::0))
+      (method
+        (methodid 9:two::2::0)
+        (functionid 44:reify_duplicate_ref_typeid::maker::two::2::0))))
+  (func
+    (functionid 44:reify_duplicate_ref_typeid::maker::one::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 36:reify_duplicate_ref_typeid::maker::0))
+      (param
+        (localid 7:handler)
+        (typeid 43:reify_duplicate_ref_typeid::maker::fn$11::0)))
+    (typeid 43:reify_duplicate_ref_typeid::maker::fn$12::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$25)
+            (functionid 57:reify_duplicate_ref_typeid::maker::lambda$0::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:handler)))))
+        (ret
+          (localid 8:local$25)))))
+  (func
+    (functionid 44:reify_duplicate_ref_typeid::maker::two::2::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 36:reify_duplicate_ref_typeid::maker::0))
+      (param
+        (localid 7:handler)
+        (typeid 43:reify_duplicate_ref_typeid::maker::fn$15::0)))
+    (typeid 43:reify_duplicate_ref_typeid::maker::fn$16::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$31)
+            (functionid 57:reify_duplicate_ref_typeid::maker::lambda$1::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:handler)))))
+        (ret
+          (localid 8:local$31)))))
+  (type
+    (typeid 43:reify_duplicate_ref_typeid::maker::fn$16::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (type
+    (typeid 43:reify_duplicate_ref_typeid::maker::fn$15::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (func
+    (functionid 57:reify_duplicate_ref_typeid::maker::lambda$1::create::1::0)
+    (params
+      (param
+        (localid 7:handler)
+        (typeid 53:reify_duplicate_ref_typeid::maker::lambda$1::fn$14::0)))
+    (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$28)
+            (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:handler)))))
+        (ret
+          (localid 8:local$28)))))
+  (class
+    (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+    (fields
+      (field
+        (fieldid 7:handler)
+        (typeid 53:reify_duplicate_ref_typeid::maker::lambda$1::fn$13::0)))
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 56:reify_duplicate_ref_typeid::maker::lambda$1::apply::1::0))))
+  (type
+    (typeid 53:reify_duplicate_ref_typeid::maker::lambda$1::fn$14::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (type
+    (typeid 53:reify_duplicate_ref_typeid::maker::lambda$1::fn$13::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (func
+    (functionid 56:reify_duplicate_ref_typeid::maker::lambda$1::apply::1::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$193)
+            (arg
+              (argcopy)
+              (localid 5:$self))
+            (fieldid 7:handler))
+          (load
+            (localid 10:local$1251)
+            (localid 9:local$193))
+          (lookup
+            (localid 10:local$1469)
+            (localid 10:local$1251)
+            (methodid 11:apply::1::0))
+          (calldyn
+            (localid 10:local$1470)
+            (localid 10:local$1469)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1251))))
+          (const
+            (localid 9:none$1551)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1551)))))
+  (type
+    (typeid 43:reify_duplicate_ref_typeid::maker::fn$12::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (type
+    (typeid 43:reify_duplicate_ref_typeid::maker::fn$11::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (func
+    (functionid 57:reify_duplicate_ref_typeid::maker::lambda$0::create::1::0)
+    (params
+      (param
+        (localid 7:handler)
+        (typeid 53:reify_duplicate_ref_typeid::maker::lambda$0::fn$10::0)))
+    (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$22)
+            (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 7:handler)))))
+        (ret
+          (localid 8:local$22)))))
+  (class
+    (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+    (fields
+      (field
+        (fieldid 7:handler)
+        (typeid 52:reify_duplicate_ref_typeid::maker::lambda$0::fn$9::0)))
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 56:reify_duplicate_ref_typeid::maker::lambda$0::apply::1::0))))
+  (type
+    (typeid 53:reify_duplicate_ref_typeid::maker::lambda$0::fn$10::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (type
+    (typeid 52:reify_duplicate_ref_typeid::maker::lambda$0::fn$9::0)
+    (union
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$1::0)
+      (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)
+      (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+  (func
+    (functionid 56:reify_duplicate_ref_typeid::maker::lambda$0::apply::1::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 46:reify_duplicate_ref_typeid::maker::lambda$0::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$192)
+            (arg
+              (argcopy)
+              (localid 5:$self))
+            (fieldid 7:handler))
+          (load
+            (localid 10:local$1250)
+            (localid 9:local$192))
+          (lookup
+            (localid 10:local$1467)
+            (localid 10:local$1250)
+            (methodid 11:apply::1::0))
+          (calldyn
+            (localid 10:local$1468)
+            (localid 10:local$1467)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1250))))
+          (const
+            (localid 9:none$1552)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1552)))))
+  (class
+    (classid 39:reify_duplicate_ref_typeid::lambda$2::0)
+    (fields)
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 49:reify_duplicate_ref_typeid::lambda$2::apply::1::0))))
+  (func
+    (functionid 49:reify_duplicate_ref_typeid::lambda$2::apply::1::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 39:reify_duplicate_ref_typeid::lambda$2::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$33)
+            (functionid 28:_builtin::none::create::0::0)
+            (args))
+          (const
+            (localid 9:none$1553)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1553)))))
+  (func
+    (functionid 28:_builtin::none::create::0::0)
+    (params)
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 9:local$106)
+            (none)
+            (none))
+          (const
+            (localid 9:none$1554)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1554)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (none)
+    (methods))
+  (primitive
+    (ref
+      (typeid 53:reify_duplicate_ref_typeid::maker::lambda$1::fn$13::0))
+    (methods)))
