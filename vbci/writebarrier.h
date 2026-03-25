@@ -338,6 +338,9 @@ namespace vbci::writebarrier
 
   inline void init(Location store_loc, void* addr, ValueType t, Register next)
   {
+    if (next->is_readonly())
+      Value::error(Error::BadStore);
+
     auto ops =
       write_ops<true>().prepare_store(store_loc).prepare_in(next->location());
 

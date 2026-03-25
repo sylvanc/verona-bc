@@ -653,12 +653,11 @@ namespace vbci
 
   ValueBorrow Value::op_read() const
   {
-    if (tag == ValueType::Cown)
+    if (tag == ValueType::Cown || tag == ValueType::Ptr)
     {
       Value r = *this;
       // Note that the context will perform incref (do_unop) in the interpreter,
-      // so op_read itself does not modify the reference count. This implements
-      // a borrow of the underlying cown without taking ownership here.
+      // so op_read itself does not modify the reference count.
       r.readonly = true;
       return r;
     }

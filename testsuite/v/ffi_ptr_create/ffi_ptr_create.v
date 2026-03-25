@@ -1,6 +1,6 @@
 make_ptr(): ffi::ptr
 {
-  ffi::ptr()
+  ffi::ptr::create(none)
 }
 
 main(): i32

@@ -1669,20 +1669,20 @@ namespace vbcc
         }
         else if (node == Read)
         {
-          // Read: cown -> result (same type, but read-only).
+          // Read: cown/ptr -> result (same type, but read-only).
           auto src_type = typed(node / Rhs);
 
-          if (src_type && !is_cown_type(src_type))
+          if (src_type && !is_cown_type(src_type) && (src_type != Ptr))
           {
             type_err(
               node,
               std::format(
-                "read: operand type '{}' is not a cown type",
+                "read: operand type '{}' is not a cown or ptr type",
                 type_name(src_type)));
             return true;
           }
 
-          // Read gives back the cown type (with readonly semantics at runtime).
+          // Read gives back the same type (with readonly semantics at runtime).
           if (src_type)
             set_type(env, node / LocalId, clone(src_type));
           else

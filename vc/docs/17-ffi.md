@@ -122,6 +122,18 @@ For FFI parameters declared as `ptr`, Verona also passes pointer-like runtime va
 - objects are passed as a pointer to their fields (like a C `struct`)
 - `callback` values are passed as their C function pointer
 
+To explicitly create a raw pointer value in Verona source, use the `_builtin/ffi`
+wrapper:
+
+```verona
+let null_ptr = ffi::ptr::create(none);
+let stack_ptr = ffi::ptr::create(x);
+```
+
+`ffi::ptr::create(x)` takes the address of `x`'s current runtime storage. The
+resulting pointer is read-only and cannot be stored into Verona heap objects; it
+is intended for immediate FFI-style use.
+
 Strings are Verona objects containing a `data: array[u8]` field, so to pass string bytes to C, pass `my_string.data` (and usually `my_string.size`) rather than the string object itself.
 
 ### Memory Ownership
