@@ -5,65 +5,45 @@ parse
   (directory
     (file
       (group
-        (ident 5:maker)
+        (ident 4:once)
+        (ident 6:answer)
+        (paren)
+        (:)
+        (ident 3:i32)
         (brace
           (group
-            (ident 6:create)
-            (paren)
-            (:)
-            (ident 5:maker)
-            (brace
-              (group
-                (new)
-                (brace))))
+            (int 2:42))))
+      (group
+        (use)
+        (brace
           (group
-            (ident 3:one)
-            (paren
-              (list
-                (group
-                  (ident 4:self)
-                  (:)
-                  (ident 5:maker))
-                (group
-                  (ident 7:handler)
-                  (:)
-                  (paren)
-                  (symbolid 2:->)
-                  (ident 4:none))))
-            (:)
+            (ident 4:init)
             (paren)
-            (symbolid 2:->)
-            (ident 4:none)
+            (:)
+            (ident 3:any)
             (brace
               (group
-                (paren)
-                (symbolid 2:->)
-                (ident 7:handler)
-                (paren))))
+                (triplecolon)
+                (ident 8:printval)
+                (paren
+                  (group
+                    (ident 15:init_calls_once)
+                    (doublecolon)
+                    (ident 6:answer)
+                    (paren))))
+              (group
+                (semi))))
           (group
-            (ident 3:two)
+            (ident 8:printval)
+            (=)
+            (string 8:printval)
             (paren
-              (list
-                (group
-                  (ident 4:self)
-                  (:)
-                  (ident 5:maker))
-                (group
-                  (ident 7:handler)
-                  (:)
-                  (paren)
-                  (symbolid 2:->)
-                  (ident 4:none))))
-            (:)
-            (paren)
-            (symbolid 2:->)
-            (ident 4:none)
-            (brace
               (group
-                (paren)
-                (symbolid 2:->)
-                (ident 7:handler)
-                (paren))))))
+                (ident 3:any)))
+            (:)
+            (ident 4:none))
+          (group
+            (semi))))
       (group
         (ident 4:main)
         (paren)
@@ -71,53 +51,11 @@ parse
         (ident 3:i32)
         (brace
           (group
-            (let)
-            (ident 1:h)
-            (=)
-            (paren)
-            (symbolid 2:->)
-            (brace))
-          (group
-            (semi))
-          (group
-            (let)
-            (ident 1:m)
-            (=)
-            (ident 5:maker))
-          (group
-            (semi))
-          (group
-            (let)
-            (ident 2:f1)
-            (=)
-            (ident 1:m)
-            (dot)
-            (ident 3:one)
+            (triplecolon)
+            (ident 8:printval)
             (paren
               (group
-                (ident 1:h))))
-          (group
-            (semi))
-          (group
-            (let)
-            (ident 2:f2)
-            (=)
-            (ident 1:m)
-            (dot)
-            (ident 3:two)
-            (paren
-              (group
-                (ident 1:h))))
-          (group
-            (semi))
-          (group
-            (ident 2:f1)
-            (paren))
-          (group
-            (semi))
-          (group
-            (ident 2:f2)
-            (paren))
+                (int 1:0))))
           (group
             (semi))
           (group

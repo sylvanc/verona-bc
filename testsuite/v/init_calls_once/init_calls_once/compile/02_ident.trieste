@@ -3,160 +3,94 @@ ident
 (top
   {
     _builtin = classdef
-    reify_duplicate_ref_typeid = classdef}
+    init_calls_once = classdef}
   (classdef
     {
+      answer = function
       create = function
-      main = function
-      maker = classdef}
+      init = function
+      main = function}
     (none)
-    (ident 26:reify_duplicate_ref_typeid)
+    (ident 15:init_calls_once)
     (typeparams)
     (where)
     (classbody
-      (classdef
-        {
-          create = function
-          one = function
-          two = function}
-        (none)
-        (ident 5:maker)
+      (function
+        {}
+        (once)
+        (ident 6:answer)
         (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))
+            (nameelement
+              (ident 3:i32)
+              (typeargs))))
         (where)
-        (classbody
+        (body
+          (expr
+            (int 2:42))))
+      (lib
+        (string 0:)
+        (symbols
           (function
             {}
             (rhs)
-            (ident 6:create)
+            (ident 4:init)
             (typeparams)
             (params)
             (type
               (typename
                 (nameelement
-                  (ident 26:reify_duplicate_ref_typeid)
+                  (ident 8:_builtin)
                   (typeargs))
                 (nameelement
-                  (ident 5:maker)
+                  (ident 3:any)
                   (typeargs))))
             (where)
             (body
               (expr
-                (new
-                  (newargs)))))
-          (function
-            {
-              handler = paramdef
-              self = paramdef}
-            (rhs)
-            (ident 3:one)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 4:self)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))))
-                (body))
-              (paramdef
-                (ident 7:handler)
-                (type
-                  (functype
-                    (noargtype)
-                    (typename
+                (triplecolon
+                  (nameelement
+                    (ident 8:printval)
+                    (typeargs)))
+                (exprseq
+                  (expr
+                    (funcname
                       (nameelement
-                        (ident 8:_builtin)
+                        (ident 15:init_calls_once)
                         (typeargs))
                       (nameelement
-                        (ident 4:none)
-                        (typeargs)))))
-                (body)))
-            (type
-              (functype
-                (noargtype)
+                        (ident 6:answer)
+                        (typeargs)))
+                    (tuple))))))
+          (symbol
+            (symbolid 8:printval)
+            (string 8:printval)
+            (string 0:)
+            (none)
+            (ffiparams
+              (type
                 (typename
                   (nameelement
                     (ident 8:_builtin)
                     (typeargs))
                   (nameelement
-                    (ident 4:none)
+                    (ident 3:any)
                     (typeargs)))))
-            (where)
-            (body
-              (expr
-                (lambda
-                  {}
-                  (params)
-                  (type
-                    (typevar))
-                  (body
-                    (expr
-                      (localid 7:handler)
-                      (tuple)))))))
-          (function
-            {
-              handler = paramdef
-              self = paramdef}
-            (rhs)
-            (ident 3:two)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 4:self)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))))
-                (body))
-              (paramdef
-                (ident 7:handler)
-                (type
-                  (functype
-                    (noargtype)
-                    (typename
-                      (nameelement
-                        (ident 8:_builtin)
-                        (typeargs))
-                      (nameelement
-                        (ident 4:none)
-                        (typeargs)))))
-                (body)))
             (type
-              (functype
-                (noargtype)
-                (typename
-                  (nameelement
-                    (ident 8:_builtin)
-                    (typeargs))
-                  (nameelement
-                    (ident 4:none)
-                    (typeargs)))))
-            (where)
-            (body
-              (expr
-                (lambda
-                  {}
-                  (params)
-                  (type
-                    (typevar))
-                  (body
-                    (expr
-                      (localid 7:handler)
-                      (tuple)))))))))
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:none)
+                  (typeargs)))))))
       (function
-        {
-          f1 = let
-          f2 = let
-          h = let
-          m = let}
+        {}
         (rhs)
         (ident 4:main)
         (typeparams)
@@ -172,84 +106,13 @@ ident
         (where)
         (body
           (expr
-            (=
+            (triplecolon
+              (nameelement
+                (ident 8:printval)
+                (typeargs)))
+            (exprseq
               (expr
-                (let
-                  (ident 1:h)
-                  (type
-                    (typevar))))
-              (expr
-                (lambda
-                  {}
-                  (params)
-                  (type
-                    (typevar))
-                  (body
-                    (expr
-                      (funcname
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))
-                        (nameelement
-                          (ident 6:create)
-                          (typeargs)))))))))
-          (expr
-            (=
-              (expr
-                (let
-                  (ident 1:m)
-                  (type
-                    (typevar))))
-              (expr
-                (funcname
-                  (nameelement
-                    (ident 26:reify_duplicate_ref_typeid)
-                    (typeargs))
-                  (nameelement
-                    (ident 5:maker)
-                    (typeargs))
-                  (nameelement
-                    (ident 6:create)
-                    (typeargs))))))
-          (expr
-            (=
-              (expr
-                (let
-                  (ident 2:f1)
-                  (type
-                    (typevar))))
-              (expr
-                (localid 1:m)
-                (dot
-                  (ident 3:one)
-                  (typeargs))
-                (exprseq
-                  (expr
-                    (localid 1:h))))))
-          (expr
-            (=
-              (expr
-                (let
-                  (ident 2:f2)
-                  (type
-                    (typevar))))
-              (expr
-                (localid 1:m)
-                (dot
-                  (ident 3:two)
-                  (typeargs))
-                (exprseq
-                  (expr
-                    (localid 1:h))))))
-          (expr
-            (localid 2:f1)
-            (tuple))
-          (expr
-            (localid 2:f2)
-            (tuple))
+                (int 1:0))))
           (expr
             (int 1:0))))
       (function
@@ -261,7 +124,7 @@ ident
         (type
           (typename
             (nameelement
-              (ident 26:reify_duplicate_ref_typeid)
+              (ident 15:init_calls_once)
               (typeargs))))
         (where)
         (body

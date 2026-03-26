@@ -79,10 +79,78 @@ namespace vc
       return false;
     }
 
+    bool contains_typeid(const Node& type) const
+    {
+      if (!type)
+        return false;
+
+      if (type == TypeId)
+        return true;
+
+      for (auto& child : *type)
+      {
+        if (contains_typeid(child))
+          return true;
+      }
+
+      return false;
+    }
+
+    bool is_nomatch_ir(const Node& type) const
+    {
+      return type && (type == ClassId) &&
+        (type->location().view() == "_builtin::nomatch::0");
+    }
+
     bool has_unresolved_type(const Node& type, const NodeMap<Node>& subst) const
     {
       std::set<Node> seen;
       return has_unresolved_type(type, subst, seen);
+    }
+
+    bool contains_typeparam_ref(const Node& type) const
+    {
+      if (!type)
+        return false;
+
+      if (type == Type)
+        return contains_typeparam_ref(type->front());
+
+      if (type == TypeVar)
+        return true;
+
+      if (type == TypeName)
+      {
+        auto def = top;
+
+        for (auto& elem : *type)
+        {
+          for (auto& arg : *(elem / TypeArgs))
+          {
+            if (contains_typeparam_ref(arg))
+              return true;
+          }
+
+          auto defs = def->look((elem / Ident)->location());
+
+          if (defs.empty())
+            return false;
+
+          def = defs.front();
+          if (def == TypeParam)
+            return true;
+        }
+
+        return false;
+      }
+
+      for (auto& child : *type)
+      {
+        if (contains_typeparam_ref(child))
+          return true;
+      }
+
+      return false;
     }
 
     bool has_unresolved_type(
@@ -271,8 +339,14 @@ namespace vc
               {
                 auto src_it = local_types.find((stmt / Rhs)->location());
                 if (src_it != local_types.end())
-                  local_types[(stmt / LocalId)->location()] =
-                    clone(src_it->second);
+                {
+                  auto dst_loc = (stmt / LocalId)->location();
+                  auto dst_it = local_types.find(dst_loc);
+
+                  local_types[dst_loc] = (dst_it == local_types.end()) ?
+                    clone(src_it->second) :
+                    merge_refined_type(dst_it->second, src_it->second);
+                }
               }
               else if (stmt->in({New, Stack}))
               {
@@ -315,15 +389,31 @@ namespace vc
                   auto recv_it = local_types.find(li->second.recv_loc);
                   if (recv_it != local_types.end())
                   {
-                    for (auto* target : find_method_targets(
-                           recv_it->second, li->second.method_id))
+                    auto targets = find_method_targets(
+                      recv_it->second, li->second.method_id, stmt->at(2), false);
+
+                    if (
+                      targets.empty() &&
+                      receiver_is_param(func, li->second.recv_loc))
+                    {
+                      auto fallback_targets = find_method_targets(
+                        Dyn, li->second.method_id, stmt->at(2), false);
+
+                      if (refine_receiver_type(
+                            func, li->second.recv_loc, recv_it->second, fallback_targets))
+                      {
+                        changed = true;
+                        targets = std::move(fallback_targets);
+                      }
+                    }
+
+                    for (auto* target : targets)
                     {
                       changed |=
                         refine_function_params(*target, stmt->at(2), false);
                     }
 
-                    auto ret = find_method_return_type(
-                      recv_it->second, li->second.method_id);
+                    auto ret = find_method_return_type(targets);
 
                     if (!ret && recv_it->second == Ref)
                     {
@@ -358,8 +448,25 @@ namespace vc
                     bool needs_refresh =
                       (cown_type == Cown) && (cown_type->front() == Dyn);
 
-                    for (auto* target : find_method_targets(
-                           recv_it->second, li->second.method_id))
+                    auto targets = find_method_targets(
+                      recv_it->second, li->second.method_id, stmt->at(2), true);
+
+                    if (
+                      targets.empty() &&
+                      receiver_is_param(func, li->second.recv_loc))
+                    {
+                      auto fallback_targets = find_method_targets(
+                        Dyn, li->second.method_id, stmt->at(2), true);
+
+                      if (refine_receiver_type(
+                            func, li->second.recv_loc, recv_it->second, fallback_targets))
+                      {
+                        changed = true;
+                        targets = std::move(fallback_targets);
+                      }
+                    }
+
+                    for (auto* target : targets)
                     {
                       changed |=
                         refine_function_params(*target, stmt->at(2), true);
@@ -373,8 +480,7 @@ namespace vc
                     // cown type for those inferred returns as well as Dyn.
                     if ((cown_type == Cown) && needs_refresh)
                     {
-                      auto ret = find_method_return_type(
-                        recv_it->second, li->second.method_id);
+                      auto ret = find_method_return_type(targets);
 
                       if (ret && (ret != Dyn))
                       {
@@ -430,7 +536,8 @@ namespace vc
             }
           }
 
-          if ((r->def / Type)->front() == TypeVar)
+          auto current_ret = func / Type;
+          if (((r->def / Type)->front() == TypeVar) || is_nomatch_ir(current_ret))
           {
             // Now try to infer the return type from Return locals.
             // Collect all distinct return types to build a union if needed.
@@ -487,6 +594,7 @@ namespace vc
             }
           }
         }
+
       } while (changed);
 
       for (auto r : deferred_typevar)
@@ -776,7 +884,25 @@ namespace vc
 
         if (type == Union)
         {
-          ReceiverSet result{false, {}};
+          ReceiverSet explicit_result{false, {}};
+          ReceiverSet expanded_result{false, {}};
+          bool saw_expanded = false;
+
+          auto add_unique = [](ReceiverSet& result, Node recv) {
+            bool dup = false;
+
+            for (auto& existing : result.types)
+            {
+              if (existing->equals(recv))
+              {
+                dup = true;
+                break;
+              }
+            }
+
+            if (!dup)
+              result.types.push_back(clone(recv));
+          };
 
           for (auto& child : *type)
           {
@@ -785,25 +911,45 @@ namespace vc
             if (child_set.all)
               return ReceiverSet{true, {}};
 
-            for (auto& recv : child_set.types)
-            {
-              bool dup = false;
+            auto& result = contains_typeid(child) ? expanded_result : explicit_result;
+            saw_expanded |= contains_typeid(child);
 
-              for (auto& existing : result.types)
+            for (auto& recv : child_set.types)
+              add_unique(result, recv);
+          }
+
+          if (saw_expanded && !explicit_result.types.empty())
+          {
+            bool explicit_subset = true;
+
+            for (auto& recv : explicit_result.types)
+            {
+              bool found = false;
+
+              for (auto& expanded : expanded_result.types)
               {
-                if (existing->equals(recv))
+                if (expanded->equals(recv))
                 {
-                  dup = true;
+                  found = true;
                   break;
                 }
               }
 
-              if (!dup)
-                result.types.push_back(clone(recv));
+              if (!found)
+              {
+                explicit_subset = false;
+                break;
+              }
             }
+
+            if (explicit_subset)
+              return explicit_result;
           }
 
-          return result;
+          for (auto& recv : expanded_result.types)
+            add_unique(explicit_result, recv);
+
+          return explicit_result;
         }
 
         if (type->in({Ref, Array, Cown}))
@@ -1081,13 +1227,12 @@ namespace vc
 
       // All other defs: dedup using substitution map equality.
       // Compare entries for TypeParams owned by this def AND by the
-      // enclosing class (if the def is a Function). Functions like
-      // ref::* reference the class's TypeParam T in their signature,
-      // so different T bindings must produce different reifications.
+      // enclosing class. Nested classes/shapes can reference the parent's
+      // TypeParams in their own signatures/bodies, so different bindings for
+      // the enclosing class must produce different reifications.
       auto own_tps = def / TypeParams;
       auto parent_cls = def->parent(ClassDef);
-      auto parent_tps =
-        (parent_cls && def == Function) ? parent_cls / TypeParams : Node{};
+      auto parent_tps = parent_cls ? parent_cls / TypeParams : Node{};
 
       for (auto& existing : r_vec)
       {
@@ -1272,8 +1417,31 @@ namespace vc
       return nullptr;
     }
 
+    Reification* find_class_reification(const Node& classid)
+    {
+      auto classid_loc = classid->location().view();
+
+      for (auto& key : map_order)
+      {
+        if (key != ClassDef)
+          continue;
+
+        for (auto& reif : map[key])
+        {
+          if (reif.id && (reif.id->location().view() == classid_loc))
+            return &reif;
+        }
+      }
+
+      return nullptr;
+    }
+
     std::vector<Reification*>
-    find_method_targets(Node recv_type, const std::string& method_id)
+    find_method_targets(
+      Node recv_type,
+      const std::string& method_id,
+      const Node& args,
+      bool behavior_args)
     {
       auto recv_set = extract_receivers(recv_type);
       std::vector<Reification*> targets;
@@ -1315,7 +1483,7 @@ namespace vc
             auto* target = find_function_reification(m / FunctionId);
 
             if (
-              target &&
+              target && method_target_accepts_args(*target, args, behavior_args) &&
               std::none_of(targets.begin(), targets.end(), [&](auto* existing) {
                 return existing == target;
               }))
@@ -1400,6 +1568,112 @@ namespace vc
       return Ref << inner;
     }
 
+    bool
+    method_target_accepts_args(
+      Reification& target, const Node& args, bool behavior_args)
+    {
+      if (!target.reification)
+        return false;
+
+      auto params = target.reification / Params;
+
+      if (params->size() != args->size())
+        return false;
+
+      for (size_t i = 1; i < args->size(); i++)
+      {
+        auto actual = actual_arg_type(args->at(i), behavior_args);
+
+        if (!actual)
+          continue;
+
+        auto param = params->at(i) / Type;
+
+        if (
+          contains_dyn(actual) || contains_typeid(actual) || contains_dyn(param) ||
+          contains_typeid(param))
+          continue;
+
+        if (!vbcc::IRSubtype(top, actual, param))
+          return false;
+      }
+
+      return true;
+    }
+
+    Node receiver_type_from_targets(const std::vector<Reification*>& targets)
+    {
+      Node union_node = Union;
+
+      auto add_unique = [&](Node type) {
+        for (auto& existing : *union_node)
+        {
+          if (existing->equals(type))
+            return;
+        }
+
+        union_node << clone(type);
+      };
+
+      for (auto* target : targets)
+      {
+        if (!target || !target->reification)
+          continue;
+
+        auto params = target->reification / Params;
+        if (params->empty())
+          continue;
+
+        add_unique(params->front() / Type);
+      }
+
+      if (union_node->empty())
+        return {};
+
+      if (union_node->size() == 1)
+        return clone(union_node->front());
+
+      return union_node;
+    }
+
+    bool refine_receiver_type(
+      const Node& func,
+      const Location& recv_loc,
+      Node& current_type,
+      const std::vector<Reification*>& targets)
+    {
+      auto refined = receiver_type_from_targets(targets);
+
+      if (!refined || current_type->equals(refined))
+        return false;
+
+      current_type = clone(refined);
+
+      for (auto& param : *(func / Params))
+      {
+        if ((param / LocalId)->location() != recv_loc)
+          continue;
+
+        auto current = param / Type;
+        if (!current->equals(refined))
+          param->replace(current, clone(refined));
+        break;
+      }
+
+      return true;
+    }
+
+    bool receiver_is_param(const Node& func, const Location& recv_loc) const
+    {
+      for (auto& param : *(func / Params))
+      {
+        if ((param / LocalId)->location() == recv_loc)
+          return true;
+      }
+
+      return false;
+    }
+
     bool refine_function_params(
       Reification& target, const Node& args, bool behavior_args)
     {
@@ -1414,6 +1688,71 @@ namespace vc
 
       bool changed = false;
 
+      auto find_create_field_def = [&](const Node& def_param) -> Node {
+        auto parent_cls = target.def->parent(ClassDef);
+        if (!parent_cls)
+          return {};
+        if ((target.def / Ident)->location().view() != "create")
+          return {};
+
+        auto field_name = (def_param / Ident)->location().view();
+        for (auto& child : *(parent_cls / ClassBody))
+        {
+          if (child != FieldDef)
+            continue;
+          if ((child / Ident)->location().view() != field_name)
+            continue;
+          return child;
+        }
+
+        return {};
+      };
+
+      auto sync_create_field_type =
+        [&](const Node& def_param, const Node& refined_type) {
+          auto parent_cls = target.def->parent(ClassDef);
+          if (!parent_cls)
+            return false;
+          if ((target.def / Ident)->location().view() != "create")
+            return false;
+
+          auto class_id = target.reification / Type;
+          if (class_id != ClassId)
+            return false;
+
+          auto* class_reif = find_class_reification(class_id);
+          if (!class_reif || !class_reif->reification)
+            return false;
+
+          auto field_name = (def_param / Ident)->location().view();
+          auto field_def = find_create_field_def(def_param);
+
+          if (
+            !field_def ||
+            !(
+              contains_typeparam_ref(field_def / Type) ||
+              has_unresolved_type(field_def / Type, class_reif->subst)))
+            return false;
+
+          auto fields = class_reif->reification / Fields;
+          for (auto& field : *fields)
+          {
+            if ((field / FieldId)->location().view() != field_name)
+              continue;
+
+            auto current_field = field / Type;
+            auto refined = clone(refined_type);
+
+            if (current_field->equals(refined))
+              return false;
+
+            field->replace(current_field, refined);
+            return true;
+          }
+
+          return false;
+        };
+
       for (size_t i = 0; i < args->size(); i++)
       {
         auto actual = actual_arg_type(args->at(i), behavior_args);
@@ -1424,11 +1763,28 @@ namespace vc
         auto param = params->at(i);
         auto def_param = def_params->at(i);
         auto current = param / Type;
+        bool generic_origin = contains_typeparam_ref(def_param / Type);
+        auto unresolved_seed = reify_type(def_param / Type, target.subst);
+        bool is_create = (target.def / Ident)->location().view() == "create";
+        auto field_def = find_create_field_def(def_param);
+        bool generic_create_field =
+          field_def &&
+          (contains_typeparam_ref(field_def / Type) ||
+           has_unresolved_type(field_def / Type, target.subst));
+        bool constructor_seed =
+          is_create && generic_create_field && contains_typeid(current) &&
+          !contains_typeid(actual) &&
+          vbcc::IRSubtype(top, actual, current);
+        bool replacing_seed =
+          unresolved_seed && current->equals(unresolved_seed) &&
+          current->in({TypeId, Union, Dyn});
 
-        if (!has_unresolved_type(def_param / Type, target.subst))
+        if (
+          !generic_origin && !has_unresolved_type(def_param / Type, target.subst) &&
+          !constructor_seed)
           continue;
 
-        Node merged = contains_dyn(current) ?
+        Node merged = (contains_dyn(current) || replacing_seed || constructor_seed) ?
           clone(actual) :
           merge_refined_type(current, actual);
 
@@ -1437,9 +1793,54 @@ namespace vc
           param->replace(current, merged);
           changed = true;
         }
+
+        changed |= sync_create_field_type(def_param, merged);
       }
 
       return changed;
+    }
+
+    Node find_method_return_type(const std::vector<Reification*>& targets)
+    {
+      Nodes ret_types;
+
+      for (auto* target : targets)
+      {
+        if (!target || !target->reification)
+          continue;
+
+        Node ret = target->reification / Type;
+
+        if (!ret)
+          continue;
+
+        bool dup = false;
+
+        for (auto& existing : ret_types)
+        {
+          if (existing->equals(ret))
+          {
+            dup = true;
+            break;
+          }
+        }
+
+        if (!dup)
+          ret_types.push_back(ret);
+      }
+
+      if (ret_types.empty())
+        return {};
+
+      if (ret_types.size() == 1)
+        return clone(ret_types.front());
+
+      Node union_node = Union;
+
+      for (auto& ret : ret_types)
+        union_node << clone(ret);
+
+      return union_node;
     }
 
     // Given a reified receiver type (possibly a union) and a MethodId string,
@@ -2651,6 +3052,17 @@ namespace vc
         {
           if (!r.id->equals(classid) || (r.def != ClassDef))
             continue;
+
+          if (r.reification)
+          {
+            auto fields = r.reification / Fields;
+            for (auto& field : *fields)
+            {
+              if ((field / FieldId)->location().view() != field_name)
+                continue;
+              return clone(field / Type);
+            }
+          }
 
           for (auto& f : *(r.def / ClassBody))
           {

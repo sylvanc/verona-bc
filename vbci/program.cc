@@ -140,8 +140,30 @@ namespace vbci
     setup_strings();
     setup_argv(args);
 
-    // Run library init functions. If an init returns a value with an apply
-    // method (@callback), store it as a fini callback to be called at shutdown.
+    auto& sched = verona::rt::Scheduler::get();
+    sched.init(num_threads);
+
+    // Run memo (once) function initializers in dependency order.
+    // This must happen after sched.init() because once functions may create
+    // cowns (via `when`), which requires the scheduler's core pool to be
+    // initialized for behavior queuing. It must also happen before library
+    // init, because use-block init functions may call memoized stubs.
+    memo_slots.resize(memo_func_ids.size());
+    for (size_t i = 0; i < memo_func_ids.size(); i++)
+    {
+      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
+
+      // Freeze the memo slot value: once-function results are ambiently
+      // accessible and must be immutable. Freezing calculates SCCs and
+      // converts all reachable objects to immutable with union-find RC.
+      auto& slot = memo_slots[i];
+      if (slot->is_header())
+        freeze(slot->get_header());
+    }
+
+    // Run library init functions after memo init so they can safely call
+    // memoized functions. If an init returns a value with an apply method
+    // (@callback), store it as a fini callback to be called at shutdown.
     for (auto& init : init_funcs)
     {
       if (!init)
@@ -156,26 +178,6 @@ namespace vbci
 
       if (apply)
         fini_callbacks.emplace_back(std::move(result), apply);
-    }
-
-    auto& sched = verona::rt::Scheduler::get();
-    sched.init(num_threads);
-
-    // Run memo (once) function initializers in dependency order.
-    // This must happen after sched.init() because once functions may create
-    // cowns (via `when`), which requires the scheduler's core pool to be
-    // initialized for behavior queuing.
-    memo_slots.resize(memo_func_ids.size());
-    for (size_t i = 0; i < memo_func_ids.size(); i++)
-    {
-      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
-
-      // Freeze the memo slot value: once-function results are ambiently
-      // accessible and must be immutable. Freezing calculates SCCs and
-      // converts all reachable objects to immutable with union-find RC.
-      auto& slot = memo_slots[i];
-      if (slot->is_header())
-        freeze(slot->get_header());
     }
 
     ValueTransfer ret =

@@ -3,793 +3,93 @@ application
 (top
   {
     _builtin = classdef
-    reify_duplicate_ref_typeid = classdef}
+    init_calls_once = classdef}
   (classdef
     {
+      answer = function
       create = function
-      lambda$2 = classdef
-      main = function
-      maker = classdef}
+      init = function
+      main = function}
     (none)
-    (ident 26:reify_duplicate_ref_typeid)
+    (ident 15:init_calls_once)
     (typeparams)
     (where)
     (classbody
-      (classdef
-        {
-          create = function
-          fn$11 = classdef
-          fn$12 = classdef
-          fn$15 = classdef
-          fn$16 = classdef
-          lambda$0 = classdef
-          lambda$1 = classdef
-          one = function
-          two = function}
-        (none)
-        (ident 5:maker)
-        (typeparams)
-        (where)
-        (classbody
-          (function
-            {}
-            (rhs)
-            (ident 6:create)
-            (typeparams)
-            (params)
-            (type
-              (typename
-                (nameelement
-                  (ident 26:reify_duplicate_ref_typeid)
-                  (typeargs))
-                (nameelement
-                  (ident 5:maker)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (new
-                  (newargs)))))
-          (classdef
-            {
-              apply = function
-              create = function
-              fn$10 = classdef
-              fn$9 = classdef}
-            (none)
-            (ident 8:lambda$0)
-            (typeparams)
-            (where)
-            (classbody
-              (classdef
-                {
-                  apply = function}
-                (shape)
-                (ident 4:fn$9)
-                (typeparams)
-                (where)
-                (classbody
-                  (function
-                    {
-                      self = paramdef}
-                    (rhs)
-                    (ident 5:apply)
-                    (typeparams)
-                    (params
-                      (paramdef
-                        (ident 4:self)
-                        (type
-                          (typeself))))
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))))
-                    (where)
-                    (body
-                      (expr
-                        (call
-                          (funcname
-                            (nameelement
-                              (ident 8:_builtin)
-                              (typeargs))
-                            (nameelement
-                              (ident 4:none)
-                              (typeargs))
-                            (nameelement
-                              (ident 6:create)
-                              (typeargs)))
-                          (args)))))))
-              (fielddef
-                (ident 7:handler)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$0)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:fn$9)
-                      (typeargs)))))
-              (classdef
-                {
-                  apply = function}
-                (shape)
-                (ident 5:fn$10)
-                (typeparams)
-                (where)
-                (classbody
-                  (function
-                    {
-                      self = paramdef}
-                    (rhs)
-                    (ident 5:apply)
-                    (typeparams)
-                    (params
-                      (paramdef
-                        (ident 4:self)
-                        (type
-                          (typeself))))
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))))
-                    (where)
-                    (body
-                      (expr
-                        (call
-                          (funcname
-                            (nameelement
-                              (ident 8:_builtin)
-                              (typeargs))
-                            (nameelement
-                              (ident 4:none)
-                              (typeargs))
-                            (nameelement
-                              (ident 6:create)
-                              (typeargs)))
-                          (args)))))))
-              (function
-                {
-                  handler = paramdef}
-                (rhs)
-                (ident 6:create)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 7:handler)
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 26:reify_duplicate_ref_typeid)
-                          (typeargs))
-                        (nameelement
-                          (ident 5:maker)
-                          (typeargs))
-                        (nameelement
-                          (ident 8:lambda$0)
-                          (typeargs))
-                        (nameelement
-                          (ident 5:fn$10)
-                          (typeargs))))))
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$0)
-                      (typeargs))))
-                (where)
-                (body
-                  (expr
-                    (new
-                      (newargs
-                        (newarg
-                          (ident 7:handler)
-                          (expr
-                            (localid 7:handler))))))))
-              (function
-                {
-                  $self = paramdef}
-                (rhs)
-                (ident 5:apply)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 5:$self)
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 26:reify_duplicate_ref_typeid)
-                          (typeargs))
-                        (nameelement
-                          (ident 5:maker)
-                          (typeargs))
-                        (nameelement
-                          (ident 8:lambda$0)
-                          (typeargs))))))
-                (type
-                  (typevar))
-                (where)
-                (body
-                  (expr
-                    (calldyn
-                      (expr
-                        (load
-                          (expr
-                            (fieldref
-                              (expr
-                                (localid 5:$self))
-                              (fieldid 7:handler)))))
-                      (ident 5:apply)
-                      (typeargs)
-                      (args)))))))
-          (classdef
-            {
-              apply = function}
-            (shape)
-            (ident 5:fn$11)
-            (typeparams)
-            (where)
-            (classbody
-              (function
-                {
-                  self = paramdef}
-                (rhs)
-                (ident 5:apply)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 4:self)
-                    (type
-                      (typeself))))
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:none)
-                      (typeargs))))
-                (where)
-                (body
-                  (expr
-                    (call
-                      (funcname
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))
-                        (nameelement
-                          (ident 6:create)
-                          (typeargs)))
-                      (args)))))))
-          (classdef
-            {
-              apply = function}
-            (shape)
-            (ident 5:fn$12)
-            (typeparams)
-            (where)
-            (classbody
-              (function
-                {
-                  self = paramdef}
-                (rhs)
-                (ident 5:apply)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 4:self)
-                    (type
-                      (typeself))))
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:none)
-                      (typeargs))))
-                (where)
-                (body
-                  (expr
-                    (call
-                      (funcname
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))
-                        (nameelement
-                          (ident 6:create)
-                          (typeargs)))
-                      (args)))))))
-          (function
-            {
-              handler = paramdef
-              self = paramdef}
-            (rhs)
-            (ident 3:one)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 4:self)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs)))))
-              (paramdef
-                (ident 7:handler)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:fn$11)
-                      (typeargs))))))
-            (type
-              (typename
-                (nameelement
-                  (ident 26:reify_duplicate_ref_typeid)
-                  (typeargs))
-                (nameelement
-                  (ident 5:maker)
-                  (typeargs))
-                (nameelement
-                  (ident 5:fn$12)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$0)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args
-                    (expr
-                      (localid 7:handler)))))))
-          (classdef
-            {
-              apply = function
-              create = function
-              fn$13 = classdef
-              fn$14 = classdef}
-            (none)
-            (ident 8:lambda$1)
-            (typeparams)
-            (where)
-            (classbody
-              (classdef
-                {
-                  apply = function}
-                (shape)
-                (ident 5:fn$13)
-                (typeparams)
-                (where)
-                (classbody
-                  (function
-                    {
-                      self = paramdef}
-                    (rhs)
-                    (ident 5:apply)
-                    (typeparams)
-                    (params
-                      (paramdef
-                        (ident 4:self)
-                        (type
-                          (typeself))))
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))))
-                    (where)
-                    (body
-                      (expr
-                        (call
-                          (funcname
-                            (nameelement
-                              (ident 8:_builtin)
-                              (typeargs))
-                            (nameelement
-                              (ident 4:none)
-                              (typeargs))
-                            (nameelement
-                              (ident 6:create)
-                              (typeargs)))
-                          (args)))))))
-              (fielddef
-                (ident 7:handler)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$1)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:fn$13)
-                      (typeargs)))))
-              (classdef
-                {
-                  apply = function}
-                (shape)
-                (ident 5:fn$14)
-                (typeparams)
-                (where)
-                (classbody
-                  (function
-                    {
-                      self = paramdef}
-                    (rhs)
-                    (ident 5:apply)
-                    (typeparams)
-                    (params
-                      (paramdef
-                        (ident 4:self)
-                        (type
-                          (typeself))))
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))))
-                    (where)
-                    (body
-                      (expr
-                        (call
-                          (funcname
-                            (nameelement
-                              (ident 8:_builtin)
-                              (typeargs))
-                            (nameelement
-                              (ident 4:none)
-                              (typeargs))
-                            (nameelement
-                              (ident 6:create)
-                              (typeargs)))
-                          (args)))))))
-              (function
-                {
-                  handler = paramdef}
-                (rhs)
-                (ident 6:create)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 7:handler)
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 26:reify_duplicate_ref_typeid)
-                          (typeargs))
-                        (nameelement
-                          (ident 5:maker)
-                          (typeargs))
-                        (nameelement
-                          (ident 8:lambda$1)
-                          (typeargs))
-                        (nameelement
-                          (ident 5:fn$14)
-                          (typeargs))))))
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$1)
-                      (typeargs))))
-                (where)
-                (body
-                  (expr
-                    (new
-                      (newargs
-                        (newarg
-                          (ident 7:handler)
-                          (expr
-                            (localid 7:handler))))))))
-              (function
-                {
-                  $self = paramdef}
-                (rhs)
-                (ident 5:apply)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 5:$self)
-                    (type
-                      (typename
-                        (nameelement
-                          (ident 26:reify_duplicate_ref_typeid)
-                          (typeargs))
-                        (nameelement
-                          (ident 5:maker)
-                          (typeargs))
-                        (nameelement
-                          (ident 8:lambda$1)
-                          (typeargs))))))
-                (type
-                  (typevar))
-                (where)
-                (body
-                  (expr
-                    (calldyn
-                      (expr
-                        (load
-                          (expr
-                            (fieldref
-                              (expr
-                                (localid 5:$self))
-                              (fieldid 7:handler)))))
-                      (ident 5:apply)
-                      (typeargs)
-                      (args)))))))
-          (classdef
-            {
-              apply = function}
-            (shape)
-            (ident 5:fn$15)
-            (typeparams)
-            (where)
-            (classbody
-              (function
-                {
-                  self = paramdef}
-                (rhs)
-                (ident 5:apply)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 4:self)
-                    (type
-                      (typeself))))
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:none)
-                      (typeargs))))
-                (where)
-                (body
-                  (expr
-                    (call
-                      (funcname
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))
-                        (nameelement
-                          (ident 6:create)
-                          (typeargs)))
-                      (args)))))))
-          (classdef
-            {
-              apply = function}
-            (shape)
-            (ident 5:fn$16)
-            (typeparams)
-            (where)
-            (classbody
-              (function
-                {
-                  self = paramdef}
-                (rhs)
-                (ident 5:apply)
-                (typeparams)
-                (params
-                  (paramdef
-                    (ident 4:self)
-                    (type
-                      (typeself))))
-                (type
-                  (typename
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:none)
-                      (typeargs))))
-                (where)
-                (body
-                  (expr
-                    (call
-                      (funcname
-                        (nameelement
-                          (ident 8:_builtin)
-                          (typeargs))
-                        (nameelement
-                          (ident 4:none)
-                          (typeargs))
-                        (nameelement
-                          (ident 6:create)
-                          (typeargs)))
-                      (args)))))))
-          (function
-            {
-              handler = paramdef
-              self = paramdef}
-            (rhs)
-            (ident 3:two)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 4:self)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs)))))
-              (paramdef
-                (ident 7:handler)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:fn$15)
-                      (typeargs))))))
-            (type
-              (typename
-                (nameelement
-                  (ident 26:reify_duplicate_ref_typeid)
-                  (typeargs))
-                (nameelement
-                  (ident 5:maker)
-                  (typeargs))
-                (nameelement
-                  (ident 5:fn$16)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$1)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args
-                    (expr
-                      (localid 7:handler)))))))))
-      (classdef
-        {
-          apply = function
-          create = function}
-        (none)
-        (ident 8:lambda$2)
-        (typeparams)
-        (where)
-        (classbody
-          (function
-            {}
-            (rhs)
-            (ident 6:create)
-            (typeparams)
-            (params)
-            (type
-              (typename
-                (nameelement
-                  (ident 26:reify_duplicate_ref_typeid)
-                  (typeargs))
-                (nameelement
-                  (ident 8:lambda$2)
-                  (typeargs))))
-            (where)
-            (body
-              (expr
-                (new
-                  (newargs)))))
-          (function
-            {
-              $self = paramdef}
-            (rhs)
-            (ident 5:apply)
-            (typeparams)
-            (params
-              (paramdef
-                (ident 5:$self)
-                (type
-                  (typename
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$2)
-                      (typeargs))))))
-            (type
-              (typevar))
-            (where)
-            (body
-              (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 8:_builtin)
-                      (typeargs))
-                    (nameelement
-                      (ident 4:none)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args)))))))
       (function
-        {
-          f1 = let
-          f2 = let
-          h = let
-          m = let}
+        {}
+        (once)
+        (ident 6:answer)
+        (typeparams)
+        (params)
+        (type
+          (typename
+            (nameelement
+              (ident 8:_builtin)
+              (typeargs))
+            (nameelement
+              (ident 3:i32)
+              (typeargs))))
+        (where)
+        (body
+          (expr
+            (int 2:42))))
+      (lib
+        (string 0:)
+        (symbols
+          (function
+            {}
+            (rhs)
+            (ident 4:init)
+            (typeparams)
+            (params)
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 3:any)
+                  (typeargs))))
+            (where)
+            (body
+              (expr
+                (ffi
+                  (symbolid 8:printval)
+                  (args
+                    (expr
+                      (call
+                        (funcname
+                          (nameelement
+                            (ident 15:init_calls_once)
+                            (typeargs))
+                          (nameelement
+                            (ident 6:answer)
+                            (typeargs)))
+                        (args))))))))
+          (symbol
+            (symbolid 8:printval)
+            (string 8:printval)
+            (string 0:)
+            (none)
+            (ffiparams
+              (type
+                (typename
+                  (nameelement
+                    (ident 8:_builtin)
+                    (typeargs))
+                  (nameelement
+                    (ident 3:any)
+                    (typeargs)))))
+            (type
+              (typename
+                (nameelement
+                  (ident 8:_builtin)
+                  (typeargs))
+                (nameelement
+                  (ident 4:none)
+                  (typeargs)))))))
+      (function
+        {}
         (rhs)
         (ident 4:main)
         (typeparams)
@@ -805,95 +105,11 @@ application
         (where)
         (body
           (expr
-            (=
-              (expr
-                (let
-                  (ident 1:h)
-                  (type
-                    (typevar))))
-              (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 8:lambda$2)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args)))))
-          (expr
-            (=
-              (expr
-                (let
-                  (ident 1:m)
-                  (type
-                    (typevar))))
-              (expr
-                (call
-                  (funcname
-                    (nameelement
-                      (ident 26:reify_duplicate_ref_typeid)
-                      (typeargs))
-                    (nameelement
-                      (ident 5:maker)
-                      (typeargs))
-                    (nameelement
-                      (ident 6:create)
-                      (typeargs)))
-                  (args)))))
-          (expr
-            (=
-              (expr
-                (let
-                  (ident 2:f1)
-                  (type
-                    (typevar))))
-              (expr
-                (calldyn
-                  (expr
-                    (localid 1:m))
-                  (ident 3:one)
-                  (typeargs)
-                  (args
-                    (expr
-                      (exprseq
-                        (expr
-                          (localid 1:h)))))))))
-          (expr
-            (=
-              (expr
-                (let
-                  (ident 2:f2)
-                  (type
-                    (typevar))))
-              (expr
-                (calldyn
-                  (expr
-                    (localid 1:m))
-                  (ident 3:two)
-                  (typeargs)
-                  (args
-                    (expr
-                      (exprseq
-                        (expr
-                          (localid 1:h)))))))))
-          (expr
-            (calldyn
-              (expr
-                (localid 2:f1))
-              (ident 5:apply)
-              (typeargs)
-              (args)))
-          (expr
-            (calldyn
-              (expr
-                (localid 2:f2))
-              (ident 5:apply)
-              (typeargs)
-              (args)))
+            (ffi
+              (symbolid 8:printval)
+              (args
+                (expr
+                  (int 1:0)))))
           (expr
             (int 1:0))))
       (function
@@ -905,7 +121,7 @@ application
         (type
           (typename
             (nameelement
-              (ident 26:reify_duplicate_ref_typeid)
+              (ident 15:init_calls_once)
               (typeargs))))
         (where)
         (body
@@ -1465,8 +681,8 @@ application
               create =
                 function
                 function
-              lambda$3 = classdef
-              lambda$4 = classdef
+              lambda$0 = classdef
+              lambda$1 = classdef
               remove = function}
             (none)
             (ident 8:external)
@@ -1643,7 +859,7 @@ application
                   apply = function
                   create = function}
                 (none)
-                (ident 8:lambda$3)
+                (ident 8:lambda$0)
                 (typeparams)
                 (where)
                 (classbody
@@ -1665,7 +881,7 @@ application
                           (ident 8:external)
                           (typeargs))
                         (nameelement
-                          (ident 8:lambda$3)
+                          (ident 8:lambda$0)
                           (typeargs))))
                     (where)
                     (body
@@ -1694,7 +910,7 @@ application
                               (ident 8:external)
                               (typeargs))
                             (nameelement
-                              (ident 8:lambda$3)
+                              (ident 8:lambda$0)
                               (typeargs)))))
                       (paramdef
                         (ident 1:c)
@@ -1765,7 +981,7 @@ application
                               (ident 8:external)
                               (typeargs))
                             (nameelement
-                              (ident 8:lambda$3)
+                              (ident 8:lambda$0)
                               (typeargs))
                             (nameelement
                               (ident 6:create)
@@ -1776,7 +992,7 @@ application
                   apply = function
                   create = function}
                 (none)
-                (ident 8:lambda$4)
+                (ident 8:lambda$1)
                 (typeparams)
                 (where)
                 (classbody
@@ -1798,7 +1014,7 @@ application
                           (ident 8:external)
                           (typeargs))
                         (nameelement
-                          (ident 8:lambda$4)
+                          (ident 8:lambda$1)
                           (typeargs))))
                     (where)
                     (body
@@ -1827,7 +1043,7 @@ application
                               (ident 8:external)
                               (typeargs))
                             (nameelement
-                              (ident 8:lambda$4)
+                              (ident 8:lambda$1)
                               (typeargs)))))
                       (paramdef
                         (ident 1:c)
@@ -1898,7 +1114,7 @@ application
                               (ident 8:external)
                               (typeargs))
                             (nameelement
-                              (ident 8:lambda$4)
+                              (ident 8:lambda$1)
                               (typeargs))
                             (nameelement
                               (ident 6:create)
@@ -3303,8 +2519,8 @@ application
             function
             function
           fill_range = function
-          fn$17 = classdef
-          fn$18 = classdef
+          fn$6 = classdef
+          fn$7 = classdef
           pairs = function
           size = function}
         (none)
@@ -3729,7 +2945,7 @@ application
               T = typeparam
               apply = function}
             (shape)
-            (ident 5:fn$17)
+            (ident 4:fn$6)
             (typeparams
               (typeparam
                 (ident 1:T)))
@@ -3758,7 +2974,7 @@ application
                           (ident 5:array)
                           (typeargs))
                         (nameelement
-                          (ident 5:fn$17)
+                          (ident 4:fn$6)
                           (typeargs))
                         (nameelement
                           (ident 1:T)
@@ -3838,7 +3054,7 @@ application
                               (ident 1:T)
                               (typeargs))))))
                     (nameelement
-                      (ident 5:fn$17)
+                      (ident 4:fn$6)
                       (typeargs
                         (type
                           (typename
@@ -3927,7 +3143,7 @@ application
               T = typeparam
               apply = function}
             (shape)
-            (ident 5:fn$18)
+            (ident 4:fn$7)
             (typeparams
               (typeparam
                 (ident 1:T)))
@@ -3967,7 +3183,7 @@ application
                           (ident 5:array)
                           (typeargs))
                         (nameelement
-                          (ident 5:fn$18)
+                          (ident 4:fn$7)
                           (typeargs))
                         (nameelement
                           (ident 1:T)
@@ -4047,7 +3263,7 @@ application
                               (ident 1:T)
                               (typeargs))))))
                     (nameelement
-                      (ident 5:fn$18)
+                      (ident 4:fn$7)
                       (typeargs
                         (type
                           (typename
@@ -5326,7 +4542,7 @@ application
         {
           T = typeparam
           create = function
-          lambda$5 = classdef
+          lambda$2 = classdef
           read = function}
         (none)
         (ident 4:cown)
@@ -5341,7 +4557,7 @@ application
               apply = function
               create = function}
             (none)
-            (ident 8:lambda$5)
+            (ident 8:lambda$2)
             (typeparams
               (typeparam
                 (ident 1:T)))
@@ -5358,7 +4574,7 @@ application
                       (ident 4:cown)
                       (typeargs))
                     (nameelement
-                      (ident 8:lambda$5)
+                      (ident 8:lambda$2)
                       (typeargs))
                     (nameelement
                       (ident 1:T)
@@ -5381,7 +4597,7 @@ application
                           (ident 4:cown)
                           (typeargs))
                         (nameelement
-                          (ident 8:lambda$5)
+                          (ident 8:lambda$2)
                           (typeargs))
                         (nameelement
                           (ident 1:T)
@@ -5406,7 +4622,7 @@ application
                               (ident 1:T)
                               (typeargs))))))
                     (nameelement
-                      (ident 8:lambda$5)
+                      (ident 8:lambda$2)
                       (typeargs
                         (type
                           (typename
@@ -5417,7 +4633,7 @@ application
                               (ident 4:cown)
                               (typeargs))
                             (nameelement
-                              (ident 8:lambda$5)
+                              (ident 8:lambda$2)
                               (typeargs))
                             (nameelement
                               (ident 1:T)
@@ -5460,7 +4676,7 @@ application
                                   (ident 1:T)
                                   (typeargs))))))
                         (nameelement
-                          (ident 8:lambda$5)
+                          (ident 8:lambda$2)
                           (typeargs
                             (type
                               (typename
@@ -5471,7 +4687,7 @@ application
                                   (ident 4:cown)
                                   (typeargs))
                                 (nameelement
-                                  (ident 8:lambda$5)
+                                  (ident 8:lambda$2)
                                   (typeargs))
                                 (nameelement
                                   (ident 1:T)
@@ -5554,7 +4770,7 @@ application
                                   (ident 1:T)
                                   (typeargs))))))
                         (nameelement
-                          (ident 8:lambda$5)
+                          (ident 8:lambda$2)
                           (typeargs
                             (type
                               (typename
@@ -19597,8 +18813,8 @@ application
           find = function
           insert = function
           is_space = function
-          lambda$7 = classdef
-          lambda$8 = classdef
+          lambda$4 = classdef
+          lambda$5 = classdef
           len =
             function
             function
@@ -22232,7 +21448,7 @@ application
               apply = function
               create = function}
             (none)
-            (ident 8:lambda$7)
+            (ident 8:lambda$4)
             (typeparams)
             (where)
             (classbody
@@ -22251,7 +21467,7 @@ application
                       (ident 6:string)
                       (typeargs))
                     (nameelement
-                      (ident 8:lambda$7)
+                      (ident 8:lambda$4)
                       (typeargs))))
                 (where)
                 (body
@@ -22278,7 +21494,7 @@ application
                           (ident 6:string)
                           (typeargs))
                         (nameelement
-                          (ident 8:lambda$7)
+                          (ident 8:lambda$4)
                           (typeargs)))))
                   (paramdef
                     (ident 4:$arg)
@@ -22374,7 +21590,7 @@ application
                     (true))))))
           (function
             {
-              local$6 = let
+              local$3 = let
               other = paramdef
               self = paramdef}
             (rhs)
@@ -22419,7 +21635,7 @@ application
                         (=
                           (expr
                             (let
-                              (ident 7:local$6)
+                              (ident 7:local$3)
                               (type
                                 (typevar))))
                           (expr
@@ -22447,7 +21663,7 @@ application
                                       (ident 6:string)
                                       (typeargs))
                                     (nameelement
-                                      (ident 8:lambda$7)
+                                      (ident 8:lambda$4)
                                       (typeargs))
                                     (nameelement
                                       (ident 6:create)
@@ -22457,7 +21673,7 @@ application
                           (typeargs)
                           (args
                             (expr
-                              (localid 7:local$6)))))))
+                              (localid 7:local$3)))))))
                   (block
                     {}
                     (body
@@ -22956,7 +22172,7 @@ application
             {
               apply = function}
             (none)
-            (ident 8:lambda$8)
+            (ident 8:lambda$5)
             (typeparams)
             (where)
             (classbody
@@ -23001,7 +22217,7 @@ application
                           (ident 6:string)
                           (typeargs))
                         (nameelement
-                          (ident 8:lambda$8)
+                          (ident 8:lambda$5)
                           (typeargs)))))
                   (paramdef
                     (ident 1:i)
@@ -23158,7 +22374,7 @@ application
                               (ident 6:string)
                               (typeargs))
                             (nameelement
-                              (ident 8:lambda$8)
+                              (ident 8:lambda$5)
                               (typeargs))))
                         (newargs
                           (newarg

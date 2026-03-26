@@ -168,7 +168,7 @@ use
 
 ### Behavior
 
-- **`init`** runs once, before `main()`, on a scheduler thread.
+- **`init`** runs once, after memoized `once` initialization and before `main()`, on a scheduler thread.
 - The `init` function has an inline body — it is **not** an FFI symbol binding like other `use` block entries.
 - `init` returns `any`. If the return value is a callable (a lambda or an object with `apply`), the runtime calls it as a **finalizer** after `main()` and all pending `when` behaviors complete, just before process exit.
 - If `init` returns `none` or a non-callable value, no finalizer runs.
