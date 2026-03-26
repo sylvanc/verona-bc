@@ -19,8 +19,9 @@ namespace vbci
     // The remaining parameters correspond to the callback's C arguments.
     auto num_c_args = cc->arg_value_types.size();
 
-    // Arg 0: the lambda (self). Borrow it — the closure owns it.
-    Thread::set_callback_arg(0, cc->lambda.borrow());
+    // Arg 0: the lambda (self). Borrow it — the enclosing Verona callback
+    // object owns it.
+    Thread::set_callback_arg(0, ValueBorrow(cc->lambda));
 
     // Args 1..N: converted C arguments.
     for (size_t i = 0; i < num_c_args; i++)
@@ -121,7 +122,7 @@ namespace vbci
     }
 
     cc->func = func;
-    cc->lambda = lambda;
+    cc->lambda = lambda.borrow();
     return cc;
   }
 }
