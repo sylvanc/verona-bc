@@ -397,7 +397,8 @@ namespace vbci
       return {t.behavior, t.current_pc};
   }
 
-  Thread::Thread() : program(&Program::get()), frame(nullptr), args(0)
+  Thread::Thread()
+  : program(&Program::get()), frame(nullptr), args(0)
   {
     frames.reserve(16);
     locals.resize(1024);
@@ -481,8 +482,12 @@ namespace vbci
     {
       // Runtime error is fatal to the behavior. Clean up all frames and store
       // the error in the result cown.
+      {
+        logging::Error log;
+        log << error_value.to_string() << std::endl;
+        print_error_stack(log, error_value);
+      }
       teardown_all();
-      LOG(Error) << error_value.to_string();
       Register r = result->exchange<true>(ValueImmortal(error_value));
     }
 
@@ -527,6 +532,7 @@ namespace vbci
           continue;
         log << std::endl << "    local[" << j << "] = " << frame.local(j);
       }
+
       if (top_frame_only)
         break;
       if (i != 0)
@@ -541,6 +547,48 @@ namespace vbci
     {
       log << std::endl << "    arg[" << i << "] = " << frame->arg(i);
     }
+  }
+
+  void Thread::print_error_stack(logging::Log& log, const Value& error_value)
+  {
+    auto error_func = error_value.error_function();
+    auto error_pc = error_value.error_pc();
+
+    log << "Stack trace:";
+
+    ssize_t i = frames.size() - 1;
+
+    if ((i >= 0) && (frames[i].func == error_func))
+    {
+      log << std::endl << "  at " << program->di_function(frames[i].func)
+          << " (pc=" << error_pc << ")" << std::endl
+          << program->debug_info(frames[i].func, error_pc);
+      i--;
+    }
+    else
+    {
+      log << std::endl << "  at " << program->di_function(error_func)
+          << " (pc=" << error_pc << ")" << std::endl
+          << program->debug_info(error_func, error_pc);
+    }
+
+    for (; i >= 0; i--)
+    {
+      auto& frame = frames[i];
+      auto start_pc = frame.func->labels.at(0);
+      auto pc = frame.pc > start_pc ? frame.pc - 1 : frame.pc;
+
+      log << std::endl << "  at " << program->di_function(frame.func) << " (pc="
+          << pc << ")" << std::endl
+          << program->debug_info(frame.func, pc);
+    }
+
+    if (args == 0)
+      return;
+
+    log << std::endl << "  Args stack:";
+    for (size_t i = 0; i < args; i++)
+      log << std::endl << "    arg[" << i << "] = " << frame->arg(i);
   }
 
 #ifndef NDEBUG
@@ -2369,11 +2417,12 @@ namespace vbci
     }
     else
     {
-      for (size_t i = 0; i < args; i++)
+      auto num_args = args;
+      args = 0;
+
+      for (size_t i = 0; i < num_args; i++)
         locals.at(i).clear();
     }
-
-    args = 0;
   }
 
   void
@@ -2403,7 +2452,7 @@ namespace vbci
         {
           LOG(Error) << "Closure argument is not sendable: " << closure.borrow()
                      << " in region " << closure->get_header()->region();
-          Value::error(Error::BadArgs);
+          Value::error(Error::BadStackEscape);
         }
 
         num_cowns--;

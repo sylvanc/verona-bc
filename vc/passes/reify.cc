@@ -407,10 +407,18 @@ namespace vc
                       }
                     }
 
+                    bool unresolved_param_receiver =
+                      receiver_is_param(func, li->second.recv_loc) &&
+                      (contains_dyn(recv_it->second) ||
+                       contains_typeid(recv_it->second));
+
+                    if (unresolved_param_receiver && (targets.size() > 1))
+                      continue;
+
                     for (auto* target : targets)
                     {
-                      changed |=
-                        refine_function_params(*target, stmt->at(2), false);
+                      if (target)
+                        changed |= refine_function_params(*target, stmt->at(2), false);
                     }
 
                     auto ret = find_method_return_type(targets);
@@ -466,10 +474,22 @@ namespace vc
                       }
                     }
 
+                    bool unresolved_param_receiver =
+                      receiver_is_param(func, li->second.recv_loc) &&
+                      (contains_dyn(recv_it->second) ||
+                       contains_typeid(recv_it->second));
+
+                    if (unresolved_param_receiver && (targets.size() > 1))
+                      targets.clear();
+
                     for (auto* target : targets)
                     {
-                      changed |=
-                        refine_function_params(*target, stmt->at(2), true);
+                      if (target)
+                        changed |= refine_function_params(*target, stmt->at(2), true);
+                    }
+
+                    for (auto* target : targets)
+                    {
                       needs_refresh |=
                         ((target->def / Type)->front() == TypeVar);
                     }
@@ -861,6 +881,36 @@ namespace vc
       }
 
       return {};
+    }
+
+    Node resolve_reified_typeids(const Node& type)
+    {
+      if (!type)
+        return {};
+
+      if (type == TypeId)
+      {
+        auto resolved = resolve_receiver_typeid(type);
+        return resolved ? resolve_reified_typeids(resolved) : clone(type);
+      }
+
+      if (type == Type)
+        return Type << resolve_reified_typeids(type->front());
+
+      if (type == Union)
+      {
+        Node result = Union;
+
+        for (auto& child : *type)
+          result << resolve_reified_typeids(child);
+
+        return result;
+      }
+
+      if (type->in({Ref, Array, Cown}))
+        return type->type() << resolve_reified_typeids(type->front());
+
+      return clone(type);
     }
 
     // Extract individual type ids from a reified type. Dyn (or an unresolved
@@ -1312,15 +1362,75 @@ namespace vc
           // User-defined class.
           Node fields = Fields;
 
+          auto find_create_param_type = [&](const Node& field_def) -> Node {
+            auto field_name = (field_def / Ident)->location().view();
+
+            for (auto& child : *(r.def / ClassBody))
+            {
+              if (child != Function)
+                continue;
+
+              if ((child / Ident)->location().view() != "create")
+                continue;
+
+              auto* create_reif = find_function_reification(child, r.subst);
+
+              if (!create_reif || !create_reif->reification)
+                continue;
+
+              auto params = create_reif->reification / Params;
+              auto def_params = child / Params;
+
+              for (size_t i = 0; i < def_params->size(); i++)
+              {
+                if ((def_params->at(i) / Ident)->location().view() != field_name)
+                  continue;
+
+                return clone(params->at(i) / Type);
+              }
+            }
+
+            return {};
+          };
+
+          auto has_create_param = [&](const Node& field_def) {
+            auto field_name = (field_def / Ident)->location().view();
+
+            for (auto& child : *(r.def / ClassBody))
+            {
+              if (child != Function)
+                continue;
+
+              if ((child / Ident)->location().view() != "create")
+                continue;
+
+              for (auto& param : *(child / Params))
+              {
+                if ((param / Ident)->location().view() == field_name)
+                  return true;
+              }
+            }
+
+            return false;
+          };
+
           for (auto& f : *(r.def / ClassBody))
           {
             if (f != FieldDef)
               continue;
 
+            auto field_type = find_create_param_type(f);
+
+            if (!field_type)
+            {
+              field_type = has_create_param(f) ?
+                reify_type(f / Type, r.subst) :
+                reify_emitted_type(f / Type, r.subst, f / Ident, "field type");
+            }
+
             fields
               << (Field << (FieldId ^ (f / Ident))
-                        << reify_emitted_type(
-                             f / Type, r.subst, f / Ident, "field type"));
+                        << field_type);
           }
 
           r.reification = Class << r.id << fields << Methods;
@@ -1410,6 +1520,23 @@ namespace vc
         for (auto& reif : map[key])
         {
           if (reif.id && (reif.id->location().view() == funcid_loc))
+            return &reif;
+        }
+      }
+
+      return nullptr;
+    }
+
+    Reification* find_function_reification(const Node& def, const NodeMap<Node>& subst)
+    {
+      for (auto& key : map_order)
+      {
+        if (key != Function)
+          continue;
+
+        for (auto& reif : map[key])
+        {
+          if ((reif.def == def) && subst_equal(reif.subst, subst))
             return &reif;
         }
       }
@@ -1549,6 +1676,63 @@ namespace vc
       return merged;
     }
 
+    Node behavior_arg_type(Node type)
+    {
+      if (!type)
+        return {};
+
+      if (type == Union)
+      {
+        Node converted = Union;
+
+        auto add_unique = [&](Node candidate) {
+          if (!candidate)
+            return;
+
+          auto add_one = [&](Node single) {
+            for (auto& existing : *converted)
+            {
+              if (existing->equals(single))
+                return;
+            }
+
+            converted << clone(single);
+          };
+
+          if (candidate == Union)
+          {
+            for (auto& child : *candidate)
+              add_one(child);
+          }
+          else
+          {
+            add_one(candidate);
+          }
+        };
+
+        for (auto& child : *type)
+          add_unique(behavior_arg_type(child));
+
+        if (converted->empty())
+          return {};
+
+        if (converted->size() == 1)
+          return clone(converted->front());
+
+        return converted;
+      }
+
+      if (type != Cown)
+        return clone(type);
+
+      auto inner = clone(type->front());
+
+      if (inner != Dyn)
+        ensure_ref_reified(inner);
+
+      return Ref << inner;
+    }
+
     Node actual_arg_type(const Node& arg, bool behavior_arg)
     {
       auto src = arg->back();
@@ -1557,15 +1741,10 @@ namespace vc
       if (it == local_types.end())
         return {};
 
-      if (!behavior_arg || (it->second != Cown))
+      if (!behavior_arg)
         return clone(it->second);
 
-      auto inner = clone(it->second->front());
-
-      if (inner != Dyn)
-        ensure_ref_reified(inner);
-
-      return Ref << inner;
+      return behavior_arg_type(it->second);
     }
 
     bool
@@ -1588,13 +1767,15 @@ namespace vc
           continue;
 
         auto param = params->at(i) / Type;
+        auto resolved_actual = resolve_reified_typeids(actual);
+        auto resolved_param = resolve_reified_typeids(param);
 
         if (
-          contains_dyn(actual) || contains_typeid(actual) || contains_dyn(param) ||
-          contains_typeid(param))
+          contains_dyn(resolved_actual) || contains_typeid(resolved_actual) ||
+          contains_dyn(resolved_param) || contains_typeid(resolved_param))
           continue;
 
-        if (!vbcc::IRSubtype(top, actual, param))
+        if (!vbcc::IRSubtype(top, resolved_actual, resolved_param))
           return false;
       }
 

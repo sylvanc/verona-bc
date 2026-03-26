@@ -93,6 +93,18 @@ namespace vbci
       }
       catch (Value& error_value)
       {
+        {
+          logging::Error log;
+          log << error_value.to_string() << std::endl;
+          print_error_stack(log, error_value);
+        }
+
+        // An error may be raised before normal argument validation/consumption
+        // resets `args` (for example while queueing a behavior). Clear any
+        // pending arguments before unwinding so later sync calls don't trip the
+        // `args == 0` invariant and mask the original error.
+        drop_args();
+
         // Only tear down frames we created, not our caller's frames.
         while (frames.size() > depth)
         {
@@ -101,8 +113,6 @@ namespace vbci
           frames.pop_back();
           frame = frames.empty() ? nullptr : &frames.back();
         }
-
-        LOG(Error) << error_value.to_string();
       }
     }
 
@@ -125,6 +135,7 @@ namespace vbci
     void queue_behavior(Register& result, uint32_t type_id, Function* func);
 
     void print_stack(logging::Log& log, bool top_frame_only = false);
+    void print_error_stack(logging::Log& log, const Value& error_value);
 #ifndef NDEBUG
     void check_stack_rc_invariant(std::source_location);
 #endif

@@ -146,6 +146,8 @@ namespace vbci
     Cown* get_cown() const;
     Array* get_array() const;
     Function* function() const;
+    Function* error_function() const;
+    PC error_pc() const;
     size_t get_size() const;
     Register& get_register() const;
 

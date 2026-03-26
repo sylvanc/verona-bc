@@ -69,6 +69,18 @@ namespace vbci
     return Value(ValueType::None);
   }
 
+  Function* Value::error_function() const
+  {
+    assert(is_error());
+    return reinterpret_cast<Function*>(err.func);
+  }
+
+  PC Value::error_pc() const
+  {
+    assert(is_error());
+    return idx;
+  }
+
   ValueImmortal Value::null()
   {
     return Value(static_cast<void*>(nullptr));
