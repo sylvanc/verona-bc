@@ -91,7 +91,34 @@ namespace vbci
 
   Register& Program::memo_slot(size_t index)
   {
+    init_memo_slot(index);
     return memo_slots.at(index);
+  }
+
+  void Program::init_memo_slot(size_t index)
+  {
+    auto& slot = memo_slots.at(index);
+    if (!slot->is_invalid())
+      return;
+
+    auto& initializing = memo_slot_initializing.at(index);
+    assert(!initializing);
+
+    struct Reset
+    {
+      uint8_t& flag;
+
+      ~Reset()
+      {
+        flag = false;
+      }
+    } reset{initializing};
+
+    initializing = true;
+    slot = Thread::run_callback(&functions.at(memo_func_ids.at(index)), 0);
+
+    if (slot->is_header())
+      freeze(slot->get_header());
   }
 
   uint32_t Program::get_typeid_arg()
@@ -143,27 +170,16 @@ namespace vbci
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
 
-    // Run memo (once) function initializers in dependency order.
-    // This must happen after sched.init() because once functions may create
-    // cowns (via `when`), which requires the scheduler's core pool to be
-    // initialized for behavior queuing. It must also happen before library
-    // init, because use-block init functions may call memoized stubs.
+    // Pre-size memo slots before library init so use-block init callbacks can
+    // safely call once-function stubs. A MemoLoad lazily initializes a missing
+    // slot on first use; after init returns, any remaining slots are filled in
+    // the compiler-emitted dependency order below.
     memo_slots.resize(memo_func_ids.size());
-    for (size_t i = 0; i < memo_func_ids.size(); i++)
-    {
-      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
+    memo_slot_initializing.assign(memo_func_ids.size(), false);
 
-      // Freeze the memo slot value: once-function results are ambiently
-      // accessible and must be immutable. Freezing calculates SCCs and
-      // converts all reachable objects to immutable with union-find RC.
-      auto& slot = memo_slots[i];
-      if (slot->is_header())
-        freeze(slot->get_header());
-    }
-
-    // Run library init functions after memo init so they can safely call
-    // memoized functions. If an init returns a value with an apply method
-    // (@callback), store it as a fini callback to be called at shutdown.
+    // Run library init functions before the eager memo pass. If an init returns
+    // a value with an apply method (@callback), store it as a fini callback to
+    // be called at shutdown.
     for (auto& init : init_funcs)
     {
       if (!init)
@@ -179,6 +195,13 @@ namespace vbci
       if (apply)
         fini_callbacks.emplace_back(std::move(result), apply);
     }
+
+    // Run any remaining memo (once) function initializers in dependency order.
+    // This must happen after sched.init() because once functions may create
+    // cowns (via `when`), which requires the scheduler's core pool to be
+    // initialized for behavior queuing.
+    for (size_t i = 0; i < memo_func_ids.size(); i++)
+      init_memo_slot(i);
 
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
@@ -211,6 +234,7 @@ namespace vbci
     for (auto& slot : memo_slots)
       slot = ValueTransfer(Value());
     memo_slots.clear();
+    memo_slot_initializing.clear();
 
     cleanup_strings();
 

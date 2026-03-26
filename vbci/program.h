@@ -43,6 +43,7 @@ namespace vbci
     std::vector<std::optional<size_t>> init_funcs;
     std::vector<std::pair<Register, Function*>> fini_callbacks;
     std::vector<Register> memo_slots;
+    std::vector<uint8_t> memo_slot_initializing;
     std::vector<size_t> memo_func_ids;
     std::vector<Symbol> symbols;
 
@@ -160,6 +161,7 @@ namespace vbci
     bool parse_methods(Class& cls, PC& pc);
     bool fixup_methods(Class& cls);
     void parse_complex_type(ComplexType& t, uint32_t type_id, PC& pc);
+    void init_memo_slot(size_t index);
 
     std::string str(size_t& pc, std::vector<uint8_t>& from);
     void string_table(
