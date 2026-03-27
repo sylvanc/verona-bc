@@ -178,7 +178,8 @@ namespace vc
       assert(main_module == ClassDef);
       assert((main_module / TypeParams)->empty());
 
-      // Check that main is defined under the main module and has no type parameters.
+      // Check that main is defined under the main module and has no type
+      // parameters.
       auto main_defs = main_module->look(Location("main"));
       if (main_defs.empty())
       {
