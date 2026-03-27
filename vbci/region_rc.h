@@ -29,8 +29,9 @@ namespace vbci
 
     void rfree(Header* h) override;
     void insert(Header* h) override;
-    void remove(Header* h) override;
+    bool remove(Header* h) override;
     bool is_finalizing() override;
+    bool begin_finalizing() override;
     void finalize_contents() override;
     void release_dead_objects() override;
 

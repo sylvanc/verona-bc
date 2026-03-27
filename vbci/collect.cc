@@ -19,6 +19,7 @@
 #include "region.h"
 
 #include <queue>
+#include <type_traits>
 #include <vbci.h>
 #include <vector>
 
@@ -54,7 +55,8 @@ namespace vbci
   };
 
   static thread_local std::queue<WorkItem> worklist;
-  static thread_local std::vector<WorkItem> to_delete;
+  static thread_local std::vector<Header*> headers_to_delete;
+  static thread_local std::vector<Region*> regions_to_delete;
   static thread_local bool in_collection = false;
 
   static void drain_work_list()
@@ -90,37 +92,43 @@ namespace vbci
         }
       }
 
-      to_delete.push_back(n);
-    }
-
-    // Phase 2: Delete all finalized objects.
-    for (auto& n : to_delete)
-    {
-      LOG(Trace) << "Deleting work item: " << static_cast<void*>(n.header);
-
       switch (n.type)
       {
         case CollectorType::Header:
-        {
-          auto h = static_cast<Header*>(n.header);
-
-          if (h->location().is_immutable() || h->location().is_pending())
-            delete[] reinterpret_cast<uint8_t*>(h);
-          else
-            h->region()->rfree(h);
+          headers_to_delete.push_back(static_cast<Header*>(n.header));
           break;
-        }
 
         case CollectorType::Region:
-        {
-          auto r = static_cast<Region*>(n.header);
-          r->release_dead_objects();
+          regions_to_delete.push_back(static_cast<Region*>(n.header));
           break;
-        }
       }
     }
 
-    to_delete.clear();
+    // Phase 2: Delete all finalized objects. Explicit header frees must happen
+    // before region bulk frees so a Region work item cannot free a later Header
+    // work item that still points into that region.
+    for (auto* h : headers_to_delete)
+    {
+      LOG(Trace) << "Deleting work item: " << static_cast<void*>(h);
+
+      if (h->location().is_immutable() || h->location().is_pending())
+      {
+        delete[] reinterpret_cast<uint8_t*>(h);
+      }
+      else
+      {
+        h->region()->rfree(h);
+      }
+    }
+
+    for (auto* r : regions_to_delete)
+    {
+      LOG(Trace) << "Deleting work item: " << static_cast<void*>(r);
+      r->release_dead_objects();
+    }
+
+    headers_to_delete.clear();
+    regions_to_delete.clear();
 
     // Phase 2 may have enqueued new items (e.g., freeing a region's objects
     // causes a parent region's stack_rc to hit 0). Loop back to process them.
@@ -136,6 +144,26 @@ namespace vbci
   template<typename T>
   void collect(T* h)
   {
+    if constexpr (std::is_same_v<T, Header>)
+    {
+      if (h->location().is_region())
+      {
+        auto* region = h->region();
+
+        if (region->is_finalizing())
+          return;
+
+        // Detach explicit header work items from the region up front so a later
+        // Region work item won't re-finalize them.
+        if (!region->remove(h))
+          return;
+      }
+    }
+    else if (!h->begin_finalizing())
+    {
+      return;
+    }
+
     worklist.emplace(Tag<T>::value, h);
 
     if (!in_collection)

@@ -40,9 +40,9 @@ namespace vbci
     headers.emplace(h);
   }
 
-  void RegionRC::remove(Header* h)
+  bool RegionRC::remove(Header* h)
   {
-    headers.erase(h);
+    return headers.erase(h) != 0;
   }
 
   bool RegionRC::is_finalizing()
@@ -50,10 +50,19 @@ namespace vbci
     return finalizing;
   }
 
+  bool RegionRC::begin_finalizing()
+  {
+    if (finalizing)
+      return false;
+
+    finalizing = true;
+    return true;
+  }
+
   void RegionRC::finalize_contents()
   {
     auto& program = Program::get();
-    finalizing = true;
+    assert(finalizing);
 
     for (auto h : headers)
     {

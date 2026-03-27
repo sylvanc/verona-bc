@@ -1,9 +1,9 @@
-pin[A](some: A): none
+pin(some: any): none
 {
   :::pin(some)
 }
 
-unpin[A](some: A): none
+unpin(some: any): none
 {
   :::unpin(some)
 }
