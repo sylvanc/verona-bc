@@ -133,8 +133,6 @@ namespace vc
 
       while (curr_scope && !found)
       {
-        // This gets from `name` up to `curr_scope`. That means `use` gets
-        // repeated, which we have to catch below.
         auto defs = name->lookup(curr_scope);
 
         for (auto& def : defs)
@@ -168,12 +166,16 @@ namespace vc
 
             return Done;
           }
+        }
 
-          // Check if this is a class, type alias, or type parameter.
-          // Functions are not accepted directly here. They are found via
-          // `use` includes (below) or via resolve_down. This prevents
-          // functions on a class from shadowing methods of the same name
-          // on other types.
+        auto scope_defs = curr_scope->look(name->location());
+
+        for (auto& def : scope_defs)
+        {
+          // Resolve types in the current lexical scope order-independently.
+          // `lookup()` is still used above for local variables because it
+          // traverses inner block scopes, but declarations/imports should not
+          // depend on source order.
           if (def->in({ClassDef, TypeAlias, TypeParam}))
           {
             found = def;
@@ -181,50 +183,45 @@ namespace vc
             state.result << elem;
             return Continue;
           }
+        }
 
-          // Look into the imported names.
-          if (
-            (def == Use) &&
-            (def->parent({Top, ClassDef, TypeAlias, Function}) == curr_scope))
-          {
-            // Don't follow our own Use (self-referential include).
-            if (n->parent() == def)
-              continue;
+        for (auto& def : curr_scope->includes())
+        {
+          assert(def == Use);
 
-            // Ignore `use` that don't syntactically precede the definition.
-            if (!def->precedes(name))
-              continue;
+          // Don't follow our own Use (self-referential include).
+          if (n->parent() == def)
+            continue;
 
-            // Wait for the use to be resolved.
-            STEP(block_on_children(def));
+          // Wait for the use to be resolved.
+          STEP(block_on_children(def));
 
-            // Ignore this if the use failed to resolve.
-            auto use_name = def / TypeName;
-            if (use_name == Error)
-              continue;
+          // Ignore this if the use failed to resolve.
+          auto use_name = def / TypeName;
+          if (use_name == Error)
+            continue;
 
-            // The imported module will always be a ClassDef.
-            auto use_def = find_def(use_name);
-            assert(use_def == ClassDef);
+          // The imported module will always be a ClassDef.
+          auto use_def = find_def(use_name);
+          assert(use_def == ClassDef);
 
-            // This will be one ClassDef or TypeAlias, or zero or more
-            // Functions. Use lookdown instead of look, so that we don't get
-            // TypeParam or FieldDef results.
-            auto defs = use_def->lookdown(name->location());
-            if (defs.empty())
-              continue;
+          // This will be one ClassDef or TypeAlias, or zero or more
+          // Functions. Use lookdown instead of look, so that we don't get
+          // TypeParam or FieldDef results.
+          auto defs = use_def->lookdown(name->location());
+          if (defs.empty())
+            continue;
 
-            // The use_name is already fully qualified. Copy its elements
-            // to state.result, preserving the correct type (FuncName/TypeName).
-            state.result = (n == FuncName) ? FuncName : TypeName;
+          // The use_name is already fully qualified. Copy its elements
+          // to state.result, preserving the correct type (FuncName/TypeName).
+          state.result = (n == FuncName) ? FuncName : TypeName;
 
-            for (auto& child : *use_name)
-              state.result << clone(child);
+          for (auto& child : *use_name)
+            state.result << clone(child);
 
-            state.result << elem;
-            found = defs.front();
-            return Continue;
-          }
+          state.result << elem;
+          found = defs.front();
+          return Continue;
         }
 
         curr_scope = curr_scope->parent({Top, ClassDef, TypeAlias, Function});

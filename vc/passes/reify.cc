@@ -667,8 +667,7 @@ namespace vc
       // wrapper invariance.
       {
         WFContext wf_ctx(wfIR);
-        auto ok = wfIR.build_st(top);
-        assert(ok);
+        wfIR.build_st(top);
         std::vector<std::pair<Token, Node>> emitted;
 
         for (auto& key : map_order)

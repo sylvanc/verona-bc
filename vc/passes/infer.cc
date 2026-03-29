@@ -1005,23 +1005,29 @@ namespace vc
 
     env_it->second.type = primitive_or_ffi_type(expected_prim->type());
     auto const_stmt = const_it->second;
-    if (const_stmt->size() == 3)
-    {
-      auto old_type = const_stmt->at(1);
-      if (old_type->type() != expected_prim->type())
+    auto refine_const_stmt = [&](const Node& stmt) {
+      if (stmt->size() == 3)
       {
-        const_stmt->replace(old_type, expected_prim->type());
-        note_infer_transfer_change();
+        auto old_type = stmt->at(1);
+        if (old_type->type() != expected_prim->type())
+        {
+          stmt->replace(old_type, expected_prim->type());
+          note_infer_transfer_change();
+          return true;
+        }
       }
-    }
-    else
-    {
-      auto dst = const_stmt->front();
-      auto lit = const_stmt->back();
-      const_stmt->erase(const_stmt->begin(), const_stmt->end());
-      const_stmt << dst << expected_prim->type() << lit;
-      note_infer_transfer_change();
-    }
+      else
+      {
+        auto dst = stmt->front();
+        auto lit = stmt->back();
+        stmt->erase(stmt->begin(), stmt->end());
+        stmt << dst << expected_prim->type() << lit;
+        note_infer_transfer_change();
+        return true;
+      }
+      return false;
+    };
+    snmalloc::UNUSED(refine_const_stmt(const_stmt));
 
     return true;
   }
@@ -2264,6 +2270,15 @@ namespace vc
       return;
 
     auto lookup_node = lookup_it->second;
+    std::map<Location, Node> const_defs;
+    if (def_stmts != nullptr)
+    {
+      for (auto& [loc, stmt] : *def_stmts)
+      {
+        if (stmt == Const)
+          const_defs[loc] = stmt;
+      }
+    }
     auto refine_numeric = [&](const Location& loc) -> bool {
       auto it = env.find(loc);
       if (it == env.end())
@@ -2285,12 +2300,46 @@ namespace vc
         return false;
 
       it->second.type = primitive_or_ffi_type(expected_prim->type());
+
+      if (def_stmts != nullptr)
+      {
+        auto def_it = def_stmts->find(loc);
+        if (def_it != def_stmts->end() && def_it->second == Const)
+        {
+          auto const_stmt = def_it->second;
+          if (const_stmt->size() == 3)
+          {
+            auto old_type = const_stmt->at(1);
+            if (old_type->type() != expected_prim->type())
+            {
+              const_stmt->replace(old_type, expected_prim->type());
+              note_infer_transfer_change();
+            }
+          }
+          else
+          {
+            auto dst = const_stmt->front();
+            auto lit = const_stmt->back();
+            const_stmt->erase(const_stmt->begin(), const_stmt->end());
+            const_stmt << dst << expected_prim->type() << lit;
+            note_infer_transfer_change();
+          }
+        }
+      }
+
       return true;
+    };
+    auto refine_from_expected =
+      [&](const Location& loc, const Node& expected) -> bool {
+      bool changed = false;
+      if (!const_defs.empty() && refine_const_local(env, const_defs, loc, expected))
+        changed = true;
+      if (merge_env(env, loc, expected, top))
+        changed = true;
+      return changed;
     };
 
     bool refined = false;
-    for (auto& arg_node : *args)
-      refined = refine_numeric((arg_node / Rhs)->location()) || refined;
 
     auto lookup_src = lookup_node / Rhs;
     refined = refine_numeric(lookup_src->location()) || refined;
@@ -2322,6 +2371,20 @@ namespace vc
         }
         if (refine_function_return_consts(info.func, expected_prim))
           refined = true;
+      }
+      if (info.func)
+      {
+        auto params = info.func / Params;
+        for (size_t i = 0; i < params->size() && i < args->size(); i++)
+        {
+          auto expected = apply_subst(top, params->at(i) / Type, info.subst);
+          if (!expected || is_uninformative_backward_type(expected))
+            continue;
+
+          auto arg_loc = (args->at(i) / Rhs)->location();
+          if (refine_from_expected(arg_loc, expected))
+            refined = true;
+        }
       }
     }
 
@@ -4671,6 +4734,8 @@ namespace vc
               const_defs,
               ret_loc,
               primitive_or_ffi_type(ret_prim->type())));
+          propagate_call_constraint(
+            env, ret_loc, func_ret, top, lookup_stmts, &all_def_stmts);
           bool changed = merge_env(env, ret_loc, clone(func_ret), top);
           auto ret_it = env.find(ret_loc);
           if (ret_it != env.end())

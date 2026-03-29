@@ -18,7 +18,7 @@ maker
 
 main(): i32
 {
-  let h = () -> {};
+  let h = () -> {}
   let m = maker;
   let f1 = m.one(h);
   let f2 = m.two(h);
