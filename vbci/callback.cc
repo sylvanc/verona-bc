@@ -9,54 +9,12 @@ namespace vbci
 {
   // Universal libffi trampoline. Called by C code through the closure's
   // code_ptr. Marshals C arguments back to Verona Values and calls the
-  // lambda's apply method via Thread::run_callback.
+  // lambda's apply method via Thread::handle_callback.
   static void
   callback_handler(ffi_cif* /*cif*/, void* ret, void* args[], void* user_data)
   {
     auto* cc = static_cast<CallbackClosure*>(user_data);
-
-    // The apply function's first parameter is self (the lambda).
-    // The remaining parameters correspond to the callback's C arguments.
-    auto num_c_args = cc->arg_value_types.size();
-
-    // Arg 0: the lambda (self). Borrow it — the enclosing Verona callback
-    // object owns it.
-    Thread::set_callback_arg(0, ValueBorrow(cc->lambda));
-
-    // Args 1..N: converted C arguments.
-    for (size_t i = 0; i < num_c_args; i++)
-    {
-      auto vt = cc->arg_value_types[i];
-
-      if (vt == ValueType::Invalid)
-      {
-        // Dynamic type — the C side passed a Value*.
-        auto* val = static_cast<Value*>(args[i]);
-        Thread::set_callback_arg(i + 1, ValueBorrow(*val));
-      }
-      else
-      {
-        Thread::set_callback_arg(i + 1, Value::from_addr(vt, args[i]));
-      }
-    }
-
-    auto result = Thread::run_callback(cc->func, num_c_args + 1);
-
-    // Marshal the return value back to C.
-    if (cc->return_value_type == ValueType::None)
-    {
-      // void return — nothing to write.
-    }
-    else if (cc->return_value_type == ValueType::Invalid)
-    {
-      // Dynamic return — write the full Value.
-      *static_cast<Value*>(ret) = result.extract();
-    }
-    else
-    {
-      // Primitive return — write via to_addr.
-      result.borrow().to_addr(cc->return_value_type, ret);
-    }
+    Thread::handle_callback(cc, ret, args);
   }
 
   CallbackClosure* make_callback(const Register& lambda, Function* func)

@@ -162,6 +162,7 @@ namespace vbci
     bool fixup_methods(Class& cls);
     void parse_complex_type(ComplexType& t, uint32_t type_id, PC& pc);
     void init_memo_slot(size_t index);
+    std::string fallback_function(Function* func);
 
     std::string str(size_t& pc, std::vector<uint8_t>& from);
     void string_table(

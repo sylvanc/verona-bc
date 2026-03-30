@@ -424,6 +424,11 @@ namespace vbci
     get().thread_run_behavior(work);
   }
 
+  void Thread::handle_callback(CallbackClosure* cc, void* ret, void** args)
+  {
+    get().thread_handle_callback(cc, ret, args);
+  }
+
   void Thread::thread_run_behavior(verona::rt::Work* work)
   {
     assert(!frame);
@@ -505,15 +510,57 @@ namespace vbci
   Register Thread::thread_run(Function* func)
   {
     auto depth = frames.size();
-    pushframe(func, 0);
+    Register saved;
+    bool preserve_parent_local0 = frame != nullptr;
 
-    invariant();
+    if (preserve_parent_local0)
+      saved = std::move(frame->local(0));
 
-    while (depth != frames.size())
-      step();
+    try
+    {
+      pushframe(func, 0);
 
-    LOG(Trace) << "thread_run completed! Result: " << locals.at(0);
-    return std::move(locals.at(0));
+      invariant();
+
+      while (depth != frames.size())
+        step();
+    }
+    catch (Value&)
+    {
+      // An error may be raised before normal argument validation/consumption
+      // resets `args` (for example while queueing a behavior). Clear any
+      // pending arguments before unwinding so later sync calls don't trip the
+      // `args == 0` invariant and mask the original error.
+      drop_args();
+
+      while (frames.size() > depth)
+      {
+        frame->drop_args(args);
+        teardown();
+        frames.pop_back();
+        frame = frames.empty() ? nullptr : &frames.back();
+      }
+
+      if (preserve_parent_local0)
+        frame->local(0) = std::move(saved);
+
+      throw;
+    }
+
+    Register result;
+
+    if (preserve_parent_local0)
+    {
+      result = std::move(frame->local(0));
+      frame->local(0) = std::move(saved);
+    }
+    else
+    {
+      result = std::move(locals.at(0));
+    }
+
+    LOG(Trace) << "thread_run completed! Result: " << result;
+    return result;
   }
 
   void Thread::print_stack(logging::Log& log, bool top_frame_only)
@@ -2569,44 +2616,52 @@ namespace vbci
     return thread.locals.at(idx);
   }
 
-  Register Thread::run_callback(Function* func, size_t num_args)
+  void Thread::thread_handle_callback(CallbackClosure* cc, void* ret, void** args_)
   {
-    auto& self = get();
-    assert(self.args == 0);
-    self.args = num_args;
+    assert(args == 0);
+    auto num_c_args = cc->arg_value_types.size();
+    arg(args++) = ValueBorrow(cc->lambda);
 
-    auto depth = self.frames.size();
-
-    // When called during an active FFI call, parent frames exist on the stack.
-    // popframe with dst=0 writes the return value to the parent frame's
-    // local[0], so we must save and restore it.
-    Register saved;
-    if (self.frame)
-      saved = std::move(self.frame->local(0));
-
-    self.pushframe(func, 0);
-    self.invariant();
-
-    while (depth != self.frames.size())
-      self.step();
-
-    if (self.frame)
+    for (size_t i = 0; i < num_c_args; i++)
     {
-      // Retrieve the callback result from where popframe placed it.
-      Register result = std::move(self.frame->local(0));
+      auto vt = cc->arg_value_types[i];
 
-      // Restore the parent frame's original register.
-      self.frame->local(0) = std::move(saved);
-
-      return result;
+      if (vt == ValueType::Invalid)
+      {
+        auto* val = static_cast<Value*>(args_[i]);
+        arg(args++) = ValueBorrow(*val);
+      }
+      else
+      {
+        arg(args++) = Value::from_addr(vt, args_[i]);
+      }
     }
 
-    // No parent frame — result is at the bottom of the locals vector.
-    return std::move(self.locals.at(0));
-  }
+    try
+    {
+      auto result = thread_run(cc->func);
 
-  void Thread::set_callback_arg(size_t idx, ValueBorrow val)
-  {
-    get().arg(idx) = val;
+      if (cc->return_value_type == ValueType::None)
+      {
+        return;
+      }
+      else if (cc->return_value_type == ValueType::Invalid)
+      {
+        *static_cast<Value*>(ret) = result.extract();
+      }
+      else
+      {
+        result.borrow().to_addr(cc->return_value_type, ret);
+      }
+    }
+    catch (Value& error_value)
+    {
+      {
+        logging::Error log;
+        log << error_value.to_string() << std::endl;
+        print_error_stack(log, error_value);
+      }
+      std::abort();
+    }
   }
 }

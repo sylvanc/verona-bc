@@ -5,6 +5,7 @@
 #include "freeze.h"
 #include "thread.h"
 
+#include <cstdint>
 #include <dlfcn.h>
 #include <format>
 #include <verona.h>
@@ -115,7 +116,7 @@ namespace vbci
     } reset{initializing};
 
     initializing = true;
-    slot = Thread::run_callback(&functions.at(memo_func_ids.at(index)), 0);
+    slot = Thread::run_sync(&functions.at(memo_func_ids.at(index)));
 
     if (slot->is_header())
       freeze(slot->get_header());
@@ -185,7 +186,7 @@ namespace vbci
       if (!init)
         continue;
 
-      auto result = Thread::run_callback(&functions.at(*init), 0);
+      auto result = Thread::run_sync(&functions.at(*init));
 
       if (result->is_invalid())
         continue;
@@ -224,8 +225,7 @@ namespace vbci
     // Run fini callbacks in reverse order (last init = first fini).
     for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
     {
-      Thread::set_callback_arg(0, it->first.borrow());
-      Thread::run_callback(it->second, 1);
+      (void)Thread::run_sync(it->second, it->first.borrow());
     }
 
     fini_callbacks.clear();
@@ -523,7 +523,7 @@ namespace vbci
   std::string Program::debug_info(Function* func, PC pc)
   {
     if (!di_decompress())
-      return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
+      return std::format(" --> {}:{}", fallback_function(func), pc);
 
     constexpr auto no_value = size_t(-1);
     auto di_file = no_value;
@@ -564,8 +564,7 @@ namespace vbci
     }
 
     if (di_file == no_value)
-      return std::format(
-        " --> function {}:{}", static_cast<void*>(func), di_offset);
+      return std::format(" --> {}:{}", fallback_function(func), di_offset);
 
     auto& filename = di_strings.at(di_file);
     auto source = get_source_file(di_file);
@@ -595,10 +594,33 @@ namespace vbci
   std::string Program::di_function(Function* func)
   {
     if (!di_decompress())
-      return std::format("function {}", static_cast<void*>(func));
+      return fallback_function(func);
 
     auto pc = di + func->debug_info;
     return di_strings.at(di_uleb(pc));
+  }
+
+  std::string Program::fallback_function(Function* func)
+  {
+    if (func == nullptr)
+      return "function <null>";
+
+    if (functions.empty())
+      return "function <unloaded>";
+
+    auto first = reinterpret_cast<uintptr_t>(functions.data());
+    auto ptr = reinterpret_cast<uintptr_t>(func);
+    auto size = functions.size() * sizeof(Function);
+
+    if ((ptr >= first) && (ptr < (first + size)))
+    {
+      auto offset = ptr - first;
+
+      if ((offset % sizeof(Function)) == 0)
+        return std::format("function#{}", offset / sizeof(Function));
+    }
+
+    return "function <external>";
   }
 
   std::string Program::di_class(Class& cls)
