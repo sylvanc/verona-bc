@@ -340,9 +340,12 @@ namespace vbcc
             }
           }
 
-          for (auto& l : func_state.labels)
+          for (auto label_node : *(node / Labels))
           {
+            auto& l = func_state.get_label(label_node / LabelId);
             auto unneeded = Bitset(func_state.register_names.size());
+            Node body = label_node / Body;
+            std::vector<std::pair<Node, Node>> drops;
 
             for (auto succ_idx : l.succ)
               unneeded |= func_state.labels.at(succ_idx).in;
@@ -352,7 +355,44 @@ namespace vbcc
             for (size_t r = 0; r < func_state.register_names.size(); r++)
             {
               if (unneeded.test(r))
-                l.automove(r);
+              {
+                auto last = l.last_use.at(r);
+
+                if (!last)
+                  continue;
+
+                auto parent = last->parent();
+
+                if ((parent == Arg) && (parent->front() == ArgCopy))
+                {
+                  l.automove(r);
+                  continue;
+                }
+
+                if (parent == Copy)
+                {
+                  l.automove(r);
+                  continue;
+                }
+
+                Node stmt = last;
+
+                while (stmt && (stmt->parent() != body))
+                  stmt = stmt->parent();
+
+                if (!stmt)
+                  continue;
+
+                drops.emplace_back(stmt, Drop << clone(last));
+                l.last_use[r] = {};
+              }
+            }
+
+            for (auto& [stmt, drop] : drops)
+            {
+              auto it = body->find(stmt);
+              assert(it != body->end());
+              body->insert(std::next(it), drop);
             }
           }
         }
