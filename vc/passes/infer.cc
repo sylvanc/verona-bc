@@ -817,6 +817,18 @@ namespace vc
 
     auto class_def = find_def(top, inner);
     Node subst_source = inner;
+
+    // Follow TypeAlias chains to the underlying ClassDef.
+    while (class_def == TypeAlias)
+    {
+      auto alias_type = class_def / Type;
+      if (alias_type->front() != TypeName)
+        break;
+      class_def = find_def(top, alias_type->front());
+      if (!class_def)
+        return {};
+    }
+
     if ((!class_def || class_def != ClassDef) && inner->size() > 1)
     {
       Node base = TypeName;
