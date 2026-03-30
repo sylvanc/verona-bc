@@ -407,18 +407,21 @@ namespace vc
                       }
                     }
 
-                    bool unresolved_param_receiver =
-                      receiver_is_param(func, li->second.recv_loc) &&
-                      (contains_dyn(recv_it->second) ||
-                       contains_typeid(recv_it->second));
+                    bool unresolved_receiver =
+                      contains_dyn(recv_it->second) ||
+                      contains_typeid(recv_it->second);
 
-                    if (unresolved_param_receiver && (targets.size() > 1))
-                      continue;
+                    bool skip_param_refinement =
+                      unresolved_receiver && (targets.size() > 1);
 
-                    for (auto* target : targets)
+                    if (!skip_param_refinement)
                     {
-                      if (target)
-                        changed |= refine_function_params(*target, stmt->at(2), false);
+                      for (auto* target : targets)
+                      {
+                        if (target)
+                          changed |=
+                            refine_function_params(*target, stmt->at(2), false);
+                      }
                     }
 
                     auto ret = find_method_return_type(targets);
@@ -474,18 +477,21 @@ namespace vc
                       }
                     }
 
-                    bool unresolved_param_receiver =
-                      receiver_is_param(func, li->second.recv_loc) &&
-                      (contains_dyn(recv_it->second) ||
-                       contains_typeid(recv_it->second));
+                    bool unresolved_receiver =
+                      contains_dyn(recv_it->second) ||
+                      contains_typeid(recv_it->second);
 
-                    if (unresolved_param_receiver && (targets.size() > 1))
-                      targets.clear();
+                    bool skip_param_refinement =
+                      unresolved_receiver && (targets.size() > 1);
 
-                    for (auto* target : targets)
+                    if (!skip_param_refinement)
                     {
-                      if (target)
-                        changed |= refine_function_params(*target, stmt->at(2), true);
+                      for (auto* target : targets)
+                      {
+                        if (target)
+                          changed |=
+                            refine_function_params(*target, stmt->at(2), true);
+                      }
                     }
 
                     for (auto* target : targets)
@@ -761,6 +767,7 @@ namespace vc
     std::vector<MethodInvocation> method_invocations;
     std::vector<PendingCallback> pending_callbacks;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
+    std::map<std::pair<const NodeDef*, const NodeDef*>, bool> shape_subtype_cache;
 
     // Per-function local type map: LocalId location -> reified type.
     // Populated during reify_function, used by reify_lookup.
@@ -828,7 +835,19 @@ namespace vc
               if (!cr.resolved_name)
                 continue;
 
-              if (check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
+              auto cache_key =
+                std::make_pair(cr.resolved_name.get(), r.resolved_name.get());
+              auto [cache_it, inserted] =
+                shape_subtype_cache.try_emplace(cache_key, false);
+
+              if (
+                inserted &&
+                check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
+              {
+                cache_it->second = true;
+              }
+
+              if (cache_it->second)
                 union_node << clone(cr.id);
             }
           }
@@ -918,6 +937,18 @@ namespace vc
     // across the resolved inner receiver set.
     ReceiverSet extract_receivers(const Node& reified_type)
     {
+      auto same_receiver = [](const Node& left, const Node& right) {
+        if (!left || !right || (left->type() != right->type()))
+          return false;
+
+        if (left->in({ClassId, FunctionId, TypeId}))
+          return left->location().view() == right->location().view();
+
+        Node left_id = left;
+        Node right_id = right;
+        return left_id->equals(right_id);
+      };
+
       std::function<ReceiverSet(const Node&)> collect = [&](const Node& type) {
         if (!type || (type == Dyn))
           return ReceiverSet{true, {}};
@@ -937,12 +968,12 @@ namespace vc
           ReceiverSet expanded_result{false, {}};
           bool saw_expanded = false;
 
-          auto add_unique = [](ReceiverSet& result, Node recv) {
+          auto add_unique = [&](ReceiverSet& result, Node recv) {
             bool dup = false;
 
             for (auto& existing : result.types)
             {
-              if (existing->equals(recv))
+              if (same_receiver(existing, recv))
               {
                 dup = true;
                 break;
@@ -977,7 +1008,7 @@ namespace vc
 
               for (auto& expanded : expanded_result.types)
               {
-                if (expanded->equals(recv))
+                if (same_receiver(expanded, recv))
                 {
                   found = true;
                   break;
@@ -1025,6 +1056,19 @@ namespace vc
       return collect(reified_type);
     }
 
+    bool same_reification_id(const Node& left, const Node& right)
+    {
+      if (!left || !right || (left->type() != right->type()))
+        return false;
+
+      if (left->in({ClassId, FunctionId, TypeId}))
+        return left->location().view() == right->location().view();
+
+      Node left_id = left;
+      Node right_id = right;
+      return left_id->equals(right_id);
+    }
+
     // Check if a MethodInvocation targets a specific class reification.
     bool mi_targets(const MethodInvocation& mi, Node class_id)
     {
@@ -1033,7 +1077,7 @@ namespace vc
 
       for (auto r : mi.receivers)
       {
-        if (class_id->equals(r))
+        if (same_reification_id(class_id, r))
           return true;
       }
 
@@ -1163,6 +1207,9 @@ namespace vc
     // Check whether two substitution maps are equivalent under invariance.
     bool subst_equal(const NodeMap<Node>& a, const NodeMap<Node>& b)
     {
+      if (a.size() != b.size())
+        return false;
+
       return std::equal(
         a.begin(), a.end(), b.begin(), b.end(), [&](auto& lhs, auto& rhs) {
           return (lhs.first == rhs.first) &&
@@ -1589,7 +1636,7 @@ namespace vc
 
           for (auto& recv : recv_set.types)
           {
-            if (r.id->equals(recv))
+            if (same_reification_id(r.id, recv))
             {
               matches = true;
               break;
@@ -2049,7 +2096,7 @@ namespace vc
 
           for (auto& recv : recv_set.types)
           {
-            if (r.id->equals(recv))
+            if (same_reification_id(r.id, recv))
             {
               matches = true;
               break;
@@ -3087,7 +3134,7 @@ namespace vc
             {
               for (auto& cr : map[key])
               {
-                if (cr.id && cr.id->equals(rt) && cr.reification)
+                if (cr.id && same_reification_id(cr.id, rt) && cr.reification)
                 {
                   has_impl = true;
                   break;
@@ -3230,7 +3277,7 @@ namespace vc
       {
         for (auto& r : map[key])
         {
-          if (!r.id->equals(classid) || (r.def != ClassDef))
+          if (!same_reification_id(r.id, classid) || (r.def != ClassDef))
             continue;
 
           if (r.reification)
@@ -3251,7 +3298,6 @@ namespace vc
 
             if ((f / Ident)->location().view() != field_name)
               continue;
-
             return reify_type(f / Type, r.subst);
           }
 
