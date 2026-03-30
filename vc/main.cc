@@ -53,6 +53,13 @@ int main(int argc, char** argv)
         if (!path.has_filename())
           path = path.parent_path();
 
+        // Check is the path is a directory, if not this is an error.
+        if (!std::filesystem::is_directory(path))
+        {
+          std::cerr << "Error: path is not a directory: " << path << std::endl;
+          std::exit(1);
+        }
+
         if (!path.empty() && bytecode_file.empty())
           bytecode_file = path.stem().replace_extension(".vbc");
 

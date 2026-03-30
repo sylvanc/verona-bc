@@ -178,6 +178,28 @@ namespace vc
       assert(main_module == ClassDef);
       assert((main_module / TypeParams)->empty());
 
+      // Check that main is defined under the main module and has no type
+      // parameters.
+      auto main_defs = main_module->look(Location("main"));
+      if (main_defs.empty())
+      {
+        top << err(
+          main_module,
+          "No `main` function found under the main module: " +
+            std::string((main_module / Ident)->location().view()));
+        return;
+      }
+
+      auto main_def = main_defs.front();
+      if ((main_def / TypeParams)->empty() == false)
+      {
+        top << err(
+          main_def,
+          "`main` function cannot have type parameters: " +
+            std::string((main_def / Ident)->location().view()));
+        return;
+      }
+
       auto id = top->fresh();
       auto main_call = Call
         << (LocalId ^ id) << Rhs
@@ -3382,7 +3404,10 @@ namespace vc
           if (def == Top)
             return err(elem, "No top-level definition found");
 
-          return err(elem, "Identifier not found")
+          return err(
+                   elem,
+                   "Identifier not found: " +
+                     std::string(ident->location().view()))
             << errmsg("Resolving here:") << errloc(def / Ident);
         }
 
