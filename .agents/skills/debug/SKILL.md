@@ -14,6 +14,25 @@ Don't assert a cause. State hypotheses explicitly. Prove the execution path with
 
 A hypothesis is not knowledge. If you can test it, test it. This protocol makes that concrete for debugging sessions.
 
+## Verona hard stop: no source-level compiler workarounds
+
+When debugging Verona source code, libraries, or examples against `vc` / `vbci`, treat "this looks like a compiler/runtime bug" as a hard stop for workaround-ish repo edits.
+
+Before editing the source package under investigation, classify each proposed change as one of:
+
+- **Real source bug**: the source is independently wrong with respect to the intended API, language semantics, or external library contract.
+- **Compiler workaround**: the change exists only to dodge compiler/runtime behavior (for example wrapper methods added only to make lambdas distinct, extra wrapper objects around unions, typed-literal hacks, signature changes added only to appease inference/typecheck, or control-flow reshaping that has no source-level justification).
+
+Rules:
+
+1. **Do not commit workaround churn into the source tree while debugging.** If a change is in the second category, stop and discuss instead of editing the repo copy.
+2. **Reduce first.** Build a minimal reproduction in `build/tmp/` that demonstrates the compiler/runtime bug before touching the real source tree.
+3. **Prove source edits are source fixes.** If you believe a source edit is still warranted, state the independent source-level reason for it and the evidence supporting that reason.
+4. **Scratch before repo.** Hypothesis-testing edits for likely compiler bugs belong in scratch copies under `build/tmp/`, not in the main worktree.
+5. **If the change list starts to include scaffolding** — wrapper methods, indirection layers, typed match literals, helper closures whose only purpose is to differentiate codegen — back up immediately. That is a sign you are debugging the compiler by mutating the source program.
+
+This is stricter than the general debugging protocol on purpose: source-level workaround churn is often net negative because it obscures the real bug, dirties the worktree, and increases rollback cost.
+
 ## When to use the full protocol
 
 This protocol is for non-trivial debugging — cases where you don't know the cause, or where your first guess could be wrong. If the cause is immediately obvious and verifiable in one step (a typo, a missing import), just fix it.

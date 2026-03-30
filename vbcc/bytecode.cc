@@ -1457,7 +1457,8 @@ namespace vbcc
   size_t Bytecode::typ(Node type)
   {
     // If it's a TypeId, encode what it maps to instead.
-    if (type == TypeId)
+    // Loop to follow chained aliases (e.g., cb -> fn$N -> Union).
+    while (type == TypeId)
       type = get_typealias(type) / Type;
 
     if (type == Dyn)

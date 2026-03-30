@@ -1915,6 +1915,27 @@ namespace vc
       }
     }
 
+    // Union receiver: resolve on every member, all must have the method.
+    if (receiver_type == Type && receiver_type->front() == Union)
+    {
+      MethodInfo first_info;
+
+      for (auto& member : *(receiver_type->front()))
+      {
+        Node member_type = Type << clone(member);
+        auto info = resolve_method(
+          top, member_type, method_ident, hand, arity, method_typeargs);
+
+        if (!info.func)
+          return {};
+
+        if (!first_info.func)
+          first_info = std::move(info);
+      }
+
+      return first_info;
+    }
+
     // Auto-deref ref[T] / cown[T].
     auto ref_inner = extract_ref_inner(receiver_type);
     if (!ref_inner)
@@ -1984,6 +2005,18 @@ namespace vc
     auto actual_def = find_def(top, actual_inner);
     if (!shape_def || !actual_def)
       return false;
+
+    // Follow TypeAlias chains to the underlying ClassDef.
+    while (shape_def == TypeAlias)
+    {
+      auto alias_type = shape_def / Type;
+      if (alias_type->front() != TypeName)
+        break;
+      shape_def = find_def(top, alias_type->front());
+      if (!shape_def)
+        return false;
+    }
+
     if (shape_def != ClassDef || actual_def != ClassDef)
       return false;
     if ((shape_def / Shape) != Shape)

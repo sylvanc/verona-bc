@@ -109,4 +109,4 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
 
 Task-specific knowledge and procedures are stored in `.agents/skills/`.
 Each skill is a directory with a `SKILL.md` file containing instructions.
-Available skills: add-test, docs-update, review, testsuite, vbci-memory, verona-conventions.
+Available skills: add-test, debug, docs-update, review, testsuite, vbci-memory, verona-conventions.
