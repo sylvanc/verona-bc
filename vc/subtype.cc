@@ -126,8 +126,10 @@ namespace vc
       return false;
 
     if (
-      l->in({Dyn, TypeSelf, TypeVar, Union, Isect, WhereOr, WhereAnd, WhereNot}) ||
-      r->in({Dyn, TypeSelf, TypeVar, Union, Isect, WhereOr, WhereAnd, WhereNot}))
+      l->in(
+        {Dyn, TypeSelf, TypeVar, Union, Isect, WhereOr, WhereAnd, WhereNot}) ||
+      r->in(
+        {Dyn, TypeSelf, TypeVar, Union, Isect, WhereOr, WhereAnd, WhereNot}))
       return false;
 
     if ((l == TupleType) || (r == TupleType))

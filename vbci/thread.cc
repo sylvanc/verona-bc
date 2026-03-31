@@ -397,8 +397,7 @@ namespace vbci
       return {t.behavior, t.current_pc};
   }
 
-  Thread::Thread()
-  : program(&Program::get()), frame(nullptr), args(0)
+  Thread::Thread() : program(&Program::get()), frame(nullptr), args(0)
   {
     frames.reserve(16);
     locals.resize(1024);
@@ -607,15 +606,17 @@ namespace vbci
 
     if ((i >= 0) && (frames[i].func == error_func))
     {
-      log << std::endl << "  at " << program->di_function(frames[i].func)
+      log << std::endl
+          << "  at " << program->di_function(frames[i].func)
           << " (pc=" << error_pc << ")" << std::endl
           << program->debug_info(frames[i].func, error_pc);
       i--;
     }
     else
     {
-      log << std::endl << "  at " << program->di_function(error_func)
-          << " (pc=" << error_pc << ")" << std::endl
+      log << std::endl
+          << "  at " << program->di_function(error_func) << " (pc=" << error_pc
+          << ")" << std::endl
           << program->debug_info(error_func, error_pc);
     }
 
@@ -625,8 +626,9 @@ namespace vbci
       auto start_pc = frame.func->labels.at(0);
       auto pc = frame.pc > start_pc ? frame.pc - 1 : frame.pc;
 
-      log << std::endl << "  at " << program->di_function(frame.func) << " (pc="
-          << pc << ")" << std::endl
+      log << std::endl
+          << "  at " << program->di_function(frame.func) << " (pc=" << pc << ")"
+          << std::endl
           << program->debug_info(frame.func, pc);
     }
 
@@ -2616,7 +2618,8 @@ namespace vbci
     return thread.locals.at(idx);
   }
 
-  void Thread::thread_handle_callback(CallbackClosure* cc, void* ret, void** args_)
+  void
+  Thread::thread_handle_callback(CallbackClosure* cc, void* ret, void** args_)
   {
     assert(args == 0);
     auto num_c_args = cc->arg_value_types.size();

@@ -2377,7 +2377,9 @@ namespace vc
     auto refine_from_expected =
       [&](const Location& loc, const Node& expected) -> bool {
       bool changed = false;
-      if (!const_defs.empty() && refine_const_local(env, const_defs, loc, expected))
+      if (
+        !const_defs.empty() &&
+        refine_const_local(env, const_defs, loc, expected))
         changed = true;
       if (merge_env(env, loc, expected, top))
         changed = true;

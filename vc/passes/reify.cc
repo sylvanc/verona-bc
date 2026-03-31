@@ -390,7 +390,10 @@ namespace vc
                   if (recv_it != local_types.end())
                   {
                     auto targets = find_method_targets(
-                      recv_it->second, li->second.method_id, stmt->at(2), false);
+                      recv_it->second,
+                      li->second.method_id,
+                      stmt->at(2),
+                      false);
 
                     if (
                       targets.empty() &&
@@ -400,15 +403,17 @@ namespace vc
                         Dyn, li->second.method_id, stmt->at(2), false);
 
                       if (refine_receiver_type(
-                            func, li->second.recv_loc, recv_it->second, fallback_targets))
+                            func,
+                            li->second.recv_loc,
+                            recv_it->second,
+                            fallback_targets))
                       {
                         changed = true;
                         targets = std::move(fallback_targets);
                       }
                     }
 
-                    bool unresolved_receiver =
-                      contains_dyn(recv_it->second) ||
+                    bool unresolved_receiver = contains_dyn(recv_it->second) ||
                       contains_typeid(recv_it->second);
 
                     bool skip_param_refinement =
@@ -470,15 +475,17 @@ namespace vc
                         Dyn, li->second.method_id, stmt->at(2), true);
 
                       if (refine_receiver_type(
-                            func, li->second.recv_loc, recv_it->second, fallback_targets))
+                            func,
+                            li->second.recv_loc,
+                            recv_it->second,
+                            fallback_targets))
                       {
                         changed = true;
                         targets = std::move(fallback_targets);
                       }
                     }
 
-                    bool unresolved_receiver =
-                      contains_dyn(recv_it->second) ||
+                    bool unresolved_receiver = contains_dyn(recv_it->second) ||
                       contains_typeid(recv_it->second);
 
                     bool skip_param_refinement =
@@ -563,7 +570,8 @@ namespace vc
           }
 
           auto current_ret = func / Type;
-          if (((r->def / Type)->front() == TypeVar) || is_nomatch_ir(current_ret))
+          if (
+            ((r->def / Type)->front() == TypeVar) || is_nomatch_ir(current_ret))
           {
             // Now try to infer the return type from Return locals.
             // Collect all distinct return types to build a union if needed.
@@ -767,7 +775,8 @@ namespace vc
     std::vector<MethodInvocation> method_invocations;
     std::vector<PendingCallback> pending_callbacks;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
-    std::map<std::pair<const NodeDef*, const NodeDef*>, bool> shape_subtype_cache;
+    std::map<std::pair<const NodeDef*, const NodeDef*>, bool>
+      shape_subtype_cache;
 
     // Per-function local type map: LocalId location -> reified type.
     // Populated during reify_function, used by reify_lookup.
@@ -991,7 +1000,8 @@ namespace vc
             if (child_set.all)
               return ReceiverSet{true, {}};
 
-            auto& result = contains_typeid(child) ? expanded_result : explicit_result;
+            auto& result =
+              contains_typeid(child) ? expanded_result : explicit_result;
             saw_expanded |= contains_typeid(child);
 
             for (auto& recv : child_set.types)
@@ -1429,7 +1439,8 @@ namespace vc
 
               for (size_t i = 0; i < def_params->size(); i++)
               {
-                if ((def_params->at(i) / Ident)->location().view() != field_name)
+                if (
+                  (def_params->at(i) / Ident)->location().view() != field_name)
                   continue;
 
                 return clone(params->at(i) / Type);
@@ -1474,9 +1485,7 @@ namespace vc
                 reify_emitted_type(f / Type, r.subst, f / Ident, "field type");
             }
 
-            fields
-              << (Field << (FieldId ^ (f / Ident))
-                        << field_type);
+            fields << (Field << (FieldId ^ (f / Ident)) << field_type);
           }
 
           r.reification = Class << r.id << fields << Methods;
@@ -1573,7 +1582,8 @@ namespace vc
       return nullptr;
     }
 
-    Reification* find_function_reification(const Node& def, const NodeMap<Node>& subst)
+    Reification*
+    find_function_reification(const Node& def, const NodeMap<Node>& subst)
     {
       for (auto& key : map_order)
       {
@@ -1609,8 +1619,7 @@ namespace vc
       return nullptr;
     }
 
-    std::vector<Reification*>
-    find_method_targets(
+    std::vector<Reification*> find_method_targets(
       Node recv_type,
       const std::string& method_id,
       const Node& args,
@@ -1656,7 +1665,8 @@ namespace vc
             auto* target = find_function_reification(m / FunctionId);
 
             if (
-              target && method_target_accepts_args(*target, args, behavior_args) &&
+              target &&
+              method_target_accepts_args(*target, args, behavior_args) &&
               std::none_of(targets.begin(), targets.end(), [&](auto* existing) {
                 return existing == target;
               }))
@@ -1793,8 +1803,7 @@ namespace vc
       return behavior_arg_type(it->second);
     }
 
-    bool
-    method_target_accepts_args(
+    bool method_target_accepts_args(
       Reification& target, const Node& args, bool behavior_args)
     {
       if (!target.reification)
@@ -1956,8 +1965,7 @@ namespace vc
 
           if (
             !field_def ||
-            !(
-              contains_typeparam_ref(field_def / Type) ||
+            !(contains_typeparam_ref(field_def / Type) ||
               has_unresolved_type(field_def / Type, class_reif->subst)))
             return false;
 
@@ -1994,24 +2002,23 @@ namespace vc
         auto unresolved_seed = reify_type(def_param / Type, target.subst);
         bool is_create = (target.def / Ident)->location().view() == "create";
         auto field_def = find_create_field_def(def_param);
-        bool generic_create_field =
-          field_def &&
+        bool generic_create_field = field_def &&
           (contains_typeparam_ref(field_def / Type) ||
            has_unresolved_type(field_def / Type, target.subst));
-        bool constructor_seed =
-          is_create && generic_create_field && contains_typeid(current) &&
-          !contains_typeid(actual) &&
+        bool constructor_seed = is_create && generic_create_field &&
+          contains_typeid(current) && !contains_typeid(actual) &&
           vbcc::IRSubtype(top, actual, current);
-        bool replacing_seed =
-          unresolved_seed && current->equals(unresolved_seed) &&
-          current->in({TypeId, Union, Dyn});
+        bool replacing_seed = unresolved_seed &&
+          current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
 
         if (
-          !generic_origin && !has_unresolved_type(def_param / Type, target.subst) &&
+          !generic_origin &&
+          !has_unresolved_type(def_param / Type, target.subst) &&
           !constructor_seed)
           continue;
 
-        Node merged = (contains_dyn(current) || replacing_seed || constructor_seed) ?
+        Node merged =
+          (contains_dyn(current) || replacing_seed || constructor_seed) ?
           clone(actual) :
           merge_refined_type(current, actual);
 
