@@ -73,17 +73,31 @@ namespace vc
 
   // Ops with fixed result types.
   const std::map<Token, Token> fixed_result_type = {
-    {Eq, Bool},          {Ne, Bool},
-    {Lt, Bool},          {Le, Bool},
-    {Gt, Bool},          {Ge, Bool},
-    {IsInf, Bool},       {IsNaN, Bool},
-    {Not, Bool},         {Bits, U64},
-    {Len, USize},        {Const_E, F64},
-    {Const_Pi, F64},     {Const_Inf, F64},
-    {Const_NaN, F64},    {GetRaise, U64},
-    {SetRaise, U64},     {FreeCallback, None},
-    {AddExternal, None}, {RemoveExternal, None},
-    {ArrayCopy, None},   {ArrayFill, None},
+    {Eq, Bool},
+    {Ne, Bool},
+    {Lt, Bool},
+    {Le, Bool},
+    {Gt, Bool},
+    {Ge, Bool},
+    {IsInf, Bool},
+    {IsNaN, Bool},
+    {Not, Bool},
+    {Bits, U64},
+    {Len, USize},
+    {Const_E, F64},
+    {Const_Pi, F64},
+    {Const_Inf, F64},
+    {Const_NaN, F64},
+    {GetRaise, U64},
+    {SetRaise, U64},
+    {FreeCallback, None},
+    {Pin, None},
+    {Unpin, None},
+    {FFIStore, None},
+    {AddExternal, None},
+    {RemoveExternal, None},
+    {ArrayCopy, None},
+    {ArrayFill, None},
     {ArrayCompare, I64},
   };
 
@@ -803,6 +817,18 @@ namespace vc
 
     auto class_def = find_def(top, inner);
     Node subst_source = inner;
+
+    // Follow TypeAlias chains to the underlying ClassDef.
+    while (class_def == TypeAlias)
+    {
+      auto alias_type = class_def / Type;
+      if (alias_type->front() != TypeName)
+        break;
+      class_def = find_def(top, alias_type->front());
+      if (!class_def)
+        return {};
+    }
+
     if ((!class_def || class_def != ClassDef) && inner->size() > 1)
     {
       Node base = TypeName;
@@ -991,23 +1017,29 @@ namespace vc
 
     env_it->second.type = primitive_or_ffi_type(expected_prim->type());
     auto const_stmt = const_it->second;
-    if (const_stmt->size() == 3)
-    {
-      auto old_type = const_stmt->at(1);
-      if (old_type->type() != expected_prim->type())
+    auto refine_const_stmt = [&](const Node& stmt) {
+      if (stmt->size() == 3)
       {
-        const_stmt->replace(old_type, expected_prim->type());
-        note_infer_transfer_change();
+        auto old_type = stmt->at(1);
+        if (old_type->type() != expected_prim->type())
+        {
+          stmt->replace(old_type, expected_prim->type());
+          note_infer_transfer_change();
+          return true;
+        }
       }
-    }
-    else
-    {
-      auto dst = const_stmt->front();
-      auto lit = const_stmt->back();
-      const_stmt->erase(const_stmt->begin(), const_stmt->end());
-      const_stmt << dst << expected_prim->type() << lit;
-      note_infer_transfer_change();
-    }
+      else
+      {
+        auto dst = stmt->front();
+        auto lit = stmt->back();
+        stmt->erase(stmt->begin(), stmt->end());
+        stmt << dst << expected_prim->type() << lit;
+        note_infer_transfer_change();
+        return true;
+      }
+      return false;
+    };
+    snmalloc::UNUSED(refine_const_stmt(const_stmt));
 
     return true;
   }
@@ -1895,6 +1927,27 @@ namespace vc
       }
     }
 
+    // Union receiver: resolve on every member, all must have the method.
+    if (receiver_type == Type && receiver_type->front() == Union)
+    {
+      MethodInfo first_info;
+
+      for (auto& member : *(receiver_type->front()))
+      {
+        Node member_type = Type << clone(member);
+        auto info = resolve_method(
+          top, member_type, method_ident, hand, arity, method_typeargs);
+
+        if (!info.func)
+          return {};
+
+        if (!first_info.func)
+          first_info = std::move(info);
+      }
+
+      return first_info;
+    }
+
     // Auto-deref ref[T] / cown[T].
     auto ref_inner = extract_ref_inner(receiver_type);
     if (!ref_inner)
@@ -1964,6 +2017,18 @@ namespace vc
     auto actual_def = find_def(top, actual_inner);
     if (!shape_def || !actual_def)
       return false;
+
+    // Follow TypeAlias chains to the underlying ClassDef.
+    while (shape_def == TypeAlias)
+    {
+      auto alias_type = shape_def / Type;
+      if (alias_type->front() != TypeName)
+        break;
+      shape_def = find_def(top, alias_type->front());
+      if (!shape_def)
+        return false;
+    }
+
     if (shape_def != ClassDef || actual_def != ClassDef)
       return false;
     if ((shape_def / Shape) != Shape)
@@ -2250,6 +2315,15 @@ namespace vc
       return;
 
     auto lookup_node = lookup_it->second;
+    std::map<Location, Node> const_defs;
+    if (def_stmts != nullptr)
+    {
+      for (auto& [loc, stmt] : *def_stmts)
+      {
+        if (stmt == Const)
+          const_defs[loc] = stmt;
+      }
+    }
     auto refine_numeric = [&](const Location& loc) -> bool {
       auto it = env.find(loc);
       if (it == env.end())
@@ -2271,12 +2345,48 @@ namespace vc
         return false;
 
       it->second.type = primitive_or_ffi_type(expected_prim->type());
+
+      if (def_stmts != nullptr)
+      {
+        auto def_it = def_stmts->find(loc);
+        if (def_it != def_stmts->end() && def_it->second == Const)
+        {
+          auto const_stmt = def_it->second;
+          if (const_stmt->size() == 3)
+          {
+            auto old_type = const_stmt->at(1);
+            if (old_type->type() != expected_prim->type())
+            {
+              const_stmt->replace(old_type, expected_prim->type());
+              note_infer_transfer_change();
+            }
+          }
+          else
+          {
+            auto dst = const_stmt->front();
+            auto lit = const_stmt->back();
+            const_stmt->erase(const_stmt->begin(), const_stmt->end());
+            const_stmt << dst << expected_prim->type() << lit;
+            note_infer_transfer_change();
+          }
+        }
+      }
+
       return true;
+    };
+    auto refine_from_expected =
+      [&](const Location& loc, const Node& expected) -> bool {
+      bool changed = false;
+      if (
+        !const_defs.empty() &&
+        refine_const_local(env, const_defs, loc, expected))
+        changed = true;
+      if (merge_env(env, loc, expected, top))
+        changed = true;
+      return changed;
     };
 
     bool refined = false;
-    for (auto& arg_node : *args)
-      refined = refine_numeric((arg_node / Rhs)->location()) || refined;
 
     auto lookup_src = lookup_node / Rhs;
     refined = refine_numeric(lookup_src->location()) || refined;
@@ -2308,6 +2418,20 @@ namespace vc
         }
         if (refine_function_return_consts(info.func, expected_prim))
           refined = true;
+      }
+      if (info.func)
+      {
+        auto params = info.func / Params;
+        for (size_t i = 0; i < params->size() && i < args->size(); i++)
+        {
+          auto expected = apply_subst(top, params->at(i) / Type, info.subst);
+          if (!expected || is_uninformative_backward_type(expected))
+            continue;
+
+          auto arg_loc = (args->at(i) / Rhs)->location();
+          if (refine_from_expected(arg_loc, expected))
+            refined = true;
+        }
       }
     }
 
@@ -2755,6 +2879,14 @@ namespace vc
       recovered = clone(stmt / Type);
     }
     else if (stmt == Convert)
+    {
+      recovered = clone(stmt / Type);
+    }
+    else if (stmt == FFIStruct)
+    {
+      recovered = ffi_struct_result_type();
+    }
+    else if (stmt == FFILoad)
     {
       recovered = clone(stmt / Type);
     }
@@ -3638,6 +3770,26 @@ namespace vc
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), ffi_primitive_type(ffrt->second));
+      }
+      else if (stmt == FFIStruct)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge((stmt / LocalId)->location(), ffi_struct_result_type());
+      }
+      else if (stmt == FFILoad)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
+        merge((stmt / LocalId)->location(), clone(stmt / Type));
+      }
+      else if (stmt == FFIStore)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CallOps);
+        auto value_loc = (stmt / ValueSrc)->location();
+        auto expected = clone(stmt / Type);
+        snmalloc::UNUSED(refine_local_const(value_loc, expected));
+        if (merge_bwd(value_loc, expected))
+          propagate_call_node(
+            env, value_loc, top, lookup_stmts, &all_def_stmts);
       }
       // ----- Call -----
       else if (stmt == Call)
@@ -4629,6 +4781,8 @@ namespace vc
               const_defs,
               ret_loc,
               primitive_or_ffi_type(ret_prim->type())));
+          propagate_call_constraint(
+            env, ret_loc, func_ret, top, lookup_stmts, &all_def_stmts);
           bool changed = merge_env(env, ret_loc, clone(func_ret), top);
           auto ret_it = env.find(ret_loc);
           if (ret_it != env.end())

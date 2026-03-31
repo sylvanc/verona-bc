@@ -1,3 +1,8 @@
+---
+name: verona-coding
+description: Patterns, pitfalls, and idioms for writing Verona source code (.v files). Use when writing library code, _builtin types, or user programs.
+---
+
 # Verona Coding Skill
 
 Patterns, pitfalls, and idioms for writing Verona source code. Use this skill
@@ -143,7 +148,13 @@ when writing `.v` files — library code, `_builtin` types, or user programs.
 - `Type(args)` is sugar for `Type::create(args)`.
 - `array[u8]::fill(n)` allocates an array of size `n` (zero-filled).
 - `self.len` calls the getter (zero-arg method, no parens needed).
+- `f()` calls a zero-arg callable value. Don't drop the parens on lambda/function
+  values just because zero-arg methods omit them.
+- Prefer paren-less syntax for clear zero-arg and single-arg calls:
+  `handle::signal`, `tty`, `self.init handler`, `pipe::open 0`.
 - `self.len = x` calls the setter.
+- `final(self: T)` receives a read-only self. Don't call mutating helpers like
+  `self.close` from a finalizer; inline read-only-safe cleanup instead.
 
 ## Testing Patterns
 
@@ -153,6 +164,24 @@ when writing `.v` files — library code, `_builtin` types, or user programs.
   if cond1_fails { result = result + 1 }
   if cond2_fails { result = result + 2 }
   // ...powers of 2...
-  result   // exit code 0 means all passed
-  ```
+   result   // exit code 0 means all passed
+   ```
 - Tests must be self-contained — no external dependencies, no `use "_builtin"`.
+
+## FFI / libuv Wrapper Lifetimes
+
+- **Tie keepalive to the real external lifetime**: for libuv-backed wrappers,
+  use timer-style `_activate(active)` plus handler-safe deferred release
+  (`_finish_handler`) so `ffi::pin` / `ffi::unpin` and
+  `ffi::external.add` / `ffi::external.remove` track active handles or pending
+  requests.
+- **Don't rely on incidental references**: a callback closure or unrelated
+  signal watcher may accidentally keep a wrapper alive for a while, but that is
+  not a sound lifetime strategy.
+- **Synchronous setup failures need their own path**: if a wrapper can fail
+  before it becomes active (for example `pipe.open(fd)`), don't route the error
+  through an active-only dispatch helper — use a separate ungated failure
+  callback path.
+- **Capture sendable wrappers in FFI callbacks**: when a callback must refer
+  back to an owned state machine, capture the outer sendable wrapper (or another
+  sendable handle), not a cown-owned mutable `_state` directly.

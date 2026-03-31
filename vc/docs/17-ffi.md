@@ -122,6 +122,18 @@ For FFI parameters declared as `ptr`, Verona also passes pointer-like runtime va
 - objects are passed as a pointer to their fields (like a C `struct`)
 - `callback` values are passed as their C function pointer
 
+To explicitly create a raw pointer value in Verona source, use the `_builtin/ffi`
+wrapper:
+
+```verona
+let null_ptr = ffi::ptr::create(none);
+let stack_ptr = ffi::ptr::create(x);
+```
+
+`ffi::ptr::create(x)` takes the address of `x`'s current runtime storage. The
+resulting pointer is read-only and cannot be stored into Verona heap objects; it
+is intended for immediate FFI-style use.
+
 Strings are Verona objects containing a `data: array[u8]` field, so to pass string bytes to C, pass `my_string.data` (and usually `my_string.size`) rather than the string object itself.
 
 ### Memory Ownership
@@ -156,7 +168,7 @@ use
 
 ### Behavior
 
-- **`init`** runs once, before `main()`, on a scheduler thread.
+- **`init`** runs once, after memoized `once` initialization and before `main()`, on a scheduler thread.
 - The `init` function has an inline body — it is **not** an FFI symbol binding like other `use` block entries.
 - `init` returns `any`. If the return value is a callable (a lambda or an object with `apply`), the runtime calls it as a **finalizer** after `main()` and all pending `when` behaviors complete, just before process exit.
 - If `init` returns `none` or a non-callable value, no finalizer runs.
@@ -249,6 +261,9 @@ The `_builtin/ffi/` directory contains Verona wrapper functions for common FFI o
 |----------|-----------|-------------|
 | `ffi::external.add` | `(self: external): none` | Add an external resource (increments the external event count) |
 | `ffi::external.remove` | `(self: external): none` | Remove an external resource (decrements the external event count) |
+| `ffi::pin(x)` | `(x: A): none` | Pin a refcounted Verona value (object, array, or cown) for external use. Pinning a readonly object or array is a runtime error. |
+| `ffi::unpin(x)` | `(x: A): none` | Release a prior external pin |
+| `ffi::struct[A]` | layout helper object | Compute and cache C ABI layout metadata for a single FFI-compatible field type `A` or a flat tuple `(A1, A2, ...)` |
 
 ### External Resource Management
 
@@ -256,6 +271,35 @@ The runtime tracks "external resources" — things outside the Verona scheduler'
 
 - **`ffi::external.add`** — Tells the scheduler an external resource exists. The scheduler will not shut down while external resources remain.
 - **`ffi::external.remove`** — Tells the scheduler an external resource has been released.
+- **`ffi::pin(x)` / `ffi::unpin(x)`** — Add or remove an external root for a refcounted Verona value. This is intended for low-level FFI wrappers that hand Verona-managed memory to external code. Objects, arrays, and cowns can be pinned. Pinning a frame-local object or array first drags it to a fresh heap region. Pinning a stack allocation is an error.
+
+### Raw Struct Layout Helpers
+
+`ffi::struct[A]()` memoizes C ABI layout metadata for `A`. If `A` is a bare type, it is treated as a single-field struct. If `A` is a tuple, it must be a **flat** tuple of field types. Nested tuples are rejected.
+
+```verona
+let layout = ffi::struct[(u8, i32, usize)]();
+let mem = layout.alloc;
+
+layout.store[u8](mem, 0, u8 7);
+layout.store[i32](mem, 1, i32 5);
+layout.store[usize](mem, 2, 1234);
+
+let x = layout.load[i32](mem, 1);
+layout.free(mem);
+```
+
+The layout object contains:
+
+- `size: usize` — total struct size
+- `offsets: array[usize]` — byte offset of each field
+- `kinds: array[u8]` — runtime kind tags used to validate `load[B]` / `store[B]`
+
+Allowed field types are the FFI-compatible leaf types: primitive scalars, `ptr`, objects, arrays, and cowns. `dyn`, `ref[T]`, unions, and tuples-as-fields are rejected.
+
+`load[B]` / `store[B]` check that `B` matches the recorded field kind, then read or write raw memory at `ptr + offsets(index)`. This is intentionally low-level: the runtime can validate the expected Verona kind, but it cannot prove that an arbitrary foreign memory block really contains a valid Verona-managed object graph.
+
+If you store Verona-managed pointer-like values (objects, arrays, cowns) into foreign memory, you are responsible for keeping them alive for as long as the foreign code may use them. Use `ffi::pin` / `ffi::unpin` when appropriate.
 
 The `external` class is a singleton (using `once create()`) that serializes add/remove operations through an internal cown. The dot syntax `ffi::external.add` auto-calls `create()` to get the singleton and then dispatches `.add` on it. See [Functions §7.10](07-functions.md) for more on `once` functions.
 
@@ -267,3 +311,4 @@ The wrappers internally use `:::` builtins:
 - `callback::create[T]` uses `:::make_callback`
 - `external` uses `once create()` for singleton initialization and serializes `:::add_external`/`:::remove_external` through an internal cown
 - `add_external` and `remove_external` call their corresponding `:::` builtins
+- `struct[A]` uses `:::ffistruct[A]`, `:::ffiload[B]`, and `:::ffistore[B]`

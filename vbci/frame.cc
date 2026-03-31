@@ -89,10 +89,11 @@ namespace vbci
 
   void Frame::drop_args(size_t& args)
   {
-    for (size_t i = 0; i < args; i++)
-      locals[base + func->registers + i].clear();
-
+    auto num_args = args;
     args = 0;
+
+    for (size_t i = 0; i < num_args; i++)
+      locals[base + func->registers + i].clear();
   }
 
   Region& Frame::get_frame_local_region() const

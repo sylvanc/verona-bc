@@ -6,6 +6,7 @@ endmacro()
 
 # Regular expression to match test files
 set(TESTSUITE_REGEX ".*\\.v$")
+set(TESTSUITE_REQUIRE_BASENAME_MATCH_PARENT_DIR TRUE)
 
 # Use the installed binary which has _builtin next to it
 set(TESTSUITE_EXE "${CMAKE_INSTALL_PREFIX}/vc/vc")

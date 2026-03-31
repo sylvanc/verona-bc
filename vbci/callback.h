@@ -19,13 +19,16 @@ namespace vbci
     ffi_type* return_ffi_type;
     ValueType return_value_type;
     Function* func;
-    Register lambda;
+    // Borrowed self value. The enclosing Verona _builtin::ffi::callback object
+    // owns the callable and is responsible for freeing this closure before the
+    // callable goes away.
+    Value lambda;
 
-    // Free a callback closure and release the lambda.
+    // Free a callback closure. The borrowed lambda is owned by the enclosing
+    // Verona callback object.
     void free()
     {
       ffi_closure_free(closure);
-      lambda.clear();
       delete this;
     }
   };

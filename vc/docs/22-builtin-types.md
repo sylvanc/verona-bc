@@ -324,11 +324,18 @@ Used as a parameter type when no specific methods are needed (e.g., `is()`, `bit
 
 ## 22.11 `ptr`
 
-Opaque raw pointer type. Empty class with no methods:
+Opaque raw pointer type. The surface wrapper lives in `_builtin/ffi/ptr.v`:
 
 ```verona
-ptr {}
+ptr
+{
+  create(from: any = none): ptr
+}
 ```
+
+`ffi::ptr::create(none)` creates a null pointer. `ffi::ptr::create(x)` takes the
+address of `x`'s current runtime storage and returns it as a read-only `ptr`,
+which may be passed to FFI but cannot be stored into Verona heap objects.
 
 Used to pass C function pointers and opaque handles through FFI. See [FFI §17.7](17-ffi.md) for callback usage.
 

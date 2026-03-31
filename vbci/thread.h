@@ -16,6 +16,8 @@
 
 namespace vbci
 {
+  struct CallbackClosure;
+
   struct Thread
   {
     friend struct Operands;
@@ -44,19 +46,22 @@ namespace vbci
     static Region* frame_region_for_stack(Location stack_loc);
 
     template<typename... Ts>
-    static void run_sync(Function* func, Ts&&... argv)
+    static Register run_sync(Function* func, Ts&&... argv)
     {
-      get().thread_run_sync(func, std::forward<Ts>(argv)...);
+      return get().thread_run_sync(func, std::forward<Ts>(argv)...);
     }
 
-    // Called by the callback trampoline to invoke a Verona function with
-    // pre-set arguments. Returns the result register. The caller is
-    // responsible for setting up args via set_callback_arg / set_callback_args
-    // before calling this.
-    static Register run_callback(Function* func, size_t num_args);
+    template<typename... Ts>
+    static Register run_cleanup(Function* func, Ts&&... argv)
+    {
+      return get().thread_run_cleanup(func, std::forward<Ts>(argv)...);
+    }
 
-    // Set a callback argument by borrowing a value.
-    static void set_callback_arg(size_t idx, ValueBorrow val);
+    // Called only by the libffi callback trampoline. Marshals C arguments into
+    // thread registers, invokes the Verona callback, and writes the C return
+    // value. Runtime errors are fatal here because unwinding across libffi is
+    // unsafe.
+    static void handle_callback(CallbackClosure* cc, void* ret, void** args);
 
     VBCI_KEEP static std::string debug()
     {
@@ -80,33 +85,31 @@ namespace vbci
     static void run_behavior(verona::rt::Work* work);
 
     template<typename... Ts>
-    void thread_run_sync(Function* func, Ts&&... argv)
+    Register thread_run_sync(Function* func, Ts&&... argv)
     {
       assert(args == 0);
       ((arg(args++) = std::forward<Ts>(argv)), ...);
+      return thread_run(func);
+    }
 
-      auto depth = frames.size();
-
+    template<typename... Ts>
+    Register thread_run_cleanup(Function* func, Ts&&... argv)
+    {
       try
       {
-        thread_run(func);
+        return thread_run_sync(func, std::forward<Ts>(argv)...);
       }
       catch (Value& error_value)
       {
-        // Only tear down frames we created, not our caller's frames.
-        while (frames.size() > depth)
-        {
-          frame->drop_args(args);
-          teardown();
-          frames.pop_back();
-          frame = frames.empty() ? nullptr : &frames.back();
-        }
-
-        LOG(Error) << error_value.to_string();
+        logging::Error log;
+        log << error_value.to_string() << std::endl;
+        print_error_stack(log, error_value);
+        return {};
       }
     }
 
     void thread_run_behavior(verona::rt::Work* work);
+    void thread_handle_callback(CallbackClosure* cc, void* ret, void** args);
     Register thread_run(Function* func);
     void step();
     void pushframe(Function* func, size_t dst);
@@ -125,6 +128,7 @@ namespace vbci
     void queue_behavior(Register& result, uint32_t type_id, Function* func);
 
     void print_stack(logging::Log& log, bool top_frame_only = false);
+    void print_error_stack(logging::Log& log, const Value& error_value);
 #ifndef NDEBUG
     void check_stack_rc_invariant(std::source_location);
 #endif

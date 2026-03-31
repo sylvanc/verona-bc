@@ -1,7 +1,7 @@
 ptr
 {
-  create(): ptr
+  create(from: any = none): ptr
   {
-    :::ptr(none)
+    :::read(:::ptr(from))
   }
 }

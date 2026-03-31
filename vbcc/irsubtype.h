@@ -7,16 +7,31 @@ namespace vbcc
 {
   using namespace trieste;
 
+  inline Node IRResolveAlias(const SequentCtx& ctx, const Node& t)
+  {
+    if (!ctx.scope || (t != TypeId))
+      return t;
+
+    auto defs = ctx.scope->look(t->location());
+
+    for (auto& def : defs)
+    {
+      if (def == Type)
+        return def / Type;
+    }
+
+    return t;
+  }
+
   inline const Axiom IRAxiomEq(const SequentCalculus& c)
   {
     return [&](const SequentCtx& ctx, Node& l, Node& r) {
       if (l == TypeId)
       {
-        for (auto& child : *ctx.scope)
-        {
-          if ((child == Type) && (child / TypeId)->equals(l))
-            return c(ctx, child / Type, r);
-        }
+        auto resolved = IRResolveAlias(ctx, l);
+
+        if (resolved.get() != l.get())
+          return c(ctx, resolved, r);
       }
 
       return l->equals(r);
@@ -28,11 +43,10 @@ namespace vbcc
     return [&](const SequentCtx& ctx, Node& l, Node& r) {
       if (l == TypeId)
       {
-        for (auto& child : *ctx.scope)
-        {
-          if ((child == Type) && (child / TypeId)->equals(l))
-            return c(ctx, child / Type, r);
-        }
+        auto resolved = IRResolveAlias(ctx, l);
+
+        if (resolved.get() != l.get())
+          return c(ctx, resolved, r);
       }
 
       return (l->type() == r->type()) && c.invariant(ctx, l / Type, r / Type);
@@ -73,11 +87,10 @@ namespace vbcc
         [](const SequentCtx& ctx, Node& l, Node& r) {
           if (l == TypeId)
           {
-            for (auto& child : *ctx.scope)
-            {
-              if ((child == Type) && (child / TypeId)->equals(l))
-                return IRSubtype(ctx, child / Type, r);
-            }
+            auto resolved = IRResolveAlias(ctx, l);
+
+            if (resolved.get() != l.get())
+              return IRSubtype(ctx, resolved, r);
           }
 
           return (l == TupleType) && (r == TupleType) &&
@@ -91,16 +104,13 @@ namespace vbcc
 
       TypeId >>
         [](const SequentCtx& ctx, Node& l, Node& r) {
-          if (l->equals(r))
-            return true;
+          auto l_resolved = IRResolveAlias(ctx, l);
+          auto r_resolved = IRResolveAlias(ctx, r);
 
-          for (auto& child : *ctx.scope)
-          {
-            if ((child == Type) && (child / TypeId)->equals(r))
-              return IRSubtype(ctx, l, child / Type);
-          }
+          if ((l_resolved.get() != l.get()) || (r_resolved.get() != r.get()))
+            return IRSubtype(ctx, l_resolved, r_resolved);
 
-          return false;
+          return l->equals(r);
         },
     },
     {}};

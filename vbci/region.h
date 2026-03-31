@@ -48,8 +48,9 @@ namespace vbci
     virtual Array* array(uint32_t type_id, size_t size) = 0;
     virtual void rfree(Header* h) = 0;
     virtual void insert(Header* h) = 0;
-    virtual void remove(Header* h) = 0;
+    virtual bool remove(Header* h) = 0;
     virtual bool is_finalizing() = 0;
+    virtual bool begin_finalizing() = 0;
     virtual void finalize_contents() = 0;
     virtual void release_dead_objects() = 0;
     void for_each_header(auto&& fn) const;

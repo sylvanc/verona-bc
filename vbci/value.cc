@@ -69,6 +69,18 @@ namespace vbci
     return Value(ValueType::None);
   }
 
+  Function* Value::error_function() const
+  {
+    assert(is_error());
+    return reinterpret_cast<Function*>(err.func);
+  }
+
+  PC Value::error_pc() const
+  {
+    assert(is_error());
+    return idx;
+  }
+
   ValueImmortal Value::null()
   {
     return Value(static_cast<void*>(nullptr));
@@ -417,6 +429,14 @@ namespace vbci
     return i32;
   }
 
+  uint8_t Value::get_u8() const
+  {
+    if (tag != ValueType::U8)
+      Value::error(Error::BadConversion);
+
+    return u8;
+  }
+
   uint64_t Value::get_u64() const
   {
     if (tag != ValueType::U64)
@@ -645,12 +665,11 @@ namespace vbci
 
   ValueBorrow Value::op_read() const
   {
-    if (tag == ValueType::Cown)
+    if (tag == ValueType::Cown || tag == ValueType::Ptr)
     {
       Value r = *this;
       // Note that the context will perform incref (do_unop) in the interpreter,
-      // so op_read itself does not modify the reference count. This implements
-      // a borrow of the underlying cown without taking ownership here.
+      // so op_read itself does not modify the reference count.
       r.readonly = true;
       return r;
     }
@@ -765,6 +784,63 @@ namespace vbci
 
       default:
         break;
+    }
+  }
+
+  void Value::pin() const
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::Array:
+      {
+        if (readonly)
+          Value::error(Error::BadOperand);
+
+        auto h = get_header();
+        auto loc = h->location();
+
+        if (loc.is_stack())
+          Value::error(Error::BadStackEscape);
+
+        if (loc.is_region() && loc.to_region()->is_frame_local())
+        {
+          auto nr = Region::create(RegionType::RegionRC);
+          LOG(Trace) << "Pin: dragging frame-local allocation to new region @"
+                     << nr;
+
+          if (!drag_allocation<false>(nr, h))
+          {
+            nr->free_region();
+            Value::error(Error::BadStackEscape);
+          }
+        }
+
+        reg_inc();
+        return;
+      }
+
+      case ValueType::Cown:
+        reg_inc();
+        return;
+
+      default:
+        return;
+    }
+  }
+
+  void Value::unpin() const
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::Array:
+      case ValueType::Cown:
+        reg_dec();
+        return;
+
+      default:
+        return;
     }
   }
 

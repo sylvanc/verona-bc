@@ -109,6 +109,11 @@ namespace vbcc
       MakeCallback,
       CodePtrCallback,
       FreeCallback,
+      Pin,
+      Unpin,
+      FFIStruct,
+      FFILoad,
+      FFIStore,
       AddExternal,
       RemoveExternal,
       Freeze,
@@ -132,6 +137,7 @@ namespace vbcc
   Node errmsg(const std::string& msg);
   Node errloc(Node node);
   ValueType val(Node ptype);
+  Node ffi_struct_result_type();
   std::string unescape(const std::string_view& in);
 
   template<typename T>

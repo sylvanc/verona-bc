@@ -2,6 +2,20 @@
 
 namespace vc
 {
+  namespace
+  {
+    Node builtin_typename(std::string_view name, Node arg = {})
+    {
+      Node elem = NameElement << (Ident ^ std::string(name)) << TypeArgs;
+
+      if (arg)
+        elem / TypeArgs << clone(arg);
+
+      return TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                      << elem;
+    }
+  }
+
   Node make_type(NodeRange r)
   {
     return Type << (r || TypeVar);
@@ -157,6 +171,15 @@ namespace vc
     return Type
       << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
                    << (NameElement << (Ident ^ "nomatch") << TypeArgs));
+  }
+
+  Node ffi_struct_result_type()
+  {
+    Node usize = Type << builtin_typename("usize");
+    Node u8 = Type << builtin_typename("u8");
+    return TupleType << clone(usize->front())
+                     << builtin_typename("array", usize)
+                     << builtin_typename("array", u8);
   }
 
   Node make_nomatch(Node localid)

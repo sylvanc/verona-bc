@@ -23,6 +23,8 @@ namespace vbcc
             // Duplicate name. Check type compatibility.
             auto existing = state->get_symbol(_(Symbol) / SymbolId);
             assert(existing);
+            auto top = _(Symbol)->scope();
+            assert(top);
 
             auto ep = existing / FFIParams;
             auto np = _(Symbol) / FFIParams;
@@ -33,13 +35,13 @@ namespace vbcc
                                (_(Symbol) / Lhs)->location().view()) &&
               ((existing / Rhs)->location().view() ==
                (_(Symbol) / Rhs)->location().view()) &&
-              IRSubtype.invariant(state->top, er, nr) &&
+              IRSubtype.invariant(top, er, nr) &&
               std::equal(ep->begin(),
                          ep->end(),
                          np->begin(),
                          np->end(),
                          [&](auto& a, auto& b) {
-                           return IRSubtype.invariant(state->top, a, b);
+                           return IRSubtype.invariant(top, a, b);
                          });
 
             if (!compatible)
@@ -280,13 +282,16 @@ namespace vbcc
         }
       }
 
-      // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv), and
-      // `ref dyn` (unknown RegisterRef types). This has to happen after all
+      // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv),
+      // `ref dyn` (unknown RegisterRef types), [usize] (FFI struct offsets),
+      // and the fixed FFIStruct result tuple. This has to happen after all
       // classes have been added, but before any complex primitives.
       state->typ(Cown << I32);
       state->typ(Array << U8);
       state->typ(Array << (Array << U8));
       state->typ(Ref << Dyn);
+      state->typ(Array << USize);
+      state->typ(ffi_struct_result_type());
       return 0;
     });
 

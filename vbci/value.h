@@ -138,6 +138,7 @@ namespace vbci
     bool is_error() const;
     bool get_bool() const;
     int32_t get_i32() const;
+    uint8_t get_u8() const;
     uint64_t get_u64() const;
     void* get_ptr() const;
     Header* get_header() const;
@@ -145,6 +146,8 @@ namespace vbci
     Cown* get_cown() const;
     Array* get_array() const;
     Function* function() const;
+    Function* error_function() const;
+    PC error_pc() const;
     size_t get_size() const;
     Register& get_register() const;
 
@@ -565,6 +568,10 @@ namespace vbci
     // Decrement RC for a reference held in a field context.
     // Adjusts object RC only — no stack_rc change. Collects if RC hits 0.
     void field_dec() const;
+
+    // Pin or unpin a refcounted value for external use.
+    void pin() const;
+    void unpin() const;
 
   public:
     struct nounop

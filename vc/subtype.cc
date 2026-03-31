@@ -111,6 +111,145 @@ namespace vc
     return {};
   }
 
+  bool definitely_not_subtype(const SequentCtx& ctx, Node l, Node r)
+  {
+    if (!l || !r)
+      return false;
+
+    if (l == Type)
+      l = l->front();
+
+    if (r == Type)
+      r = r->front();
+
+    if (!l || !r)
+      return false;
+
+    if (
+      l->in(
+        {Dyn, TypeSelf, TypeVar, Union, Isect, WhereOr, WhereAnd, WhereNot}) ||
+      r->in(
+        {Dyn, TypeSelf, TypeVar, Union, Isect, WhereOr, WhereAnd, WhereNot}))
+      return false;
+
+    if ((l == TupleType) || (r == TupleType))
+    {
+      if ((l != TupleType) || (r != TupleType))
+        return true;
+
+      if (l->size() != r->size())
+        return true;
+
+      auto li = l->begin();
+      auto ri = r->begin();
+
+      while (li != l->end() && ri != r->end())
+      {
+        if (
+          definitely_not_subtype(ctx, *li, *ri) ||
+          definitely_not_subtype(ctx, *ri, *li))
+          return true;
+
+        ++li;
+        ++ri;
+      }
+
+      return false;
+    }
+
+    auto primitive = [](const Node& n) {
+      return n->in(
+        {None,
+         Bool,
+         I8,
+         I16,
+         I32,
+         I64,
+         U8,
+         U16,
+         U32,
+         U64,
+         ISize,
+         USize,
+         ILong,
+         ULong,
+         F32,
+         F64,
+         DefaultInt,
+         DefaultFloat});
+    };
+
+    if (primitive(l) || primitive(r))
+      return l->type() != r->type();
+
+    if ((l != TypeName) || (r != TypeName))
+      return false;
+
+    auto l_def = find_def(ctx.scope, l);
+    auto r_def = find_def(ctx.scope, r);
+
+    if (!l_def || !r_def)
+      return false;
+
+    if (l_def == TypeAlias)
+    {
+      auto new_ctx = build_typearg_ctx(ctx, l);
+      return definitely_not_subtype(new_ctx, l_def / Type, Type << clone(r));
+    }
+
+    if (r_def == TypeAlias)
+    {
+      auto new_ctx = build_typearg_ctx(ctx, r);
+      return definitely_not_subtype(new_ctx, Type << clone(l), r_def / Type);
+    }
+
+    if (l_def->type().in({TypeParam}) || r_def->type().in({TypeParam}))
+      return false;
+
+    bool l_shape = (l_def == ClassDef) && ((l_def / Shape) == Shape);
+    bool r_shape = (r_def == ClassDef) && ((r_def / Shape) == Shape);
+
+    if (l_shape || r_shape)
+      return false;
+
+    if (l_def != r_def)
+      return true;
+
+    if (l->size() != r->size())
+      return true;
+
+    auto le = l->begin();
+    auto re = r->begin();
+
+    while (le != l->end() && re != r->end())
+    {
+      auto l_ta = (*le) / TypeArgs;
+      auto r_ta = (*re) / TypeArgs;
+
+      if (l_ta->size() != r_ta->size())
+        return true;
+
+      auto lti = l_ta->begin();
+      auto rti = r_ta->begin();
+
+      while (lti != l_ta->end() && rti != r_ta->end())
+      {
+        if (
+          definitely_not_subtype(ctx, *lti, *rti) ||
+          definitely_not_subtype(ctx, *rti, *lti))
+          return true;
+
+        ++lti;
+        ++rti;
+      }
+
+      ++le;
+      ++re;
+    }
+
+    return false;
+  }
+
   // Build bidirectional SubType implications pairing the TypeParams of two
   // functions by position. Both functions must have the same TypeParam count.
   // The FQ TypeParam names are built relative to their respective enclosing
@@ -244,7 +383,9 @@ namespace vc
 
       while (sp_it != shape_params->end() && mp_it != match_params->end())
       {
-        if (!Subtype(func_ctx, (*sp_it) / Type, (*mp_it) / Type))
+        if (
+          definitely_not_subtype(func_ctx, (*sp_it) / Type, (*mp_it) / Type) ||
+          !Subtype(func_ctx, (*sp_it) / Type, (*mp_it) / Type))
           return false;
 
         ++sp_it;
@@ -252,7 +393,9 @@ namespace vc
       }
 
       // Check return type (covariant): concrete ret <: shape ret.
-      if (!Subtype(func_ctx, match / Type, shape_func / Type))
+      if (
+        definitely_not_subtype(func_ctx, match / Type, shape_func / Type) ||
+        !Subtype(func_ctx, match / Type, shape_func / Type))
         return false;
     }
 

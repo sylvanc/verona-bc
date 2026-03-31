@@ -5,6 +5,7 @@
 #include "freeze.h"
 #include "thread.h"
 
+#include <cstdint>
 #include <dlfcn.h>
 #include <format>
 #include <verona.h>
@@ -91,7 +92,34 @@ namespace vbci
 
   Register& Program::memo_slot(size_t index)
   {
+    init_memo_slot(index);
     return memo_slots.at(index);
+  }
+
+  void Program::init_memo_slot(size_t index)
+  {
+    auto& slot = memo_slots.at(index);
+    if (!slot->is_invalid())
+      return;
+
+    auto& initializing = memo_slot_initializing.at(index);
+    assert(!initializing);
+
+    struct Reset
+    {
+      uint8_t& flag;
+
+      ~Reset()
+      {
+        flag = false;
+      }
+    } reset{initializing};
+
+    initializing = true;
+    slot = Thread::run_sync(&functions.at(memo_func_ids.at(index)));
+
+    if (slot->is_header())
+      freeze(slot->get_header());
   }
 
   uint32_t Program::get_typeid_arg()
@@ -102,6 +130,16 @@ namespace vbci
   uint32_t Program::get_typeid_argv()
   {
     return typeid_argv;
+  }
+
+  uint32_t Program::get_typeid_array_usize()
+  {
+    return typeid_array_usize;
+  }
+
+  uint32_t Program::get_typeid_ffi_struct_result()
+  {
+    return typeid_ffi_struct_result;
   }
 
   Array* Program::get_argv()
@@ -130,14 +168,25 @@ namespace vbci
     setup_strings();
     setup_argv(args);
 
-    // Run library init functions. If an init returns a value with an apply
-    // method (@callback), store it as a fini callback to be called at shutdown.
+    auto& sched = verona::rt::Scheduler::get();
+    sched.init(num_threads);
+
+    // Pre-size memo slots before library init so use-block init callbacks can
+    // safely call once-function stubs. A MemoLoad lazily initializes a missing
+    // slot on first use; after init returns, any remaining slots are filled in
+    // the compiler-emitted dependency order below.
+    memo_slots.resize(memo_func_ids.size());
+    memo_slot_initializing.assign(memo_func_ids.size(), false);
+
+    // Run library init functions before the eager memo pass. If an init returns
+    // a value with an apply method (@callback), store it as a fini callback to
+    // be called at shutdown.
     for (auto& init : init_funcs)
     {
       if (!init)
         continue;
 
-      auto result = Thread::run_callback(&functions.at(*init), 0);
+      auto result = Thread::run_sync(&functions.at(*init));
 
       if (result->is_invalid())
         continue;
@@ -148,25 +197,12 @@ namespace vbci
         fini_callbacks.emplace_back(std::move(result), apply);
     }
 
-    auto& sched = verona::rt::Scheduler::get();
-    sched.init(num_threads);
-
-    // Run memo (once) function initializers in dependency order.
+    // Run any remaining memo (once) function initializers in dependency order.
     // This must happen after sched.init() because once functions may create
     // cowns (via `when`), which requires the scheduler's core pool to be
     // initialized for behavior queuing.
-    memo_slots.resize(memo_func_ids.size());
     for (size_t i = 0; i < memo_func_ids.size(); i++)
-    {
-      memo_slots[i] = Thread::run_callback(&functions.at(memo_func_ids[i]), 0);
-
-      // Freeze the memo slot value: once-function results are ambiently
-      // accessible and must be immutable. Freezing calculates SCCs and
-      // converts all reachable objects to immutable with union-find RC.
-      auto& slot = memo_slots[i];
-      if (slot->is_header())
-        freeze(slot->get_header());
-    }
+      init_memo_slot(i);
 
     ValueTransfer ret =
       Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
@@ -189,8 +225,7 @@ namespace vbci
     // Run fini callbacks in reverse order (last init = first fini).
     for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
     {
-      Thread::set_callback_arg(0, it->first.borrow());
-      Thread::run_callback(it->second, 1);
+      (void)Thread::run_sync(it->second, it->first.borrow());
     }
 
     fini_callbacks.clear();
@@ -199,6 +234,7 @@ namespace vbci
     for (auto& slot : memo_slots)
       slot = ValueTransfer(Value());
     memo_slots.clear();
+    memo_slot_initializing.clear();
 
     cleanup_strings();
 
@@ -487,7 +523,7 @@ namespace vbci
   std::string Program::debug_info(Function* func, PC pc)
   {
     if (!di_decompress())
-      return std::format(" --> function {}:{}", static_cast<void*>(func), pc);
+      return std::format(" --> {}:{}", fallback_function(func), pc);
 
     constexpr auto no_value = size_t(-1);
     auto di_file = no_value;
@@ -528,8 +564,7 @@ namespace vbci
     }
 
     if (di_file == no_value)
-      return std::format(
-        " --> function {}:{}", static_cast<void*>(func), di_offset);
+      return std::format(" --> {}:{}", fallback_function(func), di_offset);
 
     auto& filename = di_strings.at(di_file);
     auto source = get_source_file(di_file);
@@ -559,10 +594,33 @@ namespace vbci
   std::string Program::di_function(Function* func)
   {
     if (!di_decompress())
-      return std::format("function {}", static_cast<void*>(func));
+      return fallback_function(func);
 
     auto pc = di + func->debug_info;
     return di_strings.at(di_uleb(pc));
+  }
+
+  std::string Program::fallback_function(Function* func)
+  {
+    if (func == nullptr)
+      return "function <null>";
+
+    if (functions.empty())
+      return "function <unloaded>";
+
+    auto first = reinterpret_cast<uintptr_t>(functions.data());
+    auto ptr = reinterpret_cast<uintptr_t>(func);
+    auto size = functions.size() * sizeof(Function);
+
+    if ((ptr >= first) && (ptr < (first + size)))
+    {
+      auto offset = ptr - first;
+
+      if ((offset % sizeof(Function)) == 0)
+        return std::format("function#{}", offset / sizeof(Function));
+    }
+
+    return "function <external>";
   }
 
   std::string Program::di_class(Class& cls)
@@ -855,6 +913,22 @@ namespace vbci
     typeid_ref_dyn = min_complex_type_id + 3;
     assert(complex_type(typeid_ref_dyn).tag == TypeTag::Ref);
     assert(complex_type(typeid_ref_dyn).children.at(0) == DynId);
+
+    typeid_array_usize = min_complex_type_id + 4;
+    assert(complex_type(typeid_array_usize).tag == TypeTag::Array);
+    assert(
+      complex_type(typeid_array_usize).children.at(0) == +ValueType::USize);
+
+    typeid_ffi_struct_result = min_complex_type_id + 5;
+    assert(complex_type(typeid_ffi_struct_result).tag == TypeTag::Tuple);
+    assert(complex_type(typeid_ffi_struct_result).children.size() == 3);
+    assert(
+      complex_type(typeid_ffi_struct_result).children.at(0) ==
+      +ValueType::USize);
+    assert(
+      complex_type(typeid_ffi_struct_result).children.at(1) ==
+      typeid_array_usize);
+    assert(complex_type(typeid_ffi_struct_result).children.at(2) == typeid_arg);
 
     // Prepare symbols now that all type information is available.
     for (auto& symbol : symbols)

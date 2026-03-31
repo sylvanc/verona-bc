@@ -1,0 +1,565 @@
+vc
+typecheck
+(top
+  {
+    @main = func
+    _builtin::cown::create::1::0 = func
+    _builtin::cown::lambda$4::0 = class
+    _builtin::cown::lambda$4::apply::1::0 = func
+    _builtin::cown::lambda$4::create::1::0 = func
+    _builtin::ffi::callback::0 = class
+    _builtin::ffi::callback::_cb::1::0 = func
+    _builtin::ffi::callback::_cb::1::ref::0 = func
+    _builtin::ffi::callback::create::1::0 = func
+    _builtin::ffi::callback::final::1::0 = func
+    _builtin::none::create::0::0 = func
+    liveness_drop_fieldref::box_state::0 = class
+    liveness_drop_fieldref::box_state::_cb::1::ref::0 = func
+    liveness_drop_fieldref::box_state::create::0::0 = func
+    liveness_drop_fieldref::box_state::fn$8::0 = type
+    liveness_drop_fieldref::box_state::lambda$0::0 = class
+    liveness_drop_fieldref::box_state::lambda$0::apply::2::0 = func
+    liveness_drop_fieldref::box_state::lambda$0::create::0::0 = func
+    liveness_drop_fieldref::box_state::lambda$1::0 = class
+    liveness_drop_fieldref::box_state::lambda$1::apply::2::0 = func
+    liveness_drop_fieldref::box_state::lambda$1::create::0::0 = func
+    liveness_drop_fieldref::holder::0 = class
+    liveness_drop_fieldref::holder::create::1::0 = func
+    liveness_drop_fieldref::main::0::0 = func}
+  (func
+    (functionid 5:@main)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 5:$1533)
+            (functionid 34:liveness_drop_fieldref::main::0::0)
+            (args)))
+        (ret
+          (localid 5:$1533)))))
+  (func
+    (functionid 34:liveness_drop_fieldref::main::0::0)
+    (params)
+    (i32)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$23)
+            (functionid 47:liveness_drop_fieldref::box_state::create::0::0)
+            (args))
+          (copy
+            (localid 10:local$1059)
+            (localid 1:s))
+          (copy
+            (localid 1:s)
+            (localid 8:local$23))
+          (call
+            (localid 8:local$24)
+            (functionid 44:liveness_drop_fieldref::holder::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))))
+          (copy
+            (localid 10:local$1060)
+            (localid 1:h))
+          (copy
+            (localid 1:h)
+            (localid 8:local$24))
+          (const
+            (localid 8:local$25)
+            (i32)
+            (int 1:0)))
+        (ret
+          (localid 8:local$25)))))
+  (func
+    (functionid 47:liveness_drop_fieldref::box_state::create::0::0)
+    (params)
+    (classid 36:liveness_drop_fieldref::box_state::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 10:local$1056)
+            (functionid 57:liveness_drop_fieldref::box_state::lambda$0::create::0::0)
+            (args))
+          (call
+            (localid 9:local$182)
+            (functionid 37:_builtin::ffi::callback::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 10:local$1056))))
+          (new
+            (localid 8:local$19)
+            (classid 36:liveness_drop_fieldref::box_state::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$182))))
+          (copy
+            (localid 10:local$1057)
+            (localid 4:self))
+          (copy
+            (localid 4:self)
+            (localid 8:local$19))
+          (call
+            (localid 9:local$183)
+            (functionid 57:liveness_drop_fieldref::box_state::lambda$1::create::0::0)
+            (args))
+          (call
+            (localid 8:local$20)
+            (functionid 37:_builtin::ffi::callback::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$183))))
+          (lookup
+            (localid 9:local$184)
+            (localid 4:self)
+            (methodid 14:_cb::1::ref::0))
+          (calldyn
+            (localid 9:local$185)
+            (localid 9:local$184)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (store
+            (localid 10:local$1240)
+            (localid 9:local$185)
+            (arg
+              (argcopy)
+              (localid 8:local$20))))
+        (ret
+          (localid 4:self)))))
+  (func
+    (functionid 44:liveness_drop_fieldref::holder::create::1::0)
+    (params
+      (param
+        (localid 1:s)
+        (classid 36:liveness_drop_fieldref::box_state::0)))
+    (classid 33:liveness_drop_fieldref::holder::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 9:local$187)
+            (functionid 28:_builtin::cown::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 1:s))))
+          (new
+            (localid 8:local$22)
+            (classid 33:liveness_drop_fieldref::holder::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 9:local$187)))))
+        (ret
+          (localid 8:local$22)))))
+  (class
+    (classid 33:liveness_drop_fieldref::holder::0)
+    (fields
+      (field
+        (fieldid 1:c)
+        (cown
+          (classid 36:liveness_drop_fieldref::box_state::0))))
+    (methods))
+  (class
+    (classid 36:liveness_drop_fieldref::box_state::0)
+    (fields
+      (field
+        (fieldid 3:_cb)
+        (classid 26:_builtin::ffi::callback::0)))
+    (methods
+      (method
+        (methodid 14:_cb::1::ref::0)
+        (functionid 49:liveness_drop_fieldref::box_state::_cb::1::ref::0))))
+  (func
+    (functionid 28:_builtin::cown::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (classid 36:liveness_drop_fieldref::box_state::0)))
+    (cown
+      (classid 36:liveness_drop_fieldref::box_state::0))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$69)
+            (functionid 38:_builtin::cown::lambda$4::create::1::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:some))))
+          (lookup
+            (localid 10:local$1107)
+            (localid 8:local$69)
+            (methodid 11:apply::1::0))
+          (whendyn
+            (localid 10:local$1108)
+            (localid 10:local$1107)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:local$69)))
+            (cown
+              (classid 36:liveness_drop_fieldref::box_state::0))))
+        (ret
+          (localid 10:local$1108)))))
+  (func
+    (functionid 38:_builtin::cown::lambda$4::create::1::0)
+    (params
+      (param
+        (localid 4:some)
+        (classid 36:liveness_drop_fieldref::box_state::0)))
+    (classid 27:_builtin::cown::lambda$4::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$68)
+            (classid 27:_builtin::cown::lambda$4::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:some)))))
+        (ret
+          (localid 8:local$68)))))
+  (class
+    (classid 27:_builtin::cown::lambda$4::0)
+    (fields
+      (field
+        (fieldid 4:some)
+        (classid 36:liveness_drop_fieldref::box_state::0)))
+    (methods
+      (method
+        (methodid 11:apply::1::0)
+        (functionid 37:_builtin::cown::lambda$4::apply::1::0))))
+  (func
+    (functionid 37:_builtin::cown::lambda$4::apply::1::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 27:_builtin::cown::lambda$4::0)))
+    (classid 36:liveness_drop_fieldref::box_state::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$251)
+            (arg
+              (argcopy)
+              (localid 5:$self))
+            (fieldid 4:some))
+          (load
+            (localid 10:local$1264)
+            (localid 9:local$251)))
+        (ret
+          (localid 10:local$1264)))))
+  (class
+    (classid 26:_builtin::ffi::callback::0)
+    (fields
+      (field
+        (fieldid 9:_callable)
+        (typeid 42:liveness_drop_fieldref::box_state::fn$8::0))
+      (field
+        (fieldid 3:_cb)
+        (ptr)))
+    (methods
+      (method
+        (methodid 6:@final)
+        (functionid 36:_builtin::ffi::callback::final::1::0))
+      (method
+        (methodid 9:_cb::1::0)
+        (functionid 34:_builtin::ffi::callback::_cb::1::0))))
+  (type
+    (typeid 42:liveness_drop_fieldref::box_state::fn$8::0)
+    (union
+      (classid 46:liveness_drop_fieldref::box_state::lambda$1::0)
+      (classid 46:liveness_drop_fieldref::box_state::lambda$0::0)))
+  (func
+    (functionid 36:_builtin::ffi::callback::final::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 26:_builtin::ffi::callback::0)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (lookup
+            (localid 9:local$192)
+            (localid 4:self)
+            (methodid 9:_cb::1::0))
+          (calldyn
+            (localid 9:local$193)
+            (localid 9:local$192)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (freecallback
+            (localid 10:local$1242)
+            (localid 9:local$193))
+          (const
+            (localid 9:none$1534)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1534)))))
+  (func
+    (functionid 34:_builtin::ffi::callback::_cb::1::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 26:_builtin::ffi::callback::0)))
+    (ptr)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$28)
+            (functionid 39:_builtin::ffi::callback::_cb::1::ref::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 4:self))))
+          (load
+            (localid 10:local$1062)
+            (localid 8:local$28)))
+        (ret
+          (localid 10:local$1062)))))
+  (func
+    (functionid 39:_builtin::ffi::callback::_cb::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 26:_builtin::ffi::callback::0)))
+    (ref
+      (ptr))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$189)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:_cb)))
+        (ret
+          (localid 9:local$189)))))
+  (func
+    (functionid 57:liveness_drop_fieldref::box_state::lambda$0::create::0::0)
+    (params)
+    (classid 46:liveness_drop_fieldref::box_state::lambda$0::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$15)
+            (classid 46:liveness_drop_fieldref::box_state::lambda$0::0)
+            (args)))
+        (ret
+          (localid 8:local$15)))))
+  (func
+    (functionid 37:_builtin::ffi::callback::create::1::0)
+    (params
+      (param
+        (localid 8:callable)
+        (union
+          (classid 46:liveness_drop_fieldref::box_state::lambda$0::0)
+          (classid 46:liveness_drop_fieldref::box_state::lambda$1::0))))
+    (classid 26:_builtin::ffi::callback::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (makecallback
+            (localid 10:local$1063)
+            (localid 8:callable))
+          (new
+            (localid 8:local$29)
+            (classid 26:_builtin::ffi::callback::0)
+            (args
+              (arg
+                (argcopy)
+                (localid 8:callable))
+              (arg
+                (argcopy)
+                (localid 10:local$1063)))))
+        (ret
+          (localid 8:local$29)))))
+  (func
+    (functionid 57:liveness_drop_fieldref::box_state::lambda$1::create::0::0)
+    (params)
+    (classid 46:liveness_drop_fieldref::box_state::lambda$1::0)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (new
+            (localid 8:local$17)
+            (classid 46:liveness_drop_fieldref::box_state::lambda$1::0)
+            (args)))
+        (ret
+          (localid 8:local$17)))))
+  (func
+    (functionid 49:liveness_drop_fieldref::box_state::_cb::1::ref::0)
+    (params
+      (param
+        (localid 4:self)
+        (classid 36:liveness_drop_fieldref::box_state::0)))
+    (ref
+      (classid 26:_builtin::ffi::callback::0))
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (fieldref
+            (localid 9:local$181)
+            (arg
+              (argcopy)
+              (localid 4:self))
+            (fieldid 3:_cb)))
+        (ret
+          (localid 9:local$181)))))
+  (class
+    (classid 46:liveness_drop_fieldref::box_state::lambda$1::0)
+    (fields)
+    (methods
+      (method
+        (methodid 9:@callback)
+        (functionid 56:liveness_drop_fieldref::box_state::lambda$1::apply::2::0))))
+  (class
+    (classid 46:liveness_drop_fieldref::box_state::lambda$0::0)
+    (fields)
+    (methods
+      (method
+        (methodid 9:@callback)
+        (functionid 56:liveness_drop_fieldref::box_state::lambda$0::apply::2::0))))
+  (func
+    (functionid 56:liveness_drop_fieldref::box_state::lambda$1::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 46:liveness_drop_fieldref::box_state::lambda$1::0))
+      (param
+        (localid 1:p)
+        (ptr)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$18)
+            (functionid 28:_builtin::none::create::0::0)
+            (args))
+          (const
+            (localid 9:none$1537)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1537)))))
+  (func
+    (functionid 56:liveness_drop_fieldref::box_state::lambda$0::apply::2::0)
+    (params
+      (param
+        (localid 5:$self)
+        (classid 46:liveness_drop_fieldref::box_state::lambda$0::0))
+      (param
+        (localid 1:p)
+        (ptr)))
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (call
+            (localid 8:local$16)
+            (functionid 28:_builtin::none::create::0::0)
+            (args))
+          (const
+            (localid 9:none$1535)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1535)))))
+  (func
+    (functionid 28:_builtin::none::create::0::0)
+    (params)
+    (none)
+    (vars)
+    (labels
+      (label
+        (labelid 5:start)
+        (body
+          (const
+            (localid 8:local$95)
+            (none)
+            (none))
+          (const
+            (localid 9:none$1536)
+            (none)
+            (none)))
+        (ret
+          (localid 9:none$1536)))))
+  (primitive
+    (i32)
+    (methods))
+  (primitive
+    (cown
+      (classid 36:liveness_drop_fieldref::box_state::0))
+    (methods))
+  (primitive
+    (ref
+      (classid 36:liveness_drop_fieldref::box_state::0))
+    (methods))
+  (primitive
+    (ref
+      (ptr))
+    (methods))
+  (primitive
+    (ref
+      (classid 26:_builtin::ffi::callback::0))
+    (methods))
+  (primitive
+    (ptr)
+    (methods))
+  (primitive
+    (none)
+    (methods)))

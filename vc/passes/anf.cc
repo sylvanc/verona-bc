@@ -844,16 +844,63 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        // Callback operations (single arg, already a LocalId after earlier
-        // rules extract expressions to locals).
+        // Single-arg builtin operations (already a LocalId after earlier rules
+        // extract expressions to locals).
         In(Expr, Lhs) *
-              T(MakeCallback, CodePtrCallback, FreeCallback, Freeze)[Lhs]
+              T(MakeCallback,
+                CodePtrCallback,
+                FreeCallback,
+                Freeze,
+                Pin,
+                Unpin)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
           [](Match& _) {
             auto id = _.fresh(l_local);
             auto rhs = _(Rhs);
             Node op = _(Lhs)->type();
             return Seq << (Lift << Body << (op << (LocalId ^ id) << rhs))
+                       << (LocalId ^ id);
+          },
+
+        // FFI struct layout builtin.
+        In(Expr, Lhs) * T(FFIStruct) << (T(Type)[Type] * (T(Args) << End)) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (FFIStruct << (LocalId ^ id)
+                                              << clone((_(Type))->front())))
+                       << (LocalId ^ id);
+          },
+
+        // FFI raw load builtin.
+        In(Expr, Lhs) * T(FFILoad)
+            << (T(Type)[Type] *
+                (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])) *
+                   (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs])) *
+                   (T(Arg) << (T(ArgCopy) * T(LocalId)[MethodId])))) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift << Body
+                                << (FFILoad << (LocalId ^ id) << _(Lhs)
+                                            << _(Rhs) << _(MethodId)
+                                            << clone((_(Type))->front())))
+                       << (LocalId ^ id);
+          },
+
+        // FFI raw store builtin.
+        In(Expr, Lhs) * T(FFIStore)
+            << (T(Type)[Type] *
+                (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])) *
+                   (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs])) *
+                   (T(Arg) << (T(ArgCopy) * T(LocalId)[MethodId])) *
+                   (T(Arg) << (T(ArgCopy) * T(LocalId)[SymbolId])))) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (FFIStore << (LocalId ^ id) << _(Lhs) << _(Rhs)
+                                        << _(MethodId) << _(SymbolId)
+                                        << clone((_(Type))->front())))
                        << (LocalId ^ id);
           },
 

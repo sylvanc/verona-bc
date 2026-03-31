@@ -16,7 +16,7 @@ main(): i32
   else
   {
     99
-  };
+  }
   if f1 != 1 { result = result + 4 }
 
   let f2 = match s.find("xyz")
@@ -26,7 +26,7 @@ main(): i32
   else
   {
     99
-  };
+  }
   if f2 != 99 { result = result + 8 }
 
   let f3 = match s.find("")
@@ -36,7 +36,7 @@ main(): i32
   else
   {
     99
-  };
+  }
   if f3 != 0 { result = result + 16 }
 
   let f4 = match "".find("a")
@@ -46,7 +46,7 @@ main(): i32
   else
   {
     99
-  };
+  }
   if f4 != 99 { result = result + 32 }
 
   // --- contains ---

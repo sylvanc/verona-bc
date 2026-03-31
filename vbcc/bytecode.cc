@@ -1051,6 +1051,23 @@ namespace vbcc
             code << uleb(+Op::FFI) << dst(stmt)
                  << uleb(*get_symbol_id(stmt / SymbolId));
           }
+          else if (stmt == FFIStruct)
+          {
+            code << uleb(+Op::FFIStruct) << dst(stmt) << uleb(typ(stmt / Type));
+          }
+          else if (stmt == FFILoad)
+          {
+            code << uleb(+Op::FFILoad) << dst(stmt) << lhs(stmt) << rhs(stmt)
+                 << uleb(*func_state.get_register_id(stmt / Kind))
+                 << uleb(typ(stmt / Type));
+          }
+          else if (stmt == FFIStore)
+          {
+            code << uleb(+Op::FFIStore) << dst(stmt) << lhs(stmt) << rhs(stmt)
+                 << uleb(*func_state.get_register_id(stmt / Kind))
+                 << uleb(*func_state.get_register_id(stmt / ValueSrc))
+                 << uleb(typ(stmt / Type));
+          }
           else if (stmt == ArrayCopy)
           {
             args(stmt / Args);
@@ -1298,6 +1315,14 @@ namespace vbcc
           {
             code << uleb(+Op::FreeCallback) << dst(stmt) << src(stmt);
           }
+          else if (stmt == Pin)
+          {
+            code << uleb(+Op::Pin) << dst(stmt) << src(stmt);
+          }
+          else if (stmt == Unpin)
+          {
+            code << uleb(+Op::Unpin) << dst(stmt) << src(stmt);
+          }
           else if (stmt == AddExternal)
           {
             code << uleb(+Op::AddExternal) << dst(stmt);
@@ -1432,7 +1457,8 @@ namespace vbcc
   size_t Bytecode::typ(Node type)
   {
     // If it's a TypeId, encode what it maps to instead.
-    if (type == TypeId)
+    // Loop to follow chained aliases (e.g., cb -> fn$N -> Union).
+    while (type == TypeId)
       type = get_typealias(type) / Type;
 
     if (type == Dyn)
@@ -1483,9 +1509,6 @@ namespace vbcc
     }
     else if (type == Union)
     {
-      b << uleb(+TypeTag::Union);
-      b << uleb(type->size());
-
       std::vector<size_t> child_types;
 
       for (auto& child : *type)
@@ -1494,6 +1517,9 @@ namespace vbcc
       std::sort(child_types.begin(), child_types.end());
       child_types.erase(
         std::unique(child_types.begin(), child_types.end()), child_types.end());
+
+      b << uleb(+TypeTag::Union);
+      b << uleb(child_types.size());
 
       for (auto t : child_types)
         b << uleb(t);

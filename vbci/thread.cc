@@ -86,6 +86,104 @@ namespace vbci
     }
   }
 
+  static bool ffi_struct_leaf_type(
+    Program& program, uint32_t type_id, ValueType& kind, ffi_type*& rep)
+  {
+    if (
+      (type_id == DynId) || program.is_tuple(type_id) ||
+      program.is_ref(type_id) || program.is_union(type_id))
+      return false;
+
+    auto layout = program.layout_type_id(type_id);
+    kind = layout.first;
+    rep = layout.second;
+
+    switch (kind)
+    {
+      case ValueType::Bool:
+      case ValueType::I8:
+      case ValueType::I16:
+      case ValueType::I32:
+      case ValueType::I64:
+      case ValueType::U8:
+      case ValueType::U16:
+      case ValueType::U32:
+      case ValueType::U64:
+      case ValueType::ILong:
+      case ValueType::ULong:
+      case ValueType::ISize:
+      case ValueType::USize:
+      case ValueType::F32:
+      case ValueType::F64:
+      case ValueType::Ptr:
+      case ValueType::Object:
+      case ValueType::Array:
+      case ValueType::Cown:
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  static bool ffi_struct_members(
+    Program& program,
+    uint32_t layout_type_id,
+    std::vector<ValueType>& kinds,
+    std::vector<ffi_type*>& reps)
+  {
+    auto add_leaf = [&](uint32_t field_type_id) {
+      ValueType kind;
+      ffi_type* rep;
+      if (!ffi_struct_leaf_type(program, field_type_id, kind, rep))
+        return false;
+      kinds.push_back(kind);
+      reps.push_back(rep);
+      return true;
+    };
+
+    if (program.is_tuple(layout_type_id))
+    {
+      auto& tuple = program.complex_type(layout_type_id);
+
+      if (tuple.children.empty())
+        return false;
+
+      for (auto field_type_id : tuple.children)
+      {
+        if (program.is_tuple(field_type_id) || !add_leaf(field_type_id))
+          return false;
+      }
+
+      return true;
+    }
+
+    return add_leaf(layout_type_id);
+  }
+
+  static ValueType
+  ffi_expected_kind(Program& program, uint32_t expected_type_id)
+  {
+    ValueType kind;
+    ffi_type* rep;
+    snmalloc::UNUSED(rep);
+
+    if (!ffi_struct_leaf_type(program, expected_type_id, kind, rep))
+      Value::error(Error::BadType);
+
+    return kind;
+  }
+
+  static void* ffi_field_addr(const Register& base, const Register& offset)
+  {
+    auto* ptr = static_cast<uint8_t*>(base->get_ptr());
+
+    if (ptr == nullptr)
+      Value::error(Error::BadOperand);
+
+    return ptr + offset->get_size();
+  }
+
   struct ConstantBase
   {};
   template<typename T_>
@@ -325,6 +423,11 @@ namespace vbci
     get().thread_run_behavior(work);
   }
 
+  void Thread::handle_callback(CallbackClosure* cc, void* ret, void** args)
+  {
+    get().thread_handle_callback(cc, ret, args);
+  }
+
   void Thread::thread_run_behavior(verona::rt::Work* work)
   {
     assert(!frame);
@@ -383,8 +486,12 @@ namespace vbci
     {
       // Runtime error is fatal to the behavior. Clean up all frames and store
       // the error in the result cown.
+      {
+        logging::Error log;
+        log << error_value.to_string() << std::endl;
+        print_error_stack(log, error_value);
+      }
       teardown_all();
-      LOG(Error) << error_value.to_string();
       Register r = result->exchange<true>(ValueImmortal(error_value));
     }
 
@@ -402,15 +509,57 @@ namespace vbci
   Register Thread::thread_run(Function* func)
   {
     auto depth = frames.size();
-    pushframe(func, 0);
+    Register saved;
+    bool preserve_parent_local0 = frame != nullptr;
 
-    invariant();
+    if (preserve_parent_local0)
+      saved = std::move(frame->local(0));
 
-    while (depth != frames.size())
-      step();
+    try
+    {
+      pushframe(func, 0);
 
-    LOG(Trace) << "thread_run completed! Result: " << locals.at(0);
-    return std::move(locals.at(0));
+      invariant();
+
+      while (depth != frames.size())
+        step();
+    }
+    catch (Value&)
+    {
+      // An error may be raised before normal argument validation/consumption
+      // resets `args` (for example while queueing a behavior). Clear any
+      // pending arguments before unwinding so later sync calls don't trip the
+      // `args == 0` invariant and mask the original error.
+      drop_args();
+
+      while (frames.size() > depth)
+      {
+        frame->drop_args(args);
+        teardown();
+        frames.pop_back();
+        frame = frames.empty() ? nullptr : &frames.back();
+      }
+
+      if (preserve_parent_local0)
+        frame->local(0) = std::move(saved);
+
+      throw;
+    }
+
+    Register result;
+
+    if (preserve_parent_local0)
+    {
+      result = std::move(frame->local(0));
+      frame->local(0) = std::move(saved);
+    }
+    else
+    {
+      result = std::move(locals.at(0));
+    }
+
+    LOG(Trace) << "thread_run completed! Result: " << result;
+    return result;
   }
 
   void Thread::print_stack(logging::Log& log, bool top_frame_only)
@@ -429,6 +578,7 @@ namespace vbci
           continue;
         log << std::endl << "    local[" << j << "] = " << frame.local(j);
       }
+
       if (top_frame_only)
         break;
       if (i != 0)
@@ -443,6 +593,51 @@ namespace vbci
     {
       log << std::endl << "    arg[" << i << "] = " << frame->arg(i);
     }
+  }
+
+  void Thread::print_error_stack(logging::Log& log, const Value& error_value)
+  {
+    auto error_func = error_value.error_function();
+    auto error_pc = error_value.error_pc();
+
+    log << "Stack trace:";
+
+    ssize_t i = frames.size() - 1;
+
+    if ((i >= 0) && (frames[i].func == error_func))
+    {
+      log << std::endl
+          << "  at " << program->di_function(frames[i].func)
+          << " (pc=" << error_pc << ")" << std::endl
+          << program->debug_info(frames[i].func, error_pc);
+      i--;
+    }
+    else
+    {
+      log << std::endl
+          << "  at " << program->di_function(error_func) << " (pc=" << error_pc
+          << ")" << std::endl
+          << program->debug_info(error_func, error_pc);
+    }
+
+    for (; i >= 0; i--)
+    {
+      auto& frame = frames[i];
+      auto start_pc = frame.func->labels.at(0);
+      auto pc = frame.pc > start_pc ? frame.pc - 1 : frame.pc;
+
+      log << std::endl
+          << "  at " << program->di_function(frame.func) << " (pc=" << pc << ")"
+          << std::endl
+          << program->debug_info(frame.func, pc);
+    }
+
+    if (args == 0)
+      return;
+
+    log << std::endl << "  Args stack:";
+    for (size_t i = 0; i < args; i++)
+      log << std::endl << "    arg[" << i << "] = " << frame->arg(i);
   }
 
 #ifndef NDEBUG
@@ -592,6 +787,16 @@ namespace vbci
         return os << "Drop";
       case Op::Freeze:
         return os << "Freeze";
+      case Op::Pin:
+        return os << "Pin";
+      case Op::Unpin:
+        return os << "Unpin";
+      case Op::FFIStruct:
+        return os << "FFIStruct";
+      case Op::FFILoad:
+        return os << "FFILoad";
+      case Op::FFIStore:
+        return os << "FFIStore";
       case Op::RegisterRef:
         return os << "RegisterRef";
       case Op::FieldRefMove:
@@ -1673,6 +1878,145 @@ namespace vbci
         break;
       }
 
+      case Op::Pin:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          src->pin();
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::Unpin:
+      {
+        process([](Register& dst, const Register& src) INLINE {
+          src->unpin();
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
+      case Op::FFIStruct:
+      {
+        process([](
+                  Register& dst,
+                  Constant<size_t> layout_type_id,
+                  Frame& frame,
+                  Program& program) INLINE {
+          std::vector<ValueType> kinds;
+          std::vector<ffi_type*> reps;
+
+          if (!ffi_struct_members(program, layout_type_id, kinds, reps))
+            Value::error(Error::BadType);
+
+          std::vector<ffi_type*> struct_elements = reps;
+          struct_elements.push_back(nullptr);
+
+          std::vector<size_t> offsets(kinds.size());
+          ffi_type struct_type;
+          struct_type.size = 0;
+          struct_type.alignment = 0;
+          struct_type.type = FFI_TYPE_STRUCT;
+          struct_type.elements = struct_elements.data();
+
+          if (
+            ffi_get_struct_offsets(
+              FFI_DEFAULT_ABI, &struct_type, offsets.data()) != FFI_OK)
+          {
+            Value::error(Error::BadType);
+          }
+
+          auto result_type_id = program.get_typeid_ffi_struct_result();
+          auto offsets_type_id = program.get_typeid_array_usize();
+          auto kinds_type_id = program.get_typeid_arg();
+
+          auto* offsets_arr =
+            frame.region->array(offsets_type_id, offsets.size());
+          auto* kinds_arr = frame.region->array(kinds_type_id, kinds.size());
+          auto* tuple_arr = frame.region->array(result_type_id, 3);
+
+          for (size_t i = 0; i < offsets.size(); i++)
+          {
+            Register off_reg =
+              ValueTransfer(Value(ValueType::USize, offsets.at(i)));
+            Register kind_reg = ValueTransfer(
+              Value(ValueType::U8, static_cast<uint8_t>(kinds.at(i))));
+            snmalloc::UNUSED(offsets_arr->exchange<false>(i, off_reg));
+            snmalloc::UNUSED(kinds_arr->exchange<false>(i, kind_reg));
+          }
+
+          Register size_reg =
+            ValueTransfer(Value(ValueType::USize, struct_type.size));
+          Register offsets_reg = ValueTransfer(offsets_arr);
+          Register kinds_reg = ValueTransfer(kinds_arr);
+
+          snmalloc::UNUSED(tuple_arr->exchange<false>(0, size_reg));
+          snmalloc::UNUSED(tuple_arr->exchange<false>(1, offsets_reg));
+          snmalloc::UNUSED(tuple_arr->exchange<false>(2, kinds_reg));
+
+          if (!freeze(tuple_arr))
+            Value::error(Error::BadType);
+
+          dst = ValueTransfer(tuple_arr);
+        });
+        break;
+      }
+
+      case Op::FFILoad:
+      {
+        process([](
+                  Register& dst,
+                  const Register& base,
+                  const Register& offset,
+                  const Register& kind_reg,
+                  Constant<size_t> expected_type_id,
+                  Program& program) INLINE {
+          auto actual_kind = static_cast<ValueType>(kind_reg->get_u8());
+          auto expected_kind = ffi_expected_kind(program, expected_type_id);
+
+          if (actual_kind != expected_kind)
+            Value::error(Error::BadType);
+
+          auto value =
+            Value::from_addr(actual_kind, ffi_field_addr(base, offset));
+
+          if (
+            (value.is_header() || value.is_cown()) &&
+            !program.subtype(value.type_id(), expected_type_id))
+          {
+            Value::error(Error::BadType);
+          }
+
+          dst = value;
+        });
+        break;
+      }
+
+      case Op::FFIStore:
+      {
+        process([](
+                  Register& dst,
+                  const Register& base,
+                  const Register& offset,
+                  const Register& kind_reg,
+                  const Register& value,
+                  Constant<size_t> expected_type_id,
+                  Program& program) INLINE {
+          auto actual_kind = static_cast<ValueType>(kind_reg->get_u8());
+          auto expected_kind = ffi_expected_kind(program, expected_type_id);
+
+          if (actual_kind != expected_kind)
+            Value::error(Error::BadType);
+
+          if (!program.subtype(value->type_id(), expected_type_id))
+            Value::error(Error::BadType);
+
+          value->to_addr(actual_kind, ffi_field_addr(base, offset));
+          dst = ValueImmortal(Value::none());
+        });
+        break;
+      }
+
       case Op::AddExternal:
       {
         process([](Register& dst) INLINE {
@@ -2122,11 +2466,12 @@ namespace vbci
     }
     else
     {
-      for (size_t i = 0; i < args; i++)
+      auto num_args = args;
+      args = 0;
+
+      for (size_t i = 0; i < num_args; i++)
         locals.at(i).clear();
     }
-
-    args = 0;
   }
 
   void
@@ -2156,7 +2501,7 @@ namespace vbci
         {
           LOG(Error) << "Closure argument is not sendable: " << closure.borrow()
                      << " in region " << closure->get_header()->region();
-          Value::error(Error::BadArgs);
+          Value::error(Error::BadStackEscape);
         }
 
         num_cowns--;
@@ -2273,44 +2618,53 @@ namespace vbci
     return thread.locals.at(idx);
   }
 
-  Register Thread::run_callback(Function* func, size_t num_args)
+  void
+  Thread::thread_handle_callback(CallbackClosure* cc, void* ret, void** args_)
   {
-    auto& self = get();
-    assert(self.args == 0);
-    self.args = num_args;
+    assert(args == 0);
+    auto num_c_args = cc->arg_value_types.size();
+    arg(args++) = ValueBorrow(cc->lambda);
 
-    auto depth = self.frames.size();
-
-    // When called during an active FFI call, parent frames exist on the stack.
-    // popframe with dst=0 writes the return value to the parent frame's
-    // local[0], so we must save and restore it.
-    Register saved;
-    if (self.frame)
-      saved = std::move(self.frame->local(0));
-
-    self.pushframe(func, 0);
-    self.invariant();
-
-    while (depth != self.frames.size())
-      self.step();
-
-    if (self.frame)
+    for (size_t i = 0; i < num_c_args; i++)
     {
-      // Retrieve the callback result from where popframe placed it.
-      Register result = std::move(self.frame->local(0));
+      auto vt = cc->arg_value_types[i];
 
-      // Restore the parent frame's original register.
-      self.frame->local(0) = std::move(saved);
-
-      return result;
+      if (vt == ValueType::Invalid)
+      {
+        auto* val = static_cast<Value*>(args_[i]);
+        arg(args++) = ValueBorrow(*val);
+      }
+      else
+      {
+        arg(args++) = Value::from_addr(vt, args_[i]);
+      }
     }
 
-    // No parent frame — result is at the bottom of the locals vector.
-    return std::move(self.locals.at(0));
-  }
+    try
+    {
+      auto result = thread_run(cc->func);
 
-  void Thread::set_callback_arg(size_t idx, ValueBorrow val)
-  {
-    get().arg(idx) = val;
+      if (cc->return_value_type == ValueType::None)
+      {
+        return;
+      }
+      else if (cc->return_value_type == ValueType::Invalid)
+      {
+        *static_cast<Value*>(ret) = result.extract();
+      }
+      else
+      {
+        result.borrow().to_addr(cc->return_value_type, ret);
+      }
+    }
+    catch (Value& error_value)
+    {
+      {
+        logging::Error log;
+        log << error_value.to_string() << std::endl;
+        print_error_stack(log, error_value);
+      }
+      std::abort();
+    }
   }
 }

@@ -299,7 +299,7 @@ main(): i32
 - **Zero arguments only**: `once` functions cannot have parameters. A `once` function with parameters is a compile error.
 - **No methods**: Because Verona methods always have at least one parameter (`self`), the zero-parameter rule naturally prevents `once` on methods.
 - **Mutually exclusive with `ref`**: `once` and `ref` occupy the same grammar slot — you cannot combine them.
-- **Eager evaluation**: `once` functions run before `main()`, in dependency order. If `once f()` calls `once g()`, then `g` is evaluated first.
+- **Eager evaluation**: `once` functions run before any FFI `init` functions and before `main()`, in dependency order. If `once f()` calls `once g()`, then `g` is evaluated first.
 - **Cycle detection**: Circular dependencies between `once` functions (including through non-once intermediaries) are detected at compile time and reported as errors.
 - **Immortal results**: The cached return value is held for the program's entire lifetime and never collected. This is appropriate for the primary use case (global cowns and configuration).
 

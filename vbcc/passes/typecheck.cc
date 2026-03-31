@@ -388,20 +388,20 @@ namespace vbcc
         errors.push_back({node, msg});
       };
 
-      // Resolve TypeId to its definition (typically a Union).
-      // Type entries in the IR are: Type <<= TypeId * (Type >>= wfType).
-      // Recursively resolves through Union, Array, Cown, and Ref.
+      // Resolve TypeId to its definition (typically a Union) through the
+      // assignids-built Bytecode map. Recursively resolves through Union,
+      // Array, Cown, and Ref.
       std::function<Node(const Node&)> resolve_type =
         [&](const Node& t) -> Node {
         if (!t)
           return t;
         if (t == TypeId)
         {
-          for (auto& child : *top)
-          {
-            if (child == Type && (child / TypeId)->location() == t->location())
-              return resolve_type(child / Type);
-          }
+          auto id = state->get_typealias_id(t);
+
+          if (id)
+            return resolve_type(state->get_typealias(t) / Type);
+
           return t; // Unresolved TypeId - leave as-is
         }
         if (t == Union)
@@ -1250,6 +1250,105 @@ namespace vbcc
           // Freeze returns the frozen object (same type as src).
           set_type(env, node / LocalId, typed(node / Rhs));
         }
+        else if (node->type().in({Pin, Unpin}))
+        {
+          // Pin/unpin return None.
+          set_type(env, node / LocalId, None);
+        }
+        else if (node == FFIStruct)
+        {
+          set_type(env, node / LocalId, ffi_struct_result_type());
+        }
+        else if (node == FFILoad)
+        {
+          auto ptr_type = typed(node / Lhs);
+          auto offset_type = typed(node / Rhs);
+          auto kind_type = typed(node / Kind);
+
+          if (ptr_type && !IRSubtype(top, ptr_type, Ptr))
+          {
+            type_err(
+              node,
+              std::format(
+                "ffiload: base pointer type '{}' is not a subtype of 'ptr'",
+                type_name(ptr_type)));
+            return true;
+          }
+
+          if (offset_type && !IRSubtype(top, offset_type, USize))
+          {
+            type_err(
+              node,
+              std::format(
+                "ffiload: offset type '{}' is not a subtype of 'usize'",
+                type_name(offset_type)));
+            return true;
+          }
+
+          if (kind_type && !IRSubtype(top, kind_type, U8))
+          {
+            type_err(
+              node,
+              std::format(
+                "ffiload: kind type '{}' is not a subtype of 'u8'",
+                type_name(kind_type)));
+            return true;
+          }
+
+          set_type(env, node / LocalId, clone(node / Type));
+        }
+        else if (node == FFIStore)
+        {
+          auto ptr_type = typed(node / Lhs);
+          auto offset_type = typed(node / Rhs);
+          auto kind_type = typed(node / Kind);
+          auto value_type = typed(node / ValueSrc);
+          auto expected = resolve_type(node / Type);
+
+          if (ptr_type && !IRSubtype(top, ptr_type, Ptr))
+          {
+            type_err(
+              node,
+              std::format(
+                "ffistore: base pointer type '{}' is not a subtype of 'ptr'",
+                type_name(ptr_type)));
+            return true;
+          }
+
+          if (offset_type && !IRSubtype(top, offset_type, USize))
+          {
+            type_err(
+              node,
+              std::format(
+                "ffistore: offset type '{}' is not a subtype of 'usize'",
+                type_name(offset_type)));
+            return true;
+          }
+
+          if (kind_type && !IRSubtype(top, kind_type, U8))
+          {
+            type_err(
+              node,
+              std::format(
+                "ffistore: kind type '{}' is not a subtype of 'u8'",
+                type_name(kind_type)));
+            return true;
+          }
+
+          if (value_type && expected && !IRSubtype(top, value_type, expected))
+          {
+            type_err(
+              node,
+              std::format(
+                "ffistore: value type '{}' is not a subtype of expected type "
+                "'{}'",
+                type_name(value_type),
+                type_name(expected)));
+            return true;
+          }
+
+          set_type(env, node / LocalId, None);
+        }
         else if (node->type().in(
                    {Add, Sub, Mul, Div, Mod, And, Or, Xor, Shl, Shr, Min, Max}))
         {
@@ -1570,20 +1669,20 @@ namespace vbcc
         }
         else if (node == Read)
         {
-          // Read: cown -> result (same type, but read-only).
+          // Read: cown/ptr -> result (same type, but read-only).
           auto src_type = typed(node / Rhs);
 
-          if (src_type && !is_cown_type(src_type))
+          if (src_type && !is_cown_type(src_type) && (src_type != Ptr))
           {
             type_err(
               node,
               std::format(
-                "read: operand type '{}' is not a cown type",
+                "read: operand type '{}' is not a cown or ptr type",
                 type_name(src_type)));
             return true;
           }
 
-          // Read gives back the cown type (with readonly semantics at runtime).
+          // Read gives back the same type (with readonly semantics at runtime).
           if (src_type)
             set_type(env, node / LocalId, clone(src_type));
           else
@@ -1594,7 +1693,14 @@ namespace vbcc
           // Math constants are F64.
           set_type(env, node / LocalId, F64);
         }
-        else if (node->type().in({AddExternal, RemoveExternal, FreeCallback}))
+        else if (node->type().in({
+                   AddExternal,
+                   RemoveExternal,
+                   FreeCallback,
+                   Pin,
+                   Unpin,
+                   FFIStore,
+                 }))
         {
           // These produce None.
           set_type(env, node / LocalId, None);
