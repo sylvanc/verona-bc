@@ -4,7 +4,6 @@
 
 Optimization.
 - Allow inline of `raise` lambdas.
-- Sequent calculus optimizations.
 - Overall compile times.
 
 Semantics.
