@@ -4232,6 +4232,10 @@ namespace vc
           // No TypeArgs but the def has TypeParams (e.g., bare class name
           // as return type from within a generic class). Inherit any
           // existing substitutions from the resolution context.
+          // If not found in resolve_subst, check existing reifications of
+          // this def for a TypeParam binding (handles nested classes of
+          // generic outer classes, where the outer subst isn't in the
+          // immediate resolution context).
           for (auto& tp : *tps)
           {
             auto find = resolve_subst.find(tp);
@@ -4239,6 +4243,21 @@ namespace vc
             if (find != resolve_subst.end())
             {
               r.subst[tp] = find->second;
+              resolve_subst[tp] = find->second;
+            }
+            else
+            {
+              auto map_it = map.find(def);
+              if (map_it != map.end() && !map_it->second.empty())
+              {
+                auto& existing = map_it->second.front();
+                auto existing_find = existing.subst.find(tp);
+                if (existing_find != existing.subst.end())
+                {
+                  r.subst[tp] = existing_find->second;
+                  resolve_subst[tp] = existing_find->second;
+                }
+              }
             }
           }
         }
