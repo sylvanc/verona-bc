@@ -92,6 +92,27 @@ namespace vc
       return ok;
     });
 
+    // If the inner lambda captured $self from an enclosing lambda's apply,
+    // rename it to $enclosing_self to avoid conflicting with this lambda's
+    // own $self parameter. This gives sharing semantics: the inner lambda
+    // holds a reference to the enclosing closure object.
+    auto self_it = freevars.find(Location("$self"));
+    if (self_it != freevars.end())
+    {
+      freevars.emplace(Location("$enclosing_self"), self_it->second);
+      freevars.erase(self_it);
+
+      // Rewrite all $self references in the lambda body to $enclosing_self.
+      lambda->traverse([&](auto node) {
+        if (node == LocalId && node->location().view() == "$self")
+        {
+          auto parent = node->parent();
+          parent->replace(node, LocalId ^ "$enclosing_self");
+        }
+        return true;
+      });
+    }
+
     auto id = _.fresh(l_lambda);
 
     bool is_block = has_raise || has_var_capture;
@@ -168,7 +189,12 @@ namespace vc
       }
       else
       {
-        fields.push_back({freevar, fv_resolved, Expr << (LocalId ^ freevar)});
+        // For $enclosing_self, the creation-site expression must reference
+        // $self (the enclosing apply's parameter), not $enclosing_self.
+        auto create_name =
+          (freevar.view() == "$enclosing_self") ? Location("$self") : freevar;
+        fields.push_back(
+          {freevar, fv_resolved, Expr << (LocalId ^ create_name)});
       }
     }
 
@@ -200,7 +226,8 @@ namespace vc
                                            << (FieldId ^ field.name)))))));
         ref_captures.insert(field.name);
       }
-      else if (field.name.view()[0] == '$')
+      else if (
+        field.name.view()[0] == '$' && field.name.view() != "$enclosing_self")
       {
         // Internal field (e.g., $raise_target): load value
         // directly into a Let with the same name.
