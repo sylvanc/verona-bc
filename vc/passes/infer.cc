@@ -2624,10 +2624,25 @@ namespace vc
     {
       auto ta = scope.name_elem / TypeArgs;
       auto tps = scope.def / TypeParams;
-      if (ta->empty() && !tps->empty())
+      if (!tps->empty())
       {
-        needs_inference = true;
-        break;
+        if (ta->empty())
+        {
+          needs_inference = true;
+          break;
+        }
+
+        for (auto& t : *ta)
+        {
+          if (t == Type && t->front() == TypeVar)
+          {
+            needs_inference = true;
+            break;
+          }
+        }
+
+        if (needs_inference)
+          break;
       }
     }
 
@@ -2667,7 +2682,7 @@ namespace vc
       {
         bool needs_reinfer = false;
         for (auto& t : *ta)
-          if (direct_typeparam(top, t))
+          if (direct_typeparam(top, t) || (t == Type && t->front() == TypeVar))
           {
             needs_reinfer = true;
             break;

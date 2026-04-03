@@ -177,7 +177,8 @@ namespace vc
       {
         // Qualified function call followed by dot: Ns::f(args).method
         // Convert to Call before the dot rules consume it.
-        In(Expr) * T(FuncName)[FuncName] * T(Tuple)[Tuple] * T(Dot) >>
+        In(Expr) * T(FuncName)[FuncName] * T(Tuple, ExprSeq)[Tuple] *
+            T(Dot)[Dot] >>
           [](Match& _) {
             return Seq << (Call << _(FuncName) << (Args << *_(Tuple)))
                        << _(Dot);
