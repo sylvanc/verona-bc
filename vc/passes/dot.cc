@@ -87,6 +87,7 @@ namespace vc
     {"freeze", {0, 1, Freeze}},
     {"pin", {0, 1, Pin}},
     {"unpin", {0, 1, Unpin}},
+    {"merge", {0, 2, Merge}},
     {"ffistruct", {1, 0, FFIStruct}},
     {"ffiload", {1, 3, FFILoad}},
     {"ffistore", {1, 4, FFIStore}},

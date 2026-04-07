@@ -223,11 +223,9 @@ namespace vbci
       collect(this);
     }
 
-#ifndef NDEBUG
     RC get_stack_rc() const
     {
       return stack_rc;
     }
-#endif
   };
 }

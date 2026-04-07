@@ -31,6 +31,7 @@ namespace vbci
     BadType,
     BadRegionEntryPoint,
     BadFreeze,
+    BadMerge,
     SchedulerAlreadyRunning,
   };
 
@@ -95,6 +96,8 @@ namespace vbci
         return "bad region entry point";
       case Error::BadFreeze:
         return "cannot freeze a readonly value";
+      case Error::BadMerge:
+        return "cannot merge regions: both have owners";
       case Error::SchedulerAlreadyRunning:
         return "scheduler already running";
 

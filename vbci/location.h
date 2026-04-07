@@ -116,7 +116,11 @@ namespace vbci
       return (value & Mask) == Pending;
     }
 
-    Region* to_region() const;
+    Region* to_region() const
+    {
+      assert(is_region());
+      return reinterpret_cast<Region*>(value);
+    }
 
     Location pending() const
     {
@@ -153,7 +157,4 @@ namespace vbci
       return reinterpret_cast<Header*>(value & ~Mask);
     }
   };
-
-  template<bool is_move>
-  bool drag_allocation(Region* dest, Header* h, Region** pr = nullptr);
 }

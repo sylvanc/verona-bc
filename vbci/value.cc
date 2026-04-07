@@ -2,6 +2,7 @@
 
 #include "array.h"
 #include "cown.h"
+#include "drag.h"
 #include "object.h"
 #include "platform.h"
 #include "program.h"

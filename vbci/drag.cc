@@ -1,4 +1,4 @@
-#include "location.h"
+#include "drag.h"
 
 #include "array.h"
 #include "header.h"
@@ -7,12 +7,6 @@
 
 namespace vbci
 {
-  Region* Location::to_region() const
-  {
-    assert(is_region());
-    return reinterpret_cast<Region*>(value);
-  }
-
   template<bool is_move>
   bool drag_allocation(Region* r, Header* h, Region** pr)
   {

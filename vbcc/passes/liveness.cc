@@ -124,6 +124,12 @@ namespace vbcc
             use(node / Rhs);
             def(node / LocalId);
           }
+          else if (node == Merge)
+          {
+            use(node / Lhs);
+            use(node / Rhs);
+            def(node / LocalId);
+          }
           else if (node == FFILoad)
           {
             use(node / Lhs);

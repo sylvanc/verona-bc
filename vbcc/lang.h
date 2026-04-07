@@ -111,6 +111,7 @@ namespace vbcc
       FreeCallback,
       Pin,
       Unpin,
+      Merge,
       FFIStruct,
       FFILoad,
       FFIStore,

@@ -1260,7 +1260,7 @@ namespace vbcc
           // Freeze returns the frozen object (same type as src).
           set_type(env, node / LocalId, typed(node / Rhs));
         }
-        else if (node->type().in({Pin, Unpin}))
+        else if (node->type().in({Pin, Unpin, Merge}))
         {
           // Pin/unpin return None.
           set_type(env, node / LocalId, None);
@@ -1760,6 +1760,7 @@ namespace vbcc
                    FreeCallback,
                    Pin,
                    Unpin,
+                   Merge,
                    FFIStore,
                  }))
         {

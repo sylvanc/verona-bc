@@ -1330,6 +1330,10 @@ namespace vbcc
           {
             code << uleb(+Op::Unpin) << dst(stmt) << src(stmt);
           }
+          else if (stmt == Merge)
+          {
+            code << uleb(+Op::Merge) << dst(stmt) << lhs(stmt) << rhs(stmt);
+          }
           else if (stmt == AddExternal)
           {
             code << uleb(+Op::AddExternal) << dst(stmt);
