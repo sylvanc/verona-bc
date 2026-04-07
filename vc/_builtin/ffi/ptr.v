@@ -1,6 +1,11 @@
 ptr
 {
-  create(from: any = none): ptr
+  create(): ptr
+  {
+    :::ptr(none)
+  }
+
+  create(from: any): ptr
   {
     :::read(:::ptr(from))
   }

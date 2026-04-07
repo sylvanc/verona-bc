@@ -186,10 +186,10 @@ namespace vbci
       if (!init)
         continue;
 
-      auto result = Thread::run_sync(&functions.at(*init));
+      auto result = Thread::run_cleanup(&functions.at(*init));
 
       if (result->is_invalid())
-        continue;
+        return -1;
 
       auto* apply = result->method(CallbackMethodId);
 
