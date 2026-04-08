@@ -413,14 +413,12 @@ namespace vbcc
               // Add callee vars to caller vars (alpha-renamed).
               for (auto& v : *(target / Vars))
               {
-                auto var_name =
-                  std::string((v / LocalId)->location().view());
+                auto var_name = std::string((v / LocalId)->location().view());
                 auto rit = rename_map.find(var_name);
 
                 if (rit != rename_map.end())
                   caller_vars
-                    << (VarDef << (LocalId ^ rit->second)
-                               << clone(v / Type));
+                    << (VarDef << (LocalId ^ rit->second) << clone(v / Type));
                 else
                 {
                   // Var is a param name — shouldn't happen but handle

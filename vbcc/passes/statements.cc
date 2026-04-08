@@ -311,8 +311,7 @@ namespace vbcc
             TypePat[Type] *
             ~(T(Vars) *
               (T(LocalId) * ~(T(Colon) * TypePat) *
-                (T(Comma) * T(LocalId) * ~(T(Colon) * TypePat))++
-              )[Vars]) >>
+               (T(Comma) * T(LocalId) * ~(T(Colon) * TypePat))++)[Vars]) >>
           [](Match& _) {
             auto start = std::string(_(GlobalId)->location().view());
             start.at(0) = '^';

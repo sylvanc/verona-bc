@@ -148,23 +148,36 @@ namespace vbcc
             {
               state->error = true;
               node->parent()->replace(
-                node,
-                err(
-                  node / Rhs,
-                  "RegisterRef targets non-var register"));
+                node, err(node / Rhs, "RegisterRef targets non-var register"));
               return true;
             }
 
             def(node / LocalId);
           }
-          else if (node->in({Const,         ConstStr,         NewArray,
-                             NewArrayConst, StackArray,       StackArrayConst,
-                             RegionArray,   RegionArrayConst,
-                             FieldRef,      ArrayRefConst,    FFI,
-                             FFIStruct,     GetRaise,         Const_E,
-                             Const_Pi,      Const_Inf,        Const_NaN,
-                             AddExternal,   RemoveExternal,   MemoSlot,
-                             ArrayCopy,     ArrayFill,        ArrayCompare}))
+          else if (node->in(
+                     {Const,
+                      ConstStr,
+                      NewArray,
+                      NewArrayConst,
+                      StackArray,
+                      StackArrayConst,
+                      RegionArray,
+                      RegionArrayConst,
+                      FieldRef,
+                      ArrayRefConst,
+                      FFI,
+                      FFIStruct,
+                      GetRaise,
+                      Const_E,
+                      Const_Pi,
+                      Const_Inf,
+                      Const_NaN,
+                      AddExternal,
+                      RemoveExternal,
+                      MemoSlot,
+                      ArrayCopy,
+                      ArrayFill,
+                      ArrayCompare}))
           {
             def(node / LocalId);
           }
