@@ -50,7 +50,7 @@ namespace vbcc
             vars.resize(func->register_names.size());
 
             for (auto var : *(node / Vars))
-              vars.set(*func->get_register_id(var));
+              vars.set(*func->get_register_id(var / LocalId));
           }
           else if (node == Label)
           {
@@ -139,9 +139,27 @@ namespace vbcc
             use(node / ValueSrc);
             def(node / LocalId);
           }
+          else if (node == RegisterRef)
+          {
+            // RegisterRef must target a var register, not an SSA register.
+            auto src_r = func->get_register_id(node / Rhs);
+
+            if (src_r && !vars.test(*src_r))
+            {
+              state->error = true;
+              node->parent()->replace(
+                node,
+                err(
+                  node / Rhs,
+                  "RegisterRef targets non-var register"));
+              return true;
+            }
+
+            def(node / LocalId);
+          }
           else if (node->in({Const,         ConstStr,         NewArray,
                              NewArrayConst, StackArray,       StackArrayConst,
-                             RegionArray,   RegionArrayConst, RegisterRef,
+                             RegionArray,   RegionArrayConst,
                              FieldRef,      ArrayRefConst,    FFI,
                              FFIStruct,     GetRaise,         Const_E,
                              Const_Pi,      Const_Inf,        Const_NaN,
@@ -201,7 +219,7 @@ namespace vbcc
           auto vars = Bitset(func_state.register_names.size());
 
           for (auto var : *(node / Vars))
-            vars.set(*func_state.get_register_id(var));
+            vars.set(*func_state.get_register_id(var / LocalId));
 
           // Backward data-flow.
           std::queue<size_t> wl;

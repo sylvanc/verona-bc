@@ -1,0 +1,7 @@
+// RegisterRef targeting a non-var SSA register should produce a compile error.
+
+func @main(): i32
+  $x = const i32 42
+  $r = ref $x
+  $val = load $r
+  ret $val
