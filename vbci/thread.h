@@ -44,6 +44,7 @@ namespace vbci
     static ValueTransfer run_async(uint32_t type_id, Function* func);
     static Register& get_register(uint64_t id);
     static Region* frame_region_for_stack(Location stack_loc);
+    static void check_var_type_for_register(uint64_t raw_idx, const Value& v);
 
     template<typename... Ts>
     static Register run_sync(Function* func, Ts&&... argv)

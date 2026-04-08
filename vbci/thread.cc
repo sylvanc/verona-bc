@@ -1355,6 +1355,12 @@ namespace vbci
       case Op::RegisterRef:
       {
         process([](Register& dst, Constant<size_t> idx, Frame& frame) INLINE {
+          auto params = frame.func->param_types.size();
+          auto vars = frame.func->var_types.size();
+
+          if (idx < params || idx >= params + vars)
+            Value::error(Error::BadRefTarget);
+
           dst = ValueStaticLifetime(frame.base + idx, frame.frame_id);
         });
         break;
@@ -2616,6 +2622,35 @@ namespace vbci
   {
     auto& thread = Thread::get();
     return thread.locals.at(idx);
+  }
+
+  void Thread::check_var_type_for_register(uint64_t raw_idx, const Value& v)
+  {
+    auto& thread = Thread::get();
+
+    // Walk the frame stack to find the frame that owns this register.
+    for (auto it = thread.frames.rbegin(); it != thread.frames.rend(); ++it)
+    {
+      if (raw_idx >= it->base && raw_idx < it->base + it->func->registers)
+      {
+        auto local_idx = raw_idx - it->base;
+        auto params = it->func->param_types.size();
+        auto vars = it->func->var_types.size();
+
+        if (local_idx < params || local_idx >= params + vars)
+          return;
+
+        auto var_type = it->func->var_types.at(local_idx - params);
+
+        if (var_type == DynId)
+          return;
+
+        if (!thread.program->subtype(v.type_id(), var_type))
+          Value::error(Error::BadType);
+
+        return;
+      }
+    }
   }
 
   void
