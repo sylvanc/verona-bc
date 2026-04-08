@@ -986,6 +986,13 @@ namespace vbci
 
     f.return_type = uleb(pc);
 
+    // Variable types.
+    auto vars = uleb(pc);
+    f.var_types.resize(vars);
+
+    for (size_t i = 0; i < vars; i++)
+      f.var_types.at(i) = uleb(pc);
+
     // Labels.
     f.labels.resize(uleb(pc));
 

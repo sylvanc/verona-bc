@@ -1894,8 +1894,8 @@ namespace vbcc
         }
         for (auto& var : *(func_node / Vars))
         {
-          auto key = std::string(var->location().view());
-          init_env[key] = Dyn;
+          auto key = std::string((var / LocalId)->location().view());
+          init_env[key] = resolve_type(var / Type);
         }
 
         // Environment fingerprint for convergence detection.

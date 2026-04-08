@@ -108,7 +108,7 @@ namespace vbcc
     for (auto& var : vars)
     {
       if (var == LocalId)
-        r << var;
+        r << (VarDef << var << Dyn);
     }
 
     return r;
