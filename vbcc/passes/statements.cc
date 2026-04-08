@@ -216,6 +216,7 @@ namespace vbcc
           Symbol,
           Func,
           Param,
+          VarDef,
           NewArray,
           NewArrayConst,
           StackArray,

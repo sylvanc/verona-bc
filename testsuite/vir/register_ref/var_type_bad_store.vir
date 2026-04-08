@@ -1,0 +1,9 @@
+// Storing the wrong type through a ref to a typed var should fail at runtime.
+
+func @main(): i32 var $val: i32
+  $val = const i32 42
+  $wrong = const bool true
+  $r = ref $val
+  // Store a bool through a ref to an i32 var — should fail.
+  $prev = store $r $wrong
+  ret $val
