@@ -1747,7 +1747,7 @@ namespace vbci
       case Op::Neg:
         do_unop(neg);
       case Op::Not:
-        do_unop(not );
+        do_unop(not);
       case Op::Abs:
         do_unop(abs);
       case Op::Ceil:

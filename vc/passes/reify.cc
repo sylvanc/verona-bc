@@ -3234,9 +3234,8 @@ namespace vc
     // Get the reification and return the ClassId or TypeId.
     Node reify_typename(const Node& tn, const NodeMap<Node>& subst)
     {
-      return get_reification(tn, subst, [](auto& def) {
-        return def->in({ClassDef, TypeAlias});
-      });
+      return get_reification(
+        tn, subst, [](auto& def) { return def->in({ClassDef, TypeAlias}); });
     }
 
     // Ensure a primitive type is reified. Delegates to find_or_push which
