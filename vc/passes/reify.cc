@@ -2185,6 +2185,7 @@ namespace vc
 
       // Reify the function body.
       Node vars = Vars;
+      std::vector<Location> var_locs;
       Node labels = clone(r.def / Labels);
 
       for (auto& l : *labels)
@@ -2549,7 +2550,7 @@ namespace vc
           }
           else if (n == Var)
           {
-            vars << (LocalId ^ (n / Ident));
+            var_locs.push_back((n / Ident)->location());
             remove.push_back(n);
           }
           else if (n->in({New, Stack}))
@@ -2934,6 +2935,14 @@ namespace vc
           body << (Const << (LocalId ^ none_loc) << None << None);
           term->replace(term->front(), LocalId ^ none_loc);
         }
+      }
+
+      // Build VarDef nodes with types from local_types.
+      for (auto& loc : var_locs)
+      {
+        auto it = local_types.find(loc);
+        Node var_type = (it != local_types.end()) ? clone(it->second) : Dyn;
+        vars << (VarDef << (LocalId ^ loc) << var_type);
       }
 
       if ((r.def / Lhs) == Once)

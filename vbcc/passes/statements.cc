@@ -105,10 +105,23 @@ namespace vbcc
   {
     Node r = Vars;
 
-    for (auto& var : vars)
+    for (size_t i = 0; i < vars.size(); i++)
     {
-      if (var == LocalId)
-        r << var;
+      if (vars[i] == LocalId)
+      {
+        // Check for typed var: LocalId Colon Type
+        if (
+          (i + 2 < vars.size()) && (vars[i + 1] == Colon) &&
+          (vars[i + 2] != LocalId) && (vars[i + 2] != Comma))
+        {
+          r << (VarDef << vars[i] << vars[i + 2]);
+          i += 2;
+        }
+        else
+        {
+          r << (VarDef << vars[i] << Dyn);
+        }
+      }
     }
 
     return r;
@@ -203,6 +216,7 @@ namespace vbcc
           Symbol,
           Func,
           Param,
+          VarDef,
           NewArray,
           NewArrayConst,
           StackArray,
@@ -295,7 +309,9 @@ namespace vbcc
         // Function.
         (T(Func) << End) * T(GlobalId)[GlobalId] * ParamDef[Params] * T(Colon) *
             TypePat[Type] *
-            ~(T(Vars) * (T(LocalId) * (T(Comma) * T(LocalId))++)[Vars]) >>
+            ~(T(Vars) *
+              (T(LocalId) * ~(T(Colon) * TypePat) *
+               (T(Comma) * T(LocalId) * ~(T(Colon) * TypePat))++)[Vars]) >>
           [](Match& _) {
             auto start = std::string(_(GlobalId)->location().view());
             start.at(0) = '^';

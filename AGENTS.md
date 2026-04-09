@@ -13,6 +13,7 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
 # Verona Compiler (vc) Specifics
 
 - **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump-clean` and `ninja update-dump` to regenerate golden test files.
+- **Baseline before starting work**: Before making any changes, run `ninja install && ctest -j$(nproc)` to verify the full test suite passes. Do NOT proceed if tests fail — fix the environment first. This prevents committing broken golden files (e.g., segfaults from misconfigured builds).
 - **Running vc**: Always run `vc` from the `build` directory, passing the path to the source directory on the command line (e.g., `dist/vc/vc build ../testsuite/v/hello`). Do NOT `cd` into the source directory — the `.vbc` output name is derived from the directory name, so building with `.` produces a hidden `..vbc` file.
 - **Debugging**: Use `gdb` for debugging.
 - **Pass-limited testing**: `-p <passname>` stops after a specific pass (e.g., `-p ident`). `--dump_passes=<dir>` dumps intermediate ASTs.

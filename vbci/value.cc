@@ -5,6 +5,7 @@
 #include "object.h"
 #include "platform.h"
 #include "program.h"
+#include "thread.h"
 
 namespace vbci
 {
@@ -990,6 +991,10 @@ namespace vbci
         }
 
         Register& reg = Thread::get_register(u64);
+
+        // Type-check the new value against the var's declared type.
+        Thread::check_var_type_for_register(u64, v.borrow());
+
         ValueTransfer prev = reg.extract();
 
         if constexpr (is_move)

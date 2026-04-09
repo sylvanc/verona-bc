@@ -371,7 +371,7 @@ namespace vbcc
         // Stub function: original id, MemoSlot load.
         Node stub_func = Func
           << (FunctionId ^ orig_id_str) << Params << clone(r_type)
-          << (Vars << (LocalId ^ "$memo"))
+          << (Vars << (VarDef << (LocalId ^ "$memo") << Dyn))
           << (Labels
               << (Label << (LabelId ^ "entry")
                         << (Body

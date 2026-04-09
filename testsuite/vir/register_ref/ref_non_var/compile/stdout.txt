@@ -1,0 +1,14 @@
+Errors:
+RegisterRef targets non-var register
+-- ref_non_var.vir:5:12
+  $r = ref $x
+           ~~
+
+----------------
+use of undefined register
+-- ref_non_var.vir:6:15
+  $val = load $r
+              ~~
+
+Pass liveness failed with 2 errors!
+

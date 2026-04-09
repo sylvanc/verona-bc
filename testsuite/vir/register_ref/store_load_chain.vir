@@ -1,6 +1,6 @@
 // Multiple stores against one register reference returning prior values.
 
-func @main(): i32
+func @main(): i32 var $x
   $x = const i32 2
   $r = ref $x
   $val1 = const i32 4

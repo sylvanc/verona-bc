@@ -11,6 +11,7 @@ namespace vbci
   {
     std::vector<PC> labels;
     std::vector<uint32_t> param_types;
+    std::vector<uint32_t> var_types;
     size_t registers;
     uint32_t return_type;
     size_t debug_info;

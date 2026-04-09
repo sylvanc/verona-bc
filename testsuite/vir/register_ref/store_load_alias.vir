@@ -1,6 +1,6 @@
 // Two register references aliasing the same source register.
 
-func @main(): i32
+func @main(): i32 var $x
   $x = const i32 3
   $a = ref $x
   $b = ref $x

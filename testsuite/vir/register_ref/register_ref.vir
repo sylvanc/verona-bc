@@ -13,7 +13,7 @@ func @stack_rec($n: i32): i32
 ^base
   ret $n
 
-func @main(): i32
+func @main(): i32 var $count
   $count = const i32 1000
   $ref = ref $count
   $result = call @stack_rec($count)

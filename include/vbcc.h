@@ -15,6 +15,7 @@ namespace vbcc
   inline const auto Func = TokenDef("func");
   inline const auto FuncOnce = TokenDef("funconce");
   inline const auto Vars = TokenDef("vars");
+  inline const auto VarDef = TokenDef("vardef");
   inline const auto MemoInit = TokenDef("memoinit");
   inline const auto MemoSlot = TokenDef("memoslot");
 
@@ -303,7 +304,8 @@ namespace vbcc
     | (MemoSlot <<= wfDst * FunctionId)
     | (Params <<= Param++)
     | (Param <<= LocalId * (Type >>= wfType))
-    | (Vars <<= LocalId++)
+    | (Vars <<= VarDef++)
+    | (VarDef <<= LocalId * (Type >>= wfType))
     | (Labels <<= Label++)
     | (Label <<= LabelId * Body * (Return >>= wfTerminator))
     | (Body <<= wfStatement++)

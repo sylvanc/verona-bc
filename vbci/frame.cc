@@ -2,6 +2,7 @@
 
 #include "function.h"
 #include "object.h"
+#include "program.h"
 
 namespace vbci
 {
@@ -99,5 +100,26 @@ namespace vbci
   Region& Frame::get_frame_local_region() const
   {
     return *region;
+  }
+
+  void Frame::check_var_type(size_t idx, Program& prog) const
+  {
+    auto params = func->param_types.size();
+    auto vars = func->var_types.size();
+
+    // Only check registers in the var range.
+    if (idx < params || idx >= params + vars)
+      return;
+
+    auto var_type = func->var_types.at(idx - params);
+
+    // Skip type check for Dyn (untyped vars).
+    if (var_type == DynId)
+      return;
+
+    auto& reg = locals.at(base + idx);
+
+    if (!prog.subtype(reg->type_id(), var_type))
+      Value::error(Error::BadType);
   }
 }

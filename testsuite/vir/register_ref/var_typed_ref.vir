@@ -1,0 +1,37 @@
+// End-to-end test: typed var with ref store, cross-call, and direct assignment.
+
+func @write_ref($r: ref i32, $value: i32): i32
+  $prev = store $r $value
+  ret $prev
+
+func @main(): i32 var $a: i32, $b: i32
+  // Direct assignment to var.
+  $val1 = const i32 10
+  $a = copy $val1
+  // Create ref and store through it.
+  $r = ref $a
+  $val2 = const i32 20
+  $old = store $r $val2
+  // Check old value was 10.
+  $exp_old = const i32 10
+  $ok1 = eq $old $exp_old
+  // Cross-call store through ref.
+  $val3 = const i32 30
+  $prev = call @write_ref($r, $val3)
+  $exp_prev = const i32 20
+  $ok2 = eq $prev $exp_prev
+  // Direct assignment to second var.
+  $val4 = const i32 42
+  $b = copy $val4
+  // Verify $a was updated by cross-call.
+  $exp_a = const i32 30
+  $ok3 = eq $a $exp_a
+  // All checks.
+  $t1 = and $ok1 $ok2
+  $all = and $t1 $ok3
+  cond $all ^ok ^fail
+^ok
+  ret $b
+^fail
+  $err = const i32 -1
+  ret $err

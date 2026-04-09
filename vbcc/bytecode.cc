@@ -660,6 +660,13 @@ namespace vbcc
 
       hdr << uleb(typ(func_state.func / Type));
 
+      // Variable types.
+      auto vars_node = func_state.func / Vars;
+      hdr << uleb(vars_node->size());
+
+      for (auto& var : *vars_node)
+        hdr << uleb(typ(var / Type));
+
       // Labels.
       hdr << uleb(func_state.label_idxs.size());
 

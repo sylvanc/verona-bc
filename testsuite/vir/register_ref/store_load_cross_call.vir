@@ -4,7 +4,7 @@ func @write_ref($r: ref i32, $value: i32): i32
   $prev = store $r $value
   ret $prev
 
-func @main(): i32
+func @main(): i32 var $x
   $x = const i32 1
   $r = ref $x
   $new = const i32 7

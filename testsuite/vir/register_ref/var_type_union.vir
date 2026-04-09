@@ -1,0 +1,30 @@
+// A union-typed var accepts values of either member type via Copy.
+// The ref store checks the union type at runtime through the var type.
+
+type @intorbool = i32 | bool
+
+func @main(): i32 var $x: @intorbool, $y: @intorbool
+  // Store an i32 into the union var.
+  $val1 = const i32 42
+  $x = copy $val1
+  // Store a bool into the second union var.
+  $val2 = const bool true
+  $y = copy $val2
+  // Store through ref with matching types.
+  $rx = ref $x
+  $val3 = const i32 99
+  $prev = store $rx $val3
+  // The previous value was 42.
+  $exp = const i32 42
+  $ok1 = eq $prev $exp
+  // The current value is 99.
+  $cur = load $rx
+  $ok2 = eq $cur $val3
+  $both = and $ok1 $ok2
+  cond $both ^ok ^fail
+^ok
+  $ret = const i32 0
+  ret $ret
+^fail
+  $ret = const i32 1
+  ret $ret
