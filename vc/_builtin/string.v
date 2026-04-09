@@ -1,3 +1,9 @@
+use
+{
+  strlen = "strlen"(ffi::ptr): usize;
+  memcpy = "memcpy"(ffi::ptr, ffi::ptr, usize): ffi::ptr;
+}
+
 string
 {
   data: array[u8];
@@ -8,6 +14,20 @@ string
   create(data: array[u8]): string
   {
     new { data, len = data.size - 1 }
+  }
+
+  // Create a string from a C string pointer.
+  from_cstr(ptr: ffi::ptr): string
+  {
+    if ptr == ffi::ptr
+    {
+      return string(array[u8]::fill 1)
+    }
+
+    let len = :::strlen(ptr);
+    let buf = array[u8]::fill(len + 1);
+    :::memcpy(buf, ptr, len + 1);
+    string buf
   }
 
   copy(self: string): string
