@@ -1130,39 +1130,43 @@ namespace vbci
 
   bool Program::di_decompress()
   {
-    if (di_content.size() > 0)
-      return true;
+    std::call_once(di_once, [this]() {
+      if (di == PC(-1))
+        return;
 
-    if (di == PC(-1))
-      return false;
+      auto cap =
+        ZSTD_getFrameContentSize(&content.at(di), content.size() - di);
 
-    auto cap = ZSTD_getFrameContentSize(&content.at(di), content.size() - di);
+      if ((cap == ZSTD_CONTENTSIZE_ERROR) || (cap == ZSTD_CONTENTSIZE_UNKNOWN))
+        return;
 
-    if ((cap == ZSTD_CONTENTSIZE_ERROR) || (cap == ZSTD_CONTENTSIZE_UNKNOWN))
-      return false;
+      di_content.resize(cap);
+      auto decompressed_size = ZSTD_decompress(
+        di_content.data(), cap, &content.at(di), content.size() - di);
 
-    di_content.resize(cap);
-    auto decompressed_size = ZSTD_decompress(
-      di_content.data(), cap, &content.at(di), content.size() - di);
+      if (ZSTD_isError(decompressed_size))
+      {
+        di_content.clear();
+        return;
+      }
 
-    if (ZSTD_isError(decompressed_size))
-      return false;
+      di_content.resize(decompressed_size);
 
-    di_content.resize(decompressed_size);
+      PC pc = 0;
+      string_table(pc, di_content, di_strings);
+      auto num_sources = di_uleb(pc);
 
-    PC pc = 0;
-    string_table(pc, di_content, di_strings);
-    auto num_sources = di_uleb(pc);
+      for (size_t i = 0; i < num_sources; i++)
+      {
+        auto di_file = di_uleb(pc);
+        source_files[di_file].di_pos = pc;
+        pc += di_uleb(pc);
+      }
 
-    for (size_t i = 0; i < num_sources; i++)
-    {
-      auto di_file = di_uleb(pc);
-      source_files[di_file].di_pos = pc;
-      pc += di_uleb(pc);
-    }
+      di = pc;
+    });
 
-    di = pc;
-    return true;
+    return !di_content.empty();
   }
 
   SourceFile* Program::get_source_file(size_t di_file)

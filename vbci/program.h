@@ -11,6 +11,7 @@
 
 #include <bit>
 #include <fstream>
+#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -63,6 +64,7 @@ namespace vbci
     std::vector<uint8_t> di_content;
     std::vector<std::string> di_strings;
     std::unordered_map<size_t, SourceFile> source_files;
+    std::once_flag di_once;
 
   public:
     static Program& get();
@@ -75,8 +77,8 @@ namespace vbci
     Program() = default;
 
     // Move constructors
-    Program(Program&&) = default;
-    Program& operator=(Program&&) = default;
+    Program(Program&&) = delete;
+    Program& operator=(Program&&) = delete;
 
     Symbol& symbol(size_t idx);
     Function* function(size_t idx);
