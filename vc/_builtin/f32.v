@@ -289,4 +289,9 @@ f32
   {
     :::convf64(self)
   }
+
+  string(self: f32): string
+  {
+    self.f64.string
+  }
 }

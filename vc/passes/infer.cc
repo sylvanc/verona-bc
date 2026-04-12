@@ -1125,6 +1125,29 @@ namespace vc
           return clone(incoming);
         }
       }
+
+      // Default yields to a compatible primitive member of a union.
+      // e.g., DefaultInt + Union(usize, none) → usize.
+      if (incoming->front() == Union)
+      {
+        for (auto& member : *(incoming->front()))
+        {
+          auto mt = Type << clone(member);
+          auto mp = extract_primitive(mt);
+          if (mp)
+          {
+            bool compat =
+              (existing->front() == DefaultInt && mp->in(integer_types)) ||
+              (existing->front() == DefaultFloat && mp->in(float_types));
+            if (compat)
+            {
+              if (active_infer_profile != nullptr)
+                active_infer_profile->merge_type_default_promote++;
+              return mt;
+            }
+          }
+        }
+      }
     }
 
     if (is_default_type(incoming) && !is_default_type(existing))
@@ -4054,22 +4077,24 @@ namespace vc
             {
               auto recv_loc = (lookup_it->second / Rhs)->location();
               bool local_refined = refine_local_const(recv_loc, target_type);
+              bool fwd_refined = merge(recv_loc, target_type);
               bool bwd_refined = merge_bwd(recv_loc, target_type);
               if (bwd_refined)
                 propagate_call_node(
                   env, recv_loc, top, lookup_stmts, &all_def_stmts);
-              refined = refined || local_refined || bwd_refined;
+              refined = refined || local_refined || fwd_refined || bwd_refined;
             }
 
             for (auto& arg_node : *args)
             {
               auto arg_loc = (arg_node / Rhs)->location();
               bool local_refined = refine_local_const(arg_loc, target_type);
+              bool fwd_refined = merge(arg_loc, target_type);
               bool bwd_refined = merge_bwd(arg_loc, target_type);
               if (bwd_refined)
                 propagate_call_node(
                   env, arg_loc, top, lookup_stmts, &all_def_stmts);
-              refined = refined || local_refined || bwd_refined;
+              refined = refined || local_refined || fwd_refined || bwd_refined;
             }
 
             if (lookup_it != lookup_stmts.end())
@@ -4588,6 +4613,18 @@ namespace vc
               }
               if (eit->second.is_fixed && !info.is_fixed)
                 continue;
+              // Don't widen: if the forward type is already a concrete
+              // (non-default) non-union type and the backward is a union,
+              // keep the forward type — it's more precise.
+              if (
+                eit->second.type && info.type &&
+                !eit->second.type->empty() && !info.type->empty() &&
+                info.type->front() == Union &&
+                eit->second.type->front() != Union &&
+                !is_default_type(eit->second.type))
+              {
+                continue;
+              }
               if (!eit->second.is_fixed && info.is_fixed)
               {
                 eit->second.type = clone(info.type);
@@ -4632,6 +4669,15 @@ namespace vc
                 }
                 if (eit->second.is_fixed && !info.is_fixed)
                   continue;
+                if (
+                  eit->second.type && info.type &&
+                  !eit->second.type->empty() && !info.type->empty() &&
+                  info.type->front() == Union &&
+                  eit->second.type->front() != Union &&
+                  !is_default_type(eit->second.type))
+                {
+                  continue;
+                }
                 if (!eit->second.is_fixed && info.is_fixed)
                 {
                   eit->second.type = clone(info.type);

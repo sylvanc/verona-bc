@@ -184,4 +184,16 @@ i64
   {
     :::convf64(self)
   }
+
+  string(self: i64): string
+  {
+    if self < 0
+    {
+      "-" + (-self).u64.string
+    }
+    else
+    {
+      self.u64.string
+    }
+  }
 }

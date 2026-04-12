@@ -184,4 +184,9 @@ isize
   {
     :::convf64(self)
   }
+
+  string(self: isize): string
+  {
+    self.i64.string
+  }
 }

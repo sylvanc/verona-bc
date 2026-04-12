@@ -109,7 +109,7 @@ ilong
   {
     :::abs(self)
   }
-  
+
   bool(self: ilong): bool
   {
     self != 0
@@ -183,5 +183,10 @@ ilong
   f64(self: ilong): f64
   {
     :::convf64(self)
+  }
+
+  string(self: ilong): string
+  {
+    self.i64.string
   }
 }
