@@ -24,9 +24,8 @@ runner
   }
 }
 
-main(): i32
+main(): none
 {
   let h = holder(state 42);
   runner::run(h, s -> none);
-  0
 }

@@ -1,10 +1,13 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // End-to-end test: typed var with ref store, cross-call, and direct assignment.
 
 func @write_ref($r: ref i32, $value: i32): i32
   $prev = store $r $value
   ret $prev
 
-func @main(): i32 var $a: i32, $b: i32
+func @main(): none var $a: i32, $b: i32
   // Direct assignment to var.
   $val1 = const i32 10
   $a = copy $val1
@@ -31,7 +34,11 @@ func @main(): i32 var $a: i32, $b: i32
   $all = and $t1 $ok3
   cond $all ^ok ^fail
 ^ok
-  ret $b
+  $_ = ffi @set_exit_code($b)
+  $_none = const none
+  ret $_none
 ^fail
   $err = const i32 -1
-  ret $err
+  $_ = ffi @set_exit_code($err)
+  $_none = const none
+  ret $_none

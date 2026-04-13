@@ -34,10 +34,9 @@ box[A]
   }
 }
 
-main(): i32
+main(): none
 {
   let b = box(cell(i32 42));
   b.get;
   b.doit "hello";
-  0
 }

@@ -1,12 +1,15 @@
 lib
   @malloc = "malloc"(usize): ptr
   @free = "free"(ptr): none
+  @set_exit_code = "set_exit_code"(i32): none
 
-func @main(): i32
+func @main(): none
   $size = const usize 8
   $addr = ffi @malloc($size)
   $free = ffi @free($addr)
   $x = const usize 12
   $y = add $size $x
   $z = convert i32 $y
-  ret $z
+  $_ = ffi @set_exit_code($z)
+  $_none = const none
+  ret $_none

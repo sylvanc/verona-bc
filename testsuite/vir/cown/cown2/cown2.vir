@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 
 class @BoolObject
     @f : bool
@@ -11,9 +14,11 @@ func @behavior1 ($cown1 : ref @BoolObject) : i32
     $ret_val = const i32 42 
     ret $ret_val
     
-func @main() : i32 
+func @main(): none 
     $cown1 = when @behavior0() : @BoolObject
     $cown2 = when @behavior1($cown1) : i32
     
     $ret_val = const i32 42 
-    ret $ret_val
+    $_ = ffi @set_exit_code($ret_val)
+    $_none = const none
+    ret $_none

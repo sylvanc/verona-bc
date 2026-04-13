@@ -1,6 +1,11 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Verify that assigning a value of the correct type to a typed var succeeds.
 
-func @main(): i32 var $x: i32
+func @main(): none var $x: i32
   $val = const i32 42
   $x = copy $val
-  ret $x
+  $_ = ffi @set_exit_code($x)
+  $_none = const none
+  ret $_none

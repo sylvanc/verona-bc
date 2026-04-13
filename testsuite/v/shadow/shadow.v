@@ -1,7 +1,7 @@
 // Test that local variables inside blocks and lambdas can shadow
 // variables in the enclosing scope without corrupting the outer value.
 // Also tests sibling-scope reuse and nested combinations.
-main(): i32
+main(): none
 {
   // Outer x = 1
   let x: i32 = i32 1;
@@ -99,5 +99,5 @@ main(): i32
   // a=1, b=1, c=1, d=62, e=105, g=213, s=7
   // sum = 1+1+1+62+105+213+7 = 390
   // exit code on Linux = 390 & 0xff = 134
-  a + b + c + d + e + g + s
+  ffi::exit_code(a + b + c + d + e + g + s)
 }

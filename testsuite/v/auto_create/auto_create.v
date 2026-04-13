@@ -8,9 +8,9 @@ point
   y: i32;
 }
 
-main(): i32
+main(): none
 {
   // Uses the auto-generated create(x: i32, y: i32): point
   let p = point(3.i32, 4.i32);
-  p.x + p.y
+  ffi::exit_code(p.x + p.y)
 }

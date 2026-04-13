@@ -2,8 +2,9 @@ lib
   @getargv = "getargv"(): [[u8]]
   @puts = "puts"(ptr): i32
   @printf = "printf"(ptr, ...): i32
+  @set_exit_code = "set_exit_code"(i32): none
 
-func @main(): i32
+func @main(): none
   var $argi
   $one = const usize 1
   $fmt = const "%s (%d)\n"
@@ -27,4 +28,6 @@ func @main(): i32
   jump ^cond
 ^done
   $r = const i32 0
-  ret $r
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none

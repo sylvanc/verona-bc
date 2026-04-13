@@ -25,7 +25,7 @@ counter
   }
 }
 
-main(): i32
+main(): none
 {
   // & tests: false & x should NOT evaluate x, true & x should evaluate x.
   let tt = counter(true);
@@ -72,5 +72,4 @@ main(): i32
 
   // Expected: tt=1 tf=1 ft=0 ff=0 ot=0 of=0 pt=1 pf=1 -> total=4
   :::printval(counts);
-  0
 }

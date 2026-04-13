@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -14,5 +14,5 @@ main(): i32
   if wrapped != "\"quoted\"" { result = result + 16 }
   if wrapped.size != 8 { result = result + 32 }
 
-  result
+  ffi::exit_code result
 }

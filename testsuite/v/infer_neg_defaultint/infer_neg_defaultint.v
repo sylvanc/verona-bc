@@ -6,7 +6,7 @@ neg(): i64
   -1
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -15,5 +15,5 @@ main(): i32
 
   if !(infer_neg_defaultint::neg() == (i64 0 - i64 1)) { result = result + 2 }
 
-  result
+  ffi::exit_code result
 }

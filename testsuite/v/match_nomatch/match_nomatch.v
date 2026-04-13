@@ -4,7 +4,7 @@ noeq
   val: i32;
 }
 
-main(): i32
+main(): none
 {
   var result = i32 0;
 
@@ -25,5 +25,5 @@ main(): i32
   }) else (i32 0);
   if !(b == 42) { result = result + 2 }
 
-  result
+  ffi::exit_code result
 }

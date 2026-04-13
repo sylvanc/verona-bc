@@ -13,7 +13,7 @@ cell
   }
 }
 
-main(): i32
+main(): none
 {
   // Create a cown holding cell(10).
   let a = when ()
@@ -41,5 +41,4 @@ main(): i32
     :::printval(sum);
     cell(sum)
   }
-  0
 }

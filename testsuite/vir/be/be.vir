@@ -1,5 +1,6 @@
 lib
   @printval = "printval"(dyn): none
+  @set_exit_code = "set_exit_code"(i32): none
 
 class @closure_bool
   @val: bool
@@ -44,7 +45,7 @@ func @behavior2_apply($self: @behavior2, $promise_v: ref i32): none
   $_ = ffi @printval($a)
   ret $_
 
-func @main(): i32
+func @main(): none
   $bool = const bool true
   $closure_bool = region arena @closure_bool($bool)
   $be1 = lookup $closure_bool @apply
@@ -59,4 +60,6 @@ func @main(): i32
   $closure2 = new @behavior2()
   $_ = when @behavior2_apply($closure2, $ro_promise): none
   $zero = const i32 0
-  ret $zero
+  $_ = ffi @set_exit_code($zero)
+  $_none = const none
+  ret $_none

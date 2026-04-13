@@ -47,7 +47,7 @@ picker
   }
 }
 
-main(): i32
+main(): none
 {
   // Lambda params should be inferred from readable::cb via the union.
   // The key test is that this compiles: src, data, size have no annotations.
@@ -57,5 +57,4 @@ main(): i32
   let b = picker::pick(1);
   b.start (src, data, size) -> {}
 
-  0
 }

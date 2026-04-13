@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 type @A_or_B = @A | @B 
 
 class @closure_a 
@@ -29,7 +32,7 @@ func @behavior1 ($cown1 : ref @A_or_B) : @A_or_B
     ret $new
 
     
-func @main() : i32 
+func @main(): none 
     $true = const bool true 
     $b = region rc @B($true)
     $closure_a = heap $b @closure_a($b)
@@ -39,4 +42,6 @@ func @main() : i32
     $cown2 = when @behavior1($cown1) : @A_or_B
     
     $ret_val = const i32 42 
-    ret $ret_val
+    $_ = ffi @set_exit_code($ret_val)
+    $_none = const none
+    ret $_none

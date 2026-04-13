@@ -1,10 +1,13 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 class @B 
     @f : bool 
 
 class @A
     @f : @B 
 
-func @main() : i32 
+func @main(): none 
     $true = const bool true 
     $b1 = region rc @B($true)
     // add reference from frame local to a region, then parent the region
@@ -12,4 +15,6 @@ func @main() : i32
     $a2 = region rc @A($b1)
     
     $ret_val = const i32 42 
-    ret $ret_val
+    $_ = ffi @set_exit_code($ret_val)
+    $_none = const none
+    ret $_none

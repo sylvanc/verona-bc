@@ -1,8 +1,9 @@
 lib
   @malloc = "malloc"(usize): ptr
   @free = "free"(ptr): none
+  @set_exit_code = "set_exit_code"(i32): none
 
-func @main(): i32
+func @main(): none
   $pair_layout = ffistruct tuple(u8, i32, usize)
   $single_layout = ffistruct u64
 
@@ -85,7 +86,11 @@ func @main(): i32
   cond $ok ^ok ^fail
 ^ok
   $ret = const i32 0
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none
 ^fail
   $ret = const i32 1
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none

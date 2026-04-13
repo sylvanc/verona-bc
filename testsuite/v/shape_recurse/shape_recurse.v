@@ -33,8 +33,8 @@ invoke(r: returner): i32
   r.val()
 }
 
-main(): i32
+main(): none
 {
   let b = box::create(42);
-  shape_recurse::invoke(b)
+  ffi::exit_code(shape_recurse::invoke(b))
 }

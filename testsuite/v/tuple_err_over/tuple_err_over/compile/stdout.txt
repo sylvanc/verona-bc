@@ -12,9 +12,9 @@ store: value type 'dyn' is not a subtype of reference content type 'Union(Tuple(
 
 ----------------
 call: argument type 'dyn' is not a subtype of parameter type 'i32'
--- tuple_err_over.v:7:11
-  a + b + c
-          ~
+-- tuple_err_over.v:7:26
+  ffi::exit_code(a + b + c)
+                         ~
 
 Pass typecheck failed with 3 errors!
 

@@ -28,8 +28,8 @@ unwrap_i32(w: wrapper[i32]): i32
   w.get
 }
 
-main(): i32
+main(): none
 {
   let w = infer_backward::wrap(42);
-  infer_backward::unwrap_i32(w)
+  ffi::exit_code(infer_backward::unwrap_i32(w))
 }

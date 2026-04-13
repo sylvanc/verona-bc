@@ -16,7 +16,7 @@ box[T]
   }
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -38,5 +38,5 @@ main(): i32
   var c: i32 = a + b;
   if !(c == 3) { result = result + 8 }
 
-  result
+  ffi::exit_code result
 }

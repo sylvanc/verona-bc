@@ -32,7 +32,7 @@ writer
   }
 }
 
-main(): i32
+main(): none
 {
   let a = writer();
   let tag = "out";
@@ -41,5 +41,4 @@ main(): i32
     (s: string) -> none;
   }
   a.send();
-  0
 }

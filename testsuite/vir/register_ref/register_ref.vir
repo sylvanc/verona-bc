@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // This example creates a reference to a register, then calls a function that
 // recurses to a high depth, and finally reads the register reference to verify
 // that the value is still correct.
@@ -13,7 +16,7 @@ func @stack_rec($n: i32): i32
 ^base
   ret $n
 
-func @main(): i32 var $count
+func @main(): none var $count
   $count = const i32 1000
   $ref = ref $count
   $result = call @stack_rec($count)
@@ -21,4 +24,6 @@ func @main(): i32 var $count
   // This exposes a bug where the stack was moved, and the register reference
   // pointed to the unmoved stack location.
   $old = load $ref
-  ret $count
+  $_ = ffi @set_exit_code($count)
+  $_none = const none
+  ret $_none

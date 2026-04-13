@@ -16,7 +16,7 @@ maker
   }
 }
 
-main(): i32
+main(): none
 {
   let h = () -> {}
   let m = maker;
@@ -24,5 +24,4 @@ main(): i32
   let f2 = m.two(h);
   f1();
   f2();
-  0
 }

@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   let arr = array[i32]::fill(10);
 
@@ -14,5 +14,5 @@ main(): i32
     sum = sum + i
   }
 
-  sum
+  ffi::exit_code sum
 }

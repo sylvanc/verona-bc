@@ -1,13 +1,18 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 class @A
     @f1 : i32 
 
 class @B 
     @f1 : @A
 
-func @main(): i32
+func @main(): none
     $i = const i32 42
     $a =  new @A($i)
     $b = region rc @B($a)
-    ret $i
+    $_ = ffi @set_exit_code($i)
+    $_none = const none
+    ret $_none
 
     

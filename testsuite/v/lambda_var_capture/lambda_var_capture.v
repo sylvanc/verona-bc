@@ -30,7 +30,7 @@ var_and_raise(n: i32, target: i32): i32
   0
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
   let a = lambda_var_capture::read_var(10);
@@ -41,5 +41,5 @@ main(): i32
   if c != 42 { result = result + 4 }
   let d = lambda_var_capture::var_and_raise(42, 99);
   if d != 0 { result = result + 8 }
-  result
+  ffi::exit_code result
 }

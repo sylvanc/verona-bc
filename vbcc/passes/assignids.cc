@@ -178,10 +178,10 @@ namespace vbcc
               return err(func_id, "main function must take no parameters");
             }
 
-            if ((func_state.func / Type) != I32)
+            if ((func_state.func / Type) != None)
             {
               state->error = true;
-              return err(func_id, "main function must return i32");
+              return err(func_id, "main function must return none");
             }
           }
 
@@ -282,11 +282,11 @@ namespace vbcc
         }
       }
 
-      // Reserve types for cown i32 (main), [u8] (arg), [[u8]] (argv),
+      // Reserve types for cown none (main), [u8] (arg), [[u8]] (argv),
       // `ref dyn` (unknown RegisterRef types), [usize] (FFI struct offsets),
       // and the fixed FFIStruct result tuple. This has to happen after all
       // classes have been added, but before any complex primitives.
-      state->typ(Cown << I32);
+      state->typ(Cown << None);
       state->typ(Array << U8);
       state->typ(Array << (Array << U8));
       state->typ(Ref << Dyn);

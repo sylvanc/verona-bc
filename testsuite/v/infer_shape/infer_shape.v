@@ -27,8 +27,8 @@ extract[T](g: getter[T]): T
   g.get
 }
 
-main(): i32
+main(): none
 {
   let b = box[i32](42);
-  infer_shape::extract(b)
+  ffi::exit_code(infer_shape::extract(b))
 }

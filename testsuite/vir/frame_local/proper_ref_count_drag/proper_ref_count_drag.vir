@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 class @B 
     @f : bool
 
@@ -7,14 +10,16 @@ class @A
 class @C 
     @f : @A
 
-func @main():i32 
+func @main(): none 
     $true = const bool true 
     $b = region rc @B($true)
     $a = new @A($b)
     $c = region rc @C($a)
 
     $ret_val = const i32 42 
-    ret $ret_val
+    $_ = ffi @set_exit_code($ret_val)
+    $_none = const none
+    ret $_none
     
 
 

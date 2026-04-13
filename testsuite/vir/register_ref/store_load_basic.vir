@@ -1,6 +1,9 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Basic store/load from a single register reference.
 
-func @main(): i32 var $init
+func @main(): none var $init
   $init = const i32 5
   $r = ref $init
   $val = const i32 9
@@ -14,7 +17,11 @@ func @main(): i32 var $init
   cond $both ^ok ^fail
 ^ok
   $ret = const i32 0
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none
 ^fail
   $ret = const i32 -1
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none

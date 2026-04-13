@@ -205,7 +205,7 @@ namespace vbci
       init_memo_slot(i);
 
     ValueTransfer ret =
-      Thread::run_async(typeid_cown_i32, &functions.at(MainFuncId));
+      Thread::run_async(typeid_cown_none, &functions.at(MainFuncId));
     sched.run();
 
     auto ret_val = ret.get_cown()->load();
@@ -217,10 +217,6 @@ namespace vbci
 
       if (exit_code == 0)
         exit_code = -1;
-    }
-    else if (exit_code == 0)
-    {
-      exit_code = ret_val.get_i32();
     }
 
     // Run fini callbacks in reverse order (last init = first fini).
@@ -884,9 +880,9 @@ namespace vbci
       return false;
     }
 
-    if (!subtype(functions.at(MainFuncId).return_type, +ValueType::I32))
+    if (!subtype(functions.at(MainFuncId).return_type, +ValueType::None))
     {
-      LOG(Error) << file << ": `main` must return i32" << std::endl;
+      LOG(Error) << file << ": `main` must return none" << std::endl;
       return false;
     }
 
@@ -897,9 +893,9 @@ namespace vbci
     for (auto& t : complex_types)
       parse_complex_type(t, type_id++, pc);
 
-    typeid_cown_i32 = min_complex_type_id;
-    assert(complex_type(typeid_cown_i32).tag == TypeTag::Cown);
-    assert(complex_type(typeid_cown_i32).children.at(0) == +ValueType::I32);
+    typeid_cown_none = min_complex_type_id;
+    assert(complex_type(typeid_cown_none).tag == TypeTag::Cown);
+    assert(complex_type(typeid_cown_none).children.at(0) == +ValueType::None);
 
     typeid_arg = min_complex_type_id + 1;
     assert(complex_type(typeid_arg).tag == TypeTag::Array);

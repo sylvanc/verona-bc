@@ -1,5 +1,5 @@
-main(): i32
+main(): none
 {
   let f = (x: i32) -> x + 1;
-  f(41)
+  ffi::exit_code(f(41))
 }

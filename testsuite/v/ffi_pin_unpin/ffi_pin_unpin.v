@@ -8,7 +8,7 @@ box
   }
 }
 
-main(): i32
+main(): none
 {
   let b = box(array[u8]::fill(3, u8 1));
   let c = cown none;
@@ -19,5 +19,4 @@ main(): i32
   ffi::unpin(b.data);
   ffi::pin(c);
   ffi::unpin(c);
-  0
 }

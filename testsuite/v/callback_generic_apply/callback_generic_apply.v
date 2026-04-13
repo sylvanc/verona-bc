@@ -30,11 +30,11 @@ tester
   }
 }
 
-main(): i32
+main(): none
 {
   var r = 0;
   let t = tester;
   t.run 42;
   if t.result != 42 { r = r + 1 }
-  r
+  ffi::exit_code r
 }

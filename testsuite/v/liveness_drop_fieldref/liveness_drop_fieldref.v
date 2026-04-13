@@ -24,9 +24,8 @@ holder
   }
 }
 
-main(): i32
+main(): none
 {
   let s = box_state();
   let h = holder(s);
-  0
 }

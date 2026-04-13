@@ -1,4 +1,9 @@
-func @main(): i32
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
   jump ^join
 ^join
-  ret $x
+  $_ = ffi @set_exit_code($x)
+  $_none = const none
+  ret $_none

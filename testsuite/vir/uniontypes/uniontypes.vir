@@ -1,9 +1,12 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 type @union = i32 | @Foo
 
 class @Foo
   @a: i32
 
-func @main(): i32
+func @main(): none
   $x = const i32 99
   $foo = stack @Foo($x)
   $ref = ref $foo @a
@@ -13,9 +16,13 @@ func @main(): i32
   $r3 = eq $r1 $r2
   cond $r3 ^true ^false
 ^true
-  ret $r1
+  $_ = ffi @set_exit_code($r1)
+  $_none = const none
+  ret $_none
 ^false
-  ret $r2
+  $_ = ffi @set_exit_code($r2)
+  $_none = const none
+  ret $_none
 
 func @func1($x: @union): i32
   $r = const i32 1

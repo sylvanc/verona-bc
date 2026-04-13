@@ -8,8 +8,8 @@ apply_fn(f: i32 -> i32, x: i32): i32
   f(x)
 }
 
-main(): i32
+main(): none
 {
   let inc = (x: i32): i32 -> { x + 1 }
-  functype::apply_fn(inc, 41)
+  ffi::exit_code(functype::apply_fn(inc, 41))
 }

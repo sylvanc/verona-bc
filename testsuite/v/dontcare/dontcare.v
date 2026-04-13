@@ -1,5 +1,5 @@
 // Test using _ (DontCare) on the LHS of assignments.
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -26,5 +26,5 @@ main(): i32
   (x, _) = t4;
   if !(x == 70) { result = result + 4 }
 
-  result
+  ffi::exit_code result
 }

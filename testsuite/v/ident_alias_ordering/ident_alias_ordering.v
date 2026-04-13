@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   let buf = later.alloc;
   later.store[usize](buf, 0, 7);
@@ -11,5 +11,5 @@ main(): i32
     result = result + 1
   }
 
-  result
+  ffi::exit_code result
 }

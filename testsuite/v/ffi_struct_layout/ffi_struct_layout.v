@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   let pair = ffi::struct[(u8, i32, usize)]::create();
   let single = ffi::struct[u64]::create();
@@ -27,5 +27,5 @@ main(): i32
 
   pair.free(pair_ptr);
   single.free(single_ptr);
-  result
+  ffi::exit_code result
 }

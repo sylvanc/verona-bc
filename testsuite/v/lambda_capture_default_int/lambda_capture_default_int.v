@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   let count = 0;
   let f = (): none ->
@@ -10,5 +10,4 @@ main(): i32
   }
 
   f();
-  0
 }

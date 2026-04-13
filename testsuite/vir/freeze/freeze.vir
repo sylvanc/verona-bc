@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Test the freeze op across interesting topologies.
 // Exit code 0 = all tests passed.
 
@@ -104,7 +107,7 @@ func @test_double_freeze() : i32
     ret $r
 
 // Main: run all tests and return bitmask of failures.
-func @main() : i32
+func @main(): none
     $r0 = const i32 0
 
     $r1 = call @test_simple()
@@ -205,6 +208,10 @@ func @main() : i32
     ^f8
     $b8 = const i32 128
     $a8 = add $a7 $b8
-    ret $a8
+    $_ = ffi @set_exit_code($a8)
+    $_none = const none
+    ret $_none
     ^t8pass
-    ret $a7
+    $_ = ffi @set_exit_code($a7)
+    $_none = const none
+    ret $_none

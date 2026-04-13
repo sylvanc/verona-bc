@@ -3,7 +3,7 @@ maybe_val(flag: bool): i32 | nomatch
   if flag { i32 42 }
 }
 
-main(): i32
+main(): none
 {
   let a: i32 = else_expr::maybe_val(true) else (i32 0);
   let b: i32 = else_expr::maybe_val(false) else (i32 0);
@@ -20,5 +20,5 @@ main(): i32
     result = result + 2
   }
 
-  result
+  ffi::exit_code result
 }

@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 class @Foo
   @a: i32
   @final @Foo_final
@@ -7,11 +10,13 @@ func @Foo_final($self: @Foo): i32
   $a = load $ref
   ret $a
 
-func @main(): i32
+func @main(): none
   $a = const i32 99
   $foo0 = stack @Foo($a)
   $foo1 = region rc @Foo($a)
   $foo2 = heap $foo1 @Foo($a)
   $foo3 = region arena @Foo($a)
   $r = const i32 3
-  ret $r
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none

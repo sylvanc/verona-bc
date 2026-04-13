@@ -14,9 +14,8 @@ use
   printval = "printval"(any): none;
 }
 
-main(): i32
+main(): none
 {
   var x: i32 = 2;
   :::printval(x);
-  0
 }

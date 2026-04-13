@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -18,5 +18,5 @@ main(): i32
   let c = (match 5 { (x: i32) -> x * 2; }) else (99);
   if !(c == 10) { result = result + 4 }
 
-  result
+  ffi::exit_code result
 }

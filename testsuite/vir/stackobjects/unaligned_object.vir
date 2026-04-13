@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Force an unaligned object placement by first allocating a small byte array
 // whose total size is not a multiple of 8, then placing an object immediately
 // after. This exercises stack placement when alignment would otherwise be
@@ -7,7 +10,7 @@ class @Pair
   @x: i64
   @y: i64
 
-func @main(): i32
+func @main(): none
   $len = const usize 3                   // 3 bytes to skew alignment
   $bytes = stack [i8] $len               // small byte array on stack
 
@@ -49,7 +52,11 @@ func @main(): i32
   cond $all1 ^pass ^fail
 ^pass
   $ret = const i32 0
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none
 ^fail
   $ret = const i32 -1
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none

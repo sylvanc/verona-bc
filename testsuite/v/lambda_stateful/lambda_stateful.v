@@ -32,7 +32,7 @@ independent_state(): i32
   a2 + b2
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -63,5 +63,5 @@ main(): i32
     result = result + 4
   }
 
-  result
+  ffi::exit_code result
 }

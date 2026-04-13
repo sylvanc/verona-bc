@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -7,5 +7,5 @@ main(): i32
     result = result + 1
   }
 
-  result
+  ffi::exit_code result
 }

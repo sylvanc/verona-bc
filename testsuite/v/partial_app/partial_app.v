@@ -22,7 +22,7 @@ box
   combine(self: box, a: i32, b: i32): i32 { self.val + a + b }
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -83,5 +83,5 @@ main(): i32
     result = result + 128
   }
 
-  result
+  ffi::exit_code result
 }

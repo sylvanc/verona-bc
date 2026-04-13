@@ -1,3 +1,8 @@
-func @main(): i32
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
   $i = const i32 0
-  ret $i
+  $_ = ffi @set_exit_code($i)
+  $_none = const none
+  ret $_none

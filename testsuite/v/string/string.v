@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   let s = "hello";
   var result = 0;
@@ -41,5 +41,5 @@ main(): i32
   if ("" + "hello") != "hello" { result = result + 524288 }
   if ("hello" + "") != "hello" { result = result + 1048576 }
 
-  result
+  ffi::exit_code result
 }
