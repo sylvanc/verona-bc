@@ -218,7 +218,7 @@ namespace vbci
       if (exit_code == 0)
         exit_code = -1;
     }
-    else if(exit_code == 0)
+    else if (exit_code == 0)
     {
       exit_code = ret_val.get_i32();
     }
@@ -1133,8 +1133,7 @@ namespace vbci
       if (di == PC(-1))
         return;
 
-      auto cap =
-        ZSTD_getFrameContentSize(&content.at(di), content.size() - di);
+      auto cap = ZSTD_getFrameContentSize(&content.at(di), content.size() - di);
 
       if ((cap == ZSTD_CONTENTSIZE_ERROR) || (cap == ZSTD_CONTENTSIZE_UNKNOWN))
         return;

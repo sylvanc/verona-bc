@@ -4617,9 +4617,8 @@ namespace vc
               // (non-default) non-union type and the backward is a union,
               // keep the forward type — it's more precise.
               if (
-                eit->second.type && info.type &&
-                !eit->second.type->empty() && !info.type->empty() &&
-                info.type->front() == Union &&
+                eit->second.type && info.type && !eit->second.type->empty() &&
+                !info.type->empty() && info.type->front() == Union &&
                 eit->second.type->front() != Union &&
                 !is_default_type(eit->second.type))
               {
@@ -4670,9 +4669,8 @@ namespace vc
                 if (eit->second.is_fixed && !info.is_fixed)
                   continue;
                 if (
-                  eit->second.type && info.type &&
-                  !eit->second.type->empty() && !info.type->empty() &&
-                  info.type->front() == Union &&
+                  eit->second.type && info.type && !eit->second.type->empty() &&
+                  !info.type->empty() && info.type->front() == Union &&
                   eit->second.type->front() != Union &&
                   !is_default_type(eit->second.type))
                 {
