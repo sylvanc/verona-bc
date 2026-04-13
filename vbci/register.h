@@ -5,6 +5,7 @@
  *
  * This holds a value and manages the ownership semantics of that value.
  */
+#include "location.h"
 #include "value.h"
 
 namespace vbci
