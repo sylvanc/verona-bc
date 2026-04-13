@@ -9,6 +9,7 @@
 #include "logging.h"
 #include "value.h"
 
+#include <atomic>
 #include <bit>
 #include <fstream>
 #include <mutex>
@@ -65,6 +66,8 @@ namespace vbci
     std::vector<std::string> di_strings;
     std::unordered_map<size_t, SourceFile> source_files;
     std::once_flag di_once;
+
+    std::atomic<int32_t> exit_code{0};
 
   public:
     static Program& get();
@@ -131,6 +134,11 @@ namespace vbci
       std::filesystem::path& path,
       size_t num_threads,
       std::vector<std::string> args);
+
+    void set_exit_code(int32_t code)
+    {
+      exit_code = code;
+    }
 
     std::pair<ValueType, ffi_type*> layout_type_id(uint32_t type_id);
     std::pair<ValueType, ffi_type*> layout_union_type(ComplexType& t);

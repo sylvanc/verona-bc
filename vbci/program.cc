@@ -210,23 +210,22 @@ namespace vbci
 
     auto ret_val = ret.get_cown()->load();
     ret.field_dec();
-    int exit_code;
 
     if (ret_val.is_error())
     {
       LOG(Error) << ret_val.to_string();
-      exit_code = -1;
+
+      if (exit_code == 0)
+        exit_code = -1;
     }
-    else
+    else if(exit_code == 0)
     {
       exit_code = ret_val.get_i32();
     }
 
     // Run fini callbacks in reverse order (last init = first fini).
     for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
-    {
-      (void)Thread::run_sync(it->second, it->first.borrow());
-    }
+      Thread::run_sync(it->second, it->first.borrow());
 
     fini_callbacks.clear();
 
