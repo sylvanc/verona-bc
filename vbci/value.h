@@ -689,10 +689,10 @@ namespace vbci
           return Value(OpB{}(b, v.b));
 
         case ValueType::I8:
-          return Value(OpI{}(i8, v.i8));
+          return Value(static_cast<int8_t>(OpI{}(i8, v.i8)));
 
         case ValueType::I16:
-          return Value(OpI{}(i16, v.i16));
+          return Value(static_cast<int16_t>(OpI{}(i16, v.i16)));
 
         case ValueType::I32:
           return Value(OpI{}(i32, v.i32));
@@ -701,10 +701,10 @@ namespace vbci
           return Value(OpI{}(i64, v.i64));
 
         case ValueType::U8:
-          return Value(OpU{}(u8, v.u8));
+          return Value(static_cast<uint8_t>(OpU{}(u8, v.u8)));
 
         case ValueType::U16:
-          return Value(OpU{}(u16, v.u16));
+          return Value(static_cast<uint16_t>(OpU{}(u16, v.u16)));
 
         case ValueType::U32:
           return Value(OpU{}(u32, v.u32));
