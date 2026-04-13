@@ -1,3 +1,14 @@
+use
+{
+  strlen = "strlen"(ffi::ptr): usize;
+  memcpy = "memcpy"(ffi::ptr, ffi::ptr, usize): ffi::ptr;
+}
+
+shape to_string
+{
+  string(self: self): string;
+}
+
 string
 {
   data: array[u8];
@@ -8,6 +19,20 @@ string
   create(data: array[u8]): string
   {
     new { data, len = data.size - 1 }
+  }
+
+  // Create a string from a C string pointer.
+  from_cstr(ptr: ffi::ptr): string
+  {
+    if ptr == ffi::ptr
+    {
+      return string(array[u8]::fill 1)
+    }
+
+    let len = :::strlen(ptr);
+    let buf = array[u8]::fill(len + 1);
+    :::memcpy(buf, ptr, len + 1);
+    string buf
   }
 
   copy(self: string): string
@@ -32,6 +57,11 @@ string
     self.len != 0
   }
 
+  string(self: string): string
+  {
+    self
+  }
+
   cstring(self: string): array[u8]
   {
     self.data
@@ -39,25 +69,28 @@ string
 
   // --- Comparison ---
 
-  ==(self: string, other: string): bool
+  ==(self: string, other: to_string): bool
   {
-    if self.len != other.len
+    let s = other.string;
+
+    if self.len != s.len
     {
       return false
     }
 
-    self.data.compare(0, other.data, 0, self.len) == 0
+    self.data.compare(0, s.data, 0, self.len) == 0
   }
 
-  !=(self: string, other: string): bool
+  !=(self: string, other: to_string): bool
   {
     !(self == other)
   }
 
-  <(self: string, other: string): bool
+  <(self: string, other: to_string): bool
   {
-    let n = self.len.min(other.len);
-    let cmp = self.data.compare(0, other.data, 0, n);
+    let s = other.string;
+    let n = self.len.min(s.len);
+    let cmp = self.data.compare(0, s.data, 0, n);
 
     if cmp < 0
     {
@@ -68,32 +101,33 @@ string
       return false
     }
 
-    self.len < other.len
+    self.len < s.len
   }
 
-  <=(self: string, other: string): bool
+  <=(self: string, other: to_string): bool
   {
-    !(other < self)
+    !(other.string < self)
   }
 
-  >(self: string, other: string): bool
+  >(self: string, other: to_string): bool
   {
-    other < self
+    other.string < self
   }
 
-  >=(self: string, other: string): bool
+  >=(self: string, other: to_string): bool
   {
     !(self < other)
   }
 
   // --- Concatenation ---
 
-  +(self: string, other: string): string
+  +(self: string, other: to_string): string
   {
-    let result = array[u8]::fill(self.len + other.len + 1);
+    let s = other.string;
+    let result = array[u8]::fill(self.len + s.len + 1);
     result.copy_from(0, self.data, 0, self.len);
-    result.copy_from(self.len, other.data, 0, other.len);
-    result(self.len + other.len) = 0;
+    result.copy_from(self.len, s.data, 0, s.len);
+    result(self.len + s.len) = 0;
     string(result)
   }
 
@@ -123,68 +157,73 @@ string
 
   // --- Mutation ---
 
-  append(self: string, other: string): none
+  append(self: string, other: to_string): none
   {
-    self.reserve(self.len + other.len);
-    self.data.copy_from(self.len, other.data, 0, other.len);
-    self.len = self.len + other.len;
+    let s = other.string;
+    self.reserve(self.len + s.len);
+    self.data.copy_from(self.len, s.data, 0, s.len);
+    self.len = self.len + s.len;
     self.data()(self.len) = 0
   }
 
-  insert(self: string, index: usize, other: string): none
+  insert(self: string, index: usize, other: to_string): none
   {
-    self.reserve(self.len + other.len);
     // shift tail right using bulk copy (handles overlap)
-    self.data.copy_from(index + other.len, self.data, index, self.len - index);
-    self.data.copy_from(index, other.data, 0, other.len);
-    self.len = self.len + other.len;
+    let s = other.string;
+    self.reserve(self.len + s.len);
+    self.data.copy_from(index + s.len, self.data, index, self.len - index);
+    self.data.copy_from(index, s.data, 0, s.len);
+    self.len = self.len + s.len;
     self.data()(self.len) = 0
   }
 
   erase(self: string, offset: usize, count: usize): none
   {
-    let n = count.min(self.len - offset);
     // shift tail left using bulk copy (handles overlap)
+    let n = count.min(self.len - offset);
     self.data.copy_from(offset, self.data, offset + n, self.len - offset - n);
     self.len = self.len - n;
     self.data()(self.len) = 0
   }
 
-  replace(self: string, offset: usize, count: usize, other: string): none
+  replace(self: string, offset: usize, count: usize, other: to_string): none
   {
-    let n = count.min(self.len - offset);
-    let new_len = self.len - n + other.len;
-    self.reserve(new_len);
     // shift tail to final position, then copy replacement in
-    self.data.copy_from(offset + other.len, self.data, offset + n, self.len - offset - n);
-    self.data.copy_from(offset, other.data, 0, other.len);
+    let s = other.string;
+    let n = count.min(self.len - offset);
+    let new_len = self.len - n + s.len;
+    self.reserve(new_len);
+    self.data.copy_from(
+      offset + s.len, self.data, offset + n, self.len - offset - n);
+    self.data.copy_from(offset, s.data, 0, s.len);
     self.len = new_len;
     self.data()(self.len) = 0
   }
 
   // --- Search ---
 
-  find(self: string, other: string): usize | none
+  find(self: string, other: to_string): usize | none
   {
-    if other.len == 0
+    let s = other.string;
+
+    if s.len == 0
     {
       return usize 0
     }
 
-    if other.len > self.len
+    if s.len > self.len
     {
       return none
     }
 
-    var i: usize = 0;
-    let limit = self.len - other.len + 1;
+    var i = 0;
+    let limit = self.len - s.len + 1;
 
     while i < limit
     {
-      if self.data.compare(i, other.data, 0, other.len) == 0
+      if self.data.compare(i, s.data, 0, s.len) == 0
       {
-        let found: usize = i;
-        return found
+        return i
       }
       i = i + 1
     }
@@ -192,9 +231,9 @@ string
     none
   }
 
-  contains(self: string, other: string): bool
+  contains(self: string, other: to_string): bool
   {
-    match self.find(other)
+    match self.find other
     {
       (i: usize) -> true;
     }
@@ -204,25 +243,29 @@ string
     }
   }
 
-  starts_with(self: string, prefix: string): bool
+  starts_with(self: string, prefix: to_string): bool
   {
-    if prefix.len > self.len
+    let p = prefix.string;
+
+    if p.len > self.len
     {
       return false
     }
 
-    self.data.compare(0, prefix.data, 0, prefix.len) == 0
+    self.data.compare(0, p.data, 0, p.len) == 0
   }
 
-  ends_with(self: string, suffix: string): bool
+  ends_with(self: string, suffix: to_string): bool
   {
-    if suffix.len > self.len
+    let s = suffix.string;
+
+    if s.len > self.len
     {
       return false
     }
 
-    let offset = self.len - suffix.len;
-    self.data.compare(offset, suffix.data, 0, suffix.len) == 0
+    let offset = self.len - s.len;
+    self.data.compare(offset, s.data, 0, s.len) == 0
   }
 
   // --- Slicing ---
@@ -259,12 +302,14 @@ string
   trim_right(self: string): string
   {
     var i = self.len;
+
     while i > 0
     {
       if !string::is_space(self.data()(i - 1))
       {
         return self.substring(0, i)
       }
+
       i = i - 1
     }
 
@@ -273,24 +318,29 @@ string
 
   trim(self: string): string
   {
-    var start: usize = 0;
+    var start = 0;
+
     while start < self.len
     {
-      let s: usize = start;
+      let s = start;
+
       if !string::is_space(self.data()(s))
       {
         var end = self.len;
+
         while end > s
         {
           if !string::is_space(self.data()(end - 1))
           {
             return self.substring(s, end - s)
           }
+
           end = end - 1
         }
 
         return self.substring(s, 0)
       }
+
       start = start + 1
     }
 

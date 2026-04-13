@@ -1,5 +1,6 @@
 #pragma once
 
+#include "drag.h"
 #include "ident.h"
 #include "location.h"
 #include "region.h"

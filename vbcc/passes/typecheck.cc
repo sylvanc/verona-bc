@@ -87,6 +87,16 @@ namespace vbcc
        F64});
   }
 
+  // Types that support == and != (numeric types plus ptr).
+  static bool is_equality_comparable(const Node& t)
+  {
+    if (is_numeric(t))
+      return true;
+    if (t == Dyn)
+      return true;
+    return t == Ptr;
+  }
+
   static bool is_float(const Node& t)
   {
     if (t == Dyn)
@@ -1250,7 +1260,7 @@ namespace vbcc
           // Freeze returns the frozen object (same type as src).
           set_type(env, node / LocalId, typed(node / Rhs));
         }
-        else if (node->type().in({Pin, Unpin}))
+        else if (node->type().in({Pin, Unpin, Merge}))
         {
           // Pin/unpin return None.
           set_type(env, node / LocalId, None);
@@ -1471,9 +1481,61 @@ namespace vbcc
               set_type(env, node / LocalId, Dyn);
           }
         }
-        else if (node->type().in({Eq, Ne, Lt, Le, Gt, Ge}))
+        else if (node->type().in({Eq, Ne}))
         {
-          // Comparison binops: both operands same numeric type. dst is Bool.
+          // Equality: both operands same comparable type. dst is Bool.
+          auto lhs_type = typed(node / Lhs);
+          auto rhs_type = typed(node / Rhs);
+
+          if (lhs_type && !is_equality_comparable(lhs_type))
+          {
+            type_err(
+              node,
+              std::format(
+                "{}: left operand type '{}' is not comparable",
+                std::string(node->type().str()),
+                type_name(lhs_type)));
+            return true;
+          }
+
+          if (rhs_type && !is_equality_comparable(rhs_type))
+          {
+            type_err(
+              node,
+              std::format(
+                "{}: right operand type '{}' is not comparable",
+                std::string(node->type().str()),
+                type_name(rhs_type)));
+            return true;
+          }
+
+          // Check all concrete types across both operands match.
+          if (lhs_type && rhs_type)
+          {
+            auto first = first_concrete_leaf(lhs_type);
+            if (!first)
+              first = first_concrete_leaf(rhs_type);
+            if (
+              first &&
+              !(all_leaves_are(lhs_type, first->type()) &&
+                all_leaves_are(rhs_type, first->type())))
+            {
+              type_err(
+                node,
+                std::format(
+                  "{}: mismatched operand types '{}' and '{}'",
+                  std::string(node->type().str()),
+                  type_name(lhs_type),
+                  type_name(rhs_type)));
+              return true;
+            }
+          }
+
+          set_type(env, node / LocalId, Bool);
+        }
+        else if (node->type().in({Lt, Le, Gt, Ge}))
+        {
+          // Ordering comparisons: both operands same numeric type. dst is Bool.
           auto lhs_type = typed(node / Lhs);
           auto rhs_type = typed(node / Rhs);
 
@@ -1499,7 +1561,6 @@ namespace vbcc
             return true;
           }
 
-          // Check all concrete types across both operands match.
           if (lhs_type && rhs_type)
           {
             auto first = first_concrete_leaf(lhs_type);
@@ -1699,6 +1760,7 @@ namespace vbcc
                    FreeCallback,
                    Pin,
                    Unpin,
+                   Merge,
                    FFIStore,
                  }))
         {

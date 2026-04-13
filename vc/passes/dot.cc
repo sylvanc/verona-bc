@@ -87,6 +87,7 @@ namespace vc
     {"freeze", {0, 1, Freeze}},
     {"pin", {0, 1, Pin}},
     {"unpin", {0, 1, Unpin}},
+    {"merge", {0, 2, Merge}},
     {"ffistruct", {1, 0, FFIStruct}},
     {"ffiload", {1, 3, FFILoad}},
     {"ffistore", {1, 4, FFIStore}},
@@ -177,7 +178,8 @@ namespace vc
       {
         // Qualified function call followed by dot: Ns::f(args).method
         // Convert to Call before the dot rules consume it.
-        In(Expr) * T(FuncName)[FuncName] * T(Tuple)[Tuple] * T(Dot) >>
+        In(Expr) * T(FuncName)[FuncName] * T(Tuple, ExprSeq)[Tuple] *
+            T(Dot)[Dot] >>
           [](Match& _) {
             return Seq << (Call << _(FuncName) << (Args << *_(Tuple)))
                        << _(Dot);

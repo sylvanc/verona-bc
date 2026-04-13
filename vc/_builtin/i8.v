@@ -184,4 +184,9 @@ i8
   {
     :::convf64(self)
   }
+
+  string(self: i8): string
+  {
+    self.i64.string
+  }
 }

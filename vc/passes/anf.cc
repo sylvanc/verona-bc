@@ -862,6 +862,18 @@ namespace vc
                        << (LocalId ^ id);
           },
 
+        // Two-arg builtin operations (Merge).
+        In(Expr, Lhs) * T(Merge)
+            << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Lhs])) *
+                  (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
+          [](Match& _) {
+            auto id = _.fresh(l_local);
+            return Seq << (Lift
+                           << Body
+                           << (Merge << (LocalId ^ id) << _(Lhs) << _(Rhs)))
+                       << (LocalId ^ id);
+          },
+
         // FFI struct layout builtin.
         In(Expr, Lhs) * T(FFIStruct) << (T(Type)[Type] * (T(Args) << End)) >>
           [](Match& _) {

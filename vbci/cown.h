@@ -1,5 +1,6 @@
 #pragma once
 
+#include "drag.h"
 #include "header.h"
 #include "program.h"
 #include "region.h"

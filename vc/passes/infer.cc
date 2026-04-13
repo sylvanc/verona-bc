@@ -73,32 +73,15 @@ namespace vc
 
   // Ops with fixed result types.
   const std::map<Token, Token> fixed_result_type = {
-    {Eq, Bool},
-    {Ne, Bool},
-    {Lt, Bool},
-    {Le, Bool},
-    {Gt, Bool},
-    {Ge, Bool},
-    {IsInf, Bool},
-    {IsNaN, Bool},
-    {Not, Bool},
-    {Bits, U64},
-    {Len, USize},
-    {Const_E, F64},
-    {Const_Pi, F64},
-    {Const_Inf, F64},
-    {Const_NaN, F64},
-    {GetRaise, U64},
-    {SetRaise, U64},
-    {FreeCallback, None},
-    {Pin, None},
-    {Unpin, None},
-    {FFIStore, None},
-    {AddExternal, None},
-    {RemoveExternal, None},
-    {ArrayCopy, None},
-    {ArrayFill, None},
-    {ArrayCompare, I64},
+    {Eq, Bool},        {Ne, Bool},          {Lt, Bool},
+    {Le, Bool},        {Gt, Bool},          {Ge, Bool},
+    {IsInf, Bool},     {IsNaN, Bool},       {Not, Bool},
+    {Bits, U64},       {Len, USize},        {Const_E, F64},
+    {Const_Pi, F64},   {Const_Inf, F64},    {Const_NaN, F64},
+    {GetRaise, U64},   {SetRaise, U64},     {FreeCallback, None},
+    {Pin, None},       {Unpin, None},       {Merge, None},
+    {FFIStore, None},  {AddExternal, None}, {RemoveExternal, None},
+    {ArrayCopy, None}, {ArrayFill, None},   {ArrayCompare, I64},
   };
 
   const std::map<Token, Token> fixed_ffi_result_type = {
@@ -1140,6 +1123,29 @@ namespace vc
           if (active_infer_profile != nullptr)
             active_infer_profile->merge_type_default_promote++;
           return clone(incoming);
+        }
+      }
+
+      // Default yields to a compatible primitive member of a union.
+      // e.g., DefaultInt + Union(usize, none) → usize.
+      if (incoming->front() == Union)
+      {
+        for (auto& member : *(incoming->front()))
+        {
+          auto mt = Type << clone(member);
+          auto mp = extract_primitive(mt);
+          if (mp)
+          {
+            bool compat =
+              (existing->front() == DefaultInt && mp->in(integer_types)) ||
+              (existing->front() == DefaultFloat && mp->in(float_types));
+            if (compat)
+            {
+              if (active_infer_profile != nullptr)
+                active_infer_profile->merge_type_default_promote++;
+              return mt;
+            }
+          }
         }
       }
     }
@@ -2624,10 +2630,25 @@ namespace vc
     {
       auto ta = scope.name_elem / TypeArgs;
       auto tps = scope.def / TypeParams;
-      if (ta->empty() && !tps->empty())
+      if (!tps->empty())
       {
-        needs_inference = true;
-        break;
+        if (ta->empty())
+        {
+          needs_inference = true;
+          break;
+        }
+
+        for (auto& t : *ta)
+        {
+          if (t == Type && t->front() == TypeVar)
+          {
+            needs_inference = true;
+            break;
+          }
+        }
+
+        if (needs_inference)
+          break;
       }
     }
 
@@ -2667,7 +2688,7 @@ namespace vc
       {
         bool needs_reinfer = false;
         for (auto& t : *ta)
-          if (direct_typeparam(top, t))
+          if (direct_typeparam(top, t) || (t == Type && t->front() == TypeVar))
           {
             needs_reinfer = true;
             break;
@@ -4056,22 +4077,24 @@ namespace vc
             {
               auto recv_loc = (lookup_it->second / Rhs)->location();
               bool local_refined = refine_local_const(recv_loc, target_type);
+              bool fwd_refined = merge(recv_loc, target_type);
               bool bwd_refined = merge_bwd(recv_loc, target_type);
               if (bwd_refined)
                 propagate_call_node(
                   env, recv_loc, top, lookup_stmts, &all_def_stmts);
-              refined = refined || local_refined || bwd_refined;
+              refined = refined || local_refined || fwd_refined || bwd_refined;
             }
 
             for (auto& arg_node : *args)
             {
               auto arg_loc = (arg_node / Rhs)->location();
               bool local_refined = refine_local_const(arg_loc, target_type);
+              bool fwd_refined = merge(arg_loc, target_type);
               bool bwd_refined = merge_bwd(arg_loc, target_type);
               if (bwd_refined)
                 propagate_call_node(
                   env, arg_loc, top, lookup_stmts, &all_def_stmts);
-              refined = refined || local_refined || bwd_refined;
+              refined = refined || local_refined || fwd_refined || bwd_refined;
             }
 
             if (lookup_it != lookup_stmts.end())
@@ -4590,6 +4613,17 @@ namespace vc
               }
               if (eit->second.is_fixed && !info.is_fixed)
                 continue;
+              // Don't widen: if the forward type is already a concrete
+              // (non-default) non-union type and the backward is a union,
+              // keep the forward type — it's more precise.
+              if (
+                eit->second.type && info.type && !eit->second.type->empty() &&
+                !info.type->empty() && info.type->front() == Union &&
+                eit->second.type->front() != Union &&
+                !is_default_type(eit->second.type))
+              {
+                continue;
+              }
               if (!eit->second.is_fixed && info.is_fixed)
               {
                 eit->second.type = clone(info.type);
@@ -4634,6 +4668,14 @@ namespace vc
                 }
                 if (eit->second.is_fixed && !info.is_fixed)
                   continue;
+                if (
+                  eit->second.type && info.type && !eit->second.type->empty() &&
+                  !info.type->empty() && info.type->front() == Union &&
+                  eit->second.type->front() != Union &&
+                  !is_default_type(eit->second.type))
+                {
+                  continue;
+                }
                 if (!eit->second.is_fixed && info.is_fixed)
                 {
                   eit->second.type = clone(info.type);
@@ -5295,6 +5337,12 @@ namespace vc
       SequentCtx ctx{top, {}, {}};
       Nodes ret_types;
       bool unresolved = false;
+
+      // If any parameter is still TypeVar, the function hasn't been fully
+      // resolved yet. Treat as unresolved so the deferred retry can improve.
+      for (auto& pd : *(node / Params))
+        if ((pd / Type)->front() == TypeVar)
+          unresolved = true;
 
       if (in_generic)
       {

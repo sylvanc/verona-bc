@@ -179,4 +179,9 @@ ulong
   {
     :::convf64(self)
   }
+
+  string(self: ulong): string
+  {
+    self.u64.string
+  }
 }

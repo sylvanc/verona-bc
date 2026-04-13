@@ -4,11 +4,12 @@ add_executable(vbci
   callback.cc
   classes.cc
   collect.cc
+  drag.cc
   dynlib.cc
   frame.cc
   freeze.cc
-  location.cc
   main.cc
+  merge.cc
   program.cc
   region.cc
   region_rc.cc

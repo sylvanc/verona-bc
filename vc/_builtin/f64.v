@@ -1,3 +1,8 @@
+use
+{
+  snprintf = "snprintf"(ffi::ptr, usize, ffi::ptr, f64): i32;
+}
+
 f64
 {
   create(some: f64 = 0): f64
@@ -288,5 +293,16 @@ f64
   f64(self: f64): f64
   {
     self
+  }
+
+  string(self: f64): string
+  {
+    let buf = array[u8]::fill(32);
+    let fmt = "%g";
+    let n = (:::snprintf(buf, 32, fmt.cstring, self)).usize;
+    let result = array[u8]::fill(n + 1);
+    result.copy_from(0, buf, 0, n);
+    result(n) = 0;
+    string result
   }
 }

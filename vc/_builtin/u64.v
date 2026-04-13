@@ -179,4 +179,36 @@ u64
   {
     :::convf64(self)
   }
+
+  string(self: u64): string
+  {
+    if self == 0
+    {
+      return "0"
+    }
+
+    // Count digits
+    var len = 0;
+    var tmp = self;
+
+    while tmp > 0
+    {
+      len = len + 1;
+      tmp = tmp / 10
+    }
+
+    let result = array[u8]::fill(len + 1);
+    var n = self;
+    var i = len;
+
+    while n > 0
+    {
+      i = i - 1;
+      result(i) = (n % 10).u8 + '0';
+      n = n / 10
+    }
+
+    result(len) = 0;
+    string result
+  }
 }

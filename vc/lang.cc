@@ -50,23 +50,30 @@ namespace vc
     return path;
   }
 
+  Node find_def_from(Node def, const Node& name, NodeIt it, NodeIt end)
+  {
+    if (it == end)
+      return def;
+
+    auto& elem = *it;
+    assert(elem == NameElement);
+    auto defs = def->look((elem / Ident)->location());
+
+    for (auto& d : defs)
+    {
+      auto result = find_def_from(d, name, it + 1, end);
+
+      if (result)
+        return result;
+    }
+
+    return {};
+  }
+
   Node find_def(Node top, const Node& name)
   {
     assert(name->in({FuncName, TypeName}));
-    Node def = top;
-
-    for (auto& elem : *name)
-    {
-      assert(elem == NameElement);
-      auto defs = def->look((elem / Ident)->location());
-
-      if (defs.empty())
-        return {};
-
-      def = defs.front();
-    }
-
-    return def;
+    return find_def_from(top, name, name->begin(), name->end());
   }
 
   Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand)

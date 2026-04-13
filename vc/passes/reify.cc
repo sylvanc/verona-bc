@@ -123,8 +123,10 @@ namespace vc
       {
         auto def = top;
 
-        for (auto& elem : *type)
+        for (auto it = type->begin(); it != type->end(); ++it)
         {
+          auto& elem = *it;
+
           for (auto& arg : *(elem / TypeArgs))
           {
             if (contains_typeparam_ref(arg))
@@ -136,7 +138,27 @@ namespace vc
           if (defs.empty())
             return false;
 
-          def = defs.front();
+          if (defs.size() > 1 && (it + 1) != type->end())
+          {
+            auto next_ident = (*(it + 1)) / Ident;
+            auto picked = defs.front();
+
+            for (auto& d : defs)
+            {
+              if (!d->look(next_ident->location()).empty())
+              {
+                picked = d;
+                break;
+              }
+            }
+
+            def = picked;
+          }
+          else
+          {
+            def = defs.front();
+          }
+
           if (def == TypeParam)
             return true;
         }
@@ -169,8 +191,10 @@ namespace vc
       {
         auto def = top;
 
-        for (auto& elem : *type)
+        for (auto it = type->begin(); it != type->end(); ++it)
         {
+          auto& elem = *it;
+
           for (auto& arg : *(elem / TypeArgs))
           {
             if (has_unresolved_type(arg, subst, seen))
@@ -182,7 +206,26 @@ namespace vc
           if (defs.empty())
             return false;
 
-          def = defs.front();
+          if (defs.size() > 1 && (it + 1) != type->end())
+          {
+            auto next_ident = (*(it + 1)) / Ident;
+            auto picked = defs.front();
+
+            for (auto& d : defs)
+            {
+              if (!d->look(next_ident->location()).empty())
+              {
+                picked = d;
+                break;
+              }
+            }
+
+            def = picked;
+          }
+          else
+          {
+            def = defs.front();
+          }
 
           if (def == TypeParam)
           {
@@ -461,9 +504,6 @@ namespace vc
 
                   if (recv_it != local_types.end())
                   {
-                    bool needs_refresh =
-                      (cown_type == Cown) && (cown_type->front() == Dyn);
-
                     auto targets = find_method_targets(
                       recv_it->second, li->second.method_id, stmt->at(2), true);
 
@@ -501,17 +541,11 @@ namespace vc
                       }
                     }
 
-                    for (auto* target : targets)
-                    {
-                      needs_refresh |=
-                        ((target->def / Type)->front() == TypeVar);
-                    }
-
                     // TypeVar-returning behaviors may have been reified with a
                     // provisional return (for example just nomatch) before the
                     // deferred return-type pass converges. Refresh the result
-                    // cown type for those inferred returns as well as Dyn.
-                    if ((cown_type == Cown) && needs_refresh)
+                    // cown type when the reified return differs from the
+                    // current cown type.
                     {
                       auto ret = find_method_return_type(targets);
 
@@ -1142,17 +1176,10 @@ namespace vc
         return arg;
 
       // Navigate the FQ name to see if the last element is a TypeParam.
-      Node def = top;
+      auto def = find_def(top, inner);
 
-      for (auto& elem : *inner)
-      {
-        auto defs = def->look((elem / Ident)->location());
-
-        if (defs.empty())
-          return arg;
-
-        def = defs.front();
-      }
+      if (!def)
+        return arg;
 
       if (def == TypeParam)
       {
@@ -2365,6 +2392,7 @@ namespace vc
                      FreeCallback,
                      Pin,
                      Unpin,
+                     Merge,
                      AddExternal,
                      RemoveExternal,
                    }))
@@ -4140,7 +4168,31 @@ namespace vc
         else
         {
           // Intermediate elements must resolve to a scope (ClassDef).
-          def = defs.front();
+          // When multiple defs exist (e.g., function overloads), pick
+          // the one that contains the next element in the path.
+          if (defs.size() > 1)
+          {
+            auto next_ident = (*(it + 1)) / Ident;
+            def = {};
+
+            for (auto& d : defs)
+            {
+              auto next_defs = d->look(next_ident->location());
+
+              if (!next_defs.empty())
+              {
+                def = d;
+                break;
+              }
+            }
+
+            if (!def)
+              def = defs.front();
+          }
+          else
+          {
+            def = defs.front();
+          }
 
           if (def == TypeParam)
           {

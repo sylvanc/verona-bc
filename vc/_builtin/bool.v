@@ -1,7 +1,4 @@
-shape to_bool
-{
-  apply(self: self): bool;
-}
+use bool_thunk = ()->bool;
 
 bool
 {
@@ -15,12 +12,12 @@ bool
     self
   }
 
-  &(self: bool, other: to_bool): bool
+  &(self: bool, other: bool_thunk): bool
   {
     if self { other() } else { false }
   }
 
-  |(self: bool, other: to_bool): bool
+  |(self: bool, other: bool_thunk): bool
   {
     if self { true } else { other() }
   }
@@ -78,5 +75,10 @@ bool
   bool(self: bool): bool
   {
     self
+  }
+
+  string(self: bool): string
+  {
+    if self { "true" } else { "false" }
   }
 }

@@ -1,4 +1,4 @@
-#include "location.h"
+#include "drag.h"
 
 #include "array.h"
 #include "header.h"
@@ -7,12 +7,6 @@
 
 namespace vbci
 {
-  Region* Location::to_region() const
-  {
-    assert(is_region());
-    return reinterpret_cast<Region*>(value);
-  }
-
   template<bool is_move>
   bool drag_allocation(Region* r, Header* h, Region** pr)
   {
@@ -109,6 +103,12 @@ namespace vbci
         static_cast<Object*>(next_h)->trace_fn(fn);
     }
 
+    // Guard the destination region against premature free during sub-region
+    // reparenting. Sub-region stack_dec can cascade to the destination (via the
+    // newly set parent pointer) before the dragged objects have contributed
+    // their stack_rc.
+    r->stack_inc();
+
     // Parent tracked sub-regions to the destination.
     for (auto& [hr, entry] : regions)
     {
@@ -134,6 +134,9 @@ namespace vbci
     }
 
     r->stack_dec(stack_rc_decs);
+
+    // Release the guard.
+    r->stack_dec();
     return true;
   }
 

@@ -179,4 +179,9 @@ u8
   {
     :::convf64(self)
   }
+
+  string(self: u8): string
+  {
+    self.u64.string
+  }
 }

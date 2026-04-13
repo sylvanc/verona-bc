@@ -4,4 +4,9 @@ none
   {
     :::none()
   }
+
+  string(self: none): string
+  {
+    "none"
+  }
 }

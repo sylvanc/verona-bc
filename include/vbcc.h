@@ -78,6 +78,7 @@ namespace vbcc
   inline const auto Freeze = TokenDef("freeze");
   inline const auto Pin = TokenDef("pin");
   inline const auto Unpin = TokenDef("unpin");
+  inline const auto Merge = TokenDef("merge");
   inline const auto FFIStruct = TokenDef("ffistruct");
   inline const auto FFILoad = TokenDef("ffiload");
   inline const auto FFIStore = TokenDef("ffistore");
@@ -254,12 +255,12 @@ namespace vbcc
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
     StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
-    RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | FFIStruct |
-    FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef | ArrayRefConst |
-    Load | Store | Lookup | Arg | Call | CallDyn | TryCallDyn | FFI | When |
-    WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop | wfConst | Typetest |
-    MakeCallback | CodePtrCallback | FreeCallback | MemoSlot | ArrayCopy |
-    ArrayFill | ArrayCompare;
+    RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | Merge |
+    FFIStruct | FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef |
+    ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn | TryCallDyn |
+    FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop | wfConst |
+    Typetest | MakeCallback | CodePtrCallback | FreeCallback | MemoSlot |
+    ArrayCopy | ArrayFill | ArrayCompare;
 
   inline const auto wfTerminator =
     Tailcall | TailcallDyn | Return | Raise | Cond | Jump;
@@ -332,6 +333,7 @@ namespace vbcc
     | (Freeze <<= wfDst * wfSrc)
     | (Pin <<= wfDst * wfSrc)
     | (Unpin <<= wfDst * wfSrc)
+    | (Merge <<= wfDst * wfLhs * wfRhs)
     | (FFIStruct <<= wfDst * (Type >>= wfType))
     | (FFILoad <<= wfDst * wfLhs * wfRhs * wfKind * (Type >>= wfType))
     | (FFIStore <<=

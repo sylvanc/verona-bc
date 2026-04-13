@@ -179,4 +179,9 @@ usize
   {
     :::convf64(self)
   }
+
+  string(self: usize): string
+  {
+    self.u64.string
+  }
 }
