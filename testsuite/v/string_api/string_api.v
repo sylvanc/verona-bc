@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -73,5 +73,5 @@ main(): i32
   if padded.trim_right != "  hi" { result = result + 262144 }
   if "".trim.size != 0 { result = result + 524288 }
 
-  result
+  ffi::exit_code result
 }

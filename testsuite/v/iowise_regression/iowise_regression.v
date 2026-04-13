@@ -94,7 +94,7 @@ _fd_writer
   }
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -112,5 +112,5 @@ main(): i32
     result = result + 2;
   }
 
-  result
+  ffi::exit_code result
 }

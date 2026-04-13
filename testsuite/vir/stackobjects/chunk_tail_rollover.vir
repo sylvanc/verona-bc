@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Leave only a few bytes in the current chunk (array len=123 => 984 bytes of
 // data plus header) so the next stack allocation falls into a fresh chunk. We
 // then allocate a stack object in that next chunk and verify both the nearly
@@ -7,7 +10,7 @@ class @Pair
   @x: i64
   @y: i64
 
-func @main(): i32
+func @main(): none
   $len = const usize 123               // leave only a small tail in chunk
   $arr = stack [i64] $len              // allocate array in current chunk
 
@@ -49,7 +52,11 @@ func @main(): i32
   cond $all_ok ^pass ^fail
 ^pass
   $ret = const i32 0
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none
 ^fail
   $ret = const i32 -1
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none

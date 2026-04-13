@@ -1,9 +1,14 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 class @A
   @f: i32
 
-func @main(): i32
+func @main(): none
   $i = const i32 99
   $a = stack @A($i)
   $ref = ref $a @f
   $j = load $ref
-  ret $j
+  $_ = ffi @set_exit_code($j)
+  $_none = const none
+  ret $_none

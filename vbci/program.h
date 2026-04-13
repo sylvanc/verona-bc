@@ -53,7 +53,7 @@ namespace vbci
     std::vector<ffi_type*> ffi_type_value_elements;
 
     uint32_t min_complex_type_id;
-    uint32_t typeid_cown_i32;
+    uint32_t typeid_cown_none;
     uint32_t typeid_arg;
     uint32_t typeid_argv;
     uint32_t typeid_ref_dyn;

@@ -13,8 +13,7 @@ use
   printval = "printval"(any): none;
 }
 
-main(): i32
+main(): none
 {
   :::printval(0);
-  0
 }

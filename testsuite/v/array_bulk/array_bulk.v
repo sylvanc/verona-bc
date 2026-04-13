@@ -11,7 +11,7 @@ box
   }
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -110,5 +110,5 @@ main(): i32
   if obj_overlap(2).val != 1 { result = result + 536870912 }
   if obj_overlap(3).val != 2 { result = result + 1073741824 }
 
-  i32 result
+  ffi::exit_code(i32 result)
 }

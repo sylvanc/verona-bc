@@ -1,5 +1,5 @@
 // Test that raise outside a lambda produces an error.
-main(): i32
+main(): none
 {
-  raise 42
+  ffi::exit_code(raise 42)
 }

@@ -1,7 +1,10 @@
 lib
   @printval = "printval"(dyn): none
+  @set_exit_code = "set_exit_code"(i32): none
 
-func @main(): i32
+func @main(): none
   $r = const i32 4
   $_ = ffi @printval($r)
-  ret $r
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none

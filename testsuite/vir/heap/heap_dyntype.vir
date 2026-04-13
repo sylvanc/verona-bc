@@ -1,8 +1,11 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 
 class @Foo
     @f : @Foo | bool
     
-func @main() : i32
+func @main(): none
     $true = const bool true
     $a1 = region rc @Foo($true)
     $a2 = heap $a1 @Foo($true)
@@ -14,4 +17,6 @@ func @main() : i32
     $old3 = store $r2 $a1
 
     $ret_val = const i32 42
-    ret $ret_val
+    $_ = ffi @set_exit_code($ret_val)
+    $_none = const none
+    ret $_none

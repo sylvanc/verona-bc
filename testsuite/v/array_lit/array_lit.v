@@ -1,6 +1,6 @@
 // Test array literal syntax ::(expr, ...)
 // Elements explicitly typed.
-main(): i32
+main(): none
 {
   let a = ::(i32 5, i32 10, i32 15);
   var sum: i32 = i32 0;
@@ -13,5 +13,5 @@ main(): i32
   }
 
   // Expected: 5 + 10 + 15 = 30
-  sum
+  ffi::exit_code sum
 }

@@ -695,7 +695,7 @@ namespace vc
 
       // Add an entry point for main.
       top
-        << (Func << (FunctionId ^ "@main") << Params << I32 << Vars
+        << (Func << (FunctionId ^ "@main") << Params << None << Vars
                  << (Labels
                      << (Label << (LabelId ^ "start") << (Body << main_call)
                                << (Return << (LocalId ^ id)))));

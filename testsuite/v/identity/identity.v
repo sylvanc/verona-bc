@@ -6,7 +6,7 @@ point
   y: i32;
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -27,5 +27,5 @@ main(): i32
   // bits on object is non-zero (it's a pointer)
   if bits(a) == 0 { result = result + 64 }
 
-  result
+  ffi::exit_code result
 }

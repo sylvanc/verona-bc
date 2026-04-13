@@ -1,9 +1,12 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // A union-typed var accepts values of either member type via Copy.
 // The ref store checks the union type at runtime through the var type.
 
 type @intorbool = i32 | bool
 
-func @main(): i32 var $x: @intorbool, $y: @intorbool
+func @main(): none var $x: @intorbool, $y: @intorbool
   // Store an i32 into the union var.
   $val1 = const i32 42
   $x = copy $val1
@@ -24,7 +27,11 @@ func @main(): i32 var $x: @intorbool, $y: @intorbool
   cond $both ^ok ^fail
 ^ok
   $ret = const i32 0
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none
 ^fail
   $ret = const i32 1
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none

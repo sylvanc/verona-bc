@@ -18,8 +18,8 @@ find_first(a: i32, b: i32, target: i32): i32
   0
 }
 
-main(): i32
+main(): none
 {
   let result = raise_block::find_first(10, 42, 42);
-  result
+  ffi::exit_code result
 }

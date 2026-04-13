@@ -5,7 +5,6 @@ once bad(x: i32): i32
   x
 }
 
-main(): i32
+main(): none
 {
-  i32 0
 }

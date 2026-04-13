@@ -1,9 +1,14 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 class @Box
     @val : i32
 
-func @main() : i32
+func @main(): none
     $zero = const i32 0
     $box = region rc @Box($zero)
     $p = pin $box
     $u = unpin $box
-    ret $zero
+    $_ = ffi @set_exit_code($zero)
+    $_none = const none
+    ret $_none

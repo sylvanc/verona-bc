@@ -20,7 +20,7 @@ node
   }
 }
 
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -45,5 +45,5 @@ main(): i32
   if n.left.val != 3 { result = result + 8; }
   if n.right.val != 7 { result = result + 16; }
 
-  result
+  ffi::exit_code result
 }

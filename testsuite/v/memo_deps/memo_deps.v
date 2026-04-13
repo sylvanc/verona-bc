@@ -11,8 +11,8 @@ once derived(): i32
   memo_deps::base() + i32 32
 }
 
-main(): i32
+main(): none
 {
   let v = memo_deps::derived();
-  if v == i32 42 { i32 0 } else { i32 1 }
+  ffi::exit_code(if v == i32 42 { i32 0 } else { i32 1 })
 }

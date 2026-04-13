@@ -16,9 +16,8 @@ holder
   }
 }
 
-main(): i32
+main(): none
 {
   let h = holder();
   h.reset;
-  0
 }

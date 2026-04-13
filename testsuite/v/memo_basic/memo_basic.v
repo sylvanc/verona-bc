@@ -6,7 +6,7 @@ once answer(): i32
   i32 42
 }
 
-main(): i32
+main(): none
 {
   let a = memo_basic::answer();
   let b = memo_basic::answer();
@@ -14,5 +14,5 @@ main(): i32
   if a != i32 42 { result = result + i32 1 }
   if b != i32 42 { result = result + i32 2 }
   if a != b { result = result + i32 4 }
-  result
+  ffi::exit_code result
 }

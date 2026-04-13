@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Stack object holding a reference to a region-allocated object. Ensures
 // stack->region references remain valid and readable after construction.
 
@@ -7,7 +10,7 @@ class @Payload
 class @Holder
   @p: @Payload
 
-func @main(): i32
+func @main(): none
   $val = const i64 77                   // value to embed in payload
   $payload = region rc @Payload($val)   // region RC allocation (non-frame-local)
 
@@ -23,7 +26,11 @@ func @main(): i32
   cond $ok ^pass ^fail
 ^pass
   $ret = const i32 0
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none
 ^fail
   $ret = const i32 -1
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none

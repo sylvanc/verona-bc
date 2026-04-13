@@ -22,9 +22,9 @@ identity[T](x: T): T
   x
 }
 
-main(): i32
+main(): none
 {
   let w = wrapper[i32](1);
   let v = w.get;
-  infer_lookup::identity(v)
+  ffi::exit_code(infer_lookup::identity(v))
 }

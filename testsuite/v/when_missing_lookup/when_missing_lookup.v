@@ -11,7 +11,6 @@ foo
   }
 }
 
-main(): i32
+main(): none
 {
-  0
 }

@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 primitive [i32]
   @index @array_i32_index
 
@@ -21,7 +24,7 @@ func @ref_i32_store($a: ref i32, $v: i32): i32
   $prev = store $a $v
   ret $prev
 
-func @main(): i32
+func @main(): none
   $i = const usize 10
   $a = stack [i32] $i
   $b = stack [i32] 10
@@ -46,7 +49,11 @@ func @main(): i32
   cond $eq3 ^eq ^ne
 ^eq
   $r = const i32 1
-  ret $r
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none
 ^ne
   $r = const i32 -1
-  ret $r
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none

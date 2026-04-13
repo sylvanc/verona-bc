@@ -1,5 +1,5 @@
-main(): i32
+main(): none
 {
   var x: i32 = 0;
-  x
+  ffi::exit_code x
 }

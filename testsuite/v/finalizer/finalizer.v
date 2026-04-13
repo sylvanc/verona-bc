@@ -17,9 +17,8 @@ resource
   }
 }
 
-main(): i32
+main(): none
 {
   var a = resource(10);
   a.val = 42;
-  0
 }

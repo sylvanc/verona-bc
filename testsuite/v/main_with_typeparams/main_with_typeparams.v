@@ -1,4 +1,3 @@
-main[T](): i32
+main[T](): none
 {
-  0
 }

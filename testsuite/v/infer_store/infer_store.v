@@ -12,7 +12,7 @@ box
   }
 }
 
-main(): i32
+main(): none
 {
   let b = box;
 
@@ -37,5 +37,5 @@ main(): i32
   }
 
   // result should be 3 (both tests pass).
-  result
+  ffi::exit_code result
 }

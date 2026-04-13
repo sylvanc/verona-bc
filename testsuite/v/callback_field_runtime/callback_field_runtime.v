@@ -9,8 +9,7 @@ holder
   }
 }
 
-main(): i32
+main(): none
 {
   let h = holder();
-  0
 }

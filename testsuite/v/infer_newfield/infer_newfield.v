@@ -8,8 +8,7 @@ counter
   }
 }
 
-main(): i32
+main(): none
 {
   let c = counter;
-  0
 }

@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   var result = 0;
   let v: i32 = 42;
@@ -28,5 +28,5 @@ main(): i32
   let f = (match w { (42) -> w + 100; (x: i32) -> x; }) else (0);
   if !(f == 7) { result = result + 32 }
 
-  result
+  ffi::exit_code result
 }

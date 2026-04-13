@@ -11,10 +11,10 @@ myclass
   get(self: myclass, offset: i32 = 10.i32): i32 { 42.i32 + offset }
 }
 
-main(): i32
+main(): none
 {
   let obj = myclass();
   // Calling obj.get() should use the default-expanded rhs: get(self, 10)
   // which returns 42 + 10 = 52, NOT the auto-rhs which would return 42.
-  obj.get()
+  ffi::exit_code(obj.get())
 }

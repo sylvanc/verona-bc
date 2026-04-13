@@ -10,7 +10,7 @@ once g(): i32
   memo_cycle::f()
 }
 
-main(): i32
+main(): none
 {
-  memo_cycle::f()
+  ffi::exit_code(memo_cycle::f())
 }

@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Test non-local return via raise.
 //
 // main calls outer, which calls inner.
@@ -23,7 +26,9 @@ func @outer($target: u64): i32
 
 // main(): i32
 //   Gets its own raise target, calls outer, returns result.
-func @main(): i32
+func @main(): none
   $target = getraise
   $result = call @outer($target)
-  ret $result
+  $_ = ffi @set_exit_code($result)
+  $_none = const none
+  ret $_none

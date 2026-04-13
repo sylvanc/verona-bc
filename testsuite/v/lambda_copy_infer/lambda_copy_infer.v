@@ -22,8 +22,8 @@ wrap_copy[T](val: T): wrapper[T]
   f(val)
 }
 
-main(): i32
+main(): none
 {
   let w = lambda_copy_infer::wrap_copy[i32](42);
-  w.get
+  ffi::exit_code(w.get)
 }

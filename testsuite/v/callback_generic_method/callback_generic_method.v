@@ -6,9 +6,8 @@ genmethod
   }
 }
 
-main(): i32
+main(): none
 {
   var obj = genmethod;
   var cb = ffi::callback(obj);
-  0
 }

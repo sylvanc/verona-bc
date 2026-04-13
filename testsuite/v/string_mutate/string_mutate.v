@@ -1,4 +1,4 @@
-main(): i32
+main(): none
 {
   var result = 0;
 
@@ -48,5 +48,5 @@ main(): i32
   if sub != "hello" { result = result + 2048 }
   if s8 != "hello world" { result = result + 4096 }
 
-  result
+  ffi::exit_code result
 }

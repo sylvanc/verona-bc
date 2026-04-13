@@ -1,4 +1,9 @@
-func @main(): i32
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
   $a = const i32 99
   $ref = ref $a 0
-  ret $a
+  $_ = ffi @set_exit_code($a)
+  $_none = const none
+  ret $_none

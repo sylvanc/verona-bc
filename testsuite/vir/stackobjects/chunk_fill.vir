@@ -1,10 +1,13 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Fill (or almost fill) a single stack chunk with a stack array and verify the
 // endpoints are writable/readable. With 1024-byte chunks and i64 stride 8,
 // len=124 leaves 1024 - (124*8 + header) bytes. This exercises the walker’s
 // ability to stop on the sentinel/tail and ensures no overrun in a near-full
 // chunk.
 
-func @main(): i32
+func @main(): none
   $len = const usize 124             // choose length to nearly fill one chunk
   $arr = stack [i64] $len            // allocate stack array
 
@@ -35,7 +38,11 @@ func @main(): i32
   cond $ok ^pass ^fail
 ^pass
   $ret = const i32 0
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none
 ^fail
   $ret = const i32 -1
-  ret $ret
+  $_ = ffi @set_exit_code($ret)
+  $_none = const none
+  ret $_none

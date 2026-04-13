@@ -1,6 +1,6 @@
-main(): i32
+main(): none
 {
   var x: i32 = 1;
   var y: u32 = 2;
-  x + y
+  ffi::exit_code(x + y)
 }

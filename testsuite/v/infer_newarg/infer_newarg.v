@@ -8,8 +8,8 @@ cell
   }
 }
 
-main(): i32
+main(): none
 {
   let c = cell(1);
-  c.f
+  ffi::exit_code(c.f)
 }

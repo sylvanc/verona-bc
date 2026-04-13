@@ -16,8 +16,8 @@ unwrap[T](w: wrapper[T]): T
   w.val
 }
 
-main(): i32
+main(): none
 {
   let w = wrapper[i32](1);
-  infer_struct::unwrap(w)
+  ffi::exit_code(infer_struct::unwrap(w))
 }

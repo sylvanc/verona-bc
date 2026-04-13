@@ -1,3 +1,6 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
 // Recursively allocate stack arrays to force multiple chunk allocations and
 // vector growth. Each frame writes/reads within its own array so we validate
 // that references remain stable even after many pushes grow the chunk vector.
@@ -32,7 +35,9 @@ func @alloc_depth($n: i32): i32
 ^base
   ret $zero                            // success when n == 0
 
-func @main(): i32
+func @main(): none
   $depth = const i32 20
   $r = call @alloc_depth($depth)
-  ret $r
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none

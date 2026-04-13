@@ -22,8 +22,8 @@ apply_and_wrap[T](val: T): wrapper[T]
   f(val)
 }
 
-main(): i32
+main(): none
 {
   let w = lambda_infer::apply_and_wrap[i32](42);
-  w.get
+  ffi::exit_code(w.get)
 }
