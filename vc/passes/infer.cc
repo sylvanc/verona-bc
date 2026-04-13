@@ -5340,6 +5340,12 @@ namespace vc
       Nodes ret_types;
       bool unresolved = false;
 
+      // If any parameter is still TypeVar, the function hasn't been fully
+      // resolved yet. Treat as unresolved so the deferred retry can improve.
+      for (auto& pd : *(node / Params))
+        if ((pd / Type)->front() == TypeVar)
+          unresolved = true;
+
       if (in_generic)
       {
         for (auto& lbl : *labels)

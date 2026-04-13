@@ -945,7 +945,11 @@ namespace vbci
         Value::error(Error::BadLoadTarget);
     }
 
-    v.readonly = readonly;
+    // Propagate readonly only to mutable (non-immortal, non-immutable) values.
+    // Immortal values (primitives) and immutable values (frozen objects) are
+    // inherently shareable and don't need the readonly restriction.
+    if (readonly && !v.location().is_immortal() && !v.location().is_immutable())
+      v.readonly = true;
     return v;
   }
 
