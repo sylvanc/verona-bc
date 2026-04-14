@@ -707,7 +707,30 @@ namespace vc
 
           // Insert the dependency's AST.
           assert(p_ast == Directory);
-          deps.push_back((Directory ^ dep.hash) << *p_ast);
+
+          // Extract the original module name from the URL.
+          auto url_path =
+            std::filesystem::path(std::string(url->location().view()));
+          auto orig_name = url_path.stem().string();
+          for (auto& c : orig_name)
+            if (c == '-')
+              c = '_';
+
+          auto dep_dir = (Directory ^ dep.hash) << *p_ast;
+
+          // Add a self-referencing type alias so the dependency can
+          // resolve its own module name (which gets renamed to the hash).
+          if (orig_name != dep.hash)
+          {
+            dep_dir
+              << (TypeAlias << (Ident ^ orig_name) << TypeParams << Where
+                            << (Type
+                                << (TypeName
+                                    << (NameElement << (Ident ^ dep.hash)
+                                                    << TypeArgs))));
+          }
+
+          deps.push_back(dep_dir);
 
           // Rewrite the Use.
           auto tn = TypeName << (NameElement << (Ident ^ dep.hash) << TypeArgs);
