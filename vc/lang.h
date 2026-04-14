@@ -127,7 +127,8 @@ namespace vc
       Tuple,
       ArrayLit,
       Typetest,
-      ExprSeq);
+      ExprSeq,
+      DontCare);
 
   inline const auto wfType =
     TypeName | Union | Isect | TupleType | FuncType | TypeVar | TypeSelf;
