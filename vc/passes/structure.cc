@@ -1,6 +1,8 @@
 #include "../dependency.h"
 #include "../lang.h"
 
+#include <unordered_set>
+
 namespace vc
 {
   const std::initializer_list<Token> wfTypeElement = {
@@ -647,7 +649,9 @@ namespace vc
         T(Expr) << End >> [](Match&) -> Node { return {}; },
       }};
 
-    p.post([&](auto top) -> size_t {
+    auto seen_deps = std::make_shared<std::unordered_set<std::string>>();
+
+    p.post([&, seen_deps](auto top) -> size_t {
       Nodes deps;
 
       top->traverse([&](auto node) {
@@ -705,8 +709,27 @@ namespace vc
             return false;
           }
 
-          // Insert the dependency's AST.
+          // Insert the dependency's AST, deduplicating by hash.
           assert(p_ast == Directory);
+
+          // Skip if this dependency was already added (diamond dependency).
+          if (!seen_deps->insert(dep.hash).second)
+          {
+            // Rewrite the Use to point to the existing ClassDef.
+            auto tn =
+              TypeName << (NameElement << (Ident ^ dep.hash) << TypeArgs);
+
+            if (id && (node->parent() != ClassBody))
+              id = err(
+                node, "Dependency aliases can only be declared in classes");
+            else if (id)
+              id = TypeAlias << id << TypeParams << Where << (Type << tn);
+            else
+              id = Use << tn;
+
+            node->parent()->replace(node, id);
+            return true;
+          }
 
           // Extract the original module name from the URL.
           auto url_path =
