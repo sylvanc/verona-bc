@@ -716,12 +716,12 @@ namespace vc
           if (!seen_deps->insert(dep.hash).second)
           {
             // Rewrite the Use to point to the existing ClassDef.
-            auto tn =
-              TypeName << (NameElement << (Ident ^ dep.hash) << TypeArgs);
+            auto tn = TypeName
+              << (NameElement << (Ident ^ dep.hash) << TypeArgs);
 
             if (id && (node->parent() != ClassBody))
-              id = err(
-                node, "Dependency aliases can only be declared in classes");
+              id =
+                err(node, "Dependency aliases can only be declared in classes");
             else if (id)
               id = TypeAlias << id << TypeParams << Where << (Type << tn);
             else
