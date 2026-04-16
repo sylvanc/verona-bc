@@ -18,7 +18,12 @@ namespace vbci
   struct Region
   {
   private:
-    Region* parent;
+    union
+    {
+      Region* parent;
+      Cown* cown_owner_ptr;
+    };
+
     Header* entry_point;
     RC stack_rc;
     RegionType type;
@@ -144,12 +149,12 @@ namespace vbci
 
     bool has_owner() const
     {
-      return parent || cown_owned;
+      return has_parent() || cown_owned;
     }
 
     bool has_parent() const
     {
-      return parent != nullptr;
+      return !cown_owned && parent != nullptr;
     }
 
     Region* get_parent() const
@@ -193,11 +198,12 @@ namespace vbci
       return cown_owned;
     }
 
-    void set_cown_owner(Header* entry)
+    void set_cown_owner(Cown* owner, Header* entry)
     {
       assert(!has_owner());
       assert(entry);
       cown_owned = true;
+      cown_owner_ptr = owner;
       entry_point = entry;
     }
 
@@ -205,10 +211,16 @@ namespace vbci
     {
       assert(cown_owned);
       cown_owned = false;
+      parent = nullptr;
       entry_point = nullptr;
 
       if (stack_rc == 0)
         free_region();
+    }
+
+    Cown* get_cown_owner() const
+    {
+      return cown_owned ? cown_owner_ptr : nullptr;
     }
 
     Header* get_entry_point() const

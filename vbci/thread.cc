@@ -2594,7 +2594,7 @@ namespace vbci
           {
             LOG(Trace) << "Setting closure (" << closure.borrow()
                        << ") region owner: " << r << " to cown owner.";
-            r->set_cown_owner(closure->get_header());
+            r->set_cown_owner(nullptr, closure->get_header());
           }
           else
           {

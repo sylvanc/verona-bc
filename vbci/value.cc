@@ -819,6 +819,15 @@ namespace vbci
         }
 
         reg_inc();
+
+        // Keep the owning cown alive while this object is pinned.
+        if (loc.is_region())
+        {
+          auto* owner = loc.to_region()->get_cown_owner();
+          if (owner)
+            owner->inc();
+        }
+
         return;
       }
 
@@ -837,6 +846,23 @@ namespace vbci
     {
       case ValueType::Object:
       case ValueType::Array:
+      {
+        // Save cown owner before reg_dec (which may modify the region).
+        Cown* owner = nullptr;
+        auto h = get_header();
+        auto loc = h->location();
+        if (loc.is_region())
+          owner = loc.to_region()->get_cown_owner();
+
+        reg_dec();
+
+        // Release the cown reference after all region access.
+        if (owner)
+          owner->dec();
+
+        return;
+      }
+
       case ValueType::Cown:
         reg_dec();
         return;

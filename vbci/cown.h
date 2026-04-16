@@ -132,7 +132,7 @@ namespace vbci
       // Set cown ownership on the region.
       if (r)
       {
-        r->set_cown_owner(content.get_header());
+        r->set_cown_owner(this, content.get_header());
 
         // For non-dragged regions, remove the register's stack reference —
         // the cown now owns the region. For frame-local drags, the drag
@@ -195,7 +195,7 @@ namespace vbci
         // Restore outgoing region ownership on failure.
         if (prev_region)
         {
-          prev_region->set_cown_owner(content.get_header());
+          prev_region->set_cown_owner(this, content.get_header());
           prev_region->stack_dec();
         }
 
