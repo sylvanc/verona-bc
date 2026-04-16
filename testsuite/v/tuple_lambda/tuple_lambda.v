@@ -6,8 +6,8 @@ make(): (() -> i32, () -> i32)
   (a, b)
 }
 
-main(): i32
+main(): none
 {
   (let a, let b) = tuple_lambda::make();
-  a() + b() - 3
+  ffi::exit_code(a() + b() - 3)
 }
