@@ -1580,9 +1580,16 @@ namespace vc
             if (reif.reification)
               return clone(reif.reification / Type);
 
-            // Not yet reified — return empty. The deferred second pass
-            // will resolve this after all functions are reified.
-            return {};
+            // Not yet reified — eagerly compute the return type from the
+            // function's ClassDef so that receiver-type tracking for
+            // downstream Lookup/CallDyn sites doesn't fall back to the
+            // conservative "all classes" receiver set.
+            auto def_type = reif.def / Type;
+            if (def_type->front() == TypeVar)
+              return {};
+
+            return reify_emitted_type(
+              def_type, reif.subst, reif.def / Ident, "return type");
           }
         }
       }
