@@ -836,7 +836,7 @@ namespace vbci
         return;
 
       default:
-        return;
+        Value::error(Error::BadOperand);
     }
   }
 
@@ -868,7 +868,7 @@ namespace vbci
         return;
 
       default:
-        return;
+        Value::error(Error::BadOperand);
     }
   }
 
