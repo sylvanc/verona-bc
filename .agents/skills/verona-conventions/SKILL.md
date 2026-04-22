@@ -15,7 +15,6 @@ user-invocable: false
 - `#pragma once`, not include guards.
 - Project headers first, then system/library headers separated by a blank line.
 - Use `constexpr`/`consteval`, structured bindings, `if constexpr`, `std::span`, `[[nodiscard]]`.
-- `snmalloc::UNUSED()` (qualified), not bare `UNUSED()`.
 - Prefer `static constexpr` over `#define` for constants.
 
 ## Trieste Patterns
