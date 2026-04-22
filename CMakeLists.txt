@@ -51,8 +51,8 @@ FetchContent_MakeAvailable(cmake_utils)
 
 FetchContent_Declare(
   verona-rt
-  GIT_REPOSITORY https://github.com/microsoft/verona-rt
-  GIT_TAG 380e91f5e3378400d28bf7de8a480fd08cb758c0
+  GIT_REPOSITORY https://github.com/mjp41/verona-rt
+  GIT_TAG sophia1
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
