@@ -1818,8 +1818,8 @@ namespace vbci
       case Op::GetRaise:
       {
         process([](Register& dst, Frame& frame) INLINE {
-          dst =
-            ValueImmortal(Value(static_cast<uint64_t>(frame.raise_target.raw())));
+          dst = ValueImmortal(
+            Value(static_cast<uint64_t>(frame.raise_target.raw())));
         });
         break;
       }
@@ -1827,8 +1827,8 @@ namespace vbci
       case Op::SetRaise:
       {
         process([](Register& dst, const Register& src, Frame& frame) INLINE {
-          dst =
-            ValueImmortal(Value(static_cast<uint64_t>(frame.raise_target.raw())));
+          dst = ValueImmortal(
+            Value(static_cast<uint64_t>(frame.raise_target.raw())));
           frame.raise_target = Location::from_raw(src->get_u64());
         });
         break;
