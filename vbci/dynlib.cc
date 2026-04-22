@@ -96,7 +96,7 @@ namespace vbci
         ffi_prep_cif_var(
           &cif,
           FFI_DEFAULT_ABI,
-          static_cast<unsigned>(param_ffi_types.size()),
+          static_cast<unsigned>(param_types.size()),
           static_cast<unsigned>(args.size()),
           return_ffi_type,
           param_ffi_types.data()) != FFI_OK)

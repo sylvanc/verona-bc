@@ -21,8 +21,7 @@ jobs:
         # standard
         variant: [ "Standard" ]
 
-        platform: [ "ubuntu-latest" ]
-#        platform: [ "ubuntu-latest", "windows-latest", "mac-latest" ]
+        platform: [ "ubuntu-latest", "ubuntu-24.04-arm", "macos-latest" ]
 
 
         build-type: [ "Release", "Debug" ]
@@ -31,6 +30,17 @@ jobs:
           - platform: "ubuntu-latest"
             cmake-flags: "-G Ninja"
             dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+
+          - platform: "ubuntu-24.04-arm"
+            cmake-flags: "-G Ninja"
+            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+
+          - platform: "macos-latest"
+            cmake-flags: "-G Ninja"
+            dependencies: |
+              brew install ninja libffi libgit2 zstd openssl pkg-config
+              echo "PKG_CONFIG_PATH=$(brew --prefix libffi)/lib/pkgconfig:$(brew --prefix zstd)/lib/pkgconfig:$(brew --prefix libgit2)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+              echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
 
           - variant: "Clang"
             platform: "ubuntu-latest"
@@ -43,15 +53,6 @@ jobs:
             build-type: "Release"
             cmake-flags: "-G Ninja -DSANITIZER=address,undefined -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
             dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
-
-          # - platform: "windows-latest"
-          #   build-type: "Debug"
-          #   # Exclude perf tests in Debug on Windows as they take too long.
-          #   ctest-flags: "-E perf"
-          
-          # - platform: "mac-latest"
-          #   cmake-flags: ""
-          #   dependencies: ""
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{matrix.platform}}
