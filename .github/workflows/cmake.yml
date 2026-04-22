@@ -21,13 +21,17 @@ jobs:
         # standard
         variant: [ "Standard" ]
 
-        platform: [ "ubuntu-latest", "macos-latest" ]
+        platform: [ "ubuntu-latest", "ubuntu-24.04-arm", "macos-latest" ]
 
 
         build-type: [ "Release", "Debug" ]
                 
         include:
           - platform: "ubuntu-latest"
+            cmake-flags: "-G Ninja"
+            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+
+          - platform: "ubuntu-24.04-arm"
             cmake-flags: "-G Ninja"
             dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
 
