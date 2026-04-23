@@ -397,7 +397,7 @@ namespace vbcc
 
                 if (!last)
                 {
-                  if (!l.used.test(r))
+                  if (!l.used.test(r) && !vars.test(r))
                   {
                     // Dead def: defined but never used or killed.
                     // Find the defining statement in this label's body

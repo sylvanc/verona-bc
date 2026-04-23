@@ -2137,6 +2137,35 @@ namespace vc
         bool replacing_seed = unresolved_seed &&
           current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
 
+        // A TypeId that was resolved from a class-level TypeParam is a valid
+        // concrete type. Don't replace it — the class's subst already
+        // determined the correct type. Method-level TypeParams should still
+        // be refined from call-site argument types.
+        if (replacing_seed && (current == TypeId) && generic_origin)
+        {
+          auto def_type = def_param / Type;
+          auto tp_name = (def_type == Type) ? def_type->front() : def_type;
+
+          if (tp_name == TypeName)
+          {
+            auto last_elem = tp_name->back();
+            auto tp_ident = last_elem / Ident;
+            auto parent_cls = target.def->parent(ClassDef);
+
+            if (parent_cls)
+            {
+              for (auto& tp : *(parent_cls / TypeParams))
+              {
+                if ((tp / Ident)->location() == tp_ident->location())
+                {
+                  replacing_seed = false;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
         if (
           !generic_origin &&
           !has_unresolved_type(def_param / Type, target.subst) &&
