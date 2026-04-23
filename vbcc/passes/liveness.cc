@@ -396,7 +396,32 @@ namespace vbcc
                 auto last = l.last_use.at(r);
 
                 if (!last)
+                {
+                  if (!l.used.test(r))
+                  {
+                    // Dead def: defined but never used or killed.
+                    // Find the defining statement in this label's body
+                    // and insert a drop after it.
+                    for (auto it = body->begin(); it != body->end(); ++it)
+                    {
+                      auto& s = *it;
+
+                      if (s->empty() || (s->front() != LocalId))
+                        continue;
+
+                      auto dst = func_state.get_register_id(s->front());
+
+                      if (dst && (*dst == r))
+                      {
+                        body->insert(
+                          std::next(it), Drop << clone(s->front()));
+                        break;
+                      }
+                    }
+                  }
+
                   continue;
+                }
 
                 auto parent = last->parent();
 

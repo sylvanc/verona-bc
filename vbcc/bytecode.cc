@@ -122,6 +122,7 @@ namespace vbcc
     defd.resize(size);
     dead.resize(size);
     out.resize(size);
+    used.resize(size);
   }
 
   std::pair<bool, std::string> LabelState::def(size_t r, Node& node, bool var)
@@ -168,6 +169,8 @@ namespace vbcc
     if (dead.test(r))
       return false;
 
+    used.set(r);
+
     if (!out.test(r))
     {
       out.set(r);
@@ -187,6 +190,8 @@ namespace vbcc
     // require it.
     if (dead.test(r))
       return false;
+
+    used.set(r);
 
     if (out.test(r))
       out.reset(r);
