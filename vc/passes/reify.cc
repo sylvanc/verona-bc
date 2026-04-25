@@ -2137,6 +2137,13 @@ namespace vc
         bool replacing_seed = unresolved_seed &&
           current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
 
+        // A fully-resolved union (no TypeId or Dyn members) is not a seed.
+        // Without this, the first call-site's arg type overwrites the declared
+        // union type (e.g., Union(ClassId, None) → None from a none arg).
+        if (replacing_seed && (current == Union) &&
+            !contains_typeid(current) && !contains_dyn(current))
+          replacing_seed = false;
+
         // A TypeId that was resolved from a class-level TypeParam is a valid
         // concrete type. Don't replace it — the class's subst already
         // determined the correct type. Method-level TypeParams should still
