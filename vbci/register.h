@@ -232,7 +232,6 @@ namespace vbci
         case ValueType::Cown:
         {
           auto cown = src.get_cown();
-          snmalloc::UNUSED(field_id);
           auto readonly = src.is_readonly();
 
           replace_unsafe([&]() {

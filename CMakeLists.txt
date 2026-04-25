@@ -63,18 +63,10 @@ set(TRIESTE_BUILD_PARSERS Off)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 2818ab9ccc4e10b95782162a3da26f122851de33
+  GIT_TAG 7d0b29403b253e924bf66eb287e76c3954bd14f8
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
-
-# Use snmalloc clangformat function (verona-rt has a stale copy).
-# Override the version to find whatever is installed, and set the include
-# patterns to match our source layout.
-clangformat_targets(
-  VERSION 20
-  INCLUDE_PATTERNS vc/*.cc vc/*.h vbcc/*.cc vbcc/*.h vbci/*.cc vbci/*.h include/*.h
-)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 

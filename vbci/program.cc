@@ -324,6 +324,15 @@ namespace vbci
   std::pair<ValueType, ffi_type*> Program::layout_union_type(ComplexType& t)
   {
     assert(t.tag == TypeTag::Union);
+
+    // Bottom type: no value can inhabit an empty union. Raise a runtime
+    // error rather than producing an invalid layout. An empty union
+    // reaching this path indicates a compiler bug (typically reify
+    // emitting a shape-class with no concrete implementors that is still
+    // referenced by a reachable function's signature).
+    if (t.children.empty())
+      Value::error(Error::BadType);
+
     auto& child = t.children.at(0);
     auto rep = layout_type_id(child);
     bool ok = true;
@@ -1054,9 +1063,18 @@ namespace vbci
     }
 
     // Calculate the class size.
-    if (!cls.calc_size())
+    try
     {
-      LOG(Error) << file << ": couldn't calculate class size" << std::endl;
+      if (!cls.calc_size())
+      {
+        LOG(Error) << file << ": couldn't calculate class size" << std::endl;
+        return false;
+      }
+    }
+    catch (const Value& err)
+    {
+      LOG(Error) << file << ": couldn't calculate class size: "
+                 << err.to_string() << std::endl;
       return false;
     }
 

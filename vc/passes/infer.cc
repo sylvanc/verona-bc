@@ -1022,8 +1022,8 @@ namespace vc
       }
       return false;
     };
-    snmalloc::UNUSED(refine_const_stmt(const_stmt));
 
+    refine_const_stmt(const_stmt);
     return true;
   }
 
@@ -1516,12 +1516,13 @@ namespace vc
               continue;
 
             auto dst_loc = (stmt / LocalId)->location();
-            if (merge_env(
-                  env,
-                  dst_loc,
-                  src_it->second.type,
-                  top,
-                  src_it->second.call_node))
+            if (
+              merge_env(
+                env,
+                dst_loc,
+                src_it->second.type,
+                top,
+                src_it->second.call_node))
               enqueue_if_concrete(env, dst_loc, work, in_queue);
           }
           else if (stmt == Lookup)
@@ -1558,18 +1559,20 @@ namespace vc
               auto inner = src_it->second.type->front();
               if (inner == TupleType && index < inner->size())
               {
-                if (merge_env(
-                      env,
-                      dst_loc,
-                      ref_type(Type << clone(inner->at(index))),
-                      top))
+                if (
+                  merge_env(
+                    env,
+                    dst_loc,
+                    ref_type(Type << clone(inner->at(index))),
+                    top))
                   enqueue_if_concrete(env, dst_loc, work, in_queue);
                 continue;
               }
             }
 
-            if (merge_env(
-                  env, dst_loc, ref_type(clone(src_it->second.type)), top))
+            if (
+              merge_env(
+                env, dst_loc, ref_type(clone(src_it->second.type)), top))
               enqueue_if_concrete(env, dst_loc, work, in_queue);
           }
           else if (stmt == ArrayRefFromEnd)
@@ -1585,15 +1588,14 @@ namespace vc
             if (inner == TupleType && offset > 0 && offset <= inner->size())
             {
               auto index = inner->size() - offset;
-              if (merge_env(
-                    env,
-                    dst_loc,
-                    ref_type(Type << clone(inner->at(index))),
-                    top))
+              if (
+                merge_env(
+                  env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
                 enqueue_if_concrete(env, dst_loc, work, in_queue);
             }
-            else if (merge_env(
-                       env, dst_loc, ref_type(clone(src_it->second.type)), top))
+            else if (
+              merge_env(
+                env, dst_loc, ref_type(clone(src_it->second.type)), top))
             {
               enqueue_if_concrete(env, dst_loc, work, in_queue);
             }
@@ -1684,7 +1686,8 @@ namespace vc
                 continue;
 
               auto arg_loc = (args->at(i) / Rhs)->location();
-              snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+              refine_local_const(arg_loc, expected);
+
               if (merge_env(env, arg_loc, expected, top))
                 enqueue_if_concrete(env, arg_loc, work, in_queue);
             }
@@ -2238,7 +2241,7 @@ namespace vc
         new_ta << clone(find->second.type);
       }
       if (all_constrained)
-        snmalloc::UNUSED(replace_if_changed(scope.name_elem, ta, new_ta));
+        replace_if_changed(scope.name_elem, ta, new_ta);
     }
 
     // Build substitution from updated TypeArgs.
@@ -2400,8 +2403,7 @@ namespace vc
     auto recv_it = env.find(lookup_src->location());
     if (recv_it == env.end() && def_stmts != nullptr)
     {
-      snmalloc::UNUSED(recover_local_type_from_def(
-        lookup_src->location(), env, *def_stmts, top));
+      recover_local_type_from_def(lookup_src->location(), env, *def_stmts, top);
       recv_it = env.find(lookup_src->location());
     }
     if (recv_it != env.end())
@@ -2418,8 +2420,7 @@ namespace vc
         auto new_ret = retarget_numeric_type(info.func / Type, expected_prim);
         if (new_ret)
         {
-          snmalloc::UNUSED(
-            replace_if_changed(info.func, info.func / Type, new_ret));
+          replace_if_changed(info.func, info.func / Type, new_ret);
           refined = true;
         }
         if (refine_function_return_consts(info.func, expected_prim))
@@ -2710,7 +2711,7 @@ namespace vc
         new_ta << clone(find->second.type);
       }
       if (all_constrained)
-        snmalloc::UNUSED(replace_if_changed(scope.name_elem, ta, new_ta));
+        replace_if_changed(scope.name_elem, ta, new_ta);
     }
 
     return all_default;
@@ -2769,7 +2770,7 @@ namespace vc
         resolved = arg_it->second.type;
       }
 
-      snmalloc::UNUSED(replace_if_changed(param, formal_type, clone(resolved)));
+      replace_if_changed(param, formal_type, clone(resolved));
 
       // Keep FieldDef in sync.
       if (parent_cls)
@@ -2782,8 +2783,7 @@ namespace vc
           if ((child / Ident)->location().view() != pname)
             continue;
           if (contains_typevar(child / Type))
-            snmalloc::UNUSED(
-              replace_if_changed(child, child / Type, clone(resolved)));
+            replace_if_changed(child, child / Type, clone(resolved));
           break;
         }
       }
@@ -3304,8 +3304,7 @@ namespace vc
 
         auto tuple_ref = ref_to_tuple.find(src_loc);
         if (tuple_ref != ref_to_tuple.end())
-          snmalloc::UNUSED(
-            upsert_ref_to_tuple(ref_to_tuple, dst_loc, tuple_ref->second));
+          upsert_ref_to_tuple(ref_to_tuple, dst_loc, tuple_ref->second);
 
         // Backward: src = merge(src, dst).
         dst_it = env.find(dst_loc);
@@ -3329,9 +3328,10 @@ namespace vc
             call_expected = bwd_it->second.type;
           }
 
-          if ((dst_it->second.is_fixed ||
-               (bwd_it != bwd.end() && bwd_it->second.is_fixed)))
-            snmalloc::UNUSED(refine_local_const(src_loc, expected));
+          if (
+            (dst_it->second.is_fixed ||
+             (bwd_it != bwd.end() && bwd_it->second.is_fixed)))
+            refine_local_const(src_loc, expected);
           if (call_expected)
             propagate_call_constraint(
               env, src_loc, call_expected, top, lookup_stmts, &all_def_stmts);
@@ -3448,8 +3448,7 @@ namespace vc
         auto dst_it = env.find(dst_loc);
         if (dst_it != env.end() && !is_default_type(dst_it->second.type))
         {
-          snmalloc::UNUSED(
-            merge_bwd(src_loc, ref_type(clone(dst_it->second.type))));
+          merge_bwd(src_loc, ref_type(clone(dst_it->second.type)));
         }
       }
       // ----- Store -----
@@ -3526,11 +3525,10 @@ namespace vc
           // Track ref_to_tuple for Store-based element tracking.
           auto rtt = ref_to_tuple.find(arg_loc);
           if (rtt != ref_to_tuple.end())
-            snmalloc::UNUSED(upsert_ref_to_tuple(
-              ref_to_tuple, dst_loc, {rtt->second.first, index}));
+            upsert_ref_to_tuple(
+              ref_to_tuple, dst_loc, {rtt->second.first, index});
           else
-            snmalloc::UNUSED(
-              upsert_ref_to_tuple(ref_to_tuple, dst_loc, {arg_loc, index}));
+            upsert_ref_to_tuple(ref_to_tuple, dst_loc, {arg_loc, index});
 
           // Resolve element if source is TupleType.
           if (src_it != env.end())
@@ -3629,8 +3627,7 @@ namespace vc
           bool is_lit = dst_loc.view().find("array") != std::string_view::npos;
           tuple_locals[dst_loc] = {
             sz, is_lit, std::vector<Node>(sz), std::vector<Location>(sz)};
-          snmalloc::UNUSED(
-            upsert_ref_to_tuple(ref_to_tuple, dst_loc, {dst_loc, 0}));
+          upsert_ref_to_tuple(ref_to_tuple, dst_loc, {dst_loc, 0});
         }
       }
       // ----- TypeAssertion -----
@@ -3673,7 +3670,7 @@ namespace vc
                 if (ft && !contains_typevar(ft))
                 {
                   auto expected = clone(ft);
-                  snmalloc::UNUSED(refine_local_const(arg_loc, ft));
+                  refine_local_const(arg_loc, ft);
                   if (merge_bwd(arg_loc, ft))
                   {
                     propagate_call_constraint(
@@ -3693,8 +3690,7 @@ namespace vc
                   arg_it != env.end() && contains_typevar(f / Type) &&
                   !contains_typevar(arg_it->second.type) &&
                   !contains_default_type(arg_it->second.type))
-                  snmalloc::UNUSED(replace_if_changed(
-                    f, f / Type, clone(arg_it->second.type)));
+                  replace_if_changed(f, f / Type, clone(arg_it->second.type));
                 break;
               }
             }
@@ -3727,7 +3723,7 @@ namespace vc
           if (compatible)
           {
             auto refined = primitive_or_ffi_type(rhs_prim->type());
-            snmalloc::UNUSED(refine_local_const(lhs_loc, refined));
+            refine_local_const(lhs_loc, refined);
             if (merge_bwd(lhs_loc, clone(refined)))
               propagate_call_node(
                 env, lhs_loc, top, lookup_stmts, &all_def_stmts);
@@ -3780,14 +3776,16 @@ namespace vc
         }
       }
       // ----- Fixed result types -----
-      else if (auto frt = fixed_result_type.find(stmt->type());
-               frt != fixed_result_type.end())
+      else if (
+        auto frt = fixed_result_type.find(stmt->type());
+        frt != fixed_result_type.end())
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), primitive_type(frt->second));
       }
-      else if (auto ffrt = fixed_ffi_result_type.find(stmt->type());
-               ffrt != fixed_ffi_result_type.end())
+      else if (
+        auto ffrt = fixed_ffi_result_type.find(stmt->type());
+        ffrt != fixed_ffi_result_type.end())
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), ffi_primitive_type(ffrt->second));
@@ -3807,7 +3805,7 @@ namespace vc
         InferStmtScope stmt_scope(InferStmtFamily::CallOps);
         auto value_loc = (stmt / ValueSrc)->location();
         auto expected = clone(stmt / Type);
-        snmalloc::UNUSED(refine_local_const(value_loc, expected));
+        refine_local_const(value_loc, expected);
         if (merge_bwd(value_loc, expected))
           propagate_call_node(
             env, value_loc, top, lookup_stmts, &all_def_stmts);
@@ -3865,7 +3863,7 @@ namespace vc
             !is_uninformative_backward_type(expected))
           {
             auto arg_loc = (args->at(i) / Rhs)->location();
-            snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+            refine_local_const(arg_loc, expected);
             if (merge_bwd(arg_loc, expected))
             {
               propagate_call_constraint(
@@ -3922,7 +3920,7 @@ namespace vc
               merge(dst_loc, ret);
           }
         }
-        snmalloc::UNUSED(upsert_lookup_stmt(lookup_stmts, dst_loc, stmt));
+        upsert_lookup_stmt(lookup_stmts, dst_loc, stmt);
       }
       // ----- CallDyn / TryCallDyn -----
       else if (stmt->in({CallDyn, TryCallDyn}))
@@ -3991,7 +3989,7 @@ namespace vc
                   !is_uninformative_backward_type(expected))
                 {
                   auto arg_loc = (args->at(i) / Rhs)->location();
-                  snmalloc::UNUSED(refine_local_const(arg_loc, expected));
+                  refine_local_const(arg_loc, expected);
                   if (merge_bwd(arg_loc, expected))
                   {
                     refined = true;
@@ -4161,8 +4159,7 @@ namespace vc
               auto fa = ffi_args->begin();
               while (fp != ffi_params->end() && fa != ffi_args->end())
               {
-                snmalloc::UNUSED(
-                  refine_local_const((*fa)->location(), clone(*fp)));
+                refine_local_const((*fa)->location(), clone(*fp));
                 if (merge_bwd((*fa)->location(), clone(*fp)))
                   propagate_call_node(
                     env, (*fa)->location(), top, lookup_stmts, &all_def_stmts);
@@ -4190,8 +4187,7 @@ namespace vc
         if (src_it != env.end())
         {
           auto apply_ret = src_it->second.type;
-          snmalloc::UNUSED(
-            replace_if_changed(stmt, stmt / Type, clone(apply_ret)));
+          replace_if_changed(stmt, stmt / Type, clone(apply_ret));
           merge(dst_loc, cown_type(apply_ret));
         }
 
@@ -4263,8 +4259,7 @@ namespace vc
                       continue;
                     }
                     auto new_type = ref_type(ci);
-                    snmalloc::UNUSED(
-                      replace_if_changed(param, param / Type, new_type));
+                    replace_if_changed(param, param / Type, new_type);
                     env[(param / Ident)->location()] = {
                       clone(new_type), true, {}};
                   }
@@ -4818,11 +4813,11 @@ namespace vc
           auto ret_loc = (term / LocalId)->location();
           auto ret_prim = extract_backward_primitive(func_ret);
           if (ret_prim)
-            snmalloc::UNUSED(refine_const_local(
+            refine_const_local(
               env,
               const_defs,
               ret_loc,
-              primitive_or_ffi_type(ret_prim->type())));
+              primitive_or_ffi_type(ret_prim->type()));
           propagate_call_constraint(
             env, ret_loc, func_ret, top, lookup_stmts, &all_def_stmts);
           bool changed = merge_env(env, ret_loc, clone(func_ret), top);

@@ -33,7 +33,7 @@ namespace vc
   {
     struct ParseState
     {
-      RE2 re_dir;
+      TRegex re_dir;
       size_t depth;
       size_t str_start;
       size_t str_end;
@@ -59,7 +59,7 @@ namespace vc
     p.prefile([](auto&, auto& path) { return path.extension() == ".v"; });
 
     p.predir([=](auto&, auto& path) {
-      return RE2::FullMatch(path.filename().string(), ps->re_dir);
+      return TRegex::FullMatch(path.filename().string(), ps->re_dir);
     });
 
     p.postparse([](auto& pp, auto& path, auto ast) {

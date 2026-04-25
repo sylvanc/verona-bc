@@ -34,6 +34,7 @@ namespace vbcc
     Bitset defd;
     Bitset dead;
     Bitset out;
+    Bitset used;
 
     void resize(size_t size);
     std::pair<bool, std::string> def(size_t r, Node& node, bool var);

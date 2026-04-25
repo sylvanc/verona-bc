@@ -39,10 +39,9 @@ make_counter_incorrect(): (() -> i32, () -> i32)
 }
 
 // Nested sibling lambdas at two levels: the outer lambda captures
-// count, then creates two inner lambdas that access count through
-// the shared enclosing closure ($enclosing_self). Because both
-// inc and get go through the same enclosing closure object,
-// inc's mutations ARE visible to get.
+// count, then creates two inner lambdas that each independently
+// capture count from the outer closure's field. Each inner lambda
+// gets its own copy, so inc's mutations are NOT visible to get.
 make_nested_counter(): (() -> i32, () -> i32)
 {
   let count: i32 = 0;
@@ -79,15 +78,16 @@ main(): none
     result = result + 4
   }
 
-  // Two-level: sibling lambdas share state through enclosing closure.
-  // inc mutates count via $enclosing_self, get reads the same object.
+  // Two-level: sibling lambdas also do NOT share state (copy semantics).
+  // Each inner lambda independently captures count from the outer closure.
+  // inc mutates its own copy, get reads its own copy (always 0).
   (let inc2, let get2) = lambda_nested::make_nested_counter();
   inc2();
   inc2();
   inc2();
   inc2();
   inc2();
-  if get2() != 5
+  if get2() != 0
   {
     result = result + 8
   }

@@ -326,9 +326,11 @@ namespace vc
       std::vector<Reification*> deferred_typevar;
       drain_worklist(deferred_typevar);
       resolve_shapes();
+      prune_empty_shape_unions();
       process_pending_callbacks(false);
       drain_worklist(deferred_typevar);
       resolve_shapes();
+      prune_empty_shape_unions();
       process_pending_callbacks(true);
       drain_worklist(deferred_typevar);
 
@@ -907,6 +909,96 @@ namespace vc
             r.reification = Type << clone(r.id) << union_node->front();
           else
             r.reification = Type << clone(r.id) << union_node;
+        }
+      }
+    }
+
+    // After resolve_shapes, prune TypeId members from unions in class fields
+    // where the shape resolved to an empty union (no implementors). These
+    // TypeIds were kept as "pending" during reify_type but now have definitive
+    // empty-union reifications.
+    void prune_empty_shape_unions()
+    {
+      auto is_empty_shape = [&](const Node& type_id) -> bool
+      {
+        for (auto& key : map_order)
+        {
+          for (auto& cr : map[key])
+          {
+            if (cr.id && same_reification_id(cr.id, type_id))
+            {
+              if (cr.reification && (cr.reification == Type))
+              {
+                auto& body = cr.reification->back();
+                return (body == Union) && body->empty();
+              }
+
+              return false;
+            }
+          }
+        }
+
+        return true;
+      };
+
+      // Prune a union node in place, returning the simplified result.
+      auto prune_union = [&](const Node& u) -> Node
+      {
+        Node result = Union;
+
+        for (auto& child : *u)
+        {
+          if ((child == TypeId) && is_empty_shape(child))
+            continue;
+
+          result << clone(child);
+        }
+
+        if (result->empty())
+          return Dyn;
+
+        if (result->size() == 1)
+          return result->front();
+
+        return result;
+      };
+
+      for (auto& key : map_order)
+      {
+        for (auto& r : map[key])
+        {
+          if (!r.reification)
+            continue;
+
+          if (r.reification == Class)
+          {
+            auto fields = r.reification / Fields;
+
+            for (auto& field : *fields)
+            {
+              auto& ft = field->back();
+
+              if (ft == Union)
+              {
+                auto pruned = prune_union(ft);
+
+                if (pruned != ft)
+                  field->replace(ft, pruned);
+              }
+            }
+          }
+          else if (r.reification == Type)
+          {
+            auto& body = r.reification->back();
+
+            if (body == Union)
+            {
+              auto pruned = prune_union(body);
+
+              if (pruned != body)
+                r.reification->replace(body, pruned);
+            }
+          }
         }
       }
     }
@@ -1580,9 +1672,16 @@ namespace vc
             if (reif.reification)
               return clone(reif.reification / Type);
 
-            // Not yet reified — return empty. The deferred second pass
-            // will resolve this after all functions are reified.
-            return {};
+            // Not yet reified — eagerly compute the return type from the
+            // function's ClassDef so that receiver-type tracking for
+            // downstream Lookup/CallDyn sites doesn't fall back to the
+            // conservative "all classes" receiver set.
+            auto def_type = reif.def / Type;
+            if (def_type->front() == TypeVar)
+              return {};
+
+            return reify_emitted_type(
+              def_type, reif.subst, reif.def / Ident, "return type");
           }
         }
       }
@@ -2037,6 +2136,35 @@ namespace vc
           vbcc::IRSubtype(top, actual, current);
         bool replacing_seed = unresolved_seed &&
           current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
+
+        // A TypeId that was resolved from a class-level TypeParam is a valid
+        // concrete type. Don't replace it — the class's subst already
+        // determined the correct type. Method-level TypeParams should still
+        // be refined from call-site argument types.
+        if (replacing_seed && (current == TypeId) && generic_origin)
+        {
+          auto def_type = def_param / Type;
+          auto tp_name = (def_type == Type) ? def_type->front() : def_type;
+
+          if (tp_name == TypeName)
+          {
+            auto last_elem = tp_name->back();
+            auto tp_ident = last_elem / Ident;
+            auto parent_cls = target.def->parent(ClassDef);
+
+            if (parent_cls)
+            {
+              for (auto& tp : *(parent_cls / TypeParams))
+              {
+                if ((tp / Ident)->location() == tp_ident->location())
+                {
+                  replacing_seed = false;
+                  break;
+                }
+              }
+            }
+          }
+        }
 
         if (
           !generic_origin &&
@@ -3171,27 +3299,38 @@ namespace vc
           else if (rt == TypeId)
           {
             // Check if this TypeId corresponds to a shape with no
-            // implementors. If so, drop it from the union.
-            bool has_impl = false;
-
-            for (auto& key : map_order)
+            // implementors. If the shape's reification hasn't been emitted
+            // yet (null), keep it — resolve_shapes may add implementors
+            // later. If the shape has been resolved to an empty union,
+            // drop it. The post-shape cleanup pass (prune_empty_shape_unions)
+            // handles any TypeIds that turn out to be empty after
+            // resolve_shapes runs.
+            auto has_empty_shape = [&](const Node& tid) -> bool
             {
-              for (auto& cr : map[key])
+              for (auto& key : map_order)
               {
-                if (cr.id && same_reification_id(cr.id, rt) && cr.reification)
+                for (auto& cr : map[key])
                 {
-                  has_impl = true;
-                  break;
+                  if (cr.id && same_reification_id(cr.id, tid))
+                  {
+                    if (cr.reification && (cr.reification == Type))
+                    {
+                      auto& body = cr.reification->back();
+                      return (body == Union) && body->empty();
+                    }
+
+                    // Pending (null) or non-Type reification — keep.
+                    return false;
+                  }
                 }
               }
 
-              if (has_impl)
-                break;
-            }
+              // Not in the map at all — treat as empty.
+              return true;
+            };
 
-            if (has_impl)
+            if (!has_empty_shape(rt))
               r << rt;
-            // else: drop this arm (shape with no implementors)
           }
           else
             r << rt;

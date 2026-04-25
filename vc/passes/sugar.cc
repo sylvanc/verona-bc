@@ -41,6 +41,7 @@ namespace vc
     }
 
     std::map<Location, std::pair<Node, bool>> freevars;
+    std::set<Location> enclosing_field_captures;
     bool has_raise = false;
     bool has_var_capture = false;
 
@@ -84,34 +85,41 @@ namespace vc
             }
 
             if (freevars.find(loc) == freevars.end())
-              freevars.emplace(loc, std::make_pair(Node{}, false));
+            {
+              // Check if this is a field of the enclosing lambda class.
+              // This handles nested lambdas: the outer lambda captured
+              // this variable as a field, and the inner lambda should
+              // independently capture the field value.
+              auto enclosing_cls = lambda->parent(ClassDef);
+
+              if (enclosing_cls)
+              {
+                auto cls_body = enclosing_cls / ClassBody;
+
+                for (auto& child : *cls_body)
+                {
+                  if (
+                    child == FieldDef &&
+                    (child / Ident)->location() == loc)
+                  {
+                    fv_type = clone(child / Type);
+                    freevars.emplace(
+                      loc, std::make_pair(fv_type, false));
+                    enclosing_field_captures.insert(loc);
+                    break;
+                  }
+                }
+              }
+
+              if (freevars.find(loc) == freevars.end())
+                freevars.emplace(loc, std::make_pair(Node{}, false));
+            }
           }
         }
       }
 
       return ok;
     });
-
-    // If the inner lambda captured $self from an enclosing lambda's apply,
-    // rename it to $enclosing_self to avoid conflicting with this lambda's
-    // own $self parameter. This gives sharing semantics: the inner lambda
-    // holds a reference to the enclosing closure object.
-    auto self_it = freevars.find(Location("$self"));
-    if (self_it != freevars.end())
-    {
-      freevars.emplace(Location("$enclosing_self"), self_it->second);
-      freevars.erase(self_it);
-
-      // Rewrite all $self references in the lambda body to $enclosing_self.
-      lambda->traverse([&](auto node) {
-        if (node == LocalId && node->location().view() == "$self")
-        {
-          auto parent = node->parent();
-          parent->replace(node, LocalId ^ "$enclosing_self");
-        }
-        return true;
-      });
-    }
 
     auto id = _.fresh(l_lambda);
 
@@ -134,6 +142,8 @@ namespace vc
       auto func_ret_type = enclosing_func / Type;
 
       lambda->traverse([&](auto node) {
+        if (node != lambda && node == Lambda)
+          return false;
         if (node == Raise && node->size() == 1)
           node << clone(func_ret_type);
         return node != Error;
@@ -187,14 +197,24 @@ namespace vc
            Expr << (Ref << (Expr << (LocalId ^ freevar))),
            true});
       }
+      else if (enclosing_field_captures.count(freevar) > 0)
+      {
+        // Enclosing lambda field capture: the creation-site expression
+        // loads the field from the outer lambda's $self. At the creation
+        // site, $self is the outer lambda's closure object.
+        fields.push_back(
+          {freevar,
+           fv_resolved,
+           Expr
+             << (Load
+                 << (Expr
+                     << (FieldRef << (Expr << (LocalId ^ "$self"))
+                                  << (FieldId ^ freevar))))});
+      }
       else
       {
-        // For $enclosing_self, the creation-site expression must reference
-        // $self (the enclosing apply's parameter), not $enclosing_self.
-        auto create_name =
-          (freevar.view() == "$enclosing_self") ? Location("$self") : freevar;
         fields.push_back(
-          {freevar, fv_resolved, Expr << (LocalId ^ create_name)});
+          {freevar, fv_resolved, Expr << (LocalId ^ freevar)});
       }
     }
 
@@ -226,8 +246,7 @@ namespace vc
                                            << (FieldId ^ field.name)))))));
         ref_captures.insert(field.name);
       }
-      else if (
-        field.name.view()[0] == '$' && field.name.view() != "$enclosing_self")
+      else if (field.name.view()[0] == '$')
       {
         // Internal field (e.g., $raise_target): load value
         // directly into a Let with the same name.
@@ -270,6 +289,8 @@ namespace vc
     {
       std::vector<Node> to_rewrite;
       apply_body->traverse([&](auto node) {
+        if (node == Lambda)
+          return false;
         if (node == LocalId && let_captures.count(node->location()) > 0)
           to_rewrite.push_back(node);
         return true;

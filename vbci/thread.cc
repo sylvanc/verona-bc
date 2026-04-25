@@ -168,7 +168,6 @@ namespace vbci
   {
     ValueType kind;
     ffi_type* rep;
-    snmalloc::UNUSED(rep);
 
     if (!ffi_struct_leaf_type(program, expected_type_id, kind, rep))
       Value::error(Error::BadType);
@@ -743,7 +742,7 @@ namespace vbci
 #ifndef NDEBUG
     check_stack_rc_invariant(loc);
 #else
-    snmalloc::UNUSED(loc);
+    (void)loc;
 #endif
   }
 
@@ -1962,8 +1961,8 @@ namespace vbci
               ValueTransfer(Value(ValueType::USize, offsets.at(i)));
             Register kind_reg = ValueTransfer(
               Value(ValueType::U8, static_cast<uint8_t>(kinds.at(i))));
-            snmalloc::UNUSED(offsets_arr->exchange<false>(i, off_reg));
-            snmalloc::UNUSED(kinds_arr->exchange<false>(i, kind_reg));
+            offsets_arr->exchange<false>(i, off_reg);
+            kinds_arr->exchange<false>(i, kind_reg);
           }
 
           Register size_reg =
@@ -1971,9 +1970,9 @@ namespace vbci
           Register offsets_reg = ValueTransfer(offsets_arr);
           Register kinds_reg = ValueTransfer(kinds_arr);
 
-          snmalloc::UNUSED(tuple_arr->exchange<false>(0, size_reg));
-          snmalloc::UNUSED(tuple_arr->exchange<false>(1, offsets_reg));
-          snmalloc::UNUSED(tuple_arr->exchange<false>(2, kinds_reg));
+          tuple_arr->exchange<false>(0, size_reg);
+          tuple_arr->exchange<false>(1, offsets_reg);
+          tuple_arr->exchange<false>(2, kinds_reg);
 
           if (!freeze(tuple_arr))
             Value::error(Error::BadType);
@@ -2520,8 +2519,14 @@ namespace vbci
 
         if (!closure->is_sendable())
         {
+          auto h = closure->get_header();
+          auto r = h->region();
           LOG(Error) << "Closure argument is not sendable: " << closure.borrow()
-                     << " in region " << closure->get_header()->region();
+                     << " in region " << r
+                     << " stack_rc=" << r->get_stack_rc()
+                     << " has_parent=" << r->has_parent()
+                     << " has_cown=" << r->has_cown_owner()
+                     << " frame_local=" << r->is_frame_local();
           Value::error(Error::BadStackEscape);
         }
 

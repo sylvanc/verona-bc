@@ -42,7 +42,6 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
 - **Running compiled programs**: `dist/vbci/vbci foo.vbc` executes a compiled `.vbc` file (output of `vc build`). Debug the interpreter with `lldb-20 -- dist/vbci/vbci foo.vbc`.
 - **Verona source syntax notes**: Class definitions use bare names (no `class` keyword): `myclass[T] { ... }`. Fields need semicolons: `val: T;`. `new` uses `new { field = val }` (no class name). No `let`/`var` keyword on class fields. `use` for imports.
 - **Node construction pitfall**: `auto tn = TypeName` copies the `TokenDef` (deleted copy constructor). Use `Node tn = TypeName` to create a new AST node.
-- **`UNUSED` is qualified**: Use `snmalloc::UNUSED()`, not bare `UNUSED()`.
 - **Reify dedup strategy**: `find_or_push()` uses a hybrid approach. Primitives/wrappers use `id->equals()` with structural IDs (no index embedded). Everything else uses `subst_equal()` because `make_id()` embeds `r_vec.size()` into the ClassId string — calling it before the dedup loop gives each entry a unique ID and dedup silently fails.
 - **Runtime "bad type" errors**: These usually trace back to unrefined default literal types (U64/F64) in the compiler output that don't match the expected type at the use site. Check the infer pass output (`--dump_passes`) to see if Const nodes have the expected types.
 - **`.vbc` output naming**: `vc build <dir>` produces `<project_name>.vbc` in the current directory. If the project name is empty or ".", the output file is `.vbc` (hidden file).
