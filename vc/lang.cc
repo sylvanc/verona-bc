@@ -444,6 +444,23 @@ namespace vc
              << create_args;
     }
 
+    // Rebind locals in the apply function body so that nested lambdas
+    // processed later in this topdown pass can find them via lookup().
+    // The WF check normally rebuilds symtabs between pass iterations,
+    // but topdown processing of nested lambdas happens within the same
+    // iteration, before the WF check runs.
+    auto apply_func = (class_def / ClassBody)->back();
+    assert(apply_func == Function);
+    auto body = apply_func / Body;
+    body->traverse([&](auto node) {
+      if (node->in({Var, Let}))
+      {
+        node->bind((node / Ident)->location());
+      }
+      // Don't descend into nested lambdas.
+      return node != Lambda;
+    });
+
     return {class_def, create_expr};
   }
 }
