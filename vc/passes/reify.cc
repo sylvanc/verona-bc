@@ -1603,6 +1603,20 @@ namespace vc
                 reify_type(f / Type, r.subst) :
                 reify_emitted_type(f / Type, r.subst, f / Ident, "field type");
             }
+            else
+            {
+              // If the declared field type is a resolved union (e.g.,
+              // _node | none) but the create param was refined to a single
+              // member (e.g., _node from one overload), use the declared
+              // field type to preserve the full union.
+              auto declared = reify_type(f / Type, r.subst);
+              if (declared && (declared == Union) &&
+                  !contains_typeid(declared) && !contains_dyn(declared) &&
+                  !field_type->equals(declared))
+              {
+                field_type = declared;
+              }
+            }
 
             fields << (Field << (FieldId ^ (f / Ident)) << field_type);
           }
@@ -2105,6 +2119,14 @@ namespace vc
             auto refined = clone(refined_type);
 
             if (current_field->equals(refined))
+              return false;
+
+            // Don't narrow a resolved union field type. If the current field
+            // is a union without TypeId/Dyn, it's fully resolved and should
+            // not be replaced by a single member type from one call site.
+            if (current_field == Union &&
+                !contains_typeid(current_field) &&
+                !contains_dyn(current_field))
               return false;
 
             field->replace(current_field, refined);
