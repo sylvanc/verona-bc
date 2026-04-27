@@ -380,22 +380,18 @@ namespace vbci::writebarrier
     if (loc.is_immortal() || loc.is_stack())
       return;
 
-    // RC dec, no region operation.
+    // RC dec if not immortal or on the stack
+    v.field_dec();
+
     if (loc.is_immutable())
-    {
-      v.field_dec();
       return;
-    }
 
     assert(loc.is_region());
     auto r = loc.to_region();
 
     // Frame-local regions skip stack RC accounting.
     if (r->is_frame_local())
-    {
-      v.field_dec();
       return;
-    }
 
     if (store_loc.is_stack())
     {
@@ -410,12 +406,9 @@ namespace vbci::writebarrier
     }
 
     // Internal edge within the same region — no parent to clear.
-    // Still decrement field RC so individual object collection cascades.
+    // Earlier object RC dec so individual object collection cascades.
     if (store_loc == loc)
-    {
-      v.field_dec();
       return;
-    }
 
     // Clear parent if the region has one (sub-region relationship).
     if (r->has_parent())
@@ -423,8 +416,5 @@ namespace vbci::writebarrier
       r->clear_parent();
       return;
     }
-
-    // Different region, no parent — just decrement the value's RC.
-    v.field_dec();
   }
 }
