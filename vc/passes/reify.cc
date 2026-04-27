@@ -2147,12 +2147,6 @@ namespace vc
         auto def_param = def_params->at(i);
         auto current = param / Type;
 
-        // The self parameter of a concrete class method should never be
-        // widened. It was set correctly during initial reification.
-        // Only shape methods (where self starts as Dyn/TypeId) need widening.
-        if (i == 0 && (current == ClassId))
-          continue;
-
         bool generic_origin = contains_typeparam_ref(def_param / Type);
         auto unresolved_seed = reify_type(def_param / Type, target.subst);
         bool is_create = (target.def / Ident)->location().view() == "create";

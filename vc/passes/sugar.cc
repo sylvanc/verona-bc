@@ -427,14 +427,22 @@ namespace vc
     // Create the match values at the call site.
     Node callsite = ExprSeq;
 
-    // Check arity of $arg.
-    new_body
-      << (Expr
-          << (If << (Expr << (Unop << Len
-                                   << (Args << (Expr << (LocalId ^ "$arg"))))
-                          << (MethodName << (SymbolId ^ "!=") << TypeArgs)
-                          << (Int ^ std::to_string(arity)))
-                 << clone(nomatch_block)));
+    // Check arity of $arg for multi-element patterns (tuple destructuring).
+    // Single-element patterns don't need this — parentheses around a single
+    // expression don't create a tuple, so arity=1 patterns always receive
+    // the value directly. The Typetest alone handles type narrowing.
+    // Skipping this for arity=1 is required because Len returns the array
+    // size for arrays, which would incorrectly reject array type matches.
+    if (arity > 1)
+    {
+      new_body
+        << (Expr
+            << (If << (Expr << (Unop << Len
+                                     << (Args << (Expr << (LocalId ^ "$arg"))))
+                            << (MethodName << (SymbolId ^ "!=") << TypeArgs)
+                            << (Int ^ std::to_string(arity)))
+                   << clone(nomatch_block)));
+    }
 
     // Destructure $arg into the original params.
     Node dst = Tuple;
