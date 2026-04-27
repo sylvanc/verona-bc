@@ -38,6 +38,13 @@ namespace vc
     SequentCtx new_ctx = base;
     Node scope = base.scope;
 
+    // Track TypeArg values already bound to avoid redundant implications.
+    // Nested scopes inherit TypeParams from parents, producing implications
+    // like omap::K <: i32 AND omap::lambda$21::K <: i32 for the same K.
+    // The sequent calculus decomposes each implication via branching, so
+    // redundant implications cause exponential slowdown.
+    std::vector<Node> seen_typeargs;
+
     for (size_t i = 0; i < name->size(); i++)
     {
       auto elem = name->at(i);
@@ -57,23 +64,43 @@ namespace vc
       {
         if (*tp_it == TypeParam)
         {
-          // Build a FQ TypeName for this TypeParam.
-          auto make_fq_tp = [&]() {
-            Node fq_tp = TypeName;
-            for (size_t j = 0; j <= i; j++)
+          // Skip if we already have an implication for an equivalent TypeArg.
+          // This happens when a nested class inherits TypeParams from its
+          // parent — both scope levels carry the same TypeArg value.
+          Node ta = *ta_it;
+          bool already_seen = false;
+          for (auto& seen : seen_typeargs)
+          {
+            if (seen->equals(ta))
             {
-              fq_tp << (NameElement << clone(name->at(j) / Ident) << TypeArgs);
+              already_seen = true;
+              break;
             }
-            fq_tp << (NameElement << clone((*tp_it) / Ident) << TypeArgs);
-            return fq_tp;
-          };
+          }
 
-          // Bidirectional implications:
-          // TypeParam <: TypeArg and TypeArg <: TypeParam.
-          new_ctx.implies.push_back(
-            SubType << (Type << make_fq_tp()) << clone(*ta_it));
-          new_ctx.implies.push_back(
-            SubType << clone(*ta_it) << (Type << make_fq_tp()));
+          if (!already_seen)
+          {
+            seen_typeargs.push_back(ta);
+
+            // Build a FQ TypeName for this TypeParam.
+            auto make_fq_tp = [&]() {
+              Node fq_tp = TypeName;
+              for (size_t j = 0; j <= i; j++)
+              {
+                fq_tp
+                  << (NameElement << clone(name->at(j) / Ident) << TypeArgs);
+              }
+              fq_tp << (NameElement << clone((*tp_it) / Ident) << TypeArgs);
+              return fq_tp;
+            };
+
+            // Bidirectional implications:
+            // TypeParam <: TypeArg and TypeArg <: TypeParam.
+            new_ctx.implies.push_back(
+              SubType << (Type << make_fq_tp()) << clone(*ta_it));
+            new_ctx.implies.push_back(
+              SubType << clone(*ta_it) << (Type << make_fq_tp()));
+          }
         }
 
         ++ta_it;
