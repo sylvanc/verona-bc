@@ -2202,12 +2202,6 @@ namespace vc
           !constructor_seed)
           continue;
 
-        // A concrete ClassId param was correctly resolved during
-        // reification. Don't merge call-site arg types into it unless
-        // it's being replaced as a seed or constructor field.
-        if (current == ClassId && !replacing_seed && !constructor_seed)
-          continue;
-
         Node merged =
           (contains_dyn(current) || replacing_seed || constructor_seed) ?
           clone(actual) :
