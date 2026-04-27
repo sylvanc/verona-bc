@@ -5512,19 +5512,10 @@ namespace vc
         prev = count;
       }
 
-      top->traverse([&](auto node) {
-        if (node != Function)
-          return node == Top || node == ClassDef || node == ClassBody ||
-            node == Lib || node == Symbols;
-        process_function(node, top, false);
-        return false;
-      });
-
-      for (auto& func : deferred)
-        if (has_typevar(func))
-          process_function(func, top, true);
-
       // Sweep: DefaultInt → u64, DefaultFloat → f64.
+      // Done before the final function re-processing so that New/Stack
+      // handlers see concrete arg types and can push them into lambda
+      // fields that still have ref[TypeVar].
       top->traverse([](Node& node) {
         if (node->in({DefaultInt, DefaultFloat}))
         {
@@ -5541,6 +5532,18 @@ namespace vc
         }
         return true;
       });
+
+      top->traverse([&](auto node) {
+        if (node != Function)
+          return node == Top || node == ClassDef || node == ClassBody ||
+            node == Lib || node == Symbols;
+        process_function(node, top, false);
+        return false;
+      });
+
+      for (auto& func : deferred)
+        if (has_typevar(func))
+          process_function(func, top, true);
 
       return 0;
     });
