@@ -2196,10 +2196,22 @@ namespace vc
           }
         }
 
-        if (
-          !generic_origin &&
-          !has_unresolved_type(def_param / Type, target.subst) &&
-          !constructor_seed)
+        // Only refine params that are Dyn (from unresolved TypeVar).
+        // ClassId and TypeId params are correctly resolved types from
+        // source annotations and must not be modified. Dyn represents
+        // _builtin::any and should also not be refined — it's a valid
+        // type annotation meaning "accepts anything".
+        //
+        // The only params that need refinement are those containing Dyn
+        // where the original def had a TypeVar that reify_type couldn't
+        // resolve through substitution.
+        if (!contains_dyn(current))
+          continue;
+
+        // Even for Dyn params, only refine if the def param had an
+        // unresolved type (TypeVar that couldn't be substituted).
+        // A param annotated as `any` in source should stay Dyn.
+        if (!has_unresolved_type(def_param / Type, target.subst))
           continue;
 
         Node merged =
