@@ -440,24 +440,6 @@ namespace vc
                       stmt->at(2),
                       false);
 
-                    if (
-                      targets.empty() &&
-                      receiver_is_param(func, li->second.recv_loc))
-                    {
-                      auto fallback_targets = find_method_targets(
-                        Dyn, li->second.method_id, stmt->at(2), false);
-
-                      if (refine_receiver_type(
-                            func,
-                            li->second.recv_loc,
-                            recv_it->second,
-                            fallback_targets))
-                      {
-                        changed = true;
-                        targets = std::move(fallback_targets);
-                      }
-                    }
-
                     bool unresolved_receiver = contains_dyn(recv_it->second) ||
                       contains_typeid(recv_it->second);
 
@@ -508,24 +490,6 @@ namespace vc
                   {
                     auto targets = find_method_targets(
                       recv_it->second, li->second.method_id, stmt->at(2), true);
-
-                    if (
-                      targets.empty() &&
-                      receiver_is_param(func, li->second.recv_loc))
-                    {
-                      auto fallback_targets = find_method_targets(
-                        Dyn, li->second.method_id, stmt->at(2), true);
-
-                      if (refine_receiver_type(
-                            func,
-                            li->second.recv_loc,
-                            recv_it->second,
-                            fallback_targets))
-                      {
-                        changed = true;
-                        targets = std::move(fallback_targets);
-                      }
-                    }
 
                     bool unresolved_receiver = contains_dyn(recv_it->second) ||
                       contains_typeid(recv_it->second);
@@ -2208,11 +2172,18 @@ namespace vc
         if (!contains_dyn(current))
           continue;
 
-        // Even for Dyn params, only refine if the def param had an
-        // unresolved type (TypeVar that couldn't be substituted).
-        // A param annotated as `any` in source should stay Dyn.
-        if (!has_unresolved_type(def_param / Type, target.subst))
-          continue;
+        // Only refine Dyn params from unresolved TypeVar or TypeParam.
+        // If the def param type is a TypeName that resolves to `any`
+        // (not TypeVar or unresolved TypeParam), it's a genuine `any`
+        // annotation — don't refine.
+        {
+          auto def_type = def_param / Type;
+          auto inner = (def_type == Type) ? def_type->front() : def_type;
+          if (inner != TypeVar &&
+              !has_unresolved_type(def_type, target.subst) &&
+              !contains_typeparam_ref(def_type))
+            continue;
+        }
 
         Node merged =
           (contains_dyn(current) || replacing_seed || constructor_seed) ?
