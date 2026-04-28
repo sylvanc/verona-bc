@@ -38,12 +38,18 @@ namespace vc
     SequentCtx new_ctx = base;
     Node scope = base.scope;
 
-    // Track TypeArg values already bound to avoid redundant implications.
-    // Nested scopes inherit TypeParams from parents, producing implications
-    // like omap::K <: i32 AND omap::lambda$21::K <: i32 for the same K.
-    // The sequent calculus decomposes each implication via branching, so
-    // redundant implications cause exponential slowdown.
-    std::vector<Node> seen_typeargs;
+    // Track (TypeParam ident location, TypeArg value) pairs already implied.
+    // Nested scopes inherit TypeParams from parents, producing redundant
+    // implications like omap::K <: i32 AND omap::lambda$21::K <: i32
+    // for the same TypeParam. The sequent calculus decomposes each
+    // implication via branching, so redundant implications cause
+    // exponential slowdown (2^N).
+    //
+    // We dedup by ident location: inherited TypeParams share the
+    // parent's ident location, so they dedup correctly. Independent
+    // TypeParams (e.g., a shape's own T vs the enclosing class's T)
+    // have different ident locations and are always kept.
+    std::vector<std::pair<Location, Node>> seen;
 
     for (size_t i = 0; i < name->size(); i++)
     {
@@ -64,14 +70,13 @@ namespace vc
       {
         if (*tp_it == TypeParam)
         {
-          // Skip if we already have an implication for an equivalent TypeArg.
-          // This happens when a nested class inherits TypeParams from its
-          // parent — both scope levels carry the same TypeArg value.
+          auto tp_loc = ((*tp_it) / Ident)->location();
           Node ta = *ta_it;
           bool already_seen = false;
-          for (auto& seen : seen_typeargs)
+
+          for (auto& [s_loc, s_ta] : seen)
           {
-            if (seen->equals(ta))
+            if ((s_loc == tp_loc) && s_ta->equals(ta))
             {
               already_seen = true;
               break;
@@ -80,7 +85,7 @@ namespace vc
 
           if (!already_seen)
           {
-            seen_typeargs.push_back(ta);
+            seen.push_back({tp_loc, ta});
 
             // Build a FQ TypeName for this TypeParam.
             auto make_fq_tp = [&]() {

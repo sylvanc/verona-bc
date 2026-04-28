@@ -440,6 +440,24 @@ namespace vc
                       stmt->at(2),
                       false);
 
+                    if (
+                      targets.empty() &&
+                      receiver_is_param(func, li->second.recv_loc))
+                    {
+                      auto fallback_targets = find_method_targets(
+                        Dyn, li->second.method_id, stmt->at(2), false);
+
+                      if (refine_receiver_type(
+                            func,
+                            li->second.recv_loc,
+                            recv_it->second,
+                            fallback_targets))
+                      {
+                        changed = true;
+                        targets = std::move(fallback_targets);
+                      }
+                    }
+
                     bool unresolved_receiver = contains_dyn(recv_it->second) ||
                       contains_typeid(recv_it->second);
 
@@ -490,6 +508,24 @@ namespace vc
                   {
                     auto targets = find_method_targets(
                       recv_it->second, li->second.method_id, stmt->at(2), true);
+
+                    if (
+                      targets.empty() &&
+                      receiver_is_param(func, li->second.recv_loc))
+                    {
+                      auto fallback_targets = find_method_targets(
+                        Dyn, li->second.method_id, stmt->at(2), true);
+
+                      if (refine_receiver_type(
+                            func,
+                            li->second.recv_loc,
+                            recv_it->second,
+                            fallback_targets))
+                      {
+                        changed = true;
+                        targets = std::move(fallback_targets);
+                      }
+                    }
 
                     bool unresolved_receiver = contains_dyn(recv_it->second) ||
                       contains_typeid(recv_it->second);
@@ -851,7 +887,7 @@ namespace vc
 
               if (
                 inserted &&
-                check_shape_subtype(ctx, cr.resolved_name, r.resolved_name))
+                Subtype(ctx, cr.resolved_name, r.resolved_name))
               {
                 cache_it->second = true;
               }
@@ -1567,20 +1603,6 @@ namespace vc
                 reify_type(f / Type, r.subst) :
                 reify_emitted_type(f / Type, r.subst, f / Ident, "field type");
             }
-            else
-            {
-              // If the declared field type is a resolved union (e.g.,
-              // _node | none) but the create param was refined to a single
-              // member (e.g., _node from one overload), use the declared
-              // field type to preserve the full union.
-              auto declared = reify_type(f / Type, r.subst);
-              if (declared && (declared == Union) &&
-                  !contains_typeid(declared) && !contains_dyn(declared) &&
-                  !field_type->equals(declared))
-              {
-                field_type = declared;
-              }
-            }
 
             fields << (Field << (FieldId ^ (f / Ident)) << field_type);
           }
@@ -2085,14 +2107,6 @@ namespace vc
             if (current_field->equals(refined))
               return false;
 
-            // Don't narrow a resolved union field type. If the current field
-            // is a union without TypeId/Dyn, it's fully resolved and should
-            // not be replaced by a single member type from one call site.
-            if (current_field == Union &&
-                !contains_typeid(current_field) &&
-                !contains_dyn(current_field))
-              return false;
-
             field->replace(current_field, refined);
             return true;
           }
@@ -2110,7 +2124,6 @@ namespace vc
         auto param = params->at(i);
         auto def_param = def_params->at(i);
         auto current = param / Type;
-
         bool generic_origin = contains_typeparam_ref(def_param / Type);
         auto unresolved_seed = reify_type(def_param / Type, target.subst);
         bool is_create = (target.def / Ident)->location().view() == "create";
@@ -2123,13 +2136,6 @@ namespace vc
           vbcc::IRSubtype(top, actual, current);
         bool replacing_seed = unresolved_seed &&
           current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
-
-        // A fully-resolved union (no TypeId or Dyn members) is not a seed.
-        // Without this, the first call-site's arg type overwrites the declared
-        // union type (e.g., Union(ClassId, None) → None from a none arg).
-        if (replacing_seed && (current == Union) &&
-            !contains_typeid(current) && !contains_dyn(current))
-          replacing_seed = false;
 
         // A TypeId that was resolved from a class-level TypeParam is a valid
         // concrete type. Don't replace it — the class's subst already
@@ -2160,30 +2166,11 @@ namespace vc
           }
         }
 
-        // Only refine params that are Dyn (from unresolved TypeVar).
-        // ClassId and TypeId params are correctly resolved types from
-        // source annotations and must not be modified. Dyn represents
-        // _builtin::any and should also not be refined — it's a valid
-        // type annotation meaning "accepts anything".
-        //
-        // The only params that need refinement are those containing Dyn
-        // where the original def had a TypeVar that reify_type couldn't
-        // resolve through substitution.
-        if (!contains_dyn(current))
+        if (
+          !generic_origin &&
+          !has_unresolved_type(def_param / Type, target.subst) &&
+          !constructor_seed)
           continue;
-
-        // Only refine Dyn params from unresolved TypeVar or TypeParam.
-        // If the def param type is a TypeName that resolves to `any`
-        // (not TypeVar or unresolved TypeParam), it's a genuine `any`
-        // annotation — don't refine.
-        {
-          auto def_type = def_param / Type;
-          auto inner = (def_type == Type) ? def_type->front() : def_type;
-          if (inner != TypeVar &&
-              !has_unresolved_type(def_type, target.subst) &&
-              !contains_typeparam_ref(def_type))
-            continue;
-        }
 
         Node merged =
           (contains_dyn(current) || replacing_seed || constructor_seed) ?

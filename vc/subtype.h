@@ -7,9 +7,12 @@
 namespace vc
 {
   SequentCtx build_typearg_ctx(const SequentCtx& base, const Node& name);
-  bool check_shape_subtype(const SequentCtx& ctx, const Node& l, const Node& r);
   bool
   shape_functions_conflict(const SequentCtx& ctx, const Node& l, const Node& r);
+
+  // Internal to the Subtype axiom table — do not call directly.
+  // Use Subtype(ctx, l, r) instead.
+  bool check_shape_subtype(const SequentCtx& ctx, const Node& l, const Node& r);
 
   inline const SequentCalculus Subtype{
     {Type},
