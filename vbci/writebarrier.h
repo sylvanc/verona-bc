@@ -52,16 +52,18 @@ namespace vbci::writebarrier
 
       if (out_loc.is_region())
       {
-        // If storage wasn't in the stack or a frame-local region, add a stack
-        // RC.
+        // Heap-to-heap store: the old value participated in stack_rc and may
+        // have been parented as a sub-region of the storage region.
         if (
           !store_loc.is_stack() &&
           !(store_loc.is_region() && store_loc.to_region()->is_frame_local()))
+        {
           out_stack_inc();
 
-        // If out was in a different region, unparent it.
-        if (store_loc != out_loc)
-          out_clear_parent();
+          // If out was in a different region, unparent it.
+          if (store_loc != out_loc)
+            out_clear_parent();
+        }
       }
 
       return *this;

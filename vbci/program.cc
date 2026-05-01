@@ -645,7 +645,10 @@ namespace vbci
     di_uleb(pc);
 
     while (idx > 0)
+    {
       di_uleb(pc);
+      idx--;
+    }
 
     return di_strings.at(di_uleb(pc));
   }
