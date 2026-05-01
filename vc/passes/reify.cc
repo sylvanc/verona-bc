@@ -360,196 +360,281 @@ namespace vc
           auto func = r->reification;
           auto labels = func / Labels;
 
-          // Rebuild local_types by scanning the reified body.
-          local_types.clear();
-          lookup_info.clear();
+          // Build a predecessor map so we can compute per-label entry
+          // environments with typetest-induced narrowing on Cond edges.
+          auto preds_map = build_label_pred_map(labels);
 
-          // Track param types.
-          for (auto& p : *(func / Params))
-            local_types[(p / LocalId)->location()] = clone(p / Type);
+          // Per-label exit environments. We iterate to fixpoint so that
+          // back-edges (e.g. from while-loops) propagate.
+          std::map<Location, LocalEnv> label_exits;
 
-          for (auto& lbl : *labels)
+          bool inner_changed = true;
+          while (inner_changed)
           {
-            for (auto& stmt : *(lbl / Body))
+            inner_changed = false;
+
+            for (size_t li = 0; li < labels->size(); ++li)
             {
-              if (stmt->in({Const, Convert}))
-              {
-                local_types[(stmt / LocalId)->location()] = clone(stmt / Type);
-              }
-              else if (stmt == ConstStr)
-              {
-                local_types[(stmt / LocalId)->location()] = Array << clone(U8);
-              }
-              else if (stmt->in({Copy, Move}))
-              {
-                auto src_it = local_types.find((stmt / Rhs)->location());
-                if (src_it != local_types.end())
-                {
-                  auto dst_loc = (stmt / LocalId)->location();
-                  auto dst_it = local_types.find(dst_loc);
+              auto lbl = labels->at(li);
+              Location lbl_loc = (lbl / LabelId)->location();
 
-                  local_types[dst_loc] = (dst_it == local_types.end()) ?
-                    clone(src_it->second) :
-                    merge_refined_type(dst_it->second, src_it->second);
-                }
-              }
-              else if (stmt->in({New, Stack}))
-              {
-                local_types[(stmt / LocalId)->location()] =
-                  clone(stmt / ClassId);
-              }
-              else if (stmt == FieldRef)
-              {
-                auto obj_loc = (stmt / Arg / Rhs)->location();
-                auto obj_it = local_types.find(obj_loc);
-                if (obj_it != local_types.end() && (obj_it->second == ClassId))
-                {
-                  auto ft = find_field_type(obj_it->second, stmt / FieldId);
-                  if (ft)
-                    local_types[(stmt / LocalId)->location()] = Ref << ft;
-                }
-              }
-              else if (stmt == Lookup)
-              {
-                auto mid = (stmt / MethodId)->location().view();
-                lookup_info[(stmt / LocalId)->location()] = {
-                  std::string(mid), (stmt / Rhs)->location()};
-              }
-              else if (stmt == Call)
-              {
-                if (auto* target = find_function_reification(stmt / FunctionId))
-                  changed |=
-                    refine_function_params(*target, stmt->at(2), false);
+              // Compute the entry env for this label.
+              LocalEnv entry;
 
-                auto ret = find_func_return_type(stmt / FunctionId);
-                if (ret)
-                  local_types[(stmt / LocalId)->location()] = ret;
-              }
-              else if (stmt->in({CallDyn, TryCallDyn}))
+              if (li == 0)
               {
-                auto src_loc = (stmt / Rhs)->location();
-                auto li = lookup_info.find(src_loc);
-                if (li != lookup_info.end())
+                // Entry label starts with parameter types.
+                for (auto& p : *(func / Params))
+                  entry[(p / LocalId)->location()] = clone(p / Type);
+              }
+              else
+              {
+                auto pit = preds_map.find(lbl_loc);
+                if (pit != preds_map.end())
                 {
-                  auto recv_it = local_types.find(li->second.recv_loc);
-                  if (recv_it != local_types.end())
+                  for (auto& edge : pit->second)
                   {
-                    auto targets = find_method_targets(
-                      recv_it->second,
-                      li->second.method_id,
-                      stmt->at(2),
-                      false);
+                    auto exit_it = label_exits.find(edge.pred_loc);
+                    if (exit_it == label_exits.end())
+                      continue;
 
-                    if (
-                      targets.empty() &&
-                      receiver_is_param(func, li->second.recv_loc))
-                    {
-                      auto fallback_targets = find_method_targets(
-                        Dyn, li->second.method_id, stmt->at(2), false);
-
-                      if (refine_receiver_type(
-                            func,
-                            li->second.recv_loc,
-                            recv_it->second,
-                            fallback_targets))
-                      {
-                        changed = true;
-                        targets = std::move(fallback_targets);
-                      }
-                    }
-
-                    bool unresolved_receiver = contains_dyn(recv_it->second) ||
-                      contains_typeid(recv_it->second);
-
-                    bool skip_param_refinement =
-                      unresolved_receiver && (targets.size() > 1);
-
-                    if (!skip_param_refinement)
-                    {
-                      for (auto* target : targets)
-                      {
-                        if (target)
-                          changed |=
-                            refine_function_params(*target, stmt->at(2), false);
-                      }
-                    }
-
-                    auto ret = find_method_return_type(targets);
-
-                    if (!ret && recv_it->second == Ref)
-                    {
-                      auto& mid = li->second.method_id;
-                      if (mid.starts_with("*::"))
-                        ret = clone(recv_it->second->front());
-                    }
-
-                    if (ret)
-                      local_types[(stmt / LocalId)->location()] = ret;
+                    auto narrowed =
+                      apply_edge_narrowing(exit_it->second, edge.narrowing);
+                    merge_env_into(entry, narrowed);
                   }
                 }
               }
-              else if (stmt == Load)
-              {
-                auto src_it = local_types.find((stmt / Rhs)->location());
-                if (src_it != local_types.end() && (src_it->second == Ref))
-                  local_types[(stmt / LocalId)->location()] =
-                    clone(src_it->second->front());
-              }
-              else if (stmt == WhenDyn)
-              {
-                auto cown_type = stmt / Cown;
-                auto li = lookup_info.find((stmt / Rhs)->location());
 
-                if (li != lookup_info.end())
+              // Reset per-label state. lookup_info is set inside the body
+              // and consumed in the same label, so clear per label.
+              local_types = std::move(entry);
+              lookup_info.clear();
+
+              for (auto& stmt : *(lbl / Body))
+              {
+                if (stmt->in({Const, Convert}))
                 {
-                  auto recv_it = local_types.find(li->second.recv_loc);
-
-                  if (recv_it != local_types.end())
+                  local_types[(stmt / LocalId)->location()] =
+                    clone(stmt / Type);
+                }
+                else if (stmt == ConstStr)
+                {
+                  local_types[(stmt / LocalId)->location()] = Array
+                    << clone(U8);
+                }
+                else if (stmt->in({Copy, Move}))
+                {
+                  auto src_it = local_types.find((stmt / Rhs)->location());
+                  if (src_it != local_types.end())
                   {
-                    auto targets = find_method_targets(
-                      recv_it->second, li->second.method_id, stmt->at(2), true);
+                    auto dst_loc = (stmt / LocalId)->location();
+                    auto dst_it = local_types.find(dst_loc);
 
-                    if (
-                      targets.empty() &&
-                      receiver_is_param(func, li->second.recv_loc))
+                    local_types[dst_loc] = (dst_it == local_types.end()) ?
+                      clone(src_it->second) :
+                      merge_refined_type(dst_it->second, src_it->second);
+                  }
+                }
+                else if (stmt->in({New, Stack}))
+                {
+                  local_types[(stmt / LocalId)->location()] =
+                    clone(stmt / ClassId);
+                }
+                else if (stmt == FieldRef)
+                {
+                  auto obj_loc = (stmt / Arg / Rhs)->location();
+                  auto obj_it = local_types.find(obj_loc);
+                  if (
+                    obj_it != local_types.end() && (obj_it->second == ClassId))
+                  {
+                    auto ft = find_field_type(obj_it->second, stmt / FieldId);
+                    if (ft)
+                      local_types[(stmt / LocalId)->location()] = Ref << ft;
+                  }
+                }
+                else if (stmt == Lookup)
+                {
+                  auto mid = (stmt / MethodId)->location().view();
+                  lookup_info[(stmt / LocalId)->location()] = {
+                    std::string(mid), (stmt / Rhs)->location()};
+                }
+                else if (stmt == Call)
+                {
+                  if (
+                    auto* target = find_function_reification(stmt / FunctionId))
+                    changed |=
+                      refine_function_params(*target, stmt->at(2), false);
+
+                  auto ret = find_func_return_type(stmt / FunctionId);
+                  if (ret)
+                    local_types[(stmt / LocalId)->location()] = ret;
+                }
+                else if (stmt->in({CallDyn, TryCallDyn}))
+                {
+                  auto src_loc = (stmt / Rhs)->location();
+                  auto li = lookup_info.find(src_loc);
+                  if (li != lookup_info.end())
+                  {
+                    auto recv_it = local_types.find(li->second.recv_loc);
+                    if (recv_it != local_types.end())
                     {
-                      auto fallback_targets = find_method_targets(
-                        Dyn, li->second.method_id, stmt->at(2), true);
+                      auto targets = find_method_targets(
+                        recv_it->second,
+                        li->second.method_id,
+                        stmt->at(2),
+                        false);
 
-                      if (refine_receiver_type(
-                            func,
-                            li->second.recv_loc,
-                            recv_it->second,
-                            fallback_targets))
+                      if (
+                        targets.empty() &&
+                        receiver_is_param(func, li->second.recv_loc))
                       {
-                        changed = true;
-                        targets = std::move(fallback_targets);
+                        auto fallback_targets = find_method_targets(
+                          Dyn, li->second.method_id, stmt->at(2), false);
+
+                        if (refine_receiver_type(
+                              func,
+                              li->second.recv_loc,
+                              recv_it->second,
+                              fallback_targets))
+                        {
+                          changed = true;
+                          targets = std::move(fallback_targets);
+                        }
                       }
-                    }
 
-                    bool unresolved_receiver = contains_dyn(recv_it->second) ||
-                      contains_typeid(recv_it->second);
+                      bool unresolved_receiver =
+                        contains_dyn(recv_it->second) ||
+                        contains_typeid(recv_it->second);
 
-                    bool skip_param_refinement =
-                      unresolved_receiver && (targets.size() > 1);
+                      bool skip_param_refinement =
+                        unresolved_receiver && (targets.size() > 1);
 
-                    if (!skip_param_refinement)
-                    {
-                      for (auto* target : targets)
+                      if (!skip_param_refinement)
                       {
-                        if (target)
-                          changed |=
-                            refine_function_params(*target, stmt->at(2), true);
+                        for (auto* target : targets)
+                        {
+                          if (target)
+                            changed |= refine_function_params(
+                              *target, stmt->at(2), false);
+                        }
                       }
-                    }
 
-                    // TypeVar-returning behaviors may have been reified with a
-                    // provisional return (for example just nomatch) before the
-                    // deferred return-type pass converges. Refresh the result
-                    // cown type when the reified return differs from the
-                    // current cown type.
-                    {
                       auto ret = find_method_return_type(targets);
+
+                      if (!ret && recv_it->second == Ref)
+                      {
+                        auto& mid = li->second.method_id;
+                        if (mid.starts_with("*::"))
+                          ret = clone(recv_it->second->front());
+                      }
+
+                      if (ret)
+                        local_types[(stmt / LocalId)->location()] = ret;
+                    }
+                  }
+                }
+                else if (stmt == Load)
+                {
+                  auto src_it = local_types.find((stmt / Rhs)->location());
+                  if (src_it != local_types.end() && (src_it->second == Ref))
+                    local_types[(stmt / LocalId)->location()] =
+                      clone(src_it->second->front());
+                }
+                else if (stmt == WhenDyn)
+                {
+                  auto cown_type = stmt / Cown;
+                  auto li = lookup_info.find((stmt / Rhs)->location());
+
+                  if (li != lookup_info.end())
+                  {
+                    auto recv_it = local_types.find(li->second.recv_loc);
+
+                    if (recv_it != local_types.end())
+                    {
+                      auto targets = find_method_targets(
+                        recv_it->second,
+                        li->second.method_id,
+                        stmt->at(2),
+                        true);
+
+                      if (
+                        targets.empty() &&
+                        receiver_is_param(func, li->second.recv_loc))
+                      {
+                        auto fallback_targets = find_method_targets(
+                          Dyn, li->second.method_id, stmt->at(2), true);
+
+                        if (refine_receiver_type(
+                              func,
+                              li->second.recv_loc,
+                              recv_it->second,
+                              fallback_targets))
+                        {
+                          changed = true;
+                          targets = std::move(fallback_targets);
+                        }
+                      }
+
+                      bool unresolved_receiver =
+                        contains_dyn(recv_it->second) ||
+                        contains_typeid(recv_it->second);
+
+                      bool skip_param_refinement =
+                        unresolved_receiver && (targets.size() > 1);
+
+                      if (!skip_param_refinement)
+                      {
+                        for (auto* target : targets)
+                        {
+                          if (target)
+                            changed |= refine_function_params(
+                              *target, stmt->at(2), true);
+                        }
+                      }
+
+                      // TypeVar-returning behaviors may have been reified with
+                      // a provisional return (for example just nomatch) before
+                      // the deferred return-type pass converges. Refresh the
+                      // result cown type when the reified return differs from
+                      // the current cown type.
+                      {
+                        auto ret = find_method_return_type(targets);
+
+                        if (ret && (ret != Dyn))
+                        {
+                          Node new_cown = Cown << clone(ret);
+
+                          if (!cown_type->equals(new_cown))
+                          {
+                            stmt->replace(cown_type, new_cown);
+                            changed = true;
+                          }
+
+                          cown_type = stmt / Cown;
+                        }
+                      }
+                    }
+                  }
+
+                  local_types[(stmt / LocalId)->location()] = clone(cown_type);
+                }
+                else if (stmt == When)
+                {
+                  auto cown_type = stmt / Cown;
+
+                  if (
+                    auto* target = find_function_reification(stmt / FunctionId))
+                  {
+                    changed |=
+                      refine_function_params(*target, stmt->at(2), true);
+
+                    bool needs_refresh = (cown_type == Cown) &&
+                      ((cown_type->front() == Dyn) ||
+                       ((target->def / Type)->front() == TypeVar));
+
+                    if (needs_refresh)
+                    {
+                      Node ret = target->reification / Type;
 
                       if (ret && (ret != Dyn))
                       {
@@ -565,42 +650,18 @@ namespace vc
                       }
                     }
                   }
-                }
 
-                local_types[(stmt / LocalId)->location()] = clone(cown_type);
+                  local_types[(stmt / LocalId)->location()] = clone(cown_type);
+                }
               }
-              else if (stmt == When)
+
+              // Save exit env. If the env changed, run another inner
+              // iteration to propagate to successors.
+              auto& saved = label_exits[lbl_loc];
+              if (!envs_equal(saved, local_types))
               {
-                auto cown_type = stmt / Cown;
-
-                if (auto* target = find_function_reification(stmt / FunctionId))
-                {
-                  changed |= refine_function_params(*target, stmt->at(2), true);
-
-                  bool needs_refresh = (cown_type == Cown) &&
-                    ((cown_type->front() == Dyn) ||
-                     ((target->def / Type)->front() == TypeVar));
-
-                  if (needs_refresh)
-                  {
-                    Node ret = target->reification / Type;
-
-                    if (ret && (ret != Dyn))
-                    {
-                      Node new_cown = Cown << clone(ret);
-
-                      if (!cown_type->equals(new_cown))
-                      {
-                        stmt->replace(cown_type, new_cown);
-                        changed = true;
-                      }
-
-                      cown_type = stmt / Cown;
-                    }
-                  }
-                }
-
-                local_types[(stmt / LocalId)->location()] = clone(cown_type);
+                saved = local_types;
+                inner_changed = true;
               }
             }
           }
@@ -611,6 +672,8 @@ namespace vc
           {
             // Now try to infer the return type from Return locals.
             // Collect all distinct return types to build a union if needed.
+            // Use each label's own exit env (with typetest narrowing) so the
+            // inferred return type is precise.
             Nodes ret_types;
 
             for (auto& lbl : *labels)
@@ -620,8 +683,14 @@ namespace vc
                 continue;
 
               auto ret_loc = (term / LocalId)->location();
-              auto it = local_types.find(ret_loc);
-              if (it == local_types.end())
+              Location lbl_loc = (lbl / LabelId)->location();
+
+              auto eit = label_exits.find(lbl_loc);
+              if (eit == label_exits.end())
+                continue;
+
+              auto it = eit->second.find(ret_loc);
+              if (it == eit->second.end())
                 continue;
 
               bool dup = false;
@@ -885,9 +954,7 @@ namespace vc
               auto [cache_it, inserted] =
                 shape_subtype_cache.try_emplace(cache_key, false);
 
-              if (
-                inserted &&
-                Subtype(ctx, cr.resolved_name, r.resolved_name))
+              if (inserted && Subtype(ctx, cr.resolved_name, r.resolved_name))
               {
                 cache_it->second = true;
               }
@@ -919,8 +986,7 @@ namespace vc
     // empty-union reifications.
     void prune_empty_shape_unions()
     {
-      auto is_empty_shape = [&](const Node& type_id) -> bool
-      {
+      auto is_empty_shape = [&](const Node& type_id) -> bool {
         for (auto& key : map_order)
         {
           for (auto& cr : map[key])
@@ -942,8 +1008,7 @@ namespace vc
       };
 
       // Prune a union node in place, returning the simplified result.
-      auto prune_union = [&](const Node& u) -> Node
-      {
+      auto prune_union = [&](const Node& u) -> Node {
         Node result = Union;
 
         for (auto& child : *u)
@@ -1806,6 +1871,228 @@ namespace vc
       }
 
       return targets;
+    }
+
+    // Remove `to_remove` from `source`. Returns the residual type, or null
+    // if no narrowing applies (e.g., source doesn't contain to_remove).
+    // Operates on IR-level types.
+    Node subtract_type(const Node& source, const Node& to_remove)
+    {
+      if (!source || !to_remove)
+        return {};
+
+      if (source == Dyn)
+        return {};
+
+      if (source == Union)
+      {
+        Node remaining = Union;
+        bool removed = false;
+
+        for (auto& child : *source)
+        {
+          if (vbcc::IRSubtype.invariant(top, child, to_remove))
+          {
+            removed = true;
+          }
+          else
+          {
+            remaining << clone(child);
+          }
+        }
+
+        if (!removed)
+          return {};
+
+        if (remaining->empty())
+          return Union;
+
+        if (remaining->size() == 1)
+          return clone(remaining->front());
+
+        return remaining;
+      }
+
+      if (vbcc::IRSubtype.invariant(top, source, to_remove))
+        return Union;
+
+      return {};
+    }
+
+    // Walk a label body in reverse to find the Typetest that produced
+    // `cond_local`'s value, following any Not chain. Returns
+    // {src_loc, type, negated} on success.
+    struct TypetestTrace
+    {
+      Location src_loc;
+      Node type;
+      bool negated;
+    };
+
+    std::optional<TypetestTrace>
+    trace_typetest(const Location& cond_local, const Node& body)
+    {
+      Location target_loc = cond_local;
+      bool negated = false;
+
+      for (auto it = body->rbegin(); it != body->rend(); ++it)
+      {
+        auto& stmt = *it;
+
+        if (stmt == Not)
+        {
+          if ((stmt / LocalId)->location() == target_loc)
+          {
+            target_loc = (stmt / Rhs)->location();
+            negated = !negated;
+          }
+        }
+        else if (stmt == Typetest)
+        {
+          if ((stmt / LocalId)->location() == target_loc)
+          {
+            return TypetestTrace{
+              (stmt / Rhs)->location(), stmt / Type, negated};
+          }
+        }
+      }
+
+      return std::nullopt;
+    }
+
+    // Edge from a predecessor label to a successor, optionally carrying
+    // typetest-induced narrowing on a single local.
+    struct EdgeNarrowing
+    {
+      Location src_loc;
+      Node test_type;
+      // If true, the edge confirms src is NOT test_type (subtract).
+      // If false, the edge confirms src IS test_type (intersect).
+      bool exclude;
+    };
+
+    struct LabelEdge
+    {
+      Location pred_loc;
+      std::optional<EdgeNarrowing> narrowing;
+    };
+
+    using LabelPredMap = std::map<Location, std::vector<LabelEdge>>;
+
+    LabelPredMap build_label_pred_map(const Node& labels)
+    {
+      LabelPredMap preds;
+
+      for (auto& lbl : *labels)
+      {
+        Location pred_loc = (lbl / LabelId)->location();
+        auto term = lbl / Return;
+
+        if (term == Jump)
+        {
+          Location succ = (term / LabelId)->location();
+          preds[succ].push_back({pred_loc, std::nullopt});
+        }
+        else if (term == Cond)
+        {
+          Location bool_loc = (term / LocalId)->location();
+          Location t_succ = (term / Lhs)->location();
+          Location f_succ = (term / Rhs)->location();
+
+          auto trace = trace_typetest(bool_loc, lbl / Body);
+
+          std::optional<EdgeNarrowing> t_narrow;
+          std::optional<EdgeNarrowing> f_narrow;
+
+          if (trace)
+          {
+            // True branch: cond bool was true. If trace not negated, the
+            // test was Typetest(_, src, type) directly, so true means
+            // src IS type. If negated (via Not), true means src is NOT
+            // type.
+            if (!trace->negated)
+            {
+              t_narrow = EdgeNarrowing{trace->src_loc, trace->type, false};
+              f_narrow = EdgeNarrowing{trace->src_loc, trace->type, true};
+            }
+            else
+            {
+              t_narrow = EdgeNarrowing{trace->src_loc, trace->type, true};
+              f_narrow = EdgeNarrowing{trace->src_loc, trace->type, false};
+            }
+          }
+
+          preds[t_succ].push_back({pred_loc, t_narrow});
+          preds[f_succ].push_back({pred_loc, f_narrow});
+        }
+        // Return, Raise, Tailcall, TailcallDyn: no successors.
+      }
+
+      return preds;
+    }
+
+    using LocalEnv = std::map<Location, Node>;
+
+    // Apply edge narrowing to a copy of the predecessor's exit env.
+    LocalEnv apply_edge_narrowing(
+      LocalEnv env, const std::optional<EdgeNarrowing>& narrowing)
+    {
+      if (!narrowing)
+        return env;
+
+      auto it = env.find(narrowing->src_loc);
+      if (it == env.end())
+        return env;
+
+      Node narrowed;
+      if (narrowing->exclude)
+      {
+        narrowed = subtract_type(it->second, narrowing->test_type);
+      }
+      else
+      {
+        // Confirm src is the test type. Only intersect (use test_type)
+        // if it's a subtype of the current env type — otherwise the
+        // source disagrees with the test, so we skip narrowing.
+        if (vbcc::IRSubtype.invariant(top, narrowing->test_type, it->second))
+          narrowed = clone(narrowing->test_type);
+      }
+
+      if (narrowed)
+        it->second = narrowed;
+
+      return env;
+    }
+
+    // Merge the entry env from a predecessor into the accumulating env.
+    void merge_env_into(LocalEnv& dst, const LocalEnv& src)
+    {
+      for (auto& [loc, ty] : src)
+      {
+        auto it = dst.find(loc);
+        if (it == dst.end())
+          dst[loc] = clone(ty);
+        else
+          dst[loc] = merge_refined_type(it->second, ty);
+      }
+    }
+
+    bool envs_equal(const LocalEnv& a, const LocalEnv& b)
+    {
+      if (a.size() != b.size())
+        return false;
+
+      for (auto& [loc, ty] : a)
+      {
+        auto it = b.find(loc);
+        if (it == b.end())
+          return false;
+        Node tmp = it->second;
+        if (!ty->equals(tmp))
+          return false;
+      }
+
+      return true;
     }
 
     Node merge_refined_type(Node current, Node actual)
@@ -3305,8 +3592,7 @@ namespace vc
             // drop it. The post-shape cleanup pass (prune_empty_shape_unions)
             // handles any TypeIds that turn out to be empty after
             // resolve_shapes runs.
-            auto has_empty_shape = [&](const Node& tid) -> bool
-            {
+            auto has_empty_shape = [&](const Node& tid) -> bool {
               for (auto& key : map_order)
               {
                 for (auto& cr : map[key])
