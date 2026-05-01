@@ -200,6 +200,125 @@ namespace vc
                 << Args;
   }
 
+  Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
+  {
+    if (type_node != Type || subst.empty())
+      return clone(type_node);
+
+    auto inner = type_node->front();
+
+    if (inner == TypeName)
+    {
+      auto def = find_def(top, inner);
+      if (def && def == TypeParam)
+      {
+        auto it = subst.find(def);
+        if (it != subst.end())
+          return clone(it->second);
+      }
+
+      Node new_tn = TypeName;
+      for (auto& elem : *inner)
+      {
+        Node new_ta = TypeArgs;
+        for (auto& ta_child : *(elem / TypeArgs))
+          new_ta << apply_subst(top, ta_child, subst);
+        new_tn << (NameElement << clone(elem / Ident) << new_ta);
+      }
+      return Type << new_tn;
+    }
+
+    if (inner->in({Union, Isect, TupleType}))
+    {
+      Node new_inner = inner->type();
+      for (auto& child : *inner)
+        new_inner << apply_subst(top, Type << clone(child), subst)->front();
+      return Type << new_inner;
+    }
+
+    return clone(type_node);
+  }
+
+  NodeMap<Node> build_subst_from_typename(Node top, const Node& name)
+  {
+    NodeMap<Node> subst;
+    assert(name == TypeName);
+    Node scope = top;
+
+    for (auto& elem : *name)
+    {
+      assert(elem == NameElement);
+      auto defs = scope->look((elem / Ident)->location());
+      if (defs.empty())
+        return subst;
+
+      scope = defs.front();
+      auto type_args = elem / TypeArgs;
+      if (type_args->empty())
+        continue;
+
+      auto type_params = scope / TypeParams;
+      auto ta_it = type_args->begin();
+      auto tp_it = type_params->begin();
+
+      while (ta_it != type_args->end() && tp_it != type_params->end())
+      {
+        if (*tp_it == TypeParam)
+          subst[*tp_it] = clone(*ta_it);
+
+        ++ta_it;
+        ++tp_it;
+      }
+    }
+
+    return subst;
+  }
+
+  Node substitute_typeself(const Node& type_node, const Node& self_type)
+  {
+    if (!type_node)
+      return type_node;
+
+    // Inner of self_type used for direct TypeSelf-token replacement.
+    Node self_inner =
+      (self_type == Type && self_type->size() == 1) ? self_type->front()
+                                                    : self_type;
+
+    if (type_node == TypeSelf)
+      return clone(self_inner);
+
+    if (type_node == Type)
+    {
+      Node new_type = Type;
+      for (auto& child : *type_node)
+        new_type << substitute_typeself(child, self_type);
+      return new_type;
+    }
+
+    if (type_node == TypeName)
+    {
+      Node new_tn = TypeName;
+      for (auto& elem : *type_node)
+      {
+        Node new_ta = TypeArgs;
+        for (auto& ta_child : *(elem / TypeArgs))
+          new_ta << substitute_typeself(ta_child, self_type);
+        new_tn << (NameElement << clone(elem / Ident) << new_ta);
+      }
+      return new_tn;
+    }
+
+    if (type_node->in({Union, Isect, TupleType}))
+    {
+      Node new_inner = type_node->type();
+      for (auto& child : *type_node)
+        new_inner << substitute_typeself(child, self_type);
+      return new_inner;
+    }
+
+    return clone(type_node);
+  }
+
   std::vector<FreeTP> collect_free_typeparams(Node node)
   {
     std::vector<FreeTP> free_tps;

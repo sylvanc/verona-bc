@@ -2,120 +2,6 @@
 
 namespace vc
 {
-  // Filter out implications that mention TypeSelf. TypeSelf bindings are
-  // local to each shape check and must not leak into recursive calls.
-  Nodes filter_typeself(const Nodes& implies)
-  {
-    Nodes result;
-
-    for (auto& imp : implies)
-    {
-      bool has_typeself = false;
-
-      imp->traverse([&](const Node& n) {
-        if (n == TypeSelf)
-        {
-          has_typeself = true;
-          return false;
-        }
-
-        return true;
-      });
-
-      if (!has_typeself)
-        result.push_back(imp);
-    }
-
-    return result;
-  }
-
-  // Build SubType implications from a TypeName reference's path.
-  // Each TypeArg on a NameElement is paired with the corresponding
-  // TypeParam of that scope, creating bidirectional SubType
-  // implications to express equality (TypeParam = TypeArg).
-  SequentCtx build_typearg_ctx(const SequentCtx& base, const Node& name)
-  {
-    SequentCtx new_ctx = base;
-    Node scope = base.scope;
-
-    // Track (TypeParam ident location, TypeArg value) pairs already implied.
-    // Nested scopes inherit TypeParams from parents, producing redundant
-    // implications like omap::K <: i32 AND omap::lambda$21::K <: i32
-    // for the same TypeParam. The sequent calculus decomposes each
-    // implication via branching, so redundant implications cause
-    // exponential slowdown (2^N).
-    //
-    // We dedup by ident location: inherited TypeParams share the
-    // parent's ident location, so they dedup correctly. Independent
-    // TypeParams (e.g., a shape's own T vs the enclosing class's T)
-    // have different ident locations and are always kept.
-    std::vector<std::pair<Location, Node>> seen;
-
-    for (size_t i = 0; i < name->size(); i++)
-    {
-      auto elem = name->at(i);
-      auto defs = scope->look((elem / Ident)->location());
-      assert(!defs.empty());
-      scope = defs.front();
-
-      auto type_args = elem / TypeArgs;
-      if (type_args->empty())
-        continue;
-
-      auto type_params = scope / TypeParams;
-      auto ta_it = type_args->begin();
-      auto tp_it = type_params->begin();
-
-      while (ta_it != type_args->end() && tp_it != type_params->end())
-      {
-        if (*tp_it == TypeParam)
-        {
-          auto tp_loc = ((*tp_it) / Ident)->location();
-          Node ta = *ta_it;
-          bool already_seen = false;
-
-          for (auto& [s_loc, s_ta] : seen)
-          {
-            if ((s_loc == tp_loc) && s_ta->equals(ta))
-            {
-              already_seen = true;
-              break;
-            }
-          }
-
-          if (!already_seen)
-          {
-            seen.push_back({tp_loc, ta});
-
-            // Build a FQ TypeName for this TypeParam.
-            auto make_fq_tp = [&]() {
-              Node fq_tp = TypeName;
-              for (size_t j = 0; j <= i; j++)
-              {
-                fq_tp
-                  << (NameElement << clone(name->at(j) / Ident) << TypeArgs);
-              }
-              fq_tp << (NameElement << clone((*tp_it) / Ident) << TypeArgs);
-              return fq_tp;
-            };
-
-            // Bidirectional implications:
-            // TypeParam <: TypeArg and TypeArg <: TypeParam.
-            new_ctx.implies.push_back(
-              SubType << (Type << make_fq_tp()) << clone(*ta_it));
-            new_ctx.implies.push_back(
-              SubType << clone(*ta_it) << (Type << make_fq_tp()));
-          }
-        }
-
-        ++ta_it;
-        ++tp_it;
-      }
-    }
-
-    return new_ctx;
-  }
-
   // Find a function in a ClassDef that matches the given signature:
   // same name, handedness, param count, and TypeParam count.
   Node find_matching_function(const Node& def, const Node& target_func)
@@ -225,14 +111,18 @@ namespace vc
 
     if (l_def == TypeAlias)
     {
-      auto new_ctx = build_typearg_ctx(ctx, l);
-      return definitely_not_subtype(new_ctx, l_def / Type, Type << clone(r));
+      // Expand the alias: substitute its TypeParams with the TypeName's
+      // TypeArgs and recurse with the concrete type.
+      auto subst = build_subst_from_typename(ctx.scope, l);
+      auto expanded = apply_subst(ctx.scope, l_def / Type, subst);
+      return definitely_not_subtype(ctx, expanded, Type << clone(r));
     }
 
     if (r_def == TypeAlias)
     {
-      auto new_ctx = build_typearg_ctx(ctx, r);
-      return definitely_not_subtype(new_ctx, Type << clone(l), r_def / Type);
+      auto subst = build_subst_from_typename(ctx.scope, r);
+      auto expanded = apply_subst(ctx.scope, r_def / Type, subst);
+      return definitely_not_subtype(ctx, Type << clone(l), expanded);
     }
 
     if (l_def->type().in({TypeParam}) || r_def->type().in({TypeParam}))
@@ -284,8 +174,10 @@ namespace vc
 
   // Build bidirectional SubType implications pairing the TypeParams of two
   // functions by position. Both functions must have the same TypeParam count.
-  // The FQ TypeParam names are built relative to their respective enclosing
-  // TypeName references (l_name / r_name).
+  // Function-level TypeParams are universally quantified — they need to be
+  // matched (alpha-equivalence) rather than instantiated. The bidirectional
+  // implications model this for small N (typically 1-2 function TypeParams).
+  // Long-term: replace with skolemization (rename to fresh shared rigid).
   SequentCtx build_func_typeparam_ctx(
     const SequentCtx& base,
     const Node& l_name,
@@ -336,6 +228,12 @@ namespace vc
   // For every function on the shape, l must have a matching function with
   // compatible signatures: parameter types contravariant (shape param <:
   // concrete param), return type covariant (concrete ret <: shape ret).
+  //
+  // Class-level TypeParams are bound by direct substitution (System F):
+  // L's TypeArgs substitute into the concrete function signatures; R's
+  // TypeArgs substitute into the shape signatures. TypeSelf in shape
+  // signatures is replaced with L. After substitution, recursive Subtype
+  // calls compare fully concrete types — no TypeParam refs survive.
   bool check_shape_subtype(const SequentCtx& ctx, const Node& l, const Node& r)
   {
     // Coinductive check: if l <: r is already assumed in the
@@ -367,29 +265,16 @@ namespace vc
       return false;
     assert((r_def == ClassDef) && ((r_def / Shape) == Shape));
 
-    // Filter out TypeSelf implications from the caller's context.
-    // TypeSelf bindings are local to each shape check — leaking them
-    // into recursive calls creates false type equalities between
-    // unrelated types. Other implications (e.g., TypeParam bindings)
-    // are preserved.
-    SequentCtx filtered_ctx{
-      ctx.scope, filter_typeself(ctx.implies), ctx.assumptions};
+    // Build per-side substitutions for class-level TypeParams.
+    auto subst_l = build_subst_from_typename(ctx.scope, l);
+    auto subst_r = build_subst_from_typename(ctx.scope, r);
 
-    // Build TypeArg↔TypeParam implications for both sides.
-    auto new_ctx = build_typearg_ctx(filtered_ctx, l);
-    new_ctx = build_typearg_ctx(new_ctx, r);
-
-    // TypeSelf = l (the proposed concrete subtype). Bidirectional
-    // implications make TypeSelf invariant with the concrete type.
-    new_ctx.implies.push_back(
-      SubType << (Type << TypeSelf) << (Type << clone(l)));
-    new_ctx.implies.push_back(
-      SubType << (Type << clone(l)) << (Type << TypeSelf));
+    // L wrapped as a Type — used as the TypeSelf binding for shape sigs.
+    Node l_as_type = Type << clone(l);
 
     // Coinductive assumption: l <: r. Stored in `assumptions` (not
-    // `implies`) so the sequent calculus never decomposes it. The
-    // check_shape_subtype coinductive check above inspects assumptions
-    // directly to break recursive cycles.
+    // `implies`) so the sequent calculus never decomposes it.
+    SequentCtx new_ctx = ctx;
     new_ctx.assumptions.push_back(
       SubType << (Type << clone(l)) << (Type << clone(r)));
 
@@ -403,9 +288,23 @@ namespace vc
       if (!match)
         return false;
 
-      // Build TypeParam pairing implications for function-level TypeParams.
+      // Function-level TypeParams: pair them via implications (still small N).
       auto func_ctx =
         build_func_typeparam_ctx(new_ctx, l, match, r, shape_func);
+
+      // Substitute TypeSelf with L on BOTH sides (TypeSelf in either
+      // signature represents "the implementing type", which is L). Then
+      // substitute class-level TypeParams: shape sigs use R's subst, match
+      // sigs use L's subst. After substitution, recursive Subtype calls
+      // compare fully concrete types — no TypeSelf or TypeParam refs survive.
+      auto subst_shape_type = [&](const Node& t) {
+        Node bound = substitute_typeself(t, l_as_type);
+        return apply_subst(ctx.scope, bound, subst_r);
+      };
+      auto subst_match_type = [&](const Node& t) {
+        Node bound = substitute_typeself(t, l_as_type);
+        return apply_subst(ctx.scope, bound, subst_l);
+      };
 
       // Check parameter types (contravariant): shape param <: concrete param.
       auto shape_params = shape_func / Params;
@@ -415,9 +314,12 @@ namespace vc
 
       while (sp_it != shape_params->end() && mp_it != match_params->end())
       {
+        auto sp_t = subst_shape_type((*sp_it) / Type);
+        auto mp_t = subst_match_type((*mp_it) / Type);
+
         if (
-          definitely_not_subtype(func_ctx, (*sp_it) / Type, (*mp_it) / Type) ||
-          !Subtype(func_ctx, (*sp_it) / Type, (*mp_it) / Type))
+          definitely_not_subtype(func_ctx, sp_t, mp_t) ||
+          !Subtype(func_ctx, sp_t, mp_t))
           return false;
 
         ++sp_it;
@@ -425,9 +327,12 @@ namespace vc
       }
 
       // Check return type (covariant): concrete ret <: shape ret.
+      auto shape_ret = subst_shape_type(shape_func / Type);
+      auto match_ret = subst_match_type(match / Type);
+
       if (
-        definitely_not_subtype(func_ctx, match / Type, shape_func / Type) ||
-        !Subtype(func_ctx, match / Type, shape_func / Type))
+        definitely_not_subtype(func_ctx, match_ret, shape_ret) ||
+        !Subtype(func_ctx, match_ret, shape_ret))
         return false;
     }
 
@@ -439,6 +344,11 @@ namespace vc
   // but incompatible types — meaning no concrete type could satisfy both.
   // A shared function conflicts if any parameter pair is contradictory
   // (neither is a subtype of the other) or the return types conflict.
+  //
+  // Class-level TypeParams are bound by direct substitution. For shape
+  // conflict, no concrete TypeSelf binding is meaningful; we leave TypeSelf
+  // as-is in both sides' signatures (it represents the same hypothetical
+  // implementing type on both sides).
   bool
   shape_functions_conflict(const SequentCtx& ctx, const Node& l, const Node& r)
   {
@@ -448,14 +358,9 @@ namespace vc
     assert((l_def / Shape) == Shape);
     assert((r_def / Shape) == Shape);
 
-    // Filter out TypeSelf implications — shape conflict checks are
-    // abstract and a leaked TypeSelf binding would give wrong results.
-    SequentCtx filtered_ctx{
-      ctx.scope, filter_typeself(ctx.implies), ctx.assumptions};
-
-    // Build TypeArg↔TypeParam implications for both sides.
-    auto new_ctx = build_typearg_ctx(filtered_ctx, l);
-    new_ctx = build_typearg_ctx(new_ctx, r);
+    // Build per-side substitutions for class-level TypeParams.
+    auto subst_l = build_subst_from_typename(ctx.scope, l);
+    auto subst_r = build_subst_from_typename(ctx.scope, r);
 
     for (auto& l_func : *(l_def / ClassBody))
     {
@@ -466,8 +371,15 @@ namespace vc
       if (!r_func)
         continue;
 
-      // Same signature identity — check for type conflicts.
-      auto func_ctx = build_func_typeparam_ctx(new_ctx, l, l_func, r, r_func);
+      // Function-level TypeParam pairing for matched function.
+      auto func_ctx = build_func_typeparam_ctx(ctx, l, l_func, r, r_func);
+
+      auto subst_l_type = [&](const Node& t) {
+        return apply_subst(ctx.scope, t, subst_l);
+      };
+      auto subst_r_type = [&](const Node& t) {
+        return apply_subst(ctx.scope, t, subst_r);
+      };
 
       // For a concrete type to satisfy both shapes, it would need a function
       // whose param types are supertypes of BOTH shapes' param types, and
@@ -481,8 +393,8 @@ namespace vc
 
       while (lp_it != l_params->end() && rp_it != r_params->end())
       {
-        auto lt = (*lp_it) / Type;
-        auto rt = (*rp_it) / Type;
+        auto lt = subst_l_type((*lp_it) / Type);
+        auto rt = subst_r_type((*rp_it) / Type);
 
         if (!Subtype(func_ctx, lt, rt) && !Subtype(func_ctx, rt, lt))
         {
@@ -495,8 +407,8 @@ namespace vc
 
       // Return types conflict if neither is a subtype of the other
       // (no common subtype exists by this approximation).
-      auto l_ret = l_func / Type;
-      auto r_ret = r_func / Type;
+      auto l_ret = subst_l_type(l_func / Type);
+      auto r_ret = subst_r_type(r_func / Type);
 
       if (!Subtype(func_ctx, l_ret, r_ret) && !Subtype(func_ctx, r_ret, l_ret))
       {

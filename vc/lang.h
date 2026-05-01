@@ -473,6 +473,20 @@ namespace vc
   Node ffi_struct_result_type();
   Node make_nomatch(Node localid);
 
+  // Substitute TypeParam references in a Type AST with their bound types.
+  // Keys are TypeParam def-nodes (unique per definition, capture-free).
+  // Returns a fresh clone if subst is empty or no substitution applies.
+  Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst);
+
+  // Build a substitution map by walking each NameElement of a fully-qualified
+  // TypeName: for each scope (ClassDef / TypeAlias / Function), pair its
+  // TypeParams with the NameElement's TypeArgs. Keyed by TypeParam def-node.
+  NodeMap<Node> build_subst_from_typename(Node top, const Node& name);
+
+  // Replace TypeSelf nodes in a Type AST with self_type. Used at shape-check
+  // boundaries to bind the shape's TypeSelf to the proposed concrete type.
+  Node substitute_typeself(const Node& type_node, const Node& self_type);
+
   // Free type parameter from an enclosing scope.
   struct FreeTP
   {

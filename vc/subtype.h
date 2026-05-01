@@ -6,7 +6,6 @@
 
 namespace vc
 {
-  SequentCtx build_typearg_ctx(const SequentCtx& base, const Node& name);
   bool
   shape_functions_conflict(const SequentCtx& ctx, const Node& l, const Node& r);
 
@@ -50,20 +49,22 @@ namespace vc
 
           if ((l_def == TypeAlias) || (r_def == TypeAlias))
           {
-            // Expand the alias: replace the alias reference with its body
-            // and recurse. If both sides are aliases, expand left first;
-            // recursion handles the right.
+            // Expand the alias: substitute its TypeParams with the
+            // TypeName's TypeArgs and recurse with the concrete type.
+            // Generic instantiation by direct substitution — no implications.
             // Note: assumes alias chains are acyclic (guaranteed by the ident
             // pass). Cyclic aliases would cause infinite recursion.
             if (l_def == TypeAlias)
             {
-              auto new_ctx = build_typearg_ctx(ctx, l);
-              return Subtype(new_ctx, l_def / Type, r);
+              auto subst = build_subst_from_typename(ctx.scope, l);
+              auto expanded = apply_subst(ctx.scope, l_def / Type, subst);
+              return Subtype(ctx, expanded, r);
             }
             else
             {
-              auto new_ctx = build_typearg_ctx(ctx, r);
-              return Subtype(new_ctx, l, r_def / Type);
+              auto subst = build_subst_from_typename(ctx.scope, r);
+              auto expanded = apply_subst(ctx.scope, r_def / Type, subst);
+              return Subtype(ctx, l, expanded);
             }
           }
 

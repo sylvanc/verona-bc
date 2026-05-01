@@ -413,7 +413,6 @@ namespace vc
     size_t same_type_env_calls = 0;
     size_t same_type_env_equal = 0;
     size_t navigate_call_calls = 0;
-    size_t apply_subst_calls = 0;
     size_t infer_typeargs_calls = 0;
     size_t push_arg_types_to_params_calls = 0;
     size_t propagate_call_node_calls = 0;
@@ -455,7 +454,6 @@ namespace vc
     InferClock::duration same_type_tree_time{};
     InferClock::duration same_type_env_time{};
     InferClock::duration navigate_call_time{};
-    InferClock::duration apply_subst_time{};
     InferClock::duration infer_typeargs_time{};
     InferClock::duration push_arg_types_to_params_time{};
     InferClock::duration propagate_call_node_time{};
@@ -572,7 +570,6 @@ namespace vc
       << "\tresolve_miss=" << stats.resolve_method_cache_misses
       << "\tresolve_scan=" << stats.resolve_method_scans
       << "\tnavigate_call=" << stats.navigate_call_calls
-      << "\tapply_subst=" << stats.apply_subst_calls
       << "\tinfer_typeargs=" << stats.infer_typeargs_calls
       << "\tpush_arg_types=" << stats.push_arg_types_to_params_calls
       << "\tprop_call_node=" << stats.propagate_call_node_calls
@@ -630,7 +627,6 @@ namespace vc
       << "\tcascade_loop_ms=" << infer_duration_ms(stats.cascade_loop_time)
       << "\tresolve_ms=" << infer_duration_ms(stats.resolve_method_time)
       << "\tnavigate_call_ms=" << infer_duration_ms(stats.navigate_call_time)
-      << "\tapply_subst_ms=" << infer_duration_ms(stats.apply_subst_time)
       << "\tinfer_typeargs_ms=" << infer_duration_ms(stats.infer_typeargs_time)
       << "\tpush_arg_types_ms="
       << infer_duration_ms(stats.push_arg_types_to_params_time)
@@ -1851,52 +1847,6 @@ namespace vc
         extract_constraints(
           top, f_inner->at(i), a_inner->at(i), constraints, is_default);
     }
-  }
-
-  Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
-  {
-    if (active_infer_profile != nullptr)
-      active_infer_profile->apply_subst_calls++;
-    InferScopedTimer timer(
-      (active_infer_profile != nullptr) ?
-        &active_infer_profile->apply_subst_time :
-        nullptr);
-
-    if (type_node != Type || subst.empty())
-      return clone(type_node);
-
-    auto inner = type_node->front();
-
-    if (inner == TypeName)
-    {
-      auto def = find_def(top, inner);
-      if (def && def == TypeParam)
-      {
-        auto it = subst.find(def);
-        if (it != subst.end())
-          return clone(it->second);
-      }
-
-      Node new_tn = TypeName;
-      for (auto& elem : *inner)
-      {
-        Node new_ta = TypeArgs;
-        for (auto& ta_child : *(elem / TypeArgs))
-          new_ta << apply_subst(top, ta_child, subst);
-        new_tn << (NameElement << clone(elem / Ident) << new_ta);
-      }
-      return Type << new_tn;
-    }
-
-    if (inner->in({Union, Isect, TupleType}))
-    {
-      Node new_inner = inner->type();
-      for (auto& child : *inner)
-        new_inner << apply_subst(top, Type << clone(child), subst)->front();
-      return Type << new_inner;
-    }
-
-    return clone(type_node);
   }
 
   // ===== Method resolution =====
