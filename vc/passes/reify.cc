@@ -2072,7 +2072,11 @@ namespace vc
         // Confirm src is the test type. Only intersect (use test_type)
         // if it's a subtype of the current env type — otherwise the
         // source disagrees with the test, so we skip narrowing.
-        if (vbcc::IRSubtype.invariant(top, narrowing->test_type, it->second))
+        // Use one-way subtype (test_type <: current); invariant would
+        // require dyn <: test_type which is false for any concrete type
+        // and would silently skip narrowing whenever the current type is
+        // dyn (e.g., a lambda parameter that has just been typetested).
+        if (vbcc::IRSubtype(top, narrowing->test_type, it->second))
           narrowed = clone(narrowing->test_type);
       }
 
