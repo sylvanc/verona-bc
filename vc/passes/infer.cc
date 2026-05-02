@@ -2289,6 +2289,15 @@ namespace vc
       if (it == env.end())
         return false;
 
+      // Don't change the type of a location whose type is fixed (e.g.,
+      // pinned by a TypeAssertion or function param). The receiver of a
+      // method call may be such a location, and its method dispatch is
+      // already determined by its declared type — we must not silently
+      // retarget it to a different primitive based on a downstream
+      // constraint flowing back through the CallDyn result.
+      if (it->second.is_fixed)
+        return false;
+
       auto current_prim = extract_primitive(it->second.type);
       bool compatible = (it->second.type->front() == DefaultInt &&
                          expected_prim->in(integer_types)) ||
@@ -3107,6 +3116,26 @@ namespace vc
         (type->front() != Union || extract_backward_primitive(type));
       if (record_backward)
       {
+        // If env has a fixed concrete type for this location and the
+        // incoming `type` is not a subtype of it, recording the bwd
+        // constraint would contradict the user-declared (or
+        // already-locked) ground truth. The contradiction would later
+        // leak through a Copy chain (the Copy bwd handler reads
+        // bwd[dst].type as `expected` and writes it into bwd[src]),
+        // ultimately corrupting an unfixed source local via either the
+        // entry-merge bwd → env promotion or the const-finalization
+        // pass. Drop the bwd write here so env stays authoritative.
+        auto eit_fixed = env.find(loc);
+        if (
+          eit_fixed != env.end() && eit_fixed->second.is_fixed &&
+          eit_fixed->second.type && !eit_fixed->second.type->empty() &&
+          !eit_fixed->second.type->front()->in(
+            {TypeVar, DefaultInt, DefaultFloat}))
+        {
+          SequentCtx ctx_fixed{top, {}, {}};
+          if (!Subtype(ctx_fixed, type, eit_fixed->second.type))
+            return changed;
+        }
         auto bit = bwd.find(loc);
         if (bit == bwd.end())
         {
@@ -3191,8 +3220,12 @@ namespace vc
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         auto dst = stmt->front();
         Node type_tok;
+        bool ast_has_concrete = false;
         if (stmt->size() == 3)
+        {
           type_tok = stmt->at(1);
+          ast_has_concrete = !type_tok->in({DefaultInt, DefaultFloat});
+        }
         else
           type_tok = default_literal_type(stmt->back());
 
@@ -3217,6 +3250,22 @@ namespace vc
         }
 
         merge(dst->location(), type);
+
+        // If the AST already carries a concrete primitive type for this
+        // Const, treat env[dst] as fixed. The type slot was set by an
+        // earlier infer pass invocation (which mutated the AST in place
+        // via refine_const_local) and must not be overridden by backward
+        // propagation in subsequent invocations of the infer pass.
+        // Without this, a const literal whose declared type was set via
+        // a TypeAssertion in an earlier invocation can be silently
+        // re-typed when the assertion node has been removed and the
+        // function is re-processed.
+        if (ast_has_concrete)
+        {
+          auto it = env.find(dst->location());
+          if (it != env.end())
+            it->second.is_fixed = true;
+        }
       }
       // ----- ConstStr -----
       else if (stmt == ConstStr)
@@ -3586,10 +3635,20 @@ namespace vc
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         auto loc = (stmt / LocalId)->location();
-        merge(loc, clone(stmt / Type));
-        auto it = env.find(loc);
-        if (it != env.end())
-          it->second.is_fixed = true;
+        auto assertion_type = stmt / Type;
+        // TypeAssertions with embedded TypeVars (e.g., capture-ref
+        // placeholders inserted by sugar before captures are resolved)
+        // are placeholders, not declared types — skip them entirely so
+        // later refinement (FieldRef/Load chains, etc.) can establish
+        // env[loc] organically. Only fully concrete TypeAssertions
+        // count as declared and pin env[loc] as fixed.
+        if (!contains_typevar(assertion_type))
+        {
+          merge(loc, clone(assertion_type));
+          auto it = env.find(loc);
+          if (it != env.end())
+            it->second.is_fixed = true;
+        }
       }
       // ----- New / Stack -----
       else if (stmt->in({New, Stack}))
@@ -5105,10 +5164,13 @@ namespace vc
       auto it = body->begin();
       while (it != body->end())
       {
-        // 2. TypeAssertion: remove.
+        // 2. TypeAssertion: skip in-place transformations; the post-pass
+        // sweep removes TypeAssertion nodes after all process_function
+        // invocations have completed (preserving fixed-ness across
+        // multi-pass invocations).
         if (*it == TypeAssertion)
         {
-          it = body->erase(it, std::next(it));
+          ++it;
           continue;
         }
 
@@ -5495,6 +5557,30 @@ namespace vc
       for (auto& func : deferred)
         if (has_typevar(func))
           process_function(func, top, true);
+
+      // Final cleanup: remove TypeAssertion nodes. Kept across all
+      // process_function invocations above so multi-pass infer can
+      // re-derive is_fixed for explicitly-typed locals; required gone
+      // by wfBodyInfer.
+      top->traverse([](Node& node) {
+        if (node == TypeAssertion)
+        {
+          auto parent = node->parent();
+          if (parent)
+          {
+            for (auto it = parent->begin(); it != parent->end(); ++it)
+            {
+              if (*it == node)
+              {
+                parent->erase(it, std::next(it));
+                break;
+              }
+            }
+          }
+          return false;
+        }
+        return true;
+      });
 
       return 0;
     });
