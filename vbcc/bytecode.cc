@@ -31,28 +31,6 @@ namespace vbcc
   };
 
   template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<T>&& s)
-  {
-    // This uses zigzag encoding.
-    auto value = (s.value << 1) ^ (s.value >> ((sizeof(T) * 8) - 1));
-    return b << uleb(value);
-  }
-
-  template<>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<float>&& s)
-  {
-    auto value = std::bit_cast<int32_t>(s.value);
-    return b << sleb(value);
-  }
-
-  template<>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<double>&& s)
-  {
-    auto value = std::bit_cast<int64_t>(s.value);
-    return b << sleb(value);
-  }
-
-  template<typename T>
   std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, uleb<T>&& u)
   {
     auto value = u.value;
@@ -65,6 +43,29 @@ namespace vbcc
 
     b.push_back(value);
     return b;
+  }
+
+  template<typename T>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<T>&& s)
+  {
+    // This uses zigzag encoding.
+    auto value = (s.value << 1) ^ (s.value >> ((sizeof(T) * 8) - 1));
+    return b << uleb(value);
+  }
+
+  template<>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<float>&& s)
+  {
+    // Float bit patterns can have the top bit of the int32 cast set
+    // (e.g. any value whose magnitude is >= 2.0), which would overflow
+    // the signed-zigzag encoding. Round-trip the bits through uleb.
+    return b << uleb(std::bit_cast<uint32_t>(s.value));
+  }
+
+  template<>
+  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<double>&& s)
+  {
+    return b << uleb(std::bit_cast<uint64_t>(s.value));
   }
 
   template<typename T>

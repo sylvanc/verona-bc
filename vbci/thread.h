@@ -148,9 +148,19 @@ namespace vbci
     template<typename T = size_t>
     SNMALLOC_FAST_PATH T leb()
     {
-      if constexpr (
-        (std::is_integral_v<T> && std::is_signed_v<T>) ||
-        std::is_floating_point_v<T>)
+      if constexpr (std::is_floating_point_v<T>)
+      {
+        // Float bit patterns are written as uleb on the producer side
+        // (see vbcc/bytecode.cc sleb<float>/sleb<double> overloads),
+        // so round-trip the bits back through uleb + bit_cast.
+        if constexpr (sizeof(T) == sizeof(uint32_t))
+          return std::bit_cast<T>(
+            static_cast<uint32_t>(program->uleb(frame->pc)));
+        else
+          return std::bit_cast<T>(
+            static_cast<uint64_t>(program->uleb(frame->pc)));
+      }
+      else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>)
         return static_cast<T>(program->sleb(frame->pc));
       else
         return static_cast<T>(program->uleb(frame->pc));
