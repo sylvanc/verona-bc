@@ -120,7 +120,10 @@ namespace vbcc
                       CodePtrCallback,
                       FreeCallback,
                       Pin,
-                      Unpin}))
+                      Unpin,
+                      NewArray,
+                      StackArray,
+                      RegionArray}))
           {
             use(node / Rhs);
             def(node / LocalId);
@@ -164,11 +167,8 @@ namespace vbcc
           else if (node->in(
                      {Const,
                       ConstStr,
-                      NewArray,
                       NewArrayConst,
-                      StackArray,
                       StackArrayConst,
-                      RegionArray,
                       RegionArrayConst,
                       FieldRef,
                       ArrayRefConst,
