@@ -105,6 +105,11 @@ i64
     :::not(self)
   }
 
+  cttz(self: i64): i64
+  {
+    :::cttz(self)
+  }
+
   abs(self: i64): i64
   {
     :::abs(self)

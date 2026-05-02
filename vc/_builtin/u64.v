@@ -105,6 +105,11 @@ u64
     :::not(self)
   }
 
+  cttz(self: u64): u64
+  {
+    :::cttz(self)
+  }
+
   bool(self: u64): bool
   {
     self != 0

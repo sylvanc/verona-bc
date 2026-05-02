@@ -152,6 +152,7 @@ namespace vbcc
   inline const auto Len = TokenDef("len");
   inline const auto MakePtr = TokenDef("makeptr");
   inline const auto Read = TokenDef("read");
+  inline const auto Cttz = TokenDef("cttz");
 
   // Callback operations.
   inline const auto MakeCallback = TokenDef("makecallback");
@@ -247,7 +248,7 @@ namespace vbcc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
-    Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
+    Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read | Cttz;
 
   inline const auto wfConst =
     Const_E | Const_Pi | Const_Inf | Const_NaN | AddExternal | RemoveExternal;
@@ -412,6 +413,7 @@ namespace vbcc
     | (Len <<= wfDst * wfSrc)
     | (MakePtr <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)
+    | (Cttz <<= wfDst * wfSrc)
     | (Const_E <<= wfDst)
     | (Const_Pi <<= wfDst)
     | (Const_Inf <<= wfDst)

@@ -342,6 +342,11 @@ namespace vbci
     Len,
     Ptr,
 
+    // Bit-counting ops on integer types. Cttz returns count of trailing
+    // zeros; for a zero input, returns the operand's bit width. Result
+    // type is the same as the operand type.
+    Cttz,
+
     // This creates a read-only view of the target. Currently, this can only be
     // done on cowns.
     Read,

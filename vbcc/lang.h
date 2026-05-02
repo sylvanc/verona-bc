@@ -68,7 +68,8 @@ namespace vbcc
       Bits,
       Len,
       MakePtr,
-      Read);
+      Read,
+      Cttz);
 
   const auto Constant = T(Const_E, Const_Pi, Const_Inf, Const_NaN);
 

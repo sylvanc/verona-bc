@@ -111,6 +111,21 @@ namespace vbcc
     return t->type().in({F32, F64});
   }
 
+  static bool is_integer(const Node& t)
+  {
+    if (t == Dyn)
+      return true;
+    if (t == Union)
+    {
+      for (auto& child : *t)
+        if (!is_integer(child))
+          return false;
+      return t->size() > 0;
+    }
+    return t->type().in(
+      {I8, I16, I32, I64, U8, U16, U32, U64, ILong, ULong, ISize, USize});
+  }
+
   static bool is_object_type(const Node& t)
   {
     if (t == Dyn)
@@ -1744,6 +1759,26 @@ namespace vbcc
           }
 
           // Read gives back the same type (with readonly semantics at runtime).
+          if (src_type)
+            set_type(env, node / LocalId, clone(src_type));
+          else
+            set_type(env, node / LocalId, Dyn);
+        }
+        else if (node == Cttz)
+        {
+          // Count trailing zeros: integer operand, result has the same type.
+          auto src_type = typed(node / Rhs);
+
+          if (src_type && !is_integer(src_type))
+          {
+            type_err(
+              node,
+              std::format(
+                "cttz: operand type '{}' is not an integer",
+                type_name(src_type)));
+            return true;
+          }
+
           if (src_type)
             set_type(env, node / LocalId, clone(src_type));
           else

@@ -105,6 +105,11 @@ isize
     :::not(self)
   }
 
+  cttz(self: isize): isize
+  {
+    :::cttz(self)
+  }
+
   abs(self: isize): isize
   {
     :::abs(self)

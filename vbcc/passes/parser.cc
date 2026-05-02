@@ -146,6 +146,7 @@ namespace vbcc
         "len\\b" >> [](auto& m) { m.add(Len); },
         "makeptr\\b" >> [](auto& m) { m.add(MakePtr); },
         "read\\b" >> [](auto& m) { m.add(Read); },
+        "cttz\\b" >> [](auto& m) { m.add(Cttz); },
 
         // Constants.
         "e\\b" >> [](auto& m) { m.add(Const_E); },

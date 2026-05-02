@@ -141,7 +141,7 @@ namespace vc
 
   inline const auto wfUnop = Neg | Not | Abs | Ceil | Floor | Exp | Log | Sqrt |
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
-    Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
+    Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read | Cttz;
 
   inline const auto wfNulop = None | Const_E | Const_Pi | Const_Inf |
     Const_NaN | AddExternal | RemoveExternal;
@@ -425,6 +425,7 @@ namespace vc
     | (Len <<= wfDst * wfSrc)
     | (MakePtr <<= wfDst * wfSrc)
     | (Read <<= wfDst * wfSrc)
+    | (Cttz <<= wfDst * wfSrc)
     | (FFI <<= wfDst * SymbolId * Args)
     | (ArrayCopy <<= wfDst * Args)
     | (ArrayFill <<= wfDst * Args)

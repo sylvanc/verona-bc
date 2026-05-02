@@ -105,6 +105,11 @@ usize
     :::not(self)
   }
 
+  cttz(self: usize): usize
+  {
+    :::cttz(self)
+  }
+
   bool(self: usize): bool
   {
     self != 0

@@ -113,6 +113,7 @@ namespace vbcc
                       Len,
                       MakePtr,
                       Read,
+                      Cttz,
                       SetRaise,
                       Typetest,
                       MakeCallback,

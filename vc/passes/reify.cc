@@ -2881,6 +2881,14 @@ namespace vc
             if (src_it != local_types.end())
               local_types[(n / LocalId)->location()] = clone(src_it->second);
           }
+          else if (n == Cttz)
+          {
+            // Propagate type from source to destination (same-type unop).
+            auto src_it = local_types.find((n / Rhs)->location());
+
+            if (src_it != local_types.end())
+              local_types[(n / LocalId)->location()] = clone(src_it->second);
+          }
           else if (n->in({ArrayCopy, ArrayFill}))
           {
             reify_primitive(None);

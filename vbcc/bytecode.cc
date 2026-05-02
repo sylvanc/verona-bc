@@ -1299,6 +1299,10 @@ namespace vbcc
           {
             code << uleb(+Op::Read) << dst(stmt) << src(stmt);
           }
+          else if (stmt == Cttz)
+          {
+            code << uleb(+Op::Cttz) << dst(stmt) << src(stmt);
+          }
           else if (stmt == Const_E)
           {
             code << uleb(+Op::Const_E) << dst(stmt);

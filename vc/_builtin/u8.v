@@ -105,6 +105,11 @@ u8
     :::not(self)
   }
 
+  cttz(self: u8): u8
+  {
+    :::cttz(self)
+  }
+
   bool(self: u8): bool
   {
     self != 0

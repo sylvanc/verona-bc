@@ -74,6 +74,7 @@ namespace vc
     {"len", {0, 1, Unop << Len}},
     {"ptr", {0, 1, Unop << MakePtr}},
     {"read", {0, 1, Unop << Read}},
+    {"cttz", {0, 1, Unop << Cttz}},
     {"none", {0, 0, Nulop << None}},
     {"e", {0, 0, Nulop << Const_E}},
     {"pi", {0, 0, Nulop << Const_Pi}},

@@ -105,6 +105,11 @@ ilong
     :::not(self)
   }
 
+  cttz(self: ilong): ilong
+  {
+    :::cttz(self)
+  }
+
   abs(self: ilong): ilong
   {
     :::abs(self)

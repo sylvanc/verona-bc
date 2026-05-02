@@ -105,6 +105,11 @@ i32
     :::not(self)
   }
 
+  cttz(self: i32): i32
+  {
+    :::cttz(self)
+  }
+
   abs(self: i32): i32
   {
     :::abs(self)

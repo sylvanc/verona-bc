@@ -946,6 +946,8 @@ namespace vbci
         return os << "Bits";
       case Op::Len:
         return os << "Len";
+      case Op::Cttz:
+        return os << "Cttz";
       case Op::Ptr:
         return os << "Ptr";
       case Op::Read:
@@ -1797,6 +1799,8 @@ namespace vbci
         do_unop(bits);
       case Op::Len:
         do_unop(len);
+      case Op::Cttz:
+        do_unop(cttz);
       case Op::Read:
       {
         process([](Register& dst, const Register& src)

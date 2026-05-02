@@ -105,6 +105,11 @@ ulong
     :::not(self)
   }
 
+  cttz(self: ulong): ulong
+  {
+    :::cttz(self)
+  }
+
   bool(self: ulong): bool
   {
     self != 0

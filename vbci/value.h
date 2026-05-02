@@ -4,6 +4,7 @@
 #include "logging.h"
 #include "platform.h"
 
+#include <bit>
 #include <cmath>
 #include <cstring>
 #include <functional>
@@ -526,6 +527,23 @@ namespace vbci
     Value op_atanh() const
     {
       return unop<nounop, nounop, nounop, atanh>();
+    }
+
+    // Count trailing zeros: returns the count as the same integer type as
+    // the operand. For an all-zero operand, returns the operand bit width.
+    struct cttz
+    {
+      template<typename T>
+      constexpr T operator()(T arg) const
+      {
+        using U = std::make_unsigned_t<T>;
+        return static_cast<T>(std::countr_zero(static_cast<U>(arg)));
+      }
+    };
+
+    Value op_cttz() const
+    {
+      return unop<nounop, cttz, cttz, nounop>();
     }
 
     Value op_bits() const;
