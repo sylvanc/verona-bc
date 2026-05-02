@@ -1028,6 +1028,31 @@ namespace vc
         return result;
       };
 
+      // Canonicalize a type node: bare TypeIds that resolve to empty-Union
+      // shapes are canonicalized to Dyn (no value can inhabit them, so any
+      // layout is correct, and Dyn matches the catchall layout used
+      // elsewhere). Unions are pruned via prune_union. Returns the
+      // canonical replacement (which may be the original node).
+      auto canonicalize = [&](const Node& t) -> Node {
+        if (!t)
+          return t;
+
+        if ((t == TypeId) && is_empty_shape(t))
+          return Dyn;
+
+        if (t == Union)
+          return prune_union(t);
+
+        return t;
+      };
+
+      auto canonicalize_in_place = [&](Node parent, const Node& child) {
+        auto pruned = canonicalize(child);
+
+        if (pruned != child)
+          parent->replace(child, pruned);
+      };
+
       for (auto& key : map_order)
       {
         for (auto& r : map[key])
@@ -1040,29 +1065,22 @@ namespace vc
             auto fields = r.reification / Fields;
 
             for (auto& field : *fields)
-            {
-              auto& ft = field->back();
-
-              if (ft == Union)
-              {
-                auto pruned = prune_union(ft);
-
-                if (pruned != ft)
-                  field->replace(ft, pruned);
-              }
-            }
+              canonicalize_in_place(field, field->back());
           }
           else if (r.reification == Type)
           {
-            auto& body = r.reification->back();
+            canonicalize_in_place(r.reification, r.reification->back());
+          }
+          else if (r.reification->in({Func, FuncOnce}))
+          {
+            // Function param types and return type. The return type is
+            // the third child (FunctionId * Params * Type * Vars * Labels).
+            for (auto& p : *(r.reification / Params))
+              canonicalize_in_place(p, p->back());
 
-            if (body == Union)
-            {
-              auto pruned = prune_union(body);
-
-              if (pruned != body)
-                r.reification->replace(body, pruned);
-            }
+            // Return type position: index 2.
+            auto ret = r.reification->at(2);
+            canonicalize_in_place(r.reification, ret);
           }
         }
       }
