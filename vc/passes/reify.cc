@@ -2428,6 +2428,7 @@ namespace vc
         // concrete type. Don't replace it — the class's subst already
         // determined the correct type. Method-level TypeParams should still
         // be refined from call-site argument types.
+        bool shape_param = false;
         if (replacing_seed && (current == TypeId) && generic_origin)
         {
           auto def_type = def_param / Type;
@@ -2450,8 +2451,65 @@ namespace vc
                 }
               }
             }
+
+            // A TypeId resolved from a Shape ClassDef is a structural type
+            // that accepts any implementing class. Refining it to a single
+            // call-site's actual class would prevent later calls with
+            // different implementing classes from typechecking. Skip
+            // refinement entirely for shape parameters with at least one
+            // implementor: resolve_shapes already expanded the TypeId to a
+            // Union of implementors. For unresolvable shapes (empty
+            // implementor set), fall through to the normal refinement path
+            // so the caller's actual type provides a usable parameter type.
+            if (replacing_seed)
+            {
+              auto def = find_def(top, tp_name);
+              if (def && (def == ClassDef) && ((def / Shape) == Shape))
+              {
+                // Determine whether the shape has any implementors. After
+                // resolve_shapes/prune_empty_shape_unions, the shape's
+                // reification body is one of:
+                //   - Dyn: pruned-empty (no implementors)
+                //   - Union (empty): not pruned yet, no implementors
+                //   - Union (1+ entries) or single ClassId/TypeId: implementors
+                bool empty_shape = true;
+                for (auto& key : map_order)
+                {
+                  for (auto& cr : map[key])
+                  {
+                    if (!cr.id || !same_reification_id(cr.id, current))
+                      continue;
+                    if (cr.reification && (cr.reification == Type))
+                    {
+                      auto& body = cr.reification->back();
+                      if (body == Dyn)
+                        empty_shape = true;
+                      else if (body == Union)
+                        empty_shape = body->empty();
+                      else
+                        empty_shape = false;
+                    }
+                    else
+                    {
+                      // Pending reification — assume it will get implementors.
+                      empty_shape = false;
+                    }
+                    goto found;
+                  }
+                }
+              found:
+                if (!empty_shape)
+                {
+                  replacing_seed = false;
+                  shape_param = true;
+                }
+              }
+            }
           }
         }
+
+        if (shape_param)
+          continue;
 
         if (
           !generic_origin &&

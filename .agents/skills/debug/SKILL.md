@@ -25,11 +25,13 @@ Before editing the source package under investigation, classify each proposed ch
 
 Rules:
 
-1. **Do not commit workaround churn into the source tree while debugging.** If a change is in the second category, stop and discuss instead of editing the repo copy.
-2. **Reduce first.** Build a minimal reproduction in `build/tmp/` that demonstrates the compiler/runtime bug before touching the real source tree.
-3. **Prove source edits are source fixes.** If you believe a source edit is still warranted, state the independent source-level reason for it and the evidence supporting that reason.
-4. **Scratch before repo.** Hypothesis-testing edits for likely compiler bugs belong in scratch copies under `build/tmp/`, not in the main worktree.
-5. **If the change list starts to include scaffolding** — wrapper methods, indirection layers, typed match literals, helper closures whose only purpose is to differentiate codegen — back up immediately. That is a sign you are debugging the compiler by mutating the source program.
+1. **Compiler bugs are NEVER out of scope.** When a compiler/runtime bug is identified during any task — even one that "isn't about the compiler" — fixing it in the compiler is a HARD requirement, not a deferred follow-up. Do not declare the task done while leaving a workaround in place. Do not file the bug and move on. Pause the outer task, fix the compiler, then return.
+2. **No source-level workarounds.** Never paper over a compiler bug by mutating the consuming source (wrapper methods to disambiguate codegen, extra indirection layers, typed-literal hacks, control-flow contortions, signature changes that exist only to satisfy inference/typecheck). If you find yourself adding such scaffolding, you are debugging the compiler by mutating the source program — back up.
+3. **Do not commit workaround churn into the source tree while debugging.** If a change is in the second category above, stop and discuss instead of editing the repo copy.
+4. **Reduce first.** Build a minimal reproduction in `build/tmp/` that demonstrates the compiler/runtime bug before touching the real source tree.
+5. **Prove source edits are source fixes.** If you believe a source edit is still warranted, state the independent source-level reason for it and the evidence supporting that reason.
+6. **Scratch before repo.** Hypothesis-testing edits for likely compiler bugs belong in scratch copies under `build/tmp/`, not in the main worktree.
+7. **Revert any temporary workarounds after the compiler fix lands.** If you applied a workaround in a scratch repo to keep moving, you must remove it and verify the unworkaround'd code passes once the compiler fix is merged.
 
 This is stricter than the general debugging protocol on purpose: source-level workaround churn is often net negative because it obscures the real bug, dirties the worktree, and increases rollback cost.
 
