@@ -12,6 +12,11 @@ array[T]
     a
   }
 
+  alloc(size: usize): array[T]
+  {
+    :::newarray[T](size)
+  }
+
   size(self: array[T]): usize
   {
     :::len(self)
