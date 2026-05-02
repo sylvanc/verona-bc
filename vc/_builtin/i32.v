@@ -110,6 +110,11 @@ i32
     :::cttz(self)
   }
 
+  hash(self: i32): u64
+  {
+    :::bits(self).mix64
+  }
+
   abs(self: i32): i32
   {
     :::abs(self)

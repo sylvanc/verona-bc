@@ -110,6 +110,11 @@ ilong
     :::cttz(self)
   }
 
+  hash(self: ilong): u64
+  {
+    :::bits(self).mix64
+  }
+
   abs(self: ilong): ilong
   {
     :::abs(self)

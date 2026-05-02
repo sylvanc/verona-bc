@@ -305,4 +305,12 @@ f64
     result(n) = 0;
     string result
   }
+
+  // Hash. ±0 are normalized to a single bit pattern so they hash equal,
+  // matching f64's IEEE-754 == comparison.
+  hash(self: f64): u64
+  {
+    if self == 0.0 { (u64 0).mix64 }
+    else { :::bits(self).mix64 }
+  }
 }

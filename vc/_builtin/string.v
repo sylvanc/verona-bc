@@ -346,4 +346,21 @@ string
 
     string(array[u8]::fill(1))
   }
+
+  // FNV-1a 64-bit hash over the byte range [0, len). Identical strings
+  // hash to the same value regardless of buffer capacity or terminator.
+  hash(self: string): u64
+  {
+    var h = u64 0xcbf29ce484222325;
+    var i = 0;
+
+    while i < self.len
+    {
+      h = h ^ self(i).u64;
+      h = h * 0x00000100000001b3;
+      i = i + 1
+    }
+
+    h
+  }
 }

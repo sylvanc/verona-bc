@@ -110,6 +110,11 @@ usize
     :::cttz(self)
   }
 
+  hash(self: usize): u64
+  {
+    :::bits(self).mix64
+  }
+
   bool(self: usize): bool
   {
     self != 0

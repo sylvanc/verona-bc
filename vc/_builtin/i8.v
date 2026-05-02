@@ -110,6 +110,11 @@ i8
     :::cttz(self)
   }
 
+  hash(self: i8): u64
+  {
+    :::bits(self).mix64
+  }
+
   abs(self: i8): i8
   {
     :::abs(self)

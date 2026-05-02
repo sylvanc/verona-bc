@@ -110,6 +110,11 @@ ulong
     :::cttz(self)
   }
 
+  hash(self: ulong): u64
+  {
+    :::bits(self).mix64
+  }
+
   bool(self: ulong): bool
   {
     self != 0

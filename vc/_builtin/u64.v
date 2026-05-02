@@ -110,6 +110,22 @@ u64
     :::cttz(self)
   }
 
+  // Mix the bits of a u64 so that small differences in input lead to
+  // large differences in output. The constant is the golden ratio
+  // multiplier used by xxh3 / splitmix64.
+  mix64(self: u64): u64
+  {
+    var h = self;
+    h = (h ^ (h >> 32)) * 0x9e3779b97f4a7c15;
+    h = h ^ (h >> 32);
+    h * 0x9e3779b97f4a7c15
+  }
+
+  hash(self: u64): u64
+  {
+    self.mix64
+  }
+
   bool(self: u64): bool
   {
     self != 0

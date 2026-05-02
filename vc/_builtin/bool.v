@@ -81,4 +81,10 @@ bool
   {
     if self { "true" } else { "false" }
   }
+
+  hash(self: bool): u64
+  {
+    let v = if self { u64 1 } else { u64 0 };
+    v.mix64
+  }
 }
