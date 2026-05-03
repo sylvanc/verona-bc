@@ -5558,29 +5558,9 @@ namespace vc
         if (has_typevar(func))
           process_function(func, top, true);
 
-      // Final cleanup: remove TypeAssertion nodes. Kept across all
-      // process_function invocations above so multi-pass infer can
-      // re-derive is_fixed for explicitly-typed locals; required gone
-      // by wfBodyInfer.
-      top->traverse([](Node& node) {
-        if (node == TypeAssertion)
-        {
-          auto parent = node->parent();
-          if (parent)
-          {
-            for (auto it = parent->begin(); it != parent->end(); ++it)
-            {
-              if (*it == node)
-              {
-                parent->erase(it, std::next(it));
-                break;
-              }
-            }
-          }
-          return false;
-        }
-        return true;
-      });
+      // TypeAssertion nodes are preserved past infer. Reify consumes
+      // them (using them as constraint sources for body-driven type-arg
+      // inference) and strips them before lowering to IR.
 
       return 0;
     });

@@ -3122,6 +3122,15 @@ namespace vc
             var_locs.push_back((n / Ident)->location());
             remove.push_back(n);
           }
+          else if (n == TypeAssertion)
+          {
+            // Phase 2 stub: TypeAssertions are now preserved past infer
+            // and reach reify. Reify will eventually use them as
+            // constraint sources for body-driven type-arg inference
+            // (Phase 3); for now, just strip them so the body satisfies
+            // wfIR.
+            remove.push_back(n);
+          }
           else if (n->in({New, Stack}))
           {
             // Save the type before reify_new transforms the node.

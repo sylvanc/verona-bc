@@ -445,7 +445,10 @@ namespace vc
   // clang-format on
 
   inline const auto wfTypeInfer = wfTypeNoFunc;
-  inline const auto wfBodyInfer = wfBodyANF - TypeAssertion;
+  // TypeAssertion nodes are preserved past infer and consumed by reify
+  // (used as constraint sources for body-driven type-arg inference, then
+  // stripped before lowering to IR).
+  inline const auto wfBodyInfer = wfBodyANF;
 
   // clang-format off
   inline const auto wfPassInfer =
