@@ -920,6 +920,21 @@ namespace vc
             }
           }
         }
+        else if (node == Function)
+        {
+          // User-source functions must declare a return type. Lambdas
+          // (which always allow inference) are constructed separately
+          // and never appear here. Compiler-synthesized functions
+          // (field accessors, auto-create constructors, lambda lifts)
+          // always supply explicit types at construction time.
+          if ((node / Type)->front() == TypeVar)
+          {
+            node->replace(
+              node / Type,
+              err(node / Ident, "Function must have a return type"));
+            ok = false;
+          }
+        }
         else if (node->in({Else, Equals}))
         {
           if (node->size() != 2)

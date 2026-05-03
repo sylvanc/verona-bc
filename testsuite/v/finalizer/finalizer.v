@@ -11,7 +11,7 @@ resource
 {
   val: i32;
 
-  final(self: resource)
+  final(self: resource): none
   {
     :::printval(self.val)
   }
