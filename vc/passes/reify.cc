@@ -2128,11 +2128,25 @@ namespace vc
       if (current->equals(actual))
         return clone(current);
 
-      if (current == Dyn)
+      // TypeVar is the inference unknown ("no observation yet").
+      // When merging with any real type T, prefer T (TypeVar is bottom
+      // on the inference lattice).
+      if (current == TypeVar)
         return clone(actual);
 
-      if (actual == Dyn)
+      if (actual == TypeVar)
         return clone(current);
+
+      // Note: Dyn is the type-system top, not a placeholder. For
+      // proper join semantics, merge(Dyn, T) = Dyn | T = Dyn (any
+      // T <: Dyn). The previous v23/v24 code had an inversion here
+      // that returned T when current was Dyn — that was the
+      // Dyn-as-placeholder semantics now replaced by TypeVar-as-
+      // placeholder. The merge below produces Dyn naturally because
+      // adding T to a union containing Dyn yields {Dyn, T}; we
+      // simplify by returning Dyn directly when either side is Dyn.
+      if (current == Dyn || actual == Dyn)
+        return Dyn;
 
       Node merged = Union;
 
