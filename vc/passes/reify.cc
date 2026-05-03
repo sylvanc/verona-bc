@@ -2608,13 +2608,31 @@ namespace vc
       auto recv_set = extract_receivers(recv_type);
       Nodes ret_types;
 
-      for (auto& key : map_order)
+      // Use index-based loop because find_func_return_type below may
+      // recursively push to map_order via reify_emitted_type ->
+      // find_or_push, invalidating range-for iterators.
+      for (size_t ki = 0; ki < map_order.size(); ki++)
       {
+        Node key = map_order[ki];
+
         if (key != ClassDef)
           continue;
 
-        for (auto& r : map[key])
+        // Inner loop is also index-based: find_or_push can also push to
+        // map[key] (the per-key Reification vector), invalidating refs.
+        auto& r_vec_initial = map[key];
+
+        for (size_t ri = 0; ri < r_vec_initial.size(); ri++)
         {
+          // Re-resolve the vector each iteration in case map_order's
+          // backing buffer was reallocated since the last iteration. The
+          // inner Reification vector itself can also have grown, so
+          // bound-check against its current size.
+          auto& r_vec = map[map_order[ki]];
+          if (ri >= r_vec.size())
+            break;
+          auto& r = r_vec[ri];
+
           if (!r.reification || !r.id)
             continue;
 
