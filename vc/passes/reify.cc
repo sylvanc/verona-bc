@@ -2136,21 +2136,26 @@ namespace vc
 
       Node merged = Union;
 
-      auto add_type = [&](Node type) {
-        auto add_one = [&](Node single) {
-          for (auto& existing : *merged)
-          {
-            if (existing->equals(single))
-              return;
-          }
+      auto add_one = [&](Node single) {
+        for (auto& existing : *merged)
+        {
+          if (existing->equals(single))
+            return;
+        }
 
-          merged << clone(single);
-        };
+        merged << clone(single);
+      };
 
+      // Flatten nested unions so the resulting union is canonical
+      // (single-level). Without this, a union child is added as a single
+      // element each round; subsequent merges re-add a structurally-equal
+      // but non-deduplicated nested union, and the merged size grows
+      // without bound across the reify fixpoint.
+      std::function<void(Node)> add_type = [&](Node type) {
         if (type == Union)
         {
           for (auto& child : *type)
-            add_one(child);
+            add_type(child);
         }
         else
         {
@@ -2160,6 +2165,9 @@ namespace vc
 
       add_type(current);
       add_type(actual);
+
+      if (merged->empty())
+        return Dyn;
 
       if (merged->size() == 1)
         return clone(merged->front());
