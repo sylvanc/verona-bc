@@ -2443,8 +2443,20 @@ namespace vc
         bool constructor_seed = is_create && generic_create_field &&
           contains_typeid(current) && !contains_typeid(actual) &&
           vbcc::IRSubtype(top, actual, current);
+        // The "seed" form is the param's reified declared type — what a fresh
+        // reification of the def's type produces with the current subst.
+        // We only want to *replace* the seed when it represents an
+        // unresolved type (a Shape TypeId, Dyn, or a Union that still has
+        // unresolved members). A Union of fully-concrete types is a valid
+        // declared type and should be merged with — not replaced by —
+        // call-site arguments. Otherwise a single call site passing the
+        // narrower side of `T | none` (e.g. `none`) would silently drop
+        // the wider member from the function's param type.
+        bool seed_unresolved = current->in({TypeId, Dyn}) ||
+          ((current == Union) &&
+           (contains_typeid(current) || contains_dyn(current)));
         bool replacing_seed = unresolved_seed &&
-          current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
+          current->equals(unresolved_seed) && seed_unresolved;
 
         // A TypeId that was resolved from a class-level TypeParam is a valid
         // concrete type. Don't replace it — the class's subst already
