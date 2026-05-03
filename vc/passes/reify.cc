@@ -838,8 +838,18 @@ namespace vc
     // reify gets a Reification struct.
     struct Reification
     {
+      // Source AST def (Function / ClassDef / TypeAlias).
       Node def;
+      // Substitution for this reification's TypeParams.
       NodeMap<Node> subst;
+      // Canonical id Node. Set once at construction in find_or_push.
+      // INVARIANT: this is the canonical Node used as a worker key
+      // (Phase 3+ NodeWorker) and as the IR ClassId / FunctionId
+      // child of r.reification (e.g., line ~3542 `Func << r.id`).
+      // It MUST NOT be cloned by find_or_push's return path —
+      // find_or_push returns clone(id) for AST-embedding callers
+      // who need their own parented copy. Direct access via
+      // r.id from a Reification* always yields the canonical.
       Node id;
       Node reification;
       Node resolved_name; // Resolved TypeName for shape checking
