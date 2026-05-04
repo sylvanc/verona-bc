@@ -13,28 +13,28 @@
 
 list[T]
 {
-  _node[T]
+  _node
   {
     value: T;
-    next: _node[T] | none;
-    prev: _node[T] | none;
+    next: _node | none;
+    prev: _node | none;
 
-    create(value: T, next: _node[T] | none, prev: _node[T] | none): _node[T]
+    create(value: T, next: _node | none, prev: _node | none): _node
     {
       new { value, next, prev }
     }
   }
 
-  _head: _node[T] | none;
-  _tail: _node[T] | none;
+  _head: _node | none;
+  _tail: _node | none;
 
   create(): list[T] { new { _head = none, _tail = none } }
 
   push_back(self: list[T], v: T): list[T]
   {
-    // Constructs a node with two _node[T] | none args. One is the literal
+    // Constructs a node with two _node | none args. One is the literal
     // `none` (which used to wrongly narrow the next param to `none`).
-    let n = _node[T](v, none, self._tail);
+    let n = _node(v, none, self._tail);
     self._tail = n;
     match self._head { (h: list[T]::_node) -> none } else { self._head = n };
     self
