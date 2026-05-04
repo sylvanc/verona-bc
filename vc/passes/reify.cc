@@ -1924,6 +1924,18 @@ namespace vc
             if (def_type->front() == TypeVar)
               return {};
 
+            // Phase 3b.4: if the def references unbound formals (subst
+            // missing entries) — body-driven binding will fill these
+            // when reify_function runs later. Don't eagerly reify here;
+            // it would emit a spurious "type parameter cannot be
+            // inferred" error before binding happens. Returning {}
+            // lets the caller fall back to TypeVar / unresolved-receiver
+            // tracking; the second-pass refinement (after binding
+            // populates reif.reification) replaces it with the actual
+            // return type.
+            if (has_unresolved_type(def_type, reif.subst))
+              return {};
+
             return reify_emitted_type(
               def_type, reif.subst, reif.def / Ident, "return type");
           }
@@ -2976,13 +2988,30 @@ namespace vc
       // Reify the function signature.
       auto def_type = r.def / Type;
       bool typevar_return = (def_type->front() == TypeVar);
+
+      // Phase 3b.4 body-driven binding: detect unbound formals (declared
+      // TypeParams without an entry in r.subst). If the return type
+      // references any unbound formal, defer r_type emission until after
+      // body walk + evidence gathering. The reverted Phase 0.5 / current
+      // partial-binding fills constrained slots from arg types and leaves
+      // unconstrained formals out of r.subst.
+      auto def_tps = r.def / TypeParams;
+      Nodes unbound_formals;
+      for (auto& tp : *def_tps)
+      {
+        if (r.subst.find(tp) == r.subst.end())
+          unbound_formals.push_back(tp);
+      }
+      bool body_driven = !typevar_return && !unbound_formals.empty() &&
+        has_unresolved_type(def_type, r.subst);
+
       Node r_type;
 
-      if (!typevar_return)
+      if (typevar_return || body_driven)
+        r_type = {}; // Will be inferred from Return terminals after body.
+      else
         r_type =
           reify_emitted_type(def_type, r.subst, r.def / Ident, "return type");
-      else
-        r_type = {}; // Will be inferred from Return terminals after body.
       Node params = Params;
 
       for (auto& p : *(r.def / Params))
@@ -3748,6 +3777,106 @@ namespace vc
         // AGENTS.md: Dyn is reserved for the IR encoding of `any`.
         if (!r_type)
           r_type = TypeVar;
+      }
+
+      // Phase 3b.4: body-driven binding for unbound formals. After the
+      // body walk, gather Return evidence from local_types[ret_loc] and
+      // bind each unbound formal to the LUB of admitted evidence.
+      // Admitted evidence: the Return value's tracked type, filtered
+      // against the declared return type's concrete (non-formal-bare)
+      // alternatives (those are matched by the union's concrete arms;
+      // remaining evidence types belong to the bare-formal arm).
+      if (body_driven)
+      {
+        Nodes evidence;
+
+        for (auto& l : *labels)
+        {
+          auto term = l / Return;
+          if (term != Return)
+            continue;
+
+          auto ret_loc = (term / LocalId)->location();
+          auto it = local_types.find(ret_loc);
+          if (it == local_types.end())
+            continue;
+
+          // Skip the intermediate TypeVar marker (refinement pending);
+          // it doesn't constitute body evidence.
+          if (it->second == TypeVar)
+            continue;
+
+          bool dup = false;
+          for (auto& existing : evidence)
+          {
+            if (existing->equals(it->second))
+            {
+              dup = true;
+              break;
+            }
+          }
+          if (!dup)
+            evidence.push_back(clone(it->second));
+        }
+
+        // Filter evidence against concrete (non-unbound) alternatives of
+        // the declared return type. Anything matching a concrete alt is
+        // attributed to that alt, not to a formal.
+        auto inner = (def_type == Type) ? def_type->front() : def_type;
+        Nodes concrete_alts;
+        if (inner == Union)
+        {
+          for (auto& alt : *inner)
+          {
+            // An alt is "concrete" if reifying it under r.subst doesn't
+            // leak an unresolved formal.
+            Node alt_t = (alt == Type) ? clone(alt) : Type << clone(alt);
+            if (has_unresolved_type(alt_t, r.subst))
+              continue;
+            concrete_alts.push_back(reify_type(alt_t, r.subst));
+          }
+        }
+
+        Nodes filtered;
+        for (auto& ev : evidence)
+        {
+          bool matches_concrete = false;
+          for (auto& c : concrete_alts)
+          {
+            if (c->equals(ev))
+            {
+              matches_concrete = true;
+              break;
+            }
+          }
+          if (!matches_concrete)
+            filtered.push_back(clone(ev));
+        }
+
+        // Bind unbound formals from the LUB of filtered evidence.
+        // For now: support a single unbound formal. Multiple unbound
+        // formals in the return type would need positional matching
+        // (future work).
+        if (unbound_formals.size() == 1 && !filtered.empty())
+        {
+          auto formal = unbound_formals.front();
+          Node lub;
+          if (filtered.size() == 1)
+            lub = clone(filtered.front());
+          else
+          {
+            lub = Union;
+            for (auto& f : filtered)
+              lub << clone(f);
+          }
+          r.subst[formal] = Type << lub;
+        }
+
+        // Re-emit r_type with the (possibly-updated) substitution. If a
+        // formal is still unbound, reify_emitted_type emits a clean
+        // "type parameter cannot be inferred" error.
+        r_type =
+          reify_emitted_type(def_type, r.subst, r.def / Ident, "return type");
       }
 
       // Implicit none return: when a function returns none, append a
