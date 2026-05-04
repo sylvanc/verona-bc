@@ -1380,9 +1380,17 @@ namespace vc
                                           clone(find->second);
         }
 
-        // TypeParam not in subst — return Dyn to prevent self-referential
-        // substitution cycles (where a TypeParam maps to a reference to
-        // itself, causing infinite recursion in reify_type).
+        // TypeParam not in subst — this is a hard compile error. Dyn is
+        // ONLY the IR encoding of `any`; it must never be used as a
+        // fallback for an unbound formal. Emit the error and return Dyn
+        // so the AST stays well-formed for downstream cleanup; the compile
+        // will fail at end of pass because errors is non-empty.
+        errors.push_back(err(
+          inner,
+          std::format(
+            "Type parameter `{}` cannot be inferred. Provide an explicit "
+            "type argument.",
+            (def / Ident)->location().view())));
         return wrapped ? (Type << Dyn) : Dyn;
       }
 
@@ -4726,6 +4734,14 @@ namespace vc
               if (find != resolve_subst.end())
                 return reify_type(find->second, resolve_subst);
 
+              // TypeParam not in subst — hard compile error. Dyn is
+              // ONLY the IR encoding of `any`; never a fallback.
+              errors.push_back(err(
+                elem,
+                std::format(
+                  "Type parameter `{}` cannot be inferred. Provide an "
+                  "explicit type argument.",
+                  (d / Ident)->location().view())));
               return Dyn;
             }
           }

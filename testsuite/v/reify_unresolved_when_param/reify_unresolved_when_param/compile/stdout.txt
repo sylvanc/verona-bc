@@ -1,0 +1,14 @@
+Errors:
+Type parameter `A` cannot be inferred. Provide an explicit type argument.
+-- reify_unresolved_when_param.v:18:19
+  run[A, B](some: A, handler: B->none): none
+                  ~
+
+----------------
+Type parameter `B` cannot be inferred. Provide an explicit type argument.
+-- reify_unresolved_when_param.v:18:31
+  run[A, B](some: A, handler: B->none): none
+                              ~
+
+Pass reify failed with 2 errors!
+
