@@ -732,6 +732,52 @@ namespace vc
               }
             }
           }
+
+          // VarDef refinement: VarDef types are emitted in the first pass
+          // body walk using local_types observed at that time. If a var's
+          // type couldn't be tracked then (e.g., because a CallDyn's
+          // receiver was a not-yet-reified lambda), the first-pass fallback
+          // emitted Dyn. Now that the second pass has refined local_types,
+          // update VarDef types from the aggregated label exits.
+          //
+          // This is the Dyn-rule fix at site VarDef (line ~3558): when the
+          // second pass produces a concrete type for a var that the first
+          // pass left as Dyn, replace the Dyn with the concrete type.
+          {
+            std::map<Location, Node> aggregated;
+
+            for (auto& [lbl_loc, env] : label_exits)
+            {
+              for (auto& [var_loc, type] : env)
+              {
+                auto it = aggregated.find(var_loc);
+                if (it == aggregated.end())
+                  aggregated[var_loc] = clone(type);
+                else
+                  aggregated[var_loc] =
+                    merge_refined_type(it->second, type);
+              }
+            }
+
+            auto vars_node = func / Vars;
+
+            for (auto& vd : *vars_node)
+            {
+              auto loc = (vd / LocalId)->location();
+              auto it = aggregated.find(loc);
+              if (it == aggregated.end())
+                continue;
+              if (it->second == Dyn)
+                continue;
+
+              auto old_type = vd / Type;
+              if (old_type->equals(it->second))
+                continue;
+
+              vd->replace(old_type, clone(it->second));
+              changed = true;
+            }
+          }
         }
 
       } while (changed);
@@ -3626,6 +3672,11 @@ namespace vc
       }
 
       // Build VarDef nodes with types from local_types.
+      // Note: a var without a local_types entry here is an intermediate
+      // marker — the first-pass body walk couldn't track it, typically
+      // because of a CallDyn whose receiver class is a not-yet-reified
+      // lambda with TypeVar return. The second pass refines this VarDef
+      // type from aggregated label_exits (see line ~723 in run()).
       for (auto& loc : var_locs)
       {
         auto it = local_types.find(loc);
