@@ -2685,7 +2685,7 @@ namespace vc
             break;
           auto& r = r_vec[ri];
 
-          if (!r.reification || !r.id)
+          if (!r.id)
             continue;
 
           if ((r.def / Shape) == Shape)
@@ -2705,34 +2705,108 @@ namespace vc
           if (!matches)
             continue;
 
-          auto methods = r.reification / Methods;
+          Node ret;
 
-          for (auto& m : *methods)
+          if (r.reification)
           {
-            if ((m / MethodId)->location().view() == method_id)
+            auto methods = r.reification / Methods;
+
+            for (auto& m : *methods)
             {
-              auto ret = find_func_return_type(m / FunctionId);
-
-              if (!ret)
-                break;
-
-              bool dup = false;
-
-              for (auto& existing : ret_types)
+              if ((m / MethodId)->location().view() == method_id)
               {
-                if (existing->equals(ret))
+                ret = find_func_return_type(m / FunctionId);
+                break;
+              }
+            }
+          }
+          else
+          {
+            // Pending class — its r.reification hasn't been built yet
+            // (drain_worklist hasn't reached it). Resolve the method via
+            // method_invocations: for any MI that targets this class with
+            // the right method_id, find the matching Function in the
+            // class's ClassBody, build the func subst (mirroring
+            // register_method), and look up the return type via
+            // find_func_return_type. This avoids the Dyn-fallback that
+            // would otherwise leak into IR (Dyn-rule, see AGENTS.md).
+            for (auto& mi : method_invocations)
+            {
+              if (mi.method_id != method_id)
+                continue;
+
+              if (!mi_targets(mi, r.id))
+                continue;
+
+              for (auto& f : *(r.def / ClassBody))
+              {
+                if (f != Function)
+                  continue;
+
+                if ((f / Ident)->location().view() != mi.name)
+                  continue;
+
+                if ((f / Lhs)->type() != mi.hand)
+                  continue;
+
+                if ((f / Params)->size() != mi.arity)
+                  continue;
+
+                auto func_tps = f / TypeParams;
+
+                if (func_tps->size() != mi.typeargs->size())
+                  continue;
+
+                NodeMap<Node> combined = mi.call_subst;
+
+                for (auto& [k, v] : r.subst)
+                  combined.insert_or_assign(k, v);
+
+                NodeMap<Node> func_subst = r.subst;
+
+                for (size_t i = 0; i < func_tps->size(); i++)
                 {
-                  dup = true;
-                  break;
+                  auto ta = mi.typeargs->at(i);
+
+                  if (ta == Type)
+                    func_subst[func_tps->at(i)] = reify_type(ta, combined);
                 }
+
+                // Compute the return type directly without queueing the
+                // function for reification — find_method_return_type is
+                // a query, not a registration. Return type is wfType,
+                // built by reify_emitted_type from the function's
+                // declared return type and the call subst.
+                auto def_type = f / Type;
+
+                if (def_type->front() != TypeVar)
+                  ret = reify_emitted_type(
+                    def_type, func_subst, f / Ident, "return type");
+
+                break;
               }
 
-              if (!dup)
-                ret_types.push_back(ret);
+              if (ret)
+                break;
+            }
+          }
 
+          if (!ret)
+            continue;
+
+          bool dup = false;
+
+          for (auto& existing : ret_types)
+          {
+            if (existing->equals(ret))
+            {
+              dup = true;
               break;
             }
           }
+
+          if (!dup)
+            ret_types.push_back(ret);
         }
       }
 
