@@ -1045,6 +1045,15 @@ namespace vc
 
     std::map<Location, LookupInfo> lookup_info;
 
+    // Phase 3b.5 (b): concrete-receiver taint tracking. A local is
+    // tainted if its tracked type came from a CallDyn whose receiver
+    // was non-concrete (Dyn or contained a TypeId/shape). Such types
+    // can change as new classes are reified later, so they're not safe
+    // body-driven evidence (plan v27 "Restriction: admissible only from
+    // concrete-receiver dispatches"). Taint propagates via Copy/Move.
+    // Cleared per reify_function (same lifetime as local_types).
+    std::set<Location> tainted_locals;
+
     // Drive the NodeWorker until all reifications are Resolved (or
     // Blocked due to mutual recursion — Phase 3b.4 handles that).
     // Each find_or_push call may add new work items via worker->add()
@@ -2984,6 +2993,7 @@ namespace vc
       // Clear per-function local type tracking.
       local_types.clear();
       lookup_info.clear();
+      tainted_locals.clear();
 
       // Reify the function signature.
       auto def_type = r.def / Type;
@@ -3002,6 +3012,51 @@ namespace vc
         if (r.subst.find(tp) == r.subst.end())
           unbound_formals.push_back(tp);
       }
+
+      // Phase 3b.5 (a): U-mention scan. Walk the function body. For each
+      // unbound formal U, refuse body-driven binding if U is referenced
+      // outside an admitted site (a TypeAssertion's Type with bare U).
+      // Non-admitted positions: U inside Union/array[U]/etc.; U as an
+      // explicit TypeArg to a generic call; U inside a New / NewArray
+      // type; etc. Refusing here means the formal stays unbound and the
+      // post-binding error path emits a clear "cannot be inferred"
+      // message, rather than producing IR with stale TypeVar references.
+      std::set<Node> refused_formals;
+      if (!unbound_formals.empty())
+      {
+        for (auto& l : *(r.def / Labels))
+        {
+          (l / Body)->traverse([&](Node& n) {
+            if (n != TypeName)
+              return true;
+            auto def = find_def(top, n);
+            if (!def || def != TypeParam)
+              return true;
+            // Is this a formal we care about?
+            bool is_unbound_formal = false;
+            for (auto& f : unbound_formals)
+            {
+              if (def == f)
+              {
+                is_unbound_formal = true;
+                break;
+              }
+            }
+            if (!is_unbound_formal)
+              return true;
+            // Admitted iff parent is Type and grandparent is
+            // TypeAssertion (i.e., `var x: <bare-U>` or `let x: U = ...`).
+            auto parent = n->parent();
+            auto grandparent = parent ? parent->parent() : Node{};
+            if (parent == Type && grandparent == TypeAssertion)
+              return true;
+            // Non-admitted use of the formal in the body. Refuse.
+            refused_formals.insert(def);
+            return true;
+          });
+        }
+      }
+
       bool body_driven = !typevar_return && !unbound_formals.empty() &&
         has_unresolved_type(def_type, r.subst);
 
@@ -3246,10 +3301,16 @@ namespace vc
           else if (n->in({Copy, Move}))
           {
             // Propagate type from source to destination.
-            auto src_it = local_types.find((n / Rhs)->location());
+            auto src_loc = (n / Rhs)->location();
+            auto dst_loc = (n / LocalId)->location();
+            auto src_it = local_types.find(src_loc);
 
             if (src_it != local_types.end())
-              local_types[(n / LocalId)->location()] = clone(src_it->second);
+              local_types[dst_loc] = clone(src_it->second);
+
+            // Phase 3b.5 (b): propagate concrete-receiver taint.
+            if (tainted_locals.count(src_loc))
+              tainted_locals.insert(dst_loc);
           }
           else if (n == RegisterRef)
           {
@@ -3464,6 +3525,7 @@ namespace vc
             // Track CallDyn return type by resolving the method on
             // the receiver's reified class.
             auto src_loc = (n / Rhs)->location();
+            auto dst_loc = (n / LocalId)->location();
             auto li = lookup_info.find(src_loc);
             if (li != lookup_info.end())
             {
@@ -3485,7 +3547,19 @@ namespace vc
                 }
 
                 if (ret)
-                  local_types[(n / LocalId)->location()] = ret;
+                  local_types[dst_loc] = ret;
+
+                // Phase 3b.5 (b): mark the result tainted if the
+                // receiver type was non-concrete (Dyn or contains a
+                // shape TypeId, or the receiver itself is tainted).
+                // Tainted CallDyn results aren't admitted as body-
+                // driven evidence — their target set can grow as new
+                // classes are reified.
+                if (
+                  contains_dyn(recv_it->second) ||
+                  contains_typeid(recv_it->second) ||
+                  tainted_locals.count(li->second.recv_loc))
+                  tainted_locals.insert(dst_loc);
               }
             }
           }
@@ -3809,10 +3883,98 @@ namespace vc
       // against the declared return type's concrete (non-formal-bare)
       // alternatives (those are matched by the union's concrete arms;
       // remaining evidence types belong to the bare-formal arm).
+      // Phase 3b.4 / 3b.5: body-driven binding. After the body walk, bind
+      // each unbound formal U_k from "body evidence" — types tracked at
+      // admitted body sites that attribute to U_k. Skipping rules:
+      //  - tainted (concrete-receiver rule, Phase 3b.5 b): a local whose
+      //    tracked type came from a CallDyn over a non-concrete receiver
+      //    is not safe evidence (target set can grow as new classes
+      //    reify).
+      //  - refused (U-mention scan, Phase 3b.5 a): a formal mentioned in
+      //    a non-admitted body position is not bound from any evidence;
+      //    the user must supply an explicit type argument.
+      //  - intermediate TypeVar marker: the body walk hasn't determined
+      //    the type yet (e.g., pending lambda apply). Not evidence.
+      // For multi-unbound formals (Phase 3b.5 d): each formal gets its
+      // own evidence list. Return-statement evidence is attributed to a
+      // unique unbound bare-formal alternative of the declared return
+      // type; if multiple unbound bare-formal alts exist, return
+      // evidence is ambiguous and refused. var-evidence is attributed
+      // directly to the formal recorded at the TypeAssertion site.
       if (body_driven)
       {
-        Nodes evidence;
+        NodeMap<Nodes> evidence_per_formal;
 
+        // var-evidence: directly attributed by var_to_formal.
+        for (auto& [var_loc, formal] : var_to_formal)
+        {
+          if (refused_formals.count(formal))
+            continue;
+          if (tainted_locals.count(var_loc))
+            continue;
+          auto it = local_types.find(var_loc);
+          if (it == local_types.end())
+            continue;
+          if (it->second == TypeVar)
+            continue;
+          auto& list = evidence_per_formal[formal];
+          bool dup = false;
+          for (auto& existing : list)
+          {
+            if (existing->equals(it->second))
+            {
+              dup = true;
+              break;
+            }
+          }
+          if (!dup)
+            list.push_back(clone(it->second));
+        }
+
+        // Categorize def_type's union alternatives as concrete or
+        // bare-formal (unbound formal alone). Bare-formal alts capture
+        // Return-evidence attribution.
+        auto inner = (def_type == Type) ? def_type->front() : def_type;
+        Nodes concrete_alts;
+        NodeMap<Node> bare_unbound_alts; // formal_def → alt (TypeName)
+
+        auto categorize_alt = [&](Node alt) {
+          auto inner_alt = (alt == Type) ? alt->front() : alt;
+          if (inner_alt == TypeName)
+          {
+            auto def = find_def(top, inner_alt);
+            if (def && def == TypeParam)
+            {
+              for (auto& f : unbound_formals)
+              {
+                if (def == f)
+                {
+                  if (!refused_formals.count(f))
+                    bare_unbound_alts[f] = clone(alt);
+                  return;
+                }
+              }
+            }
+          }
+          // Concrete (or formal-but-bound) — reify and add.
+          Node alt_t = (alt == Type) ? clone(alt) : Type << clone(alt);
+          if (!has_unresolved_type(alt_t, r.subst))
+            concrete_alts.push_back(reify_type(alt_t, r.subst));
+        };
+
+        if (inner == Union)
+        {
+          for (auto& alt : *inner)
+            categorize_alt(alt);
+        }
+        else
+        {
+          // Single alternative (non-union return type).
+          categorize_alt(def_type);
+        }
+
+        // Return evidence: attribute each Return's tracked type to the
+        // unique bare-unbound formal alternative, if any.
         for (auto& l : *labels)
         {
           auto term = l / Return;
@@ -3820,101 +3982,70 @@ namespace vc
             continue;
 
           auto ret_loc = (term / LocalId)->location();
+          if (tainted_locals.count(ret_loc))
+            continue;
           auto it = local_types.find(ret_loc);
           if (it == local_types.end())
             continue;
-
-          // Skip the intermediate TypeVar marker (refinement pending);
-          // it doesn't constitute body evidence.
           if (it->second == TypeVar)
             continue;
 
-          bool dup = false;
-          for (auto& existing : evidence)
-          {
-            if (existing->equals(it->second))
-            {
-              dup = true;
-              break;
-            }
-          }
-          if (!dup)
-            evidence.push_back(clone(it->second));
-        }
-
-        // Phase 3b.4.3: var x: U initializer evidence. For each TypeAssertion
-        // recorded as `var x: <unbound formal>`, the var's tracked type
-        // from local_types is body evidence for that formal.
-        for (auto& [var_loc, formal] : var_to_formal)
-        {
-          auto it = local_types.find(var_loc);
-          if (it == local_types.end())
-            continue;
-          if (it->second == TypeVar)
-            continue;
-
-          bool dup = false;
-          for (auto& existing : evidence)
-          {
-            if (existing->equals(it->second))
-            {
-              dup = true;
-              break;
-            }
-          }
-          if (!dup)
-            evidence.push_back(clone(it->second));
-        }
-
-        // Filter evidence against concrete (non-unbound) alternatives of
-        // the declared return type. Anything matching a concrete alt is
-        // attributed to that alt, not to a formal.
-        auto inner = (def_type == Type) ? def_type->front() : def_type;
-        Nodes concrete_alts;
-        if (inner == Union)
-        {
-          for (auto& alt : *inner)
-          {
-            // An alt is "concrete" if reifying it under r.subst doesn't
-            // leak an unresolved formal.
-            Node alt_t = (alt == Type) ? clone(alt) : Type << clone(alt);
-            if (has_unresolved_type(alt_t, r.subst))
-              continue;
-            concrete_alts.push_back(reify_type(alt_t, r.subst));
-          }
-        }
-
-        Nodes filtered;
-        for (auto& ev : evidence)
-        {
+          // Drop if matches a concrete alt (attributed to that arm).
           bool matches_concrete = false;
           for (auto& c : concrete_alts)
           {
-            if (c->equals(ev))
+            if (c->equals(it->second))
             {
               matches_concrete = true;
               break;
             }
           }
-          if (!matches_concrete)
-            filtered.push_back(clone(ev));
+          if (matches_concrete)
+            continue;
+
+          // If exactly one bare-unbound formal alt, attribute to it.
+          if (bare_unbound_alts.size() == 1)
+          {
+            auto& formal = bare_unbound_alts.begin()->first;
+            auto& list = evidence_per_formal[formal];
+            bool dup = false;
+            for (auto& existing : list)
+            {
+              if (existing->equals(it->second))
+              {
+                dup = true;
+                break;
+              }
+            }
+            if (!dup)
+              list.push_back(clone(it->second));
+          }
+          // Multiple bare-unbound alts: ambiguous. Refuse all of them
+          // for Return-evidence attribution. (var-evidence still works
+          // since it's attributed by site.)
+          else if (bare_unbound_alts.size() > 1)
+          {
+            for (auto& [formal, _] : bare_unbound_alts)
+              refused_formals.insert(formal);
+          }
         }
 
-        // Bind unbound formals from the LUB of filtered evidence.
-        // For now: support a single unbound formal. Multiple unbound
-        // formals in the return type would need positional matching
-        // (future work).
-        if (unbound_formals.size() == 1 && !filtered.empty())
+        // Bind each formal to the LUB of its evidence list.
+        for (auto& [formal, ev_list] : evidence_per_formal)
         {
-          auto formal = unbound_formals.front();
+          if (refused_formals.count(formal))
+            continue;
+          if (ev_list.empty())
+            continue;
+
           Node lub;
-          if (filtered.size() == 1)
-            lub = clone(filtered.front());
+          if (ev_list.size() == 1)
+            lub = clone(ev_list.front());
           else
           {
             lub = Union;
-            for (auto& f : filtered)
-              lub << clone(f);
+            for (auto& e : ev_list)
+              lub << clone(e);
           }
           r.subst[formal] = Type << lub;
         }
