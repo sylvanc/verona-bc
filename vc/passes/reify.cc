@@ -803,6 +803,22 @@ namespace vc
               def_params->at(i) / Ident, "parameter type");
           }
         }
+
+        // Safety net for the TypeVar VarDef intermediate marker
+        // (line ~3672). The second-pass refinement at line ~735 should
+        // have replaced TypeVar with the concrete aggregate type. If
+        // any TypeVar persists here, the var was genuinely untrackable —
+        // emit an error and convert to Dyn so wfType validates.
+        auto vars_node = r->reification / Vars;
+        for (auto& vd : *vars_node)
+        {
+          auto vt = vd / Type;
+          if (vt == TypeVar)
+          {
+            emit_unresolved_type_error(r->def / Ident, "var type");
+            vd->replace(vt, clone(Dyn));
+          }
+        }
       }
 
       resolve_shapes();
@@ -3672,15 +3688,17 @@ namespace vc
       }
 
       // Build VarDef nodes with types from local_types.
-      // Note: a var without a local_types entry here is an intermediate
-      // marker — the first-pass body walk couldn't track it, typically
-      // because of a CallDyn whose receiver class is a not-yet-reified
-      // lambda with TypeVar return. The second pass refines this VarDef
-      // type from aggregated label_exits (see line ~723 in run()).
+      // For vars whose type couldn't be tracked in this first-pass body
+      // walk (typically: a CallDyn whose receiver class is a not-yet-
+      // reified lambda with TypeVar return), emit `TypeVar` as a clear
+      // intermediate marker. The second pass refines from label_exits
+      // and replaces TypeVar with the concrete aggregate type. A
+      // post-pass scan converts any remaining TypeVar to Dyn + emits
+      // an error so wfType validates.
       for (auto& loc : var_locs)
       {
         auto it = local_types.find(loc);
-        Node var_type = (it != local_types.end()) ? clone(it->second) : Dyn;
+        Node var_type = (it != local_types.end()) ? clone(it->second) : TypeVar;
         vars << (VarDef << (LocalId ^ loc) << var_type);
       }
 
