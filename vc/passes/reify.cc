@@ -1,6 +1,7 @@
 #include "../lang.h"
 #include "../subtype.h"
 
+#include <trieste/nodeworker.h>
 #include <vbcc/irsubtype.h>
 
 namespace vc
@@ -284,6 +285,11 @@ namespace vc
       top = top_;
       builtin = top->look(Location("_builtin")).front();
 
+      // Initialize the NodeWorker driver. The Work struct holds a back-
+      // pointer to this Reifier so process() can dispatch to
+      // reify_class / reify_function / reify_typealias.
+      worker = std::make_unique<NodeWorker<ReifyWork>>(ReifyWork{this});
+
       // Create a call to main and reify it.
       auto main_module = top->front();
       assert(main_module == ClassDef);
@@ -323,16 +329,15 @@ namespace vc
       // Iteratively reify classes/aliases/functions. Method registrations
       // happen inline: reify_class registers all existing MIs on the new
       // class, and reify_lookup registers the new MI on all existing classes.
-      std::vector<Reification*> deferred_typevar;
-      drain_worklist(deferred_typevar);
+      drain_worklist();
       resolve_shapes();
       prune_empty_shape_unions();
       process_pending_callbacks(false);
-      drain_worklist(deferred_typevar);
+      drain_worklist();
       resolve_shapes();
       prune_empty_shape_unions();
       process_pending_callbacks(true);
-      drain_worklist(deferred_typevar);
+      drain_worklist();
 
       std::vector<Reification*> reified_functions;
 
@@ -971,11 +976,42 @@ namespace vc
       bool required;
     };
 
+    // Forward struct for the NodeWorker driver. ReifyWork is the Work
+    // type for NodeWorker<ReifyWork>; per-reification state is keyed by
+    // Reification.id and carries a back-pointer to the Reification.
+    // Implemented after Reifier so its methods can call back into
+    // Reifier-side dispatch (reify_class / reify_function / reify_typealias).
+    struct ReifyWork
+    {
+      Reifier* outer{nullptr};
+
+      struct State : NodeWorkerState
+      {
+        Reification* reif{nullptr};
+      };
+
+      void seed(const Node& /*id*/, State& /*s*/) {}
+
+      bool process(const Node& id, NodeWorker<ReifyWork>& worker);
+    };
+
     Node top;
     Node builtin;
     NodeMap<std::deque<Reification>> map;
     std::vector<Node> map_order;
-    std::vector<Reification*> worklist;
+    // NodeWorker driver. Each Reification is a work item keyed by
+    // Reification.id (the canonical id Node from make_id). Replaces the
+    // legacy std::vector<Reification*> worklist + drain_worklist loop;
+    // gives explicit dependency tracking via block_on for mutual /
+    // forward-reference scenarios. State holds a back-pointer to the
+    // Reification so process() can dispatch to reify_class /
+    // reify_function / reify_typealias.
+    std::unique_ptr<NodeWorker<ReifyWork>> worker;
+    // Reifications that had a TypeVar return type in their source def.
+    // Populated by ReifyWork::process when reify_function completes.
+    // Used by the post-worklist refinement loop and unresolved-return
+    // error scan.
+    std::vector<Reification*> deferred_typevar;
     std::map<Location, Node> libs;
     NodeMap<Node> init_sources;
     std::set<Node> processed_initfini;
@@ -998,34 +1034,48 @@ namespace vc
       std::string method_id;
       Location recv_loc;
     };
+    // Register a Reification with the NodeWorker. Sets the back-pointer
+    // so process() can dispatch on def kind. Idempotent: calling add()
+    // again on an already-seeded id is a no-op (NodeWorker checks).
+    void register_with_worker(Reification* r)
+    {
+      worker->add(r->id);
+      worker->state(r->id).reif = r;
+    }
+
     std::map<Location, LookupInfo> lookup_info;
 
-    void drain_worklist(std::vector<Reification*>& deferred_typevar)
+    // Drive the NodeWorker until all reifications are Resolved (or
+    // Blocked due to mutual recursion — Phase 3b.4 handles that).
+    // Each find_or_push call may add new work items via worker->add()
+    // during processing; the worker's worklist handles re-entry.
+    void drain_worklist()
     {
-      while (!worklist.empty())
+      worker->run();
+    }
+
+    // Per-Reification dispatcher. Called once per work item by
+    // ReifyWork::process. Mirrors the legacy drain_worklist body.
+    void process_reification(Reification& r)
+    {
+      if (r.def == ClassDef)
+        reify_class(r);
+      else if (r.def == TypeAlias)
+        reify_typealias(r);
+      else if (r.def == Function)
       {
-        auto r = worklist.back();
-        worklist.pop_back();
+        reify_function(r);
 
-        if (r->def == ClassDef)
-          reify_class(*r);
-        else if (r->def == TypeAlias)
-          reify_typealias(*r);
-        else if (r->def == Function)
-        {
-          reify_function(*r);
-
-          // If the function had a TypeVar return in the def, defer it
-          // for a second pass when all callees are reified. The first
-          // pass may have produced a partial return type (e.g., nomatch
-          // from match arms when the main arm's CallDyn wasn't tracked).
-          if (r->reification && (r->def / Type)->front() == TypeVar)
-            deferred_typevar.push_back(r);
-        }
-        else
-        {
-          assert(false);
-        }
+        // If the function had a TypeVar return in the def, defer it
+        // for a second pass when all callees are reified. The first
+        // pass may have produced a partial return type (e.g., nomatch
+        // from match arms when the main arm's CallDyn wasn't tracked).
+        if (r.reification && (r.def / Type)->front() == TypeVar)
+          deferred_typevar.push_back(&r);
+      }
+      else
+      {
+        assert(false);
       }
     }
 
@@ -1639,7 +1689,7 @@ namespace vc
              std::move(id),
              {},
              std::move(resolved_name)});
-          worklist.push_back(&r_vec.back());
+          register_with_worker(&r_vec.back());
           return clone(r_vec.back().id);
         }
       }
@@ -1705,7 +1755,7 @@ namespace vc
 
       r_vec.push_back(
         {def, std::move(subst), std::move(id), {}, std::move(resolved_name)});
-      worklist.push_back(&r_vec.back());
+      register_with_worker(&r_vec.back());
       return clone(r_vec.back().id);
     }
 
@@ -4177,7 +4227,7 @@ namespace vc
 
       r_vec.push_back(
         {ref_def, std::move(subst), std::move(expected_id), {}, {}});
-      worklist.push_back(&r_vec.back());
+      register_with_worker(&r_vec.back());
     }
 
     // Ensure that the array wrapper class is reified for a given element type.
@@ -5220,6 +5270,15 @@ namespace vc
       return {};
     }
   };
+
+  inline bool Reifier::ReifyWork::process(
+    const Node& id, NodeWorker<Reifier::ReifyWork>& worker)
+  {
+    auto& s = worker.state(id);
+    assert(s.reif != nullptr);
+    outer->process_reification(*s.reif);
+    return true;
+  }
 
   PassDef reify()
   {
