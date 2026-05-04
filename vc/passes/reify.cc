@@ -3005,6 +3005,12 @@ namespace vc
       bool body_driven = !typevar_return && !unbound_formals.empty() &&
         has_unresolved_type(def_type, r.subst);
 
+      // Phase 3b.4.3: var x: U evidence. Track each `var x: U` site
+      // (TypeAssertion whose Type is a bare unbound formal). After body
+      // walk, the var's tracked type from local_types is admitted as
+      // body evidence for that formal.
+      std::map<Location, Node> var_to_formal;
+
       Node r_type;
 
       if (typevar_return || body_driven)
@@ -3402,11 +3408,28 @@ namespace vc
           }
           else if (n == TypeAssertion)
           {
-            // Phase 2 stub: TypeAssertions are now preserved past infer
-            // and reach reify. Reify will eventually use them as
-            // constraint sources for body-driven type-arg inference
-            // (Phase 3); for now, just strip them so the body satisfies
-            // wfIR.
+            // Phase 3b.4.3 body-driven binding: detect `var x: U` sites
+            // where U is an unbound formal (bare TypeName referencing
+            // it). Record the local for later evidence gathering.
+            if (body_driven)
+            {
+              auto t = (n / Type)->front();
+              if (t == TypeName)
+              {
+                auto def = find_def(top, t);
+                if (def && def == TypeParam)
+                {
+                  for (auto& f : unbound_formals)
+                  {
+                    if (f.get() == def.get())
+                    {
+                      var_to_formal[(n / LocalId)->location()] = def;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
             remove.push_back(n);
           }
           else if (n->in({New, Stack}))
@@ -3803,6 +3826,30 @@ namespace vc
 
           // Skip the intermediate TypeVar marker (refinement pending);
           // it doesn't constitute body evidence.
+          if (it->second == TypeVar)
+            continue;
+
+          bool dup = false;
+          for (auto& existing : evidence)
+          {
+            if (existing->equals(it->second))
+            {
+              dup = true;
+              break;
+            }
+          }
+          if (!dup)
+            evidence.push_back(clone(it->second));
+        }
+
+        // Phase 3b.4.3: var x: U initializer evidence. For each TypeAssertion
+        // recorded as `var x: <unbound formal>`, the var's tracked type
+        // from local_types is body evidence for that formal.
+        for (auto& [var_loc, formal] : var_to_formal)
+        {
+          auto it = local_types.find(var_loc);
+          if (it == local_types.end())
+            continue;
           if (it->second == TypeVar)
             continue;
 
