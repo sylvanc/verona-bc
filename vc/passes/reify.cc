@@ -600,7 +600,7 @@ namespace vc
                       {
                         auto ret = find_method_return_type(targets);
 
-                        if (ret && (ret != Dyn))
+                        if (ret && (ret != Dyn) && (ret != TypeVar))
                         {
                           Node new_cown = Cown << clone(ret);
 
@@ -630,13 +630,14 @@ namespace vc
 
                     bool needs_refresh = (cown_type == Cown) &&
                       ((cown_type->front() == Dyn) ||
+                       (cown_type->front() == TypeVar) ||
                        ((target->def / Type)->front() == TypeVar));
 
                     if (needs_refresh)
                     {
                       Node ret = target->reification / Type;
 
-                      if (ret && (ret != Dyn))
+                      if (ret && (ret != Dyn) && (ret != TypeVar))
                       {
                         Node new_cown = Cown << clone(ret);
 
@@ -784,8 +785,14 @@ namespace vc
 
       for (auto r : deferred_typevar)
       {
-        if (r->reification && ((r->reification / Type) == Dyn))
+        if (r->reification && ((r->reification / Type) == TypeVar))
+        {
           emit_unresolved_type_error(r->def / Ident, "return type");
+          // Convert to Dyn so wfType validates; the error already fails
+          // the compile.
+          auto t = r->reification / Type;
+          r->reification->replace(t, clone(Dyn));
+        }
       }
 
       for (auto r : reified_functions)
@@ -817,6 +824,30 @@ namespace vc
           {
             emit_unresolved_type_error(r->def / Ident, "var type");
             vd->replace(vt, clone(Dyn));
+          }
+        }
+
+        // Safety net for the TypeVar WhenDyn cown intermediate marker
+        // (line ~4839). Walk the function body, find any WhenDyn whose
+        // cown content is still TypeVar, emit an error and convert to
+        // Dyn for wfType validity. The second-pass refinement at line
+        // ~640 should have replaced TypeVar by now.
+        auto labels = r->reification / Labels;
+        for (auto& lbl : *labels)
+        {
+          auto body = lbl / Body;
+          for (auto& stmt : *body)
+          {
+            if (stmt != WhenDyn)
+              continue;
+            auto cown = stmt / Cown;
+            if ((cown == Cown) && (cown->front() == TypeVar))
+            {
+              emit_unresolved_type_error(
+                r->def / Ident, "when block return type");
+              auto tv = cown->front();
+              cown->replace(tv, clone(Dyn));
+            }
           }
         }
       }
@@ -3657,14 +3688,16 @@ namespace vc
           }
         }
 
-        // Last resort: mark as Dyn and let the deferred-typevar second
-        // pass try to refine it once all callees are reified. The
-        // post-worklist check at line ~739 emits an unresolved-return
-        // error if r_type is still Dyn after all refinement attempts.
-        // Only reached for typevar_return functions (lambdas) where the
-        // first body walk couldn't determine the return type.
+        // Last resort: mark as TypeVar (intermediate marker) and let the
+        // deferred-typevar second pass try to refine it once all callees
+        // are reified. The post-worklist check at line ~787 emits an
+        // unresolved-return error if r_type is still TypeVar after all
+        // refinement attempts. Only reached for typevar_return functions
+        // (lambdas) where the first body walk couldn't determine the
+        // return type. TypeVar (not Dyn) is the principled marker per
+        // AGENTS.md: Dyn is reserved for the IR encoding of `any`.
         if (!r_type)
-          r_type = Dyn;
+          r_type = TypeVar;
       }
 
       // Implicit none return: when a function returns none, append a
@@ -4818,17 +4851,14 @@ namespace vc
           }
         }
 
-        // KNOWN ISSUE (Dyn-rule violation, see AGENTS.md): when_type is
-        // TypeVar AND find_method_return_type couldn't resolve the lambda's
-        // apply. This happens when the lambda's apply method hasn't been
-        // reified yet at WhenDyn-handling time. Affects generic_when,
-        // iowise_regression, when_match_before_send. Proper fix: ensure
-        // the apply is reified first (ordering) or re-resolve in a
-        // post-pass. Falling back to Dyn here means the cown's content
-        // type is dyn in IR — match arms that destructure it dispatch
-        // dynamically at runtime. Tracked for follow-up.
+        // Intermediate marker: WhenDyn cown content is unresolved at this
+        // first-pass time (lambda's apply isn't yet reified). Use TypeVar
+        // (not Dyn) so the second-pass refinement at line ~588 can detect
+        // and replace it. Dyn is reserved for the IR encoding of `any`
+        // per AGENTS.md. A post-pass safety net at line ~810 catches any
+        // remaining TypeVar in WhenDyn cowns and emits an error.
         if (!inner_type)
-          inner_type = Dyn;
+          inner_type = TypeVar;
       }
 
       auto dst_loc = (n / LocalId)->location();
