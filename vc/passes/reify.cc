@@ -5122,6 +5122,13 @@ namespace vc
             // Substitute any TypeParam references in the TypeArg using the
             // full resolution context, to avoid self-referential cycles.
             auto arg = ta->at(i);
+            // Phase 3.5: skip TypeVar-valued TypeArgs (formals left
+            // unbound by partial infer_typeargs). Treat as "not in
+            // subst" so reify_typename surfaces a clean compile error
+            // when the formal is referenced and Phase 3.5 hasn't bound
+            // it from body evidence.
+            if (arg == Type && arg->front() == TypeVar)
+              continue;
             auto resolved = resolve_typearg(arg, resolve_subst);
             r.subst[tps->at(i)] = resolved;
             resolve_subst[tps->at(i)] = resolved;

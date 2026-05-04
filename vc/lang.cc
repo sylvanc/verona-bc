@@ -213,7 +213,12 @@ namespace vc
       if (def && def == TypeParam)
       {
         auto it = subst.find(def);
-        if (it != subst.end())
+        // Skip TypeVar-valued subst entries (Phase 3.5 — TypeVar means
+        // "no observation yet"). Fall through to rebuild the TypeName
+        // so the unbound TypeParam reference is preserved for downstream
+        // (e.g. body-driven binding in reify).
+        if (it != subst.end() &&
+            !(it->second == Type && it->second->front() == TypeVar))
           return clone(it->second);
       }
 

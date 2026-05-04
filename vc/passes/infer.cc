@@ -2658,20 +2658,43 @@ namespace vc
           continue;
       }
 
-      bool all_constrained = true;
-      Node new_ta = TypeArgs;
-      for (auto& tp : *tps)
+      // Partial binding: ADDITIVE — only fill currently-empty/TypeVar
+      // slots. Don't clobber slots that already have a concrete type
+      // from a previous infer pass. If no slot can be advanced, leave
+      // TypeArgs unchanged so downstream inheritance logic in reify
+      // can take over.
+      bool any_advance = false;
+      for (size_t i = 0; i < tps->size(); i++)
       {
-        auto find = constraints.find(tp);
+        auto find = constraints.find(tps->at(i));
         if (find == constraints.end())
+          continue;
+        bool slot_open = (i >= ta->size()) ||
+          (ta->at(i) == Type && ta->at(i)->front() == TypeVar);
+        if (slot_open)
         {
-          all_constrained = false;
+          any_advance = true;
           break;
         }
-        new_ta << clone(find->second.type);
       }
-      if (all_constrained)
-        replace_if_changed(scope.name_elem, ta, new_ta);
+      if (!any_advance)
+        continue;
+
+      Node new_ta = TypeArgs;
+      for (size_t i = 0; i < tps->size(); i++)
+      {
+        auto find = constraints.find(tps->at(i));
+        bool slot_open = (i >= ta->size()) ||
+          (ta->at(i) == Type && ta->at(i)->front() == TypeVar);
+
+        if (slot_open && find != constraints.end())
+          new_ta << clone(find->second.type);
+        else if (i < ta->size())
+          new_ta << clone(ta->at(i));
+        else
+          new_ta << (Type << TypeVar);
+      }
+      replace_if_changed(scope.name_elem, ta, new_ta);
     }
 
     return all_default;
