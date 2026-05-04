@@ -3521,8 +3521,12 @@ namespace vc
           }
         }
 
-        // Last resort: mark as Dyn and let the deferred second pass try to
-        // refine it once all callees are reified.
+        // Last resort: mark as Dyn and let the deferred-typevar second
+        // pass try to refine it once all callees are reified. The
+        // post-worklist check at line ~739 emits an unresolved-return
+        // error if r_type is still Dyn after all refinement attempts.
+        // Only reached for typevar_return functions (lambdas) where the
+        // first body walk couldn't determine the return type.
         if (!r_type)
           r_type = Dyn;
       }
@@ -3717,9 +3721,13 @@ namespace vc
       if (type == Cown)
         return Cown << reify_type(type->front(), subst);
 
-      // TypeVar that wasn't resolved during inference (e.g., in a generic
-      // context). Return Dyn as a fallback — the caller should handle this
-      // or the second pass will resolve it.
+      // TypeVar that wasn't resolved during inference. Per the Dyn-rule
+      // (Dyn is ONLY for `any`), a TypeVar reaching here is an upstream
+      // bug — inference / reify_typename / get_reification should have
+      // emitted an error before reaching this point. Keep the Dyn return
+      // for safety in error-recovery paths, but the assert catches the
+      // case in debug builds where the upstream errors didn't fire.
+      assert(type != TypeVar && "reify_type(TypeVar): unbound formal reached IR boundary");
       if (type == TypeVar)
         return Dyn;
 
@@ -4667,7 +4675,15 @@ namespace vc
           }
         }
 
-        // Fallback: emit Dyn if we couldn't resolve.
+        // KNOWN ISSUE (Dyn-rule violation, see AGENTS.md): when_type is
+        // TypeVar AND find_method_return_type couldn't resolve the lambda's
+        // apply. This happens when the lambda's apply method hasn't been
+        // reified yet at WhenDyn-handling time. Affects generic_when,
+        // iowise_regression, when_match_before_send. Proper fix: ensure
+        // the apply is reified first (ordering) or re-resolve in a
+        // post-pass. Falling back to Dyn here means the cown's content
+        // type is dyn in IR — match arms that destructure it dispatch
+        // dynamically at runtime. Tracked for follow-up.
         if (!inner_type)
           inner_type = Dyn;
       }
