@@ -77,6 +77,26 @@ user-invocable: false
 - `assert()` liberally for invariants.
 - Errors are AST nodes, not exceptions.
 
+## Type System Hard Rule: NEVER use `Dyn` as a fallback
+
+`Dyn` is **only** the IR/runtime implementation of the `any` shape. It is the
+real top type. It is not a placeholder, not a fallback, not a "we don't know
+yet" marker. Specifically:
+
+- **TypeVar** is the inference unknown. If a formal can't be bound, the result
+  is a hard compile error pointing at the formal and asking the user to
+  provide an explicit type argument.
+- Reify must NOT silently widen unbound formals to Dyn. Sites like
+  `reify_typename`, `reify_type`, `find_method_return_type`, `merge_refined_type`,
+  and IR-emission boundaries (Param, VarDef, return type) must surface unbound
+  cases as compile errors — not as Dyn.
+- A failure to compile is a FAILURE, not an excuse to do a shitty job. Do not
+  commit code that "works" only because Dyn-typed return values happen to
+  dispatch dynamically at runtime.
+
+When you see Dyn in a fallback path that means "we don't know", treat it as a
+bug to fix.
+
 ## Adding New Ops/Builtins
 
 Adding a new bytecode op requires updates in ~15 places across the codebase. Use this checklist:

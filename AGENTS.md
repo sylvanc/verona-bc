@@ -103,7 +103,7 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
   - **freeze_local**: Freezes frame-local objects in place, then delegates heap sub-regions to `freeze()` in phase 2. `freeze()` delegates frame-local roots to `freeze_local()`.
   - **Use-after-move in write barrier**: When `apply_in` needs the header for `set_parent`, save it BEFORE the register is cleared (move semantics). Use `content.get_header()` not `next->get_header()` after extract.
   - **clear_cown_owner auto-free**: `clear_cown_owner()` now auto-frees like `clear_parent()` (calls `free_region()` if `stack_rc == 0`). Callers that need to prevent premature free must `stack_inc()` first (cown destructor and exchange already do this).
-- **Type system**: `Dyn` is a top type (`anything <: Dyn`). The bottom type is an empty `Union` (no members). In IRSubtype, the axiom table is keyed by the right operand's type (`r->type()` lookup in `reduce()`).
+- **Type system**: `Dyn` is the top type — but it is **ONLY** the IR/runtime implementation of the `any` shape. NEVER use `Dyn` as a fallback for unresolved or unbound types. `TypeVar` represents "no observation yet" during inference. If inference cannot bind a formal, that is a **hard compile error** that names the formal and tells the user to provide an explicit type argument — not a Dyn widening. This applies in reify_typename, reify_type, find_method_return_type, merge_refined_type, IR-emission boundaries (Param, VarDef, return type), and anywhere else a placeholder might leak. The bottom type is an empty `Union` (no members). In IRSubtype, the axiom table is keyed by the right operand's type (`r->type()` lookup in `reduce()`).
 
 ## Skills
 

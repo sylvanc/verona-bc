@@ -176,8 +176,12 @@ edge or lambda-context edge was never modeled.
 - Do **not** add a one-off special case for a single pair of concrete type
   trees when the real issue is missing contextual checking or subtyping.
 - Do **not** broaden global subtype rules to patch a local inference bug.
-- Do **not** collapse unresolved cases to `any` or `dyn` just to make a later
-  pass accept the program.
+- **Do NOT collapse unresolved cases to `any` or `dyn`.** Period. Not in
+  inference, not in reify, not at IR-emission boundaries, not at runtime
+  dispatch sites. `Dyn` is **only** the IR encoding of the `any` shape. If a
+  formal can't be bound, emit a clear compile error naming the formal and
+  asking for an explicit type argument. A failure to compile is a FAILURE,
+  not an excuse to widen to Dyn.
 - Do **not** ignore lambdas when tracing a supposedly "local" inference issue.
 - Do **not** assume a compile-side improvement is enough; validate runtime too.
 
