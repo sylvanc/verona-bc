@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lang.h"
+#include "typevar.h"
 
 #include <vbcc/sequent.h>
 
@@ -13,6 +14,37 @@ namespace vc
   // Use Subtype(ctx, l, r) instead.
   bool check_shape_subtype(const SequentCtx& ctx, const Node& l, const Node& r);
 
+  // TypeVar atom helper. Consults ctx.constraint_store and ctx.mode:
+  //   - Mode::Emit + store present: emit add_lower / add_upper (or
+  //     unify when both sides are TypeVars) and return {true, true}
+  //     (proof delayed; constraint recorded).
+  //   - Mode::Query or no store: return {true, false} (no emission;
+  //     caller falls back to default axiom semantics).
+  // The first bool is "the lambda handled this case at all" — true
+  // means do not invoke the default axiom; false means delegate.
+  // The second bool, valid only when the first is true, is the
+  // axiom's return value.
+  std::pair<bool, bool>
+  try_typevar_atom(const SequentCtx& ctx, const Node& l, const Node& r);
+
+  // Wraps an existing atom axiom with TypeVar emission preflight.
+  // If either l or r is TypeVar, defers to try_typevar_atom; if it
+  // handles the case, return its result. Otherwise the wrapped
+  // axiom runs unchanged. Used for primitive / TupleType / TypeName
+  // / TypeVar / TypeSelf provability axioms in Subtype.
+  inline Axiom with_typevar(Axiom inner)
+  {
+    return [inner](const SequentCtx& ctx, Node& l, Node& r) -> bool {
+      if (l == TypeVar || r == TypeVar)
+      {
+        auto [handled, ok] = try_typevar_atom(ctx, l, r);
+        if (handled)
+          return ok;
+      }
+      return inner(ctx, l, r);
+    };
+  }
+
   inline const SequentCalculus Subtype{
     {Type},
     {Union, WhereOr},
@@ -20,7 +52,7 @@ namespace vc
     {WhereNot},
     {SubType},
     {
-      TupleType >>
+      TupleType >> with_typevar(
         [](const SequentCtx& ctx, Node& l, Node& r) {
           // Tuples must be the same arity and each element must be a subtype.
           return (l == TupleType) &&
@@ -30,9 +62,9 @@ namespace vc
                    r->begin(),
                    r->end(),
                    [&](auto& t, auto& u) { return Subtype(ctx, t, u); });
-        },
+        }),
 
-      TypeName >>
+      TypeName >> with_typevar(
         [](const SequentCtx& ctx, Node& l, Node& r) {
           if ((l != TypeName) || (r != TypeName))
             return false;
@@ -110,29 +142,29 @@ namespace vc
                 r_ta->end(),
                 [&](auto& t, auto& u) { return Subtype.invariant(ctx, t, u); });
             });
-        },
+        }),
 
       Dyn >> AxiomTrue,
-      None >> AxiomEq,
-      Bool >> AxiomEq,
-      I8 >> AxiomEq,
-      I16 >> AxiomEq,
-      I32 >> AxiomEq,
-      I64 >> AxiomEq,
-      U8 >> AxiomEq,
-      U16 >> AxiomEq,
-      U32 >> AxiomEq,
-      U64 >> AxiomEq,
-      ISize >> AxiomEq,
-      USize >> AxiomEq,
-      ILong >> AxiomEq,
-      ULong >> AxiomEq,
-      F32 >> AxiomEq,
-      F64 >> AxiomEq,
+      None >> with_typevar(AxiomEq),
+      Bool >> with_typevar(AxiomEq),
+      I8 >> with_typevar(AxiomEq),
+      I16 >> with_typevar(AxiomEq),
+      I32 >> with_typevar(AxiomEq),
+      I64 >> with_typevar(AxiomEq),
+      U8 >> with_typevar(AxiomEq),
+      U16 >> with_typevar(AxiomEq),
+      U32 >> with_typevar(AxiomEq),
+      U64 >> with_typevar(AxiomEq),
+      ISize >> with_typevar(AxiomEq),
+      USize >> with_typevar(AxiomEq),
+      ILong >> with_typevar(AxiomEq),
+      ULong >> with_typevar(AxiomEq),
+      F32 >> with_typevar(AxiomEq),
+      F64 >> with_typevar(AxiomEq),
       DefaultInt >> AxiomEq,
       DefaultFloat >> AxiomEq,
-      TypeSelf >> AxiomEq,
-      TypeVar >> AxiomEq,
+      TypeSelf >> with_typevar(AxiomEq),
+      TypeVar >> with_typevar(AxiomEq),
     },
     {
       // TypeSelf is always bound through implications (TypeSelf <: T and

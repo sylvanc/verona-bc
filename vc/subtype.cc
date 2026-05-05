@@ -2,6 +2,60 @@
 
 namespace vc
 {
+  // TypeVar atom helper: see subtype.h for contract.
+  //
+  // Cases (l, r):
+  //   (alpha, beta)  : both TypeVars.
+  //                    - Same Location → unify trivially → {true, true}.
+  //                    - Else, Mode::Emit + store: unify(alpha, beta),
+  //                      return {true, true} (delayed).
+  //                    - Else: not handled → {false, _}; caller falls
+  //                      back to AxiomEq (structural compare, false
+  //                      unless same Location).
+  //   (alpha, T)     : l is TypeVar, r is concrete (or shape).
+  //                    Mode::Emit + store: add_upper(alpha, T), return
+  //                    {true, true}. Else: {false, _}; caller falls
+  //                    back to AxiomEq (false).
+  //   (T, alpha)     : l concrete, r is TypeVar.
+  //                    Mode::Emit + store: add_lower(alpha, T), return
+  //                    {true, true}. Else: {false, _}; caller falls
+  //                    back to AxiomEq (false).
+  std::pair<bool, bool>
+  try_typevar_atom(const SequentCtx& ctx, const Node& l, const Node& r)
+  {
+    // Case 1: both TypeVars, same Location → trivially unifiable.
+    if (l == TypeVar && r == TypeVar &&
+        l->location().view() == r->location().view())
+      return {true, true};
+
+    // Without a constraint store or in Query mode, defer to default.
+    auto* tvs = static_cast<TypeVarStore*>(ctx.constraint_store);
+    if (!tvs || ctx.mode != SequentCtx::Mode::Emit)
+      return {false, false};
+
+    // Case 1b: both TypeVars, distinct Locations → unify in store.
+    if (l == TypeVar && r == TypeVar)
+    {
+      auto a = tvs->intern(l->location());
+      auto b = tvs->intern(r->location());
+      tvs->unify(a, b);
+      return {true, true};
+    }
+
+    // Case 2: alpha <: T → add_upper(alpha, T).
+    if (l == TypeVar)
+    {
+      auto a = tvs->intern(l->location());
+      tvs->add_upper(a, Type << clone(r));
+      return {true, true};
+    }
+
+    // Case 3: T <: alpha → add_lower(alpha, T).
+    auto a = tvs->intern(r->location());
+    tvs->add_lower(a, Type << clone(l));
+    return {true, true};
+  }
+
   // Find a function in a ClassDef that matches the given signature:
   // same name, handedness, param count, and TypeParam count.
   Node find_matching_function(const Node& def, const Node& target_func)
