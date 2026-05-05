@@ -351,22 +351,22 @@ namespace vbci
 
     Value op_lt(const Value& v) const
     {
-      return binop<std::less<>>(v);
+      return cmpop<std::less<>>(v);
     }
 
     Value op_le(const Value& v) const
     {
-      return binop<std::less_equal<>>(v);
+      return cmpop<std::less_equal<>>(v);
     }
 
     Value op_gt(const Value& v) const
     {
-      return binop<std::greater<>>(v);
+      return cmpop<std::greater<>>(v);
     }
 
     Value op_ge(const Value& v) const
     {
-      return binop<std::greater_equal<>>(v);
+      return cmpop<std::greater_equal<>>(v);
     }
 
     make_binop(min, std::min(lhs, rhs));
@@ -685,6 +685,73 @@ namespace vbci
 
         case ValueType::F64:
           return Value(OpF{}(f64));
+
+        default:
+          Value::error(Error::BadOperand);
+      }
+    }
+
+    // Comparison op: like binop but the result is always Bool, so we
+    // do NOT cast through the operand's narrow integer type. Using
+    // `binop<std::less<>>` for u8 < u8 would silently coerce the bool
+    // result to uint8_t and emit a U8-tagged Value, which then fails
+    // get_bool() at the use site (Cond / `let b: bool = ...`).
+    template<typename Op>
+    Value cmpop(const Value& v) const
+    {
+      if (this->tag != v.tag)
+        Value::error(Error::MismatchedTypes);
+
+      switch (this->tag)
+      {
+        case ValueType::None:
+          // No total ordering on None values; all instances compare equal.
+          return Value(Op{}(0, 0));
+
+        case ValueType::Bool:
+          return Value(Op{}(b, v.b));
+
+        case ValueType::I8:
+          return Value(Op{}(i8, v.i8));
+
+        case ValueType::I16:
+          return Value(Op{}(i16, v.i16));
+
+        case ValueType::I32:
+          return Value(Op{}(i32, v.i32));
+
+        case ValueType::I64:
+          return Value(Op{}(i64, v.i64));
+
+        case ValueType::U8:
+          return Value(Op{}(u8, v.u8));
+
+        case ValueType::U16:
+          return Value(Op{}(u16, v.u16));
+
+        case ValueType::U32:
+          return Value(Op{}(u32, v.u32));
+
+        case ValueType::U64:
+          return Value(Op{}(u64, v.u64));
+
+        case ValueType::ILong:
+          return Value(Op{}(ilong, v.ilong));
+
+        case ValueType::ULong:
+          return Value(Op{}(ulong, v.ulong));
+
+        case ValueType::ISize:
+          return Value(Op{}(isize, v.isize));
+
+        case ValueType::USize:
+          return Value(Op{}(usize, v.usize));
+
+        case ValueType::F32:
+          return Value(Op{}(f32, v.f32));
+
+        case ValueType::F64:
+          return Value(Op{}(f64, v.f64));
 
         default:
           Value::error(Error::BadOperand);
