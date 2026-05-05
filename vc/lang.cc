@@ -220,12 +220,14 @@ namespace vc
       if (def && def == TypeParam)
       {
         auto it = subst.find(def);
-        // Skip TypeVar-valued subst entries (Phase 3.5 — TypeVar means
-        // "no observation yet"). Fall through to rebuild the TypeName
-        // so the unbound TypeParam reference is preserved for downstream
-        // (e.g. body-driven binding in reify).
-        if (it != subst.end() &&
-            !(it->second == Type && it->second->front() == TypeVar))
+        // Phase 4+ [S3]: substitute TypeParam → Type(TypeVar α_k)
+        // entries directly. Previously this was skipped on the basis
+        // that "TypeVar means no observation yet" and the unbound
+        // TypeParam reference was preserved for downstream body-driven
+        // binding. Under the constraint solver, the α_k identity is
+        // the route by which constraints flow to the formal, so the
+        // substitution must take effect.
+        if (it != subst.end())
           return clone(it->second);
       }
 

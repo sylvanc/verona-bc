@@ -1093,14 +1093,13 @@ namespace vc
     // Cleared per reify_function (same lifetime as local_types).
     std::set<Location> pinned_locals;
 
-    // typevar_store accumulates constraints across reifications.
-    // Per Phase 5: when reifying a caller, its body-walk constraints
-    // share the store with any callee reifications walked via
-    // gather_lambda_apply_constraints. Each formal gets a fresh α_k
-    // (unique Location), so identities don't collide. Constraints
-    // are monotone (only added, never removed), so cross-reification
-    // accumulation is safe.
-    TypeVarStore typevar_store;
+    // typevar_store is the SAME singleton used by infer (constraints
+    // emitted from subtype calls accumulate here) and by reify
+    // (cross-reify gather and per-Reification body walks). Identities
+    // are global Locations (TypeVar Locations and TypeParam Ident
+    // Locations), so accumulation across passes and functions is
+    // safe and monotone.
+    TypeVarStore& typevar_store = TypeVarStore::global();
 
     // Phase 5 cross-reification gather: when a New/Stack of a lifted
     // lambda appears in a caller's body, walk the lifted class's
@@ -3520,15 +3519,19 @@ namespace vc
         if (r.subst.find(tp) == r.subst.end())
         {
           unbound_formals.push_back(tp);
-          auto tv = make_typevar();
-          formal_typevars[tp] = tv->location();
-          typevar_store.intern(tv->location());
+          // Use the TypeParam's Ident Location as the TypeVar identity
+          // so it matches constraints emitted by infer (try_typevar_atom
+          // uses the same Location for TypeName-resolving-to-TypeParam).
+          auto tp_loc = (tp / Ident)->location();
+          auto tv = TypeVar ^ tp_loc;
+          formal_typevars[tp] = tp_loc;
+          typevar_store.intern(tp_loc);
           // Seed r.subst[tp] = Type(TypeVar α_k). resolve_typearg
           // will return the TypeVar leaf (Phase 3.5 deferred placeholder
           // semantics). After body walk + cross-reify gather, the
           // solver may bind α_k to a concrete type and replace this
           // entry via the typevar_solved_formals → r.subst update.
-          r.subst[tp] = Type << clone(tv);
+          r.subst[tp] = Type << tv;
         }
       }
 

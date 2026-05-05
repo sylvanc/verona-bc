@@ -1199,12 +1199,14 @@ namespace vc
     // identities by try_typevar_atom) accumulate observations from
     // type merges. The store records add_upper/add_lower/unify; we
     // then read existing bool result of Subtype to decide widening.
+    // merge_type uses Subtype as a read-only query (keep/widen decision).
+    // Constraint emission for the variance table happens at specific
+    // emission sites (call-arg checking, var-declaration, return), NOT
+    // here — emitting from invariant checks adds bounds in BOTH
+    // directions, which over-constrains formals to whatever they're
+    // merged against (typically `any` from defaults), defeating the
+    // purpose of the constraint solver.
     SequentCtx ctx{top, {}, {}};
-    if (active_typevar_store)
-    {
-      ctx.constraint_store = active_typevar_store;
-      ctx.mode = SequentCtx::Mode::Emit;
-    }
 
     if (Subtype.invariant(ctx, existing, incoming))
     {
@@ -3998,6 +4000,33 @@ namespace vc
             !is_uninformative_backward_type(expected))
           {
             auto arg_loc = (args->at(i) / Rhs)->location();
+
+            // Phase 4 emission: Call argument variance "arg <: formal".
+            // Run subtype in Emit mode so any TypeVar (or formal-as-
+            // TypeVar) appearing in the arg's type tree records an
+            // add_upper / add_lower / unify constraint into the global
+            // store. The Subtype return value is ignored — its purpose
+            // here is constraint emission, not a yes/no answer (the
+            // existing merge_bwd below handles the actual merge).
+            // Examples of constraints flowing here:
+            //  - lambda arg with apply param x: U_min, formal type
+            //    i32 -> none → shape match decomposes to
+            //    Subtype(i32, TypeName(U_min)) (param contravariance)
+            //    → add_lower(α_U_min, i32).
+            //  - tuple arg with element TypeName(T_caller), formal
+            //    tuple element i32 → recurses into element subtype
+            //    → add_upper(α_T_caller, i32).
+            auto arg_it = env.find(arg_loc);
+            if (
+              arg_it != env.end() && arg_it->second.type &&
+              active_typevar_store)
+            {
+              SequentCtx emit_ctx{top, {}, {}};
+              emit_ctx.constraint_store = active_typevar_store;
+              emit_ctx.mode = SequentCtx::Mode::Emit;
+              (void)Subtype(emit_ctx, arg_it->second.type, expected);
+            }
+
             refine_local_const(arg_loc, expected);
             if (merge_bwd(arg_loc, expected))
             {
@@ -4124,6 +4153,23 @@ namespace vc
                   !is_uninformative_backward_type(expected))
                 {
                   auto arg_loc = (args->at(i) / Rhs)->location();
+
+                  // Phase 4 emission (CallDyn variant): see Call's
+                  // counterpart above for rationale. Emit subtype
+                  // arg <: formal in Mode::Emit so any TypeVar (or
+                  // formal-as-TypeVar) in the arg's type tree records
+                  // a constraint into the global store.
+                  auto arg_it = env.find(arg_loc);
+                  if (
+                    arg_it != env.end() && arg_it->second.type &&
+                    active_typevar_store)
+                  {
+                    SequentCtx emit_ctx{top, {}, {}};
+                    emit_ctx.constraint_store = active_typevar_store;
+                    emit_ctx.mode = SequentCtx::Mode::Emit;
+                    (void)Subtype(emit_ctx, arg_it->second.type, expected);
+                  }
+
                   refine_local_const(arg_loc, expected);
                   if (merge_bwd(arg_loc, expected))
                   {
@@ -4498,19 +4544,18 @@ namespace vc
     MethodLookupCache* prev_method_cache = active_method_cache;
     size_t transfer_epoch = 0;
     size_t* prev_transfer_epoch = active_infer_transfer_epoch;
-    // Per-function constraint store. Constraints are emitted into
-    // this during the per-statement walks below; after convergence
-    // (Phase 4 follow-up steps), store.substitute() will rewrite env
-    // + AST type nodes. Currently the store is wired but no
-    // emission is hooked up — incremental Phase 4 progress.
-    TypeVarStore typevar_store;
+    // Per-process global TypeVarStore: constraints emitted during
+    // infer accumulate here and are consumed by reify (Phase 4+5
+    // plumb-through). Identities are global Locations so accumulation
+    // across functions is safe and monotone.
+    TypeVarStore& global_tvs = TypeVarStore::global();
     TypeVarStore* prev_typevar_store = active_typevar_store;
     bool profile_enabled = infer_profile_enabled();
     if (profile_enabled)
       active_infer_profile = &profile;
     active_method_cache = &method_cache;
     active_infer_transfer_epoch = &transfer_epoch;
-    active_typevar_store = &typevar_store;
+    active_typevar_store = &global_tvs;
     InferProcessScope process_scope(
       profile_enabled ? &profile : nullptr,
       prev_profile,

@@ -2,6 +2,28 @@
 
 namespace vc
 {
+  TypeVarStore& TypeVarStore::global()
+  {
+    static TypeVarStore instance;
+    return instance;
+  }
+
+  void TypeVarStore::reset_global()
+  {
+    auto& g = global();
+    g.loc_to_id.clear();
+    g.id_to_loc.clear();
+    g.uf_parent.clear();
+    g.bound.clear();
+    g.lower.clear();
+    g.upper.clear();
+    g.lower_hash.clear();
+    g.upper_hash.clear();
+    g.gen = 0;
+    g.solve_cache.clear();
+    g.mode = Mode::Emit;
+  }
+
   namespace
   {
     // Recursive structural-hash helper. Mirrors same_type_tree but

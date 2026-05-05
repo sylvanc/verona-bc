@@ -110,6 +110,19 @@ namespace vc
     // diagnostics.
     size_t class_count();
 
+    // Singleton accessor: a single TypeVarStore is shared between
+    // the infer pass (where constraints are emitted from subtype
+    // checks) and the reify pass (where reifications consume the
+    // accumulated constraints to bind unbound formals). Identities
+    // are stable across the boundary because TypeVar Locations and
+    // TypeParam Ident Locations are global. Constraints are monotone
+    // so cross-pass accumulation is safe.
+    //
+    // Lives for the duration of a vc invocation; cleared at the
+    // start of each top-level compilation.
+    static TypeVarStore& global();
+    static void reset_global();
+
   private:
     struct LocationHash
     {
