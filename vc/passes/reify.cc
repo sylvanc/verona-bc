@@ -3683,9 +3683,29 @@ namespace vc
             // Store: dst = old *src, *src = arg. Result is old value type.
             auto src_it = local_types.find((n / Rhs)->location());
 
-            if (src_it != local_types.end() && (src_it->second == Ref))
-              local_types[(n / LocalId)->location()] =
-                clone(src_it->second->front());
+            if (src_it != local_types.end() && (src_it->second == Ref) &&
+                !src_it->second->empty())
+            {
+              auto payload = src_it->second->front();
+              local_types[(n / LocalId)->location()] = clone(payload);
+
+              // Phase 6 constraint emission: if the ref's payload is
+              // a TypeVar α, the stored value's type contributes a
+              // lower bound on α (the value must be a subtype of α).
+              // This is the constraint that links lambda body writes
+              // to the captured local's TypeVar — the foundation of
+              // cross-functional propagation.
+              if (payload == TypeVar)
+              {
+                auto val_loc = ((n / Arg) / Rhs)->location();
+                auto val_it = local_types.find(val_loc);
+                if (val_it != local_types.end() && val_it->second)
+                {
+                  auto alpha_id = typevar_store.intern(payload->location());
+                  typevar_store.add_lower(alpha_id, val_it->second);
+                }
+              }
+            }
           }
           else if (n == Var)
           {
