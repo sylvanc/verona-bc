@@ -907,6 +907,15 @@ namespace vc
     if (left == Ident)
       return left->location().view() == right->location().view();
 
+    // TypeVar carries a unique Location (Phase 1+2). Two TypeVars with
+    // different Locations are different inference variables. Without
+    // this case, same_type_tree would return true for any two TypeVars
+    // (they have the same token and no children), causing infer's
+    // fixed-point loop to silently misconverge when constraint
+    // emission rewrites TypeVar identity.
+    if (left == TypeVar)
+      return left->location().view() == right->location().view();
+
     for (size_t i = 0; i < left->size(); i++)
       if (!same_type_tree(left->at(i), right->at(i)))
         return false;
