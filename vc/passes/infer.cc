@@ -5187,10 +5187,10 @@ namespace vc
       auto it = body->begin();
       while (it != body->end())
       {
-        // 2. TypeAssertion: skip in-place transformations; the post-pass
-        // sweep removes TypeAssertion nodes after all process_function
-        // invocations have completed (preserving fixed-ness across
-        // multi-pass invocations).
+        // 2. TypeAssertion: skip in-place transformations. The infer
+        // pass preserves TypeAssertion nodes; reify consumes them
+        // (Phase 3b.4.3 uses `var x: U` sites as body-driven binding
+        // evidence) and removes them before lowering to IR.
         if (*it == TypeAssertion)
         {
           ++it;
