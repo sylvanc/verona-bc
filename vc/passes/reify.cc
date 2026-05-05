@@ -261,6 +261,17 @@ namespace vc
 
     void emit_unresolved_type_error(const Node& blame, std::string_view context)
     {
+      // Dedupe per (source location, context). Several reify_emitted_type
+      // callers pass slightly different blame nodes (e.g. f / Ident vs
+      // r->def / Ident) for the same source location, so use the blame's
+      // source location as the dedup key, not the node identity.
+      auto loc = blame->location();
+      auto key = std::tuple<std::string_view, size_t, std::string>(
+        loc.source ? loc.source->view() : std::string_view{},
+        loc.pos,
+        std::string(context));
+      if (!reported_unresolved.insert(key).second)
+        return;
       errors.push_back(err(
         blame,
         std::format("Could not resolve {} during monomorphization", context)));
@@ -1016,6 +1027,14 @@ namespace vc
     NodeMap<Node> init_sources;
     std::set<Node> processed_initfini;
     Nodes errors;
+    // Dedupe set for "Type parameter X cannot be inferred" errors:
+    // a given unbound formal is reported at most once across the
+    // whole pass, even though many navigation paths may try to
+    // resolve it. Multiple downstream errors all point at the same
+    // root cause; one diagnostic at the use site is sufficient.
+    std::set<const NodeDef*> reported_unbound_formal;
+    std::set<std::tuple<std::string_view, size_t, std::string>>
+      reported_unresolved;
     std::vector<MethodInvocation> method_invocations;
     std::vector<PendingCallback> pending_callbacks;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
@@ -1465,6 +1484,188 @@ namespace vc
       return false;
     }
 
+    // bake_typename is below; resolve_typearg calls it. They are
+    // mutually recursive: bake_typename copies in values from subst
+    // via clone(resolve_typearg(...)) so that each filled slot is
+    // self-contained.
+
+    // Walk a fully-qualified TypeName per-element and produce a
+    // canonical, self-contained form: for every NameElement whose def
+    // has TypeParams but whose TypeArgs is empty (or contains only
+    // a deferred Type(TypeVar) placeholder), fill the TypeArgs from
+    // `subst`. The filled values are themselves canonicalized through
+    // resolve_typearg so that no implicit-TypeArg slot remains in the
+    // result. Existing explicit TypeArgs are also recursively
+    // canonicalized.
+    //
+    // The "self-contained" property means: a baked TypeName can be
+    // stored across a reification boundary (into another reification's
+    // subst map) without losing its meaning; downstream readers do
+    // not need ambient context to interpret it.
+    //
+    // Per-leaf tri-state at fill points:
+    //   - bound: subst has a concrete value for the TypeParam — bake.
+    //   - deferred: subst has Type(TypeVar) — emit Type(TypeVar) at
+    //     the slot; outer structure preserved.
+    //   - error: subst lacks the TypeParam — hard compile error per
+    //     the Dyn-rule (Dyn is ONLY the IR encoding of `any`, never
+    //     a fallback).
+    //
+    // Fast path: if no slot was filled and no explicit child changed,
+    // returns the original TypeName unchanged (no clone).
+    Node bake_typename(const Node& tn, const NodeMap<Node>& subst)
+    {
+      assert(tn->in({TypeName, FuncName}));
+
+      Node def = top;
+      Node baked = tn->type();
+      bool changed = false;
+
+      for (auto it = tn->begin(); it != tn->end(); ++it)
+      {
+        auto& elem = *it;
+        assert(elem == NameElement);
+        auto ident = elem / Ident;
+        auto ta = elem / TypeArgs;
+        bool is_last = (it + 1 == tn->end());
+
+        auto defs = def->look(ident->location());
+
+        if (defs.empty())
+        {
+          // Cannot navigate. Bail out and return original (preserves
+          // existing behavior for malformed names; errors will be
+          // reported elsewhere).
+          return tn;
+        }
+
+        // Disambiguate when multiple defs share a name (e.g. function
+        // overloads): pick the one whose body contains the next
+        // element. Mirrors get_reification's logic.
+        Node next = {};
+
+        if (defs.size() > 1 && !is_last)
+        {
+          auto next_ident = (*(it + 1)) / Ident;
+          for (auto& d : defs)
+          {
+            if (!d->look(next_ident->location()).empty())
+            {
+              next = d;
+              break;
+            }
+          }
+        }
+
+        if (!next)
+          next = defs.front();
+
+        // For non-last NameElements we expect a navigable scope. Bail
+        // (return original) on non-navigable shapes; errors are
+        // reported by get_reification when it does its own walk.
+        if (!is_last && !next->in({ClassDef, Function, TypeAlias}))
+          return tn;
+
+        // For TypeParam at the last position, we don't bake — the
+        // caller (resolve_typearg) handles that case directly.
+        if (next == TypeParam)
+        {
+          if (changed)
+            baked << clone(elem);
+          def = next;
+          continue;
+        }
+
+        auto tps = next / TypeParams;
+        Node new_ta;
+        bool elem_changed = false;
+
+        // Treat a TypeArgs slot as "logically empty" if its only
+        // child is a deferred Type(TypeVar) placeholder. This
+        // matches the explicit-TypeArg deferral at lines ~5446 of
+        // get_reification, and lets a subsequent bake fill the slot
+        // when subst gains a binding.
+        bool ta_logically_empty = ta->empty();
+
+        if (
+          !ta->empty() && (ta->size() == tps->size()) &&
+          std::all_of(ta->begin(), ta->end(), [](const Node& a) {
+            return (a == Type) && (a->front() == TypeVar);
+          }))
+        {
+          ta_logically_empty = true;
+        }
+
+        if (ta_logically_empty && !tps->empty())
+        {
+          // Implicit slot at an intermediate or final scope with
+          // TypeParams. Fill from subst per TypeParam.
+          new_ta = TypeArgs;
+          elem_changed = true;
+
+          for (auto& tp : *tps)
+          {
+            auto find = subst.find(tp);
+
+            if (find == subst.end())
+            {
+              // Unbound formal at this position. Emit a deferred
+              // Type(TypeVar) placeholder rather than a hard error
+              // here — bake_typename can be called many times along
+              // overlapping paths, so an error per call would
+              // multiply diagnostics. The proper error is emitted
+              // by resolve_typearg / get_reification when the
+              // unbound TypeParam is actually used.
+              new_ta << (Type << TypeVar);
+              continue;
+            }
+
+            // Canonicalize the value before injecting (closes the
+            // substitution: any TypeName inside `find->second` with
+            // implicit slots gets baked via resolve_typearg, which
+            // recurses back into bake_typename for nested TypeNames).
+            new_ta << clone(resolve_typearg(find->second, subst));
+          }
+        }
+        else if (!ta->empty())
+        {
+          // Explicit TypeArgs: recursively canonicalize each child.
+          new_ta = TypeArgs;
+
+          for (auto& a : *ta)
+          {
+            auto resolved = resolve_typearg(a, subst);
+
+            if (resolved != a)
+              elem_changed = true;
+
+            new_ta << clone(resolved);
+          }
+        }
+
+        if (elem_changed)
+        {
+          if (!changed)
+          {
+            // Lazily copy already-walked elements we passed through
+            // unchanged.
+            for (auto it2 = tn->begin(); it2 != it; ++it2)
+              baked << clone(*it2);
+            changed = true;
+          }
+          baked << (NameElement << clone(ident) << new_ta);
+        }
+        else if (changed)
+        {
+          baked << clone(elem);
+        }
+
+        def = next;
+      }
+
+      return changed ? baked : tn;
+    }
+
     // Resolve a TypeArg through the current substitution map. If the TypeArg
     // is a Type wrapping a TypeName that resolves to a TypeParam in the subst,
     // return the substituted value. Otherwise, return the original TypeArg.
@@ -1537,53 +1738,33 @@ namespace vc
         // fallback for an unbound formal. Emit the error and return Dyn
         // so the AST stays well-formed for downstream cleanup; the compile
         // will fail at end of pass because errors is non-empty.
-        errors.push_back(err(
-          inner,
-          std::format(
-            "Type parameter `{}` cannot be inferred. Provide an explicit "
-            "type argument.",
-            (def / Ident)->location().view())));
+        if (reported_unbound_formal.insert(def.get()).second)
+        {
+          errors.push_back(err(
+            inner,
+            std::format(
+              "Type parameter `{}` cannot be inferred. Provide an explicit "
+              "type argument.",
+              (def / Ident)->location().view())));
+        }
         return wrapped ? (Type << Dyn) : Dyn;
       }
 
-      // Not a bare TypeParam. Recursively resolve TypeParams in any nested
-      // TypeArgs (e.g., array[T] → array[i32] when T → i32 is in subst).
-      bool changed = false;
-      Node resolved_name = TypeName;
+      // Not a bare TypeParam. Recursively bake the TypeName: fills
+      // implicit TypeArgs at intermediate scopes from `subst`, and
+      // recursively canonicalises any explicit TypeArgs. The result
+      // is self-contained — safe to store across a reification
+      // boundary without losing context.
+      auto baked = bake_typename(inner, subst);
 
-      for (auto& elem : *inner)
-      {
-        auto ta = elem / TypeArgs;
-
-        if (ta->empty())
-        {
-          resolved_name << clone(elem);
-          continue;
-        }
-
-        Node new_ta = TypeArgs;
-
-        for (auto& a : *ta)
-        {
-          auto resolved = resolve_typearg(a, subst);
-
-          if (resolved != a)
-            changed = true;
-
-          new_ta << clone(resolved);
-        }
-
-        resolved_name << (NameElement << clone(elem / Ident) << new_ta);
-      }
-
-      if (!changed)
+      if (baked == inner)
         return arg;
 
       // Re-wrap in Type if the original was wrapped.
       if (wrapped)
-        return Type << resolved_name;
+        return Type << baked;
 
-      return resolved_name;
+      return baked;
     }
 
     // Check whether two substitution maps are equivalent under invariance.
@@ -1704,13 +1885,22 @@ namespace vc
       }
 
       // All other defs: dedup using substitution map equality.
-      // Compare entries for TypeParams owned by this def AND by the
-      // enclosing class. Nested classes/shapes can reference the parent's
-      // TypeParams in their own signatures/bodies, so different bindings for
-      // the enclosing class must produce different reifications.
+      // Compare entries for TypeParams owned by this def AND by ALL
+      // enclosing scopes (ClassDef and Function). Nested classes/
+      // functions can reference any ancestor's TypeParams in their
+      // own signatures/bodies, so different bindings for any
+      // enclosing scope must produce different reifications. Walk
+      // the full ancestor chain through both ClassDef and Function
+      // boundaries — a nested def captured inside a generic function
+      // (e.g. a lambda lifted from `f[U]`) dedupes by `f`'s U too.
       auto own_tps = def / TypeParams;
-      auto parent_cls = def->parent(ClassDef);
-      auto parent_tps = parent_cls ? parent_cls / TypeParams : Node{};
+      Nodes parent_tps_chain;
+      for (auto p = def->parent({ClassDef, Function}); p;
+           p = p->parent({ClassDef, Function}))
+      {
+        for (auto& tp : *(p / TypeParams))
+          parent_tps_chain.push_back(tp);
+      }
 
       for (auto& existing : r_vec)
       {
@@ -1742,9 +1932,9 @@ namespace vc
             break;
         }
 
-        if (match && parent_tps)
+        if (match)
         {
-          for (auto& tp : *parent_tps)
+          for (auto& tp : parent_tps_chain)
           {
             check_tp(tp);
             if (!match)
@@ -5282,12 +5472,15 @@ namespace vc
 
               // TypeParam not in subst — hard compile error. Dyn is
               // ONLY the IR encoding of `any`; never a fallback.
-              errors.push_back(err(
-                elem,
-                std::format(
-                  "Type parameter `{}` cannot be inferred. Provide an "
-                  "explicit type argument.",
-                  (d / Ident)->location().view())));
+              if (reported_unbound_formal.insert(d.get()).second)
+              {
+                errors.push_back(err(
+                  elem,
+                  std::format(
+                    "Type parameter `{}` cannot be inferred. Provide an "
+                    "explicit type argument.",
+                    (d / Ident)->location().view())));
+              }
               return Dyn;
             }
           }
@@ -5426,16 +5619,31 @@ namespace vc
 
           for (size_t i = 0; i < tps->size(); i++)
           {
+            auto arg = ta->at(i);
+
+            // A TypeArg that is `Type(TypeVar)` is a deferred placeholder
+            // (Phase 3.5 partial infer_typeargs left this slot unbound
+            // from arg evidence). Treat it as logically empty: try to
+            // fill from `resolve_subst` (the ambient context) — this
+            // handles cases like a call to `hmap::_lookup(...)` from
+            // inside hmap's own method body, where infer leaves the
+            // outer hmap.K / hmap.V TypeArgs as TypeVar but the call
+            // site has them in scope.
+            if (arg == Type && arg->front() == TypeVar)
+            {
+              auto find = resolve_subst.find(tps->at(i));
+              if (find != resolve_subst.end())
+              {
+                r.subst[tps->at(i)] = find->second;
+                resolve_subst[tps->at(i)] = find->second;
+              }
+              // else: leave unbound (deferred); will surface as a
+              // hard error at the use site if not bound by Phase 3.5.
+              continue;
+            }
+
             // Substitute any TypeParam references in the TypeArg using the
             // full resolution context, to avoid self-referential cycles.
-            auto arg = ta->at(i);
-            // Phase 3.5: skip TypeVar-valued TypeArgs (formals left
-            // unbound by partial infer_typeargs). Treat as "not in
-            // subst" so reify_typename surfaces a clean compile error
-            // when the formal is referenced and Phase 3.5 hasn't bound
-            // it from body evidence.
-            if (arg == Type && arg->front() == TypeVar)
-              continue;
             auto resolved = resolve_typearg(arg, resolve_subst);
             r.subst[tps->at(i)] = resolved;
             resolve_subst[tps->at(i)] = resolved;
@@ -5443,13 +5651,16 @@ namespace vc
         }
         else if (!tps->empty())
         {
-          // No TypeArgs but the def has TypeParams (e.g., bare class name
-          // as return type from within a generic class). Inherit any
-          // existing substitutions from the resolution context.
-          // If not found in resolve_subst, check existing reifications of
-          // this def for a TypeParam binding (handles nested classes of
-          // generic outer classes, where the outer subst isn't in the
-          // immediate resolution context).
+          // No TypeArgs but the def has TypeParams (e.g., bare class
+          // name as return type from within a generic class). Inherit
+          // bindings from the ambient resolution context. If a
+          // TypeParam isn't in resolve_subst, that's a hard compile
+          // error — Dyn is ONLY the IR encoding of `any`, never a
+          // fallback for unbound formals. (The previous existing-
+          // reifications fallback was a workaround that gave the
+          // WRONG answer when more than one reification of the
+          // parent class existed: it picked the first one's bindings
+          // regardless of context.)
           for (auto& tp : *tps)
           {
             auto find = resolve_subst.find(tp);
@@ -5461,17 +5672,10 @@ namespace vc
             }
             else
             {
-              auto map_it = map.find(def);
-              if (map_it != map.end() && !map_it->second.empty())
-              {
-                auto& existing = map_it->second.front();
-                auto existing_find = existing.subst.find(tp);
-                if (existing_find != existing.subst.end())
-                {
-                  r.subst[tp] = existing_find->second;
-                  resolve_subst[tp] = existing_find->second;
-                }
-              }
+              // Missing-from-subst: leave unbound. Either an explicit
+              // Type(TypeVar) is reached via the deferred-binding
+              // path (Phase 3.5), or a downstream consumer surfaces
+              // the unbound-formal error at the actual use site.
             }
           }
         }
