@@ -331,3 +331,62 @@ else (99);
 let result = match x { (n: i32) -> n; }
 // result type: i32 | nomatch — use else to strip nomatch
 ```
+
+### Pitfall: Side-Effect-Only Arm Bodies
+
+Match arm bodies are **expression context**: each arm produces a
+value (or `nomatch`), and the chain selects the first non-`nomatch`
+result. A body whose tail expression evaluates to `nomatch` is
+treated as "this arm did not match" and the chain falls through —
+this is the back-tracking mechanism described above.
+
+A bare `if`-without-else evaluates to `nomatch` when its condition
+is false (the canonical "no value" default). Putting one as the
+tail of a side-effect-only arm body is therefore a back-tracking
+expression, not a no-op:
+
+```verona
+// SURPRISE: this arm appears not to match when v == 100, because
+// the body's tail (`if v != 100 { ... }`) is nomatch when the
+// condition is false.
+match x
+{
+  (v: i32) -> { if v != 100 { result = result + 1 } }
+}
+else { result = result + 2 }
+```
+
+For side-effect-only arms, terminate the body with an explicit
+non-`nomatch` value. `none` is the natural choice:
+
+```verona
+match x
+{
+  (v: i32) -> { if v != 100 { result = result + 1 }; none }
+}
+else { result = result + 2; none }
+```
+
+Or, equivalently, use a value-returning match in let-binding form
+and ignore the result if you don't need it:
+
+```verona
+let _ = match x
+{
+  (v: i32) -> if v != 100 { result = result + 1; none } else (none)
+}
+else (none);
+```
+
+When you DO want back-tracking, write the arm body so that its
+tail produces `nomatch` deliberately, e.g., `else (nomatch)`:
+
+```verona
+// Back-track to the next arm if v is not positive.
+match x
+{
+  (v: i32) -> if v > 0 { v } else (nomatch);
+  (s: string) -> s.size;
+}
+else (0)
+```
