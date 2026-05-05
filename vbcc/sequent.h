@@ -65,6 +65,27 @@ namespace trieste
     // states — they are never split into antecedent/consequent by the
     // sequent calculus reduction.
     Nodes assumptions;
+
+    // Constraint store hook (Verona TypeVar constraint solver).
+    // Held as void* so that vbcc/sequent.h does not depend on vc/. The
+    // vc layer (vc/subtype.h, vc/typevar.h) reinterprets this as
+    // vc::TypeVarStore*. nullptr disables constraint emission and
+    // axioms behave per their AxiomEq/AxiomFalse defaults.
+    void* constraint_store = nullptr;
+
+    // Constraint emission mode:
+    // - Query: axioms only inspect; no mutation of constraint_store.
+    //   Default for read-only subtype queries (overload disambiguation,
+    //   well-formedness checks, definitely_not_subtype).
+    // - Emit: TypeVar atom rules emit add_lower / add_upper constraints
+    //   into constraint_store and return true (delayed proof). Used
+    //   during constraint emission in the infer pass.
+    enum class Mode
+    {
+      Query,
+      Emit
+    };
+    Mode mode = Mode::Query;
   };
 
   using Axiom = std::function<bool(const SequentCtx& ctx, Node& l, Node& r)>;
