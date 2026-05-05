@@ -1,5 +1,6 @@
 #include "../lang.h"
 #include "../subtype.h"
+#include "../typevar.h"
 
 #include <trieste/nodeworker.h>
 #include <vbcc/irsubtype.h>
@@ -1091,6 +1092,15 @@ namespace vc
     // union type, causing typecheck failures at the lambda New site.
     // Cleared per reify_function (same lifetime as local_types).
     std::set<Location> pinned_locals;
+
+    // Per-Reification constraint store (Phase 5/6). Constraints are
+    // emitted from the body walk and from cross-reification gathering
+    // at lambda construction sites; solver bindings then drive the
+    // binding of any unbound formals (replacing the brittle Phase 3b
+    // U-mention scan / var-evidence / return-evidence). Cleared per
+    // reify_function (same lifetime as local_types). NOT yet
+    // populated or consumed — Phase 6 follow-up wires this up.
+    TypeVarStore typevar_store;
 
     // Drive the NodeWorker until all reifications are Resolved (or
     // Blocked due to mutual recursion — Phase 3b.4 handles that).
@@ -3204,6 +3214,9 @@ namespace vc
       lookup_info.clear();
       tainted_locals.clear();
       pinned_locals.clear();
+      // Fresh per-Reification constraint store. (Phase 6 work
+      // wires this up; currently unused.)
+      typevar_store = TypeVarStore{};
 
       // Reify the function signature.
       auto def_type = r.def / Type;
