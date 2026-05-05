@@ -5560,19 +5560,59 @@ namespace vc
                 elem, "TypeParam substitution must be a type name here");
             }
 
+            // Bake `sub` so any implicit intermediate TypeArgs (paths
+            // through generic outer scopes whose TypeParams come from
+            // resolve_subst) are filled in. Without this, the inline
+            // walk below would skip them via the `if (!sta->empty())`
+            // guard, leaving the result context-dependent. Stored
+            // values reaching here should already be self-contained
+            // (resolve_typearg bakes via bake_typename before storage),
+            // but baking again is a no-op fast-path, and defends
+            // against any future code paths that bypass that storage
+            // discipline.
+            sub = bake_typename(sub, resolve_subst);
+
             // Navigate from the substituted TypeName to find the ClassDef.
             def = top;
 
-            for (auto& se : *sub)
+            for (auto se_it = sub->begin(); se_it != sub->end(); ++se_it)
             {
+              auto& se = *se_it;
               auto si = se / Ident;
               auto sta = se / TypeArgs;
               auto sdefs = def->look(si->location());
 
               if (sdefs.empty())
-                return err(se, "Definition not found in TypeParam resolution");
+                return err(
+                  se, "Definition not found in TypeParam resolution");
 
-              def = sdefs.front();
+              // Disambiguate when multiple defs share an ident (e.g.
+              // function overloads): pick the one whose body contains
+              // the next element in the path, mirroring the outer
+              // navigation loop's logic.
+              bool is_se_last = (se_it + 1 == sub->end());
+
+              if (!is_se_last && sdefs.size() > 1)
+              {
+                auto next_si = (*(se_it + 1)) / Ident;
+                def = {};
+
+                for (auto& d : sdefs)
+                {
+                  if (!d->look(next_si->location()).empty())
+                  {
+                    def = d;
+                    break;
+                  }
+                }
+
+                if (!def)
+                  def = sdefs.front();
+              }
+              else
+              {
+                def = sdefs.front();
+              }
 
               if (!sta->empty())
               {
