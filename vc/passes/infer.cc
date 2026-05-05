@@ -1194,7 +1194,17 @@ namespace vc
       return {};
     }
 
+    // Phase 4: emit constraints into the active TypeVarStore so that
+    // TypeVar leaves (and TypeName(TypeParam) refs, treated as TypeVar
+    // identities by try_typevar_atom) accumulate observations from
+    // type merges. The store records add_upper/add_lower/unify; we
+    // then read existing bool result of Subtype to decide widening.
     SequentCtx ctx{top, {}, {}};
+    if (active_typevar_store)
+    {
+      ctx.constraint_store = active_typevar_store;
+      ctx.mode = SequentCtx::Mode::Emit;
+    }
 
     if (Subtype.invariant(ctx, existing, incoming))
     {

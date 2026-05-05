@@ -28,19 +28,17 @@ namespace vc
   try_typevar_atom(const SequentCtx& ctx, const Node& l, const Node& r);
 
   // Wraps an existing atom axiom with TypeVar emission preflight.
-  // If either l or r is TypeVar, defers to try_typevar_atom; if it
-  // handles the case, return its result. Otherwise the wrapped
-  // axiom runs unchanged. Used for primitive / TupleType / TypeName
-  // / TypeVar / TypeSelf provability axioms in Subtype.
+  // If either l or r is a TypeVar OR a TypeName resolving to a
+  // TypeParam, defer to try_typevar_atom; if it handles the case,
+  // return its result. Otherwise the wrapped axiom runs unchanged.
+  // Used for primitive / TupleType / TypeName / TypeVar / TypeSelf
+  // provability axioms in Subtype.
   inline Axiom with_typevar(Axiom inner)
   {
     return [inner](const SequentCtx& ctx, Node& l, Node& r) -> bool {
-      if (l == TypeVar || r == TypeVar)
-      {
-        auto [handled, ok] = try_typevar_atom(ctx, l, r);
-        if (handled)
-          return ok;
-      }
+      auto [handled, ok] = try_typevar_atom(ctx, l, r);
+      if (handled)
+        return ok;
       return inner(ctx, l, r);
     };
   }

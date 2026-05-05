@@ -142,6 +142,8 @@ namespace trieste
       State state;
       state.ctx.scope = ctx.scope;
       state.ctx.assumptions = ctx.assumptions;
+      state.ctx.constraint_store = ctx.constraint_store;
+      state.ctx.mode = ctx.mode;
       state.lhs_pending = ctx.implies;
       state.lhs_pending.push_back(l);
       state.rhs_pending.push_back(r);

@@ -4,28 +4,58 @@ namespace vc
 {
   // TypeVar atom helper: see subtype.h for contract.
   //
+  // Identity model: a node `n` is treated as a TypeVar identity when:
+  //   - n == TypeVar (Location is n->location()), OR
+  //   - n is a TypeName whose final NameElement resolves to a TypeParam
+  //     definition (Location is the TypeParam's Ident Location).
+  // The TypeParam case lets us emit constraints involving formals
+  // without rewriting the AST: e.g., subtype(TypeName(U), I32) where
+  // U is a TypeParam emits add_upper(alpha_U, I32) using the
+  // TypeParam's Ident Location as alpha_U's identity.
+  static bool effective_typevar(
+    const Node& n, const Node& scope, Location& out_loc)
+  {
+    if (n == TypeVar)
+    {
+      out_loc = n->location();
+      return true;
+    }
+    if (n == TypeName)
+    {
+      auto def = find_def(scope, n);
+      if (def && def == TypeParam)
+      {
+        out_loc = (def / Ident)->location();
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Cases (l, r):
-  //   (alpha, beta)  : both TypeVars.
-  //                    - Same Location → unify trivially → {true, true}.
+  //   (alpha, beta)  : both effective TypeVars.
+  //                    - Same Location → trivially provable → {true, true}.
   //                    - Else, Mode::Emit + store: unify(alpha, beta),
   //                      return {true, true} (delayed).
-  //                    - Else: not handled → {false, _}; caller falls
-  //                      back to AxiomEq (structural compare, false
-  //                      unless same Location).
-  //   (alpha, T)     : l is TypeVar, r is concrete (or shape).
+  //                    - Else: {false, _}; caller falls back.
+  //   (alpha, T)     : l is effective TypeVar, r is concrete.
   //                    Mode::Emit + store: add_upper(alpha, T), return
-  //                    {true, true}. Else: {false, _}; caller falls
-  //                    back to AxiomEq (false).
-  //   (T, alpha)     : l concrete, r is TypeVar.
+  //                    {true, true}. Else: {false, _}.
+  //   (T, alpha)     : l concrete, r is effective TypeVar.
   //                    Mode::Emit + store: add_lower(alpha, T), return
-  //                    {true, true}. Else: {false, _}; caller falls
-  //                    back to AxiomEq (false).
+  //                    {true, true}. Else: {false, _}.
   std::pair<bool, bool>
   try_typevar_atom(const SequentCtx& ctx, const Node& l, const Node& r)
   {
-    // Case 1: both TypeVars, same Location → trivially unifiable.
-    if (l == TypeVar && r == TypeVar &&
-        l->location().view() == r->location().view())
+    Location l_loc, r_loc;
+    bool l_var = effective_typevar(l, ctx.scope, l_loc);
+    bool r_var = effective_typevar(r, ctx.scope, r_loc);
+
+    if (!l_var && !r_var)
+      return {false, false};
+
+    // Case 1: both effective TypeVars, same Location → trivial.
+    if (l_var && r_var && l_loc.view() == r_loc.view())
       return {true, true};
 
     // Without a constraint store or in Query mode, defer to default.
@@ -33,25 +63,25 @@ namespace vc
     if (!tvs || ctx.mode != SequentCtx::Mode::Emit)
       return {false, false};
 
-    // Case 1b: both TypeVars, distinct Locations → unify in store.
-    if (l == TypeVar && r == TypeVar)
+    // Case 1b: both effective TypeVars, distinct Locations → unify.
+    if (l_var && r_var)
     {
-      auto a = tvs->intern(l->location());
-      auto b = tvs->intern(r->location());
+      auto a = tvs->intern(l_loc);
+      auto b = tvs->intern(r_loc);
       tvs->unify(a, b);
       return {true, true};
     }
 
-    // Case 2: alpha <: T → add_upper(alpha, T).
-    if (l == TypeVar)
+    // Case 2: alpha <: T (concrete) → add_upper(alpha, T).
+    if (l_var)
     {
-      auto a = tvs->intern(l->location());
+      auto a = tvs->intern(l_loc);
       tvs->add_upper(a, Type << clone(r));
       return {true, true};
     }
 
-    // Case 3: T <: alpha → add_lower(alpha, T).
-    auto a = tvs->intern(r->location());
+    // Case 3: T (concrete) <: alpha → add_lower(alpha, T).
+    auto a = tvs->intern(r_loc);
     tvs->add_lower(a, Type << clone(l));
     return {true, true};
   }
