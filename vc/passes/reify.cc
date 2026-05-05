@@ -1093,14 +1093,289 @@ namespace vc
     // Cleared per reify_function (same lifetime as local_types).
     std::set<Location> pinned_locals;
 
-    // Per-Reification constraint store (Phase 5/6). Constraints are
-    // emitted from the body walk and from cross-reification gathering
-    // at lambda construction sites; solver bindings then drive the
-    // binding of any unbound formals (replacing the brittle Phase 3b
-    // U-mention scan / var-evidence / return-evidence). Cleared per
-    // reify_function (same lifetime as local_types). NOT yet
-    // populated or consumed — Phase 6 follow-up wires this up.
+    // typevar_store accumulates constraints across reifications.
+    // Per Phase 5: when reifying a caller, its body-walk constraints
+    // share the store with any callee reifications walked via
+    // gather_lambda_apply_constraints. Each formal gets a fresh α_k
+    // (unique Location), so identities don't collide. Constraints
+    // are monotone (only added, never removed), so cross-reification
+    // accumulation is safe.
     TypeVarStore typevar_store;
+
+    // Phase 5 cross-reification gather: when a New/Stack of a lifted
+    // lambda appears in a caller's body, walk the lifted class's
+    // apply Function body and emit Store-payload constraints into
+    // the (shared) typevar_store. The TypeVar identities flow via:
+    //  - caller seeds r.subst[U_k] = Type(TypeVar α_k)
+    //  - reify_emitted_type at the New site fills the lambda's
+    //    TypeArgs with α_k via the substitution
+    //  - inside apply, references to the lambda's own (cloned)
+    //    TypeParam are redirected to the same α_k by
+    //    rewrite_typeparam_refs (capture invariant: clone preserves
+    //    Location)
+    //  - Store statements in apply's body whose ref target is a
+    //    captured field of type ref[Union(α_k, ...)] contribute
+    //    add_lower(α_k, value_type) to the store.
+    void gather_lambda_apply_constraints(
+      const Node& new_type_wrapper, const NodeMap<Node>& caller_subst)
+    {
+      if (!new_type_wrapper)
+        return;
+
+      Node inner =
+        (new_type_wrapper == Type) ? new_type_wrapper->front() : new_type_wrapper;
+      if (!inner || inner != TypeName || inner->empty())
+        return;
+
+      // Find the class def for this New site's TypeName.
+      auto cls_def = find_def(top, inner);
+      if (!cls_def || cls_def != ClassDef)
+        return;
+
+      // Only lifted lambda classes — they have idents starting with
+      // "lambda$".
+      Node cls_ident = cls_def / Ident;
+      if (cls_ident->location().view().rfind("lambda$", 0) != 0)
+        return;
+
+      Node cls_body = cls_def / ClassBody;
+
+      // Find the apply Function inside this class.
+      Node apply_func;
+      for (auto& member : *cls_body)
+      {
+        if (member != Function)
+          continue;
+        Node fn_ident = member / Ident;
+        if (fn_ident->location().view() == "apply")
+        {
+          apply_func = member;
+          break;
+        }
+      }
+      if (!apply_func)
+        return;
+
+      // Local apply_subst that propagates TypeVar-valued substitutions
+      // (unlike vc::apply_subst which skips them). This is required so
+      // unbound formals' fresh α_k identities flow from the caller into
+      // the lambda's apply body, where Stores into captured-ref fields
+      // emit add_lower(α_k, val_type) constraints. Outside this gather,
+      // the TypeVar-skip semantics in apply_subst are still correct
+      // (Phase 3.5 deferred placeholder).
+      std::function<Node(const Node&, const NodeMap<Node>&)> subst_keep_tv =
+        [&](const Node& type_node, const NodeMap<Node>& sub) -> Node {
+        if (type_node != Type || sub.empty())
+          return clone(type_node);
+        auto in = type_node->front();
+        if (in == TypeName)
+        {
+          auto def = find_def(top, in);
+          if (def && def == TypeParam)
+          {
+            auto it = sub.find(def);
+            if (it != sub.end())
+              return clone(it->second);
+          }
+          Node new_tn = TypeName;
+          for (auto& elem : *in)
+          {
+            Node new_ta = TypeArgs;
+            for (auto& ta_child : *(elem / TypeArgs))
+              new_ta << subst_keep_tv(ta_child, sub);
+            new_tn << (NameElement << clone(elem / Ident) << new_ta);
+          }
+          return Type << new_tn;
+        }
+        if (in->in({Union, Isect, TupleType}))
+        {
+          Node new_inner = in->type();
+          for (auto& child : *in)
+            new_inner << subst_keep_tv(Type << clone(child), sub)->front();
+          return Type << new_inner;
+        }
+        return clone(type_node);
+      };
+
+      // Build a substitution mapping the lambda class's TypeParams
+      // to the New site's TypeArgs (after caller_subst applied,
+      // preserving TypeVar identities).
+      NodeMap<Node> apply_subst_map;
+      Node cls_tps = cls_def / TypeParams;
+      Node last_elem = inner->back();
+      if (!last_elem)
+        return;
+      Node cls_tas = last_elem / TypeArgs;
+      if (cls_tps->size() == cls_tas->size())
+      {
+        for (size_t i = 0; i < cls_tps->size(); i++)
+        {
+          auto ta_node = cls_tas->at(i);
+          if (!ta_node)
+            continue;
+          auto ta = subst_keep_tv(ta_node, caller_subst);
+          if (ta)
+            apply_subst_map[cls_tps->at(i)] = ta;
+        }
+      }
+
+      // Build a quick map: field name → field type.
+      std::map<std::string_view, Node> field_types;
+      for (auto& member : *cls_body)
+      {
+        if (member != FieldDef)
+          continue;
+        Node fid = member / Ident;
+        Node ft = member / Type;
+        field_types[fid->location().view()] = ft;
+      }
+
+      // Apply's params give us types for apply's locals.
+      std::map<Location, Node> apply_local_types;
+      Node apply_params = apply_func / Params;
+      for (auto& pd : *apply_params)
+      {
+        Node pd_ident = pd / Ident;
+        Node pd_type = pd / Type;
+        auto subbed = subst_keep_tv(pd_type, apply_subst_map);
+        if (subbed && subbed == Type && !subbed->empty())
+          apply_local_types[pd_ident->location()] = subbed->front();
+      }
+
+      // Walk apply's body emitting Store constraints.
+      Node labels = apply_func / Labels;
+      for (auto& lbl : *labels)
+      {
+        Node body = lbl / Body;
+        for (auto& stmt : *body)
+        {
+          if (!stmt)
+            continue;
+          if (stmt->in({Const, Convert}))
+          {
+            Node sid = stmt / LocalId;
+            Node stype = stmt / Type;
+            if (stype == Type && !stype->empty())
+              apply_local_types[sid->location()] = clone(stype->front());
+          }
+          else if (stmt == TypeAssertion)
+          {
+            Node sid = stmt / LocalId;
+            Node stype = stmt / Type;
+            auto subbed = subst_keep_tv(stype, apply_subst_map);
+            if (subbed && subbed == Type && !subbed->empty())
+              apply_local_types[sid->location()] = clone(subbed->front());
+          }
+          else if (stmt->in({Copy, Move}))
+          {
+            Node src_id = stmt / Rhs;
+            Node dst_id = stmt / LocalId;
+            auto it = apply_local_types.find(src_id->location());
+            if (it != apply_local_types.end())
+              apply_local_types[dst_id->location()] = it->second;
+          }
+          else if (stmt == FieldRef)
+          {
+            Node fid = stmt / FieldId;
+            Node did = stmt / LocalId;
+            auto fname = fid->location().view();
+            auto fit = field_types.find(fname);
+            if (fit != field_types.end())
+            {
+              auto ftype = subst_keep_tv(fit->second, apply_subst_map);
+              if (ftype && ftype == Type && !ftype->empty())
+                apply_local_types[did->location()] =
+                  Ref << clone(ftype->front());
+            }
+          }
+          else if (stmt == Load)
+          {
+            Node src_id = stmt / Rhs;
+            Node dst_id = stmt / LocalId;
+            auto it = apply_local_types.find(src_id->location());
+            if (
+              it != apply_local_types.end() && it->second && it->second == Ref &&
+              !it->second->empty())
+              apply_local_types[dst_id->location()] =
+                clone(it->second->front());
+          }
+          else if (stmt == Store)
+          {
+            Node ref_id = stmt / Rhs;
+            auto ref_loc = ref_id->location();
+            auto ref_it = apply_local_types.find(ref_loc);
+            if (ref_it == apply_local_types.end() || !ref_it->second)
+              continue;
+            // Extract the ref payload. Two shapes are possible:
+            //   1. Ref << <payload>  — local introduced via FieldRef
+            //   2. TypeName(_builtin::ref::<n>) with TypeArgs[0] = payload
+            //      — local introduced via TypeAssertion on $ref_<name>.
+            Node payload;
+            auto t = ref_it->second;
+            if (t == Ref && !t->empty())
+            {
+              payload = t->front();
+            }
+            else if (t == TypeName && !t->empty())
+            {
+              Node last = t->back();
+              if (last && last == NameElement)
+              {
+                Node tas = last / TypeArgs;
+                if (tas && !tas->empty())
+                {
+                  Node ta = tas->front();
+                  if (ta == Type && !ta->empty())
+                    payload = ta->front();
+                }
+              }
+            }
+            if (!payload)
+              continue;
+            Node arg = stmt / Arg;
+            Node val_id_node = arg / Rhs;
+            auto val_loc = val_id_node->location();
+            auto val_it = apply_local_types.find(val_loc);
+            if (val_it == apply_local_types.end() || !val_it->second)
+              continue;
+            auto val_type = val_it->second;
+
+            if (payload == TypeVar)
+            {
+              auto alpha_id = typevar_store.intern(payload->location());
+              typevar_store.add_lower(alpha_id, val_type);
+            }
+            else if (payload == Union)
+            {
+              Node tv_arm;
+              bool matched_concrete = false;
+              for (auto& arm : *payload)
+              {
+                if (!arm)
+                  continue;
+                if (arm == TypeVar)
+                {
+                  if (!tv_arm)
+                    tv_arm = arm;
+                  else
+                    tv_arm = {};
+                }
+                else if (val_type && val_type->equals(arm))
+                {
+                  matched_concrete = true;
+                  break;
+                }
+              }
+              if (!matched_concrete && tv_arm)
+              {
+                auto alpha_id = typevar_store.intern(tv_arm->location());
+                typevar_store.add_lower(alpha_id, val_type);
+              }
+            }
+          }
+        }
+      }
+    }
 
     // Drive the NodeWorker until all reifications are Resolved (or
     // Blocked due to mutual recursion — Phase 3b.4 handles that).
@@ -3214,9 +3489,14 @@ namespace vc
       lookup_info.clear();
       tainted_locals.clear();
       pinned_locals.clear();
-      // Fresh per-Reification constraint store. (Phase 6 work
-      // wires this up; currently unused.)
-      typevar_store = TypeVarStore{};
+      // typevar_store accumulates constraints ACROSS reifications.
+      // Per Phase 5 cross-functional propagation: when reifying a
+      // caller, its own body-walk constraints share the store with
+      // any callee reifications (e.g., a lifted lambda's apply
+      // body). Each formal gets a fresh α_k (unique Location), so
+      // identities don't collide. Constraints are monotone (only
+      // added, never removed), so cross-reification accumulation is
+      // safe.
 
       // Reify the function signature.
       auto def_type = r.def / Type;
@@ -3230,10 +3510,26 @@ namespace vc
       // unconstrained formals out of r.subst.
       auto def_tps = r.def / TypeParams;
       Nodes unbound_formals;
+      // Phase 6: for each unbound formal, allocate a fresh TypeVar α_k
+      // identity. Used by the constraint store to track observations
+      // about the formal during body walk; the solver then drives
+      // r.subst updates after the walk.
+      NodeMap<Location> formal_typevars;
       for (auto& tp : *def_tps)
       {
         if (r.subst.find(tp) == r.subst.end())
+        {
           unbound_formals.push_back(tp);
+          auto tv = make_typevar();
+          formal_typevars[tp] = tv->location();
+          typevar_store.intern(tv->location());
+          // Seed r.subst[tp] = Type(TypeVar α_k). resolve_typearg
+          // will return the TypeVar leaf (Phase 3.5 deferred placeholder
+          // semantics). After body walk + cross-reify gather, the
+          // solver may bind α_k to a concrete type and replace this
+          // entry via the typevar_solved_formals → r.subst update.
+          r.subst[tp] = Type << clone(tv);
+        }
       }
 
       // Phase 3b.5 (a): U-mention scan. Walk the function body. For each
@@ -3689,20 +3985,54 @@ namespace vc
               auto payload = src_it->second->front();
               local_types[(n / LocalId)->location()] = clone(payload);
 
-              // Phase 6 constraint emission: if the ref's payload is
-              // a TypeVar α, the stored value's type contributes a
-              // lower bound on α (the value must be a subtype of α).
-              // This is the constraint that links lambda body writes
-              // to the captured local's TypeVar — the foundation of
-              // cross-functional propagation.
-              if (payload == TypeVar)
+              // Phase 6 constraint emission: the stored value's type
+              // contributes a lower bound on TypeVars in the ref's
+              // payload. For a direct TypeVar payload, the value
+              // becomes a lower bound. For a Union payload, the value
+              // must subtype some arm: if it matches a concrete arm
+              // structurally, no TypeVar constraint; otherwise it's
+              // attributed to the (single) TypeVar arm if any.
+              auto val_loc = ((n / Arg) / Rhs)->location();
+              auto val_it = local_types.find(val_loc);
+              if (val_it != local_types.end() && val_it->second)
               {
-                auto val_loc = ((n / Arg) / Rhs)->location();
-                auto val_it = local_types.find(val_loc);
-                if (val_it != local_types.end() && val_it->second)
+                auto val_type = val_it->second;
+
+                if (payload == TypeVar)
                 {
-                  auto alpha_id = typevar_store.intern(payload->location());
-                  typevar_store.add_lower(alpha_id, val_it->second);
+                  auto alpha_id =
+                    typevar_store.intern(payload->location());
+                  typevar_store.add_lower(alpha_id, val_type);
+                }
+                else if (payload == Union)
+                {
+                  // Heuristic: if val_type matches any concrete arm
+                  // structurally, emit no constraint (val flows into
+                  // that arm). Else, attribute to the single TypeVar
+                  // arm if exactly one exists.
+                  Node tv_arm;
+                  bool matched_concrete = false;
+                  for (auto& arm : *payload)
+                  {
+                    if (arm == TypeVar)
+                    {
+                      if (!tv_arm)
+                        tv_arm = arm;
+                      else
+                        tv_arm = {}; // multiple TypeVars: ambiguous
+                    }
+                    else if (val_type && val_type->equals(arm))
+                    {
+                      matched_concrete = true;
+                      break;
+                    }
+                  }
+                  if (!matched_concrete && tv_arm)
+                  {
+                    auto alpha_id =
+                      typevar_store.intern(tv_arm->location());
+                    typevar_store.add_lower(alpha_id, val_type);
+                  }
                 }
               }
             }
@@ -3746,10 +4076,34 @@ namespace vc
             // or unbound formals (bare-U assertions handled by BDB above).
             // has_unresolved_type covers both: TypeVar leaves and
             // TypeParam refs not in r.subst.
+            //
+            // Phase 6: when the assertion type references unbound
+            // formals (e.g., `var best: U | none`), build an augmented
+            // subst that maps each unbound formal to its α_k TypeVar
+            // and pin local_types[loc] to that. This makes
+            // RegisterRef pick up Ref<<Union(α_U, none) and the Store
+            // emission sees the TypeVar in the payload.
             auto assert_type = n / Type;
             if (!has_unresolved_type(assert_type, r.subst))
             {
               auto reified = reify_type(assert_type, r.subst);
+              if (reified && reified != Dyn)
+              {
+                local_types[loc] = reified;
+                pinned_locals.insert(loc);
+              }
+            }
+            else if (!formal_typevars.empty())
+            {
+              // Build an augmented subst: r.subst plus an entry per
+              // unbound formal mapping it to Type(TypeVar(α_k)).
+              NodeMap<Node> aug_subst = r.subst;
+              for (auto& [tp, tv_loc] : formal_typevars)
+              {
+                aug_subst[tp] = Type
+                  << NodeDef::create(TypeVar, tv_loc);
+              }
+              auto reified = reify_type(assert_type, aug_subst);
               if (reified && reified != Dyn)
               {
                 local_types[loc] = reified;
@@ -3761,8 +4115,12 @@ namespace vc
           else if (n->in({New, Stack}))
           {
             // Save the type before reify_new transforms the node.
+            auto orig_type = n / Type;
             auto new_type = reify_emitted_type(
-              n / Type, r.subst, n / Type, "constructed type");
+              orig_type, r.subst, n / Type, "constructed type");
+
+            gather_lambda_apply_constraints(orig_type, r.subst);
+
             reify_new(n, r.subst);
             // After reify_new, dst is first child.
             local_types[(n / LocalId)->location()] = new_type;
@@ -4141,6 +4499,34 @@ namespace vc
           r_type = make_typevar();
       }
 
+      // Phase 6 — solver consumption (NEW, runs alongside legacy
+      // body-driven binding for now): for each unbound formal,
+      // query the constraint store for a binding. If solved to a
+      // non-bottom type, record it for r.subst update below. The
+      // legacy var/return-evidence mechanism still runs for cases
+      // the solver can't yet handle (e.g., return type evidence
+      // that doesn't flow through Stores).
+      NodeMap<Node> typevar_solved_formals;
+      for (auto& [tp, tv_loc] : formal_typevars)
+      {
+        auto alpha_id = typevar_store.intern(tv_loc);
+        auto solved = typevar_store.solve(alpha_id);
+        // Bottom (empty Union with no children) means no observation.
+        // Skip; legacy mechanism may still bind from return evidence.
+        if (!solved || (solved == Union && solved->empty()))
+          continue;
+        // Skip if solved still contains free TypeVars — incomplete.
+        bool has_tv = false;
+        solved->traverse([&](const Node& n) {
+          if (n == TypeVar)
+            has_tv = true;
+          return !has_tv;
+        });
+        if (has_tv)
+          continue;
+        typevar_solved_formals[tp] = Type << solved;
+      }
+
       // Phase 3b.4: body-driven binding for unbound formals. After the
       // body walk, gather Return evidence from local_types[ret_loc] and
       // bind each unbound formal to the LUB of admitted evidence.
@@ -4313,6 +4699,19 @@ namespace vc
               lub << clone(e);
           }
           r.subst[formal] = Type << lub;
+        }
+
+        // Phase 6 solver bindings: also record any formals solved by
+        // the constraint store. These complement the legacy evidence
+        // mechanism — formals only the legacy mechanism could bind
+        // come from r.subst[formal] = ... above; formals only the
+        // solver could bind come from typevar_solved_formals.
+        // Conflict resolution: legacy wins (unchanged). Solver fills
+        // gaps the legacy mechanism missed.
+        for (auto& [tp, ty] : typevar_solved_formals)
+        {
+          if (r.subst.find(tp) == r.subst.end())
+            r.subst[tp] = ty;
         }
 
         // Re-emit r_type with the (possibly-updated) substitution. If a
