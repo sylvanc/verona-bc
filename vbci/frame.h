@@ -43,6 +43,5 @@ namespace vbci
     void drop();
     void drop_args(size_t& args);
     Region& get_frame_local_region() const;
-    void check_var_type(size_t reg_idx, Program& prog) const;
   };
 }

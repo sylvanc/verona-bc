@@ -788,6 +788,16 @@ namespace vc
                 continue;
 
               auto old_type = vd / Type;
+              // First-pass concrete types (not placeholders) come from
+              // a pinned TypeAssertion (the user's declared type). They
+              // are the source of truth — second-pass aggregation may
+              // narrow (e.g. observed only the init value `none`) or
+              // widen (gather `nomatch` from match arms), but the
+              // declared type wins. Only refine when first pass left a
+              // placeholder (TypeVar / Dyn).
+              if (old_type != TypeVar && old_type != Dyn)
+                continue;
+
               if (old_type->equals(it->second))
                 continue;
 
@@ -1072,6 +1082,15 @@ namespace vc
     // concrete-receiver dispatches"). Taint propagates via Copy/Move.
     // Cleared per reify_function (same lifetime as local_types).
     std::set<Location> tainted_locals;
+
+    // Locals whose type is pinned by a concrete TypeAssertion (e.g.,
+    // `var best: i32 | none = none`). Subsequent Copy/Move into the
+    // local must NOT overwrite local_types[loc] — the user's declared
+    // type is the source of truth. Without this, captured-ref fields
+    // pick up the init value's narrower type instead of the declared
+    // union type, causing typecheck failures at the lambda New site.
+    // Cleared per reify_function (same lifetime as local_types).
+    std::set<Location> pinned_locals;
 
     // Drive the NodeWorker until all reifications are Resolved (or
     // Blocked due to mutual recursion — Phase 3b.4 handles that).
@@ -3184,6 +3203,7 @@ namespace vc
       local_types.clear();
       lookup_info.clear();
       tainted_locals.clear();
+      pinned_locals.clear();
 
       // Reify the function signature.
       auto def_type = r.def / Type;
@@ -3495,7 +3515,9 @@ namespace vc
             auto dst_loc = (n / LocalId)->location();
             auto src_it = local_types.find(src_loc);
 
-            if (src_it != local_types.end())
+            // Pinned destinations keep their declared type (from a
+            // concrete TypeAssertion). Don't let Copy/Move narrow.
+            if (src_it != local_types.end() && !pinned_locals.count(dst_loc))
               local_types[dst_loc] = clone(src_it->second);
 
             // Phase 3b.5 (b): propagate concrete-receiver taint.
@@ -3659,6 +3681,7 @@ namespace vc
           }
           else if (n == TypeAssertion)
           {
+            auto loc = (n / LocalId)->location();
             // Phase 3b.4.3 body-driven binding: detect `var x: U` sites
             // where U is an unbound formal (bare TypeName referencing
             // it). Record the local for later evidence gathering.
@@ -3674,11 +3697,30 @@ namespace vc
                   {
                     if (f.get() == def.get())
                     {
-                      var_to_formal[(n / LocalId)->location()] = def;
+                      var_to_formal[loc] = def;
                       break;
                     }
                   }
                 }
+              }
+            }
+            // Concrete TypeAssertion: pin local_types[loc] to the
+            // declared type. The user's annotation is the source of
+            // truth; subsequent Copy/Move into this local must not
+            // narrow it (e.g., `var best: i32 | none = none` must not
+            // collapse to `none`). Skip TypeAssertions whose type
+            // contains TypeVars (sugar may emit capture-ref placeholders)
+            // or unbound formals (bare-U assertions handled by BDB above).
+            // has_unresolved_type covers both: TypeVar leaves and
+            // TypeParam refs not in r.subst.
+            auto assert_type = n / Type;
+            if (!has_unresolved_type(assert_type, r.subst))
+            {
+              auto reified = reify_type(assert_type, r.subst);
+              if (reified && reified != Dyn)
+              {
+                local_types[loc] = reified;
+                pinned_locals.insert(loc);
               }
             }
             remove.push_back(n);
@@ -4678,10 +4720,25 @@ namespace vc
     // Ensure that a Ref wrapper primitive with the given inner IR type is
     // reified.  Checks for an existing entry by structural id equality and
     // creates one via the worklist if absent.
+    //
+    // When `inner_ir_type` is a Union, ALSO reify ref[member] for each
+    // member. This is needed because at runtime, `&x` for a var x of
+    // declared type Union(T_1, ..., T_n) computes its dynamic type as
+    // ref[actual_value_type], where actual_value_type is some T_i.
+    // The runtime ref-type lookup (Program::ref) falls back to ref[Dyn]
+    // if the precise ref[T_i] isn't reified, which then fails covariant
+    // subtype checks against the expected ref[Union(...)].
     void ensure_ref_reified(const Node& inner_ir_type)
     {
       if (!inner_ir_type || (inner_ir_type == Dyn))
         return;
+
+      // Recurse into union members so each ref[member] is also reified.
+      if (inner_ir_type == Union)
+      {
+        for (auto& member : *inner_ir_type)
+          ensure_ref_reified(member);
+      }
 
       auto ref_defs = builtin->look(Location("ref"));
       assert(!ref_defs.empty());

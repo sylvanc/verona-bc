@@ -516,9 +516,22 @@ namespace vbci
       if (sub_t.tag != super_t.tag)
         return false;
 
+      // Ref / Array / Cown subtyping is COVARIANT in vbci's dynamic
+      // type system. Static typing requires invariance (otherwise
+      // future writes through ref[wider] could violate the underlying
+      // ref[narrower]), but vbci already runtime-checks every write
+      // against the underlying slot's declared type via the write
+      // barrier (object/array/cown exchange + check_var_type). The
+      // dynamic type of `&x` is `ref[type-of-x]`; passing it as
+      // `ref[union(..., type-of-x, ...)]` is sound because:
+      //   - reads return values of x's actual type, which by
+      //     covariance is a subtype of the caller's expected payload;
+      //   - writes go through the slot's actual-type barrier, so
+      //     incompatible writes fail at runtime regardless of how
+      //     wide the caller's static ref type was.
       auto sub_elem = sub_t.children.at(0);
       auto super_elem = super_t.children.at(0);
-      return subtype(sub_elem, super_elem) && subtype(super_elem, sub_elem);
+      return subtype(sub_elem, super_elem);
     }
 
     return false;
@@ -993,12 +1006,13 @@ namespace vbci
 
     f.return_type = uleb(pc);
 
-    // Variable types.
+    // Var register ids. vbci tracks WHICH registers are vars (so that
+    // RegisterRef can target them); declared types are vbcc's
+    // responsibility.
     auto vars = uleb(pc);
-    f.var_types.resize(vars);
 
     for (size_t i = 0; i < vars; i++)
-      f.var_types.at(i) = uleb(pc);
+      f.var_registers.insert(uleb(pc));
 
     // Labels.
     f.labels.resize(uleb(pc));

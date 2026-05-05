@@ -3,6 +3,7 @@
 
 #include <map>
 #include <queue>
+#include <unordered_set>
 
 namespace vbcc
 {
@@ -227,6 +228,29 @@ namespace vbcc
       return it->second;
     return {};
   }
+
+  // Thread-local pointer to the current function's var location ->
+  // declared type map. Used by the RegisterRef handler so that `&x` for
+  // a Var x produces `ref[declared_type_of_x]`, not `ref[current_value_type]`.
+  // The reference must accept any future write within the var's declared
+  // type, so narrowing the payload type to the current dataflow value
+  // would produce a ref that fails downstream assignments through the
+  // ref. For Vars declared as Dyn (no annotation), we fall back to the
+  // dataflow type because there's no useful static type to use.
+  inline thread_local const std::unordered_map<std::string, Node>*
+    current_var_static_types = nullptr;
+
+  struct VarStaticTypesScope
+  {
+    const std::unordered_map<std::string, Node>* prev;
+    explicit VarStaticTypesScope(
+      const std::unordered_map<std::string, Node>* m)
+    : prev(current_var_static_types)
+    {
+      current_var_static_types = m;
+    }
+    ~VarStaticTypesScope() { current_var_static_types = prev; }
+  };
 
   // Set the type of a register in the type environment.
   static void set_type(
@@ -735,9 +759,37 @@ namespace vbcc
         }
         else if (node == RegisterRef)
         {
-          auto src_type = typed(node / Rhs);
-          if (src_type)
-            set_type(env, node / LocalId, Ref << clone(src_type));
+          // For RegisterRef of a Var with a non-trivial declared type,
+          // use the var's DECLARED static type for the ref's payload —
+          // the ref must accept any value within the var's declared
+          // type over its lifetime, not just the current dataflow value.
+          // Narrowing to the current value would produce a ref that
+          // can't be the target of later writes of other admissible
+          // types (e.g., a captured `var best: i32 | none = none`
+          // must produce ref[i32 | none], not ref[none]).
+          // For Vars declared as Dyn (no annotation, type unknown) and
+          // for non-Var sources (temporaries), fall back to the dataflow
+          // type because that's the only type information available.
+          Node ref_payload;
+          auto src_id = node / Rhs;
+          auto src_key = std::string(src_id->location().view());
+
+          if (current_var_static_types)
+          {
+            auto it = current_var_static_types->find(src_key);
+            if (it != current_var_static_types->end() && it->second != Dyn)
+              ref_payload = clone(it->second);
+          }
+
+          if (!ref_payload)
+          {
+            auto src_type = typed(node / Rhs);
+            if (src_type)
+              ref_payload = clone(src_type);
+          }
+
+          if (ref_payload)
+            set_type(env, node / LocalId, Ref << ref_payload);
           else
             set_type(env, node / LocalId, Ref << Dyn);
         }
@@ -1989,11 +2041,22 @@ namespace vbcc
           auto key = std::string((param / LocalId)->location().view());
           init_env[key] = resolve_type(param / Type);
         }
+
+        // Build a per-function map from var location -> declared type.
+        // Used by RegisterRef to compute the ref's payload type from
+        // the var's declared (static) type, not its current value type.
+        // A `ref[T]` stores any value of type T over time; narrowing the
+        // payload to the current value would produce a ref that can't
+        // accept future writes of other admissible types.
+        std::unordered_map<std::string, Node> var_static_types;
         for (auto& var : *(func_node / Vars))
         {
           auto key = std::string((var / LocalId)->location().view());
           init_env[key] = resolve_type(var / Type);
+          var_static_types[key] = resolve_type(var / Type);
         }
+
+        VarStaticTypesScope vst_scope(&var_static_types);
 
         // Environment fingerprint for convergence detection.
         auto make_fingerprint = [&](const TypeEnv& e) -> std::string {

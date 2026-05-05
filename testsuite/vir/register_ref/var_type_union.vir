@@ -2,7 +2,10 @@ lib
   @set_exit_code = "set_exit_code"(i32): none
 
 // A union-typed var accepts values of either member type via Copy.
-// The ref store checks the union type at runtime through the var type.
+// `&x` for a var x of type T produces ref[T]; the ref's payload type is
+// the var's declared static type (so future writes of any T are valid).
+// Reads through the ref therefore yield T (statically); a typetest is
+// required to narrow back to a concrete member.
 
 type @intorbool = i32 | bool
 
@@ -16,15 +19,25 @@ func @main(): none var $x: @intorbool, $y: @intorbool
   // Store through ref with matching types.
   $rx = ref $x
   $val3 = const i32 99
+  // store returns the previous value, statically of type @intorbool.
   $prev = store $rx $val3
-  // The previous value was 42.
+  // Narrow $prev to i32 before comparing.
+  $prev_is_i32 = typetest $prev i32
+  cond $prev_is_i32 ^check_prev ^fail
+^check_prev
+  $prev_i32 = convert i32 $prev
   $exp = const i32 42
-  $ok1 = eq $prev $exp
-  // The current value is 99.
+  $ok1 = eq $prev_i32 $exp
+  cond $ok1 ^check_cur ^fail
+^check_cur
+  // load returns @intorbool; narrow to i32.
   $cur = load $rx
-  $ok2 = eq $cur $val3
-  $both = and $ok1 $ok2
-  cond $both ^ok ^fail
+  $cur_is_i32 = typetest $cur i32
+  cond $cur_is_i32 ^check_cur_val ^fail
+^check_cur_val
+  $cur_i32 = convert i32 $cur
+  $ok2 = eq $cur_i32 $val3
+  cond $ok2 ^ok ^fail
 ^ok
   $ret = const i32 0
   $_ = ffi @set_exit_code($ret)

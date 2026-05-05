@@ -666,12 +666,16 @@ namespace vbcc
 
       hdr << uleb(typ(func_state.func / Type));
 
-      // Variable types.
+      // Variable register ids. Vars are NOT contiguous in register-id
+      // space when optimize-inlining adds new vars after body locals
+      // are numbered. Encode just the register id of each Var; vbci
+      // doesn't need the declared type at runtime (vbcc enforces
+      // declared types statically).
       auto vars_node = func_state.func / Vars;
       hdr << uleb(vars_node->size());
 
       for (auto& var : *vars_node)
-        hdr << uleb(typ(var / Type));
+        hdr << uleb(*func_state.get_register_id(var / LocalId));
 
       // Labels.
       hdr << uleb(func_state.label_idxs.size());
