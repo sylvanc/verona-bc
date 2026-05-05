@@ -390,14 +390,18 @@ namespace vc
     if (!type_node)
       return type_node;
 
-    // Type wrapper: unwrap, recurse, rewrap.
+    // Type wrapper: unwrap, recurse, rewrap. Skip rewrap if inner
+    // didn't change — preserve pointer identity when nothing was
+    // substituted (avoids spurious node churn).
     if (type_node == Type)
     {
       bool inner_has_tv = false;
       auto inner = type_node->front();
       auto sub = substitute(inner, inner_has_tv);
       has_typevar_out = inner_has_tv;
-      return Type << (sub ? sub : clone(inner));
+      if (!sub || sub.get() == inner.get())
+        return type_node;
+      return Type << sub;
     }
 
     // TypeVar leaf.
@@ -407,7 +411,7 @@ namespace vc
       if (it == loc_to_id.end())
       {
         has_typevar_out = true;
-        return clone(type_node);
+        return type_node;
       }
       auto solved = solve(it->second);
       // Recursively substitute through the result (bound types may
@@ -433,13 +437,13 @@ namespace vc
         any_tv = true;
       if (!sub || sub.get() != child.get())
         any_changed = true;
-      new_children.push_back(sub ? sub : clone(child));
+      new_children.push_back(sub ? sub : child);
     }
 
     has_typevar_out = any_tv;
 
     if (!any_changed)
-      return clone(type_node);
+      return type_node;
 
     Node out = NodeDef::create(type_node->type(), type_node->location());
     for (auto& c : new_children)

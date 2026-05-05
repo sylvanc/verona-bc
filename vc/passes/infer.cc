@@ -1,5 +1,6 @@
 #include "../lang.h"
 #include "../subtype.h"
+#include "../typevar.h"
 
 #include <algorithm>
 #include <chrono>
@@ -688,28 +689,39 @@ namespace vc
 
   static MethodLookupCache* active_method_cache = nullptr;
 
+  // Per-function TypeVarStore for the constraint solver. Set by
+  // InferProcessScope; accessible to merge() and helpers via this
+  // thread-local. Per Phase 4 design, infer emits constraints into
+  // this store as it processes each statement; after the per-function
+  // fixed point converges, store.substitute() walks env + AST.
+  static TypeVarStore* active_typevar_store = nullptr;
+
   struct InferProcessScope
   {
     InferProfileStats* current_profile;
     InferProfileStats* prev_profile;
     MethodLookupCache* prev_method_cache;
     size_t* prev_transfer_epoch;
+    TypeVarStore* prev_typevar_store;
 
     InferProcessScope(
       InferProfileStats* current_profile_,
       InferProfileStats* prev_profile_,
       MethodLookupCache* prev_method_cache_,
-      size_t* prev_transfer_epoch_)
+      size_t* prev_transfer_epoch_,
+      TypeVarStore* prev_typevar_store_)
     : current_profile(current_profile_),
       prev_profile(prev_profile_),
       prev_method_cache(prev_method_cache_),
-      prev_transfer_epoch(prev_transfer_epoch_)
+      prev_transfer_epoch(prev_transfer_epoch_),
+      prev_typevar_store(prev_typevar_store_)
     {}
 
     ~InferProcessScope()
     {
       active_method_cache = prev_method_cache;
       active_infer_transfer_epoch = prev_transfer_epoch;
+      active_typevar_store = prev_typevar_store;
       if (current_profile != nullptr)
         dump_infer_profile(*current_profile);
       active_infer_profile = prev_profile;
@@ -1263,6 +1275,64 @@ namespace vc
     return (u->size() == 1) ? Type << clone(u->front()) : Type << u;
   }
 
+  // Helper: register every TypeVar Location reachable in `type` with
+  // the active TypeVarStore. Called from merge_env to ensure that
+  // TypeVars appearing in env get IDs in the store. No constraint
+  // emission — just discovery.
+  static void register_typevars(const Node& type)
+  {
+    if (!type || active_typevar_store == nullptr)
+      return;
+
+    type->traverse([&](const Node& n) {
+      if (n == TypeVar)
+        active_typevar_store->intern(n->location());
+      return true;
+    });
+  }
+
+  // Helper: emit constraints into the active TypeVarStore based on a
+  // merge between `existing` (env's current type for loc) and
+  // `incoming` (the new observation). Both are Type-wrapped nodes.
+  // - existing is TypeVar α, incoming is concrete T → bind(α, T).
+  // - existing is concrete T, incoming is TypeVar α → bind(α, T).
+  // - both are TypeVar (different Locations) → unify(α, β).
+  // - otherwise: no emission (handled by merge_type).
+  // Constraints are emitted but NOT consulted yet — this is Phase 4
+  // foundation work. Phase 4 follow-up will consult the store at
+  // end of process_function and substitute.
+  static void emit_merge_constraint(const Node& existing, const Node& incoming)
+  {
+    if (active_typevar_store == nullptr || !existing || !incoming)
+      return;
+
+    auto e_inner = (existing == Type) ? existing->front() : existing;
+    auto i_inner = (incoming == Type) ? incoming->front() : incoming;
+
+    if (!e_inner || !i_inner)
+      return;
+
+    bool e_tv = (e_inner == TypeVar);
+    bool i_tv = (i_inner == TypeVar);
+
+    if (e_tv && i_tv)
+    {
+      auto a = active_typevar_store->intern(e_inner->location());
+      auto b = active_typevar_store->intern(i_inner->location());
+      active_typevar_store->unify(a, b);
+    }
+    else if (e_tv)
+    {
+      auto a = active_typevar_store->intern(e_inner->location());
+      active_typevar_store->bind(a, i_inner);
+    }
+    else if (i_tv)
+    {
+      auto b = active_typevar_store->intern(i_inner->location());
+      active_typevar_store->bind(b, e_inner);
+    }
+  }
+
   // Merge a type into env at loc. Returns true if the type changed.
   static bool merge_env(
     TypeEnv& env,
@@ -1274,6 +1344,9 @@ namespace vc
     if (active_infer_profile != nullptr)
       active_infer_profile->merge_env_calls++;
 
+    // Discover TypeVars in incoming; emission in cases below.
+    register_typevars(type);
+
     auto it = env.find(loc);
     if (it == env.end())
     {
@@ -1281,7 +1354,12 @@ namespace vc
       return true;
     }
     if (it->second.is_fixed)
+    {
+      // Even for fixed entries, emit a constraint so the store
+      // captures (existing-fixed = incoming) information.
+      emit_merge_constraint(it->second.type, type);
       return false;
+    }
 
     if (it->second.type == type)
     {
@@ -1293,6 +1371,11 @@ namespace vc
 
       return false;
     }
+
+    // Emit constraint based on TypeVar identity between existing and
+    // incoming. This runs BEFORE merge_type so we capture the
+    // pre-merge state of `existing`.
+    emit_merge_constraint(it->second.type, type);
 
     auto merged = merge_type(it->second.type, type, top);
     if (!merged)
@@ -4405,16 +4488,25 @@ namespace vc
     MethodLookupCache* prev_method_cache = active_method_cache;
     size_t transfer_epoch = 0;
     size_t* prev_transfer_epoch = active_infer_transfer_epoch;
+    // Per-function constraint store. Constraints are emitted into
+    // this during the per-statement walks below; after convergence
+    // (Phase 4 follow-up steps), store.substitute() will rewrite env
+    // + AST type nodes. Currently the store is wired but no
+    // emission is hooked up — incremental Phase 4 progress.
+    TypeVarStore typevar_store;
+    TypeVarStore* prev_typevar_store = active_typevar_store;
     bool profile_enabled = infer_profile_enabled();
     if (profile_enabled)
       active_infer_profile = &profile;
     active_method_cache = &method_cache;
     active_infer_transfer_epoch = &transfer_epoch;
+    active_typevar_store = &typevar_store;
     InferProcessScope process_scope(
       profile_enabled ? &profile : nullptr,
       prev_profile,
       prev_method_cache,
-      prev_transfer_epoch);
+      prev_transfer_epoch,
+      prev_typevar_store);
     InferScopedTimer function_timer(
       (active_infer_profile != nullptr) ?
         &active_infer_profile->process_function_time :
