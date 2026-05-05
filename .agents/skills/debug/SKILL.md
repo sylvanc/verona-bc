@@ -14,14 +14,22 @@ Don't assert a cause. State hypotheses explicitly. Prove the execution path with
 
 A hypothesis is not knowledge. If you can test it, test it. This protocol makes that concrete for debugging sessions.
 
-## Verona hard stop: no source-level compiler workarounds
+## Verona hard stop: no compiler workarounds (any context)
 
-When debugging Verona source code, libraries, or examples against `vc` / `vbci`, treat "this looks like a compiler/runtime bug" as a hard stop for workaround-ish repo edits.
+This rule applies whether you are debugging, designing a library
+API, writing a test, or refactoring. Any change whose justification
+is "the compiler can't currently handle the natural form" is a
+workaround and triggers the hard stop.
+
+When working on Verona source code, libraries, examples, or any
+artifact that consumes `vc` / `vbci`, treat "this looks like a
+compiler limitation" as a hard stop for any source-level
+contortion.
 
 Before editing the source package under investigation, classify each proposed change as one of:
 
 - **Real source bug**: the source is independently wrong with respect to the intended API, language semantics, or external library contract.
-- **Compiler workaround**: the change exists only to dodge compiler/runtime behavior (for example wrapper methods added only to make lambdas distinct, extra wrapper objects around unions, typed-literal hacks, signature changes added only to appease inference/typecheck, or control-flow reshaping that has no source-level justification).
+- **Compiler workaround**: the change exists only to dodge compiler/runtime behavior (for example wrapper methods added only to make lambdas distinct, extra wrapper objects around unions, typed-literal hacks, signature changes added only to appease inference/typecheck, control-flow reshaping that has no source-level justification, **API redesigns that abandon polymorphism because type-arg inference can't currently bind a formal**, **falling back from `each`-based iteration to index-based because lambda annotations don't contribute to type-args**, etc.).
 
 Rules:
 

@@ -10,6 +10,48 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
 - For tricky compiler/runtime/FFI bugs, do principled analysis first: reproduce, trace, inspect dumps, and localize the fault before changing semantics.
 - Before speculative interpreter/runtime changes, explain the evidence and proposed fix and get feedback.
 
+## Hard rule: principled work, NEVER workarounds
+
+This applies to ALL work — debugging, library API design, refactoring,
+testing, doc — not just debugging sessions. The "no workarounds"
+discipline in `.agents/skills/debug/SKILL.md` is repeated here at
+top level because it has been violated repeatedly in API design
+contexts where it isn't framed as "debugging".
+
+When you encounter a compiler limitation (inference failure, missing
+language feature, type-arg binding gap, etc.) while designing or
+implementing something:
+
+- **Do NOT** redesign the API to dodge it ("min/max should be
+  index-based because lambda annotations don't bind type-args").
+- **Do NOT** add restrictions, type annotations, or signature
+  contortions whose only purpose is to make the compiler accept
+  the code.
+- **Do NOT** narrow the function's polymorphism to fit current
+  compiler capability.
+- **Do NOT** comment "until phase-X lands" and ship a degraded
+  implementation. The fix IS phase-X — it just got promoted to
+  this task.
+
+What to do instead:
+
+1. Stop. The compiler limitation is now part of the work item.
+2. Reproduce minimally. Identify the exact rule that's failing.
+3. Fix the compiler. This may be more work than the original task
+   — that's expected and acceptable.
+4. Return to the original task with the limitation removed. Verify
+   the natural API works without contortions.
+
+This rule is non-negotiable. A function whose natural,
+mathematically-clean signature is `min[T, U](c: T): U | none`
+implemented over `c.each(f: U -> none)` is the correct design;
+any version of it that requires `c.size + c(i)` is a worse design
+shipped under duress, not a different design choice.
+
+The corollary: when reviewing your own work, ask "would I be
+embarrassed by this if it were the only thing the user saw?" If
+yes, it's a workaround. Back up.
+
 # Verona Compiler (vc) Specifics
 
 - **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump-clean` and `ninja update-dump` to regenerate golden test files.
