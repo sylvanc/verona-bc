@@ -1101,6 +1101,190 @@ namespace vc
     // safe and monotone.
     TypeVarStore& typevar_store = TypeVarStore::global();
 
+    // Phase B2: pre-pass emission of arg-vs-formal Subtype constraints
+    // at every Call/CallDyn site in `func_def`'s body, using SOURCE
+    // types (taken from the AST's param/return/Const annotations) and
+    // the caller's r.subst applied (which carries α_k seeds for any
+    // unbound formals). This is the reify-side counterpart of the
+    // infer-side call-arg emission: at infer time we couldn't fire on
+    // generic callers (e.g. each_min[T,U]) because T was parametric;
+    // here, T has already been substituted to a concrete class type,
+    // so navigating the receiver and resolving the method is
+    // possible. Subtype runs in Mode::Emit, so any TypeVar (or
+    // TypeName-resolving-to-TypeParam) hit during decomposition
+    // emits add_lower / add_upper / unify into the global store.
+    void emit_source_call_constraints(
+      const Node& func_def, const NodeMap<Node>& subst)
+    {
+      // source_types tracks each local's *source* type (i.e., the
+      // type as written in the AST, with caller TypeArg references
+      // unsubstituted). At emission points we apply caller's subst.
+      std::map<Location, Node> source_types;
+
+      // Initialize from params: each param has a Type child.
+      for (auto& p : *(func_def / Params))
+      {
+        Node t = p / Type;
+        if (t == Type)
+          source_types[(p / Ident)->location()] = clone(t);
+      }
+
+      auto emit_subtype = [&](const Node& arg_type, const Node& formal_type) {
+        if (!arg_type || !formal_type)
+          return;
+        SequentCtx emit_ctx{top, {}, {}};
+        emit_ctx.constraint_store = &typevar_store;
+        emit_ctx.mode = SequentCtx::Mode::Emit;
+        (void)Subtype(emit_ctx, arg_type, formal_type);
+      };
+
+      // For Call: navigate FuncName → Function def, build callee_subst
+      // from FuncName TypeArgs, then for each (param, arg) pair emit
+      // Subtype(arg_type_post_subst, formal_type_post_subst).
+      auto emit_for_call = [&](const Node& call) {
+        Node fname = call / FuncName;
+        if (!fname || fname == FuncName)
+        {
+          auto def = find_def(top, fname);
+          if (!def || def != Function)
+            return;
+          auto fparams = def / Params;
+          auto fargs = call / Args;
+          if (fparams->size() != fargs->size())
+            return;
+          // Build callee_subst from FuncName's NameElement TypeArgs.
+          NodeMap<Node> callee_subst = build_subst_from_typename(top, fname);
+          for (size_t i = 0; i < fparams->size(); i++)
+          {
+            auto pt = fparams->at(i) / Type;
+            auto formal = apply_subst(top, pt, callee_subst);
+            // Apply caller's subst to surface α_k identities in formal
+            // (in case callee inherits caller TypeParams via TypeArgs).
+            formal = apply_subst(top, formal, subst);
+            auto arg_loc = (fargs->at(i) / Rhs)->location();
+            auto it = source_types.find(arg_loc);
+            if (it == source_types.end())
+              continue;
+            auto arg_type = apply_subst(top, it->second, subst);
+            emit_subtype(arg_type, formal);
+          }
+        }
+      };
+
+      // For CallDyn: previous Lookup gives us the receiver's local id
+      // and the method ident. Apply caller subst to the receiver's
+      // source type, find its class def, find the method by name +
+      // arity, then per-(param, arg) emit Subtype.
+      std::map<Location, std::pair<Location, Node>> lookup_method_info;
+
+      auto emit_for_calldyn = [&](const Node& call) {
+        auto src_loc = (call / Rhs)->location();
+        auto li = lookup_method_info.find(src_loc);
+        if (li == lookup_method_info.end())
+          return;
+        auto recv_loc = li->second.first;
+        Node lookup_node = li->second.second;
+        auto rit = source_types.find(recv_loc);
+        if (rit == source_types.end())
+          return;
+        auto recv_resolved = apply_subst(top, rit->second, subst);
+        if (!recv_resolved || recv_resolved != Type || recv_resolved->empty())
+          return;
+        auto recv_inner = recv_resolved->front();
+        if (recv_inner != TypeName)
+          return;
+        auto cls_def = find_def(top, recv_inner);
+        if (!cls_def || cls_def != ClassDef)
+          return;
+
+        auto method_name = (lookup_node / Ident)->location();
+        auto method_hand = (lookup_node / Lhs)->type();
+        auto fargs = call / Args;
+        size_t arity = fargs->size();
+
+        Node method_def;
+        for (auto& member : *(cls_def / ClassBody))
+        {
+          if (member != Function)
+            continue;
+          if ((member / Ident)->location() != method_name)
+            continue;
+          if ((member / Lhs)->type() != method_hand &&
+              !((member / Lhs) == Once && method_hand == Rhs))
+            continue;
+          if ((member / Params)->size() != arity)
+            continue;
+          method_def = member;
+          break;
+        }
+        if (!method_def)
+          return;
+
+        // Class-level subst from the receiver's TypeName.
+        NodeMap<Node> cls_subst = build_subst_from_typename(top, recv_inner);
+
+        auto fparams = method_def / Params;
+        for (size_t i = 0; i < fparams->size(); i++)
+        {
+          auto pt = fparams->at(i) / Type;
+          auto formal = apply_subst(top, pt, cls_subst);
+          formal = apply_subst(top, formal, subst);
+          auto arg_loc = (fargs->at(i) / Rhs)->location();
+          auto it = source_types.find(arg_loc);
+          if (it == source_types.end())
+            continue;
+          auto arg_type = apply_subst(top, it->second, subst);
+          emit_subtype(arg_type, formal);
+        }
+      };
+
+      // Walk source body: track source_types on definition statements,
+      // emit constraints at Call/CallDyn statements.
+      for (auto& l : *(func_def / Labels))
+      {
+        Node body = l / Body;
+        for (auto& n : *body)
+        {
+          if (!n)
+            continue;
+
+          if (n->in({Const, Convert, New, Stack}))
+          {
+            Node t = n / Type;
+            if (t == Type)
+              source_types[(n / LocalId)->location()] = clone(t);
+          }
+          else if (n == TypeAssertion)
+          {
+            Node t = n / Type;
+            if (t == Type)
+              source_types[(n / LocalId)->location()] = clone(t);
+          }
+          else if (n->in({Copy, Move}))
+          {
+            auto src_loc = (n / Rhs)->location();
+            auto dst_loc = (n / LocalId)->location();
+            auto it = source_types.find(src_loc);
+            if (it != source_types.end())
+              source_types[dst_loc] = clone(it->second);
+          }
+          else if (n == Lookup)
+          {
+            auto recv_loc = (n / Rhs)->location();
+            lookup_method_info[(n / LocalId)->location()] = {recv_loc, n};
+          }
+          else if (n == Call)
+          {
+            emit_for_call(n);
+          }
+          else if (n->in({CallDyn, TryCallDyn}))
+          {
+            emit_for_calldyn(n);
+          }
+        }
+      }
+    }
+
     // Phase 5 cross-reification gather: when a New/Stack of a lifted
     // lambda appears in a caller's body, walk the lifted class's
     // apply Function body and emit Store-payload constraints into
@@ -3535,6 +3719,56 @@ namespace vc
         }
       }
 
+      // Phase B2: emit arg-vs-formal Subtype constraints for every
+      // Call/CallDyn in the body, using source types and r.subst.
+      // Fires for generic callers where some formal is α_k (seeded
+      // above); emission decomposes through shape match etc. and
+      // records the constraints into typevar_store. The solver
+      // consumption block below then queries store.solve(α_k) and
+      // fills r.subst gaps from solved bindings.
+      if (!unbound_formals.empty())
+      {
+        emit_source_call_constraints(r.def, r.subst);
+
+        // Phase 6 early solver consumption: now that constraints
+        // have been emitted into the global store, query for solved
+        // bindings BEFORE the body walk. This way lambda New/Stack
+        // sites and other reifications triggered during body walk
+        // pick up the concrete bindings rather than the α_k seed.
+        // (The same consumer also runs post-walk for legacy
+        // var-evidence / return-evidence — they may bind formals
+        // the constraint solver can't yet handle.)
+        for (auto& [tp, tv_loc] : formal_typevars)
+        {
+          auto alpha_id = typevar_store.intern(tv_loc);
+          auto solved = typevar_store.solve(alpha_id);
+          if (!solved || (solved == Union && solved->empty()))
+            continue;
+          // Skip if solved still contains free TypeVars — incomplete.
+          bool has_tv = false;
+          solved->traverse([&](const Node& n) {
+            if (n == TypeVar)
+              has_tv = true;
+            return !has_tv;
+          });
+          if (has_tv)
+            continue;
+          // Overwrite the α_k seed (Type wrapping a TypeVar) with the
+          // solved binding. If r.subst no longer has a TypeVar entry
+          // (e.g., legacy mechanism wrote a concrete value first),
+          // legacy wins.
+          auto it = r.subst.find(tp);
+          if (it == r.subst.end())
+          {
+            r.subst[tp] = Type << solved;
+            continue;
+          }
+          auto cur = it->second;
+          if (cur && cur == Type && !cur->empty() && cur->front() == TypeVar)
+            r.subst[tp] = Type << solved;
+        }
+      }
+
       // Phase 3b.5 (a): U-mention scan. Walk the function body. For each
       // unbound formal U, refuse body-driven binding if U is referenced
       // outside an admitted site (a TypeAssertion's Type with bare U).
@@ -4709,12 +4943,26 @@ namespace vc
         // mechanism — formals only the legacy mechanism could bind
         // come from r.subst[formal] = ... above; formals only the
         // solver could bind come from typevar_solved_formals.
-        // Conflict resolution: legacy wins (unchanged). Solver fills
-        // gaps the legacy mechanism missed.
+        // Conflict resolution: solver overwrites the seeded TypeVar
+        // placeholder; concrete legacy bindings are preserved.
         for (auto& [tp, ty] : typevar_solved_formals)
         {
-          if (r.subst.find(tp) == r.subst.end())
+          auto it = r.subst.find(tp);
+          if (it == r.subst.end())
+          {
             r.subst[tp] = ty;
+            continue;
+          }
+          // If the existing entry is the α_k seed (Type wrapping a
+          // TypeVar), overwrite with the solved binding. Otherwise
+          // legacy wins.
+          auto cur = it->second;
+          if (
+            cur && cur == Type && !cur->empty() &&
+            cur->front() == TypeVar)
+          {
+            r.subst[tp] = ty;
+          }
         }
 
         // Re-emit r_type with the (possibly-updated) substitution. If a
