@@ -12,6 +12,7 @@ add_executable(vc
   lang.cc
   main.cc
   subtype.cc
+  typevar.cc
 )
 
 if(MSVC)
