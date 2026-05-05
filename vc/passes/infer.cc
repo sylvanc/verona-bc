@@ -2692,7 +2692,7 @@ namespace vc
         else if (i < ta->size())
           new_ta << clone(ta->at(i));
         else
-          new_ta << (Type << TypeVar);
+          new_ta << (Type << make_typevar());
       }
       replace_if_changed(scope.name_elem, ta, new_ta);
     }

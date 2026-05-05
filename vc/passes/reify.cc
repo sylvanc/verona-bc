@@ -1616,7 +1616,7 @@ namespace vc
               // multiply diagnostics. The proper error is emitted
               // by resolve_typearg / get_reification when the
               // unbound TypeParam is actually used.
-              new_ta << (Type << TypeVar);
+              new_ta << (Type << make_typevar());
               continue;
             }
 
@@ -4063,7 +4063,7 @@ namespace vc
         // return type. TypeVar (not Dyn) is the principled marker per
         // AGENTS.md: Dyn is reserved for the IR encoding of `any`.
         if (!r_type)
-          r_type = TypeVar;
+          r_type = make_typevar();
       }
 
       // Phase 3b.4: body-driven binding for unbound formals. After the
@@ -4278,7 +4278,7 @@ namespace vc
       for (auto& loc : var_locs)
       {
         auto it = local_types.find(loc);
-        Node var_type = (it != local_types.end()) ? clone(it->second) : TypeVar;
+        Node var_type = (it != local_types.end()) ? clone(it->second) : make_typevar();
         vars << (VarDef << (LocalId ^ loc) << var_type);
       }
 
@@ -5405,7 +5405,7 @@ namespace vc
         // per AGENTS.md. A post-pass safety net at line ~810 catches any
         // remaining TypeVar in WhenDyn cowns and emits an error.
         if (!inner_type)
-          inner_type = TypeVar;
+          inner_type = make_typevar();
       }
 
       auto dst_loc = (n / LocalId)->location();

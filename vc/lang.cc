@@ -16,9 +16,16 @@ namespace vc
     }
   }
 
+  Node make_typevar()
+  {
+    return NodeDef::create(TypeVar, ast::fresh(l_typevar));
+  }
+
   Node make_type(NodeRange r)
   {
-    return Type << (r || TypeVar);
+    if (r.empty())
+      return Type << make_typevar();
+    return Type << r;
   }
 
   Node make_typeargs(Node typeparams)

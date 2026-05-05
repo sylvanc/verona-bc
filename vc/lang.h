@@ -53,7 +53,7 @@ namespace vc
   inline const auto Isect = TokenDef("isect");
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
-  inline const auto TypeVar = TokenDef("typevar");
+  inline const auto TypeVar = TokenDef("typevar", flag::print);
   inline const auto TypeSelf = TokenDef("typeself");
 
   // Sentinel types for unresolved integer/float literals. Exist only during
@@ -463,7 +463,9 @@ namespace vc
   // clang-format on
 
   inline const auto l_local = Location("local");
+  inline const auto l_typevar = Location("typevar");
 
+  Node make_typevar();
   Node make_type(NodeRange r = {});
   Node make_typeargs(Node typeparams);
   Nodes scope_path(Node node);
