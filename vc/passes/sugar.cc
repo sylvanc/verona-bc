@@ -175,6 +175,15 @@ namespace vc
 
       if (fv_type)
       {
+        // INVARIANT (Phase 5 cross-functional propagation): clone()
+        // preserves the Location of every TypeVar leaf, and
+        // rewrite_typeparam_refs only rewrites TypeName nodes (it
+        // never touches TypeVar). So fv_resolved's TypeVar Locations
+        // are exactly the enclosing local's TypeVar Locations. This
+        // shared identity is what enables the constraint solver to
+        // link a write inside the lambda's apply body
+        // (Store $ref_freevar val) back to the enclosing function's
+        // formal that types `freevar`.
         fv_resolved = clone(fv_type);
         rewrite_typeparam_refs(fv_resolved, free_tps, cls_path, id);
       }
