@@ -1127,14 +1127,6 @@ namespace vc
     std::map<Location, LookupInfo> lookup_info;
 
     // Phase 3b.5 (b): concrete-receiver taint tracking. A local is
-    // tainted if its tracked type came from a CallDyn whose receiver
-    // was non-concrete (Dyn or contained a TypeId/shape). Such types
-    // can change as new classes are reified later, so they're not safe
-    // body-driven evidence (plan v27 "Restriction: admissible only from
-    // concrete-receiver dispatches"). Taint propagates via Copy/Move.
-    // Cleared per reify_function (same lifetime as local_types).
-    std::set<Location> tainted_locals;
-
     // Locals whose type is pinned by a concrete TypeAssertion (e.g.,
     // `var best: i32 | none = none`). Subsequent Copy/Move into the
     // local must NOT overwrite local_types[loc] — the user's declared
@@ -3747,7 +3739,6 @@ namespace vc
       // Clear per-function local type tracking.
       local_types.clear();
       lookup_info.clear();
-      tainted_locals.clear();
       pinned_locals.clear();
       // typevar_store accumulates constraints ACROSS reifications.
       // Per Phase 5 cross-functional propagation: when reifying a
@@ -3846,58 +3837,8 @@ namespace vc
         }
       }
 
-      // Phase 3b.5 (a): U-mention scan. Walk the function body. For each
-      // unbound formal U, refuse body-driven binding if U is referenced
-      // outside an admitted site (a TypeAssertion's Type with bare U).
-      // Non-admitted positions: U inside Union/array[U]/etc.; U as an
-      // explicit TypeArg to a generic call; U inside a New / NewArray
-      // type; etc. Refusing here means the formal stays unbound and the
-      // post-binding error path emits a clear "cannot be inferred"
-      // message, rather than producing IR with stale TypeVar references.
-      std::set<Node> refused_formals;
-      if (!unbound_formals.empty())
-      {
-        for (auto& l : *(r.def / Labels))
-        {
-          (l / Body)->traverse([&](Node& n) {
-            if (n != TypeName)
-              return true;
-            auto def = find_def(top, n);
-            if (!def || def != TypeParam)
-              return true;
-            // Is this a formal we care about?
-            bool is_unbound_formal = false;
-            for (auto& f : unbound_formals)
-            {
-              if (def == f)
-              {
-                is_unbound_formal = true;
-                break;
-              }
-            }
-            if (!is_unbound_formal)
-              return true;
-            // Admitted iff parent is Type and grandparent is
-            // TypeAssertion (i.e., `var x: <bare-U>` or `let x: U = ...`).
-            auto parent = n->parent();
-            auto grandparent = parent ? parent->parent() : Node{};
-            if (parent == Type && grandparent == TypeAssertion)
-              return true;
-            // Non-admitted use of the formal in the body. Refuse.
-            refused_formals.insert(def);
-            return true;
-          });
-        }
-      }
-
       bool body_driven = !typevar_return && !unbound_formals.empty() &&
         has_unresolved_type(def_type, r.subst);
-
-      // Phase 3b.4.3: var x: U evidence. Track each `var x: U` site
-      // (TypeAssertion whose Type is a bare unbound formal). After body
-      // walk, the var's tracked type from local_types is admitted as
-      // body evidence for that formal.
-      std::map<Location, Node> var_to_formal;
 
       Node r_type;
 
@@ -4142,10 +4083,6 @@ namespace vc
             // concrete TypeAssertion). Don't let Copy/Move narrow.
             if (src_it != local_types.end() && !pinned_locals.count(dst_loc))
               local_types[dst_loc] = clone(src_it->second);
-
-            // Phase 3b.5 (b): propagate concrete-receiver taint.
-            if (tainted_locals.count(src_loc))
-              tainted_locals.insert(dst_loc);
           }
           else if (n == RegisterRef)
           {
@@ -4359,28 +4296,6 @@ namespace vc
           else if (n == TypeAssertion)
           {
             auto loc = (n / LocalId)->location();
-            // Phase 3b.4.3 body-driven binding: detect `var x: U` sites
-            // where U is an unbound formal (bare TypeName referencing
-            // it). Record the local for later evidence gathering.
-            if (body_driven)
-            {
-              auto t = (n / Type)->front();
-              if (t == TypeName)
-              {
-                auto def = find_def(top, t);
-                if (def && def == TypeParam)
-                {
-                  for (auto& f : unbound_formals)
-                  {
-                    if (f.get() == def.get())
-                    {
-                      var_to_formal[loc] = def;
-                      break;
-                    }
-                  }
-                }
-              }
-            }
             // Concrete TypeAssertion: pin local_types[loc] to the
             // declared type. The user's annotation is the source of
             // truth; subsequent Copy/Move into this local must not
@@ -4485,18 +4400,6 @@ namespace vc
 
                 if (ret)
                   local_types[dst_loc] = ret;
-
-                // Phase 3b.5 (b): mark the result tainted if the
-                // receiver type was non-concrete (Dyn or contains a
-                // shape TypeId, or the receiver itself is tainted).
-                // Tainted CallDyn results aren't admitted as body-
-                // driven evidence — their target set can grow as new
-                // classes are reified.
-                if (
-                  contains_dyn(recv_it->second) ||
-                  contains_typeid(recv_it->second) ||
-                  tainted_locals.count(li->second.recv_loc))
-                  tainted_locals.insert(dst_loc);
               }
             }
           }
