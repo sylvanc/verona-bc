@@ -1310,9 +1310,17 @@ namespace vc
   // - existing is concrete T, incoming is TypeVar α → bind(α, T).
   // - both are TypeVar (different Locations) → unify(α, β).
   // - otherwise: no emission (handled by merge_type).
-  // Constraints are emitted but NOT consulted yet — this is Phase 4
-  // foundation work. Phase 4 follow-up will consult the store at
-  // end of process_function and substitute.
+  //
+  // NOTE: This intentionally only handles literal TypeVar leaves at
+  // the top level of env types — typically default-literal placeholders
+  // and capture-ref placeholders that are LOCAL to a single function
+  // inference. Formal TypeParams are NOT handled here even though the
+  // subtype helper effective_typevar treats TypeName(TypeParam) as a
+  // TypeVar identity. The reason: the constraint store is global, and
+  // bind(α_T_param, concrete) at infer time would force one binding
+  // for ALL reifications of the function, which is wrong for generics.
+  // Per-reification formal binding happens via the reify-side
+  // emit_source_call_constraints + solve consumption.
   static void emit_merge_constraint(const Node& existing, const Node& incoming)
   {
     if (active_typevar_store == nullptr || !existing || !incoming)

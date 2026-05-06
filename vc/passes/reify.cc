@@ -1334,6 +1334,32 @@ namespace vc
           }
         }
       }
+
+      // Phase 4 [variance table, Return-arg]: for each label whose
+      // terminator is a Return statement, emit
+      //   Subtype(local_types[ret_loc], function_return_type)
+      // in Mode::Emit. This subsumes the brittle Phase 3b
+      // return-evidence binding: when the returned value carries a
+      // concrete type (or contains α_k references), the Subtype
+      // decomposition records the appropriate add_lower / add_upper
+      // / unify constraints.
+      Node func_return = func_def / Type;
+      if (func_return)
+      {
+        auto formal_return = apply_subst(top, func_return, subst);
+        for (auto& l : *(func_def / Labels))
+        {
+          auto term = l / Return;
+          if (term != Return)
+            continue;
+          auto ret_loc = (term / LocalId)->location();
+          auto rit = source_types.find(ret_loc);
+          if (rit == source_types.end())
+            continue;
+          auto ret_type = apply_subst(top, rit->second, subst);
+          emit_subtype(ret_type, formal_return);
+        }
+      }
     }
 
     // Phase 5 cross-reification gather: when a New/Stack of a lifted
