@@ -1186,6 +1186,20 @@ namespace vc
           }
         }
 
+        // Return-type leak check. The stage-2 re-derivation at line ~1031
+        // handles cases where the source return type contained a TypeVar
+        // that bound from label_exits. If, after stage 2 / fixpoint, the
+        // IR return type still contains Dyn AND the source still has an
+        // unresolved type (TypeVar leaf or unbound TypeParam), the leak
+        // is genuinely irreparable — emit an error so the compile fails
+        // rather than silently producing dyn-typed downstream IR.
+        if (
+          contains_dyn(r->reification / Type) &&
+          has_unresolved_type(r->def / Type, r->subst))
+        {
+          emit_unresolved_type_error(r->def / Ident, "return type");
+        }
+
         // Safety net for the TypeVar VarDef intermediate marker
         // (line ~3672). The second-pass refinement at line ~735 should
         // have replaced TypeVar with the concrete aggregate type. If
