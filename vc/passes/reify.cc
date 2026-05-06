@@ -1636,7 +1636,7 @@ namespace vc
 
             if (payload == TypeVar)
             {
-              auto alpha_id = typevar_store.intern(payload->location());
+              auto alpha_id = typevar_store.intern(payload);
               typevar_store.add_lower(alpha_id, val_type);
             }
             else if (payload == Union)
@@ -1662,7 +1662,7 @@ namespace vc
               }
               if (!matched_concrete && tv_arm)
               {
-                auto alpha_id = typevar_store.intern(tv_arm->location());
+                auto alpha_id = typevar_store.intern(tv_arm);
                 typevar_store.add_lower(alpha_id, val_type);
               }
             }
@@ -3803,29 +3803,39 @@ namespace vc
       // unconstrained formals out of r.subst.
       auto def_tps = r.def / TypeParams;
       Nodes unbound_formals;
-      // Phase 6: for each unbound formal, allocate a fresh TypeVar α_k
-      // identity. Used by the constraint store to track observations
-      // about the formal during body walk; the solver then drives
-      // r.subst updates after the walk.
-      NodeMap<Location> formal_typevars;
+      // Phase 6: for each unbound formal, intern a constraint-store
+      // identity (the TypeParam's FQ TypeName). Used by the solver to
+      // collect observations about the formal during constraint
+      // emission; the solver result fills r.subst.
+      //
+      // The seed value placed in r.subst[tp] is a TypeVar leaf with
+      // a fresh unique Location — a placeholder so resolve_typearg
+      // returns it instead of erroring. We intern BOTH the seed
+      // TypeVar leaf AND the FQ TypeName, then `unify` them so they
+      // share the same α_id. This way:
+      //  - Body emission via TypeName(T) → builds FQ → interns →
+      //    α_id (root).
+      //  - Cross-reify gather, working with TypeArgs after
+      //    apply_subst, sees the seed TypeVar leaf — interns →
+      //    α_id (same root after unify).
+      // formal_typevars maps TypeParam → FQ TypeName so post-walk
+      // solver consumption can look up the α for each formal.
+      NodeMap<Node> formal_typevars;
       for (auto& tp : *def_tps)
       {
         if (r.subst.find(tp) == r.subst.end())
         {
           unbound_formals.push_back(tp);
-          // Use the TypeParam's Ident Location as the TypeVar identity
-          // so it matches constraints emitted by infer (try_typevar_atom
-          // uses the same Location for TypeName-resolving-to-TypeParam).
-          auto tp_loc = (tp / Ident)->location();
-          auto tv = TypeVar ^ tp_loc;
-          formal_typevars[tp] = tp_loc;
-          typevar_store.intern(tp_loc);
-          // Seed r.subst[tp] = Type(TypeVar α_k). resolve_typearg
-          // will return the TypeVar leaf (Phase 3.5 deferred placeholder
-          // semantics). After body walk + cross-reify gather, the
-          // solver may bind α_k to a concrete type and replace this
-          // entry via the typevar_solved_formals → r.subst update.
-          r.subst[tp] = Type << tv;
+          auto fq = fq_typeparam(scope_path(tp), tp);
+          formal_typevars[tp] = fq;
+          auto fq_id = typevar_store.intern(fq);
+          // Seed: fresh TypeVar leaf, then unify its identity with
+          // the FQ identity so cross-reify gather and direct subtype
+          // emission share the same α root.
+          auto seed_tv = make_typevar();
+          auto seed_id = typevar_store.intern(seed_tv);
+          typevar_store.unify(fq_id, seed_id);
+          r.subst[tp] = Type << seed_tv;
         }
       }
 
@@ -3844,13 +3854,10 @@ namespace vc
         // have been emitted into the global store, query for solved
         // bindings BEFORE the body walk. This way lambda New/Stack
         // sites and other reifications triggered during body walk
-        // pick up the concrete bindings rather than the α_k seed.
-        // (The same consumer also runs post-walk for legacy
-        // var-evidence / return-evidence — they may bind formals
-        // the constraint solver can't yet handle.)
-        for (auto& [tp, tv_loc] : formal_typevars)
+        // pick up the concrete bindings rather than the seed.
+        for (auto& [tp, fq] : formal_typevars)
         {
-          auto alpha_id = typevar_store.intern(tv_loc);
+          auto alpha_id = typevar_store.intern(fq);
           auto solved = typevar_store.solve(alpha_id);
           if (!solved || (solved == Union && solved->empty()))
             continue;
@@ -3863,10 +3870,11 @@ namespace vc
           });
           if (has_tv)
             continue;
-          // Overwrite the α_k seed (Type wrapping a TypeVar) with the
-          // solved binding. If r.subst no longer has a TypeVar entry
-          // (e.g., legacy mechanism wrote a concrete value first),
-          // legacy wins.
+          // Overwrite the seed (Type wrapping the FQ TypeName for tp)
+          // with the solved binding. If r.subst no longer has tp at
+          // all, that's unexpected (we seeded it above) but write
+          // through anyway. If cur is something other than the seed,
+          // another mechanism already bound it; preserve.
           auto it = r.subst.find(tp);
           if (it == r.subst.end())
           {
@@ -3874,7 +3882,12 @@ namespace vc
             continue;
           }
           auto cur = it->second;
-          if (cur && cur == Type && !cur->empty() && cur->front() == TypeVar)
+          // Overwrite the seed (Type wrapping a TypeVar leaf) with
+          // the solved binding. If cur isn't the seed, another
+          // mechanism wrote a concrete value; preserve it.
+          if (
+            cur && cur == Type && !cur->empty() &&
+            cur->front() == TypeVar)
             r.subst[tp] = Type << solved;
         }
       }
@@ -4294,7 +4307,7 @@ namespace vc
                 if (payload == TypeVar)
                 {
                   auto alpha_id =
-                    typevar_store.intern(payload->location());
+                    typevar_store.intern(payload);
                   typevar_store.add_lower(alpha_id, val_type);
                 }
                 else if (payload == Union)
@@ -4323,7 +4336,7 @@ namespace vc
                   if (!matched_concrete && tv_arm)
                   {
                     auto alpha_id =
-                      typevar_store.intern(tv_arm->location());
+                      typevar_store.intern(tv_arm);
                     typevar_store.add_lower(alpha_id, val_type);
                   }
                 }
@@ -4364,23 +4377,13 @@ namespace vc
                 pinned_locals.insert(loc);
               }
             }
-            else if (!formal_typevars.empty())
-            {
-              // Build an augmented subst: r.subst plus an entry per
-              // unbound formal mapping it to Type(TypeVar(α_k)).
-              NodeMap<Node> aug_subst = r.subst;
-              for (auto& [tp, tv_loc] : formal_typevars)
-              {
-                aug_subst[tp] = Type
-                  << NodeDef::create(TypeVar, tv_loc);
-              }
-              auto reified = reify_type(assert_type, aug_subst);
-              if (reified && reified != Dyn)
-              {
-                local_types[loc] = reified;
-                pinned_locals.insert(loc);
-              }
-            }
+            // If has_unresolved_type is true, the assertion type
+            // references an unbound formal. r.subst already has seed
+            // TypeVar leaves for unbound formals (unified with the
+            // FQ identity in the constraint store), so reify_type
+            // would substitute the seed TypeVar in. We don't pin
+            // here — the seed TypeVar isn't suitable as a local_type
+            // pin, and the constraint solver handles binding.
             remove.push_back(n);
           }
           else if (n->in({New, Stack}))
@@ -4766,9 +4769,9 @@ namespace vc
       // the solver can't yet handle (e.g., return type evidence
       // that doesn't flow through Stores).
       NodeMap<Node> typevar_solved_formals;
-      for (auto& [tp, tv_loc] : formal_typevars)
+      for (auto& [tp, fq] : formal_typevars)
       {
-        auto alpha_id = typevar_store.intern(tv_loc);
+        auto alpha_id = typevar_store.intern(fq);
         auto solved = typevar_store.solve(alpha_id);
         // Bottom (empty Union with no children) means no observation.
         // Skip; legacy mechanism may still bind from return evidence.
@@ -4812,10 +4815,10 @@ namespace vc
             r.subst[tp] = ty;
             continue;
           }
-          // If the existing entry is the α_k seed (Type wrapping a
-          // TypeVar), overwrite with the solved binding. Otherwise
-          // an earlier mechanism (e.g., partial binding from arg type
-          // evidence at the call site) wins.
+          // If the existing entry is the seed (Type wrapping a
+          // TypeVar leaf), overwrite with the solved binding.
+          // Otherwise an earlier mechanism wrote a concrete value;
+          // preserve it.
           auto cur = it->second;
           if (cur && cur == Type && !cur->empty() && cur->front() == TypeVar)
             r.subst[tp] = ty;

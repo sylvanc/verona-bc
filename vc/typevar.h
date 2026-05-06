@@ -37,8 +37,20 @@ namespace vc
     // type expression — TypeName, Union, Isect, primitive, TypeVar,
     // etc.). substitute() takes/returns Type-wrapped nodes.
 
-    // Lookup or allocate a dense ID for a TypeVar Location.
-    uint32_t intern(const Location& loc);
+    // Lookup or allocate a dense ID for an identity Node.
+    //
+    // The identity Node is structurally-hashed and structurally-
+    // compared against existing identities. Two equal-by-structure
+    // Nodes always interns to the same ID.
+    //
+    // Two distinct kinds of identity Nodes are accepted:
+    //   - `TypeVar` leaf (Location-unique, fresh per make_typevar)
+    //   - `TypeName` (a fully qualified path, used for TypeParam
+    //     identities — built via fq_typeparam in vc/lang.cc).
+    //
+    // The structural hash makes algo::min::T and algo::reduce::T
+    // distinct identities even though both end in an Ident "T".
+    uint32_t intern(const Node& identity);
 
     // Find with path compression.
     uint32_t root(uint32_t id);
@@ -70,10 +82,6 @@ namespace vc
     // scan and short-circuit-clone optimization).
     Node substitute(const Node& type_node, bool& has_typevar_out);
 
-    // Diagnostic: list TypeVar Locations whose root is unbound and
-    // has no usable lower/upper bound (i.e., would be solved to bottom).
-    std::vector<Location> free_typevars();
-
     // Mode control.
     void set_mode(Mode m)
     {
@@ -93,17 +101,10 @@ namespace vc
       return gen;
     }
 
-    // True if the location was already interned; useful for callers
-    // that want to avoid creating IDs for one-off queries.
-    bool has(const Location& loc) const
-    {
-      return loc_to_id.find(loc) != loc_to_id.end();
-    }
-
     // Total number of TypeVars known to the store (including non-roots).
     size_t size() const
     {
-      return id_to_loc.size();
+      return id_to_identity.size();
     }
 
     // Total number of distinct equivalence classes (root count). For
@@ -114,9 +115,9 @@ namespace vc
     // the infer pass (where constraints are emitted from subtype
     // checks) and the reify pass (where reifications consume the
     // accumulated constraints to bind unbound formals). Identities
-    // are stable across the boundary because TypeVar Locations and
-    // TypeParam Ident Locations are global. Constraints are monotone
-    // so cross-pass accumulation is safe.
+    // are structurally distinct across functions so cross-function
+    // contamination is impossible. Constraints are monotone so
+    // cross-pass accumulation is safe.
     //
     // Lives for the duration of a vc invocation; cleared at the
     // start of each top-level compilation.
@@ -124,19 +125,24 @@ namespace vc
     static void reset_global();
 
   private:
-    struct LocationHash
-    {
-      size_t operator()(const Location& loc) const
-      {
-        return std::hash<std::string_view>{}(loc.view());
-      }
-    };
-
     Mode mode = Mode::Emit;
 
-    // Dense ID assignment per first-seen Location.
-    std::unordered_map<Location, uint32_t, LocationHash> loc_to_id;
-    std::vector<Location> id_to_loc;
+    // Identity → dense ID, comparing identities structurally
+    // (handles clones — equal-by-content identities collapse to
+    // same ID).
+    struct IdentityHash
+    {
+      size_t operator()(const Node& n) const;
+    };
+
+    struct IdentityEq
+    {
+      bool operator()(const Node& a, const Node& b) const;
+    };
+
+    std::unordered_map<Node, uint32_t, IdentityHash, IdentityEq>
+      identity_to_id;
+    std::vector<Node> id_to_identity;
 
     // Union-find: uf_parent[i] == i for roots.
     std::vector<uint32_t> uf_parent;
@@ -163,7 +169,8 @@ namespace vc
     // Bump generation counter on mutation.
     void mutate();
 
-    // Occurs check: does TypeVar with root r appear inside t?
+    // Occurs check: does the TypeVar identity with root r appear
+    // structurally inside t?
     bool occurs(uint32_t r, const Node& t);
 
     // Structural composition. Inputs are unwrapped type expressions.

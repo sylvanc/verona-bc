@@ -11,8 +11,8 @@ namespace vc
   void TypeVarStore::reset_global()
   {
     auto& g = global();
-    g.loc_to_id.clear();
-    g.id_to_loc.clear();
+    g.identity_to_id.clear();
+    g.id_to_identity.clear();
     g.uf_parent.clear();
     g.bound.clear();
     g.lower.clear();
@@ -72,15 +72,27 @@ namespace vc
     }
   }
 
-  uint32_t TypeVarStore::intern(const Location& loc)
+  // ---- structural identity hash + equality ----
+  size_t TypeVarStore::IdentityHash::operator()(const Node& n) const
   {
-    auto it = loc_to_id.find(loc);
-    if (it != loc_to_id.end())
+    return hash_node_recursive(n);
+  }
+
+  bool TypeVarStore::IdentityEq::operator()(
+    const Node& a, const Node& b) const
+  {
+    return same_tree(a, b);
+  }
+
+  uint32_t TypeVarStore::intern(const Node& identity)
+  {
+    auto it = identity_to_id.find(identity);
+    if (it != identity_to_id.end())
       return it->second;
 
-    auto id = static_cast<uint32_t>(id_to_loc.size());
-    loc_to_id.emplace(loc, id);
-    id_to_loc.push_back(loc);
+    auto id = static_cast<uint32_t>(id_to_identity.size());
+    identity_to_id.emplace(identity, id);
+    id_to_identity.push_back(identity);
     grow_to(id);
     return id;
   }
@@ -142,9 +154,8 @@ namespace vc
 
     if (t == TypeVar)
     {
-      auto& loc = t->location();
-      auto it = loc_to_id.find(loc);
-      if (it == loc_to_id.end())
+      auto it = identity_to_id.find(t);
+      if (it == identity_to_id.end())
         return false;
       return root(it->second) == r;
     }
@@ -378,8 +389,8 @@ namespace vc
         {
           if (t == TypeVar)
           {
-            auto it = loc_to_id.find(t->location());
-            if (it != loc_to_id.end() && root(it->second) == r)
+            auto it = identity_to_id.find(t);
+            if (it != identity_to_id.end() && root(it->second) == r)
               continue;
           }
           out.push_back(t);
@@ -429,8 +440,8 @@ namespace vc
     // TypeVar leaf.
     if (type_node == TypeVar)
     {
-      auto it = loc_to_id.find(type_node->location());
-      if (it == loc_to_id.end())
+      auto it = identity_to_id.find(type_node);
+      if (it == identity_to_id.end())
       {
         has_typevar_out = true;
         return type_node;
@@ -473,32 +484,10 @@ namespace vc
     return out;
   }
 
-  std::vector<Location> TypeVarStore::free_typevars()
-  {
-    std::vector<Location> result;
-    for (uint32_t id = 0; id < id_to_loc.size(); id++)
-    {
-      auto r = root(id);
-      if (r != id)
-        continue;
-      // A root is "free" if it has no bound and no usable bounds.
-      if (bound[r])
-        continue;
-      // If solve would return non-empty (lo or hi), it's not free.
-      auto solved = solve(r);
-      if (solved && solved == Union && solved->empty())
-      {
-        // Bottom — counts as free for diagnostic purposes.
-        result.push_back(id_to_loc[id]);
-      }
-    }
-    return result;
-  }
-
   size_t TypeVarStore::class_count()
   {
     size_t n = 0;
-    for (uint32_t id = 0; id < id_to_loc.size(); id++)
+    for (uint32_t id = 0; id < id_to_identity.size(); id++)
       if (root(id) == id)
         n++;
     return n;

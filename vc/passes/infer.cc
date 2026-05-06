@@ -1298,7 +1298,7 @@ namespace vc
 
     type->traverse([&](const Node& n) {
       if (n == TypeVar)
-        active_typevar_store->intern(n->location());
+        active_typevar_store->intern(n);
       return true;
     });
   }
@@ -1308,17 +1308,13 @@ namespace vc
   // `incoming` (the new observation). Both are Type-wrapped nodes.
   // - existing is TypeVar α, incoming is concrete T → bind(α, T).
   // - existing is concrete T, incoming is TypeVar α → bind(α, T).
-  // - both are TypeVar (different Locations) → unify(α, β).
+  // - both are TypeVar (different identities) → unify(α, β).
   // - otherwise: no emission (handled by merge_type).
   //
-  // NOTE: This intentionally only handles literal TypeVar leaves at
-  // the top level of env types — typically default-literal placeholders
-  // and capture-ref placeholders that are LOCAL to a single function
-  // inference. Formal TypeParams are NOT handled here even though the
-  // subtype helper effective_typevar treats TypeName(TypeParam) as a
-  // TypeVar identity. The reason: the constraint store is global, and
-  // bind(α_T_param, concrete) at infer time would force one binding
-  // for ALL reifications of the function, which is wrong for generics.
+  // Identity model: only literal TypeVar leaves are handled here.
+  // Formal TypeParams (TypeName resolving to TypeParam) are NOT
+  // handled — emitting bind(α_T_param, concrete) at infer time would
+  // force one binding for ALL reifications of a generic function.
   // Per-reification formal binding happens via the reify-side
   // emit_source_call_constraints + solve consumption.
   static void emit_merge_constraint(const Node& existing, const Node& incoming)
@@ -1337,18 +1333,18 @@ namespace vc
 
     if (e_tv && i_tv)
     {
-      auto a = active_typevar_store->intern(e_inner->location());
-      auto b = active_typevar_store->intern(i_inner->location());
+      auto a = active_typevar_store->intern(e_inner);
+      auto b = active_typevar_store->intern(i_inner);
       active_typevar_store->unify(a, b);
     }
     else if (e_tv)
     {
-      auto a = active_typevar_store->intern(e_inner->location());
+      auto a = active_typevar_store->intern(e_inner);
       active_typevar_store->bind(a, i_inner);
     }
     else if (i_tv)
     {
-      auto b = active_typevar_store->intern(i_inner->location());
+      auto b = active_typevar_store->intern(i_inner);
       active_typevar_store->bind(b, e_inner);
     }
   }

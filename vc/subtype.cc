@@ -5,19 +5,21 @@ namespace vc
   // TypeVar atom helper: see subtype.h for contract.
   //
   // Identity model: a node `n` is treated as a TypeVar identity when:
-  //   - n == TypeVar (Location is n->location()), OR
-  //   - n is a TypeName whose final NameElement resolves to a TypeParam
-  //     definition (Location is the TypeParam's Ident Location).
-  // The TypeParam case lets us emit constraints involving formals
-  // without rewriting the AST: e.g., subtype(TypeName(U), I32) where
-  // U is a TypeParam emits add_upper(alpha_U, I32) using the
-  // TypeParam's Ident Location as alpha_U's identity.
+  //   - n == TypeVar (identity is n itself, comparing structurally)
+  //   - n is a TypeName whose final NameElement resolves to a
+  //     TypeParam (identity is the FQ TypeName of that TypeParam,
+  //     built via scope_path() + fq_typeparam()).
+  //
+  // The FQ TypeName form distinguishes formals across functions —
+  // algo::min::T and algo::reduce::T have distinct FQ structures
+  // even though both end in an Ident "T" — so constraint emission
+  // does not cross-contaminate.
   static bool effective_typevar(
-    const Node& n, const Node& scope, Location& out_loc)
+    const Node& n, const Node& scope, Node& out_identity)
   {
     if (n == TypeVar)
     {
-      out_loc = n->location();
+      out_identity = n;
       return true;
     }
     if (n == TypeName)
@@ -25,7 +27,10 @@ namespace vc
       auto def = find_def(scope, n);
       if (def && def == TypeParam)
       {
-        out_loc = (def / Ident)->location();
+        // Build FQ TypeName for the TypeParam from its enclosing
+        // scope path. This is structural — equal-by-content identities
+        // intern to the same store ID even across clones.
+        out_identity = fq_typeparam(scope_path(def), def);
         return true;
       }
     }
@@ -34,7 +39,8 @@ namespace vc
 
   // Cases (l, r):
   //   (alpha, beta)  : both effective TypeVars.
-  //                    - Same Location → trivially provable → {true, true}.
+  //                    - Same identity (structural equal) → trivially
+  //                      provable → {true, true}.
   //                    - Else, Mode::Emit + store: unify(alpha, beta),
   //                      return {true, true} (delayed).
   //                    - Else: {false, _}; caller falls back.
@@ -47,15 +53,15 @@ namespace vc
   std::pair<bool, bool>
   try_typevar_atom(const SequentCtx& ctx, const Node& l, const Node& r)
   {
-    Location l_loc, r_loc;
-    bool l_var = effective_typevar(l, ctx.scope, l_loc);
-    bool r_var = effective_typevar(r, ctx.scope, r_loc);
+    Node l_id, r_id;
+    bool l_var = effective_typevar(l, ctx.scope, l_id);
+    bool r_var = effective_typevar(r, ctx.scope, r_id);
 
     if (!l_var && !r_var)
       return {false, false};
 
-    // Case 1: both effective TypeVars, same Location → trivial.
-    if (l_var && r_var && l_loc.view() == r_loc.view())
+    // Case 1: both effective TypeVars, structurally equal → trivial.
+    if (l_var && r_var && l_id->equals(r_id))
       return {true, true};
 
     // Without a constraint store or in Query mode, defer to default.
@@ -63,11 +69,11 @@ namespace vc
     if (!tvs || ctx.mode != SequentCtx::Mode::Emit)
       return {false, false};
 
-    // Case 1b: both effective TypeVars, distinct Locations → unify.
+    // Case 1b: both effective TypeVars, distinct identities → unify.
     if (l_var && r_var)
     {
-      auto a = tvs->intern(l_loc);
-      auto b = tvs->intern(r_loc);
+      auto a = tvs->intern(l_id);
+      auto b = tvs->intern(r_id);
       tvs->unify(a, b);
       return {true, true};
     }
@@ -75,13 +81,13 @@ namespace vc
     // Case 2: alpha <: T (concrete) → add_upper(alpha, T).
     if (l_var)
     {
-      auto a = tvs->intern(l_loc);
+      auto a = tvs->intern(l_id);
       tvs->add_upper(a, Type << clone(r));
       return {true, true};
     }
 
     // Case 3: T (concrete) <: alpha → add_lower(alpha, T).
-    auto a = tvs->intern(r_loc);
+    auto a = tvs->intern(r_id);
     tvs->add_lower(a, Type << clone(l));
     return {true, true};
   }
