@@ -33,20 +33,58 @@ implementing something:
   implementation. The fix IS phase-X — it just got promoted to
   this task.
 
-What to do instead:
-
-1. Stop. The compiler limitation is now part of the work item.
-2. Reproduce minimally. Identify the exact rule that's failing.
-3. Fix the compiler. This may be more work than the original task
-   — that's expected and acceptable.
-4. Return to the original task with the limitation removed. Verify
-   the natural API works without contortions.
-
 This rule is non-negotiable. A function whose natural,
 mathematically-clean signature is `min[T, U](c: T): U | none`
 implemented over `c.each(f: U -> none)` is the correct design;
 any version of it that requires `c.size + c(i)` is a worse design
 shipped under duress, not a different design choice.
+
+## STOP and REPORT: encountering a compiler bug
+
+When you encounter what appears to be a compiler bug (vc, vbcc, or
+vbci) — a typecheck error on code that should be valid, a reify
+failure on a sound generic, an inference regression vs a known-good
+baseline, a runtime failure that points back at IR generation —
+**you must STOP the current task and REPORT to the user before
+doing anything else.**
+
+Specifically you must NOT:
+- Start bisecting compiler commits to find a culprit.
+- Start patching the compiler to "fix" the bug as a side errand.
+- Revert recent compiler commits unilaterally.
+- Restructure the user's library code to dodge the compiler bug
+  (this is also a workaround — see the rule above).
+- Continue with the originally-planned work as if the bug isn't
+  there.
+
+What to do instead:
+
+1. **Stop.** Whatever task you're on (library API work, refactor,
+   tests, docs) is now blocked.
+2. **Capture a minimal reproducer.** Smallest source that exhibits
+   the bug, plus the exact error message or wrong behavior.
+3. **Report to the user.** Tell them:
+   - What you were doing when you hit it.
+   - The minimal reproducer.
+   - Your hypothesis about the cause (if any).
+   - Possible paths forward (revert specific commit, fix the
+     compiler, work around at the source level if the user agrees).
+4. **Wait for direction.** The user decides whether the fix belongs
+   in this session, in a separate compiler session, or whether to
+   revert prior compiler work. Do not assume.
+
+The reason this rule exists: compiler bugs cross-cut multiple work
+streams. Fixing them mid-task without agreement loses the original
+task's focus, may introduce new compiler regressions affecting
+unrelated code, and makes the session log incoherent. The user's
+explicit feedback after this rule was violated:
+> "we didn't agree on ANY compiler change plan. what's going on?"
+
+The principled-work rule above (no library workarounds for compiler
+limitations) is NOT a license to silently fix compiler bugs without
+user agreement. It says: when an API needs a compiler change, name
+that and propose a plan. STOP-and-REPORT is how you do that.
+
 
 The corollary: when reviewing your own work, ask "would I be
 embarrassed by this if it were the only thing the user saw?" If

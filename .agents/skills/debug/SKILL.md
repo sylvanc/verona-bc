@@ -33,7 +33,13 @@ Before editing the source package under investigation, classify each proposed ch
 
 Rules:
 
-1. **Compiler bugs are NEVER out of scope.** When a compiler/runtime bug is identified during any task — even one that "isn't about the compiler" — fixing it in the compiler is a HARD requirement, not a deferred follow-up. Do not declare the task done while leaving a workaround in place. Do not file the bug and move on. Pause the outer task, fix the compiler, then return.
+1. **Compiler bugs are NEVER out of scope.** When a compiler/runtime bug is identified during any task — even one that "isn't about the compiler" — fixing it in the compiler is a HARD requirement, not a deferred follow-up. Do not declare the task done while leaving a workaround in place. Do not file the bug and move on. Pause the outer task, fix the compiler, then return. **HOWEVER:** see rule 1a — fixing requires user agreement first.
+1a. **STOP and REPORT before "fixing" a compiler bug.** Do NOT silently start patching the compiler when you encounter a bug mid-task. Compiler changes cross-cut multiple work streams; doing them without user agreement loses the original task's focus and may regress unrelated code. The protocol when you find a compiler bug:
+    - **Stop** the current task (library, refactor, tests, doc).
+    - **Capture a minimal reproducer** in scratch (`build/tmp/`).
+    - **Report to the user**: what you were doing, the reproducer, your hypothesis, and possible paths forward (revert specific commit, fix the compiler in this session, fix in a separate session, work around at source if user explicitly agrees).
+    - **Wait for direction**. Do not bisect, patch, or revert unilaterally.
+    See AGENTS.md "STOP and REPORT" section for the full rationale.
 2. **No source-level workarounds.** Never paper over a compiler bug by mutating the consuming source (wrapper methods to disambiguate codegen, extra indirection layers, typed-literal hacks, control-flow contortions, signature changes that exist only to satisfy inference/typecheck). If you find yourself adding such scaffolding, you are debugging the compiler by mutating the source program — back up.
 3. **Do not commit workaround churn into the source tree while debugging.** If a change is in the second category above, stop and discuss instead of editing the repo copy.
 4. **Reduce first.** Build a minimal reproduction in `build/tmp/` that demonstrates the compiler/runtime bug before touching the real source tree.
