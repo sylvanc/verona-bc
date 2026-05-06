@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <format>
+#include <functional>
 #include <iostream>
 #include <unordered_set>
 
@@ -1946,11 +1947,92 @@ namespace vc
       return;
     }
 
-    // Union/Isect/TupleType: element-wise.
+    // Union/Isect: set-aware matching with flattening (unions and isects have
+    // SET semantics, not positional — element index is not stable). TupleType
+    // remains positional below.
+    if (f_inner->in({Union, Isect}) && f_inner->type() == a_inner->type())
+    {
+      auto kind = f_inner->type();
+      std::vector<Node> f_leaves;
+      std::vector<Node> a_leaves;
+      std::function<void(const Node&, std::vector<Node>&)> flatten =
+        [&](const Node& n, std::vector<Node>& out) {
+          if (n->type() == kind)
+            for (auto& c : *n)
+              flatten(c, out);
+          else
+            out.push_back(n);
+        };
+      flatten(f_inner, f_leaves);
+      flatten(a_inner, a_leaves);
+
+      // Partition f_leaves into TypeParam slots (binding candidates) and
+      // concrete slots (must match an a_leaf to remain consistent).
+      std::vector<size_t> tp_slots;
+      std::vector<size_t> concrete_slots;
+      for (size_t i = 0; i < f_leaves.size(); i++)
+      {
+        bool is_tp = false;
+        if (f_leaves[i] == TypeName)
+        {
+          auto def = find_def(top, f_leaves[i]);
+          if (def && def == TypeParam)
+            is_tp = true;
+        }
+        if (is_tp)
+          tp_slots.push_back(i);
+        else
+          concrete_slots.push_back(i);
+      }
+
+      // Match concrete f leaves to a leaves by invariant equality. Recurse so
+      // nested generic instantiations contribute their constraints.
+      std::vector<bool> a_used(a_leaves.size(), false);
+      for (size_t fi : concrete_slots)
+      {
+        auto fe_t = Type << clone(f_leaves[fi]);
+        for (size_t aj = 0; aj < a_leaves.size(); aj++)
+        {
+          if (a_used[aj])
+            continue;
+          auto ae_t = Type << clone(a_leaves[aj]);
+          if (Subtype.invariant(top, fe_t, ae_t))
+          {
+            a_used[aj] = true;
+            extract_constraints(
+              top, f_leaves[fi], a_leaves[aj], constraints, is_default);
+            break;
+          }
+        }
+      }
+
+      // Bind a single TypeParam only when exactly one a_leaf remains
+      // unmatched (unambiguous). Anything else is set-ambiguous; skip.
+      if (tp_slots.size() == 1)
+      {
+        std::vector<size_t> unmatched_a;
+        for (size_t aj = 0; aj < a_leaves.size(); aj++)
+          if (!a_used[aj])
+            unmatched_a.push_back(aj);
+
+        if (unmatched_a.size() == 1)
+        {
+          auto& fe = f_leaves[tp_slots[0]];
+          auto& ae = a_leaves[unmatched_a[0]];
+          auto fe_t = Type << clone(fe);
+          auto ae_t = Type << clone(ae);
+          // Don't bind a TypeParam to itself.
+          if (!Subtype.invariant(top, fe_t, ae_t))
+            extract_constraints(top, fe, ae, constraints, is_default);
+        }
+      }
+      return;
+    }
+
+    // TupleType: positional (sequence semantics).
     if (
-      f_inner->type() == a_inner->type() &&
-      f_inner->size() == a_inner->size() &&
-      f_inner->in({Union, Isect, TupleType}))
+      f_inner == TupleType && a_inner == TupleType &&
+      f_inner->size() == a_inner->size())
     {
       for (size_t i = 0; i < f_inner->size(); i++)
         extract_constraints(
