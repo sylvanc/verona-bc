@@ -422,12 +422,11 @@ namespace vc
             }
             else if (key == ClassDef)
             {
-              // Same idea as reify_function_stage2 but for classes:
-              // re-resolve TypeVar values in r.subst. We don't
-              // re-emit class fields (their types use ClassId/TypeId
-              // tokens already; if those tokens reference a TypeVar
-              // node, that's a bug elsewhere). The dedup pass below
-              // handles ID merging.
+              // Class stage 2: re-resolve TypeVar values in r.subst,
+              // then re-emit field types from the def using updated
+              // subst. Without the field re-emission, captured vars
+              // (e.g. lambda fields capturing a `var: T | none`) keep
+              // the stage-1 Dyn placeholder and break typecheck.
               bool changed_here = false;
               for (auto& [tp, val] : r.subst)
               {
@@ -453,6 +452,51 @@ namespace vc
               }
               if (changed_here)
                 fixpoint_changed = true;
+
+              // Re-emit field types when r.reification is a Class
+              // node (Class << ClassId << Fields << Methods). Skip
+              // shape reifications (resolve_shapes builds those).
+              if (changed_here && r.reification && r.reification == Class)
+              {
+                Node fields_node = r.reification / Fields;
+                if (fields_node)
+                {
+                  Node class_body = r.def / ClassBody;
+                  if (class_body)
+                  {
+                    // Map field name → reified type from def.
+                    std::map<Location, Node> def_field_types;
+                    for (auto& member : *class_body)
+                    {
+                      if (member != FieldDef)
+                        continue;
+                      Node field_id = member / Ident;
+                      Node field_type = member / Type;
+                      if (!field_id || !field_type)
+                        continue;
+                      if (has_unresolved_type(field_type, r.subst))
+                        continue;
+                      auto reified = reify_type(field_type, r.subst);
+                      if (reified && reified != Dyn)
+                        def_field_types[field_id->location()] = reified;
+                    }
+                    for (auto& f : *fields_node)
+                    {
+                      if (f != Field)
+                        continue;
+                      Node fid = f / FieldId;
+                      if (!fid)
+                        continue;
+                      auto it = def_field_types.find(fid->location());
+                      if (it == def_field_types.end())
+                        continue;
+                      Node cur = f->back();
+                      if (cur && !cur->equals(it->second))
+                        f->replace(cur, clone(it->second));
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -6982,6 +7026,92 @@ namespace vc
         if (new_pt && !cur_pt->equals(new_pt))
           func_params->at(i)->replace(cur_pt, new_pt);
       }
+    }
+
+    // Var types (from TypeAssertions). Stage 1's first body walk
+    // skipped pinning local_types for assertions whose type
+    // referenced unbound formals (they had TypeVar seeds in subst).
+    // After stage 2 binds those formals, walk r.def's body for any
+    // TypeAssertion whose type is now fully resolved, and update
+    // the matching VarDef's type to the user's declared type.
+    Node vars = func / Vars;
+    Node def_labels = r.def / Labels;
+    if (vars && def_labels)
+    {
+      // Build location → asserted type map from r.def's body.
+      std::map<Location, Node> asserted;
+      def_labels->traverse([&](const Node& n) {
+        if (n != TypeAssertion)
+          return true;
+        auto loc = (n / LocalId)->location();
+        Node at = n / Type;
+        if (!has_unresolved_type(at, r.subst))
+        {
+          auto reified = reify_type(at, r.subst);
+          if (reified && reified != Dyn)
+            asserted[loc] = reified;
+        }
+        return true;
+      });
+
+      for (auto& vd : *vars)
+      {
+        auto loc = (vd / LocalId)->location();
+        auto it = asserted.find(loc);
+        if (it == asserted.end())
+          continue;
+        Node cur = vd / Type;
+        if (cur && !cur->equals(it->second))
+          vd->replace(cur, clone(it->second));
+      }
+    }
+
+    // Body Type fields: TypeTest's target type, NewArray element type,
+    // etc. Stage 1 reified these with the still-seed subst, so they
+    // ended up as Dyn (or worse). Re-walk the reified labels and
+    // substitute Type-bearing fields using the updated subst.
+    //
+    // Each statement carries its Type as the LAST child (per wfIR).
+    // We search by source location for matching def-statements and
+    // re-reify their type.
+    Node func_labels = func / Labels;
+    if (def_labels && func_labels)
+    {
+      // Map source location → (statement type) from def's body for
+      // statements that carry a Type field.
+      std::map<Location, Node> stmt_type_at_loc;
+      def_labels->traverse([&](const Node& n) {
+        if (!n)
+          return true;
+        // Typetest in source has (LocalId * LocalId * Type) shape.
+        if (n == Typetest)
+        {
+          Node nt = n / Type;
+          if (nt && !has_unresolved_type(nt, r.subst))
+          {
+            auto reified = reify_type(nt, r.subst);
+            if (reified)
+              stmt_type_at_loc[n->location()] = reified;
+          }
+        }
+        return true;
+      });
+
+      func_labels->traverse([&](const Node& n) {
+        if (!n)
+          return true;
+        if (n == Typetest)
+        {
+          auto it = stmt_type_at_loc.find(n->location());
+          if (it != stmt_type_at_loc.end())
+          {
+            Node cur = n->back();
+            if (cur && !cur->equals(it->second))
+              n->replace(cur, clone(it->second));
+          }
+        }
+        return true;
+      });
     }
   }
 
