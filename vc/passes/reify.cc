@@ -1211,6 +1211,16 @@ namespace vc
             auto arg_type = apply_subst(top, it->second, subst);
             emit_subtype(arg_type, formal);
           }
+          // Track the call result's source type (return type post
+          // subst) so subsequent uses of the result drive emission.
+          Node ret_type = def / Type;
+          if (ret_type)
+          {
+            auto resolved_ret = apply_subst(top, ret_type, callee_subst);
+            resolved_ret = apply_subst(top, resolved_ret, subst);
+            if (resolved_ret)
+              source_types[(call / LocalId)->location()] = resolved_ret;
+          }
         }
       };
 
@@ -1279,6 +1289,17 @@ namespace vc
           auto arg_type = apply_subst(top, it->second, subst);
           emit_subtype(arg_type, formal);
         }
+
+        // Track the calldyn result's source type so subsequent uses
+        // (Copy into a U-typed local, etc.) can drive emission.
+        Node ret_type = method_def / Type;
+        if (ret_type)
+        {
+          auto resolved_ret = apply_subst(top, ret_type, cls_subst);
+          resolved_ret = apply_subst(top, resolved_ret, subst);
+          if (resolved_ret)
+            source_types[(call / LocalId)->location()] = resolved_ret;
+        }
       };
 
       // Walk source body: track source_types on definition statements,
@@ -1307,9 +1328,30 @@ namespace vc
           {
             auto src_loc = (n / Rhs)->location();
             auto dst_loc = (n / LocalId)->location();
-            auto it = source_types.find(src_loc);
-            if (it != source_types.end())
-              source_types[dst_loc] = clone(it->second);
+            auto src_it = source_types.find(src_loc);
+            auto dst_it = source_types.find(dst_loc);
+
+            // Variance table: writing a value of type T into a local
+            // typed α emits add_lower(α, T) (equivalently Subtype(T, α)).
+            // Run subtype in Mode::Emit so the Query-pass-first guard
+            // skips emission when both sides are concrete and prove
+            // structurally without α involvement.
+            if (
+              src_it != source_types.end() && dst_it != source_types.end())
+            {
+              auto src_type = apply_subst(top, src_it->second, subst);
+              auto dst_type = apply_subst(top, dst_it->second, subst);
+              emit_subtype(src_type, dst_type);
+            }
+
+            // Propagate src's source_type to dst (consistent with the
+            // body's actual type flow). The TypeAssertion-set source_type
+            // gets overwritten by subsequent Copy/Move from a concrete
+            // src — that's correct because the assignment's RHS is what
+            // dst HOLDS at runtime; its declared type is just an upper
+            // bound the constraint above already enforces.
+            if (src_it != source_types.end())
+              source_types[dst_loc] = clone(src_it->second);
           }
           else if (n == Lookup)
           {

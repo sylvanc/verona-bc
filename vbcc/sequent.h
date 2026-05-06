@@ -320,16 +320,52 @@ namespace trieste
 
       // Π ⊩ Γ, A ⊢ Δ, A
       // If any element in LHS proves any element in RHS, succeed.
+      //
+      // Mode::Emit two-pass behavior: when constraint emission is
+      // enabled, atom rules over TypeVars (or formal-as-TypeVar)
+      // can emit add_lower / add_upper / unify and return "delayed
+      // proof: true". Such side-effecting proofs are LESS preferred
+      // than structural proofs that would succeed without emission.
+      //
+      // To avoid emitting bogus constraints when the subtype already
+      // holds structurally — e.g. `none <: α | none` succeeds via
+      // the `none` arm without involving α — we run a Query-mode
+      // pass FIRST. If any (l, r) pair succeeds in Query mode, the
+      // subtype is provable without emission and we return true
+      // without the side-effect. Only if no pair succeeds in Query
+      // mode do we fall through to the original Emit-mode pass,
+      // letting the first matching atom emit its constraint.
+      auto axiom_match = [&](const SequentCtx& ctx, Node& l, Node& r) {
+        auto find = axioms.find(r->type());
+        if (find != axioms.end())
+          return find->second(ctx, l, r);
+        return false;
+      };
+
+      if (state.ctx.mode == SequentCtx::Mode::Emit)
+      {
+        SequentCtx query_ctx = state.ctx;
+        query_ctx.mode = SequentCtx::Mode::Query;
+
+        bool query_success = std::any_of(
+          state.lhs_atomic.begin(),
+          state.lhs_atomic.end(),
+          [&](Node& l) {
+            return std::any_of(
+              state.rhs_atomic.begin(),
+              state.rhs_atomic.end(),
+              [&](Node& r) { return axiom_match(query_ctx, l, r); });
+          });
+
+        if (query_success)
+          return true;
+      }
+
       return std::any_of(
         state.lhs_atomic.begin(), state.lhs_atomic.end(), [&](Node& l) {
           return std::any_of(
             state.rhs_atomic.begin(), state.rhs_atomic.end(), [&](Node& r) {
-              auto find = axioms.find(r->type());
-
-              if (find != axioms.end())
-                return find->second(state.ctx, l, r);
-
-              return false;
+              return axiom_match(state.ctx, l, r);
             });
         });
     }
