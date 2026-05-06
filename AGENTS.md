@@ -90,6 +90,51 @@ The corollary: when reviewing your own work, ask "would I be
 embarrassed by this if it were the only thing the user saw?" If
 yes, it's a workaround. Back up.
 
+## Hard rule: runtime errors are hard stops
+
+A runtime error from `vbci` is a **hard failure**, period. Examples:
+
+- `bad alloc target` — region/allocation-target invariant violated.
+- `bad type` — value type didn't match expected at runtime.
+- `BadStackEscape` — frame-local reference escaped its frame.
+- Frozen-object writes / RC underflow / region-parent invariant violations.
+- Segfaults, assertions tripped inside the interpreter.
+
+Any of these — even if they print to stderr without aborting the
+process and the surrounding test harness counts the test as
+"passed" — is a **must-fix, hard stop**. The runtime emitted that
+message because an invariant was violated; the test passing is
+incidental, not exculpatory.
+
+Specifically you must NOT:
+
+- Treat runtime error output as a "non-fatal warning" because the
+  test harness reported "passed".
+- Defer runtime errors to a generic "outstanding issues" list and
+  ship the surrounding work as complete. The work is not complete.
+- Annotate the test as "known issue" and move on.
+- Continue with the originally-planned work past the point where
+  runtime errors started appearing.
+
+What to do instead:
+
+1. **Stop** the current task on first runtime error.
+2. **Capture the error**: command, stderr/stdout, source location
+   pointed to by the runtime, vbc dump if relevant.
+3. **Report to the user** following the same STOP-and-REPORT
+   protocol used for compiler bugs (above): what you were doing,
+   the reproducer, hypothesis, paths forward.
+4. **Wait for direction.**
+
+Why this rule: a runtime error means a runtime invariant has been
+violated. Programs that violate invariants produce undefined
+behavior in arbitrary other places — silent miscompilation,
+memory corruption, leaks, future segfaults that look unrelated.
+Shipping work that "passes tests but emits runtime errors" is a
+worse outcome than failing the tests, because it normalizes
+broken behavior. The same logic that says compiler bugs are never
+out of scope applies: runtime bugs are never out of scope.
+
 # Verona Compiler (vc) Specifics
 
 - **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump-clean` and `ninja update-dump` to regenerate golden test files.

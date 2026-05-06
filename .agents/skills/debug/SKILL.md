@@ -49,6 +49,28 @@ Rules:
 
 This is stricter than the general debugging protocol on purpose: source-level workaround churn is often net negative because it obscures the real bug, dirties the worktree, and increases rollback cost.
 
+## Verona hard stop: runtime errors are must-fix
+
+A runtime error from `vbci` (or any other Verona runtime) is a **hard failure**, regardless of whether the surrounding test harness reports "passed" or the process exits cleanly.
+
+Examples that trigger this rule:
+
+- `bad alloc target` — region / allocation-target invariant violated.
+- `bad type` — value type didn't match expected at runtime.
+- `BadStackEscape` — frame-local reference escaped its frame.
+- Frozen-object writes, RC underflow, region-parent invariant violations.
+- Segfaults, assertions tripped inside the interpreter.
+
+Rules:
+
+1. **Runtime errors are NEVER out of scope** for the task that surfaced them. The same logic that makes compiler bugs in-scope applies: a runtime error means a runtime invariant was violated, and ignoring it normalizes undefined behavior.
+2. **"The test still passed" is irrelevant.** The runtime emitted the diagnostic because something is genuinely wrong. Tests passing past it is incidental, not exculpatory.
+3. **STOP and REPORT** on first runtime error from anything you're working on — same protocol as for compiler bugs (rule 1a above). Capture command + stderr + source location, hypothesize, propose paths forward, wait for direction.
+4. **Do NOT** annotate the test as a "known issue" and ship the surrounding work as complete. The surrounding work is not complete while the runtime is reporting violations.
+5. **Do NOT** add the error to a generic "outstanding issues" list as a deferral. That's the same anti-pattern as treating a compiler bug as deferred.
+
+Why so strict: a violated runtime invariant produces undefined behavior in arbitrary other places — silent miscompilation, memory corruption, leaks, future segfaults that look unrelated. Shipping "passes tests but emits runtime errors" is a worse outcome than failing the test, because the next person debugging an unrelated issue has no way to tell whether the runtime errors are causal.
+
 ## When to use the full protocol
 
 This protocol is for non-trivial debugging — cases where you don't know the cause, or where your first guess could be wrong. If the cause is immediately obvious and verifiable in one step (a typo, a missing import), just fix it.
