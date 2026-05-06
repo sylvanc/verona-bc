@@ -262,6 +262,16 @@ namespace vc
 
     void emit_unresolved_type_error(const Node& blame, std::string_view context)
     {
+      // During the two-stage worker run, defer error emission. A
+      // formal that looks unresolved in stage 1 may bind in stage 2
+      // (cross-function flow: callees emit constraints during their
+      // stage 1, after this caller's stage 1 has already touched
+      // r_type / Param emission). After worker.run() completes and
+      // stage 2 has had its chance, defer is cleared and the
+      // existing safety-net scans re-check for genuinely-unresolved
+      // formals.
+      if (defer_unresolved_errors)
+        return;
       // Dedupe per (source location, context). Several reify_emitted_type
       // callers pass slightly different blame nodes (e.g. f / Ident vs
       // r->def / Ident) for the same source location, so use the blame's
@@ -277,6 +287,8 @@ namespace vc
         blame,
         std::format("Could not resolve {} during monomorphization", context)));
     }
+
+    bool defer_unresolved_errors{true};
 
     Node reify_emitted_type(
       const Node& source,
@@ -350,6 +362,68 @@ namespace vc
       prune_empty_shape_unions();
       process_pending_callbacks(true);
       drain_worklist();
+
+      // Phase 6 cross-function flow: by now every reification has
+      // had stage 1 (constraint emission) AND stage 2 (re-solve)
+      // run by the worker. However, ordering means some Resolutions
+      // run their stage 2 BEFORE downstream reifications emit the
+      // constraints that would bind their TypeVars. Run a final
+      // pass: for every function reification, re-run stage 2 to
+      // pick up newly-bound bindings. Loop to fixpoint since a
+      // newly-bound formal in one function may reveal more bindings
+      // for another via TypeVar union-find chains.
+      bool fixpoint_changed = true;
+      while (fixpoint_changed)
+      {
+        fixpoint_changed = false;
+        for (auto& key : map_order)
+        {
+          if (key != Function)
+            continue;
+          for (auto& r : map[key])
+          {
+            if (!r.reification)
+              continue;
+            // Snapshot subst values before to detect change.
+            NodeMap<Node> before_subst = r.subst;
+            reify_function_stage2(r);
+            bool changed_here = false;
+            if (r.subst.size() != before_subst.size())
+              changed_here = true;
+            else
+            {
+              for (auto& [tp, val] : r.subst)
+              {
+                auto bit = before_subst.find(tp);
+                if (bit == before_subst.end())
+                {
+                  changed_here = true;
+                  break;
+                }
+                if (!val && !bit->second)
+                  continue;
+                if (!val || !bit->second)
+                {
+                  changed_here = true;
+                  break;
+                }
+                if (!val->equals(bit->second))
+                {
+                  changed_here = true;
+                  break;
+                }
+              }
+            }
+            if (changed_here)
+              fixpoint_changed = true;
+          }
+        }
+      }
+
+      // Re-enable error emission for the existing safety-net scans
+      // below. Any TypeVar that survives is a genuine unbound formal
+      // that the user must resolve.
+      defer_unresolved_errors = false;
 
       std::vector<Reification*> reified_functions;
 
@@ -1061,6 +1135,17 @@ namespace vc
       struct State : NodeWorkerState
       {
         Reification* reif{nullptr};
+
+        // Two-stage reify pipeline:
+        //   Init: nothing done yet.
+        //   NeedSolve: stage 1 done. block_on_all (via the side
+        //              direct_deps_by_parent map). When unblocked,
+        //              stage 2 runs.
+        //   Done: stage 2 done.
+        // The stage transition lets sum's solve run AFTER reduce's
+        // body emissions land in the global typevar_store.
+        enum class Stage : uint8_t { Init, NeedSolve, Done };
+        Stage stage{Stage::Init};
       };
 
       void seed(const Node& /*id*/, State& /*s*/) {}
@@ -1085,6 +1170,28 @@ namespace vc
     // Used by the post-worklist refinement loop and unresolved-return
     // error scan.
     std::vector<Reification*> deferred_typevar;
+    // Phase 6 cross-function flow: store each function reification's
+    // formal_typevars (TypeParam → α_id) and seed-TV map so the
+    // stage-2 (post-block) re-solve can re-query the solver after
+    // callees have emitted their constraints.
+    std::unordered_map<Reification*, std::vector<std::pair<Node, uint32_t>>>
+      reify_formal_alphas;
+    // Map from seed TypeVar Location → Reification* of the function
+    // that seeded it, so during stage 2 we can solve the right α
+    // even for transitively-inherited seeds.
+    std::map<Location, std::pair<Reification*, Node>> seed_owner_map;
+    // Stack of active reification ids in the current process() chain;
+    // find_or_push consults the top to record direct_deps. Holds Node
+    // ids (stable identity) instead of State* — State pointers may be
+    // invalidated by NodeMap rehashing when new reifications register.
+    std::vector<Node> reify_id_stack;
+
+    // Side-map: parent reification id → vector of direct dep ids
+    // collected during stage 1. process() consumes these to call
+    // block_on_all. Side-mapped because worker.state() uses pointer
+    // equality on Node — and record_dep is called with `clone(id)`
+    // which doesn't match the original key.
+    std::map<Node, std::vector<Node>> direct_deps_by_parent;
     std::map<Location, Node> libs;
     NodeMap<Node> init_sources;
     std::set<Node> processed_initfini;
@@ -1122,6 +1229,25 @@ namespace vc
     {
       worker->add(r->id);
       worker->state(r->id).reif = r;
+    }
+
+    // Phase 6 cross-function flow: record `id` as a direct dependency
+    // of the topmost active reification. Called from find_or_push for
+    // every id returned (newly created or existing). Stage 1 of the
+    // active reify uses these to block_on_all in process(). Uses a
+    // side-map (not worker.state) because find_or_push returns
+    // clone(id) which has different pointer identity from the original
+    // worker.state key — std::map<Node,V> uses pointer comparison.
+    void record_dep(const Node& id)
+    {
+      if (reify_id_stack.empty())
+        return;
+      Node parent_id = reify_id_stack.back();
+      Node candidate = id;
+      // Don't depend on ourselves (compare by content via equals).
+      if (parent_id->equals(candidate))
+        return;
+      direct_deps_by_parent[parent_id].push_back(id);
     }
 
     std::map<Location, LookupInfo> lookup_info;
@@ -1682,12 +1808,33 @@ namespace vc
 
     // Per-Reification dispatcher. Called once per work item by
     // ReifyWork::process. Mirrors the legacy drain_worklist body.
-    void process_reification(Reification& r)
+    // For Functions, this is the FULL pipeline (stage 1 + stage 2);
+    // process() handles the stage gating with NodeWorker block_on.
+    void process_reification(Reification& r, const Node& reif_id = {})
     {
+      if (reif_id)
+        reify_id_stack.push_back(reif_id);
+      auto pop = [&]() {
+        if (reif_id)
+          reify_id_stack.pop_back();
+      };
+
+      if (!r.def)
+      {
+        pop();
+        return;
+      }
+
       if (r.def == ClassDef)
+      {
         reify_class(r);
+        pop();
+      }
       else if (r.def == TypeAlias)
+      {
         reify_typealias(r);
+        pop();
+      }
       else if (r.def == Function)
       {
         reify_function(r);
@@ -1698,9 +1845,11 @@ namespace vc
         // from match arms when the main arm's CallDyn wasn't tracked).
         if (r.reification && (r.def / Type)->front() == TypeVar)
           deferred_typevar.push_back(&r);
+        pop();
       }
       else
       {
+        pop();
         assert(false);
       }
     }
@@ -2467,7 +2616,9 @@ namespace vc
               if (!existing.resolved_name && resolved_name)
                 existing.resolved_name = resolved_name;
 
-              return clone(existing.id);
+              auto out = clone(existing.id);
+              record_dep(out);
+              return out;
             }
           }
 
@@ -2478,7 +2629,9 @@ namespace vc
              {},
              std::move(resolved_name)});
           register_with_worker(&r_vec.back());
-          return clone(r_vec.back().id);
+          auto out = clone(r_vec.back().id);
+          record_dep(out);
+          return out;
         }
       }
 
@@ -2544,7 +2697,9 @@ namespace vc
         {
           if (!existing.resolved_name && resolved_name)
             existing.resolved_name = resolved_name;
-          return clone(existing.id);
+          auto out = clone(existing.id);
+          record_dep(out);
+          return out;
         }
       }
 
@@ -2553,7 +2708,9 @@ namespace vc
       r_vec.push_back(
         {def, std::move(subst), std::move(id), {}, std::move(resolved_name)});
       register_with_worker(&r_vec.back());
-      return clone(r_vec.back().id);
+      auto out = clone(r_vec.back().id);
+      record_dep(out);
+      return out;
     }
 
     void reify_class(Reification& r)
@@ -3776,6 +3933,15 @@ namespace vc
       return union_node;
     }
 
+    // Phase 6 stage-2: post-block re-solve. After block_on_all on
+    // this reification's direct callees has unblocked, re-query the
+    // constraint solver for any formal_typevar that was unsolved in
+    // stage 1. If newly bound, update r.subst and propagate into the
+    // reified IR (Type, Params, Vars, Body Args). Per-Reification
+    // identities are stored in `reify_formal_alphas` (TypeParam →
+    // α_id, indexed by Reification*).
+    void reify_function_stage2(Reification& r);
+
     bool reify_function(Reification& r)
     {
       // Clear per-function local type tracking.
@@ -3839,6 +4005,18 @@ namespace vc
         }
       }
 
+      // Persist formal_typevars on the Reification for stage 2 of
+      // the two-stage NodeWorker pipeline. After block_on_all on
+      // direct callees, stage 2 re-solves these α and propagates
+      // any newly-bound formals into the IR.
+      if (!formal_typevars.empty())
+      {
+        auto& alpha_vec = reify_formal_alphas[&r];
+        alpha_vec.clear();
+        for (auto& [tp, fq] : formal_typevars)
+          alpha_vec.emplace_back(tp, typevar_store.intern(fq));
+      }
+
       // Phase B2: emit arg-vs-formal Subtype constraints for every
       // Call/CallDyn in the body, using source types and r.subst.
       // Fires for generic callers where some formal is α_k (seeded
@@ -3846,7 +4024,24 @@ namespace vc
       // records the constraints into typevar_store. The solver
       // consumption block below then queries store.solve(α_k) and
       // fills r.subst gaps from solved bindings.
-      if (!unbound_formals.empty())
+      // Cross-function flow: also fire emit when r.subst contains
+      // TypeVar values inherited from an enclosing caller's seed
+      // (e.g. reduce::2::1 reified for sum's call has T_reduce =
+      // sum::T's seed_TV). Such values must NOT block emission —
+      // reduce's body emissions reach sum::T's α via the unify
+      // chain, providing the concrete binding (e.g. via vector::
+      // each's i32 element type).
+      bool has_typevar_subst = false;
+      for (auto& [tp, val] : r.subst)
+      {
+        if (val && val == Type && !val->empty() && val->front() == TypeVar)
+        {
+          has_typevar_subst = true;
+          break;
+        }
+      }
+
+      if (!unbound_formals.empty() || has_typevar_subst)
       {
         emit_source_call_constraints(r.def, r.subst);
 
@@ -6432,9 +6627,133 @@ namespace vc
     const Node& id, NodeWorker<Reifier::ReifyWork>& worker)
   {
     auto& s = worker.state(id);
-    assert(s.reif != nullptr);
-    outer->process_reification(*s.reif);
+    // s.reif may be null if this Node id was added via NodeWorker
+    // dependency resolution but not via register_with_worker (the
+    // sole path that sets reif). For now, treat as "nothing to do"
+    // and mark Resolved so dependents unblock.
+    if (s.reif == nullptr)
+      return true;
+
+    if (s.stage == State::Stage::Init)
+    {
+      // Stage 1: run the full per-Reification pipeline (signature +
+      // body walk + emit + solve + IR build). Side-effect: every
+      // find_or_push call records its returned id into
+      // direct_deps_by_parent[id] via record_dep.
+      outer->process_reification(*s.reif, id);
+      s.stage = State::Stage::NeedSolve;
+
+      // Block on all direct callees so that, when this reification
+      // resumes for stage 2, every callee has had the chance to
+      // emit its own body constraints into the global typevar_store.
+      auto dep_it = outer->direct_deps_by_parent.find(id);
+      if (dep_it != outer->direct_deps_by_parent.end() &&
+          !dep_it->second.empty() &&
+          worker.block_on_all(id, dep_it->second))
+        return false;
+      // Fall through if nothing to wait on.
+    }
+
+    if (s.stage == State::Stage::NeedSolve)
+    {
+      // Stage 2: re-query the constraint solver for formal_typevars
+      // (now populated by callees' stage-1 emissions). If a formal
+      // newly solves, update r.subst and propagate the binding into
+      // the reified IR (Type, Params, Vars, Body Args).
+      outer->reify_function_stage2(*s.reif);
+      s.stage = State::Stage::Done;
+    }
+
     return true;
+  }
+
+  inline void Reifier::reify_function_stage2(Reification& r)
+  {
+    if (!r.reification || r.reification != Func)
+      return;
+
+    // Collect (TypeParam, α_id) pairs to re-query: both formals
+    // we seeded ourselves and any inherited TypeVar values in
+    // r.subst (cross-function flow case).
+    std::vector<std::pair<Node, uint32_t>> to_query;
+    auto pf = reify_formal_alphas.find(&r);
+    if (pf != reify_formal_alphas.end())
+      to_query = pf->second;
+    for (auto& [tp, val] : r.subst)
+    {
+      if (!val || val != Type || val->empty() ||
+          val->front() != TypeVar)
+        continue;
+      auto seed_id = typevar_store.intern(val->front());
+      bool dup = false;
+      for (auto& [t, a] : to_query)
+        if (a == seed_id)
+        {
+          dup = true;
+          break;
+        }
+      if (!dup)
+        to_query.emplace_back(tp, seed_id);
+    }
+
+    bool any_changed = false;
+    for (auto& [tp, alpha_id] : to_query)
+    {
+      auto cur_subst_it = r.subst.find(tp);
+      if (cur_subst_it == r.subst.end())
+        continue;
+      auto cur = cur_subst_it->second;
+      if (!cur || cur != Type || cur->empty() ||
+          cur->front() != TypeVar)
+        continue;
+
+      auto solved = typevar_store.solve(alpha_id);
+      if (!solved || (solved == Union && solved->empty()))
+        continue;
+      bool has_tv = false;
+      solved->traverse([&](const Node& n) {
+        if (n == TypeVar)
+          has_tv = true;
+        return !has_tv;
+      });
+      if (has_tv)
+        continue;
+
+      r.subst[tp] = Type << clone(solved);
+      any_changed = true;
+    }
+
+    if (!any_changed)
+      return;
+
+    // Re-emit the reified function signature using the updated
+    // r.subst so consumers see the bound types.
+    auto func = r.reification;
+
+    // Return type.
+    auto def_type = r.def / Type;
+    if (def_type->front() != TypeVar)
+    {
+      auto new_ret = reify_emitted_type(
+        def_type, r.subst, r.def / Ident, "return type");
+      auto old_ret = func / Type;
+      if (new_ret && !old_ret->equals(new_ret))
+        func->replace(old_ret, new_ret);
+    }
+
+    // Param types.
+    auto def_params = r.def / Params;
+    auto func_params = func / Params;
+    if (def_params->size() == func_params->size())
+    {
+      for (size_t i = 0; i < def_params->size(); i++)
+      {
+        auto new_pt = reify_type(def_params->at(i) / Type, r.subst);
+        auto cur_pt = func_params->at(i) / Type;
+        if (new_pt && !cur_pt->equals(new_pt))
+          func_params->at(i)->replace(cur_pt, new_pt);
+      }
+    }
   }
 
   PassDef reify()
