@@ -378,47 +378,242 @@ namespace vc
         fixpoint_changed = false;
         for (auto& key : map_order)
         {
-          if (key != Function)
-            continue;
           for (auto& r : map[key])
           {
             if (!r.reification)
               continue;
-            // Snapshot subst values before to detect change.
-            NodeMap<Node> before_subst = r.subst;
-            reify_function_stage2(r);
-            bool changed_here = false;
-            if (r.subst.size() != before_subst.size())
-              changed_here = true;
-            else
+
+            // Run function stage 2 OR class stage 2 (resolves
+            // r.subst's TypeVar values via solver, propagates into
+            // reified IR).
+            if (key == Function)
             {
-              for (auto& [tp, val] : r.subst)
+              NodeMap<Node> before_subst = r.subst;
+              reify_function_stage2(r);
+              bool changed_here = false;
+              if (r.subst.size() != before_subst.size())
+                changed_here = true;
+              else
               {
-                auto bit = before_subst.find(tp);
-                if (bit == before_subst.end())
+                for (auto& [tp, val] : r.subst)
                 {
-                  changed_here = true;
-                  break;
-                }
-                if (!val && !bit->second)
-                  continue;
-                if (!val || !bit->second)
-                {
-                  changed_here = true;
-                  break;
-                }
-                if (!val->equals(bit->second))
-                {
-                  changed_here = true;
-                  break;
+                  auto bit = before_subst.find(tp);
+                  if (bit == before_subst.end())
+                  {
+                    changed_here = true;
+                    break;
+                  }
+                  if (!val && !bit->second)
+                    continue;
+                  if (!val || !bit->second)
+                  {
+                    changed_here = true;
+                    break;
+                  }
+                  if (!val->equals(bit->second))
+                  {
+                    changed_here = true;
+                    break;
+                  }
                 }
               }
+              if (changed_here)
+                fixpoint_changed = true;
             }
-            if (changed_here)
-              fixpoint_changed = true;
+            else if (key == ClassDef)
+            {
+              // Same idea as reify_function_stage2 but for classes:
+              // re-resolve TypeVar values in r.subst. We don't
+              // re-emit class fields (their types use ClassId/TypeId
+              // tokens already; if those tokens reference a TypeVar
+              // node, that's a bug elsewhere). The dedup pass below
+              // handles ID merging.
+              bool changed_here = false;
+              for (auto& [tp, val] : r.subst)
+              {
+                if (!val || val != Type || val->empty() ||
+                    val->front() != TypeVar)
+                  continue;
+                auto seed_id = typevar_store.intern(val->front());
+                auto solved = typevar_store.solve(seed_id);
+                if (!solved || (solved == Union && solved->empty()))
+                  continue;
+                bool has_tv = false;
+                solved->traverse([&](const Node& n) {
+                  if (n == TypeVar)
+                    has_tv = true;
+                  return !has_tv;
+                });
+                if (has_tv)
+                  continue;
+                Node inner = (solved == Type && !solved->empty()) ?
+                  solved->front() : solved;
+                r.subst[tp] = Type << clone(inner);
+                changed_here = true;
+              }
+              if (changed_here)
+                fixpoint_changed = true;
+            }
           }
         }
       }
+
+      // Phase 6: post-fixpoint reification dedup.
+      //
+      // Two reifications that started with different initial substs
+      // (one with a concrete type, one with a TypeVar inherited from
+      // an enclosing seed) may have been allocated separate IDs by
+      // find_or_push. After stage 2's fixpoint has bound the
+      // TypeVars, those substs may now be equivalent — but the IDs
+      // are baked in as ::0 and ::1.
+      //
+      // Walk every reification map slot. Within each (def, r_vec),
+      // build a canonical map: the first entry whose subst is now
+      // equal becomes the canonical id. Subsequent equivalent entries
+      // have their reification cleared (they vanish from the IR) and
+      // their ID is recorded for redirection. Then walk every reified
+      // IR node, replacing non-canonical ids with their canonical
+      // equivalent.
+      std::map<Node, Node> id_redirect;  // non-canonical id → canonical id
+      for (auto& [def, r_vec] : map)
+      {
+        if (r_vec.size() <= 1)
+          continue;
+
+        // Build canonical groups.
+        std::vector<size_t> canonical_index(r_vec.size(), SIZE_MAX);
+        for (size_t i = 0; i < r_vec.size(); i++)
+        {
+          if (canonical_index[i] != SIZE_MAX)
+            continue;
+          canonical_index[i] = i;
+          for (size_t j = i + 1; j < r_vec.size(); j++)
+          {
+            if (canonical_index[j] != SIZE_MAX)
+              continue;
+            if (subst_equal(r_vec[i].subst, r_vec[j].subst))
+              canonical_index[j] = i;
+          }
+        }
+        // Record redirects and clear non-canonical reifications.
+        for (size_t i = 0; i < r_vec.size(); i++)
+        {
+          if (canonical_index[i] == i)
+            continue;
+          auto& canonical_r = r_vec[canonical_index[i]];
+          if (!canonical_r.id || !r_vec[i].id)
+            continue;
+          if (canonical_r.id->equals(r_vec[i].id))
+            continue;
+          id_redirect[r_vec[i].id] = canonical_r.id;
+          // Drop the duplicate's IR — it's a stale copy. The
+          // canonical entry's IR is what survives.
+          r_vec[i].reification = {};
+        }
+      }
+
+      // Walk every reified IR node, replacing non-canonical ids with
+      // their canonical equivalent. Compare by content (location
+      // string) since the IR nodes are clones.
+      auto canonical_id = [&](const Node& n) -> Node {
+        for (auto& [src, dst] : id_redirect)
+        {
+          if (n->type() == src->type() && n->location() == src->location())
+            return dst;
+        }
+        return {};
+      };
+
+      std::function<void(const Node&)> redirect_ids;
+      redirect_ids = [&](const Node& node) {
+        if (!node)
+          return;
+        for (size_t i = 0; i < node->size(); i++)
+        {
+          Node child = node->at(i);
+          if (!child)
+            continue;
+          if (child->type().in({ClassId, FunctionId, TypeId}))
+          {
+            auto repl = canonical_id(child);
+            if (repl)
+              node->replace_at(i, clone(repl));
+            continue;
+          }
+          redirect_ids(child);
+        }
+      };
+
+      if (!id_redirect.empty())
+      {
+        for (auto& [def, r_vec] : map)
+        {
+          for (auto& r : r_vec)
+          {
+            if (r.reification)
+              redirect_ids(r.reification);
+          }
+        }
+      }
+
+      // Phase 6: substitute resolved_name TypeVar leaves with their
+      // solved bindings. resolved_name was built at find_or_push
+      // time using the caller's then-current subst; if the caller
+      // had a TypeVar seed, resolved_name kept that TypeVar in its
+      // TypeArgs. resolve_shapes uses resolved_name for Subtype
+      // matching; an unbound TypeVar leaf there causes legitimate
+      // shape implementors to be excluded from union members.
+      std::function<void(const Node&)> substitute_resolved_typevars;
+      substitute_resolved_typevars = [&](const Node& node) {
+        if (!node)
+          return;
+        for (size_t i = 0; i < node->size(); i++)
+        {
+          Node child = node->at(i);
+          if (!child)
+            continue;
+          if (child == TypeVar)
+          {
+            auto seed_id = typevar_store.intern(child);
+            auto solved = typevar_store.solve(seed_id);
+            if (solved && !(solved == Union && solved->empty()))
+            {
+              bool has_tv = false;
+              solved->traverse([&](const Node& n) {
+                if (n == TypeVar)
+                  has_tv = true;
+                return !has_tv;
+              });
+              if (!has_tv)
+              {
+                Node inner = (solved == Type && !solved->empty()) ?
+                  solved->front() : solved;
+                node->replace_at(i, clone(inner));
+                continue;
+              }
+            }
+          }
+          substitute_resolved_typevars(child);
+        }
+      };
+
+      for (auto& [def, r_vec] : map)
+      {
+        for (auto& r : r_vec)
+        {
+          if (r.resolved_name)
+            substitute_resolved_typevars(r.resolved_name);
+        }
+      }
+
+      // Re-run resolve_shapes once more after dedup + resolved_name
+      // substitution so shape unions reflect the canonicalized class
+      // ids and the post-fixpoint resolved_names. Clear the cache
+      // because earlier runs computed Subtype results for stale
+      // resolved_names (with TypeVar leaves) that may have been
+      // false negatives.
+      shape_subtype_cache.clear();
+      resolve_shapes();
 
       // Re-enable error emission for the existing safety-net scans
       // below. Any TypeVar that survives is a genuine unbound formal
@@ -1876,6 +2071,12 @@ namespace vc
                 continue;
               if (!cr.resolved_name)
                 continue;
+              // Skip dedup'd entries whose IR was cleared by the
+              // post-fixpoint dedup pass. Their ID is redirected
+              // to the canonical entry; including them here would
+              // produce stale references.
+              if (!cr.reification)
+                continue;
 
               auto cache_key =
                 std::make_pair(cr.resolved_name.get(), r.resolved_name.get());
@@ -2514,6 +2715,29 @@ namespace vc
       return baked;
     }
 
+    // Compare two subst values for equivalence, including α-equivalence
+    // for TypeVar leaves (two TypeVar leaves with the same union-find
+    // root are equivalent). Used by find_or_push dedup so that callees
+    // scheduled with TypeVar substs from the same enclosing reification
+    // dedup correctly.
+    bool subst_value_equal(const Node& lhs, const Node& rhs)
+    {
+      // Both bare TypeVar leaves: α-equivalence.
+      if (lhs && rhs && lhs == TypeVar && rhs == TypeVar)
+      {
+        auto la = typevar_store.intern(lhs);
+        auto ra = typevar_store.intern(rhs);
+        return typevar_store.root(la) == typevar_store.root(ra);
+      }
+      // Type-wrapped: unwrap and recurse if either side wraps a TypeVar.
+      if (lhs && rhs && lhs == Type && rhs == Type &&
+          !lhs->empty() && !rhs->empty() &&
+          (lhs->front() == TypeVar || rhs->front() == TypeVar))
+        return subst_value_equal(lhs->front(), rhs->front());
+      // Default: invariant subtype.
+      return Subtype.invariant(top, lhs, rhs);
+    }
+
     // Check whether two substitution maps are equivalent under invariance.
     bool subst_equal(const NodeMap<Node>& a, const NodeMap<Node>& b)
     {
@@ -2523,7 +2747,7 @@ namespace vc
       return std::equal(
         a.begin(), a.end(), b.begin(), b.end(), [&](auto& lhs, auto& rhs) {
           return (lhs.first == rhs.first) &&
-            Subtype.invariant(top, lhs.second, rhs.second);
+            subst_value_equal(lhs.second, rhs.second);
         });
     }
 
@@ -2670,7 +2894,7 @@ namespace vc
             return;
           }
 
-          if (!Subtype.invariant(top, a_it->second, b_it->second))
+          if (!subst_value_equal(a_it->second, b_it->second))
           {
             match = false;
           }
@@ -6719,7 +6943,12 @@ namespace vc
       if (has_tv)
         continue;
 
-      r.subst[tp] = Type << clone(solved);
+      // `solved` may itself be a Type-wrapped value or a bare type
+      // expression. r.subst values are conventionally Type-wrapped,
+      // so unwrap-then-wrap to avoid Type<Type<...>>.
+      Node inner = (solved == Type && !solved->empty()) ?
+        solved->front() : solved;
+      r.subst[tp] = Type << clone(inner);
       any_changed = true;
     }
 
