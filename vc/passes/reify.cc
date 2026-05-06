@@ -881,6 +881,57 @@ namespace vc
 
       resolve_shapes();
 
+      // Phase 6 [P9] IR-boundary scan: after all reifications complete
+      // and the existing safety nets have run, walk every reification
+      // for free TypeVar leaves. Per the design plan, the constraint
+      // solver should have bound every formal that's used in the
+      // emitted IR; any surviving TypeVar is a hard error citing the
+      // TypeVar's source Location. This catches:
+      //  - Generic instantiations whose unbound formal couldn't be
+      //    inferred (ought to be the user's responsibility — explicit
+      //    type argument).
+      //  - apply_subst paths that returned clone(type_node) for a
+      //    free TypeVar without a downstream binding.
+      //
+      // Per AGENTS.md, Dyn is the IR encoding of `any` and must NOT
+      // be used as a fallback for unresolved types. We emit an error
+      // and let the rebuild-top loop below carry on; if errors are
+      // already present, ninja will surface them.
+      std::set<std::string> typevar_seen;
+      for (auto& key : map_order)
+      {
+        for (auto& r : map[key])
+        {
+          if (!r.reification)
+            continue;
+          r.reification->traverse([&](const Node& n) {
+            if (n != TypeVar)
+              return true;
+            auto loc_view = n->location().view();
+            auto key_str = std::string(loc_view);
+            if (!typevar_seen.insert(key_str).second)
+              return true; // dedup per Location
+            Node blame = r.def;
+            if (r.def && r.def->size() > 0)
+            {
+              Node ident = r.def / Ident;
+              if (ident)
+                blame = ident;
+            }
+            errors.push_back(err(
+              blame,
+              std::format(
+                "Reified IR retains a free TypeVar (location '{}') for {}. "
+                "The type parameter could not be inferred — provide an "
+                "explicit type argument at the call site.",
+                loc_view,
+                r.def == Function ? "this function" :
+                  (r.def == ClassDef ? "this class" : "this reification"))));
+            return true;
+          });
+        }
+      }
+
       // Remove existing contents.
       top->erase(top->begin(), top->end());
 
