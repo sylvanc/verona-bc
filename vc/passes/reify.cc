@@ -4841,187 +4841,24 @@ namespace vc
         typevar_solved_formals[tp] = Type << solved;
       }
 
-      // Phase 3b.4: body-driven binding for unbound formals. After the
-      // body walk, gather Return evidence from local_types[ret_loc] and
-      // bind each unbound formal to the LUB of admitted evidence.
-      // Admitted evidence: the Return value's tracked type, filtered
-      // against the declared return type's concrete (non-formal-bare)
-      // alternatives (those are matched by the union's concrete arms;
-      // remaining evidence types belong to the bare-formal arm).
-      // Phase 3b.4 / 3b.5: body-driven binding. After the body walk, bind
-      // each unbound formal U_k from "body evidence" — types tracked at
-      // admitted body sites that attribute to U_k. Skipping rules:
-      //  - tainted (concrete-receiver rule, Phase 3b.5 b): a local whose
-      //    tracked type came from a CallDyn over a non-concrete receiver
-      //    is not safe evidence (target set can grow as new classes
-      //    reify).
-      //  - refused (U-mention scan, Phase 3b.5 a): a formal mentioned in
-      //    a non-admitted body position is not bound from any evidence;
-      //    the user must supply an explicit type argument.
-      //  - intermediate TypeVar marker: the body walk hasn't determined
-      //    the type yet (e.g., pending lambda apply). Not evidence.
-      // For multi-unbound formals (Phase 3b.5 d): each formal gets its
-      // own evidence list. Return-statement evidence is attributed to a
-      // unique unbound bare-formal alternative of the declared return
-      // type; if multiple unbound bare-formal alts exist, return
-      // evidence is ambiguous and refused. var-evidence is attributed
-      // directly to the formal recorded at the TypeAssertion site.
+      // Phase 6: post-walk body-driven binding for unbound formals.
+      // The brittle Phase 3b mechanisms (var-evidence, return-evidence,
+      // refused_formals via U-mention scan, tainted_locals) are
+      // SUBSUMED by the constraint solver:
+      //  - call-arg variance: emitted by emit_source_call_constraints
+      //    at every Call/CallDyn site (handles each-pattern bindings
+      //    where U flows via shape-match on lambda apply params).
+      //  - return-arg variance: emitted by the same helper at every
+      //    label whose terminator is a Return statement.
+      //  - cross-reify gather: gather_lambda_apply_constraints walks
+      //    lifted-lambda apply bodies emitting Store constraints.
+      //  - per-Reification α_k seeding: r.subst[U_k] = Type<TypeVar α_k>
+      //    at the TypeParam's Ident Location ensures the constraints
+      //    reach the correct identity.
+      // Solver consumption queries store.solve(α_k) and overwrites the
+      // α_k seed in r.subst with the solved binding.
       if (body_driven)
       {
-        NodeMap<Nodes> evidence_per_formal;
-
-        // var-evidence: directly attributed by var_to_formal.
-        for (auto& [var_loc, formal] : var_to_formal)
-        {
-          if (refused_formals.count(formal))
-            continue;
-          if (tainted_locals.count(var_loc))
-            continue;
-          auto it = local_types.find(var_loc);
-          if (it == local_types.end())
-            continue;
-          if (it->second == TypeVar)
-            continue;
-          auto& list = evidence_per_formal[formal];
-          bool dup = false;
-          for (auto& existing : list)
-          {
-            if (existing->equals(it->second))
-            {
-              dup = true;
-              break;
-            }
-          }
-          if (!dup)
-            list.push_back(clone(it->second));
-        }
-
-        // Categorize def_type's union alternatives as concrete or
-        // bare-formal (unbound formal alone). Bare-formal alts capture
-        // Return-evidence attribution.
-        auto inner = (def_type == Type) ? def_type->front() : def_type;
-        Nodes concrete_alts;
-        NodeMap<Node> bare_unbound_alts; // formal_def → alt (TypeName)
-
-        auto categorize_alt = [&](Node alt) {
-          auto inner_alt = (alt == Type) ? alt->front() : alt;
-          if (inner_alt == TypeName)
-          {
-            auto def = find_def(top, inner_alt);
-            if (def && def == TypeParam)
-            {
-              for (auto& f : unbound_formals)
-              {
-                if (def == f)
-                {
-                  if (!refused_formals.count(f))
-                    bare_unbound_alts[f] = clone(alt);
-                  return;
-                }
-              }
-            }
-          }
-          // Concrete (or formal-but-bound) — reify and add.
-          Node alt_t = (alt == Type) ? clone(alt) : Type << clone(alt);
-          if (!has_unresolved_type(alt_t, r.subst))
-            concrete_alts.push_back(reify_type(alt_t, r.subst));
-        };
-
-        if (inner == Union)
-        {
-          for (auto& alt : *inner)
-            categorize_alt(alt);
-        }
-        else
-        {
-          // Single alternative (non-union return type).
-          categorize_alt(def_type);
-        }
-
-        // Return evidence: attribute each Return's tracked type to the
-        // unique bare-unbound formal alternative, if any.
-        for (auto& l : *labels)
-        {
-          auto term = l / Return;
-          if (term != Return)
-            continue;
-
-          auto ret_loc = (term / LocalId)->location();
-          if (tainted_locals.count(ret_loc))
-            continue;
-          auto it = local_types.find(ret_loc);
-          if (it == local_types.end())
-            continue;
-          if (it->second == TypeVar)
-            continue;
-
-          // Drop if matches a concrete alt (attributed to that arm).
-          bool matches_concrete = false;
-          for (auto& c : concrete_alts)
-          {
-            if (c->equals(it->second))
-            {
-              matches_concrete = true;
-              break;
-            }
-          }
-          if (matches_concrete)
-            continue;
-
-          // If exactly one bare-unbound formal alt, attribute to it.
-          if (bare_unbound_alts.size() == 1)
-          {
-            auto& formal = bare_unbound_alts.begin()->first;
-            auto& list = evidence_per_formal[formal];
-            bool dup = false;
-            for (auto& existing : list)
-            {
-              if (existing->equals(it->second))
-              {
-                dup = true;
-                break;
-              }
-            }
-            if (!dup)
-              list.push_back(clone(it->second));
-          }
-          // Multiple bare-unbound alts: ambiguous. Refuse all of them
-          // for Return-evidence attribution. (var-evidence still works
-          // since it's attributed by site.)
-          else if (bare_unbound_alts.size() > 1)
-          {
-            for (auto& [formal, _] : bare_unbound_alts)
-              refused_formals.insert(formal);
-          }
-        }
-
-        // Bind each formal to the LUB of its evidence list.
-        for (auto& [formal, ev_list] : evidence_per_formal)
-        {
-          if (refused_formals.count(formal))
-            continue;
-          if (ev_list.empty())
-            continue;
-
-          Node lub;
-          if (ev_list.size() == 1)
-            lub = clone(ev_list.front());
-          else
-          {
-            lub = Union;
-            for (auto& e : ev_list)
-              lub << clone(e);
-          }
-          r.subst[formal] = Type << lub;
-        }
-
-        // Phase 6 solver bindings: also record any formals solved by
-        // the constraint store. These complement the legacy evidence
-        // mechanism — formals only the legacy mechanism could bind
-        // come from r.subst[formal] = ... above; formals only the
-        // solver could bind come from typevar_solved_formals.
-        // Conflict resolution: solver overwrites the seeded TypeVar
-        // placeholder; concrete legacy bindings are preserved.
         for (auto& [tp, ty] : typevar_solved_formals)
         {
           auto it = r.subst.find(tp);
@@ -5032,14 +4869,11 @@ namespace vc
           }
           // If the existing entry is the α_k seed (Type wrapping a
           // TypeVar), overwrite with the solved binding. Otherwise
-          // legacy wins.
+          // an earlier mechanism (e.g., partial binding from arg type
+          // evidence at the call site) wins.
           auto cur = it->second;
-          if (
-            cur && cur == Type && !cur->empty() &&
-            cur->front() == TypeVar)
-          {
+          if (cur && cur == Type && !cur->empty() && cur->front() == TypeVar)
             r.subst[tp] = ty;
-          }
         }
 
         // Re-emit r_type with the (possibly-updated) substitution. If a
