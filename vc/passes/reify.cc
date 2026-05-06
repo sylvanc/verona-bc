@@ -104,6 +104,38 @@ namespace vc
         (type->location().view() == "_builtin::nomatch::0");
     }
 
+    // True if `type` (typically a source-side Type node) contains a free
+    // TypeVar leaf anywhere in its structure (Union, Isect, TupleType,
+    // wrapper types, or inside a TypeName's TypeArgs). Distinct from
+    // has_unresolved_type which also treats unbound TypeParam refs as
+    // unresolved — here we want to detect ONLY inference unknowns
+    // (TypeVar) that should be re-derived from label_exits.
+    bool contains_typevar_leaf(const Node& type) const
+    {
+      if (!type)
+        return false;
+
+      if (type == TypeVar)
+        return true;
+
+      if (type->in({Type, Union, Isect, TupleType, Array, Ref, Cown}))
+      {
+        for (auto& c : *type)
+          if (contains_typevar_leaf(c))
+            return true;
+      }
+
+      if (type == TypeName)
+      {
+        for (auto& elem : *type)
+          for (auto& arg : *(elem / TypeArgs))
+            if (contains_typevar_leaf(arg))
+              return true;
+      }
+
+      return false;
+    }
+
     bool has_unresolved_type(const Node& type, const NodeMap<Node>& subst) const
     {
       std::set<Node> seen;
@@ -999,7 +1031,10 @@ namespace vc
 
           auto current_ret = func / Type;
           if (
-            ((r->def / Type)->front() == TypeVar) || is_nomatch_ir(current_ret))
+            ((r->def / Type)->front() == TypeVar) ||
+            is_nomatch_ir(current_ret) ||
+            (contains_dyn(current_ret) &&
+             contains_typevar_leaf(r->def / Type)))
           {
             // Now try to infer the return type from Return locals.
             // Collect all distinct return types to build a union if needed.
