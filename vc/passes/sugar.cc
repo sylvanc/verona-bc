@@ -159,13 +159,16 @@ namespace vc
 
     // For block lambdas (raising or var-capturing), add a
     // $raise_target field that captures the current raise target
-    // at creation time.
+    // at creation time. The field is typed `_builtin::any` because
+    // GetRaise produces a FrameRef value (a stack-bound reference
+    // to a frame) which has no compile-time type — `any` accepts
+    // any value type at runtime.
     if (is_block)
     {
-      auto u64_type = Type
+      auto any_type = Type
         << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                     << (NameElement << (Ident ^ "u64") << TypeArgs));
-      fields.push_back({Location("$raise_target"), u64_type, Expr << GetRaise});
+                     << (NameElement << (Ident ^ "any") << TypeArgs));
+      fields.push_back({Location("$raise_target"), any_type, Expr << GetRaise});
     }
 
     for (auto& [freevar, fv_info] : freevars)

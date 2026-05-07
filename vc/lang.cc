@@ -519,7 +519,6 @@ namespace vc
     Node create_params = Params;
     Node create_args = Args;
     Node new_args = NewArgs;
-    Node stack_new_args = NewArgs;
 
     // Prepend self param to apply_params.
     // Use $self to avoid conflicts with a captured outer "self".
@@ -537,45 +536,37 @@ namespace vc
       create_args << field.create_arg;
       new_args
         << (NewArg << (Ident ^ field.name) << (Expr << (LocalId ^ field.name)));
-      // For blocks, build NewArgs with the actual creation-site expressions
-      // instead of LocalId references (since there's no create method).
-      stack_new_args
-        << (NewArg << (Ident ^ field.name) << clone(field.create_arg));
     }
 
-    Node class_def;
-    Node create_expr;
+    // Block lambdas (those with a `raise` or a captured mutable `var`) and
+    // ordinary lambdas both go through a `create` method that emits `New`
+    // (frame-local region allocation). Stack allocation has been removed
+    // because it caused `bad alloc target` failures whenever a block lambda
+    // was passed to a callee that captured it into a region object.
+    //
+    // Safety of stack-bound captures (RegisterRef from var-capture, FrameRef
+    // from raise-target) is now enforced at escape time by drag_allocation:
+    // any object containing a stack-bound ref cannot be dragged out of its
+    // creating frame's call chain. Return / cross-region store / behavior
+    // send all funnel through drag, so escape is caught at the escape site
+    // with a clean BadStackEscape error.
+    Node class_def =
+      ClassDef << None << (Ident ^ id) << typeparams << Where
+               << (classbody
+                   << (Function << Rhs << (Ident ^ "create") << TypeParams
+                                << create_params << self_type << Where
+                                << (Body << (Expr << (New << new_args))))
+                   << (Function << Rhs << (Ident ^ "apply") << TypeParams
+                                << full_apply_params << apply_ret_type
+                                << Where << apply_body));
 
-    if (is_block)
-    {
-      // Blocks don't have a create method. The object is stack-allocated
-      // directly at the call site, so it never escapes.
-      class_def =
-        ClassDef << None << (Ident ^ id) << typeparams << Where
-                 << (classbody
-                     << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                                  << full_apply_params << apply_ret_type
-                                  << Where << apply_body));
+    Node create_expr =
+      Call << (FuncName << *clone(fq_tn_create)
+                        << (NameElement << (Ident ^ "create") << TypeArgs))
+           << create_args;
 
-      create_expr = Stack << (Type << clone(fq_tn_create)) << stack_new_args;
-    }
-    else
-    {
-      class_def =
-        ClassDef << None << (Ident ^ id) << typeparams << Where
-                 << (classbody
-                     << (Function << Rhs << (Ident ^ "create") << TypeParams
-                                  << create_params << self_type << Where
-                                  << (Body << (Expr << (New << new_args))))
-                     << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                                  << full_apply_params << apply_ret_type
-                                  << Where << apply_body));
-
-      create_expr =
-        Call << (FuncName << *clone(fq_tn_create)
-                          << (NameElement << (Ident ^ "create") << TypeArgs))
-             << create_args;
-    }
+    (void)is_block; // The is_block flag still drives $raise_target / SetRaise
+                    // emission in sugar.cc, but no longer affects allocation.
 
     // Rebind locals in the apply function body so that nested lambdas
     // processed later in this topdown pass can find them via lookup().
