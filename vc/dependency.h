@@ -126,24 +126,75 @@ namespace vc
       }
 
       // Always re-copy: remove old copy and copy fresh.
+      //
+      // Filtering rules:
+      //   - Skip `_vdeps/` directories entirely. They hold transitive
+      //     dependencies that the resolver will materialize on its own.
+      //     Copying them risks recursive bloat (and infinite recursion
+      //     for cyclic local deps), since the source's `_vdeps/` may
+      //     contain prior copies that themselves contain `_vdeps/...`.
+      //   - Only copy `*.v` source files (and the directory structure
+      //     to host them). Build artifacts, READMEs, .git/, etc. are
+      //     not part of the dependency surface.
       std::error_code ec;
       std::filesystem::remove_all(repo_path, ec);
       std::filesystem::create_directories(repo_path, ec);
-      std::filesystem::copy(
-        local_path,
-        repo_path,
-        std::filesystem::copy_options::recursive |
-          std::filesystem::copy_options::overwrite_existing,
-        ec);
+
+      auto copy_failed = [&](const std::string& msg) {
+        url->parent()->replace(
+          url, err(url, std::format("Failed to copy local dependency: {}", msg)));
+        return false;
+      };
 
       if (ec)
+        return copy_failed(ec.message());
+
+      try
       {
-        url->parent()->replace(
-          url,
-          err(
-            url,
-            std::format("Failed to copy local dependency: {}", ec.message())));
-        return false;
+        for (auto it = std::filesystem::recursive_directory_iterator(
+               local_path, std::filesystem::directory_options::skip_permission_denied);
+             it != std::filesystem::recursive_directory_iterator();
+             ++it)
+        {
+          const auto& entry = *it;
+          const auto& src = entry.path();
+          auto rel = std::filesystem::relative(src, local_path);
+          auto dst = repo_path / rel;
+
+          if (entry.is_directory(ec))
+          {
+            // Skip `_vdeps/` and don't recurse into it.
+            if (src.filename() == "_vdeps")
+            {
+              it.disable_recursion_pending();
+              continue;
+            }
+            std::filesystem::create_directories(dst, ec);
+            if (ec)
+              return copy_failed(ec.message());
+          }
+          else if (entry.is_regular_file(ec))
+          {
+            // Only copy .v files.
+            if (src.extension() != ".v")
+              continue;
+            std::filesystem::create_directories(dst.parent_path(), ec);
+            if (ec)
+              return copy_failed(ec.message());
+            std::filesystem::copy_file(
+              src,
+              dst,
+              std::filesystem::copy_options::overwrite_existing,
+              ec);
+            if (ec)
+              return copy_failed(ec.message());
+          }
+          // else: symlinks, sockets, etc. — silently skip.
+        }
+      }
+      catch (const std::filesystem::filesystem_error& e)
+      {
+        return copy_failed(e.what());
       }
 
       if (!std::filesystem::is_directory(src_path))
