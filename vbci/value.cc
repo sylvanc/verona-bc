@@ -40,6 +40,14 @@ namespace vbci
   : u64(val), idx(frame.raw()), tag(ValueType::RegisterRef), readonly(0)
   {}
 
+  Value Value::frame_ref(Location target)
+  {
+    Value v(ValueType::FrameRef);
+    v.u64 = 0;
+    v.idx = target.raw();
+    return v;
+  }
+
   Value::Value(Object* obj, size_t f, bool ro)
   : obj(obj), idx(f), tag(ValueType::FieldRef), readonly(ro)
   {}
@@ -398,6 +406,7 @@ namespace vbci
       case ValueType::FieldRef:
       case ValueType::ArrayRef:
       case ValueType::CownRef:
+      case ValueType::FrameRef:
         return false;
 
       default:
@@ -413,6 +422,11 @@ namespace vbci
   bool Value::is_error() const
   {
     return tag == ValueType::Error;
+  }
+
+  bool Value::is_stack_bound_ref() const
+  {
+    return tag == ValueType::RegisterRef || tag == ValueType::FrameRef;
   }
 
   bool Value::get_bool() const
@@ -877,6 +891,7 @@ namespace vbci
     switch (tag)
     {
       case ValueType::RegisterRef:
+      case ValueType::FrameRef:
         return Location::from_raw(idx);
 
       case ValueType::Object:
@@ -1152,6 +1167,9 @@ namespace vbci
 
       case ValueType::CownRef:
         return std::format("ref {}", cown->to_string());
+
+      case ValueType::FrameRef:
+        return std::format("frame@{}", idx);
 
       case ValueType::Function:
         return Program::get().di_function(func);

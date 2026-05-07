@@ -116,6 +116,10 @@ namespace vbci
     static ValueImmortal none();
     static ValueImmortal null();
     static ValueImmortal from_ffi(ValueType t, uint64_t v);
+    // Construct a FrameRef value carrying a frame's raise target. This is a
+    // stack-bound reference: drag_allocation refuses to drag any object that
+    // contains a FrameRef field (preventing escape of the captured frame_id).
+    static Value frame_ref(Location target);
     const void* to_ffi() const;
     static ValueBorrow from_addr(ValueType t, void* v);
 
@@ -137,6 +141,11 @@ namespace vbci
     bool is_sendable() const;
     bool is_cown() const;
     bool is_error() const;
+    // Stack-bound references (RegisterRef and FrameRef) are values whose
+    // lifetime is tied to a stack frame. They cannot be safely dragged out
+    // of their creating frame's call chain — drag_allocation rejects any
+    // object containing such a field.
+    bool is_stack_bound_ref() const;
     bool get_bool() const;
     int32_t get_i32() const;
     uint8_t get_u8() const;

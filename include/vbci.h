@@ -473,6 +473,7 @@ namespace vbci
     FieldRef,
     ArrayRef,
     CownRef,
+    FrameRef,
     Function,
     Error,
     Invalid,
