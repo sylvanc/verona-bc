@@ -1229,6 +1229,17 @@ namespace vc
       return clone(incoming);
     }
 
+    // If incoming contains TypeVar leaves but existing doesn't, prefer
+    // existing — the embedded TypeVar gives no concrete refinement
+    // beyond what existing already specifies, and merging would build
+    // a Union(existing, incoming) that pollutes env with a typevar
+    // branch that blocks downstream concretization
+    // (e.g. push_arg_types_to_params skips when arg has typevar).
+    // This generalizes the bare-TypeVar incoming rule above to
+    // nested TypeVars (e.g. ref[typevar$X] vs ref[i32]).
+    if (contains_typevar(incoming) && !contains_typevar(existing))
+      return {};
+
     if (active_infer_profile != nullptr)
       active_infer_profile->merge_type_union_build++;
 
@@ -2926,7 +2937,14 @@ namespace vc
             continue;
           if (!contains_typevar(child / Type))
             resolved = child / Type;
-          else if (is_lambda_function(func_def))
+          else if (
+            is_lambda_function(func_def) &&
+            (child / Type)->front() == TypeVar)
+            // Only allow default-typed arg refinement when the field
+            // type is a bare TypeVar (no shape info). For wrapped
+            // shapes like ref[TypeVar], default args don't give a
+            // valid concrete refinement — wait until the arg's type
+            // resolves to a concrete (non-default, non-typevar) type.
             allow_default_arg = true;
           break;
         }
