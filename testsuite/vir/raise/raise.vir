@@ -10,14 +10,14 @@ lib
 
 // inner(val, raise_target): i32
 //   Sets the raise target and raises val.
-func @inner($val: i32, $target: u64): i32
+func @inner($val: i32, $target: dyn): i32
   $prev = setraise $target
   raise $val i32
 
 // outer(raise_target): i32
 //   Calls inner with 42 and the raise target.
 //   If inner raised, we never reach the const 99 line.
-func @outer($target: u64): i32
+func @outer($target: dyn): i32
   $val = const i32 42
   $result = call @inner($val, $target)
   // This should never execute because inner raises.
