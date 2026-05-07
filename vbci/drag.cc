@@ -97,6 +97,38 @@ namespace vbci
       // Object is in a frame-local region — drag it to the destination.
       rc_map[next_h] = 1;
 
+      // Stack-bound references (RegisterRef, FrameRef) cannot be dragged
+      // out of their creating frame's call chain — their captured frame
+      // would no longer be on the stack at access time. Refuse to drag any
+      // object containing such a field. The caller of drag_allocation
+      // converts this into a clean BadStackEscape error at the actual
+      // escape site (return, cross-region store, behavior send).
+      auto contains_stack_ref = [&](Header* h) -> bool {
+        if (program.is_array(h->get_type_id()))
+        {
+          auto* arr = static_cast<Array*>(h);
+          for (size_t i = 0; i < arr->get_size(); i++)
+          {
+            if (arr->load(i).is_stack_bound_ref())
+              return true;
+          }
+        }
+        else
+        {
+          auto* obj = static_cast<Object*>(h);
+          auto& fields = obj->cls().fields;
+          for (size_t i = 0; i < fields.size(); i++)
+          {
+            if (obj->load(i).is_stack_bound_ref())
+              return true;
+          }
+        }
+        return false;
+      };
+
+      if (contains_stack_ref(next_h))
+        return false;
+
       if (program.is_array(next_h->get_type_id()))
         static_cast<Array*>(next_h)->trace_fn(fn);
       else

@@ -344,6 +344,18 @@ namespace vbci::writebarrier
     if (next->is_readonly())
       Value::error(Error::BadStore);
 
+    // Stack-bound references (RegisterRef, FrameRef) bypass the writebarrier
+    // RC machinery: they have no RC, and their lifetime safety is enforced
+    // at escape time by drag_allocation rejecting any object that contains
+    // such a field. The standard writebarrier check would reject a stack
+    // location as the in-value when storing into a region object — that
+    // rejection is too strict for these refs. Write directly and move on.
+    if (next->is_stack_bound_ref())
+    {
+      next->to_addr(t, addr);
+      return;
+    }
+
     auto ops =
       write_ops<true>().prepare_store(store_loc).prepare_in(next->location());
 
@@ -359,6 +371,17 @@ namespace vbci::writebarrier
   exchange(Location store_loc, void* addr, ValueType t, Reg<is_move> next)
   {
     auto prev = Value::from_addr(t, addr);
+
+    // Stack-bound references (RegisterRef / FrameRef) have no RC and bypass
+    // the writebarrier. See init() above for rationale.
+    if (next->is_stack_bound_ref() || prev.is_stack_bound_ref())
+    {
+      next->to_addr(t, addr);
+      if constexpr (is_move)
+        next.clear_unsafe();
+      return ValueTransfer(prev);
+    }
+
     auto ops = write_ops<is_move>()
                  .prepare_store(store_loc)
                  .prepare_out(prev.location())
