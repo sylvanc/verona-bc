@@ -73,4 +73,19 @@ array[T]
   {
     :::arraycmp(self, self_offset, other, other_offset, len)
   }
+
+  // Materialize an `each`-style source into a fresh array.
+  // Two-pass: count via each, then allocate, then fill via each.
+  // Lambdas use explicit `: none` to discard their body value at the
+  // shape boundary (the convention used throughout algo for lambdas
+  // in generic functions whose receiver is a typeparam).
+  from_each[Src](src: Src): array[T]
+  {
+    var n: usize = 0;
+    src.each (x: T): none -> { n = n + 1; }
+    let a: array[T] = array[T]::alloc(n);
+    var i: usize = 0;
+    src.each (x: T): none -> { a(i) = x; i = i + 1; }
+    a
+  }
 }
