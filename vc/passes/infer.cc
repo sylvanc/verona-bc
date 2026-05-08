@@ -2979,7 +2979,46 @@ namespace vc
         else if (i < ta->size())
           new_ta << clone(ta->at(i));
         else
-          new_ta << (Type << make_typevar());
+        {
+          // Slot is open and arg-driven inference produced no constraint
+          // for this TypeParam. Before falling back to a fresh TypeVar,
+          // walk the caller's enclosing-class chain looking for a
+          // TypeParam with the same Ident — if found, use a TypeName
+          // reference to it. This preserves the source-level identity
+          // the user expressed when calling a method on an enclosing
+          // class (e.g. `hmap::_lookup` from inside `hmap::lambda$N`,
+          // where lambda$N inherited `K, V` from `hmap`).
+          auto callee_tp = tps->at(i);
+          auto callee_name = (callee_tp / Ident)->location().view();
+          Node matched_tp;
+          for (auto enc = call->parent(ClassDef); enc;
+               enc = enc->parent(ClassDef))
+          {
+            for (auto& enc_tp : *(enc / TypeParams))
+            {
+              if ((enc_tp / Ident)->location().view() == callee_name)
+              {
+                matched_tp = enc_tp;
+                break;
+              }
+            }
+            if (matched_tp)
+              break;
+          }
+          if (matched_tp)
+          {
+            // scope_path includes the TypeParam itself; fq_typeparam
+            // adds it again at the end. Drop it from the path.
+            auto path = scope_path(matched_tp);
+            if (!path.empty() && path.back() == matched_tp)
+              path.pop_back();
+            new_ta << (Type << fq_typeparam(path, matched_tp));
+          }
+          else
+          {
+            new_ta << (Type << make_typevar());
+          }
+        }
       }
       replace_if_changed(scope.name_elem, ta, new_ta);
     }
