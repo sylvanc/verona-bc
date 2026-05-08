@@ -4630,8 +4630,25 @@ namespace vc
                     }
                     auto new_type = ref_type(ci);
                     replace_if_changed(param, param / Type, new_type);
+                    // The When statement's lambda has a synthesized
+                    // apply method whose params are refined here from
+                    // the cown's content type. The content type comes
+                    // from the enclosing function's env and may
+                    // reference outer-scope TypeParams. Rewrite to use
+                    // the lambda class's own TypeParam identities.
+                    {
+                      auto lambda_cls = param->parent(ClassDef);
+                      if (lambda_cls)
+                      {
+                        auto cls_ident = lambda_cls / Ident;
+                        if (
+                          cls_ident->location().view().rfind("lambda$", 0) == 0)
+                          rewrite_to_lambda_tps(
+                            param / Type, lambda_cls, top);
+                      }
+                    }
                     env[(param / Ident)->location()] = {
-                      clone(new_type), true, {}};
+                      clone(param / Type), true, {}};
                   }
                 }
               }
