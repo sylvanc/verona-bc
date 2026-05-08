@@ -995,9 +995,21 @@ namespace vc
   // references to outer-scope TP nodes that don't appear in the
   // lambda's reify subst, causing "Type parameter X cannot be inferred".
   //
-  // Strategy: for every TypeName whose def is a TypeParam, if a
-  // typeparam with the same name exists on the lambda class, rebuild
-  // the TypeName to reference the lambda's TP via the FQ path
+  // ONLY rewrites TPs whose origin is a Function (not a ClassDef).
+  // For class-origin TPs, the existing reify navigation accumulates
+  // bindings through the lambda's create FuncName (which threads
+  // <cls<cls_ta>::lambda$N<cls_ta>>) — leaving the AST referring to
+  // the outer-class TP allows resolve_method_owner's prefix-fallback
+  // (vc/passes/infer.cc:802) to find the user-defined enclosing class
+  // for backward refinement of literal args.
+  // For function-origin TPs, no such accumulation exists, so we MUST
+  // rewrite — and the rewrite is safe semantically because function
+  // TPs are unconstrained by any enclosing class (function TPs don't
+  // get the prefix-fallback today either, since Function ≠ ClassDef).
+  //
+  // Strategy: for every TypeName whose def is a TypeParam owned by
+  // a Function ancestor, rebuild the TypeName to reference the
+  // lambda's own copy of that TP via the FQ path
   // <enclosing_class_path>::<lambda_name>::<tp_name>.
   static void
   rewrite_to_lambda_tps(Node type_node, Node lambda_cls, Node top)
@@ -1026,7 +1038,14 @@ namespace vc
         {
           auto tp_name = (def / Ident)->location().view();
           if (lambda_tp_names.count(tp_name) > 0)
-            to_rewrite.push_back(node);
+          {
+            // Only rewrite Function-origin TPs. Class-origin TPs are
+            // handled by reify's existing navigation accumulation and
+            // benefit from prefix-fallback for backward refinement.
+            auto tp_scope = def->parent({ClassDef, Function});
+            if (tp_scope && tp_scope == Function)
+              to_rewrite.push_back(node);
+          }
         }
       }
       return true;
@@ -4632,10 +4651,15 @@ namespace vc
                     replace_if_changed(param, param / Type, new_type);
                     // The When statement's lambda has a synthesized
                     // apply method whose params are refined here from
-                    // the cown's content type. The content type comes
-                    // from the enclosing function's env and may
-                    // reference outer-scope TypeParams. Rewrite to use
-                    // the lambda class's own TypeParam identities.
+                    // the cown's content type. The content type may
+                    // reference outer-scope TypeParams. For
+                    // function-origin TPs (which reify cannot resolve
+                    // via the lambda's create-call navigation),
+                    // rewrite to the lambda's own TP identities.
+                    // Class-origin TPs are NOT rewritten — leaving
+                    // them allows resolve_method_owner's prefix-
+                    // fallback to find the enclosing class for
+                    // backward refinement of literal args.
                     {
                       auto lambda_cls = param->parent(ClassDef);
                       if (lambda_cls)
