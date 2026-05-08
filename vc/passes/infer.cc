@@ -987,6 +987,65 @@ namespace vc
     return true;
   }
 
+  // For a type expression on a lambda class FieldDef (or its create()
+  // method's matching param), rewrite TypeName references to TypeParams
+  // declared OUTSIDE the lambda class to instead reference the lambda
+  // class's own copy of those TPs. Sugar copies free TPs into each
+  // lambda class; without this rewrite the field type carries
+  // references to outer-scope TP nodes that don't appear in the
+  // lambda's reify subst, causing "Type parameter X cannot be inferred".
+  //
+  // Strategy: for every TypeName whose def is a TypeParam, if a
+  // typeparam with the same name exists on the lambda class, rebuild
+  // the TypeName to reference the lambda's TP via the FQ path
+  // <enclosing_class_path>::<lambda_name>::<tp_name>.
+  static void
+  rewrite_to_lambda_tps(Node type_node, Node lambda_cls, Node top)
+  {
+    auto enclosing_cls = lambda_cls->parent(ClassDef);
+    if (!enclosing_cls)
+      return;
+
+    auto lambda_tps = lambda_cls / TypeParams;
+    if (lambda_tps->empty())
+      return;
+
+    std::set<std::string_view> lambda_tp_names;
+    for (auto& tp : *lambda_tps)
+      lambda_tp_names.insert((tp / Ident)->location().view());
+
+    auto cls_path = scope_path(enclosing_cls);
+    auto lambda_id = (lambda_cls / Ident)->location();
+
+    std::vector<Node> to_rewrite;
+    type_node->traverse([&](auto node) {
+      if (node == TypeName)
+      {
+        auto def = find_def(top, node);
+        if (def == TypeParam)
+        {
+          auto tp_name = (def / Ident)->location().view();
+          if (lambda_tp_names.count(tp_name) > 0)
+            to_rewrite.push_back(node);
+        }
+      }
+      return true;
+    });
+
+    for (auto& old_tn : to_rewrite)
+    {
+      auto def = find_def(top, old_tn);
+      auto tp_name = (def / Ident)->location();
+      Node new_tn = TypeName;
+      for (auto& s : cls_path)
+        new_tn << (NameElement << clone(s / Ident) << TypeArgs);
+      new_tn << (NameElement << (Ident ^ lambda_id) << TypeArgs);
+      new_tn << (NameElement << (Ident ^ tp_name) << TypeArgs);
+      old_tn->parent()->replace(old_tn, new_tn);
+    }
+  }
+
+
   static bool refine_const_local(
     TypeEnv& env,
     const std::map<Location, Node>& const_defs,
@@ -2903,7 +2962,7 @@ namespace vc
 
   // Push concrete arg types into TypeVar formal params (AST mutation).
   static void push_arg_types_to_params(
-    Node func_def, const Node& args, TypeEnv& env, Node /*top*/)
+    Node func_def, const Node& args, TypeEnv& env, Node top)
   {
     if (active_infer_profile != nullptr)
       active_infer_profile->push_arg_types_to_params_calls++;
@@ -2963,6 +3022,21 @@ namespace vc
 
       replace_if_changed(param, formal_type, clone(resolved));
 
+      // For a lambda class's create() method, the param type just
+      // refined references the caller's typeparams (e.g.
+      // `array[fromeach1::test_e::T]`). Rewrite to use the lambda
+      // class's own TP identities (e.g. `array[fromeach1::lambda$754::T]`)
+      // so reify can resolve them when reifying the lambda class. See
+      // bug repro at session-state files/from_each-repro.v.
+      if (parent_cls)
+      {
+        auto cls_ident = parent_cls / Ident;
+        bool is_lambda_cls =
+          cls_ident->location().view().rfind("lambda$", 0) == 0;
+        if (is_lambda_cls)
+          rewrite_to_lambda_tps(param / Type, parent_cls, top);
+      }
+
       // Keep FieldDef in sync.
       if (parent_cls)
       {
@@ -2974,7 +3048,15 @@ namespace vc
           if ((child / Ident)->location().view() != pname)
             continue;
           if (contains_typevar(child / Type))
+          {
             replace_if_changed(child, child / Type, clone(resolved));
+
+            auto cls_ident = parent_cls / Ident;
+            bool is_lambda_cls =
+              cls_ident->location().view().rfind("lambda$", 0) == 0;
+            if (is_lambda_cls)
+              rewrite_to_lambda_tps(child / Type, parent_cls, top);
+          }
           break;
         }
       }
@@ -3654,7 +3736,10 @@ namespace vc
                   if (
                     should_refine &&
                     replace_if_changed(f, f / Type, clone(field_inner)))
+                  {
+                    rewrite_to_lambda_tps(f / Type, class_def, top);
                     changes.forward = true;
+                  }
                 }
                 break;
               }
