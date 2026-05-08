@@ -9,6 +9,7 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
 - Cross-project workflow rules belong in `~/.config/agents/AGENTS.md`.
 - For tricky compiler/runtime/FFI bugs, do principled analysis first: reproduce, trace, inspect dumps, and localize the fault before changing semantics.
 - Before speculative interpreter/runtime changes, explain the evidence and proposed fix and get feedback.
+- **When fixing idiomatic Verona issues** (style, syntax, inference patterns) in `.v` source files, **add what you learn to `.agents/skills/verona-coding/SKILL.md`**. Each idiom found and fixed represents a pattern we want to follow next time and avoid writing the wrong way again. Update the skill with: the idiomatic form, the non-idiomatic form, why the idiom is preferred, and any context where the non-idiomatic form is actually required (e.g., literal anchors in array literals).
 
 ## Hard rule: principled work, NEVER workarounds
 
@@ -235,4 +236,4 @@ out of scope applies: runtime bugs are never out of scope.
 
 Task-specific knowledge and procedures are stored in `.agents/skills/`.
 Each skill is a directory with a `SKILL.md` file containing instructions.
-Available skills: add-test, debug, docs-update, review, testsuite, vbci-memory, verona-conventions.
+Available skills: add-test, debug, docs-update, review, testsuite, vbci-memory, verona-coding, verona-conventions, verona-type-inference.
