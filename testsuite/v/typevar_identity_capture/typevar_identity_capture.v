@@ -5,12 +5,12 @@
 // so the constraint solver binds U from the concrete element type
 // passed to `f`.
 
-last_via_capture[T, U](c: T): U | none
+last_via_capture[T, K, U](c: T): U | none
 {
   var result: U | none = none;
-  c.each (x: U): none -> {
+  c.each (k: K, x: U): none -> {
     result = x
-  };
+  }
   result
 }
 

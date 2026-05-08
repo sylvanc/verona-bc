@@ -1,9 +1,9 @@
-each_last[T, U](c: T): U | none
+each_last[T, K, U](c: T): U | none
 {
   var best: U | none = none;
-  c.each (x: U): none -> {
+  c.each (k: K, x: U): none -> {
     best = x
-  };
+  }
   best
 }
 

@@ -27,20 +27,9 @@ array[T]
     :::arrayref(self, index)
   }
 
-  each(self: array[T], f: T -> none): none
+  each(self: array[T], f: (usize, T) -> none): none
   {
-    var i = 0;
-
-    while i < self.size
-    {
-      f(self(i));
-      i = i + 1
-    }
-  }
-
-  pairs(self: array[T], f: (usize, T) -> none): none
-  {
-    var i = 0;
+    var i: usize = 0;
 
     while i < self.size
     {
@@ -79,13 +68,13 @@ array[T]
   // Lambdas use explicit `: none` to discard their body value at the
   // shape boundary (the convention used throughout algo for lambdas
   // in generic functions whose receiver is a typeparam).
-  from_each[Src](src: Src): array[T]
+  from_each[Src, K](src: Src): array[T]
   {
     var n: usize = 0;
-    src.each (x: T): none -> { n = n + 1; }
+    src.each (k: K, x: T): none -> { n = n + 1; }
     let a: array[T] = array[T]::alloc(n);
     var i: usize = 0;
-    src.each (x: T): none -> { a(i) = x; i = i + 1; }
+    src.each (k: K, x: T): none -> { a(i) = x; i = i + 1; }
     a
   }
 }

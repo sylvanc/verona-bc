@@ -1,6 +1,6 @@
 has_non_space(data: array[u8]): bool
 {
-  data.pairs (i, c) ->
+  data.each (i, c) ->
   {
     if !string::is_space(c)
     {

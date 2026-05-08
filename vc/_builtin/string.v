@@ -288,7 +288,7 @@ string
 
   trim_left(self: string): string
   {
-    self.data.pairs (i, c) ->
+    self.data.each (i, c) ->
     {
       if !string::is_space(c)
       {
