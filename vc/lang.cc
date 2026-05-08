@@ -256,7 +256,10 @@ namespace vc
   NodeMap<Node> build_subst_from_typename(Node top, const Node& name)
   {
     NodeMap<Node> subst;
-    assert(name == TypeName);
+    // Accept both TypeName and FuncName: both share the same
+    // NameElement-based path structure, and reify's call-constraint
+    // emission needs to build a substitution from a Call's FuncName.
+    assert(name == TypeName || name == FuncName);
     Node scope = top;
 
     for (auto& elem : *name)
