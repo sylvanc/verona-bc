@@ -130,11 +130,18 @@ namespace vc
     assert(enclosing_cls);
     auto cls_path = scope_path(enclosing_cls);
 
-    // Annotate Raise nodes with the enclosing function's return
-    // type, so the type checker can verify the raised value
-    // against the function that will actually receive it.
-    // This must happen before rewrite_typeparam_refs so the
-    // type param references get rewritten correctly.
+    // Annotate Raise nodes with the user-source-level enclosing
+    // function's return type. `raise` is a non-local return from the
+    // user-source enclosing function; this semantics is identical for
+    // Raise nodes at any nesting depth inside the lambda. We must
+    // annotate ALL of them — including those inside nested lambdas
+    // (case-lambdas from match-arm desugaring, user-written nested
+    // lambdas) — while AST ancestry to the user function still exists.
+    // Topdown sugar lifts each Lambda into a class as it processes
+    // it; by the time inner lambdas are visited, the outer lambda has
+    // been lifted out of the user function's body and ancestry is
+    // severed. The size==1 check on Raise ensures inner lambdas, when
+    // re-processed, don't double-annotate.
     if (has_raise)
     {
       auto enclosing_func = lambda->parent(Function);
@@ -142,8 +149,6 @@ namespace vc
       auto func_ret_type = enclosing_func / Type;
 
       lambda->traverse([&](auto node) {
-        if (node != lambda && node == Lambda)
-          return false;
         if (node == Raise && node->size() == 1)
           node << clone(func_ret_type);
         return node != Error;
