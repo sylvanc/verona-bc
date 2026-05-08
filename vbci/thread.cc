@@ -1818,7 +1818,7 @@ namespace vbci
       case Op::GetRaise:
       {
         process([](Register& dst, Frame& frame) INLINE {
-          dst = ValueImmortal(Value::frame_ref(frame.raise_target));
+          dst = ValueStaticLifetime(Value::frame_ref(frame.raise_target));
         });
         break;
       }
@@ -1826,7 +1826,7 @@ namespace vbci
       case Op::SetRaise:
       {
         process([](Register& dst, const Register& src, Frame& frame) INLINE {
-          dst = ValueImmortal(Value::frame_ref(frame.raise_target));
+          dst = ValueStaticLifetime(Value::frame_ref(frame.raise_target));
           frame.raise_target = src->location();
         });
         break;
