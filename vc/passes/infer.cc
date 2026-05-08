@@ -133,6 +133,14 @@ namespace vc
                                    << (TypeArgs << clone(inner))));
   }
 
+  Node array_type(const Node& inner)
+  {
+    return Type
+      << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                   << (NameElement << (Ident ^ "array")
+                                   << (TypeArgs << clone(inner))));
+  }
+
   Node cown_type(const Node& inner)
   {
     return Type
@@ -3308,7 +3316,7 @@ namespace vc
       }
 
       if (uniform && common && tt.size > 0)
-        return clone(common);
+        return array_type(common);
       return {};
     }
 
@@ -4744,7 +4752,7 @@ namespace vc
             uniform = false;
         }
         if (uniform && common && tt.size > 0)
-          env[loc] = {clone(common), false, {}};
+          env[loc] = {array_type(common), false, {}};
       }
       else
       {
