@@ -1,10 +1,5 @@
 array[T]
 {
-  create(some: array[T]): array[T]
-  {
-    some
-  }
-
   fill(size: usize, from: T = T): array[T]
   {
     let a = :::newarray[T](size);
@@ -74,7 +69,7 @@ array[T]
   // Lambdas use explicit `: none` to discard their body value at the
   // shape boundary (the convention used throughout algo for lambdas
   // in generic functions whose receiver is a typeparam).
-  from_each[Src, K](src: Src): array[T]
+  create[Src, K](src: Src): array[T]
   {
     var n: usize = 0;
     src.each (k: K, x: T): none -> { n = n + 1; }
