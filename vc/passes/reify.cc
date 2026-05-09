@@ -4203,9 +4203,17 @@ namespace vc
                 // a query, not a registration. Return type is wfType,
                 // built by reify_emitted_type from the function's
                 // declared return type and the call subst.
+                //
+                // BDGI: skip if def_type or its substitution contains
+                // unresolved formals. Stage 2 (reify_function_stage2)
+                // will re-resolve once cross-function constraint flow
+                // binds the relevant α's. Avoids leaking TypeVar into
+                // reify_type's IR-emission path during stage 1.
                 auto def_type = f / Type;
 
-                if (def_type->front() != TypeVar)
+                if (
+                  def_type->front() != TypeVar &&
+                  !has_unresolved_type(def_type, func_subst))
                   ret = reify_emitted_type(
                     def_type, func_subst, f / Ident, "return type");
 
@@ -5339,8 +5347,16 @@ namespace vc
         // Re-emit r_type with the (possibly-updated) substitution. If a
         // formal is still unbound, reify_emitted_type emits a clean
         // "type parameter cannot be inferred" error.
-        r_type =
-          reify_emitted_type(def_type, r.subst, r.def / Ident, "return type");
+        //
+        // BDGI: skip if def_type still references unresolved formals
+        // after subst. Cross-function constraint flow may not have
+        // propagated yet at this stage 1 finalization point — stage 2
+        // (reify_function_stage2) will re-emit when callees' constraints
+        // are visible. Premature reification would leak TypeVar α into
+        // reify_type's IR boundary.
+        if (!has_unresolved_type(def_type, r.subst))
+          r_type =
+            reify_emitted_type(def_type, r.subst, r.def / Ident, "return type");
       }
 
       // Implicit none return: when a function returns none, append a
@@ -5541,14 +5557,26 @@ namespace vc
         return Cown << reify_type(type->front(), subst);
 
       // TypeVar that wasn't resolved during inference. Per the Dyn-rule
-      // (Dyn is ONLY for `any`), a TypeVar reaching here is an upstream
-      // bug — inference / reify_typename / get_reification should have
-      // emitted an error before reaching this point. Keep the Dyn return
-      // for safety in error-recovery paths, but the assert catches the
-      // case in debug builds where the upstream errors didn't fire.
-      assert(type != TypeVar && "reify_type(TypeVar): unbound formal reached IR boundary");
+      // (Dyn is ONLY for `any`), a TypeVar from an unbound formal is a
+      // strict error — assert in debug. But TypeVars that originated
+      // from infer's `make_type()` for unannotated case-lambda return
+      // types etc. are tolerated with a Dyn fallback (matching the
+      // existing release-build behavior).
+      //
+      // Distinguish by checking seed_owner_map: a formal-seed TypeVar
+      // has an entry there. An infer-leftover does not.
       if (type == TypeVar)
+      {
+        auto it = seed_owner_map.find(type->location());
+        if (it != seed_owner_map.end())
+        {
+          // Formal seed — should have been bound by stage 2. If we
+          // reach here, that's a real bug.
+          assert(false && "reify_type(TypeVar): unbound formal reached IR boundary");
+        }
+        // Infer-leftover TypeVar — fall back to Dyn as in release.
         return Dyn;
+      }
 
       // Preserve TupleType with reified element types.
       if (type == TupleType)
