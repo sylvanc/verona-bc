@@ -146,13 +146,17 @@ namespace vc
         // Tuple creation.
         In(Expr) * T(Tuple)[Tuple] << (T(LocalId)++ * End) >>
           [](Match& _) {
-            // Allocate an array[any] of the right size.
+            // Allocate an array of the right size with a TypeVar
+            // placeholder for the element type. Infer refines the
+            // element type from store sites; an `any` placeholder
+            // would leak through Copy chains as the source-level
+            // top type and bind generic call TypeArgs incorrectly.
             auto tuple = _(Tuple);
             auto id = _.fresh(l_local);
             auto seq = Seq
               << (Lift << Body
                        << (NewArrayConst
-                           << (LocalId ^ id) << type_any()
+                           << (LocalId ^ id) << make_type()
                            << (Int ^ std::to_string(tuple->size()))));
 
             // Copy the elements into the array.
@@ -177,14 +181,15 @@ namespace vc
         // Array literal creation.
         In(Expr) * T(ArrayLit)[ArrayLit] << (T(LocalId)++ * End) >>
           [](Match& _) {
-            // Allocate an array[any] of the right size.
+            // Allocate an array of the right size with a TypeVar
+            // placeholder for the element type (see Tuple case above).
             // Uses l_arraylit prefix so infer can distinguish from tuples.
             auto arr = _(ArrayLit);
             auto id = _.fresh(l_arraylit);
             auto seq = Seq
               << (Lift << Body
                        << (NewArrayConst
-                           << (LocalId ^ id) << type_any()
+                           << (LocalId ^ id) << make_type()
                            << (Int ^ std::to_string(arr->size()))));
 
             // Copy the elements into the array.
