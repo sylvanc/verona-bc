@@ -4981,7 +4981,18 @@ namespace vc
             auto inner = reify_emitted_type(
               n / Type, r.subst, n / Type, "array element type");
 
-            if (inner == TupleType)
+            // Distinguish tuples from array literals via the LocalId
+            // prefix that anf assigned. A tuple is encoded as a
+            // NewArrayConst with l_local prefix; an array literal
+            // (including arrays whose element type happens to be a
+            // tuple) uses the l_arraylit prefix. Without this
+            // distinction, an array-of-tuples would collapse to a
+            // bare TupleType.
+            auto loc_view = (n / LocalId)->location().view();
+            bool is_array_lit =
+              loc_view.size() >= 5 && loc_view.substr(0, 5) == "array";
+
+            if (!is_array_lit && inner == TupleType)
             {
               // TupleType is a peer of Array, not wrapped in it.
               local_types[(n / LocalId)->location()] = clone(inner);
@@ -4998,10 +5009,6 @@ namespace vc
 
               // For array literals, trigger reification of the array class
               // so method invocations (size, apply) can be resolved.
-              auto loc_view = (n / LocalId)->location().view();
-              bool is_array_lit =
-                loc_view.size() >= 5 && loc_view.substr(0, 5) == "array";
-
               if (is_array_lit)
                 ensure_array_reified(orig_type, r.subst);
             }

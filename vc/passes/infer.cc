@@ -237,6 +237,11 @@ namespace vc
     return extract_wrapper_inner(type_node, "ref");
   }
 
+  Node extract_array_inner(const Node& type_node)
+  {
+    return extract_wrapper_inner(type_node, "array");
+  }
+
   Node extract_cown_inner(const Node& type_node)
   {
     return extract_wrapper_inner(type_node, "cown");
@@ -1759,6 +1764,25 @@ namespace vc
             if (stmt == ArrayRefConst)
             {
               auto index = from_chars_sep_v<size_t>(stmt / Rhs);
+
+              // For an array literal source (l_arraylit prefix or
+              // env type array[T]), the ref produced by indexing is
+              // ref[T]. Try to extract the array element type first
+              // so an array-of-tuples doesn't fall through to the
+              // tuple-indexing branch below.
+              bool src_is_array_lit =
+                src_loc.view().find("array") != std::string_view::npos;
+              if (src_is_array_lit)
+              {
+                auto elem = extract_array_inner(src_it->second.type);
+                if (elem)
+                {
+                  if (merge_env(env, dst_loc, ref_type(elem), top))
+                    enqueue_if_concrete(env, dst_loc, work, in_queue);
+                  continue;
+                }
+              }
+
               auto inner = src_it->second.type->front();
               if (inner == TupleType && index < inner->size())
               {
@@ -3342,7 +3366,7 @@ namespace vc
         }
 
         auto& et = tt.element_types[i];
-        if (!et || !extract_primitive(et))
+        if (!et)
         {
           uniform = false;
           break;
@@ -3350,7 +3374,7 @@ namespace vc
 
         if (!common)
           common = clone(et);
-        else if (et->front()->type() != common->front()->type())
+        else if (!same_type_tree(et, common))
           uniform = false;
       }
 
@@ -3912,9 +3936,25 @@ namespace vc
           else
             upsert_ref_to_tuple(ref_to_tuple, dst_loc, {arg_loc, index});
 
-          // Resolve element if source is TupleType.
+          // For an array literal source, env[arg] is array[T]; the
+          // ref produced by indexing is ref[T].
+          auto tt_it = tuple_locals.find(arg_loc);
+          bool is_array_lit_src =
+            (tt_it != tuple_locals.end()) && tt_it->second.is_array_lit;
+
           if (src_it != env.end())
           {
+            if (is_array_lit_src)
+            {
+              auto elem = extract_array_inner(src_it->second.type);
+              if (elem)
+              {
+                merge(dst_loc, ref_type(elem));
+                continue;
+              }
+            }
+
+            // Resolve element if source is TupleType.
             auto inner = src_it->second.type->front();
             if (inner == TupleType && index < inner->size())
             {
@@ -3995,20 +4035,33 @@ namespace vc
         InferStmtScope stmt_scope(InferStmtFamily::TupleOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto init_type = stmt / Type;
+        bool is_array_lit =
+          (stmt == NewArrayConst) &&
+          (dst_loc.view().find("array") != std::string_view::npos);
+        // For array literals (and NewArray), the AST Type slot holds
+        // the element type. Wrap as array[element_type] so env tracks
+        // the array's overall type, not the bare element type. For
+        // tuples (NewArrayConst with l_local prefix), the slot holds
+        // the tuple's own type, merged directly.
+        Node merge_type;
+        if ((stmt == NewArray) || is_array_lit)
+          merge_type = array_type(init_type);
+        else
+          merge_type = clone(init_type);
         auto dst_it = env.find(dst_loc);
-        if (!(dst_it != env.end() && is_any_type(init_type) &&
+        if (!(dst_it != env.end() && is_any_type(merge_type) &&
               !is_any_type(dst_it->second.type) &&
               (dst_it->second.type->front() != TypeVar)))
         {
-          merge(dst_loc, clone(init_type));
+          merge(dst_loc, merge_type);
         }
 
         if (stmt == NewArrayConst)
         {
           auto sz = from_chars_sep_v<size_t>(stmt / Rhs);
-          bool is_lit = dst_loc.view().find("array") != std::string_view::npos;
           tuple_locals[dst_loc] = {
-            sz, is_lit, std::vector<Node>(sz), std::vector<Location>(sz)};
+            sz, is_array_lit, std::vector<Node>(sz),
+            std::vector<Location>(sz)};
           upsert_ref_to_tuple(ref_to_tuple, dst_loc, {dst_loc, 0});
         }
       }
@@ -4769,7 +4822,11 @@ namespace vc
           }
         }
 
-        // Determine homogeneous type.
+        // Determine homogeneous type. Accept any element type
+        // (primitive, tuple, class) provided every slot has the same
+        // structural type. Same_type_tree treats unresolved TypeVars
+        // as distinct, so unrefined elements correctly fail the
+        // homogeneity check.
         Node common;
         bool uniform = true;
         for (size_t i = 0; i < tt.size && uniform; i++)
@@ -4780,14 +4837,14 @@ namespace vc
             break;
           }
           auto it = env.find(tt.element_value_locs[i]);
-          if (it == env.end() || !extract_primitive(it->second.type))
+          if (it == env.end())
           {
             uniform = false;
             break;
           }
           if (!common)
             common = clone(it->second.type);
-          else if (it->second.type->front()->type() != common->front()->type())
+          else if (!same_type_tree(it->second.type, common))
             uniform = false;
         }
         if (uniform && common && tt.size > 0)
@@ -5560,16 +5617,9 @@ namespace vc
               uniform = false;
               break;
             }
-            auto prim = extract_primitive(env_it->second.type);
-            if (!prim)
-            {
-              uniform = false;
-              break;
-            }
             if (!common)
               common = clone(env_it->second.type);
-            else if (
-              env_it->second.type->front()->type() != common->front()->type())
+            else if (!same_type_tree(env_it->second.type, common))
             {
               uniform = false;
               break;
