@@ -5357,6 +5357,10 @@ namespace vc
         if (!has_unresolved_type(def_type, r.subst))
           r_type =
             reify_emitted_type(def_type, r.subst, r.def / Ident, "return type");
+        else if (!r_type)
+          // Placeholder — stage 2 will overwrite it after solver
+          // consumption binds the relevant α's.
+          r_type = make_typevar();
       }
 
       // Implicit none return: when a function returns none, append a
