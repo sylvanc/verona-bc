@@ -12,6 +12,12 @@ array[T]
     a
   }
 
+  // Allocate `size` elements. Storage is zero-initialized: primitive
+  // element types are written with memset(0), so reads return 0 / 0.0
+  // / false until the caller assigns. Reference element types are
+  // initialized to `none`. This is safe to read-before-write for any
+  // primitive T or any T whose default `none` is acceptable; otherwise
+  // the caller must populate before reading.
   alloc(size: usize): array[T]
   {
     :::newarray[T](size)
