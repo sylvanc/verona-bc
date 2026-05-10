@@ -1492,6 +1492,11 @@ namespace vc
     std::set<const NodeDef*> reported_unbound_formal;
     std::set<std::tuple<std::string_view, size_t, std::string>>
       reported_unresolved;
+    // TypeParams currently being resolved (used to detect
+    // self-referential substitutions, which would otherwise infinite-
+    // loop in get_reification → reify_type → reify_typename →
+    // get_reification).
+    std::set<const NodeDef*> resolving_typeparams;
     std::vector<MethodInvocation> method_invocations;
     std::vector<PendingCallback> pending_callbacks;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
@@ -6618,7 +6623,34 @@ namespace vc
               auto find = resolve_subst.find(d);
 
               if (find != resolve_subst.end())
-                return reify_type(find->second, resolve_subst);
+              {
+                // Cycle detection: if we're already resolving this
+                // TypeParam (i.e. its substitution transitively
+                // references itself), break the cycle and emit a
+                // proper compile error instead of looping until the
+                // stack overflows. Self-referential substitutions
+                // can arise from case-lambda type-param identity
+                // confusion in infer, e.g. when a nested match
+                // produces a substitution like
+                // `T -> Union(TypeName(...::T), none)`.
+                if (!resolving_typeparams.insert(d.get()).second)
+                {
+                  if (reported_unbound_formal.insert(d.get()).second)
+                  {
+                    errors.push_back(err(
+                      elem,
+                      std::format(
+                        "Type parameter `{}` cannot be inferred "
+                        "(self-referential substitution). Provide an "
+                        "explicit type argument.",
+                        (d / Ident)->location().view())));
+                  }
+                  return Dyn;
+                }
+                auto result = reify_type(find->second, resolve_subst);
+                resolving_typeparams.erase(d.get());
+                return result;
+              }
 
               // TypeParam not in subst — hard compile error. Dyn is
               // ONLY the IR encoding of `any`; never a fallback.
