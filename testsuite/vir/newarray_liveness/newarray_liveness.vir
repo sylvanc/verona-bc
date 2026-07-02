@@ -1,0 +1,35 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
+  $new_size = const usize 4
+  $new_array = new [i32] $new_size
+  $new_len = len $new_array
+  $new_expected = const usize 4
+  $new_ok = eq $new_len $new_expected
+
+  $stack_size = const usize 5
+  $stack_array = stack [i32] $stack_size
+  $stack_len = len $stack_array
+  $stack_expected = const usize 5
+  $stack_ok = eq $stack_len $stack_expected
+
+  $region_size = const usize 6
+  $region_array = region rc [i32] $region_size
+  $region_len = len $region_array
+  $region_expected = const usize 6
+  $region_ok = eq $region_len $region_expected
+
+  $new_stack_ok = and $new_ok $stack_ok
+  $all_ok = and $new_stack_ok $region_ok
+  cond $all_ok ^pass ^fail
+^pass
+  $r = const i32 0
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none
+^fail
+  $r = const i32 -1
+  $_ = ffi @set_exit_code($r)
+  $_none = const none
+  ret $_none
