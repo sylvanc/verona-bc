@@ -508,7 +508,7 @@ namespace vbcc
     libraries.push_back(lib);
   }
 
-  void Bytecode::gen(std::filesystem::path output, bool strip)
+  void Bytecode::gen_vbc(std::filesystem::path output, bool strip)
   {
     wf::push_back(wfIR);
 

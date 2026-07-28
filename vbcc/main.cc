@@ -70,6 +70,21 @@ int main(int argc, char** argv)
   if (!opts.path.empty())
     state->add_path(opts.path);
 
-  state->gen(opts.bytecode_file, opts.strip);
+  if (opts.bytecode_file.extension().string() == ".ll")
+  {
+#if defined(VERONA_ENABLE_LLVM_BACKEND)
+    if (!state->gen_llvm(opts.bytecode_file))
+      return -1;
+#else
+    logging::Error() << "vbcc was built without LLVM backend support"
+                     << std::endl;
+    return -1;
+#endif
+  }
+  else
+  {
+    state->gen_vbc(opts.bytecode_file, opts.strip);
+  }
+
   return 0;
 }
