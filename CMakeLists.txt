@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(vbc VERSION 1.0.0 LANGUAGES CXX)
+project(vbc VERSION 1.0.0 LANGUAGES C CXX)
 
 include(FetchContent)
 find_package(Threads REQUIRED)
