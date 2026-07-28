@@ -1,6 +1,6 @@
-#include "vbcrt.h"
+#include "vrt.h"
 
-#include <vbcrt/abi.h>
+#include <vrt/abi.h>
 
 #include <atomic>
 
@@ -9,7 +9,7 @@ namespace
   std::atomic<int32_t> exit_code{0};
 }
 
-namespace vbcrt
+namespace vrt
 {
   void reset_exit_code()
   {
@@ -27,7 +27,7 @@ namespace vbcrt
   }
 }
 
-extern "C" VBCRT_EXPORT void set_exit_code(int32_t code)
+extern "C" VRT_EXPORT void set_exit_code(int32_t code)
 {
-  vbcrt::set_exit_code(code);
+  vrt::set_exit_code(code);
 }

@@ -287,15 +287,15 @@ dist/vbcc/vbcc build \
   -b simp1.ll
 
 llc -filetype=obj simp1.ll -o simp1.o
-c++ simp1.o dist/lib/libvbcrt.a -o simp1
+c++ simp1.o dist/lib/libvrt.a -o simp1
 ./simp1
 echo $? # 0
 ```
 
-`libvbcrt.a` supplies the native entry point and the process-local
+`libvrt.a` supplies the native entry point and the process-local
 `set_exit_code(i32)` FFI function used by this first backend slice.
 The compiler/runtime boundary is declared by the installed, C-compatible
-`<vbcrt/abi.h>` header. It currently declares `set_exit_code(int32_t)` as a
+`<vrt/abi.h>` header. It currently declares `set_exit_code(int32_t)` as a
 runtime-provided function and `verona_main(void)` as the generated program
 entry point. Runtime-internal C++ helpers are not part of this public ABI.
 

@@ -1,6 +1,6 @@
 ---
 name: testsuite
-description: Verona compiler test infrastructure covering VBC golden tests, LLVM-native tests, and libvbcrt ABI/runtime tests. Use when adding or registering tests, running focused or full CTest suites, updating golden files, debugging failures, checking exit codes, or understanding the testsuite CMake layout.
+description: Verona compiler test infrastructure covering VBC golden tests, LLVM-native tests, and libvrt ABI/runtime tests. Use when adding or registering tests, running focused or full CTest suites, updating golden files, debugging failures, checking exit codes, or understanding the testsuite CMake layout.
 ---
 
 # Verona Test Suite Guide
@@ -24,8 +24,8 @@ testsuite/
 ├── vbci.cmake
 ├── llvm_tests.cmake             # Registers optional LLVM-native tests
 ├── llvm_native_test.cmake       # LLVM-native execution helper
-├── vbcrt_tests.cmake            # Registers libvbcrt tests
-├── vbcrt/
+├── vrt_tests.cmake              # Registers libvrt tests
+├── vrt/
 │   ├── abi_c.c
 │   ├── abi_cxx.cc
 │   ├── exit_code_program.c
@@ -39,14 +39,14 @@ testsuite/
 `testsuite/CMakeLists.txt` registers three paths:
 
 - `vbc_tests.cmake` invokes the generic harness for VBC/VBCI tests.
-- `vbcrt_tests.cmake` directly registers C, C++, behavioural, and private
-  runtime tests linked with `vbc::vbcrt`.
+- `vrt_tests.cmake` directly registers C, C++, behavioural, and private
+  runtime tests linked with `vbc::vrt`.
 - `llvm_tests.cmake` registers LLVM-native tests when
   `VERONA_ENABLE_LLVM_BACKEND` is enabled.
 
 Keep collection-level registration modules in `testsuite/`. Keep a helper
 used by only one suite with that suite, such as
-`testsuite/vbcrt/cmake/check_exit_code.cmake`. Promote a helper to a shared
+`testsuite/vrt/cmake/check_exit_code.cmake`. Promote a helper to a shared
 directory only after another suite reuses it.
 
 The VBC path passes three explicit collection files to the generic harness:
@@ -95,19 +95,19 @@ cd build && ctest --output-on-failure -R "^llvm/simp1/native$"
 ```bash
 cd build && ctest --output-on-failure -L vbc -j$(nproc)
 cd build && ctest --output-on-failure -L llvm -j$(nproc)
-cd build && ctest --output-on-failure -L vbcrt -j$(nproc)
+cd build && ctest --output-on-failure -L vrt -j$(nproc)
 ```
 
 The `vbc` label covers `vc`, `vbcc`, and `vbci`. The `llvm` label covers LLVM
-IR generation, native compilation, linking, and execution. The `vbcrt` label
+IR generation, native compilation, linking, and execution. The `vrt` label
 covers public ABI conformance, public behaviour, and private runtime state.
 
-Run one `vbcrt` category by logical name:
+Run one `vrt` category by logical name:
 
 ```bash
-cd build && ctest --output-on-failure -R "^vbcrt/abi/"
-cd build && ctest --output-on-failure -R "^vbcrt/behavior/"
-cd build && ctest --output-on-failure -R "^vbcrt/internal/"
+cd build && ctest --output-on-failure -R "^vrt/abi/"
+cd build && ctest --output-on-failure -R "^vrt/behavior/"
+cd build && ctest --output-on-failure -R "^vrt/internal/"
 ```
 
 ### Run only compile or only runtime tests
@@ -121,7 +121,7 @@ cd build && ctest --output-on-failure -R "run" -j$(nproc)       # all runtime te
 
 ```bash
 cd build && ctest -N
-cd build && ctest -N -L vbcrt
+cd build && ctest -N -L vrt
 ```
 
 Run `cmake ..` from `build/` after changing CMake registration or adding a
@@ -203,29 +203,29 @@ build/testsuite/llvm/simp1/
 The expected native exit code is supplied by `llvm_tests.cmake`; there is no
 separate `testsuite/llvm/` source fixture or LLVM golden directory.
 
-### libvbcrt tests
+### libvrt tests
 
-`vbcrt` tests are ordinary compiled CTest targets; they do not use VBC golden
+`vrt` tests are ordinary compiled CTest targets; they do not use VBC golden
 files:
 
-- `vbcrt/abi/c` compiles the public `<vbcrt/abi.h>` interface as C11.
-- `vbcrt/abi/cxx` compiles it as C++ and checks the C-linkage signatures.
-- `vbcrt/behavior/default-exit`, `set-exit`, and `last-write-wins` link
-  against `vbc::vbcrt` and exercise the public C ABI through the real native
+- `vrt/abi/c` compiles the public `<vrt/abi.h>` interface as C11.
+- `vrt/abi/cxx` compiles it as C++ and checks the C-linkage signatures.
+- `vrt/behavior/default-exit`, `set-exit`, and `last-write-wins` link
+  against `vbc::vrt` and exercise the public C ABI through the real native
   entry point.
-- `vbcrt/internal/state` includes private `runtime/vbcrt.h` and directly
+- `vrt/internal/state` includes private `runtime/vrt.h` and directly
   checks runtime state transitions.
 
 The behavioural programs intentionally return values such as `7` and `3`.
 CTest normally treats every non-zero result as failure, while `WILL_FAIL`
 accepts any non-zero value. Therefore,
-`vbcrt/cmake/check_exit_code.cmake` runs each program and checks the exact
+`vrt/cmake/check_exit_code.cmake` runs each program and checks the exact
 expected code. Keep this black-box check even when internal state tests cover
 the same setters and getters.
 
 ### Regenerating golden files
 
-Regenerate golden files only for the VBC collections. LLVM-native and `vbcrt`
+Regenerate golden files only for the VBC collections. LLVM-native and `vrt`
 tests do not have source-tree goldens.
 
 When VBC output changes, regenerate the golden files:
@@ -307,11 +307,11 @@ CTest runs `llvm_native_test.cmake`, which invokes
 sequence. Any failed command or unexpected native exit code fails that single
 CTest entry.
 
-For the `vbcrt` tests:
+For the `vrt` tests:
 
-1. CMake builds dedicated C or C++ executables linked with `vbc::vbcrt`.
+1. CMake builds dedicated C or C++ executables linked with `vbc::vrt`.
 2. ABI and internal tests run directly.
-3. Behavioural tests run through `vbcrt/cmake/*.cmake`.
+3. Behavioural tests run through `vrt/cmake/*.cmake`.
 4. The helper fails unless the process returns the exact expected code.
 
 ### Golden file comparison
@@ -346,8 +346,8 @@ LLVM-native CTest entries are named `llvm/<name>/native`. For example,
 to `build/testsuite/llvm/simp1/`; `native` is a test-name component, not an
 artifact subdirectory.
 
-libvbcrt entries are grouped as `vbcrt/abi/<name>`,
-`vbcrt/behavior/<name>`, and `vbcrt/internal/<name>`.
+libvrt entries are grouped as `vrt/abi/<name>`, `vrt/behavior/<name>`, and
+`vrt/internal/<name>`.
 
 The test that generates output must pass before comparison tests run (set via `DEPENDS` property).
 

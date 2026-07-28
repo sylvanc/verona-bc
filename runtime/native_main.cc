@@ -1,11 +1,11 @@
-#include "vbcrt.h"
+#include "vrt.h"
 
-#include <vbcrt/abi.h>
+#include <vrt/abi.h>
 
 // defines main
 int main()
 {
-  vbcrt::reset_exit_code();
+  vrt::reset_exit_code();
   verona_main();
-  return vbcrt::get_exit_code();
+  return vrt::get_exit_code();
 }

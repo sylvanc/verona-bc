@@ -12,7 +12,7 @@ function(add_llvm_native_test name vir expected_exit)
       -DMSVC=${MSVC}
       -DNATIVE_SUFFIX=${CMAKE_EXECUTABLE_SUFFIX}
       -DOBJECT_SUFFIX=${CMAKE_CXX_OUTPUT_EXTENSION}
-      -DRUNTIME=${CMAKE_INSTALL_PREFIX}/lib/$<TARGET_FILE_NAME:libvbcrt>
+      -DRUNTIME=${CMAKE_INSTALL_PREFIX}/lib/$<TARGET_FILE_NAME:libvrt>
       -DEXPECTED_EXIT=${expected_exit}
       -P ${CMAKE_CURRENT_SOURCE_DIR}/llvm_native_test.cmake)
   set_tests_properties(

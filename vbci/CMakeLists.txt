@@ -56,7 +56,7 @@ target_link_libraries(vbci
   Threads::Threads
   snmallocshim-static
   verona_rt
-  vbc::vbcrt
+  vbc::vrt
   deps::libffi
   deps::zstd
   CLI11::CLI11

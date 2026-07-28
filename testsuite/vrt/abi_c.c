@@ -1,4 +1,4 @@
-#include <vbcrt/abi.h>
+#include <vrt/abi.h>
 
 static void (*const set_exit_code_signature)(int32_t) = set_exit_code;
 static void (*const verona_main_signature)(void) = verona_main;
