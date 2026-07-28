@@ -5,8 +5,8 @@ macro(toolinvoke ARGS testfile outputdir)
 endmacro()
 
 # Regular expression to match test files
-# This regex matches files with the .infix extension
-set(TESTSUITE_REGEX ".*\\.vir")
+# Match backend-IR test inputs in the shared vir/ tree.
+set(TESTSUITE_REGEX "^vir/.*\\.vir$")
 
 set(TESTSUITE_EXE "${CMAKE_INSTALL_PREFIX}/vbcc/vbcc")
 set(TESTSUITE_RESULT_FILES exit_code.txt stderr.txt stdout.txt)

@@ -11,8 +11,7 @@ endif()
 function(testsuite name)
   message(STATUS "Building test suite: ${name}")
   set(UPDATE_DUMPS_TARGETS)
-  file(GLOB test_collections CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cmake)
-  list(REMOVE_ITEM test_collections verona_testsuite.cmake)
+  set(test_collections ${ARGN})
   file(GLOB_RECURSE all_files CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
 
   set(CLEAN_GOLDEN_DIRS)
@@ -79,7 +78,9 @@ function(testsuite name)
 
       add_test(NAME ${output_dir_relative}
         COMMAND ${test_output_cmd})
-      set_tests_properties(${output_dir_relative} PROPERTIES FIXTURES_SETUP ${output_fixture})
+      set_tests_properties(${output_dir_relative} PROPERTIES
+        FIXTURES_SETUP ${output_fixture}
+        LABELS ${name})
 
       if(DEFINED TESTSUITE_DEPENDS_ON_OUTPUT_DIR_REGEX)
         string(
@@ -160,7 +161,9 @@ function(testsuite name)
               -Dnew_file=${output_dir}/${result}
               -Ddiff_tool=${DIFF_TOOL}
               -P ${DIR_OF_TESTSUITE_CMAKE}/compare.cmake)
-          set_tests_properties(${output_dir_relative}-${result} PROPERTIES DEPENDS ${output_dir_relative})
+          set_tests_properties(${output_dir_relative}-${result} PROPERTIES
+            DEPENDS ${output_dir_relative}
+            LABELS ${name})
         endforeach()
       endif()
 
