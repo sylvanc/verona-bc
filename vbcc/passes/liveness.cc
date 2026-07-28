@@ -160,14 +160,16 @@ namespace vbcc
 
             def(node / LocalId);
           }
+          else if (node->in({NewArray, StackArray, RegionArray}))
+          {
+            use(node / Rhs);
+            def(node / LocalId);
+          }
           else if (node->in(
                      {Const,
                       ConstStr,
-                      NewArray,
                       NewArrayConst,
-                      StackArray,
                       StackArrayConst,
-                      RegionArray,
                       RegionArrayConst,
                       FieldRef,
                       ArrayRefConst,
