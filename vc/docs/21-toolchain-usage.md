@@ -256,3 +256,52 @@ An arithmetic or comparison operation received an invalid value — most often a
 ## 21.7 Internal Subcommands
 
 The `vc` compiler also provides `vc check` and `vc test` subcommands. These are internal debugging tools used during compiler development and are not intended for general use. They may change or be removed without notice.
+
+---
+
+## 21.8 Experimental LLVM Backend
+
+The experimental LLVM backend lowers backend Trieste IR (`.vir`) directly to
+textual LLVM IR (`.ll`). It is enabled by default, so the default configuration
+requires an LLVM installation discoverable by CMake:
+
+```bash
+cmake -S . -B build -G Ninja \
+  -DLLVM_DIR=/path/to/llvm/lib/cmake/llvm
+cd build
+ninja install
+```
+
+To configure the project without LLVM, explicitly disable the backend:
+
+```bash
+cmake -S . -B build -G Ninja \
+  -DVERONA_ENABLE_LLVM_BACKEND=OFF
+```
+
+Use the installed `vbcc` and select an `.ll` bytecode output path:
+
+```bash
+dist/vbcc/vbcc build \
+  ../testsuite/vir/simp1/simp1.vir \
+  -b simp1.ll
+
+llc -filetype=obj simp1.ll -o simp1.o
+c++ simp1.o dist/lib/libvbcrt.a -o simp1
+./simp1
+echo $? # 0
+```
+
+`libvbcrt.a` supplies the native entry point and the process-local
+`set_exit_code(i32)` FFI function used by this first backend slice.
+The compiler/runtime boundary is declared by the installed, C-compatible
+`<vbcrt/abi.h>` header. It currently declares `set_exit_code(int32_t)` as a
+runtime-provided function and `verona_main(void)` as the generated program
+entry point. Runtime-internal C++ helpers are not part of this public ABI.
+
+> **Status:** The LLVM backend currently supports `none` and `i32`,
+> single-block functions, process-local non-variadic FFI declarations, and
+> the `const`, `ffi`, `drop`, and `ret` tokens. Other types, control flow,
+> operations, libraries, symbol versions, and variadic calls are rejected
+> with an LLVM-backend diagnostic. A build configured without
+> `VERONA_ENABLE_LLVM_BACKEND` similarly rejects `.ll` output.

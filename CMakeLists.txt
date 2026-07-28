@@ -2,7 +2,15 @@ cmake_minimum_required(VERSION 3.14.0)
 project(vbc VERSION 1.0.0 LANGUAGES C CXX)
 
 include(FetchContent)
+include(GNUInstallDirs)
 find_package(Threads REQUIRED)
+
+option(VERONA_ENABLE_LLVM_BACKEND "Build the LLVM backend" ON)
+
+if(VERONA_ENABLE_LLVM_BACKEND)
+  find_package(LLVM REQUIRED CONFIG)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
