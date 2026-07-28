@@ -279,12 +279,25 @@ cmake -S . -B build -G Ninja \
   -DVERONA_ENABLE_LLVM_BACKEND=OFF
 ```
 
-Use the installed `vbcc` and select an `.ll` bytecode output path:
+The standalone `vbcc` selects its compiled output format explicitly:
+
+| Flag | Description |
+|------|-------------|
+| `--emit <vbc\|llvm-ir>` | Select VBC or textual LLVM IR output; defaults to `vbc` |
+| `--output-file <file>` | Set the compiled output path |
+
+When `--output-file` is omitted, `vbcc` derives the filename from the input and
+uses `.vbc` or `.ll` according to `--emit`. An explicit filename must use the
+matching extension. The existing `-o`/`--output` option remains reserved for
+the final Trieste AST rather than the compiled artifact.
+
+Use the installed `vbcc` and select LLVM IR output:
 
 ```bash
 dist/vbcc/vbcc build \
   ../testsuite/vir/simp1/simp1.vir \
-  -b simp1.ll
+  --emit llvm-ir \
+  --output-file simp1.ll
 
 llc -filetype=obj simp1.ll -o simp1.o
 c++ simp1.o dist/lib/libvrt.a -o simp1
@@ -304,4 +317,4 @@ entry point. Runtime-internal C++ helpers are not part of this public ABI.
 > the `const`, `ffi`, `drop`, and `ret` tokens. Other types, control flow,
 > operations, libraries, symbol versions, and variadic calls are rejected
 > with an LLVM-backend diagnostic. A build configured without
-> `VERONA_ENABLE_LLVM_BACKEND` similarly rejects `.ll` output.
+> `VERONA_ENABLE_LLVM_BACKEND` similarly rejects `--emit llvm-ir`.

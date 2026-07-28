@@ -7,7 +7,14 @@ set(native_object "${OUTPUT_DIR}/${test_name}${OBJECT_SUFFIX}")
 set(native "${OUTPUT_DIR}/${test_name}${NATIVE_SUFFIX}")
 
 execute_process(
-  COMMAND "${VBCC}" build "${VIR}" -b "${llvm_ir}"
+  COMMAND
+    "${VBCC}"
+    build
+    "${VIR}"
+    --emit
+    llvm-ir
+    --output-file
+    "${llvm_ir}"
   RESULT_VARIABLE compiler_result
   OUTPUT_VARIABLE compiler_output
   ERROR_VARIABLE compiler_error)
