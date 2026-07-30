@@ -1,0 +1,162 @@
+#pragma once
+
+#include "../bytecode.h"
+#include "../lang.h"
+
+#include <filesystem>
+#include <llvm/IR/CallingConv.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace vbcc
+{
+  namespace llvm_backend
+  {
+    enum class ValueKind
+    {
+      None,
+      Bool,
+      I32,
+    };
+
+    enum class OwnershipKind
+    {
+      Trivial,
+      Managed,
+    };
+
+    enum class TransferKind
+    {
+      Copy,
+      Move,
+    };
+
+    struct LoweredType
+    {
+      ValueKind kind;
+      llvm::Type* value_type;
+
+      // LLVM layout used when a VIR value needs addressable storage. The
+      // current single-block Vars stay as SSA values; None has no storage
+      // representation and uses nullptr.
+      llvm::Type* storage_type;
+
+      // Selects the lifetime policy used by Copy, ArgCopy, and Drop. Managed
+      // is reserved until the runtime retain/release ABI is lowered.
+      OwnershipKind ownership;
+    };
+
+    struct LoweredValue
+    {
+      LoweredType type;
+      llvm::Value* value = nullptr;
+    };
+
+    struct LoweredSignature
+    {
+      LoweredType return_type;
+      std::vector<LoweredType> param_types;
+      llvm::FunctionType* function_type;
+      llvm::CallingConv::ID calling_convention;
+
+      // Structure return. Currently unused because all supported return values
+      // use direct LLVM returns. Aggregate ABI lowering will use this for a
+      // hidden sret parameter.
+      bool uses_sret;
+    };
+
+    struct LoweredFunction
+    {
+      llvm::Function* function;
+      LoweredSignature signature;
+    };
+
+    class LLVMCodegen
+    {
+    private:
+      /* working state */
+      const Bytecode& state;
+      llvm::LLVMContext context;
+      llvm::Module module;
+      llvm::IRBuilder<> builder;
+      // Native FFI functions, keyed by VIR SymbolId.
+      std::unordered_map<std::string, LoweredFunction> symbols;
+      // Executable Verona functions, keyed by VIR FunctionId.
+      std::unordered_map<std::string, LoweredFunction> functions;
+      // Current SSA value for every live VIR register, including mutable Vars.
+      std::unordered_map<std::string, LoweredValue> locals;
+      // Declared representations of mutable VIR Vars. These guard reassignment;
+      // current values still live in locals while functions are one block.
+      std::unordered_map<std::string, LoweredType> variable_types;
+      bool failed = false;
+
+    public:
+      LLVMCodegen(const Bytecode& state);
+
+      bool emit(const std::filesystem::path& output);
+
+    private:
+      static std::string node_text(const Node& node);
+      static std::string strip_sigil(const std::string& name);
+      static std::string function_name(const Node& id);
+
+      void fail(const Node& node, const std::string& message);
+
+      const LoweredValue* lookup_local(
+        const Node& use_node,
+        const Node& id_node,
+        const char* operation = "use");
+      bool bind_local(
+        const Node& definition_node,
+        const Node& id_node,
+        const LoweredValue& value);
+      std::optional<LoweredValue> transfer_local(
+        const Node& use_node,
+        const Node& id_node,
+        TransferKind transfer,
+        const char* operation);
+
+      std::optional<LoweredType> lower_type(const Node& type);
+      static bool
+      same_value_representation(const LoweredType& lhs, const LoweredType& rhs);
+      std::optional<std::vector<LoweredType>> lower_params(const Node& params);
+      /* LLVM function signatures */
+      llvm::FunctionType* function_type(
+        const LoweredType& return_type,
+        const std::vector<LoweredType>& param_types);
+      std::optional<LoweredSignature>
+      lower_signature(const Node& return_type, const Node& params);
+
+      // Module construction phases consume the normalized VIR tree and lookup
+      // indexes already built in Bytecode by assignids.
+      bool configure_target();
+      bool predeclare_nominal_types();
+      bool define_type_layouts();
+      bool declare_callables();
+      bool define_globals_and_metadata();
+      bool define_functions();
+      bool emit_initializers();
+      bool verify_and_write(const std::filesystem::path& output);
+
+      void declare_symbols();
+      void declare_functions();
+
+      bool emit_function(const Node& func);
+      bool emit_statement(const Node& statement);
+      bool emit_const(const Node& statement);
+      bool emit_binop(const Node& statement);
+      bool emit_unop(const Node& statement);
+      bool emit_copy(const Node& statement);
+      bool emit_move(const Node& statement);
+      bool emit_drop(const Node& statement);
+      bool emit_ffi(const Node& statement);
+      bool emit_return(const Node& statement, const LoweredType& return_type);
+    };
+  }
+}

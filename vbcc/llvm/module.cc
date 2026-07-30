@@ -1,0 +1,240 @@
+#include "codegen.h"
+
+#include <llvm/IR/Verifier.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
+#include <system_error>
+
+namespace vbcc
+{
+  namespace llvm_backend
+  {
+    std::string LLVMCodegen::node_text(const Node& node)
+    {
+      return std::string(node->location().view());
+    }
+
+    std::string LLVMCodegen::strip_sigil(const std::string& name)
+    {
+      if (
+        !name.empty() &&
+        ((name.front() == '@') || (name.front() == '$') ||
+         (name.front() == '^')))
+        return name.substr(1);
+
+      return name;
+    }
+
+    std::string LLVMCodegen::function_name(const Node& id)
+    {
+      auto name = node_text(id);
+
+      if (name == "@main")
+        return "verona_main";
+
+      return "verona_fn_" + strip_sigil(name);
+    }
+
+    LLVMCodegen::LLVMCodegen(const Bytecode& state)
+    : state(state), module("verona", context), builder(context)
+    {}
+
+    /* top-level LLVM module emission entry point */
+    bool LLVMCodegen::emit(const std::filesystem::path& output)
+    {
+      // assignids already performs target-neutral module planning: it
+      // normalizes state.top and builds Bytecode's type, class, function,
+      // symbol, and library indexes. As LLVM lowering expands, state.top
+      // remains the exhaustive semantic-coverage checklist for the wfIR Top
+      // alternatives; the indexes provide dependency-independent lookup.
+
+      if (!configure_target())
+        return false;
+
+      if (!predeclare_nominal_types())
+        return false;
+
+      if (!define_type_layouts())
+        return false;
+
+      if (!declare_callables())
+        return false;
+
+      if (!define_globals_and_metadata())
+        return false;
+
+      if (!define_functions())
+        return false;
+
+      if (!emit_initializers())
+        return false;
+
+      return verify_and_write(output);
+    }
+
+    bool LLVMCodegen::configure_target()
+    {
+      // The current scalar subset emits target-independent LLVM IR. Before
+      // aggregate ABI lowering is added, this phase must select a
+      // TargetMachine and set both its target triple and DataLayout together.
+      return true;
+    }
+
+    bool LLVMCodegen::predeclare_nominal_types()
+    {
+      // The currently supported scalar VIR types are LLVM context-owned
+      // primitives created on demand by lower_type(), so they need no module
+      // declarations. Future class lowering will create opaque named
+      // StructTypes here, allowing recursive references before layouts exist.
+      return true;
+    }
+
+    bool LLVMCodegen::define_type_layouts()
+    {
+      // Type aliases do not produce LLVM entities. Future class lowering will
+      // resolve field storage types and set the bodies of the opaque
+      // StructTypes declared by predeclare_nominal_types().
+      return true;
+    }
+
+    bool LLVMCodegen::declare_callables()
+    {
+      // Declare every native symbol and Verona function before emitting any
+      // body so forward calls and recursion do not depend on VIR source order.
+      declare_symbols();
+      declare_functions();
+      return !failed;
+    }
+
+    bool LLVMCodegen::define_globals_and_metadata()
+    {
+      // Future class and primitive descriptors belong here because their
+      // method tables refer to the functions declared by declare_callables().
+      //
+      // Memo globals also belong here so MemoSlot can refer to them while
+      // define_functions() emits function bodies. emit_initializers() will
+      // later generate the code that fills those globals.
+      return true;
+    }
+
+    bool LLVMCodegen::define_functions()
+    {
+      for (const auto& func_state : state.functions)
+      {
+        if (func_state.func && !emit_function(func_state.func))
+          return false;
+      }
+
+      return !failed;
+    }
+
+    bool LLVMCodegen::emit_initializers()
+    {
+      // This phase will eventually call the initialization functions in
+      // MemoInit order and store their results in the globals declared by
+      // define_globals_and_metadata().
+      for (const auto& child : *state.top)
+      {
+        if ((child->type() == MemoInit) && (child->size() != 0))
+        {
+          fail(child, "MemoInit lowering is not supported");
+          return false;
+        }
+      }
+
+      // Library initializers require an explicit runtime startup sequence.
+      // They must run after memo initialization rather than being silently
+      // attached to llvm.global_ctors.
+      for (const auto& library : state.libraries)
+      {
+        auto init_func = library / InitFunc;
+
+        if (init_func->type() != None)
+        {
+          fail(init_func, "FFI library initializer lowering is not supported");
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    bool LLVMCodegen::verify_and_write(const std::filesystem::path& output)
+    {
+      if (llvm::verifyModule(module, &llvm::errs()))
+      {
+        llvm::errs() << "LLVM backend: module verification failed\n";
+        return false;
+      }
+
+      std::error_code error;
+      llvm::raw_fd_ostream stream(
+        output.string(), error, llvm::sys::fs::OF_Text);
+
+      if (error)
+      {
+        llvm::errs() << "LLVM backend: could not open '" << output.string()
+                     << "': " << error.message() << "\n";
+        return false;
+      }
+      /* textual LLVM IR output */
+      module.print(stream, nullptr);
+      stream.flush();
+
+      if (stream.has_error())
+      {
+        llvm::errs() << "LLVM backend: could not write '" << output.string()
+                     << "'\n";
+        return false;
+      }
+
+      return true;
+    }
+
+    void LLVMCodegen::fail(const Node& node, const std::string& message)
+    {
+      failed = true;
+      llvm::errs() << "LLVM backend: " << message << " at "
+                   << std::string(node->type().str()) << "\n";
+    }
+
+    const LoweredValue* LLVMCodegen::lookup_local(
+      const Node& use_node, const Node& id_node, const char* operation)
+    {
+      auto name = node_text(id_node);
+      auto local_it = locals.find(name);
+
+      if (local_it == locals.end())
+      {
+        fail(
+          use_node,
+          std::string(operation) + " of unknown local '" + name + "'");
+        return nullptr;
+      }
+
+      return &local_it->second;
+    }
+
+    bool LLVMCodegen::bind_local(
+      const Node& definition_node,
+      const Node& id_node,
+      const LoweredValue& value)
+    {
+      auto name = node_text(id_node);
+      auto variable_it = variable_types.find(name);
+
+      if (
+        (variable_it != variable_types.end()) &&
+        !same_value_representation(variable_it->second, value.type))
+      {
+        fail(
+          definition_node,
+          "assignment representation mismatch for variable '" + name + "'");
+        return false;
+      }
+
+      locals.insert_or_assign(name, value);
+      return true;
+    }
+  }
+}
