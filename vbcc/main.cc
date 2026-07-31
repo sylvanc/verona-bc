@@ -64,7 +64,10 @@ int main(int argc, char** argv)
           output_format == OutputFormat::VBC ? ".vbc" : ".ll";
 
         if (!path.empty() && output_file.empty())
-          output_file = path.stem().replace_extension(extension);
+        {
+          output_file = path.stem();
+          output_file += extension;
+        }
 
         if (!output_file.empty() && output_file.extension() != extension)
         {
