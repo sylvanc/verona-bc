@@ -87,9 +87,12 @@ namespace vbcc
       {
       private:
         LLVMCodegen& codegen;
-        // Current SSA value for every live VIR register, including mutable
-        // Vars.
+        // Latest SSA value seen for each live VIR register during emission.
+        // This linear environment cannot merge distinct incoming values at
+        // control-flow joins; that requires PHI or storage lowering.
         std::unordered_map<std::string, LoweredValue> values;
+        // Function-wide declared representation of each mutable VIR Var, used
+        // to reject reassignments with incompatible representations.
         // Declared representations of mutable VIR Vars. These guard
         // reassignment; current values still live in values while functions
         // are one block.

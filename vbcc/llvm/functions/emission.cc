@@ -20,13 +20,14 @@ namespace vbcc
       assert(function_it != functions.end());
       auto& lowered = function_it->second;
 
-      if (labels->size() != 1)
+      if (labels->empty())
       {
-        fail(labels, "only single-block functions are supported");
+        fail(labels, "function has no basic blocks");
         return false;
       }
 
       locals.reset();
+      blocks.reset();
 
       for (const auto& variable : *vars)
       {
@@ -57,52 +58,31 @@ namespace vbcc
         ++argument;
       }
 
-      auto label = labels->front();
-      auto label_id = label / LabelId;
-      auto body = label / Body;
-      auto terminator = label / Return;
-      auto* block = llvm::BasicBlock::Create(
-        context, strip_sigil(node_text(label_id)), lowered.function);
-      builder.SetInsertPoint(block);
-
-      for (const auto& statement : *body)
+      // Create every block before emitting bodies so branches may target
+      // labels that appear later in VIR source order.
+      for (const auto& label : *labels)
       {
-        if (!emit_statement(statement))
+        auto label_id = label / LabelId;
+
+        if (!blocks.declare(label_id, lowered.function))
           return false;
       }
 
-      return emit_return(terminator, lowered.return_type);
-    }
-
-    bool LLVMCodegen::emit_return(
-      const Node& statement, const LoweredType& return_type)
-    {
-      if (statement != Return)
+      for (const auto& label : *labels)
       {
-        fail(statement, "only return terminators are supported");
-        return false;
+        auto label_id = label / LabelId;
+        auto* block = blocks.get(label_id);
+        builder.SetInsertPoint(block);
+
+        for (const auto& statement : *(label / Body))
+        {
+          if (!emit_statement(statement))
+            return false;
+        }
+
+        if (!emit_terminator(label / Return, lowered.return_type))
+          return false;
       }
-
-      auto value_id = statement / LocalId;
-      auto* value = locals.find_value(value_id);
-
-      if (!value)
-      {
-        fail(
-          statement, "return of unknown local '" + node_text(value_id) + "'");
-        return false;
-      }
-
-      if (value->type != return_type)
-      {
-        fail(statement, "return representation mismatch");
-        return false;
-      }
-
-      if (return_type.kind == ValueKind::None)
-        builder.CreateRetVoid();
-      else
-        builder.CreateRet(value->value);
 
       return true;
     }
