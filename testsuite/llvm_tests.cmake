@@ -37,5 +37,17 @@ function(add_llvm_tests)
   endif()
 
   # Add all LLVM parsable tests to the test suite. These are tests that can be compiled to LLVM IR and then to native code.
+  add_llvm_native_test(
+    copy_move_drop
+    vir/llvm_copy_move_drop/llvm_copy_move_drop.vir
+    0)
+  add_llvm_native_test(
+    scalar_ops
+    vir/llvm_scalar_ops/llvm_scalar_ops.vir
+    0)
+  add_llvm_native_test(
+    control_flow
+    vir/llvm_control_flow/llvm_control_flow.vir
+    0)
   add_llvm_native_test(simp1 vir/simp1/simp1.vir 0)
 endfunction()
