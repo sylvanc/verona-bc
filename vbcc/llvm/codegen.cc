@@ -2,7 +2,6 @@
 
 namespace vbcc
 {
-  /* Bytecode entry point */
   bool Bytecode::gen_llvm(const std::filesystem::path& output) const
   {
     // Destructor automatically restores the previous WFContext when this
