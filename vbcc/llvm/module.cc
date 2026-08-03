@@ -49,12 +49,6 @@ namespace vbcc
     /* top-level LLVM module emission entry point */
     bool LLVMCodegen::emit(const std::filesystem::path& output)
     {
-      // assignids already performs target-neutral module planning: it
-      // normalizes state.top and builds Bytecode's type, class, function,
-      // symbol, and library indexes. As LLVM lowering expands, state.top
-      // remains the exhaustive semantic-coverage checklist for the wfIR Top
-      // alternatives; the indexes provide dependency-independent lookup.
-
       if (!configure_target())
         return false;
 
