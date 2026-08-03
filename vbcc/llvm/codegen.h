@@ -93,10 +93,7 @@ namespace vbcc
         std::unordered_map<std::string, LoweredValue> values;
         // Function-wide declared representation of each mutable VIR Var, used
         // to reject reassignments with incompatible representations.
-        // Declared representations of mutable VIR Vars. These guard
-        // reassignment; current values still live in values while functions
-        // are one block.
-        std::unordered_map<std::string, LoweredType> variable_types;
+        std::unordered_map<std::string, LoweredType> declared_var_types;
 
       public:
         explicit LocalState(LLVMCodegen& codegen);

@@ -10,23 +10,24 @@ namespace vbcc
     void LLVMCodegen::LocalState::reset()
     {
       values.clear();
-      variable_types.clear();
+      declared_var_types.clear();
     }
 
     void LLVMCodegen::LocalState::declare_var(
       const Node& id, const LoweredType& type)
     {
-      variable_types.insert_or_assign(LLVMCodegen::node_text(id), type);
+      declared_var_types.insert_or_assign(LLVMCodegen::node_text(id), type);
     }
 
     bool LLVMCodegen::LocalState::bind_value(
       const Node& definition, const Node& id, const LoweredValue& value)
     {
       auto name = LLVMCodegen::node_text(id);
-      auto variable = variable_types.find(name);
+      auto declared_var = declared_var_types.find(name);
 
       if (
-        (variable != variable_types.end()) && (variable->second != value.type))
+        (declared_var != declared_var_types.end()) &&
+        (declared_var->second != value.type))
       {
         codegen.fail(
           definition,
