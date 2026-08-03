@@ -23,8 +23,7 @@ namespace vbcc
         return false;
       }
 
-      locals.clear();
-      variable_types.clear();
+      locals.reset();
 
       for (const auto& variable : *(func / Vars))
       {
@@ -33,7 +32,7 @@ namespace vbcc
         if (!type)
           return false;
 
-        variable_types.insert_or_assign(node_text(variable / LocalId), *type);
+        locals.declare_var(variable / LocalId, *type);
       }
 
       auto argument = lowered.function->arg_begin();
@@ -44,10 +43,12 @@ namespace vbcc
         assert(argument != lowered.function->arg_end());
         auto name = node_text(param / LocalId);
         argument->setName(strip_sigil(name));
-        locals.insert_or_assign(
-          name,
-          LoweredValue{
-            lowered.signature.param_types.at(param_index++), &*argument});
+        if (!locals.bind_value(
+              param,
+              param / LocalId,
+              LoweredValue{
+                lowered.signature.param_types.at(param_index++), &*argument}))
+          return false;
         ++argument;
       }
 
@@ -112,12 +113,17 @@ namespace vbcc
         return false;
       }
 
-      auto* local = lookup_local(statement, statement / LocalId, "return");
+      auto value_id = statement / LocalId;
+      auto* value = locals.find_value(value_id);
 
-      if (!local)
+      if (!value)
+      {
+        fail(
+          statement, "return of unknown local '" + node_text(value_id) + "'");
         return false;
+      }
 
-      if (!same_value_representation(local->type, return_type))
+      if (!same_value_representation(value->type, return_type))
       {
         fail(statement, "return representation mismatch");
         return false;
@@ -126,7 +132,7 @@ namespace vbcc
       if (return_type.kind == ValueKind::None)
         builder.CreateRetVoid();
       else
-        builder.CreateRet(local->value);
+        builder.CreateRet(value->value);
 
       return true;
     }

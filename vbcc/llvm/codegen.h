@@ -31,12 +31,6 @@ namespace vbcc
       Managed,
     };
 
-    enum class TransferKind
-    {
-      Copy,
-      Move,
-    };
-
     struct LoweredType
     {
       ValueKind kind;
@@ -50,6 +44,8 @@ namespace vbcc
       // Selects the lifetime policy used by Copy, ArgCopy, and Drop. Managed
       // is reserved until the runtime retain/release ABI is lowered.
       OwnershipKind ownership;
+
+      bool operator==(const LoweredType&) const = default;
     };
 
     struct LoweredValue
@@ -80,6 +76,29 @@ namespace vbcc
     class LLVMCodegen
     {
     private:
+      class LocalState
+      {
+      private:
+        LLVMCodegen& codegen;
+        // Current SSA value for every live VIR register, including mutable
+        // Vars.
+        std::unordered_map<std::string, LoweredValue> values;
+        // Declared representations of mutable VIR Vars. These guard
+        // reassignment; current values still live in values while functions
+        // are one block.
+        std::unordered_map<std::string, LoweredType> variable_types;
+
+      public:
+        explicit LocalState(LLVMCodegen& codegen);
+
+        void reset();
+        void declare_var(const Node& id, const LoweredType& type);
+        bool bind_value(
+          const Node& definition, const Node& id, const LoweredValue& value);
+        const LoweredValue* find_value(const Node& id) const;
+        std::optional<LoweredValue> take_value(const Node& id);
+      };
+
       /* working state */
       const Bytecode& state;
       llvm::LLVMContext context;
@@ -89,11 +108,7 @@ namespace vbcc
       std::unordered_map<std::string, LoweredFunction> symbols;
       // Executable Verona functions, keyed by VIR FunctionId.
       std::unordered_map<std::string, LoweredFunction> functions;
-      // Current SSA value for every live VIR register, including mutable Vars.
-      std::unordered_map<std::string, LoweredValue> locals;
-      // Declared representations of mutable VIR Vars. These guard reassignment;
-      // current values still live in locals while functions are one block.
-      std::unordered_map<std::string, LoweredType> variable_types;
+      LocalState locals;
       bool failed = false;
 
     public:
@@ -108,23 +123,7 @@ namespace vbcc
 
       void fail(const Node& node, const std::string& message);
 
-      const LoweredValue* lookup_local(
-        const Node& use_node,
-        const Node& id_node,
-        const char* operation = "use");
-      bool bind_local(
-        const Node& definition_node,
-        const Node& id_node,
-        const LoweredValue& value);
-      std::optional<LoweredValue> transfer_local(
-        const Node& use_node,
-        const Node& id_node,
-        TransferKind transfer,
-        const char* operation);
-
       std::optional<LoweredType> lower_type(const Node& type);
-      static bool
-      same_value_representation(const LoweredType& lhs, const LoweredType& rhs);
       std::optional<std::vector<LoweredType>> lower_params(const Node& params);
       /* LLVM function signatures */
       llvm::FunctionType* function_type(

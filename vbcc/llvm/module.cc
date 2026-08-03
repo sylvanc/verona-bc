@@ -27,7 +27,7 @@ namespace vbcc
     }
 
     LLVMCodegen::LLVMCodegen(const Bytecode& state)
-    : state(state), module("verona", context), builder(context)
+    : state(state), module("verona", context), builder(context), locals(*this)
     {}
 
     /* top-level LLVM module emission entry point */
@@ -209,44 +209,6 @@ namespace vbcc
         return false;
       }
 
-      return true;
-    }
-    const LoweredValue* LLVMCodegen::lookup_local(
-      const Node& use_node, const Node& id_node, const char* operation)
-    {
-      auto name = node_text(id_node);
-      auto local_it = locals.find(name);
-
-      if (local_it == locals.end())
-      {
-        fail(
-          use_node,
-          std::string(operation) + " of unknown local '" + name + "'");
-        return nullptr;
-      }
-
-      return &local_it->second;
-    }
-
-    bool LLVMCodegen::bind_local(
-      const Node& definition_node,
-      const Node& id_node,
-      const LoweredValue& value)
-    {
-      auto name = node_text(id_node);
-      auto variable_it = variable_types.find(name);
-
-      if (
-        (variable_it != variable_types.end()) &&
-        !same_value_representation(variable_it->second, value.type))
-      {
-        fail(
-          definition_node,
-          "assignment representation mismatch for variable '" + name + "'");
-        return false;
-      }
-
-      locals.insert_or_assign(name, value);
       return true;
     }
   }
