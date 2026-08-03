@@ -95,7 +95,7 @@ namespace vbcc
       llvm::LLVMContext context;
       llvm::Module module;
       llvm::IRBuilder<> builder;
-      std::unordered_map<std::string, LoweredFunction> symbols;
+      std::unordered_map<std::string, LoweredFunction> ffi_symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
       LocalState locals;
       bool failed = false;
@@ -125,7 +125,8 @@ namespace vbcc
       bool emit_initializers();
       bool verify_and_write(const std::filesystem::path& output);
 
-      void declare_symbols();
+      void declare_libraries();
+      bool emit_library_initializers();
       void declare_functions();
 
       bool emit_function(const Node& func);

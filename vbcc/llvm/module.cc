@@ -112,7 +112,7 @@ namespace vbcc
     {
       // Declare every native symbol and Verona function before emitting any
       // body so forward calls and recursion do not depend on VIR source order.
-      declare_symbols();
+      declare_libraries();
       declare_functions();
       return !failed;
     }
@@ -152,22 +152,8 @@ namespace vbcc
           return false;
         }
       }
-
-      // Library initializers require an explicit runtime startup sequence.
-      // They must run after memo initialization rather than being silently
-      // attached to llvm.global_ctors.
-      for (const auto& library : state.libraries)
-      {
-        auto init_func = library / InitFunc;
-
-        if (init_func->type() != None)
-        {
-          fail(init_func, "FFI library initializer lowering is not supported");
-          return false;
-        }
-      }
-
-      return true;
+      // emit_memo_initializers() will eventually emit the MemoInit functions in order, but for now we just emit the FFI library initializers.
+      return emit_library_initializers();
     }
 
     bool LLVMCodegen::verify_and_write(const std::filesystem::path& output)

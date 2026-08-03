@@ -14,9 +14,9 @@ namespace vbcc
       auto symbol_id = statement / SymbolId;
       auto args = statement / Args;
       auto symbol_name = node_text(symbol_id);
-      auto symbol_it = symbols.find(symbol_name);
+      auto symbol_it = ffi_symbols.find(symbol_name);
 
-      if (symbol_it == symbols.end())
+      if (symbol_it == ffi_symbols.end())
       {
         fail(statement, "unknown FFI symbol '" + symbol_name + "'");
         return false;
