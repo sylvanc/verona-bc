@@ -1,6 +1,7 @@
 llvm_map_components_to_libnames(VERONA_LLVM_LIBS Core Support native)
 
 add_library(libvbcllvm STATIC
+  blocks.cc
   codegen.cc
   functions/declaration.cc
   functions/emission.cc

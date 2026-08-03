@@ -4,6 +4,7 @@
 #include "../lang.h"
 
 #include <filesystem>
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
@@ -67,6 +68,21 @@ namespace vbcc
     class LLVMCodegen
     {
     private:
+      class BasicBlockState
+      {
+      private:
+        LLVMCodegen& codegen;
+        std::unordered_map<std::string, llvm::BasicBlock*> blocks;
+
+      public:
+        explicit BasicBlockState(LLVMCodegen& codegen);
+
+        void reset();
+        bool declare(const Node& label_id, llvm::Function* function);
+        llvm::BasicBlock* get(const Node& label_id) const;
+        llvm::BasicBlock* find(const Node& branch, const Node& label_id);
+      };
+
       class LocalState
       {
       private:
@@ -97,6 +113,7 @@ namespace vbcc
       llvm::IRBuilder<> builder;
       std::unordered_map<std::string, LoweredFunction> ffi_symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
+      BasicBlockState blocks;
       LocalState locals;
       bool failed = false;
 
