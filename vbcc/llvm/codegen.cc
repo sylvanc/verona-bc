@@ -2,6 +2,17 @@
 
 namespace vbcc
 {
+  namespace llvm_backend
+  {
+    LLVMCodegen::LLVMCodegen(const Bytecode& state)
+    : state(state),
+      module("verona", context),
+      builder(context),
+      blocks(*this),
+      locals(*this)
+    {}
+  }
+
   bool Bytecode::gen_llvm(const std::filesystem::path& output) const
   {
     // Destructor automatically restores the previous WFContext when this

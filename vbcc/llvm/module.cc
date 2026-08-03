@@ -16,10 +16,6 @@ namespace vbcc
 {
   namespace llvm_backend
   {
-    LLVMCodegen::LLVMCodegen(const Bytecode& state)
-    : state(state), module("verona", context), builder(context), locals(*this)
-    {}
-
     /* top-level LLVM module emission entry point */
     bool LLVMCodegen::emit(const std::filesystem::path& output)
     {
