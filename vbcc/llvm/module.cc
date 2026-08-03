@@ -16,22 +16,6 @@ namespace vbcc
 {
   namespace llvm_backend
   {
-    std::string LLVMCodegen::node_text(const Node& node)
-    {
-      return std::string(node->location().view());
-    }
-
-    std::string LLVMCodegen::strip_sigil(const std::string& name)
-    {
-      if (
-        !name.empty() &&
-        ((name.front() == '@') || (name.front() == '$') ||
-         (name.front() == '^')))
-        return name.substr(1);
-
-      return name;
-    }
-
     std::string LLVMCodegen::function_name(const Node& id)
     {
       auto name = node_text(id);
@@ -227,14 +211,6 @@ namespace vbcc
 
       return true;
     }
-
-    void LLVMCodegen::fail(const Node& node, const std::string& message)
-    {
-      failed = true;
-      llvm::errs() << "LLVM backend: " << message << " at "
-                   << std::string(node->type().str()) << "\n";
-    }
-
     const LoweredValue* LLVMCodegen::lookup_local(
       const Node& use_node, const Node& id_node, const char* operation)
     {
