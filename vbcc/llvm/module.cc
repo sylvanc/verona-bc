@@ -16,16 +16,6 @@ namespace vbcc
 {
   namespace llvm_backend
   {
-    std::string LLVMCodegen::function_name(const Node& id)
-    {
-      auto name = node_text(id);
-
-      if (name == "@main")
-        return "verona_main";
-
-      return "verona_fn_" + strip_sigil(name);
-    }
-
     LLVMCodegen::LLVMCodegen(const Bytecode& state)
     : state(state), module("verona", context), builder(context), locals(*this)
     {}

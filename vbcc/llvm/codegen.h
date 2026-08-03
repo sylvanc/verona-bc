@@ -54,23 +54,11 @@ namespace vbcc
       llvm::Value* value = nullptr;
     };
 
-    struct LoweredSignature
-    {
-      LoweredType return_type;
-      std::vector<LoweredType> param_types;
-      llvm::FunctionType* function_type;
-      llvm::CallingConv::ID calling_convention;
-
-      // Structure return. Currently unused because all supported return values
-      // use direct LLVM returns. Aggregate ABI lowering will use this for a
-      // hidden sret parameter.
-      bool uses_sret;
-    };
-
     struct LoweredFunction
     {
       llvm::Function* function;
-      LoweredSignature signature;
+      LoweredType return_type;
+      std::vector<LoweredType> param_types;
     };
 
     class LLVMCodegen
@@ -104,9 +92,7 @@ namespace vbcc
       llvm::LLVMContext context;
       llvm::Module module;
       llvm::IRBuilder<> builder;
-      // Native FFI functions, keyed by VIR SymbolId.
       std::unordered_map<std::string, LoweredFunction> symbols;
-      // Executable Verona functions, keyed by VIR FunctionId.
       std::unordered_map<std::string, LoweredFunction> functions;
       LocalState locals;
       bool failed = false;
@@ -119,18 +105,11 @@ namespace vbcc
     private:
       static std::string node_text(const Node& node);
       static std::string strip_sigil(const std::string& name);
-      static std::string function_name(const Node& id);
 
       void fail(const Node& node, const std::string& message);
 
       std::optional<LoweredType> lower_type(const Node& type);
       std::optional<std::vector<LoweredType>> lower_params(const Node& params);
-      /* LLVM function signatures */
-      llvm::FunctionType* function_type(
-        const LoweredType& return_type,
-        const std::vector<LoweredType>& param_types);
-      std::optional<LoweredSignature>
-      lower_signature(const Node& return_type, const Node& params);
 
       // Module construction phases consume the normalized VIR tree and lookup
       // indexes already built in Bytecode by assignids.
