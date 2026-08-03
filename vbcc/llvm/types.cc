@@ -1,40 +1,64 @@
 #include "codegen.h"
 
-#include <llvm/IR/DerivedTypes.h>
-#include <utility>
+#include <cassert>
 
 namespace vbcc
 {
   namespace llvm_backend
   {
-    /* maps VIR types into LLVM types and function
-     * signatures. */
+    std::optional<LoweredType>
+    lower_builtin_type(llvm::LLVMContext& context, const Node& type);
+
+    std::optional<LoweredType>
+    lower_dyn_type(llvm::LLVMContext& context, const Node& type);
+
+    std::optional<LoweredType>
+    lower_class_id_type(llvm::LLVMContext& context, const Node& type);
+
+    std::optional<LoweredType>
+    lower_type_id_type(llvm::LLVMContext& context, const Node& type);
+
+    std::optional<LoweredType>
+    lower_union_type(llvm::LLVMContext& context, const Node& type);
+
+    std::optional<LoweredType>
+    lower_tuple_type(llvm::LLVMContext& context, const Node& type);
+
+    // wfType dispatch
     std::optional<LoweredType> LLVMCodegen::lower_type(const Node& type)
     {
-      if (type == None)
+      assert(type->type().in(
+        {None, Bool,  I8,    I16,     I32,    I64,   U8,       U16, U32,
+         U64,  ILong, ULong, ISize,   USize,  F32,   F64,      Ptr, Array,
+         Ref,  Cown,  Dyn,   ClassId, TypeId, Union, TupleType}));
+
+      std::optional<LoweredType> lowered;
+
+      if (type->type().in({None, Bool, I8,  I16,   I32,   I64,   U8,
+                           U16,  U32,  U64, ILong, ULong, ISize, USize,
+                           F32,  F64,  Ptr, Array, Ref,   Cown}))
+        lowered = lower_builtin_type(context, type);
+      else if (type == Dyn)
+        lowered = lower_dyn_type(context, type);
+      else if (type == ClassId)
+        lowered = lower_class_id_type(context, type);
+      else if (type == TypeId)
+        lowered = lower_type_id_type(context, type);
+      else if (type == Union)
+        lowered = lower_union_type(context, type);
+      else
       {
-        return LoweredType{
-          ValueKind::None,
-          llvm::Type::getVoidTy(context),
-          nullptr,
-          OwnershipKind::Trivial};
+        assert(type == TupleType);
+        lowered = lower_tuple_type(context, type);
       }
 
-      if (type == I32)
-      {
-        auto* llvm_type = llvm::Type::getInt32Ty(context);
-        return LoweredType{
-          ValueKind::I32, llvm_type, llvm_type, OwnershipKind::Trivial};
-      }
+      if (lowered)
+        return lowered;
 
-      if (type == Bool)
-      {
-        auto* llvm_type = llvm::Type::getInt1Ty(context);
-        return LoweredType{
-          ValueKind::Bool, llvm_type, llvm_type, OwnershipKind::Trivial};
-      }
-
-      fail(type, "unsupported type '" + std::string(type->type().str()) + "'");
+      fail(
+        type,
+        "type lowering is not implemented for '" +
+          std::string(type->type().str()) + "'");
       return {};
     }
   }

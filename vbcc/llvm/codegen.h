@@ -22,7 +22,10 @@ namespace vbcc
     {
       None,
       Bool,
-      I32,
+      SignedInteger,
+      UnsignedInteger,
+      Float,
+      Pointer,
     };
 
     enum class OwnershipKind
