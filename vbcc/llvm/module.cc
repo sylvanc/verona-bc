@@ -74,9 +74,45 @@ namespace vbcc
 
     bool LLVMCodegen::configure_target()
     {
-      // The current scalar subset emits target-independent LLVM IR. Before
-      // aggregate ABI lowering is added, this phase must select a
-      // TargetMachine and set both its target triple and DataLayout together.
+      // Configure the module for LLVM's native/default target. 
+      // Keep the module triple and DataLayout consistent by deriving them 
+      // from the same TargetMachine.
+      // For AOT compilation later, support user-specified target triple
+      // through CLI override. For now, just use the default target triple.
+      llvm::Triple target_triple(llvm::sys::getDefaultTargetTriple());
+
+      if (llvm::InitializeNativeTarget())
+      {
+        llvm::errs() << "LLVM backend: could not initialize target for '"
+                     << target_triple.str() << "'\n";
+        return false;
+      }
+
+      std::string error;
+      const auto* target =
+        llvm::TargetRegistry::lookupTarget(target_triple, error);
+
+      if (target == nullptr)
+      {
+        llvm::errs() << "LLVM backend: could not resolve target '"
+                     << target_triple.str() << "': " << error << "\n";
+        return false;
+      }
+
+      llvm::TargetOptions options;
+      auto target_machine =
+        std::unique_ptr<llvm::TargetMachine>(target->createTargetMachine(
+          target_triple, "generic", "", options, std::nullopt));
+
+      if (!target_machine)
+      {
+        llvm::errs() << "LLVM backend: could not create target machine for '"
+                     << target_triple.str() << "'\n";
+        return false;
+      }
+
+      module.setTargetTriple(target_triple);
+      module.setDataLayout(target_machine->createDataLayout());
       return true;
     }
 
