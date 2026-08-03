@@ -21,6 +21,13 @@ add_library(libvbcllvm STATIC
   statements/ffi.cc
   statements/move.cc
   statements/unop.cc
+  terminators.cc
+  terminators/cond.cc
+  terminators/jump.cc
+  terminators/raise.cc
+  terminators/return.cc
+  terminators/tailcall.cc
+  terminators/tailcall_dyn.cc
   types.cc
   types/array.cc
   types/builtin.cc

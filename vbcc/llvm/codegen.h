@@ -155,7 +155,15 @@ namespace vbcc
       bool emit_move(const Node& statement);
       bool emit_drop(const Node& statement);
       bool emit_ffi(const Node& statement);
+
+      bool
+      emit_terminator(const Node& terminator, const LoweredType& return_type);
+      bool emit_tailcall(const Node& statement);
+      bool emit_tailcall_dyn(const Node& statement);
       bool emit_return(const Node& statement, const LoweredType& return_type);
+      bool emit_raise(const Node& statement);
+      bool emit_cond(const Node& statement);
+      bool emit_jump(const Node& statement);
     };
   }
 }
