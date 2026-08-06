@@ -7,13 +7,16 @@ description: Verona compiler test suite infrastructure — running tests, updati
 
 ## Test Infrastructure Overview
 
-The test suite uses trieste's `testsuite.cmake` framework. Tests are defined in `testsuite/CMakeLists.txt` which calls `testsuite(vbc)`. Three cmake files define three test layers:
+The test suite uses Trieste's `testsuite.cmake` framework. Tests are defined in `testsuite/CMakeLists.txt`, which calls `testsuite(vbc)`. Two collection files define complete compile/run pipelines:
 
-| Layer | File | Tests | Input | Output dir |
-|-------|------|-------|-------|------------|
-| **vc** (compile) | `testsuite/vc.cmake` | Verona → bytecode | `*.v` files | `compile/` |
-| **vbcc** (backend) | `testsuite/vbcc.cmake` | IR → bytecode | `*.vir` files | `compile/` |
-| **vbci** (runtime) | `testsuite/vbci.cmake` | Execute bytecode | `*.vbc` files | `run/` |
+| Collection | File | Pipeline | Input |
+|------------|------|----------|-------|
+| **vc** | `testsuite/vc.cmake` | Verona → bytecode → execute | `*.v` files |
+| **vir** | `testsuite/vir.cmake` | IR → bytecode → execute | `*.vir` files |
+
+Each collection owns its compiler invocation and registers a dependent
+interpreter node. Sources under a `compile_only/` directory register only the
+compile node.
 
 Each test produces `exit_code.txt`, `stdout.txt`, and `stderr.txt` in its output directory. The vc layer also produces per-pass `.trieste` dump files, a `*_final.trieste`, and a `.vbc` file (on success).
 
