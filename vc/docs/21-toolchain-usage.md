@@ -133,9 +133,7 @@ lldb-20 -- dist/vbci/vbci my_project.vbc
 ### Updating Test Golden Files
 
 ```bash
-ninja update-dump-clean
 ninja update-dump
-cmake ..                              # re-run cmake to pick up new golden files
 ```
 
 ---

@@ -12,7 +12,7 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
 
 # Verona Compiler (vc) Specifics
 
-- **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump-clean` and `ninja update-dump` to regenerate golden test files.
+- **Build / test workflow**: Always build in the `build` directory. Always run `ninja install` to build; use the installed binaries under `build/dist/` (e.g., `dist/vc/vc`, `dist/vbci/vbci`). The build binaries under `build/vc/vc` do NOT have `_builtin` next to them. `ctest` runs the full test suite. Use `ninja update-dump` to regenerate golden test files.
 - **Baseline before starting work**: Before making any changes, run `ninja install && ctest -j$(nproc)` to verify the full test suite passes. Do NOT proceed if tests fail — fix the environment first. This prevents committing broken golden files (e.g., segfaults from misconfigured builds).
 - **Running vc**: Always run `vc` from the `build` directory, passing the path to the source directory on the command line (e.g., `dist/vc/vc build ../testsuite/v/hello`). Do NOT `cd` into the source directory — the `.vbc` output name is derived from the directory name, so building with `.` produces a hidden `..vbc` file.
 - **Debugging**: Use `gdb` for debugging.
@@ -75,7 +75,7 @@ irreversible-action guardrails (git commit/push/PR require explicit permission).
   8. Backend `vbcc/passes/typecheck.cc`: type checking if needed
   9. Interpreter `vbci/thread.cc`: op handler + op name in name array
   Missing any of items 5 or 6 causes "undefined register" errors in later passes, not at the registration site.
-- **New `_builtin` files affect ALL golden files**: Adding a new `.v` file under `vc/_builtin/` changes the compilation output for every test (because `_builtin` is always parsed). This means ALL golden files need regeneration with `ninja update-dump-clean && ninja update-dump && cmake ..`.
+- **New `_builtin` files affect ALL golden files**: Adding a new `.v` file under `vc/_builtin/` changes the compilation output for every test (because `_builtin` is always parsed). This means ALL golden files need regeneration with `ninja update-dump`.
 - **Init function reification**: Init functions (declared with inline bodies in `use` blocks) are only reified when their lib's FFI symbols are called from reachable code. If no FFI call reaches the lib, the init function won't be reified and won't run. Tests exercising init behavior must include at least one reachable FFI call from the same lib. There is no `fini` keyword — `init` returns `any`, and if the return value is callable (a lambda), the runtime uses it as the finalizer.
 - **Startup ordering for `once` vs FFI `init`**: `Program::run()` must initialize the scheduler, then fill `memo_slots` from `MemoInit`, and only then run FFI `init` callbacks. Use-block init bodies may call `once` stubs, which execute `MemoLoad` and require populated memo slots.
 - **FFI fini ordering**: `Program::run()` executes FFI fini callbacks only after `sched.run()` has returned. Fini callbacks cannot depend on newly queued `when` behaviors making progress; teardown there must be synchronous, or the relevant libuv handle must already be `uv_unref`d so loop exit does not depend on scheduler work.
