@@ -1,19 +1,47 @@
-# Arguments for testing vc compile
-macro(toolinvoke ARGS testfile outputdir)
-  get_filename_component(test_name ${testfile} NAME_WE)
-  set(${ARGS} build . -b ${outputdir}/${test_name}.vbc -o ${outputdir}/${test_name}_final.trieste)
-endmacro()
-
-# Regular expression to match test files
 set(TESTSUITE_REGEX ".*\\.v$")
-set(TESTSUITE_REQUIRE_BASENAME_MATCH_PARENT_DIR TRUE)
+set(TESTSUITE_DEFINE vc_test_define)
 
-# Use the installed binary which has _builtin next to it
-set(TESTSUITE_EXE "${CMAKE_INSTALL_PREFIX}/vc/vc")
-set(TESTSUITE_RESULT_FILES exit_code.txt stderr.txt stdout.txt)
+function(vc_test_define test)
+  get_filename_component(test_dir "${test}" DIRECTORY)
+  get_filename_component(test_file "${test}" NAME)
+  get_filename_component(test_name "${test}" NAME_WE)
+  get_filename_component(test_dir_name "${test_dir}" NAME)
+  if(NOT test_name STREQUAL test_dir_name)
+    return()
+  endif()
 
-function (test_output_dir out test)
-  get_filename_component(test_dir ${test} DIRECTORY)
-  get_filename_component(test_name ${test} NAME_WE)
-  set(${out} "${test_dir}/${test_name}/compile" PARENT_SCOPE)
+  set(test_root "${test_dir}/${test_name}")
+  set(node "${test_root}/compile")
+
+  testsuite_output_path(bytecode NODE "${node}" FILE "${test_name}.vbc")
+  testsuite_output_path(
+    final_ast NODE "${node}" FILE "${test_name}_final.trieste")
+
+  set(artifacts)
+  set(run_golden "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}/run/exit_code.txt")
+  set(compile_golden
+    "${CMAKE_CURRENT_SOURCE_DIR}/${node}/exit_code.txt")
+  if(EXISTS "${run_golden}")
+    if(EXISTS "${compile_golden}")
+      file(READ "${compile_golden}" compile_exit_code)
+    endif()
+    if(NOT DEFINED compile_exit_code OR compile_exit_code MATCHES "^0$")
+      list(APPEND artifacts "${test_name}.vbc")
+    endif()
+  endif()
+  set(artifact_metadata)
+  if(artifacts)
+    set(artifact_metadata ARTIFACTS ${artifacts})
+  endif()
+
+  testsuite_add_test(
+    NAME "${node}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}"
+    GOLDENS exit_code.txt stderr.txt stdout.txt
+    ${artifact_metadata}
+    COMMAND
+      "${CMAKE_INSTALL_PREFIX}/vc/vc"
+      build .
+      -b "${bytecode}"
+      -o "${final_ast}")
 endfunction()

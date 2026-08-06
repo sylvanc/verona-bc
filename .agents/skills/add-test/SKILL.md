@@ -53,7 +53,7 @@ Run from the `build` directory:
 
 ```bash
 cd build
-ninja install && ninja update-dump-clean && ninja update-dump && cmake ..
+ninja install && ninja update-dump
 ```
 
 This auto-generates the golden file directory structure:
