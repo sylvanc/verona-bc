@@ -133,6 +133,7 @@ lldb-20 -- dist/vbci/vbci my_project.vbc
 ### Updating Test Golden Files
 
 ```bash
+cd build
 ninja update-dump
 ```
 
