@@ -38,7 +38,7 @@ user-invocable: false
 - Debug with the binaries under the active build directory's `dist/` tree. Do not use non-installed build outputs when validating behavior.
 - `ctest --output-on-failure -j$(nproc)` for full test suite.
 - `-p <passname>` stops after a pass. `--dump_passes=<dir>` dumps intermediate ASTs.
-- Golden files: `ninja update-dump-clean && ninja update-dump && cmake ..`
+- Golden files: `ninja update-dump`
 - `exit_code.txt` has NO trailing newline (`printf '0'`, not `echo`).
 - Treat compile-time and runtime test failures as real regressions until they are investigated on the current baseline. Do not assume a failure predates your change without verification.
 
@@ -48,7 +48,9 @@ user-invocable: false
 - Do NOT write `use "_builtin"` — it is always implicitly available.
 - Bitmask exit code pattern: `var result = 0;` then `if cond { result = result + N; }` with powers of 2. Exit 0 = all passed.
 - Compile-error tests: `exit_code.txt: 1` in `compile/`, no `run/` directory.
-- Structure: `testsuite/v/<name>/<name>.v` with golden dirs `<name>/<name>/compile/` and `<name>/<name>/run/`.
+- Structure: `testsuite/v/<name>/<name>.v` with golden dirs
+  `<name>/<name>/compile/` and `<name>/<name>/run/`. Expected compile errors
+  use `testsuite/v/compile_only/<name>/<name>.v` and have no run node.
 - FFI tests must include at least one reachable FFI call from their lib to trigger init function reification.
 
 ## Verona Source Syntax

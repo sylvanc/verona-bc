@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14.0)
+cmake_minimum_required(VERSION 3.28)
 project(vbc VERSION 1.0.0 LANGUAGES C CXX)
 
 include(FetchContent)
@@ -71,7 +71,7 @@ set(TRIESTE_BUILD_PARSERS Off)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 7d0b29403b253e924bf66eb287e76c3954bd14f8
+  GIT_TAG f4423612e7a33dd8147fa7945d3b3b7a2dd8861c
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
