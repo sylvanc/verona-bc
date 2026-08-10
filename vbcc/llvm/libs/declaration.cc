@@ -16,14 +16,17 @@ namespace vbcc
         auto vararg = symbol / Vararg;
         auto return_type = symbol / Return;
         auto params = symbol / FFIParams;
+        auto linker_name_text = node_text(linker_name);
+        auto version_text = node_text(version);
+        auto is_vararg = vararg == Vararg;
 
-        if (!node_text(version).empty())
+        if (!version_text.empty())
         {
           fail(symbol, "versioned FFI symbols are not supported");
           return;
         }
 
-        if (vararg == Vararg)
+        if (is_vararg)
         {
           fail(symbol, "variadic FFI symbols are not supported");
           return;
@@ -44,7 +47,6 @@ namespace vbcc
         auto* function_type = llvm::FunctionType::get(
           lowered_return->value_type, llvm_params, false);
 
-        auto linker_name_text = node_text(linker_name);
         auto* function = module.getFunction(linker_name_text);
 
         if (function && (function->getFunctionType() != function_type))
@@ -66,10 +68,15 @@ namespace vbcc
         }
 
         function->setCallingConv(llvm::CallingConv::C);
-        ffi_symbols.emplace(
+        symbols.emplace(
           node_text(symbol_id),
-          LoweredFunction{
-            function, *lowered_return, std::move(*lowered_params)});
+          LoweredSymbol{
+            function,
+            std::move(linker_name_text),
+            std::move(version_text),
+            is_vararg,
+            *lowered_return,
+            std::move(*lowered_params)});
       };
 
       for (const auto& library : state.libraries)

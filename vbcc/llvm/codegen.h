@@ -65,6 +65,16 @@ namespace vbcc
       std::vector<LoweredType> param_types;
     };
 
+    struct LoweredSymbol
+    {
+      llvm::Function* function;
+      std::string linker_name;
+      std::string version;
+      bool vararg;
+      LoweredType return_type;
+      std::vector<LoweredType> param_types;
+    };
+
     class LLVMCodegen
     {
     private:
@@ -111,7 +121,7 @@ namespace vbcc
       llvm::LLVMContext context;
       llvm::Module module;
       llvm::IRBuilder<> builder;
-      std::unordered_map<std::string, LoweredFunction> ffi_symbols;
+      std::unordered_map<std::string, LoweredSymbol> symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
       BasicBlockState blocks;
       LocalState locals;
