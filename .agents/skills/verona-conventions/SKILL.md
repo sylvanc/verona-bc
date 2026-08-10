@@ -38,7 +38,7 @@ user-invocable: false
 - Debug with the binaries under the active build directory's `dist/` tree. Do not use non-installed build outputs when validating behavior.
 - `ctest --output-on-failure -j$(nproc)` for full test suite.
 - `-p <passname>` stops after a pass. `--dump_passes=<dir>` dumps intermediate ASTs.
-- Golden files: `ninja update-dump-clean && ninja update-dump && cmake ..`
+- Golden files: `ninja update-dump`
 - `exit_code.txt` has NO trailing newline (`printf '0'`, not `echo`).
 - Treat compile-time and runtime test failures as real regressions until they are investigated on the current baseline. Do not assume a failure predates your change without verification.
 

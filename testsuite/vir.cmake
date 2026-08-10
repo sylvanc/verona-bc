@@ -1,16 +1,12 @@
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/should_run.cmake")
 
-set(TESTSUITE_REGEX ".*\\.v$")
-set(TESTSUITE_DEFINE vc_test_define)
+set(TESTSUITE_REGEX ".*\\.vir$")
+set(TESTSUITE_DEFINE vir_test_define)
 
-function(vc_test_define test)
+function(vir_test_define test)
   get_filename_component(test_dir "${test}" DIRECTORY)
+  get_filename_component(test_file "${test}" NAME)
   get_filename_component(test_name "${test}" NAME_WE)
-  get_filename_component(test_dir_name "${test_dir}" NAME)
-  if(NOT test_name STREQUAL test_dir_name)
-    return()
-  endif()
-
   set(test_root "${test_dir}/${test_name}")
   set(compile_node "${test_root}/compile")
   set(run_node "${test_root}/run")
@@ -33,8 +29,8 @@ function(vc_test_define test)
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ${artifact_metadata}
     COMMAND
-      "${CMAKE_INSTALL_PREFIX}/vc/vc"
-      build .
+      "${CMAKE_INSTALL_PREFIX}/vbcc/vbcc"
+      build "${test_file}"
       -b "${bytecode}"
       -o "${final_ast}")
 
