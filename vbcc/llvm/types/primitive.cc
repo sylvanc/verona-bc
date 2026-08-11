@@ -18,23 +18,26 @@ namespace vbcc
       {
         return LoweredType{
           ValueKind::None,
+          RuntimeValueKind::None,
           llvm::Type::getVoidTy(context),
-          nullptr,
-          OwnershipKind::Trivial};
+          nullptr};
       }
 
       LoweredType lower_bool_type(llvm::LLVMContext& context)
       {
         auto* llvm_type = llvm::Type::getInt1Ty(context);
         return LoweredType{
-          ValueKind::Bool, llvm_type, llvm_type, OwnershipKind::Trivial};
+          ValueKind::Bool, RuntimeValueKind::Scalar, llvm_type, llvm_type};
       }
 
       LoweredType lower_pointer_type(llvm::LLVMContext& context)
       {
         auto* llvm_type = llvm::PointerType::getUnqual(context);
         return LoweredType{
-          ValueKind::Pointer, llvm_type, llvm_type, OwnershipKind::Trivial};
+          ValueKind::Pointer,
+          RuntimeValueKind::RawPointer,
+          llvm_type,
+          llvm_type};
       }
     }
 

@@ -13,6 +13,7 @@ add_library(libvbcllvm STATIC
   literals/literal.cc
   locals.cc
   module.cc
+  ownership.cc
   statements.cc
   statements/binop.cc
   statements/constant.cc

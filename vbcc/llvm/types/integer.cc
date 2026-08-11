@@ -34,7 +34,7 @@ namespace vbcc
         ValueKind::SignedInteger :
         ValueKind::UnsignedInteger;
       auto* llvm_type = llvm::IntegerType::get(context, width);
-      return LoweredType{kind, llvm_type, llvm_type, OwnershipKind::Trivial};
+      return LoweredType{kind, RuntimeValueKind::Scalar, llvm_type, llvm_type};
     }
   }
 }

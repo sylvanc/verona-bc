@@ -31,25 +31,31 @@ namespace vbcc
       Pointer,
     };
 
-    enum class OwnershipKind
+    enum class RuntimeValueKind
     {
-      Trivial,
-      Managed,
+      None,
+      Scalar,
+      RawPointer,
+      Object,
+      Array,
+      Reference,
+      Cown,
+      Dynamic,
+      Aggregate,
     };
 
     struct LoweredType
     {
       ValueKind kind;
+      // Selects the runtime representation and lifetime operations associated
+      // with values of this type.
+      RuntimeValueKind runtime_kind;
       llvm::Type* value_type;
 
       // LLVM layout used when a VIR value needs addressable storage. The
       // current single-block Vars stay as SSA values; None has no storage
       // representation and uses nullptr.
       llvm::Type* storage_type;
-
-      // Selects the lifetime policy used by Copy, ArgCopy, and Drop. Managed
-      // is reserved until the runtime retain/release ABI is lowered.
-      OwnershipKind ownership;
 
       bool operator==(const LoweredType&) const = default;
     };
@@ -170,6 +176,9 @@ namespace vbcc
 
       std::optional<LoweredType> lower_type(const Node& type);
       std::optional<std::vector<LoweredType>> lower_params(const Node& params);
+
+      bool emit_retain(const Node& use, const LoweredValue& value);
+      bool emit_release(const Node& use, const LoweredValue& value);
 
       // Module construction phases consume the normalized VIR tree and lookup
       // indexes already built in Bytecode by assignids.

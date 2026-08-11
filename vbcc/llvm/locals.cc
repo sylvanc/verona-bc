@@ -98,15 +98,8 @@ namespace vbcc
 
       // Copying creates another ownership obligation when the runtime
       // representation requires one.
-      switch (value.type.ownership)
-      {
-        case OwnershipKind::Trivial:
-          break;
-
-        case OwnershipKind::Managed:
-          codegen.fail(use, "copy of a managed value is not supported");
-          return {};
-      }
+      if (!codegen.emit_retain(use, value))
+        return {};
 
       return value;
     }
@@ -124,17 +117,7 @@ namespace vbcc
 
       // Dropping ends the binding's ownership obligation when the runtime
       // representation requires one.
-      switch (value->type.ownership)
-      {
-        case OwnershipKind::Trivial:
-          break;
-
-        case OwnershipKind::Managed:
-          codegen.fail(use, "drop of a managed value is not supported");
-          return false;
-      }
-
-      return true;
+      return codegen.emit_release(use, *value);
     }
   }
 }
