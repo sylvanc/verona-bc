@@ -23,6 +23,13 @@ namespace vbcc
       }
 
       auto& symbol = symbol_it->second;
+      assert(symbol.library_index < libraries.size());
+
+      if (symbol.function == nullptr)
+      {
+        fail(statement, "dynamically resolved FFI symbols are not supported");
+        return false;
+      }
 
       if (args->size() != symbol.param_types.size())
       {
