@@ -129,11 +129,13 @@ namespace vbcc
         explicit LocalState(LLVMCodegen& codegen);
 
         void reset();
-        void declare_var(const Node& id, const LoweredType& type);
+        void declare_var(const Node& local_id, const LoweredType& type);
         bool bind_value(
-          const Node& definition, const Node& id, const LoweredValue& value);
-        const LoweredValue* find_value(const Node& id) const;
-        std::optional<LoweredValue> take_value(const Node& id);
+          const Node& definition,
+          const Node& local_id,
+          const LoweredValue& value);
+        const LoweredValue* find_value(const Node& local_id) const;
+        std::optional<LoweredValue> take_value(const Node& local_id);
       };
 
       /* working state */

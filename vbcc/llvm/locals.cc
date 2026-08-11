@@ -14,15 +14,16 @@ namespace vbcc
     }
 
     void LLVMCodegen::LocalState::declare_var(
-      const Node& id, const LoweredType& type)
+      const Node& local_id, const LoweredType& type)
     {
-      declared_var_types.insert_or_assign(LLVMCodegen::node_text(id), type);
+      declared_var_types.insert_or_assign(
+        LLVMCodegen::node_text(local_id), type);
     }
 
     bool LLVMCodegen::LocalState::bind_value(
-      const Node& definition, const Node& id, const LoweredValue& value)
+      const Node& definition, const Node& local_id, const LoweredValue& value)
     {
-      auto name = LLVMCodegen::node_text(id);
+      auto name = LLVMCodegen::node_text(local_id);
       auto declared_var = declared_var_types.find(name);
 
       if (
@@ -40,9 +41,9 @@ namespace vbcc
     }
 
     const LoweredValue*
-    LLVMCodegen::LocalState::find_value(const Node& id) const
+    LLVMCodegen::LocalState::find_value(const Node& local_id) const
     {
-      auto name = LLVMCodegen::node_text(id);
+      auto name = LLVMCodegen::node_text(local_id);
       auto value = values.find(name);
 
       if (value == values.end())
@@ -52,9 +53,9 @@ namespace vbcc
     }
 
     std::optional<LoweredValue>
-    LLVMCodegen::LocalState::take_value(const Node& id)
+    LLVMCodegen::LocalState::take_value(const Node& local_id)
     {
-      auto name = LLVMCodegen::node_text(id);
+      auto name = LLVMCodegen::node_text(local_id);
       auto value = values.find(name);
 
       if (value == values.end())
