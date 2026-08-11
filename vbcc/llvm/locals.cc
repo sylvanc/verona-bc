@@ -9,7 +9,7 @@ namespace vbcc
 
     void LLVMCodegen::LocalState::reset()
     {
-      values.clear();
+      local_values.clear();
       declared_var_types.clear();
     }
 
@@ -36,7 +36,7 @@ namespace vbcc
         return false;
       }
 
-      values.insert_or_assign(name, value);
+      local_values.insert_or_assign(name, value);
       return true;
     }
 
@@ -44,26 +44,97 @@ namespace vbcc
     LLVMCodegen::LocalState::find_value(const Node& local_id) const
     {
       auto name = LLVMCodegen::node_text(local_id);
-      auto value = values.find(name);
+      auto value = local_values.find(name);
 
-      if (value == values.end())
+      if (value == local_values.end())
         return nullptr;
 
       return &value->second;
     }
 
     std::optional<LoweredValue>
-    LLVMCodegen::LocalState::take_value(const Node& local_id)
+    LLVMCodegen::LocalState::extract_value(const Node& local_id)
     {
       auto name = LLVMCodegen::node_text(local_id);
-      auto value = values.find(name);
+      auto value = local_values.find(name);
 
-      if (value == values.end())
+      if (value == local_values.end())
         return {};
 
       auto result = value->second;
-      values.erase(value);
+      local_values.erase(value);
       return result;
+    }
+
+    std::optional<LoweredValue>
+    LLVMCodegen::LocalState::move_value(const Node& use, const Node& src)
+    {
+      auto value = extract_value(src);
+
+      if (!value)
+      {
+        codegen.fail(
+          use, "move of unknown local '" + LLVMCodegen::node_text(src) + "'");
+        return {};
+      }
+
+      // Moving transfers the source's existing ownership obligation.
+      return value;
+    }
+
+    std::optional<LoweredValue>
+    LLVMCodegen::LocalState::copy_value(const Node& use, const Node& src)
+    {
+      auto* source = find_value(src);
+
+      if (!source)
+      {
+        codegen.fail(
+          use, "copy of unknown local '" + LLVMCodegen::node_text(src) + "'");
+        return {};
+      }
+
+      auto value = *source;
+
+      // Copying creates another ownership obligation when the runtime
+      // representation requires one.
+      switch (value.type.ownership)
+      {
+        case OwnershipKind::Trivial:
+          break;
+
+        case OwnershipKind::Managed:
+          codegen.fail(use, "copy of a managed value is not supported");
+          return {};
+      }
+
+      return value;
+    }
+
+    bool LLVMCodegen::LocalState::drop_value(const Node& use, const Node& src)
+    {
+      auto value = extract_value(src);
+
+      if (!value)
+      {
+        codegen.fail(
+          use, "drop of unknown local '" + LLVMCodegen::node_text(src) + "'");
+        return false;
+      }
+
+      // Dropping ends the binding's ownership obligation when the runtime
+      // representation requires one.
+      switch (value->type.ownership)
+      {
+        case OwnershipKind::Trivial:
+          break;
+
+        case OwnershipKind::Managed:
+          codegen.fail(use, "drop of a managed value is not supported");
+          return false;
+      }
+
+      return true;
     }
   }
 }

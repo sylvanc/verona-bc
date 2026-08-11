@@ -120,10 +120,13 @@ namespace vbcc
         // Latest SSA value seen for each live VIR register during emission.
         // This linear environment cannot merge distinct incoming values at
         // control-flow joins; that requires PHI or storage lowering.
-        std::unordered_map<std::string, LoweredValue> values;
+        std::unordered_map<std::string, LoweredValue> local_values;
         // Function-wide declared representation of each mutable VIR Var, used
         // to reject reassignments with incompatible representations.
         std::unordered_map<std::string, LoweredType> declared_var_types;
+
+        // Removes a local binding without applying an ownership policy.
+        std::optional<LoweredValue> extract_value(const Node& local_id);
 
       public:
         explicit LocalState(LLVMCodegen& codegen);
@@ -135,7 +138,11 @@ namespace vbcc
           const Node& local_id,
           const LoweredValue& value);
         const LoweredValue* find_value(const Node& local_id) const;
-        std::optional<LoweredValue> take_value(const Node& local_id);
+        std::optional<LoweredValue>
+        move_value(const Node& use, const Node& src);
+        std::optional<LoweredValue>
+        copy_value(const Node& use, const Node& src);
+        bool drop_value(const Node& use, const Node& src);
       };
 
       /* working state */

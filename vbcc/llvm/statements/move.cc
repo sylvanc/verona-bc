@@ -8,15 +8,11 @@ namespace vbcc
     {
       auto dst = statement / LocalId;
       auto src = statement / Rhs;
-      auto value = locals.take_value(src);
+      auto value = locals.move_value(statement, src);
 
       if (!value)
-      {
-        fail(statement, "move of unknown local '" + node_text(src) + "'");
         return false;
-      }
 
-      // Move transfers the existing ownership obligation to the destination.
       return locals.bind_value(statement, dst, *value);
     }
   }
