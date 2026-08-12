@@ -15,6 +15,7 @@ add_library(libvbcllvm STATIC
   module.cc
   ownership.cc
   statements.cc
+  statements/args.cc
   statements/binop.cc
   statements/constant.cc
   statements/copy.cc

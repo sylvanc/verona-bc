@@ -2,12 +2,22 @@
 
 #include <cassert>
 #include <cstddef>
+#include <functional>
+#include <optional>
 #include <vector>
 
 namespace vbcc
 {
   namespace llvm_backend
   {
+    using TransferValue = std::function<std::optional<LoweredValue>(
+      const Node& use, const Node& src)>;
+
+    std::optional<std::vector<LoweredValue>> lower_args(
+      const Node& args,
+      const TransferValue& move_value,
+      const TransferValue& copy_value);
+
     bool LLVMCodegen::emit_ffi(const Node& statement)
     {
       auto dst = statement / LocalId;
@@ -37,6 +47,18 @@ namespace vbcc
         return false;
       }
 
+      auto lowered_args = lower_args(
+        args,
+        [this](const Node& use, const Node& src) {
+          return locals.move_value(use, src);
+        },
+        [this](const Node& use, const Node& src) {
+          return locals.copy_value(use, src);
+        });
+
+      if (!lowered_args)
+        return false;
+
       std::vector<llvm::Value*> llvm_args;
       llvm_args.reserve(args->size());
 
@@ -44,54 +66,21 @@ namespace vbcc
 
       for (const auto& arg : *args)
       {
-        auto arg_kind = arg / Type;
-        auto src = arg / Rhs;
-        std::optional<LoweredValue> value;
+        auto& value = lowered_args->at(i);
 
-        if (arg_kind == ArgCopy)
-        {
-          auto* source = locals.find_value(src);
-
-          if (!source)
-          {
-            fail(arg, "FFI ArgCopy of unknown local '" + node_text(src) + "'");
-            return false;
-          }
-
-          value = *source;
-
-          // ArgCopy has the same ownership semantics as Copy. Future managed
-          // representations will emit their retain operation here.
-          switch (value->type.ownership)
-          {
-            case OwnershipKind::Trivial:
-              break;
-
-            case OwnershipKind::Managed:
-              fail(arg, "FFI argument cannot copy a managed value yet");
-              return false;
-          }
-        }
-        else
-        {
-          assert(arg_kind == ArgMove);
-          value = locals.take_value(src);
-
-          if (!value)
-          {
-            fail(arg, "FFI ArgMove of unknown local '" + node_text(src) + "'");
-            return false;
-          }
-        }
-
-        if (value->type != symbol.param_types.at(i))
+        if (value.type != symbol.param_types.at(i))
         {
           fail(arg, "FFI argument representation mismatch");
           return false;
         }
 
-        assert(value->value != nullptr);
-        llvm_args.push_back(value->value);
+        if (value.value == nullptr)
+        {
+          fail(arg, "FFI argument has no runtime representation");
+          return false;
+        }
+
+        llvm_args.push_back(value.value);
         ++i;
       }
 
