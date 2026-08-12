@@ -71,6 +71,7 @@ namespace vbcc
       llvm::Function* function;
       LoweredType return_type;
       std::vector<LoweredType> param_types;
+      llvm::GlobalVariable* descriptor = nullptr;
     };
 
     struct LoweredLibrary
@@ -104,6 +105,15 @@ namespace vbcc
     class LLVMCodegen
     {
     private:
+      struct RuntimeFunctions
+      {
+        llvm::Function* thread_create = nullptr;
+        llvm::Function* thread_destroy = nullptr;
+        llvm::Function* frame_enter = nullptr;
+        llvm::Function* frame_leave = nullptr;
+        llvm::Function* frame_prepare_tailcall = nullptr;
+      };
+
       class BasicBlockState
       {
       private:
@@ -159,6 +169,11 @@ namespace vbcc
       std::vector<LoweredLibrary> libraries;
       std::unordered_map<std::string, LoweredSymbol> symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
+      RuntimeFunctions runtime;
+      llvm::StructType* function_descriptor_type = nullptr;
+      llvm::Function* entry_wrapper = nullptr;
+      llvm::Value* current_thread = nullptr;
+      llvm::Value* current_frame = nullptr;
       BasicBlockState blocks;
       LocalState locals;
       bool failed = false;
@@ -194,6 +209,11 @@ namespace vbcc
       void declare_libraries();
       bool emit_library_initializers();
       void declare_functions();
+      bool declare_runtime_functions();
+      bool define_function_descriptors();
+      bool emit_entry_wrapper();
+      bool emit_prepare_tailcall(
+        const Node& statement, llvm::Value* function_descriptor);
 
       bool emit_function(const Node& func);
       bool emit_statement(const Node& statement);
@@ -207,8 +227,9 @@ namespace vbcc
 
       bool
       emit_terminator(const Node& terminator, const LoweredType& return_type);
-      bool emit_tailcall(const Node& statement);
-      bool emit_tailcall_dyn(const Node& statement);
+      bool emit_tailcall(const Node& statement, const LoweredType& return_type);
+      bool
+      emit_tailcall_dyn(const Node& statement, const LoweredType& return_type);
       bool emit_return(const Node& statement, const LoweredType& return_type);
       bool emit_raise(const Node& statement);
       bool emit_cond(const Node& statement);

@@ -41,6 +41,12 @@ namespace vbcc
       }
 
       auto argument = lowered.function->arg_begin();
+      assert(argument != lowered.function->arg_end());
+      argument->setName("thread");
+      current_thread = &*argument++;
+      assert(argument != lowered.function->arg_end());
+      argument->setName("frame");
+      current_frame = &*argument++;
       size_t param_index = 0;
 
       for (const auto& param : *params)

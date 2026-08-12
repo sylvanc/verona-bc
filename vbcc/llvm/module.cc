@@ -45,8 +45,8 @@ namespace vbcc
 
     bool LLVMCodegen::configure_target()
     {
-      // Configure the module for LLVM's native/default target. 
-      // Keep the module triple and DataLayout consistent by deriving them 
+      // Configure the module for LLVM's native/default target.
+      // Keep the module triple and DataLayout consistent by deriving them
       // from the same TargetMachine.
       // For AOT compilation later, support user-specified target triple
       // through CLI override. For now, just use the default target triple.
@@ -110,18 +110,21 @@ namespace vbcc
       // body so forward calls and recursion do not depend on VIR source order.
       declare_libraries();
       declare_functions();
+      if (!declare_runtime_functions())
+        return false;
+
       return !failed;
     }
 
     bool LLVMCodegen::define_globals_and_metadata()
     {
-      // Future class and primitive descriptors belong here because their
+      // Class and primitive descriptors will also belong here because their
       // method tables refer to the functions declared by declare_callables().
       //
       // Memo globals also belong here so MemoSlot can refer to them while
       // define_functions() emits function bodies. emit_initializers() will
       // later generate the code that fills those globals.
-      return true;
+      return define_function_descriptors();
     }
 
     bool LLVMCodegen::define_functions()
@@ -132,7 +135,7 @@ namespace vbcc
           return false;
       }
 
-      return !failed;
+      return emit_entry_wrapper() && !failed;
     }
 
     bool LLVMCodegen::emit_initializers()
@@ -148,7 +151,8 @@ namespace vbcc
           return false;
         }
       }
-      // emit_memo_initializers() will eventually emit the MemoInit functions in order, but for now we just emit the FFI library initializers.
+      // emit_memo_initializers() will eventually emit the MemoInit functions in
+      // order, but for now we just emit the FFI library initializers.
       return emit_library_initializers();
     }
 

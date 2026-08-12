@@ -13,7 +13,7 @@ namespace vbcc
         auto name = node_text(id);
 
         if (name == "@main")
-          return std::string("verona_main");
+          return std::string("verona_fn_main");
 
         return "verona_fn_" + strip_sigil(name);
       };
@@ -34,8 +34,9 @@ namespace vbcc
         if (!lowered_return || !lowered_params)
           continue;
 
-        std::vector<llvm::Type*> llvm_params;
-        llvm_params.reserve(lowered_params->size());
+        auto* pointer_type = llvm::PointerType::getUnqual(context);
+        std::vector<llvm::Type*> llvm_params{pointer_type, pointer_type};
+        llvm_params.reserve(lowered_params->size() + 2);
 
         for (const auto& param_type : *lowered_params)
           llvm_params.push_back(param_type.value_type);
@@ -56,23 +57,45 @@ namespace vbcc
 
         auto name = function_name(function_id);
 
+        if ((id == "@main") && module.getFunction("verona_main"))
+        {
+          fail(func, "duplicate LLVM function name 'verona_main'");
+          continue;
+        }
+
         if (module.getFunction(name))
         {
           fail(func, "duplicate LLVM function name '" + name + "'");
           continue;
         }
 
-        auto linkage = id == "@main" ? llvm::GlobalValue::ExternalLinkage :
-                                       llvm::GlobalValue::InternalLinkage;
-        auto* function =
-          llvm::Function::Create(function_type, linkage, name, module);
+        auto* function = llvm::Function::Create(
+          function_type, llvm::GlobalValue::InternalLinkage, name, module);
 
-        function->setCallingConv(llvm::CallingConv::C);
+        // tailcc permits musttail calls between Verona functions whose
+        // signatures differ, matching the interpreter's reusable frame.
+        function->setCallingConv(llvm::CallingConv::Tail);
         functions.emplace(
           id,
           LoweredFunction{
             function, *lowered_return, std::move(*lowered_params)});
       }
+
+      auto main = functions.find("@main");
+
+      if (main == functions.end())
+        return;
+
+      auto* wrapper_type =
+        llvm::FunctionType::get(llvm::Type::getVoidTy(context), {}, false);
+      auto* wrapper = llvm::Function::Create(
+        wrapper_type,
+        llvm::GlobalValue::ExternalLinkage,
+        "verona_main",
+        module);
+      wrapper->setCallingConv(llvm::CallingConv::C);
+
+      entry_wrapper = wrapper;
     }
   }
 }

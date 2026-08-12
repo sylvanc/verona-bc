@@ -306,13 +306,38 @@ echo $? # 0
 `libvrt.a` supplies the native entry point and the process-local
 `set_exit_code(i32)` FFI function used by this first backend slice.
 The compiler/runtime boundary is declared by the installed, C-compatible
-`<vrt/abi.h>` header. It currently declares `set_exit_code(int32_t)` as a
+`<vrt/abi.h>` header. It declares `set_exit_code(int32_t)` as a
 runtime-provided function and `verona_main(void)` as the generated program
-entry point. Runtime-internal C++ helpers are not part of this public ABI.
+entry point. It also includes `<vrt/context.h>`, which provides opaque
+`vrt_thread` and `vrt_frame` types plus their C lifecycle API. Logical frames
+form a parent chain, carry a stable runtime-assigned identity and generated
+function descriptor, and can be rebound without changing identity in
+preparation for a tailcall. Their concrete C++ layouts remain private to
+`libvrt`.
 
-> **Status:** The LLVM backend currently supports `none` and `i32`,
-> single-block functions, process-local non-variadic FFI declarations, and
-> the `const`, `ffi`, `drop`, and `ret` tokens. Other types, control flow,
-> operations, libraries, symbol versions, and variadic calls are rejected
-> with an LLVM-backend diagnostic. A build configured without
-> `VERONA_ENABLE_LLVM_BACKEND` similarly rejects `--emit llvm-ir`.
+The C-compatible `verona_main` wrapper creates the root thread and frame, and
+every internal Verona function receives them as hidden `ptr` parameters.
+Static and dynamic tailcalls forward the same pointers. Before the LLVM
+`musttail` call, the backend transfers each `MoveArg` and calls
+`vrt_frame_prepare_tailcall`; static calls supply generated function metadata,
+while the current raw-pointer dynamic representation supplies a null
+descriptor. The liveness pass expresses non-transferred register cleanup as
+explicit `Drop` statements before the terminator.
+
+Frame-local regions, stack-object finalization, and managed ownership
+operations are not yet implemented by the native runtime. As those
+representations are added, `vrt_frame_prepare_tailcall` will reset their
+per-activation state while preserving the logical frame, its identity, and its
+frame-local region.
+
+> **Status:** The LLVM backend currently supports scalar primitive types,
+> multi-block conditional control flow, scalar operations, copy/move/drop,
+> process-local non-variadic FFI calls, returns, and static tailcalls. Dynamic
+> tailcalls are supported when the target has the current raw `ptr`
+> representation. Verona functions use LLVM `tailcc`; the exported
+> C-compatible `verona_main` wrapper enters the internal Verona calling
+> convention. Managed runtime representations, ordinary Verona calls,
+> dynamic lookup, and non-local `raise`/`getraise`/`setraise` control transfer
+> are not yet lowered. Unsupported operations, library forms, symbol versions,
+> and variadic calls produce an LLVM-backend diagnostic. A build configured
+> without `VERONA_ENABLE_LLVM_BACKEND` similarly rejects `--emit llvm-ir`.

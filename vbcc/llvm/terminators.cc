@@ -14,10 +14,10 @@ namespace vbcc
         {Tailcall, TailcallDyn, Return, Raise, Cond, Jump}));
 
       if (terminator == Tailcall)
-        return emit_tailcall(terminator);
+        return emit_tailcall(terminator, return_type);
 
       if (terminator == TailcallDyn)
-        return emit_tailcall_dyn(terminator);
+        return emit_tailcall_dyn(terminator, return_type);
 
       if (terminator == Return)
         return emit_return(terminator, return_type);
