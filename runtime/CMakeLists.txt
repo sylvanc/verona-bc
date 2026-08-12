@@ -1,4 +1,5 @@
 add_library(libvrt STATIC
+  context.cc
   exit_code.cc
   native_main.cc
 )

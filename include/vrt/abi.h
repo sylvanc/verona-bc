@@ -1,14 +1,9 @@
 #pragma once
 
-#include <stdint.h>
+#include "context.h"
+#include "export.h"
 
-#if defined(_WIN32)
-#  define VRT_EXPORT __declspec(dllexport)
-#elif defined(__GNUC__) || defined(__clang__)
-#  define VRT_EXPORT __attribute__((visibility("default")))
-#else
-#  define VRT_EXPORT
-#endif
+#include <stdint.h>
 
 #if defined(__cplusplus)
 extern "C"
