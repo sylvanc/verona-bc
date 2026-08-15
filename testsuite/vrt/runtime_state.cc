@@ -1,6 +1,8 @@
 #include "context.h"
 #include "vrt.h"
 
+#include <thread>
+
 int main()
 {
   vrt::reset_exit_code();
@@ -20,22 +22,23 @@ int main()
   const vrt_function_descriptor tail_function{3, "tail"};
 
   if (
-    (vrt_thread_current_frame(nullptr) != nullptr) ||
-    (vrt_frame_enter(nullptr, &root_function) != nullptr) ||
+    (vrt_thread_current() != nullptr) ||
+    (vrt_thread_current_frame() != nullptr) ||
     (vrt_frame_parent(nullptr) != nullptr) || (vrt_frame_id(nullptr) != 0) ||
     (vrt_frame_function(nullptr) != nullptr))
     return 4;
 
-  auto* thread = vrt_thread_create();
+  vrt::init_thread();
+  auto* thread = vrt_thread_current();
   if (thread == nullptr)
     return 5;
 
-  if (vrt_thread_current_frame(thread) != nullptr)
+  if (vrt_thread_current_frame() != nullptr)
     return 6;
 
-  auto* root = vrt_frame_enter(thread, &root_function);
+  auto* root = vrt_frame_enter(&root_function);
   if (
-    (root == nullptr) || (vrt_thread_current_frame(thread) != root) ||
+    (root == nullptr) || (vrt_thread_current_frame() != root) ||
     (vrt_frame_parent(root) != nullptr) ||
     (vrt_frame_function(root) != &root_function))
     return 7;
@@ -44,9 +47,9 @@ int main()
   if (root_id == 0)
     return 8;
 
-  auto* child = vrt_frame_enter(thread, &child_function);
+  auto* child = vrt_frame_enter(&child_function);
   if (
-    (child == nullptr) || (vrt_thread_current_frame(thread) != child) ||
+    (child == nullptr) || (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) ||
     (vrt_frame_function(child) != &child_function) ||
     (vrt_frame_id(child) == root_id))
@@ -58,34 +61,83 @@ int main()
   child->stack_mark = 4;
   child->finalizer_mark = 5;
   child->raise_target = root_id;
-  vrt_frame_prepare_tailcall(thread, child, &tail_function);
+  vrt_frame_prepare_tailcall(&tail_function);
   if (
-    (vrt_thread_current_frame(thread) != child) ||
+    (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) || (vrt_frame_id(child) != child_id) ||
     (vrt_frame_function(child) != &tail_function) ||
     (child->region != child_region) || (child->stack_mark != 4) ||
     (child->finalizer_mark != 5) || (child->raise_target != root_id))
     return 10;
 
-  vrt_frame_leave(thread, child);
-  if (vrt_thread_current_frame(thread) != root)
+  auto* reused = vrt_frame_enter(&tail_function);
+  if (
+    (reused != child) || (vrt_thread_current_frame() != child) ||
+    (vrt_frame_parent(child) != root) || (vrt_frame_id(child) != child_id) ||
+    (vrt_frame_function(child) != &tail_function) ||
+    (child->region != child_region) || (child->stack_mark != 4) ||
+    (child->finalizer_mark != 5) || (child->raise_target != root_id))
     return 11;
 
-  vrt_frame_leave(thread, root);
-  if (vrt_thread_current_frame(thread) != nullptr)
+  vrt_frame_leave();
+  if (vrt_thread_current_frame() != root)
     return 12;
 
-  vrt_thread_destroy(thread);
-
-  thread = vrt_thread_create();
+  vrt_frame_prepare_tailcall(nullptr);
   if (
-    (thread == nullptr) ||
-    (vrt_frame_enter(thread, &root_function) == nullptr) ||
-    (vrt_frame_enter(thread, &child_function) == nullptr))
+    (vrt_thread_current_frame() != root) ||
+    (vrt_frame_function(root) != nullptr))
     return 13;
 
-  vrt_thread_destroy(thread);
-  vrt_thread_destroy(nullptr);
+  auto* dynamically_reused = vrt_frame_enter(&tail_function);
+  if (
+    (dynamically_reused != root) || (vrt_thread_current_frame() != root) ||
+    (vrt_frame_parent(root) != nullptr) || (vrt_frame_id(root) != root_id) ||
+    (vrt_frame_function(root) != &tail_function))
+    return 14;
+
+  vrt_frame_leave();
+  if (vrt_thread_current_frame() != nullptr)
+    return 15;
+
+  bool isolated = false;
+  std::thread worker([&isolated, thread, &root_function]() {
+    if (
+      (vrt_thread_current() != nullptr) ||
+      (vrt_thread_current_frame() != nullptr))
+      return;
+
+    vrt::init_thread();
+    auto* worker_thread = vrt_thread_current();
+    auto* worker_frame = vrt_frame_enter(&root_function);
+    isolated = (worker_thread != nullptr) && (worker_thread != thread) &&
+      (worker_frame != nullptr) && (vrt_thread_current_frame() == worker_frame);
+    vrt::deinit_thread();
+    isolated = isolated && (vrt_thread_current() == nullptr);
+  });
+  worker.join();
+  if (!isolated || (vrt_thread_current() != thread))
+    return 16;
+
+  if (
+    (vrt_frame_enter(&root_function) == nullptr) ||
+    (vrt_frame_enter(&child_function) == nullptr))
+    return 17;
+
+  vrt::deinit_thread();
+  if (
+    (vrt_thread_current() != nullptr) ||
+    (vrt_thread_current_frame() != nullptr))
+    return 18;
+
+  vrt::init_thread();
+  thread = vrt_thread_current();
+  if (
+    (thread == nullptr) || (vrt_frame_enter(&root_function) == nullptr) ||
+    (vrt_frame_id(vrt_thread_current_frame()) != 1))
+    return 19;
+
+  vrt::deinit_thread();
 
   return 0;
 }

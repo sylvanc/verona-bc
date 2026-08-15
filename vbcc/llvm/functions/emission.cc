@@ -29,6 +29,17 @@ namespace vbcc
       locals.reset();
       blocks.reset();
 
+      if (
+        (lowered.descriptor == nullptr) || (runtime.frame_enter == nullptr) ||
+        (runtime.frame_leave == nullptr))
+      {
+        fail(func, "LLVM frame runtime is unavailable");
+        return false;
+      }
+
+      auto* prologue =
+        llvm::BasicBlock::Create(context, "prologue", lowered.function);
+
       for (const auto& variable : *vars)
       {
         auto variable_type = variable / Type;
@@ -41,12 +52,6 @@ namespace vbcc
       }
 
       auto argument = lowered.function->arg_begin();
-      assert(argument != lowered.function->arg_end());
-      argument->setName("thread");
-      current_thread = &*argument++;
-      assert(argument != lowered.function->arg_end());
-      argument->setName("frame");
-      current_frame = &*argument++;
       size_t param_index = 0;
 
       for (const auto& param : *params)
@@ -73,6 +78,10 @@ namespace vbcc
         if (!blocks.declare(label_id, lowered.function))
           return false;
       }
+
+      builder.SetInsertPoint(prologue);
+      builder.CreateCall(runtime.frame_enter, {lowered.descriptor});
+      builder.CreateBr(blocks.get(labels->front() / LabelId));
 
       for (const auto& label : *labels)
       {

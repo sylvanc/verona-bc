@@ -1,89 +1,147 @@
 #include "context.h"
 
+#include "vrt.h"
+
 #include <cassert>
+#include <exception>
 #include <new>
 
-extern "C" VRT_EXPORT vrt_thread* vrt_thread_create(void)
+namespace
 {
-  return new (std::nothrow) vrt_thread{};
+  thread_local vrt_thread* current_thread = nullptr;
+
+  void destroy_frames(vrt_thread* thread)
+  {
+    while (thread->current_frame != nullptr)
+    {
+      auto* frame = thread->current_frame;
+      thread->current_frame = frame->parent;
+      delete frame;
+    }
+  }
 }
 
-extern "C" VRT_EXPORT void vrt_thread_destroy(vrt_thread* thread)
+namespace vrt
 {
-  if (thread == nullptr)
-    return;
-
-  while (thread->current_frame != nullptr)
+  void init_thread()
   {
-    auto* frame = thread->current_frame;
-    thread->current_frame = frame->parent;
-    delete frame;
+    assert(current_thread == nullptr);
+
+    if (current_thread != nullptr)
+      return;
+
+    current_thread = new (std::nothrow) vrt_thread{};
+
+    if (current_thread == nullptr)
+      std::terminate();
   }
 
-  delete thread;
+  void deinit_thread()
+  {
+    assert(current_thread != nullptr);
+
+    if (current_thread == nullptr)
+      return;
+
+    destroy_frames(current_thread);
+    delete current_thread;
+    current_thread = nullptr;
+  }
 }
 
-extern "C" VRT_EXPORT vrt_frame* vrt_thread_current_frame(vrt_thread* thread)
+extern "C" VRT_EXPORT vrt_thread* vrt_thread_current(void)
 {
-  if (thread == nullptr)
+  return current_thread;
+}
+
+extern "C" VRT_EXPORT vrt_frame* vrt_thread_current_frame(void)
+{
+  if (current_thread == nullptr)
     return nullptr;
 
-  return thread->current_frame;
+  return current_thread->current_frame;
 }
 
 extern "C" VRT_EXPORT vrt_frame*
-vrt_frame_enter(vrt_thread* thread, const vrt_function_descriptor* function)
+vrt_frame_enter(const vrt_function_descriptor* function)
 {
-  if ((thread == nullptr) || (thread->next_frame_id == 0))
-    return nullptr;
+  auto* thread = current_thread;
+  assert(thread != nullptr);
+
+  if (thread == nullptr)
+    std::terminate();
+
+  if (thread->tailcall_pending)
+  {
+    auto* frame = thread->current_frame;
+    assert(frame != nullptr);
+    assert(
+      (thread->tailcall_target == nullptr) ||
+      (thread->tailcall_target == function));
+
+    if (
+      (frame == nullptr) ||
+      ((thread->tailcall_target != nullptr) &&
+       (thread->tailcall_target != function)))
+      std::terminate();
+
+    thread->tailcall_pending = false;
+    thread->tailcall_target = nullptr;
+    frame->function = function;
+    return frame;
+  }
+
+  if (thread->next_frame_id == 0)
+    std::terminate();
 
   auto* frame = new (std::nothrow) vrt_frame{
-    thread,
-    thread->current_frame,
-    nullptr,
-    0,
-    0,
-    thread->next_frame_id,
-    function,
-    0};
+    thread->current_frame, nullptr, 0, 0, thread->next_frame_id, function, 0};
   if (frame == nullptr)
-    return nullptr;
+    std::terminate();
 
   thread->next_frame_id++;
   thread->current_frame = frame;
   return frame;
 }
 
-extern "C" VRT_EXPORT void vrt_frame_leave(vrt_thread* thread, vrt_frame* frame)
+extern "C" VRT_EXPORT void vrt_frame_leave(void)
 {
+  auto* thread = current_thread;
   assert(thread != nullptr);
-  assert(frame != nullptr);
-  assert(frame->thread == thread);
-  assert(thread->current_frame == frame);
+  assert(!thread->tailcall_pending);
 
-  if (
-    (thread == nullptr) || (frame == nullptr) || (frame->thread != thread) ||
-    (thread->current_frame != frame))
+  if ((thread == nullptr) || thread->tailcall_pending)
+    return;
+
+  auto* frame = thread->current_frame;
+  assert(frame != nullptr);
+
+  if (frame == nullptr)
     return;
 
   thread->current_frame = frame->parent;
   delete frame;
 }
 
-extern "C" VRT_EXPORT void vrt_frame_prepare_tailcall(
-  vrt_thread* thread, vrt_frame* frame, const vrt_function_descriptor* function)
+extern "C" VRT_EXPORT void
+vrt_frame_prepare_tailcall(const vrt_function_descriptor* function)
 {
+  auto* thread = current_thread;
   assert(thread != nullptr);
-  assert(frame != nullptr);
-  assert(frame->thread == thread);
-  assert(thread->current_frame == frame);
+  assert(!thread->tailcall_pending);
 
-  if (
-    (thread == nullptr) || (frame == nullptr) || (frame->thread != thread) ||
-    (thread->current_frame != frame))
+  if ((thread == nullptr) || thread->tailcall_pending)
+    return;
+
+  auto* frame = thread->current_frame;
+  assert(frame != nullptr);
+
+  if (frame == nullptr)
     return;
 
   frame->function = function;
+  thread->tailcall_target = function;
+  thread->tailcall_pending = true;
 }
 
 extern "C" VRT_EXPORT vrt_frame* vrt_frame_parent(vrt_frame* frame)

@@ -34,9 +34,8 @@ namespace vbcc
         if (!lowered_return || !lowered_params)
           continue;
 
-        auto* pointer_type = llvm::PointerType::getUnqual(context);
-        std::vector<llvm::Type*> llvm_params{pointer_type, pointer_type};
-        llvm_params.reserve(lowered_params->size() + 2);
+        std::vector<llvm::Type*> llvm_params;
+        llvm_params.reserve(lowered_params->size());
 
         for (const auto& param_type : *lowered_params)
           llvm_params.push_back(param_type.value_type);
@@ -72,8 +71,9 @@ namespace vbcc
         auto* function = llvm::Function::Create(
           function_type, llvm::GlobalValue::InternalLinkage, name, module);
 
-        // tailcc permits musttail calls between Verona functions whose
-        // signatures differ, matching the interpreter's reusable frame.
+        // tailcc permits musttail calls between Verona functions whose user
+        // signatures differ. Runtime context is obtained from thread-local
+        // state rather than hidden parameters.
         function->setCallingConv(llvm::CallingConv::Tail);
         functions.emplace(
           id,

@@ -68,7 +68,7 @@ function(vrt_test_define test)
     vrt_test_compile_options(vrt_runtime_state)
     target_include_directories(
       vrt_runtime_state PRIVATE "${PROJECT_SOURCE_DIR}/runtime")
-    target_link_libraries(vrt_runtime_state PRIVATE vbc::vrt)
+    target_link_libraries(vrt_runtime_state PRIVATE vbc::vrt Threads::Threads)
     vrt_add_run_node("vrt/internal/state/run" vrt_runtime_state)
   else()
     message(FATAL_ERROR "Unexpected VRT test source '${test}'")

@@ -23,6 +23,9 @@ namespace vbcc
         return false;
       }
 
+      if (!emit_leave_frame(statement))
+        return false;
+
       if (return_type.kind == ValueKind::None)
         builder.CreateRetVoid();
       else

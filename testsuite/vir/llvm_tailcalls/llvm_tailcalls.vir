@@ -1,21 +1,6 @@
 lib
   @set_exit_code = "set_exit_code"(i32): none
 
-// These functions are intentionally unreachable. They verify that dynamic
-// tailcalls forward the hidden runtime context and moved arguments through a
-// raw function pointer.
-func @dispatch($target: ptr, $code: i32): none
-  tailcall $target($code)
-
-func @dispatch_i32($target: ptr, $value: i32): i32
-  tailcall $target($value)
-
-func @identity($value: i32): i32
-  ret $value
-
-func @forward($value: i32): i32
-  tailcall @identity($value)
-
 func @finish($code: i32): none
   $_result = ffi @set_exit_code($code)
   $_none = const none

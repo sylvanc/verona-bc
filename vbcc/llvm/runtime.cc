@@ -43,17 +43,11 @@ namespace vbcc
         return function;
       };
 
-      runtime.thread_create = declare("vrt_thread_create", pointer_type, {});
-      runtime.thread_destroy =
-        declare("vrt_thread_destroy", void_type, {pointer_type});
       runtime.frame_enter =
-        declare("vrt_frame_enter", pointer_type, {pointer_type, pointer_type});
-      runtime.frame_leave =
-        declare("vrt_frame_leave", void_type, {pointer_type, pointer_type});
-      runtime.frame_prepare_tailcall = declare(
-        "vrt_frame_prepare_tailcall",
-        void_type,
-        {pointer_type, pointer_type, pointer_type});
+        declare("vrt_frame_enter", pointer_type, {pointer_type});
+      runtime.frame_leave = declare("vrt_frame_leave", void_type, {});
+      runtime.frame_prepare_tailcall =
+        declare("vrt_frame_prepare_tailcall", void_type, {pointer_type});
 
       return !failed;
     }
@@ -121,48 +115,18 @@ namespace vbcc
         return true;
 
       if (
-        (main->second.descriptor == nullptr) ||
-        (runtime.thread_create == nullptr) ||
-        (runtime.thread_destroy == nullptr) ||
-        (runtime.frame_enter == nullptr) || (runtime.frame_leave == nullptr))
+        (main->second.function == nullptr) ||
+        (main->second.descriptor == nullptr))
       {
-        fail(state.top, "LLVM entry runtime context is unavailable");
+        fail(state.top, "LLVM entry function is unavailable");
         return false;
       }
 
-      auto* pointer_type = llvm::PointerType::getUnqual(context);
-      auto* null_pointer = llvm::ConstantPointerNull::get(pointer_type);
       auto* entry = llvm::BasicBlock::Create(context, "entry", entry_wrapper);
-      auto* enter_frame =
-        llvm::BasicBlock::Create(context, "enter_frame", entry_wrapper);
-      auto* invoke_main =
-        llvm::BasicBlock::Create(context, "invoke_main", entry_wrapper);
-      auto* destroy_thread =
-        llvm::BasicBlock::Create(context, "destroy_thread", entry_wrapper);
-      auto* done = llvm::BasicBlock::Create(context, "done", entry_wrapper);
 
       builder.SetInsertPoint(entry);
-      auto* thread = builder.CreateCall(runtime.thread_create, {}, "thread");
-      builder.CreateCondBr(
-        builder.CreateICmpNE(thread, null_pointer), enter_frame, done);
-
-      builder.SetInsertPoint(enter_frame);
-      auto* frame = builder.CreateCall(
-        runtime.frame_enter, {thread, main->second.descriptor}, "frame");
-      builder.CreateCondBr(
-        builder.CreateICmpNE(frame, null_pointer), invoke_main, destroy_thread);
-
-      builder.SetInsertPoint(invoke_main);
-      auto* call = builder.CreateCall(main->second.function, {thread, frame});
+      auto* call = builder.CreateCall(main->second.function);
       call->setCallingConv(main->second.function->getCallingConv());
-      builder.CreateCall(runtime.frame_leave, {thread, frame});
-      builder.CreateBr(destroy_thread);
-
-      builder.SetInsertPoint(destroy_thread);
-      builder.CreateCall(runtime.thread_destroy, {thread});
-      builder.CreateBr(done);
-
-      builder.SetInsertPoint(done);
       builder.CreateRetVoid();
       return true;
     }
@@ -171,7 +135,6 @@ namespace vbcc
       const Node& statement, llvm::Value* function_descriptor)
     {
       if (
-        (current_thread == nullptr) || (current_frame == nullptr) ||
         (runtime.frame_prepare_tailcall == nullptr) ||
         (function_descriptor == nullptr))
       {
@@ -179,9 +142,19 @@ namespace vbcc
         return false;
       }
 
-      builder.CreateCall(
-        runtime.frame_prepare_tailcall,
-        {current_thread, current_frame, function_descriptor});
+      builder.CreateCall(runtime.frame_prepare_tailcall, {function_descriptor});
+      return true;
+    }
+
+    bool LLVMCodegen::emit_leave_frame(const Node& statement)
+    {
+      if (runtime.frame_leave == nullptr)
+      {
+        fail(statement, "LLVM frame runtime is unavailable");
+        return false;
+      }
+
+      builder.CreateCall(runtime.frame_leave);
       return true;
     }
   }

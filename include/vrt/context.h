@@ -22,49 +22,49 @@ extern "C"
     const char* name;
   } vrt_function_descriptor;
 
-  /** Create an empty logical Verona thread. */
-  VRT_EXPORT vrt_thread* vrt_thread_create(void);
+  /** Return the logical thread bound to this native thread, or null. */
+  VRT_EXPORT vrt_thread* vrt_thread_current(void);
+
+  /** Return the current logical frame, or null when there is none. */
+  VRT_EXPORT vrt_frame* vrt_thread_current_frame(void);
 
   /**
-   * Destroy a logical Verona thread and any frames still owned by it.
-   *
-   * Passing a null pointer has no effect.
-   */
-  VRT_EXPORT void vrt_thread_destroy(vrt_thread* thread);
-
-  /** Return the current frame, or null when the thread has no frames. */
-  VRT_EXPORT vrt_frame* vrt_thread_current_frame(vrt_thread* thread);
-
-  /**
-   * Enter a function by pushing a new logical frame.
+   * Enter a function using the logical thread bound to this native thread.
    *
    * function may be null. A non-null descriptor must remain alive until the
    * frame is left or rebound by a tailcall.
    *
-   * Returns null if thread is null or the frame cannot be allocated.
+   * An ordinary entry pushes a new logical frame. The entry immediately after
+   * vrt_frame_prepare_tailcall reuses the prepared current frame instead.
+   *
+   * A logical thread must already be bound to this native thread by libvrt.
+   * Failure to allocate a frame or assign it an identity terminates the
+   * process.
    */
   VRT_EXPORT vrt_frame*
-  vrt_frame_enter(vrt_thread* thread, const vrt_function_descriptor* function);
+  vrt_frame_enter(const vrt_function_descriptor* function);
 
   /**
    * Leave and destroy the current logical frame.
    *
-   * The frame must be the current frame of thread.
+   * The thread bound to this native thread must have a current frame and no
+   * pending tailcall.
    */
-  VRT_EXPORT void vrt_frame_leave(vrt_thread* thread, vrt_frame* frame);
+  VRT_EXPORT void vrt_frame_leave(void);
 
   /**
    * Rebind the current logical frame for a tailcall.
    *
-   * The frame keeps its identity, parent, region, and teardown boundaries.
+   * The current frame keeps its identity, parent, region, and teardown
+   * boundaries. The next call to vrt_frame_enter consumes the pending transfer
+   * and reuses that frame.
+   *
    * Lowering is responsible for moving arguments and releasing other locals
    * before calling this function. function may be null; a non-null descriptor
    * must remain alive until the frame is left or rebound again.
    */
-  VRT_EXPORT void vrt_frame_prepare_tailcall(
-    vrt_thread* thread,
-    vrt_frame* frame,
-    const vrt_function_descriptor* function);
+  VRT_EXPORT void
+  vrt_frame_prepare_tailcall(const vrt_function_descriptor* function);
 
   /** Return the parent frame, or null for a root frame. */
   VRT_EXPORT vrt_frame* vrt_frame_parent(vrt_frame* frame);

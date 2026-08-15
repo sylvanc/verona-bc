@@ -54,9 +54,7 @@ namespace vbcc
       }
 
       std::vector<llvm::Value*> llvm_args;
-      llvm_args.reserve(args.size() + 2);
-      llvm_args.push_back(current_thread);
-      llvm_args.push_back(current_frame);
+      llvm_args.reserve(args.size());
 
       for (size_t i = 0; i < args.size(); ++i)
       {

@@ -44,12 +44,8 @@ namespace vbcc
       std::vector<llvm::Type*> param_types;
       std::vector<llvm::Value*> llvm_args;
       auto* pointer_type = llvm::PointerType::getUnqual(context);
-      param_types.reserve(args.size() + 2);
-      llvm_args.reserve(args.size() + 2);
-      param_types.push_back(pointer_type);
-      param_types.push_back(pointer_type);
-      llvm_args.push_back(current_thread);
-      llvm_args.push_back(current_frame);
+      param_types.reserve(args.size());
+      llvm_args.reserve(args.size());
 
       for (const auto& arg : args)
       {

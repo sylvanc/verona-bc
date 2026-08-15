@@ -107,8 +107,6 @@ namespace vbcc
     private:
       struct RuntimeFunctions
       {
-        llvm::Function* thread_create = nullptr;
-        llvm::Function* thread_destroy = nullptr;
         llvm::Function* frame_enter = nullptr;
         llvm::Function* frame_leave = nullptr;
         llvm::Function* frame_prepare_tailcall = nullptr;
@@ -172,8 +170,6 @@ namespace vbcc
       RuntimeFunctions runtime;
       llvm::StructType* function_descriptor_type = nullptr;
       llvm::Function* entry_wrapper = nullptr;
-      llvm::Value* current_thread = nullptr;
-      llvm::Value* current_frame = nullptr;
       BasicBlockState blocks;
       LocalState locals;
       bool failed = false;
@@ -214,6 +210,7 @@ namespace vbcc
       bool emit_entry_wrapper();
       bool emit_prepare_tailcall(
         const Node& statement, llvm::Value* function_descriptor);
+      bool emit_leave_frame(const Node& statement);
 
       bool emit_function(const Node& func);
       bool emit_statement(const Node& statement);

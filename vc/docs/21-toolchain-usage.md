@@ -309,19 +309,36 @@ The compiler/runtime boundary is declared by the installed, C-compatible
 `<vrt/abi.h>` header. It declares `set_exit_code(int32_t)` as a
 runtime-provided function and `verona_main(void)` as the generated program
 entry point. It also includes `<vrt/context.h>`, which provides opaque
-`vrt_thread` and `vrt_frame` types plus their C lifecycle API. Logical frames
+`vrt_thread` and `vrt_frame` types plus their C access API. Logical frames
 form a parent chain, carry a stable runtime-assigned identity and generated
 function descriptor, and can be rebound without changing identity in
 preparation for a tailcall. Their concrete C++ layouts remain private to
 `libvrt`.
 
-The C-compatible `verona_main` wrapper creates the root thread and frame, and
-every internal Verona function receives them as hidden `ptr` parameters.
-Static and dynamic tailcalls forward the same pointers. Before the LLVM
-`musttail` call, the backend transfers each `MoveArg` and calls
-`vrt_frame_prepare_tailcall`; static calls supply generated function metadata,
-while the current raw-pointer dynamic representation supplies a null
-descriptor. The liveness pass expresses non-transferred register cleanup as
+`libvrt` binds one logical `vrt_thread` to each participating native thread
+using thread-local storage. Runtime-owned startup and teardown perform that
+binding; generated code does not create or destroy threads. Code that needs
+the runtime thread can probe it with `vrt_thread_current()` instead of carrying
+a hidden thread argument through every Verona call.
+
+Internal Verona functions receive only their declared user parameters; runtime
+context is not carried in hidden LLVM arguments. Every generated function
+prologue calls `vrt_frame_enter`. For an ordinary call, it pushes a new logical
+frame. After `vrt_frame_prepare_tailcall`, the next callee prologue consumes a
+thread-local pending-transfer marker and reuses the prepared frame instead.
+Generated returns call `vrt_frame_leave`, while a tailcall transfers the frame
+without leaving it. The C-compatible `verona_main` wrapper calls the internal
+`@main` function without performing runtime setup or teardown.
+
+Frame entry and exit remain runtime calls in this implementation. They define
+the semantic slow path that generated prologues and epilogues can later replace
+with inline fast paths while retaining runtime fallbacks.
+
+Before the LLVM `musttail` call, the backend transfers each `MoveArg` and calls
+`vrt_frame_prepare_tailcall`. Static calls record generated function metadata;
+the current raw-pointer dynamic representation records a null target, which the
+actual tailcallee replaces with its descriptor when its prologue consumes the
+transfer. The liveness pass expresses non-transferred register cleanup as
 explicit `Drop` statements before the terminator.
 
 Frame-local regions, stack-object finalization, and managed ownership
