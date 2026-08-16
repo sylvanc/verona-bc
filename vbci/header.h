@@ -213,7 +213,12 @@ namespace vbci
 
       auto r = loc.to_region();
 
+#ifdef NDEBUG
       if (!r->is_finalizing() && (--rc == 0))
+#else
+      // Detecting rc issues in finalization (as opposed to cyclic references)
+      if ((--rc == 0) && !r->is_finalizing())
+#endif
         collect(this);
     }
   };

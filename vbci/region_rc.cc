@@ -76,7 +76,10 @@ namespace vbci
   void RegionRC::release_dead_objects()
   {
     for (auto h : headers)
+    {
+      assert(h->get_rc() == 0);
       delete[] reinterpret_cast<uint8_t*>(h);
+    }
 
     delete this;
   }
