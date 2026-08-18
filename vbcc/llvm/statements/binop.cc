@@ -11,7 +11,7 @@ namespace vbcc
       auto dst = statement / LocalId;
       auto lhs_id = statement / Lhs;
       auto rhs_id = statement / Rhs;
-      auto* lhs = locals.find_value(lhs_id);
+      auto lhs = locals.find_value(lhs_id);
 
       if (!lhs)
       {
@@ -21,7 +21,7 @@ namespace vbcc
         return false;
       }
 
-      auto* rhs = locals.find_value(rhs_id);
+      auto rhs = locals.find_value(rhs_id);
 
       if (!rhs)
       {

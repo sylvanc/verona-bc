@@ -8,7 +8,7 @@ namespace vbcc
       const Node& statement, const LoweredType& return_type)
     {
       auto value_id = statement / LocalId;
-      auto* value = locals.find_value(value_id);
+      auto value = locals.find_value(value_id);
 
       if (!value)
       {

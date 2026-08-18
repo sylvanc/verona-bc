@@ -7,7 +7,7 @@ namespace vbcc
     bool LLVMCodegen::emit_cond(const Node& statement)
     {
       auto condition_id = statement / LocalId;
-      auto* condition = locals.find_value(condition_id);
+      auto condition = locals.find_value(condition_id);
 
       if (!condition)
       {

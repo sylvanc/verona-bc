@@ -39,6 +39,7 @@ namespace vbcc
 
       auto* prologue =
         llvm::BasicBlock::Create(context, "prologue", lowered.function);
+      builder.SetInsertPoint(prologue);
 
       for (const auto& variable : *vars)
       {
@@ -79,7 +80,6 @@ namespace vbcc
           return false;
       }
 
-      builder.SetInsertPoint(prologue);
       builder.CreateCall(runtime.frame_enter, {lowered.descriptor});
       builder.CreateBr(blocks.get(labels->front() / LabelId));
 

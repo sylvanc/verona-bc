@@ -11,7 +11,7 @@ namespace vbcc
     {
       auto dst = statement / LocalId;
       auto src = statement / Rhs;
-      auto* source = locals.find_value(src);
+      auto source = locals.find_value(src);
 
       if (!source)
       {

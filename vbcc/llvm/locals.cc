@@ -10,25 +10,35 @@ namespace vbcc
     void LLVMCodegen::LocalState::reset()
     {
       local_values.clear();
-      declared_var_types.clear();
+      variables.clear();
     }
 
     void LLVMCodegen::LocalState::declare_var(
       const Node& local_id, const LoweredType& type)
     {
-      declared_var_types.insert_or_assign(
-        LLVMCodegen::node_text(local_id), type);
+      auto name = LLVMCodegen::node_text(local_id);
+      llvm::Value* storage = nullptr;
+
+      if (type.storage_type != nullptr)
+      {
+        storage = codegen.builder.CreateAlloca(
+          type.storage_type,
+          nullptr,
+          LLVMCodegen::strip_sigil(name) + ".slot");
+      }
+
+      variables.insert_or_assign(name, VariableState{type, storage});
     }
 
     bool LLVMCodegen::LocalState::bind_value(
       const Node& definition, const Node& local_id, const LoweredValue& value)
     {
       auto name = LLVMCodegen::node_text(local_id);
-      auto declared_var = declared_var_types.find(name);
+      auto variable = variables.find(name);
 
       if (
-        (declared_var != declared_var_types.end()) &&
-        (declared_var->second != value.type))
+        (variable != variables.end()) &&
+        (variable->second.type != value.type))
       {
         codegen.fail(
           definition,
@@ -36,26 +46,68 @@ namespace vbcc
         return false;
       }
 
+      if (variable != variables.end())
+      {
+        auto& state = variable->second;
+
+        if (state.storage == nullptr)
+          return true;
+
+        if (
+          (value.value == nullptr) ||
+          (value.value->getType() != state.type.storage_type))
+        {
+          codegen.fail(
+            definition,
+            "assignment storage mismatch for variable '" + name + "'");
+          return false;
+        }
+
+        codegen.builder.CreateStore(value.value, state.storage);
+        return true;
+      }
+
       local_values.insert_or_assign(name, value);
       return true;
     }
 
-    const LoweredValue*
-    LLVMCodegen::LocalState::find_value(const Node& local_id) const
+    std::optional<LoweredValue>
+    LLVMCodegen::LocalState::find_value(const Node& local_id)
     {
       auto name = LLVMCodegen::node_text(local_id);
+      auto variable = variables.find(name);
+
+      if (variable != variables.end())
+      {
+        auto& state = variable->second;
+
+        if (state.storage == nullptr)
+          return LoweredValue{state.type, nullptr};
+
+        auto* value = codegen.builder.CreateLoad(
+          state.type.storage_type,
+          state.storage,
+          LLVMCodegen::strip_sigil(name) + ".load");
+        return LoweredValue{state.type, value};
+      }
+
       auto value = local_values.find(name);
 
       if (value == local_values.end())
-        return nullptr;
+        return {};
 
-      return &value->second;
+      return value->second;
     }
 
     std::optional<LoweredValue>
     LLVMCodegen::LocalState::extract_value(const Node& local_id)
     {
       auto name = LLVMCodegen::node_text(local_id);
+      auto variable = variables.find(name);
+
+      if (variable != variables.end())
+        return find_value(local_id);
+
       auto value = local_values.find(name);
 
       if (value == local_values.end())
@@ -85,7 +137,7 @@ namespace vbcc
     std::optional<LoweredValue>
     LLVMCodegen::LocalState::copy_value(const Node& use, const Node& src)
     {
-      auto* source = find_value(src);
+      auto source = find_value(src);
 
       if (!source)
       {

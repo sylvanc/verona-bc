@@ -53,8 +53,8 @@ namespace vbcc
       llvm::Type* value_type;
 
       // LLVM layout used when a VIR value needs addressable storage. The
-      // current single-block Vars stay as SSA values; None has no storage
-      // representation and uses nullptr.
+      // mutable Vars use this for their function-local slots. None has no
+      // storage representation and uses nullptr.
       llvm::Type* storage_type;
 
       bool operator==(const LoweredType&) const = default;
@@ -130,16 +130,21 @@ namespace vbcc
       class LocalState
       {
       private:
-        LLVMCodegen& codegen;
-        // Latest SSA value seen for each live VIR register during emission.
-        // This linear environment cannot merge distinct incoming values at
-        // control-flow joins; that requires PHI or storage lowering.
-        std::unordered_map<std::string, LoweredValue> local_values;
-        // Function-wide declared representation of each mutable VIR Var, used
-        // to reject reassignments with incompatible representations.
-        std::unordered_map<std::string, LoweredType> declared_var_types;
+        struct VariableState
+        {
+          LoweredType type;
+          llvm::Value* storage;
+        };
 
-        // Removes a local binding without applying an ownership policy.
+        LLVMCodegen& codegen;
+        // SSA values for parameters and single-assignment VIR registers.
+        std::unordered_map<std::string, LoweredValue> local_values;
+        // Function-local storage for mutable VIR Vars. Slotless types such as
+        // None have a null storage pointer but remain declared here.
+        std::unordered_map<std::string, VariableState> variables;
+
+        // Extracts an SSA binding or loads a mutable Var without applying an
+        // ownership policy.
         std::optional<LoweredValue> extract_value(const Node& local_id);
 
       public:
@@ -151,7 +156,7 @@ namespace vbcc
           const Node& definition,
           const Node& local_id,
           const LoweredValue& value);
-        const LoweredValue* find_value(const Node& local_id) const;
+        std::optional<LoweredValue> find_value(const Node& local_id);
         std::optional<LoweredValue>
         move_value(const Node& use, const Node& src);
         std::optional<LoweredValue>
