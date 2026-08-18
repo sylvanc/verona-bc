@@ -1,3 +1,5 @@
+#include "blocks.h"
+
 #include "codegen.h"
 
 #include <cassert>
@@ -7,17 +9,15 @@ namespace vbcc
 {
   namespace llvm_backend
   {
-    LLVMCodegen::BasicBlockState::BasicBlockState(LLVMCodegen& codegen)
-    : codegen(codegen)
-    {}
+    BasicBlockState::BasicBlockState(LLVMCodegen& codegen) : codegen(codegen) {}
 
-    void LLVMCodegen::BasicBlockState::reset()
+    void BasicBlockState::reset()
     {
       blocks.clear();
     }
 
-    bool LLVMCodegen::BasicBlockState::declare(
-      const Node& label_id, llvm::Function* function)
+    bool
+    BasicBlockState::declare(const Node& label_id, llvm::Function* function)
     {
       auto name = LLVMCodegen::node_text(label_id);
 
@@ -34,8 +34,7 @@ namespace vbcc
       return true;
     }
 
-    llvm::BasicBlock*
-    LLVMCodegen::BasicBlockState::get(const Node& label_id) const
+    llvm::BasicBlock* BasicBlockState::get(const Node& label_id) const
     {
       auto block = blocks.find(LLVMCodegen::node_text(label_id));
       assert(block != blocks.end());
@@ -43,7 +42,7 @@ namespace vbcc
     }
 
     llvm::BasicBlock*
-    LLVMCodegen::BasicBlockState::find(const Node& branch, const Node& label_id)
+    BasicBlockState::find(const Node& branch, const Node& label_id)
     {
       auto name = LLVMCodegen::node_text(label_id);
       auto block = blocks.find(name);

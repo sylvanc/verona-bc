@@ -2,13 +2,11 @@
 
 #include "../bytecode.h"
 #include "../lang.h"
+#include "blocks.h"
+#include "locals.h"
+#include "lowered.h"
 
-#include <cstddef>
 #include <filesystem>
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/IR/CallingConv.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -21,147 +19,17 @@ namespace vbcc
 {
   namespace llvm_backend
   {
-    enum class ValueKind
-    {
-      None,
-      Bool,
-      SignedInteger,
-      UnsignedInteger,
-      Float,
-      Pointer,
-    };
-
-    enum class RuntimeValueKind
-    {
-      None,
-      Scalar,
-      RawPointer,
-      Object,
-      Array,
-      Reference,
-      Cown,
-      Dynamic,
-      Aggregate,
-    };
-
-    struct LoweredType
-    {
-      ValueKind kind;
-      // Selects the runtime representation and lifetime operations associated
-      // with values of this type.
-      RuntimeValueKind runtime_kind;
-      llvm::Type* value_type;
-
-      // LLVM layout used when a VIR value needs addressable storage. The
-      // mutable Vars use this for their function-local slots. None has no
-      // storage representation and uses nullptr.
-      llvm::Type* storage_type;
-
-      bool operator==(const LoweredType&) const = default;
-    };
-
-    struct LoweredValue
-    {
-      LoweredType type;
-      llvm::Value* value = nullptr;
-    };
-
-    struct LoweredFunction
-    {
-      llvm::Function* function;
-      LoweredType return_type;
-      std::vector<LoweredType> param_types;
-      llvm::GlobalVariable* descriptor = nullptr;
-    };
-
-    struct LoweredLibrary
-    {
-      std::string path;
-      std::optional<std::string> init_function_id;
-      std::vector<std::string> symbol_ids;
-
-      // Generated module state used once named libraries are loaded through
-      // the runtime rather than resolved directly by the native linker.
-      llvm::GlobalVariable* handle_slot = nullptr;
-      llvm::Function* initializer = nullptr;
-      llvm::GlobalVariable* finalizer_slot = nullptr;
-    };
-
-    struct LoweredSymbol
-    {
-      size_t library_index;
-      std::string linker_name;
-      std::string version;
-      bool vararg;
-      LoweredType return_type;
-      std::vector<LoweredType> param_types;
-
-      // Process-local symbols use a direct declaration. Named libraries will
-      // instead populate a per-program slot with a runtime-resolved pointer.
-      llvm::Function* function = nullptr;
-      llvm::GlobalVariable* function_pointer_slot = nullptr;
-    };
-
     class LLVMCodegen
     {
+      friend class BasicBlockState;
+      friend class LocalState;
+
     private:
       struct RuntimeFunctions
       {
         llvm::Function* frame_enter = nullptr;
         llvm::Function* frame_leave = nullptr;
         llvm::Function* frame_prepare_tailcall = nullptr;
-      };
-
-      class BasicBlockState
-      {
-      private:
-        LLVMCodegen& codegen;
-        std::unordered_map<std::string, llvm::BasicBlock*> blocks;
-
-      public:
-        explicit BasicBlockState(LLVMCodegen& codegen);
-
-        void reset();
-        bool declare(const Node& label_id, llvm::Function* function);
-        llvm::BasicBlock* get(const Node& label_id) const;
-        llvm::BasicBlock* find(const Node& branch, const Node& label_id);
-      };
-
-      class LocalState
-      {
-      private:
-        struct VariableState
-        {
-          LoweredType type;
-          llvm::Value* storage;
-        };
-
-        LLVMCodegen& codegen;
-        // SSA values for parameters and single-assignment VIR registers.
-        std::unordered_map<std::string, LoweredValue> local_values;
-        // Function-local storage for mutable VIR Vars. Slotless types such as
-        // None have a null storage pointer but remain declared here.
-        std::unordered_map<std::string, VariableState> variables;
-
-        // Extracts an SSA binding or loads a mutable Var without applying an
-        // ownership policy.
-        std::optional<LoweredValue> extract_value(const Node& local_id);
-
-      public:
-        explicit LocalState(LLVMCodegen& codegen);
-
-        void reset();
-        void declare_var(const Node& local_id, const LoweredType& type);
-        bool bind_value(
-          const Node& definition,
-          const Node& local_id,
-          const LoweredValue& value);
-        std::optional<LoweredValue> find_value(const Node& local_id);
-        std::optional<LoweredValue>
-        move_value(const Node& use, const Node& src);
-        std::optional<LoweredValue>
-        copy_value(const Node& use, const Node& src);
-        bool drop_value(const Node& use, const Node& src);
       };
 
       /* working state */
