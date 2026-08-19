@@ -4,6 +4,7 @@ add_library(libvbcllvm STATIC
   blocks.cc
   codegen.cc
   functions/declaration.cc
+  functions/descriptors.cc
   functions/emission.cc
   functions/params.cc
   libs/declaration.cc
@@ -15,7 +16,9 @@ add_library(libvbcllvm STATIC
   module.cc
   ownership.cc
   program.cc
-  runtime.cc
+  runtime/declaration.cc
+  runtime/frame.cc
+  runtime/tailcall.cc
   statements.cc
   statements/args.cc
   statements/binop.cc

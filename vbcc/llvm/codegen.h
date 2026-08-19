@@ -41,7 +41,6 @@ namespace vbcc
       std::unordered_map<std::string, LoweredSymbol> symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
       RuntimeFunctions runtime;
-      llvm::StructType* function_descriptor_type = nullptr;
       llvm::Function* program_entry = nullptr;
       BasicBlockState blocks;
       LocalState locals;
