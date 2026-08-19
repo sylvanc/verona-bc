@@ -1,7 +1,9 @@
-#include <vrt/abi.h>
+#include <vrt/frame.h>
+#include <vrt/program.h>
+#include <vrt/thread.h>
 
 static void (*const set_exit_code_signature)(int32_t) = set_exit_code;
-static void (*const verona_main_signature)(void) = verona_main;
+static void (*const program_entry_signature)(void) = verona_program_entry;
 static vrt_thread* (*const thread_current_signature)(void) = vrt_thread_current;
 static vrt_frame* (*const thread_current_frame_signature)(void) =
   vrt_thread_current_frame;
@@ -16,10 +18,10 @@ static uint64_t (*const frame_id_signature)(const vrt_frame*) = vrt_frame_id;
 static const vrt_function_descriptor* (*const frame_function_signature)(
   const vrt_frame*) = vrt_frame_function;
 
-void verona_main(void)
+void verona_program_entry(void)
 {
   set_exit_code_signature(0);
-  (void)verona_main_signature;
+  (void)program_entry_signature;
   (void)thread_current_signature;
   (void)thread_current_frame_signature;
   (void)frame_enter_signature;

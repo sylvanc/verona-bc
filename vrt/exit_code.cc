@@ -1,8 +1,7 @@
 #include "vrt.h"
 
-#include <vrt/abi.h>
-
 #include <atomic>
+#include <vrt/program.h>
 
 namespace
 {

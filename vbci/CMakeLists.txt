@@ -25,7 +25,7 @@ target_include_directories(vbci SYSTEM PRIVATE
 )
 
 target_include_directories(vbci PRIVATE
-  ${PROJECT_SOURCE_DIR}/runtime
+  ${PROJECT_SOURCE_DIR}/vrt
 )
 
 include(CheckCCompilerFlag)

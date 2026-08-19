@@ -1,6 +1,6 @@
-#include <vrt/abi.h>
+#include <vrt/program.h>
 
-void verona_main(void)
+void verona_program_entry(void)
 {
 #if defined(VRT_TEST_FIRST_EXIT_CODE)
   set_exit_code(VRT_TEST_FIRST_EXIT_CODE);

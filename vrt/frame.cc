@@ -1,71 +1,15 @@
-#include "context.h"
+#include "frame.h"
 
-#include "vrt.h"
+#include "thread.h"
 
 #include <cassert>
 #include <exception>
 #include <new>
 
-namespace
-{
-  thread_local vrt_thread* current_thread = nullptr;
-
-  void destroy_frames(vrt_thread* thread)
-  {
-    while (thread->current_frame != nullptr)
-    {
-      auto* frame = thread->current_frame;
-      thread->current_frame = frame->parent;
-      delete frame;
-    }
-  }
-}
-
-namespace vrt
-{
-  void init_thread()
-  {
-    assert(current_thread == nullptr);
-
-    if (current_thread != nullptr)
-      return;
-
-    current_thread = new (std::nothrow) vrt_thread{};
-
-    if (current_thread == nullptr)
-      std::terminate();
-  }
-
-  void deinit_thread()
-  {
-    assert(current_thread != nullptr);
-
-    if (current_thread == nullptr)
-      return;
-
-    destroy_frames(current_thread);
-    delete current_thread;
-    current_thread = nullptr;
-  }
-}
-
-extern "C" VRT_EXPORT vrt_thread* vrt_thread_current(void)
-{
-  return current_thread;
-}
-
-extern "C" VRT_EXPORT vrt_frame* vrt_thread_current_frame(void)
-{
-  if (current_thread == nullptr)
-    return nullptr;
-
-  return current_thread->current_frame;
-}
-
 extern "C" VRT_EXPORT vrt_frame*
 vrt_frame_enter(const vrt_function_descriptor* function)
 {
-  auto* thread = current_thread;
+  auto* thread = vrt::current_thread();
   assert(thread != nullptr);
 
   if (thread == nullptr)
@@ -95,7 +39,13 @@ vrt_frame_enter(const vrt_function_descriptor* function)
     std::terminate();
 
   auto* frame = new (std::nothrow) vrt_frame{
-    thread->current_frame, nullptr, 0, 0, thread->next_frame_id, function, 0};
+    thread->current_frame,
+    nullptr,
+    0,
+    0,
+    thread->next_frame_id,
+    function,
+    0};
   if (frame == nullptr)
     std::terminate();
 
@@ -106,7 +56,7 @@ vrt_frame_enter(const vrt_function_descriptor* function)
 
 extern "C" VRT_EXPORT void vrt_frame_leave(void)
 {
-  auto* thread = current_thread;
+  auto* thread = vrt::current_thread();
   assert(thread != nullptr);
   assert(!thread->tailcall_pending);
 
@@ -126,7 +76,7 @@ extern "C" VRT_EXPORT void vrt_frame_leave(void)
 extern "C" VRT_EXPORT void
 vrt_frame_prepare_tailcall(const vrt_function_descriptor* function)
 {
-  auto* thread = current_thread;
+  auto* thread = vrt::current_thread();
   assert(thread != nullptr);
   assert(!thread->tailcall_pending);
 

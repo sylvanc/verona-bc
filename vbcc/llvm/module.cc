@@ -110,6 +110,9 @@ namespace vbcc
       // body so forward calls and recursion do not depend on VIR source order.
       declare_libraries();
       declare_functions();
+      if (!declare_program_entry())
+        return false;
+
       if (!declare_runtime_functions())
         return false;
 
@@ -135,7 +138,7 @@ namespace vbcc
           return false;
       }
 
-      return emit_entry_wrapper() && !failed;
+      return emit_program_entry() && !failed;
     }
 
     bool LLVMCodegen::emit_initializers()

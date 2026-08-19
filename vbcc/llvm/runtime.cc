@@ -104,33 +104,6 @@ namespace vbcc
       return true;
     }
 
-    bool LLVMCodegen::emit_entry_wrapper()
-    {
-      if (entry_wrapper == nullptr)
-        return true;
-
-      auto main = functions.find("@main");
-
-      if (main == functions.end())
-        return true;
-
-      if (
-        (main->second.function == nullptr) ||
-        (main->second.descriptor == nullptr))
-      {
-        fail(state.top, "LLVM entry function is unavailable");
-        return false;
-      }
-
-      auto* entry = llvm::BasicBlock::Create(context, "entry", entry_wrapper);
-
-      builder.SetInsertPoint(entry);
-      auto* call = builder.CreateCall(main->second.function);
-      call->setCallingConv(main->second.function->getCallingConv());
-      builder.CreateRetVoid();
-      return true;
-    }
-
     bool LLVMCodegen::emit_prepare_tailcall(
       const Node& statement, llvm::Value* function_descriptor)
     {
@@ -157,5 +130,6 @@ namespace vbcc
       builder.CreateCall(runtime.frame_leave);
       return true;
     }
+
   }
 }

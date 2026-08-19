@@ -93,7 +93,7 @@ install(CODE [[
   file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
   ]])
 
-add_subdirectory(runtime)
+add_subdirectory(vrt)
 add_subdirectory(vbcc)
 add_subdirectory(vbci)
 add_subdirectory(vc)

@@ -305,14 +305,15 @@ echo $? # 0
 
 `libvrt.a` supplies the native entry point and the process-local
 `set_exit_code(i32)` FFI function used by this first backend slice.
-The compiler/runtime boundary is declared by the installed, C-compatible
-`<vrt/abi.h>` header. It declares `set_exit_code(int32_t)` as a
-runtime-provided function and `verona_main(void)` as the generated program
-entry point. It also includes `<vrt/context.h>`, which provides opaque
-`vrt_thread` and `vrt_frame` types plus their C access API. Logical frames
-form a parent chain, carry a stable runtime-assigned identity and generated
-function descriptor, and can be rebound without changing identity in
-preparation for a tailcall. Their concrete C++ layouts remain private to
+The compiler/runtime boundary is declared by the installed, C-compatible VRT
+headers. `<vrt/program.h>` declares `set_exit_code(int32_t)` as a
+runtime-provided function and `verona_program_entry(void)` as the generated
+program entry point. `<vrt/thread.h>` exposes logical-thread access, while
+`<vrt/frame.h>` exposes logical-frame operations and generated function
+descriptors. Both use the opaque types declared by `<vrt/types.h>`. Logical
+frames form a parent chain, carry a stable runtime-assigned identity and
+generated function descriptor, and can be rebound without changing identity
+in preparation for a tailcall. Their concrete C++ layouts remain private to
 `libvrt`.
 
 `libvrt` binds one logical `vrt_thread` to each participating native thread
@@ -327,8 +328,8 @@ prologue calls `vrt_frame_enter`. For an ordinary call, it pushes a new logical
 frame. After `vrt_frame_prepare_tailcall`, the next callee prologue consumes a
 thread-local pending-transfer marker and reuses the prepared frame instead.
 Generated returns call `vrt_frame_leave`, while a tailcall transfers the frame
-without leaving it. The C-compatible `verona_main` wrapper calls the internal
-`@main` function without performing runtime setup or teardown.
+without leaving it. The C-compatible `verona_program_entry` wrapper calls the
+internal `@main` function without performing runtime setup or teardown.
 
 Frame entry and exit remain runtime calls in this implementation. They define
 the semantic slow path that generated prologues and epilogues can later replace
@@ -352,8 +353,8 @@ frame-local region.
 > process-local non-variadic FFI calls, returns, and static tailcalls. Dynamic
 > tailcalls are supported when the target has the current raw `ptr`
 > representation. Verona functions use LLVM `tailcc`; the exported
-> C-compatible `verona_main` wrapper enters the internal Verona calling
-> convention. Managed runtime representations, ordinary Verona calls,
+> C-compatible `verona_program_entry` wrapper enters the internal Verona
+> calling convention. Managed runtime representations, ordinary Verona calls,
 > dynamic lookup, and non-local `raise`/`getraise`/`setraise` control transfer
 > are not yet lowered. Unsupported operations, library forms, symbol versions,
 > and variadic calls produce an LLVM-backend diagnostic. A build configured

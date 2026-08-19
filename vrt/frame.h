@@ -2,17 +2,9 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vrt/context.h>
+#include <vrt/frame.h>
 
 struct vrt_region;
-
-struct vrt_thread
-{
-  vrt_frame* current_frame = nullptr;
-  const vrt_function_descriptor* tailcall_target = nullptr;
-  uint64_t next_frame_id = 1;
-  bool tailcall_pending = false;
-};
 
 struct vrt_frame
 {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "context.h"
 #include "export.h"
 
 #include <stdint.h>
@@ -21,9 +20,10 @@ extern "C"
   /**
    * Enter the generated Verona program.
    *
-   * This function is implemented by generated code and called by libvrt.
+   * This function is implemented by generated native code and called by
+   * libvrt.
    */
-  VRT_EXPORT void verona_main(void);
+  VRT_EXPORT void verona_program_entry(void);
 
 #if defined(__cplusplus)
 }

@@ -11,10 +11,6 @@ namespace vbcc
     {
       const auto function_name = [](const Node& id) {
         auto name = node_text(id);
-
-        if (name == "@main")
-          return std::string("verona_fn_main");
-
         return "verona_fn_" + strip_sigil(name);
       };
 
@@ -56,12 +52,6 @@ namespace vbcc
 
         auto name = function_name(function_id);
 
-        if ((id == "@main") && module.getFunction("verona_main"))
-        {
-          fail(func, "duplicate LLVM function name 'verona_main'");
-          continue;
-        }
-
         if (module.getFunction(name))
         {
           fail(func, "duplicate LLVM function name '" + name + "'");
@@ -80,22 +70,6 @@ namespace vbcc
           LoweredFunction{
             function, *lowered_return, std::move(*lowered_params)});
       }
-
-      auto main = functions.find("@main");
-
-      if (main == functions.end())
-        return;
-
-      auto* wrapper_type =
-        llvm::FunctionType::get(llvm::Type::getVoidTy(context), {}, false);
-      auto* wrapper = llvm::Function::Create(
-        wrapper_type,
-        llvm::GlobalValue::ExternalLinkage,
-        "verona_main",
-        module);
-      wrapper->setCallingConv(llvm::CallingConv::C);
-
-      entry_wrapper = wrapper;
     }
   }
 }

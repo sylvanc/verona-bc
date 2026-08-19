@@ -14,6 +14,7 @@ add_library(libvbcllvm STATIC
   locals.cc
   module.cc
   ownership.cc
+  program.cc
   runtime.cc
   statements.cc
   statements/args.cc

@@ -1,9 +1,11 @@
 #include <cstdint>
 #include <type_traits>
-#include <vrt/abi.h>
+#include <vrt/frame.h>
+#include <vrt/program.h>
+#include <vrt/thread.h>
 
 static_assert(std::is_same_v<decltype(&set_exit_code), void (*)(std::int32_t)>);
-static_assert(std::is_same_v<decltype(&verona_main), void (*)(void)>);
+static_assert(std::is_same_v<decltype(&verona_program_entry), void (*)(void)>);
 static_assert(
   std::is_same_v<decltype(&vrt_thread_current), vrt_thread* (*)(void)>);
 static_assert(
@@ -23,7 +25,7 @@ static_assert(std::is_same_v<
               decltype(&vrt_frame_function),
               const vrt_function_descriptor* (*)(const vrt_frame*)>);
 
-extern "C" void verona_main(void)
+extern "C" void verona_program_entry(void)
 {
   set_exit_code(0);
 }

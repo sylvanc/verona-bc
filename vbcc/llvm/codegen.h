@@ -42,7 +42,7 @@ namespace vbcc
       std::unordered_map<std::string, LoweredFunction> functions;
       RuntimeFunctions runtime;
       llvm::StructType* function_descriptor_type = nullptr;
-      llvm::Function* entry_wrapper = nullptr;
+      llvm::Function* program_entry = nullptr;
       BasicBlockState blocks;
       LocalState locals;
       bool failed = false;
@@ -78,9 +78,10 @@ namespace vbcc
       void declare_libraries();
       bool emit_library_initializers();
       void declare_functions();
+      bool declare_program_entry();
       bool declare_runtime_functions();
       bool define_function_descriptors();
-      bool emit_entry_wrapper();
+      bool emit_program_entry();
       bool emit_prepare_tailcall(
         const Node& statement, llvm::Value* function_descriptor);
       bool emit_leave_frame(const Node& statement);

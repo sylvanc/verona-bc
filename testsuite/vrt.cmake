@@ -67,7 +67,7 @@ function(vrt_test_define test)
     add_executable(vrt_runtime_state "${CMAKE_CURRENT_SOURCE_DIR}/${test}")
     vrt_test_compile_options(vrt_runtime_state)
     target_include_directories(
-      vrt_runtime_state PRIVATE "${PROJECT_SOURCE_DIR}/runtime")
+      vrt_runtime_state PRIVATE "${PROJECT_SOURCE_DIR}/vrt")
     target_link_libraries(vrt_runtime_state PRIVATE vbc::vrt Threads::Threads)
     vrt_add_run_node("vrt/internal/state/run" vrt_runtime_state)
   else()

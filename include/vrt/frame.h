@@ -1,6 +1,7 @@
 #pragma once
 
 #include "export.h"
+#include "types.h"
 
 #include <stdint.h>
 
@@ -9,24 +10,12 @@ extern "C"
 {
 #endif
 
-  /** Logical execution state for one Verona invocation. */
-  typedef struct vrt_thread vrt_thread;
-
-  /** Logical Verona function frame. */
-  typedef struct vrt_frame vrt_frame;
-
   /** Static metadata describing a generated Verona function. */
   typedef struct vrt_function_descriptor
   {
     uint64_t id;
     const char* name;
   } vrt_function_descriptor;
-
-  /** Return the logical thread bound to this native thread, or null. */
-  VRT_EXPORT vrt_thread* vrt_thread_current(void);
-
-  /** Return the current logical frame, or null when there is none. */
-  VRT_EXPORT vrt_frame* vrt_thread_current_frame(void);
 
   /**
    * Enter a function using the logical thread bound to this native thread.

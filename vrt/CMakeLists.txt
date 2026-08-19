@@ -1,7 +1,8 @@
 add_library(libvrt STATIC
-  context.cc
   exit_code.cc
+  frame.cc
   native_main.cc
+  thread.cc
 )
 
 target_link_libraries(libvrt PUBLIC

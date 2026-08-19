@@ -1,4 +1,5 @@
-#include "context.h"
+#include "frame.h"
+#include "thread.h"
 #include "vrt.h"
 
 #include <thread>
