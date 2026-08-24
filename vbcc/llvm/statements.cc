@@ -36,6 +36,9 @@ namespace vbcc
       if (statement == SetRaise)
         return emit_set_raise(statement);
 
+      if (statement == Call)
+        return emit_call(statement);
+
       if (statement == FFI)
         return emit_ffi(statement);
 

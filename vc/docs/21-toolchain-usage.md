@@ -332,6 +332,13 @@ Generated returns call `vrt_frame_leave`, while a tailcall transfers the frame
 without leaving it. The C-compatible `verona_program_entry` wrapper calls the
 internal `@main` function without performing runtime setup or teardown.
 
+A static VIR `call` resolves its `FunctionId` through the module's predeclared
+function table, applies each argument's `ArgMove` or `ArgCopy` ownership
+operation, and emits a direct LLVM call with the callee's Verona calling
+convention. The callee's existing prologue and epilogue push and pop the
+logical frame, so ordinary calls require no separate frame operation at the
+call site.
+
 Each generated function also saves a native `setjmp` continuation in its
 logical frame. A VIR `raise` consumes its source value, encodes the currently
 supported scalar or raw-pointer representation in a 64-bit runtime word, and
@@ -367,14 +374,14 @@ frame-local region.
 
 > **Status:** The LLVM backend currently supports scalar primitive types,
 > multi-block conditional control flow, scalar operations, copy/move/drop,
-> process-local non-variadic FFI calls, returns, scalar/raw-pointer `raise`
-> payloads, and static tailcalls. Dynamic tailcalls are supported when the
-> target has the current raw `ptr` representation. Verona functions use LLVM
-> `tailcc`; the exported C-compatible `verona_program_entry` wrapper enters the
-> internal Verona calling convention. Managed runtime representations,
-> ordinary Verona calls and dynamic lookup are not yet lowered, so
-> source-level block-lambda raise is not yet available end to end
-> through the native backend. Unsupported operations, library forms, symbol
-> versions, and variadic calls produce an LLVM-backend diagnostic. A build
-> configured
-> without `VERONA_ENABLE_LLVM_BACKEND` similarly rejects `--emit llvm-ir`.
+> static calls, process-local non-variadic FFI calls, returns,
+> scalar/raw-pointer `raise` payloads, and static tailcalls. Dynamic tailcalls
+> are supported when the target has the current raw `ptr` representation.
+> Verona functions use LLVM `tailcc`; the exported C-compatible
+> `verona_program_entry` wrapper enters the internal Verona calling convention.
+> Managed runtime representations, dynamic calls, fallible dynamic calls, and
+> dynamic lookup are not yet lowered, so source-level block-lambda raise is not
+> yet available end to end through the native backend. Unsupported operations,
+> library forms, symbol versions, and variadic calls produce an LLVM-backend
+> diagnostic. A build configured without `VERONA_ENABLE_LLVM_BACKEND` similarly
+> rejects `--emit llvm-ir`.

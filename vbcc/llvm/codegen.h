@@ -96,6 +96,7 @@ namespace vbcc
       bool emit_move(const Node& statement);
       bool emit_get_raise(const Node& statement);
       bool emit_set_raise(const Node& statement);
+      bool emit_call(const Node& statement);
       bool emit_drop(const Node& statement);
       bool emit_ffi(const Node& statement);
 

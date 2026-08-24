@@ -23,6 +23,7 @@ add_library(libvbcllvm STATIC
   statements.cc
   statements/args.cc
   statements/binop.cc
+  statements/call.cc
   statements/constant.cc
   statements/copy.cc
   statements/drop.cc

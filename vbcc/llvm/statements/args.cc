@@ -13,22 +13,6 @@ namespace vbcc
     {
       using TransferValue = std::function<std::optional<LoweredValue>(
         const Node& use, const Node& src)>;
-
-      std::optional<LoweredValue> lower_arg(
-        const Node& arg,
-        const TransferValue& move_value,
-        const TransferValue& copy_value)
-      {
-        assert(arg->type() == Arg);
-        auto kind = arg / Type;
-        auto src = arg / Rhs;
-
-        if (kind == ArgMove)
-          return move_value(arg, src);
-
-        assert(kind == ArgCopy);
-        return copy_value(arg, src);
-      }
     }
 
     std::optional<std::vector<LoweredValue>> lower_args(
@@ -42,7 +26,13 @@ namespace vbcc
 
       for (const auto& arg : *args)
       {
-        auto value = lower_arg(arg, move_value, copy_value);
+        assert(arg->type() == Arg);
+        auto kind = arg / Type;
+        auto src = arg / Rhs;
+        assert(kind->type().in({ArgMove, ArgCopy}));
+
+        auto value =
+          kind == ArgMove ? move_value(arg, src) : copy_value(arg, src);
 
         if (!value)
           return {};
