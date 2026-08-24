@@ -17,6 +17,20 @@ static_assert(std::is_same_v<decltype(&vrt_frame_leave), void (*)(void)>);
 static_assert(std::is_same_v<
               decltype(&vrt_frame_prepare_tailcall),
               void (*)(const vrt_function_descriptor*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_frame_get_raise_target),
+              std::uint64_t (*)(void)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_frame_set_raise_target),
+              std::uint64_t (*)(std::uint64_t)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_frame_raise_continuation),
+              void* (*)(vrt_frame*)>);
+static_assert(
+  std::is_same_v<decltype(&vrt_frame_raise), void (*)(std::uint64_t)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_frame_take_raised_value),
+              std::uint64_t (*)(void)>);
 static_assert(
   std::is_same_v<decltype(&vrt_frame_parent), vrt_frame* (*)(vrt_frame*)>);
 static_assert(

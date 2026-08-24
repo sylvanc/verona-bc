@@ -41,27 +41,42 @@ int main()
   if (
     (root == nullptr) || (vrt_thread_current_frame() != root) ||
     (vrt_frame_parent(root) != nullptr) ||
-    (vrt_frame_function(root) != &root_function))
+    (vrt_frame_function(root) != &root_function) ||
+    (root->raise_target != vrt_frame_id(root)))
     return 7;
 
   const auto root_id = vrt_frame_id(root);
-  if (root_id == 0)
+  if ((root_id == 0) || (vrt_frame_get_raise_target() != root_id))
     return 8;
+
+  const auto temporary_target = root_id + 1000;
+  if (
+    (vrt_frame_set_raise_target(temporary_target) != root_id) ||
+    (vrt_frame_get_raise_target() != temporary_target) ||
+    (vrt_frame_set_raise_target(root_id) != temporary_target) ||
+    (vrt_frame_get_raise_target() != root_id))
+    return 23;
 
   auto* child = vrt_frame_enter(&child_function);
   if (
     (child == nullptr) || (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) ||
     (vrt_frame_function(child) != &child_function) ||
-    (vrt_frame_id(child) == root_id))
+    (vrt_frame_id(child) == root_id) ||
+    (child->raise_target != vrt_frame_id(child)))
     return 9;
 
   const auto child_id = vrt_frame_id(child);
+  if (
+    (vrt_frame_get_raise_target() != child_id) ||
+    (vrt_frame_set_raise_target(root_id) != child_id) ||
+    (vrt_frame_get_raise_target() != root_id))
+    return 24;
+
   auto* const child_region = reinterpret_cast<vrt_region*>(thread);
   child->region = child_region;
   child->stack_mark = 4;
   child->finalizer_mark = 5;
-  child->raise_target = root_id;
   vrt_frame_prepare_tailcall(&tail_function);
   if (
     (vrt_thread_current_frame() != child) ||
@@ -83,6 +98,28 @@ int main()
   vrt_frame_leave();
   if (vrt_thread_current_frame() != root)
     return 12;
+
+  auto* continuation =
+    static_cast<std::jmp_buf*>(vrt_frame_raise_continuation(root));
+  if (continuation == nullptr)
+    return 20;
+
+  if (setjmp(*continuation) == 0)
+  {
+    child = vrt_frame_enter(&child_function);
+    if (child == nullptr)
+      return 21;
+
+    if (vrt_frame_set_raise_target(root_id) != vrt_frame_id(child))
+      return 25;
+
+    vrt_frame_raise(42);
+  }
+
+  if (
+    (vrt_thread_current_frame() != root) ||
+    (vrt_frame_take_raised_value() != 42))
+    return 22;
 
   vrt_frame_prepare_tailcall(nullptr);
   if (

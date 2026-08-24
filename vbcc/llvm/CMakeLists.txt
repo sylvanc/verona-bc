@@ -16,9 +16,10 @@ add_library(libvbcllvm STATIC
   module.cc
   ownership.cc
   program.cc
-  runtime/declaration.cc
-  runtime/frame.cc
-  runtime/tailcall.cc
+  vrt/declaration.cc
+  vrt/frame.cc
+  vrt/raise.cc
+  vrt/tailcall.cc
   statements.cc
   statements/args.cc
   statements/binop.cc
@@ -27,6 +28,7 @@ add_library(libvbcllvm STATIC
   statements/drop.cc
   statements/ffi.cc
   statements/move.cc
+  statements/raise_target.cc
   statements/unop.cc
   terminators.cc
   terminators/cond.cc

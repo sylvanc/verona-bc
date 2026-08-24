@@ -81,8 +81,14 @@ namespace vbcc
           return false;
       }
 
-      builder.CreateCall(runtime.frame_enter, {lowered.descriptor});
-      builder.CreateBr(blocks.get(labels->front() / LabelId));
+      auto* frame =
+        builder.CreateCall(runtime.frame_enter, {lowered.descriptor}, "frame");
+      if (!emit_raise_continuation(
+            func,
+            frame,
+            blocks.get(labels->front() / LabelId),
+            lowered.return_type))
+        return false;
 
       for (const auto& label : *labels)
       {

@@ -45,6 +45,10 @@ namespace vbcc
       runtime.frame_leave = declare("vrt_frame_leave", void_type, {});
       runtime.frame_prepare_tailcall =
         declare("vrt_frame_prepare_tailcall", void_type, {pointer_type});
+      runtime.frame_get_raise_target =
+        declare("vrt_frame_get_raise_target", i64_type, {});
+      runtime.frame_set_raise_target =
+        declare("vrt_frame_set_raise_target", i64_type, {i64_type});
       runtime.frame_raise_continuation =
         declare("vrt_frame_raise_continuation", pointer_type, {pointer_type});
       runtime.frame_raise = declare("vrt_frame_raise", void_type, {i64_type});

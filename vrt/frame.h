@@ -1,5 +1,6 @@
 #pragma once
 
+#include <csetjmp>
 #include <cstddef>
 #include <cstdint>
 #include <vrt/frame.h>
@@ -15,4 +16,5 @@ struct vrt_frame
   uint64_t frame_id = 0;
   const vrt_function_descriptor* function = nullptr;
   uint64_t raise_target = 0;
+  std::jmp_buf raise_continuation{};
 };

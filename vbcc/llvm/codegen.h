@@ -30,6 +30,12 @@ namespace vbcc
         llvm::Function* frame_enter = nullptr;
         llvm::Function* frame_leave = nullptr;
         llvm::Function* frame_prepare_tailcall = nullptr;
+        llvm::Function* frame_get_raise_target = nullptr;
+        llvm::Function* frame_set_raise_target = nullptr;
+        llvm::Function* frame_raise_continuation = nullptr;
+        llvm::Function* frame_raise = nullptr;
+        llvm::Function* frame_take_raised_value = nullptr;
+        llvm::Function* setjmp = nullptr;
       };
 
       /* working state */
@@ -84,6 +90,15 @@ namespace vbcc
       bool emit_prepare_tailcall(
         const Node& statement, llvm::Value* function_descriptor);
       bool emit_leave_frame(const Node& statement);
+      bool emit_raise_continuation(
+        const Node& function,
+        llvm::Value* frame,
+        llvm::BasicBlock* normal_entry,
+        const LoweredType& return_type);
+      std::optional<llvm::Value*>
+      pack_raised_value(const Node& statement, const LoweredValue& value);
+      llvm::Value*
+      unpack_raised_value(const LoweredType& type, llvm::Value* value);
 
       bool emit_function(const Node& func);
       bool emit_statement(const Node& statement);
@@ -92,6 +107,8 @@ namespace vbcc
       bool emit_unop(const Node& statement);
       bool emit_copy(const Node& statement);
       bool emit_move(const Node& statement);
+      bool emit_get_raise(const Node& statement);
+      bool emit_set_raise(const Node& statement);
       bool emit_drop(const Node& statement);
       bool emit_ffi(const Node& statement);
 

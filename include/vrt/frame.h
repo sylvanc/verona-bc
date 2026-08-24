@@ -55,6 +55,51 @@ extern "C"
   VRT_EXPORT void
   vrt_frame_prepare_tailcall(const vrt_function_descriptor* function);
 
+  /**
+   * Return the current logical frame's raise target identity.
+   *
+   * The calling native thread must have a current logical frame and no
+   * pending tailcall.
+   */
+  VRT_EXPORT uint64_t vrt_frame_get_raise_target(void);
+
+  /**
+   * Replace the current logical frame's raise target and return the old one.
+   *
+   * target is stored without validation. vrt_frame_raise validates that the
+   * target still names an active ancestor when a raise is performed. The
+   * calling native thread must have a current logical frame and no pending
+   * tailcall.
+   */
+  VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target);
+
+  /**
+   * Return the setjmp-compatible continuation storage for frame.
+   *
+   * Generated function prologues save their native continuation here. The
+   * storage is owned by frame and remains valid until that logical frame is
+   * left.
+   */
+  VRT_EXPORT void* vrt_frame_raise_continuation(vrt_frame* frame);
+
+  /**
+   * Raise a type-erased value to the current frame's raise target.
+   *
+   * This tears down every logical frame above the target and transfers
+   * control to the continuation saved by the target function. The payload is
+   * recovered there with vrt_frame_take_raised_value. This function does not
+   * return. An invalid or inactive target terminates the process.
+   */
+  VRT_EXPORT void vrt_frame_raise(uint64_t value);
+
+  /**
+   * Consume the value associated with a raise resumed in the current frame.
+   *
+   * Calling this without a pending raise for the current frame terminates the
+   * process.
+   */
+  VRT_EXPORT uint64_t vrt_frame_take_raised_value(void);
+
   /** Return the parent frame, or null for a root frame. */
   VRT_EXPORT vrt_frame* vrt_frame_parent(vrt_frame* frame);
 

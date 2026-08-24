@@ -30,6 +30,12 @@ namespace vbcc
       if (statement == Move)
         return emit_move(statement);
 
+      if (statement == GetRaise)
+        return emit_get_raise(statement);
+
+      if (statement == SetRaise)
+        return emit_set_raise(statement);
+
       if (statement == FFI)
         return emit_ffi(statement);
 

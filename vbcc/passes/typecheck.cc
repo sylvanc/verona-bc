@@ -1789,6 +1789,17 @@ namespace vbcc
         }
         else if (node == SetRaise)
         {
+          auto src_type = typed(node / Rhs);
+
+          if (src_type && !all_leaves_are(src_type, U64))
+          {
+            type_err(
+              node,
+              std::format(
+                "setraise: target type '{}' is not u64", type_name(src_type)));
+            return true;
+          }
+
           // SetRaise returns previous raise target as U64.
           set_type(env, node / LocalId, U64);
         }

@@ -331,6 +331,22 @@ Generated returns call `vrt_frame_leave`, while a tailcall transfers the frame
 without leaving it. The C-compatible `verona_program_entry` wrapper calls the
 internal `@main` function without performing runtime setup or teardown.
 
+Each generated function also saves a native `setjmp` continuation in its
+logical frame. A VIR `raise` consumes its source value, encodes the currently
+supported scalar or raw-pointer representation in a 64-bit runtime word, and
+calls `vrt_frame_raise`. The runtime validates the active target, removes the
+intermediate logical frames, and resumes the target continuation. That target
+then consumes the payload, reconstructs its native return representation,
+leaves its frame, and returns to its caller. Tailcalled functions overwrite the
+continuation in the reused logical frame, so the stable frame identity still
+names the current native activation.
+
+VIR `getraise` and `setraise` are ordinary side-effecting statements around
+that control transfer. `getraise` reads the current logical frame's target,
+while `setraise` borrows a `u64` target, installs it, and returns the previous
+target. Setting a target does not validate it; `raise` validates that the saved
+identity still names an active ancestor when it performs the non-local return.
+
 Frame entry and exit remain runtime calls in this implementation. They define
 the semantic slow path that generated prologues and epilogues can later replace
 with inline fast paths while retaining runtime fallbacks.
@@ -350,12 +366,14 @@ frame-local region.
 
 > **Status:** The LLVM backend currently supports scalar primitive types,
 > multi-block conditional control flow, scalar operations, copy/move/drop,
-> process-local non-variadic FFI calls, returns, and static tailcalls. Dynamic
-> tailcalls are supported when the target has the current raw `ptr`
-> representation. Verona functions use LLVM `tailcc`; the exported
-> C-compatible `verona_program_entry` wrapper enters the internal Verona
-> calling convention. Managed runtime representations, ordinary Verona calls,
-> dynamic lookup, and non-local `raise`/`getraise`/`setraise` control transfer
-> are not yet lowered. Unsupported operations, library forms, symbol versions,
-> and variadic calls produce an LLVM-backend diagnostic. A build configured
+> process-local non-variadic FFI calls, returns, scalar/raw-pointer `raise`
+> payloads, and static tailcalls. Dynamic tailcalls are supported when the
+> target has the current raw `ptr` representation. Verona functions use LLVM
+> `tailcc`; the exported C-compatible `verona_program_entry` wrapper enters the
+> internal Verona calling convention. Managed runtime representations,
+> ordinary Verona calls and dynamic lookup are not yet lowered, so
+> source-level block-lambda raise is not yet available end to end
+> through the native backend. Unsupported operations, library forms, symbol
+> versions, and variadic calls produce an LLVM-backend diagnostic. A build
+> configured
 > without `VERONA_ENABLE_LLVM_BACKEND` similarly rejects `--emit llvm-ir`.
