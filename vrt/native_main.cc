@@ -3,6 +3,11 @@
 #include <vrt/program.h>
 
 // native main() in libvrt for runtime initialization and teardown.
+/*
+ * native_main.cc::main() is the executable entry point and performs runtime initialization and teardown.
+ * verona_program_entry is the generated, exported C-ABI trampoline using the C calling convention.
+ * verona_fn_main contains the generated implementation of Verona @main and uses LLVM tailcc.
+*/
 int main()
 {
   // This single-threaded bootstrap keeps runtime lifecycle out of generated
