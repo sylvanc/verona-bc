@@ -156,7 +156,7 @@ namespace vc
               // An identifier with type arguments is a method call of apply
               // with type arguments.
               state.result = Seq << (LocalId ^ name)
-                                 << (Dot << (Ident ^ "apply") << ta);
+                                 << (Dot << (Ident ^ "apply") << clone(ta));
             }
             else
             {
@@ -180,7 +180,7 @@ namespace vc
           {
             found = def;
             build_fq_prefix(state.result, curr_scope);
-            state.result << elem;
+            state.result << -elem;
             return Continue;
           }
         }
@@ -219,7 +219,7 @@ namespace vc
           for (auto& child : *use_name)
             state.result << clone(child);
 
-          state.result << elem;
+          state.result << -elem;
           found = defs.front();
           return Continue;
         }
@@ -230,7 +230,7 @@ namespace vc
       if ((n->size() == 1) && (n == FuncName))
       {
         // If it isn't found, treat it as a method if it's 1-element.
-        state.result = MethodName << name << ta;
+        state.result = MethodName << clone(name) << clone(ta);
       }
       else
       {
@@ -267,7 +267,7 @@ namespace vc
 
       // If we have multiple functions, it doesn't matter which one we use.
       found = defs.front();
-      state.result << elem;
+      state.result << -elem;
       return Continue;
     }
 
