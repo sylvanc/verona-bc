@@ -70,6 +70,19 @@ namespace vbcc
       llvm::GlobalVariable* descriptor = nullptr;
     };
 
+    struct LoweredRuntime
+    {
+      llvm::Function* frame_enter = nullptr;
+      llvm::Function* frame_leave = nullptr;
+      llvm::Function* frame_prepare_tailcall = nullptr;
+      llvm::Function* frame_get_raise_target = nullptr;
+      llvm::Function* frame_set_raise_target = nullptr;
+      llvm::Function* frame_raise_continuation = nullptr;
+      llvm::Function* frame_raise = nullptr;
+      llvm::Function* frame_take_raised_value = nullptr;
+      llvm::Function* setjmp = nullptr;
+    };
+
     struct LoweredLibrary
     {
       std::string path;
