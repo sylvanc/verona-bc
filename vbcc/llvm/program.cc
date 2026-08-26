@@ -55,6 +55,9 @@ namespace vbcc
       auto* entry = llvm::BasicBlock::Create(context, "entry", program_entry);
 
       builder.SetInsertPoint(entry);
+      if (!emit_enter_frame(state.top, main->second.descriptor))
+        return false;
+
       auto* call = builder.CreateCall(main->second.function);
       call->setCallingConv(main->second.function->getCallingConv());
       builder.CreateRetVoid();

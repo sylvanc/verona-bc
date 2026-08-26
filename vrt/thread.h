@@ -7,11 +7,9 @@
 struct vrt_thread
 {
   vrt_frame* current_frame = nullptr;
-  const vrt_function_descriptor* tailcall_target = nullptr;
   uint64_t next_frame_id = 1;
   uint64_t pending_raise_value = 0;
   vrt_frame* pending_raise_target = nullptr;
-  bool tailcall_pending = false;
   bool raise_pending = false;
 };
 

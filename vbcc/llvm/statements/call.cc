@@ -79,6 +79,10 @@ namespace vbcc
       auto result_name = callee.return_type.kind == ValueKind::None ?
         std::string() :
         strip_sigil(node_text(dst));
+
+      if (!emit_enter_frame(statement, callee.descriptor))
+        return false;
+
       auto* call = builder.CreateCall(callee.function, llvm_args, result_name);
       call->setCallingConv(callee.function->getCallingConv());
 

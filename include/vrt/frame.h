@@ -18,13 +18,10 @@ extern "C"
   } vrt_function_descriptor;
 
   /**
-   * Enter a function using the logical thread bound to this native thread.
+   * Push a logical frame for an immediately following Verona function call.
    *
    * function may be null. A non-null descriptor must remain alive until the
    * frame is left or rebound by a tailcall.
-   *
-   * An ordinary entry pushes a new logical frame. The entry immediately after
-   * vrt_frame_prepare_tailcall reuses the prepared current frame instead.
    *
    * A logical thread must already be bound to this native thread by libvrt.
    * Failure to allocate a frame or assign it an identity terminates the
@@ -36,30 +33,28 @@ extern "C"
   /**
    * Leave and destroy the current logical frame.
    *
-   * The thread bound to this native thread must have a current frame and no
-   * pending tailcall.
+   * The thread bound to this native thread must have a current frame.
    */
   VRT_EXPORT void vrt_frame_leave(void);
 
   /**
-   * Rebind the current logical frame for a tailcall.
+   * Reuse the current logical frame for an immediately following tailcall.
    *
    * The current frame keeps its identity, parent, region, and teardown
-   * boundaries. The next call to vrt_frame_enter consumes the pending transfer
-   * and reuses that frame.
+   * boundaries. Its function descriptor is replaced before this function
+   * returns; the tailcalled function must not enter another frame.
    *
    * Lowering is responsible for moving arguments and releasing other locals
    * before calling this function. function may be null; a non-null descriptor
    * must remain alive until the frame is left or rebound again.
    */
   VRT_EXPORT void
-  vrt_frame_prepare_tailcall(const vrt_function_descriptor* function);
+  vrt_frame_reuse(const vrt_function_descriptor* function);
 
   /**
    * Return the current logical frame's raise target identity.
    *
-   * The calling native thread must have a current logical frame and no
-   * pending tailcall.
+   * The calling native thread must have a current logical frame.
    */
   VRT_EXPORT uint64_t vrt_frame_get_raise_target(void);
 
@@ -74,13 +69,12 @@ extern "C"
   VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target);
 
   /**
-   * Return the setjmp-compatible continuation storage for frame.
+   * Return the current frame's setjmp-compatible continuation storage.
    *
    * Generated function prologues save their native continuation here. The
-   * storage is owned by frame and remains valid until that logical frame is
-   * left.
+   * storage remains valid until the current logical frame is left.
    */
-  VRT_EXPORT void* vrt_frame_raise_continuation(vrt_frame* frame);
+  VRT_EXPORT void* vrt_frame_raise_continuation(void);
 
   /**
    * Raise a type-erased value to the current frame's raise target.

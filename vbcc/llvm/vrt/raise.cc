@@ -11,12 +11,11 @@ namespace vbcc
   {
     bool LLVMCodegen::emit_raise_continuation(
       const Node& function,
-      llvm::Value* frame,
       llvm::BasicBlock* normal_entry,
       const LoweredType& return_type)
     {
       if (
-        (frame == nullptr) || (normal_entry == nullptr) ||
+        (normal_entry == nullptr) ||
         (runtime.frame_raise_continuation == nullptr) ||
         (runtime.frame_take_raised_value == nullptr) ||
         (runtime.setjmp == nullptr))
@@ -26,7 +25,7 @@ namespace vbcc
       }
 
       auto* continuation = builder.CreateCall(
-        runtime.frame_raise_continuation, {frame}, "raise.continuation");
+        runtime.frame_raise_continuation, {}, "raise.continuation");
       auto* state =
         builder.CreateCall(runtime.setjmp, {continuation}, "raise.state");
       auto* raised =

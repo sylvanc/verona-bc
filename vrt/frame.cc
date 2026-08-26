@@ -9,13 +9,12 @@
 
 namespace
 {
-  vrt_frame* current_stable_frame()
+  vrt_frame* current_frame()
   {
     auto* thread = vrt::current_thread();
     assert(thread != nullptr);
-    assert((thread == nullptr) || !thread->tailcall_pending);
 
-    if ((thread == nullptr) || thread->tailcall_pending)
+    if (thread == nullptr)
       std::terminate();
 
     auto* frame = thread->current_frame;
@@ -36,26 +35,6 @@ vrt_frame_enter(const vrt_function_descriptor* function)
 
   if (thread == nullptr)
     std::terminate();
-
-  if (thread->tailcall_pending)
-  {
-    auto* frame = thread->current_frame;
-    assert(frame != nullptr);
-    assert(
-      (thread->tailcall_target == nullptr) ||
-      (thread->tailcall_target == function));
-
-    if (
-      (frame == nullptr) ||
-      ((thread->tailcall_target != nullptr) &&
-       (thread->tailcall_target != function)))
-      std::terminate();
-
-    thread->tailcall_pending = false;
-    thread->tailcall_target = nullptr;
-    frame->function = function;
-    return frame;
-  }
 
   if (thread->next_frame_id == 0)
     std::terminate();
@@ -80,9 +59,8 @@ extern "C" VRT_EXPORT void vrt_frame_leave(void)
 {
   auto* thread = vrt::current_thread();
   assert(thread != nullptr);
-  assert(!thread->tailcall_pending);
 
-  if ((thread == nullptr) || thread->tailcall_pending)
+  if (thread == nullptr)
     return;
 
   auto* frame = thread->current_frame;
@@ -96,13 +74,12 @@ extern "C" VRT_EXPORT void vrt_frame_leave(void)
 }
 
 extern "C" VRT_EXPORT void
-vrt_frame_prepare_tailcall(const vrt_function_descriptor* function)
+vrt_frame_reuse(const vrt_function_descriptor* function)
 {
   auto* thread = vrt::current_thread();
   assert(thread != nullptr);
-  assert(!thread->tailcall_pending);
 
-  if ((thread == nullptr) || thread->tailcall_pending)
+  if (thread == nullptr)
     return;
 
   auto* frame = thread->current_frame;
@@ -111,39 +88,36 @@ vrt_frame_prepare_tailcall(const vrt_function_descriptor* function)
   if (frame == nullptr)
     return;
 
+  // Compiler-emitted Drop operations currently perform all representable
+  // local teardown. Native stack objects, finalizers, and frame-local region
+  // cleanup will be added here as those representations reach this backend.
   frame->function = function;
-  thread->tailcall_target = function;
-  thread->tailcall_pending = true;
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_get_raise_target(void)
 {
-  return current_stable_frame()->raise_target;
+  return current_frame()->raise_target;
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target)
 {
-  auto* frame = current_stable_frame();
+  auto* frame = current_frame();
   auto previous = frame->raise_target;
   frame->raise_target = target;
   return previous;
 }
 
-extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(vrt_frame* frame)
+extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(void)
 {
-  if (frame == nullptr)
-    return nullptr;
-
-  return frame->raise_continuation;
+  return current_frame()->raise_continuation;
 }
 
 extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
 {
   auto* thread = vrt::current_thread();
   assert(thread != nullptr);
-  assert(!thread->tailcall_pending);
 
-  if ((thread == nullptr) || thread->tailcall_pending)
+  if (thread == nullptr)
     std::terminate();
 
   auto* current = thread->current_frame;

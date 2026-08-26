@@ -74,7 +74,7 @@ namespace vbcc
     {
       llvm::Function* frame_enter = nullptr;
       llvm::Function* frame_leave = nullptr;
-      llvm::Function* frame_prepare_tailcall = nullptr;
+      llvm::Function* frame_reuse = nullptr;
       llvm::Function* frame_get_raise_target = nullptr;
       llvm::Function* frame_set_raise_target = nullptr;
       llvm::Function* frame_raise_continuation = nullptr;

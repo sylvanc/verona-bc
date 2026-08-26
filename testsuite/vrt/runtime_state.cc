@@ -77,7 +77,7 @@ int main()
   child->region = child_region;
   child->stack_mark = 4;
   child->finalizer_mark = 5;
-  vrt_frame_prepare_tailcall(&tail_function);
+  vrt_frame_reuse(&tail_function);
   if (
     (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) || (vrt_frame_id(child) != child_id) ||
@@ -86,21 +86,12 @@ int main()
     (child->finalizer_mark != 5) || (child->raise_target != root_id))
     return 10;
 
-  auto* reused = vrt_frame_enter(&tail_function);
-  if (
-    (reused != child) || (vrt_thread_current_frame() != child) ||
-    (vrt_frame_parent(child) != root) || (vrt_frame_id(child) != child_id) ||
-    (vrt_frame_function(child) != &tail_function) ||
-    (child->region != child_region) || (child->stack_mark != 4) ||
-    (child->finalizer_mark != 5) || (child->raise_target != root_id))
-    return 11;
-
   vrt_frame_leave();
   if (vrt_thread_current_frame() != root)
-    return 12;
+    return 11;
 
   auto* continuation =
-    static_cast<std::jmp_buf*>(vrt_frame_raise_continuation(root));
+    static_cast<std::jmp_buf*>(vrt_frame_raise_continuation());
   if (continuation == nullptr)
     return 20;
 
@@ -121,16 +112,16 @@ int main()
     (vrt_frame_take_raised_value() != 42))
     return 22;
 
-  vrt_frame_prepare_tailcall(nullptr);
+  vrt_frame_reuse(nullptr);
   if (
     (vrt_thread_current_frame() != root) ||
     (vrt_frame_function(root) != nullptr))
     return 13;
 
-  auto* dynamically_reused = vrt_frame_enter(&tail_function);
+  vrt_frame_reuse(&tail_function);
   if (
-    (dynamically_reused != root) || (vrt_thread_current_frame() != root) ||
-    (vrt_frame_parent(root) != nullptr) || (vrt_frame_id(root) != root_id) ||
+    (vrt_thread_current_frame() != root) || (vrt_frame_parent(root) != nullptr) ||
+    (vrt_frame_id(root) != root_id) ||
     (vrt_frame_function(root) != &tail_function))
     return 14;
 

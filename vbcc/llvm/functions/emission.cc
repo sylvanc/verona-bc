@@ -30,14 +30,6 @@ namespace vbcc
       locals.reset();
       blocks.reset();
 
-      if (
-        (lowered.descriptor == nullptr) || (runtime.frame_enter == nullptr) ||
-        (runtime.frame_leave == nullptr))
-      {
-        fail(func, "LLVM frame runtime is unavailable");
-        return false;
-      }
-
       auto* prologue =
         llvm::BasicBlock::Create(context, "prologue", lowered.function);
       builder.SetInsertPoint(prologue);
@@ -81,11 +73,8 @@ namespace vbcc
           return false;
       }
 
-      auto* frame =
-        builder.CreateCall(runtime.frame_enter, {lowered.descriptor}, "frame");
       if (!emit_raise_continuation(
             func,
-            frame,
             blocks.get(labels->front() / LabelId),
             lowered.return_type))
         return false;

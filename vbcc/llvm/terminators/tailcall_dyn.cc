@@ -63,7 +63,7 @@ namespace vbcc
 
       auto* unknown_descriptor = llvm::ConstantPointerNull::get(pointer_type);
 
-      if (!emit_prepare_tailcall(statement, unknown_descriptor))
+      if (!emit_reuse_frame(statement, unknown_descriptor))
         return false;
 
       auto* function_type =

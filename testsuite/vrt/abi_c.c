@@ -10,13 +10,13 @@ static vrt_frame* (*const thread_current_frame_signature)(void) =
 static vrt_frame* (*const frame_enter_signature)(
   const vrt_function_descriptor*) = vrt_frame_enter;
 static void (*const frame_leave_signature)(void) = vrt_frame_leave;
-static void (*const frame_prepare_tailcall_signature)(
-  const vrt_function_descriptor*) = vrt_frame_prepare_tailcall;
+static void (*const frame_reuse_signature)(const vrt_function_descriptor*) =
+  vrt_frame_reuse;
 static uint64_t (*const frame_get_raise_target_signature)(void) =
   vrt_frame_get_raise_target;
 static uint64_t (*const frame_set_raise_target_signature)(uint64_t) =
   vrt_frame_set_raise_target;
-static void* (*const frame_raise_continuation_signature)(vrt_frame*) =
+static void* (*const frame_raise_continuation_signature)(void) =
   vrt_frame_raise_continuation;
 static void (*const frame_raise_signature)(uint64_t) = vrt_frame_raise;
 static uint64_t (*const frame_take_raised_value_signature)(void) =
@@ -35,7 +35,7 @@ void verona_program_entry(void)
   (void)thread_current_frame_signature;
   (void)frame_enter_signature;
   (void)frame_leave_signature;
-  (void)frame_prepare_tailcall_signature;
+  (void)frame_reuse_signature;
   (void)frame_get_raise_target_signature;
   (void)frame_set_raise_target_signature;
   (void)frame_raise_continuation_signature;

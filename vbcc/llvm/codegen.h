@@ -74,12 +74,13 @@ namespace vbcc
       bool declare_runtime_functions();
       bool define_function_descriptors();
       bool emit_program_entry();
-      bool emit_prepare_tailcall(
+      bool emit_enter_frame(
+        const Node& statement, llvm::Value* function_descriptor);
+      bool emit_reuse_frame(
         const Node& statement, llvm::Value* function_descriptor);
       bool emit_leave_frame(const Node& statement);
       bool emit_raise_continuation(
         const Node& function,
-        llvm::Value* frame,
         llvm::BasicBlock* normal_entry,
         const LoweredType& return_type);
       std::optional<llvm::Value*>

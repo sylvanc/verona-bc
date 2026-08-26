@@ -324,20 +324,19 @@ the runtime thread can probe it with `vrt_thread_current()` instead of carrying
 a hidden thread argument through every Verona call.
 
 Internal Verona functions receive only their declared user parameters; runtime
-context is not carried in hidden LLVM arguments. Every generated function
-prologue calls `vrt_frame_enter`. For an ordinary call, it pushes a new logical
-frame. After `vrt_frame_prepare_tailcall`, the next callee prologue consumes a
-thread-local pending-transfer marker and reuses the prepared frame instead.
-Generated returns call `vrt_frame_leave`, while a tailcall transfers the frame
-without leaving it. The C-compatible `verona_program_entry` wrapper calls the
-internal `@main` function without performing runtime setup or teardown.
+context is not carried in hidden LLVM arguments. Ordinary call sites call
+`vrt_frame_enter` immediately before entering the callee. Tailcall sites call
+`vrt_frame_reuse`, which synchronously rebinds the current logical frame before
+the LLVM `musttail` call. Generated returns call `vrt_frame_leave`, while a
+tailcall transfers the frame without leaving it. The C-compatible
+`verona_program_entry` wrapper enters the `@main` frame and calls the internal
+function without performing thread setup or teardown.
 
 A static VIR `call` resolves its `FunctionId` through the module's predeclared
 function table, applies each argument's `ArgMove` or `ArgCopy` ownership
 operation, and emits a direct LLVM call with the callee's Verona calling
-convention. The callee's existing prologue and epilogue push and pop the
-logical frame, so ordinary calls require no separate frame operation at the
-call site.
+convention. The call site pushes the callee's logical frame after transferring
+the arguments; the callee's return epilogue pops it.
 
 Each generated function also saves a native `setjmp` continuation in its
 logical frame. A VIR `raise` consumes its source value, encodes the currently
@@ -355,21 +354,21 @@ while `setraise` borrows a `u64` target, installs it, and returns the previous
 target. Setting a target does not validate it; `raise` validates that the saved
 identity still names an active ancestor when it performs the non-local return.
 
-Frame entry and exit remain runtime calls in this implementation. They define
-the semantic slow path that generated prologues and epilogues can later replace
-with inline fast paths while retaining runtime fallbacks.
+Frame entry, reuse, and exit remain runtime calls in this implementation. They
+define the semantic slow path that generated call sites and epilogues can later
+replace with inline fast paths while retaining runtime fallbacks.
 
 Before the LLVM `musttail` call, the backend transfers each `MoveArg` and calls
-`vrt_frame_prepare_tailcall`. Static calls record generated function metadata;
-the current raw-pointer dynamic representation records a null target, which the
-actual tailcallee replaces with its descriptor when its prologue consumes the
-transfer. The liveness pass expresses non-transferred register cleanup as
-explicit `Drop` statements before the terminator.
+`vrt_frame_reuse`. Static calls record generated function metadata; the current
+raw-pointer dynamic representation has no descriptor and therefore records a
+null function identity until dynamic callables carry both code and metadata.
+The liveness pass expresses non-transferred register cleanup as explicit `Drop`
+statements before the terminator.
 
 Frame-local regions, stack-object finalization, and managed ownership
 operations are not yet implemented by the native runtime. As those
-representations are added, `vrt_frame_prepare_tailcall` will reset their
-per-activation state while preserving the logical frame, its identity, and its
+representations are added, `vrt_frame_reuse` will perform the old activation's
+tailcall teardown while preserving the logical frame, its identity, and its
 frame-local region.
 
 > **Status:** The LLVM backend currently supports scalar primitive types,

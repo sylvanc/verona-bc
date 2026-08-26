@@ -75,7 +75,7 @@ namespace vbcc
         llvm_args.push_back(arg.value);
       }
 
-      if (!emit_prepare_tailcall(statement, callee.descriptor))
+      if (!emit_reuse_frame(statement, callee.descriptor))
         return false;
 
       auto* call = builder.CreateCall(callee.function, llvm_args);
