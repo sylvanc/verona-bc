@@ -467,6 +467,8 @@ namespace vc
   Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand);
   Node fq_typeparam(const Nodes& path, Node tp);
   Node fq_typeargs(const Nodes& path, Node tps);
+  Node fq_scope_typeargs(Node scope);
+  Node make_fq_name(const Token& name_type, const Nodes& path);
   Node make_selftype(Node node, bool fq = false);
   Node type_any();
   Node type_nomatch();

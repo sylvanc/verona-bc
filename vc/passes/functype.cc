@@ -74,7 +74,6 @@ namespace vc
           assert(enclosing_cls);
 
           auto cls_path = scope_path(enclosing_cls);
-          auto cls_ta = fq_typeargs(cls_path, enclosing_cls / TypeParams);
 
           // Collect free type params referenced inside the FuncType.
           auto free_tps = collect_functype_free_typeparams(ft, top);
@@ -107,10 +106,7 @@ namespace vc
             // Value: the shape's own TypeParam reference.
             auto tp_name =
               std::string((free_tps[i].def / Ident)->location().view());
-            Node new_tn = TypeName;
-
-            for (auto& s : cls_path)
-              new_tn << (NameElement << clone(s / Ident) << TypeArgs);
+            Node new_tn = make_fq_name(TypeName, cls_path);
 
             new_tn << (NameElement << (Ident ^ id) << TypeArgs);
             new_tn << (NameElement << (Ident ^ tp_name) << TypeArgs);
@@ -193,17 +189,7 @@ namespace vc
             outer_ta << (Type << clone(ftp.name));
 
           // Build FQ TypeName for the replacement type.
-          Node fq_tn_outer = TypeName;
-
-          for (auto& s : cls_path)
-          {
-            if (s == enclosing_cls)
-              fq_tn_outer
-                << (NameElement << clone(enclosing_cls / Ident)
-                                << clone(cls_ta));
-            else
-              fq_tn_outer << (NameElement << clone(s / Ident) << TypeArgs);
-          }
+          Node fq_tn_outer = make_fq_name(TypeName, cls_path);
 
           fq_tn_outer << (NameElement << (Ident ^ id) << clone(outer_ta));
 
