@@ -76,49 +76,61 @@ namespace vc
     return find_def_from(top, name, name->begin(), name->end());
   }
 
-  Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand)
+  void find_func_defs_from(Node def, NodeIt it, NodeIt end, Nodes& result)
   {
-    assert(funcname == FuncName);
-    Node def = top;
+    auto& elem = *it;
+    assert(elem == NameElement);
+    auto defs = def->look((elem / Ident)->location());
+    bool is_last = (it + 1 == end);
 
-    for (auto it = funcname->begin(); it != funcname->end(); ++it)
+    for (auto& candidate : defs)
     {
-      auto& elem = *it;
-      assert(elem == NameElement);
-      auto defs = def->look((elem / Ident)->location());
-
-      if (defs.empty())
-        return {};
-
-      bool is_last = (it + 1 == funcname->end());
-
       if (is_last)
       {
-        for (auto& d : defs)
-        {
-          if (d != Function)
-            continue;
-
-          auto def_hand = (d / Lhs)->type();
-          if (
-            hand && def_hand != hand->type() &&
-            !(def_hand == Once && hand->type() == Rhs))
-            continue;
-
-          if ((d / Params)->size() != arity)
-            continue;
-
-          return d;
-        }
-
-        return {};
+        if (
+          candidate == Function &&
+          std::find(result.begin(), result.end(), candidate) == result.end())
+          result.push_back(candidate);
       }
       else
       {
-        def = defs.front();
+        find_func_defs_from(candidate, it + 1, end, result);
+      }
+    }
+  }
 
-        if (def == TypeParam)
-          return {};
+  Nodes find_func_defs(Node top, const Node& funcname)
+  {
+    assert(funcname == FuncName);
+    Nodes result;
+
+    if (!funcname->empty())
+      find_func_defs_from(
+        top, funcname->begin(), funcname->end(), result);
+
+    return result;
+  }
+
+  Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand)
+  {
+    assert(funcname == FuncName);
+    auto defs = find_func_defs(top, funcname);
+
+    for (auto& def : defs)
+    {
+      if (
+        (!hand || (def / Lhs)->type() == hand->type()) &&
+        (def / Params)->size() == arity)
+        return def;
+    }
+
+    if (hand && hand->type() == Rhs)
+    {
+      for (auto& def : defs)
+      {
+        if (
+          (def / Lhs)->type() == Once && (def / Params)->size() == arity)
+          return def;
       }
     }
 
