@@ -14,7 +14,7 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 ## 20.2 Pass Pipeline
 
-The compiler runs passes in two stages. The first 10 passes are the `vc` frontend, which transforms source code into monomorphized IR. The remaining passes are provided by the `vbcc` bytecode compiler library, which transforms IR into `.vbc` bytecode.
+The compiler runs passes in two stages. The first 11 passes are the `vc` frontend, which transforms source code into monomorphized IR. The remaining passes are provided by the `vbcc` bytecode compiler library, which transforms IR into `.vbc` bytecode.
 
 ### Frontend Passes (vc)
 
@@ -28,8 +28,9 @@ The compiler runs passes in two stages. The first 10 passes are the `vc` fronten
 | 5 | `dot` | top-down | Dot access, juxtaposition (application), `:::` builtin/FFI resolution |
 | 6 | `application` | top-down | Infix/prefix function/method calls, ref, hash, partial application |
 | 7 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
-| 8 | `infer` | once | Type inference and literal refinement |
-| 9 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
+| 8 | `overload` | once | Resolve canonical calls by value arity and handedness |
+| 9 | `infer` | once | Type inference and literal refinement |
+| 10 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
 
 ### Backend Passes (vbcc library)
 
@@ -97,6 +98,16 @@ Converts the flat token groups into nested AST structure: class definitions, fun
 ### Ident (`ident`)
 Resolves all names to fully qualified paths from the top scope. Uses `NodeWorker<Resolver>` for concurrent resolution with blocking dependencies. Builds the symbol table and resolves `use` imports.
 
+Each path element carries its own `TypeArgs`. Compiler-generated enclosing
+prefixes use explicit symbolic references to their lexical type parameters.
+Omitted arguments directly on `FuncName` path elements, including explicitly
+named enclosing scopes, are represented by the internal `???` type. Generic
+`TypeName` omissions are rejected; this currently also excludes nested holes
+such as `outer[list]::foo()`. Empty `TypeArgs` remain only on non-generic
+elements, generic definition paths used to identify a type parameter, and the
+final element of a function name that still denotes an unresolved overload
+set. `ident` does not choose a function overload or derive its generic arity.
+
 ### Sugar (`sugar`)
 Desugars syntactic sugar:
 - `match` expressions → case lambda chains with `nomatch` subtraction and `TryCallDyn` for value tests
@@ -114,11 +125,22 @@ Resolves infix/prefix operators to method calls, handles `ref` and `#` prefixes,
 ### ANF (`anf`)
 Converts the AST to A-Normal Form: all intermediate values are named, expressions are flattened to sequences of simple statements. This prepares the code for type inference and bytecode generation.
 
+### Overload (`overload`)
+Resolves each canonical ANF call by name, value arity, and handedness. It
+constructs a candidate-specific copy of the fully qualified function name and
+fills omitted generic arguments with explicit `???` slots sized from that
+candidate's `TypeParams`. Verona rejects function definitions with the same
+name, value arity, and handedness, so this overload set has at most one
+surviving candidate. Exact handedness takes precedence; an RHS call considers a
+`once` overload only when no exact RHS candidate exists. Calls through a type
+parameter remain deferred until reification supplies the enclosing
+substitution.
+
 ### Infer (`infer`)
-Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation.
+Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation. For each resolved ANF call, it replaces inferable `???` arguments while preserving explicit symbolic arguments shared from enclosing scopes.
 
 ### Reify (`reify`)
-Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are not monomorphized — they use dynamic dispatch directly. Outputs IR suitable for bytecode generation.
+Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are not monomorphized — they use dynamic dispatch directly. Reification rejects unresolved `???` arguments. Late-bound generic definition paths may inherit an ambient binding only when all available reifications agree; ambiguous bindings are errors. Outputs IR suitable for bytecode generation.
 
 ---
 

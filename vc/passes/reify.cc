@@ -3562,8 +3562,13 @@ namespace vc
       auto arity = (call / Args)->size();
 
       auto funcid = get_reification(call / FuncName, subst, [&](auto& def) {
-        return (def == Function) && ((def / Params)->size() == arity) &&
-          (((def / Lhs) == hand) || ((def / Lhs) == Once && hand == Rhs));
+        if ((def != Function) || ((def / Params)->size() != arity))
+          return 0;
+
+        if ((def / Lhs) == hand)
+          return 2;
+
+        return ((def / Lhs) == Once && hand == Rhs) ? 1 : 0;
       });
 
       if (!funcid || (funcid == Dyn))
@@ -4277,20 +4282,21 @@ namespace vc
             }
           }
 
-          // Use the accept filter to find the right def.
-          bool found = false;
+          // Use the accept filter to find the highest-priority definition.
+          size_t best = 0;
 
           for (auto& d : defs)
           {
-            if (accept(d))
+            auto priority = static_cast<size_t>(accept(d));
+
+            if (priority > best)
             {
               def = d;
-              found = true;
-              break;
+              best = priority;
             }
           }
 
-          if (!found)
+          if (best == 0)
           {
             return err(elem, "No matching definition found")
               << errmsg("Resolving here:") << errloc(defs.front() / Ident);

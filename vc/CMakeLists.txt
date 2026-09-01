@@ -5,6 +5,7 @@ add_executable(vc
   passes/functype.cc
   passes/ident.cc
   passes/infer.cc
+  passes/overload.cc
   passes/parser.cc
   passes/reify.cc
   passes/sugar.cc

@@ -22,6 +22,7 @@ int main(int argc, char** argv)
       dot(),
       application(),
       anf(),
+      overload(),
       infer(),
       reify(),
       vbcc::memo(),

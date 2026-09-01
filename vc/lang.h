@@ -466,6 +466,7 @@ namespace vc
   Node make_typeargs(Node typeparams);
   Nodes scope_path(Node node);
   Node find_def(Node top, const Node& name);
+  Nodes find_func_defs(Node top, const Node& funcname);
   Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand);
   Node fq_typeparam(const Nodes& path, Node tp);
   Node fq_typeargs(const Nodes& path, Node tps);
@@ -533,6 +534,7 @@ namespace vc
   PassDef dot();
   PassDef application();
   PassDef anf();
+  PassDef overload();
   PassDef infer();
   PassDef reify();
 }
