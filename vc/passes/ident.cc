@@ -430,7 +430,10 @@ namespace vc
             return Done;
           }
 
-          state.result << (NameElement << (Ident ^ "create") << TypeArgs);
+          auto create =
+            NameElement << (Ident ^ "create") << TypeArgs;
+
+          normalize_and_append_resolved_elem(state.result, create, found);
         }
 
         if (found == TypeParam)
