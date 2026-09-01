@@ -146,22 +146,39 @@ namespace vc
     return ta;
   }
 
+  Node fq_scope_typeargs(Node scope)
+  {
+    return fq_typeargs(scope_path(scope), scope / TypeParams);
+  }
+
+  Node make_fq_name(const Token& name_type, const Nodes& path)
+  {
+    assert((name_type == TypeName) || (name_type == FuncName));
+    Node name = name_type;
+
+    for (auto& scope : path)
+      name << (NameElement << clone(scope / Ident)
+                           << fq_scope_typeargs(scope));
+
+    return name;
+  }
+
   Node make_selftype(Node node, bool fq)
   {
     auto cls = node->parent(ClassDef);
-    auto tps = cls / TypeParams;
     auto path = scope_path(cls);
-    auto ta = fq ? fq_typeargs(path, tps) : make_typeargs(tps);
+
+    if (fq)
+    {
+      Node tn = make_fq_name(TypeName, path);
+      return Type << tn;
+    }
 
     Node tn = TypeName;
 
     for (auto& s : path)
-    {
-      if (s == cls)
-        tn << (NameElement << clone(cls / Ident) << ta);
-      else
-        tn << (NameElement << clone(s / Ident) << TypeArgs);
-    }
+      tn << (NameElement << clone(s / Ident)
+                        << make_typeargs(s / TypeParams));
 
     return Type << tn;
   }
@@ -264,10 +281,7 @@ namespace vc
     const Nodes& cls_path,
     Location new_class_id)
   {
-    Node new_tn = TypeName;
-
-    for (auto& s : cls_path)
-      new_tn << (NameElement << clone(s / Ident) << TypeArgs);
+    Node new_tn = make_fq_name(TypeName, cls_path);
 
     new_tn << (NameElement << (Ident ^ new_class_id) << TypeArgs);
     new_tn << (NameElement << (Ident ^ free_tps[idx].name) << TypeArgs);
@@ -314,7 +328,6 @@ namespace vc
     auto enclosing_cls = context_node->parent(ClassDef);
     assert(enclosing_cls);
     auto cls_path = scope_path(enclosing_cls);
-    auto cls_ta = fq_typeargs(cls_path, enclosing_cls / TypeParams);
 
     // Build TypeParams for the new class.
     Node typeparams = TypeParams;
@@ -328,10 +341,7 @@ namespace vc
 
     for (auto& ftp : free_tps)
     {
-      Node tp_tn = TypeName;
-
-      for (auto& s : cls_path)
-        tp_tn << (NameElement << clone(s / Ident) << TypeArgs);
+      Node tp_tn = make_fq_name(TypeName, cls_path);
 
       tp_tn << (NameElement << (Ident ^ id) << TypeArgs);
       tp_tn << (NameElement << (Ident ^ ftp.name) << TypeArgs);
@@ -354,30 +364,13 @@ namespace vc
     }
 
     // Build FQ TypeName for use inside the class (self type).
-    Node fq_tn = TypeName;
-
-    for (auto& s : cls_path)
-    {
-      if (s == enclosing_cls)
-        fq_tn << (NameElement << clone(enclosing_cls / Ident) << clone(cls_ta));
-      else
-        fq_tn << (NameElement << clone(s / Ident) << TypeArgs);
-    }
+    Node fq_tn = make_fq_name(TypeName, cls_path);
 
     fq_tn << (NameElement << (Ident ^ id) << clone(internal_ta));
     auto self_type = Type << clone(fq_tn);
 
     // Build FQ TypeName for the creation site call.
-    Node fq_tn_create = TypeName;
-
-    for (auto& s : cls_path)
-    {
-      if (s == enclosing_cls)
-        fq_tn_create
-          << (NameElement << clone(enclosing_cls / Ident) << clone(cls_ta));
-      else
-        fq_tn_create << (NameElement << clone(s / Ident) << TypeArgs);
-    }
+    Node fq_tn_create = make_fq_name(TypeName, cls_path);
 
     fq_tn_create << (NameElement << (Ident ^ id) << clone(outer_ta));
 

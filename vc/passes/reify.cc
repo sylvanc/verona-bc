@@ -1450,14 +1450,13 @@ namespace vc
         }
       }
 
-      // All other defs: dedup using substitution map equality.
-      // Compare entries for TypeParams owned by this def AND by the
-      // enclosing class. Nested classes/shapes can reference the parent's
-      // TypeParams in their own signatures/bodies, so different bindings for
-      // the enclosing class must produce different reifications.
-      auto own_tps = def / TypeParams;
-      auto parent_cls = def->parent(ClassDef);
-      auto parent_tps = parent_cls ? parent_cls / TypeParams : Node{};
+      // All other defs: dedup using substitution map equality for the
+      // definition and every enclosing generic scope.
+      Nodes relevant_tps;
+
+      for (auto& scope : scope_path(def))
+        for (auto& tp : *(scope / TypeParams))
+          relevant_tps.push_back(tp);
 
       for (auto& existing : r_vec)
       {
@@ -1482,21 +1481,11 @@ namespace vc
           }
         };
 
-        for (auto& tp : *own_tps)
+        for (auto& tp : relevant_tps)
         {
           check_tp(tp);
           if (!match)
             break;
-        }
-
-        if (match && parent_tps)
-        {
-          for (auto& tp : *parent_tps)
-          {
-            check_tp(tp);
-            if (!match)
-              break;
-          }
         }
 
         if (match)

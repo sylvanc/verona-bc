@@ -111,16 +111,27 @@ namespace vc
       return Done;
     }
 
+    static Node make_fq_name_from_typeparam(
+      const Token& name_type, const Node& typeparam)
+    {
+      assert((name_type == TypeName) || (name_type == FuncName));
+      assert(typeparam == TypeParam);
+      Node result = name_type;
+      auto owner = typeparam->parent({Top, ClassDef, TypeAlias, Function});
+
+      for (auto& scope : scope_path(owner))
+        result << (NameElement << clone(scope / Ident) << TypeArgs);
+
+      result << (NameElement << clone(typeparam / Ident) << TypeArgs);
+      return result;
+    }
+
     // Build a fully qualified prefix from Top down to target_scope.
-    // Each scope gets a NameElement with its Ident and empty TypeArgs.
+    // Generic scopes carry symbolic references to their own TypeParams.
     void build_fq_prefix(Node& result, const Node& target_scope)
     {
-      for (auto& s : scope_path(target_scope))
-      {
-        auto scope_ident = s / Ident;
-        result
-          << (NameElement << (Ident ^ scope_ident->location()) << TypeArgs);
-      }
+      result = make_fq_name(
+        (n == FuncName) ? FuncName : TypeName, scope_path(target_scope));
     }
 
     StepResult resolve_first()
@@ -221,6 +232,7 @@ namespace vc
 
           state.result << -elem;
           found = defs.front();
+
           return Continue;
         }
 
@@ -260,9 +272,23 @@ namespace vc
 
       if (defs.empty())
       {
-        state.result = err(name, "Identifier not found")
-          << errmsg("Resolving here:") << errloc(found / Ident);
-        return Done;
+        auto scope_defs = found->look(name->location());
+
+        for (auto& def : scope_defs)
+        {
+          if (def == TypeParam)
+          {
+            defs.push_back(def);
+            break;
+          }
+        }
+
+        if (defs.empty())
+        {
+          state.result = err(name, "Identifier not found")
+            << errmsg("Resolving here:") << errloc(found / Ident);
+          return Done;
+        }
       }
 
       // If we have multiple functions, it doesn't matter which one we use.
@@ -287,7 +313,11 @@ namespace vc
       }
       else if (n == TypeName)
       {
-        if (found == Function)
+        if (found == TypeParam)
+        {
+          state.result = make_fq_name_from_typeparam(TypeName, found);
+        }
+        else if (found == Function)
         {
           state.result = err(name, "Can't use a function as a type")
             << errmsg("Resolving here:") << errloc(found / Ident);
@@ -333,6 +363,7 @@ namespace vc
         if (found == TypeParam)
         {
           // Create sugar.
+          state.result = make_fq_name_from_typeparam(FuncName, found);
           state.result << (NameElement << (Ident ^ "create") << TypeArgs);
           return Continue;
         }
