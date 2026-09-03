@@ -70,10 +70,111 @@ namespace vc
     return {};
   }
 
+  Node find_flat_class(Node top, const Node& name, size_t& consumed)
+  {
+    Node result;
+    consumed = 0;
+
+    for (auto& flat : *top)
+    {
+      if (flat != FlatClass)
+        continue;
+
+      auto path = flat / ClassPath;
+
+      if ((path->size() <= consumed) || (path->size() > name->size()))
+        continue;
+
+      bool matches = true;
+      auto name_it = name->begin();
+
+      for (auto& segment : *path)
+      {
+        if (
+          (segment / Ident)->location() !=
+          ((*name_it) / Ident)->location())
+        {
+          matches = false;
+          break;
+        }
+
+        name_it++;
+      }
+
+      if (matches)
+      {
+        result = flat;
+        consumed = path->size();
+      }
+    }
+
+    return result;
+  }
+
   Node find_def(Node top, const Node& name)
   {
     assert(name->in({FuncName, TypeName}));
+
+    size_t consumed = 0;
+    auto flat = find_flat_class(top, name, consumed);
+
+    if (flat)
+    {
+      auto it = name->begin();
+      std::advance(it, consumed);
+      return find_def_from(flat, name, it, name->end());
+    }
+
     return find_def_from(top, name, name->begin(), name->end());
+  }
+
+  Node find_typeparam_def(Node top, const Node& name)
+  {
+    assert(name->in({FuncName, TypeName}));
+    auto count = name->size();
+
+    if (name == FuncName)
+    {
+      if (count < 2)
+        return {};
+
+      count--;
+    }
+
+    if (count == 1)
+    {
+      auto ident = name->front() / Ident;
+      auto scope =
+        name->parent({Top, FlatClass, ClassDef, TypeAlias, Function});
+
+      while (scope)
+      {
+        for (auto& def : scope->look(ident->location()))
+        {
+          if (def->in({ClassDef, TypeAlias, TypeParam}))
+            return def == TypeParam ? def : Node{};
+        }
+
+        scope =
+          scope->parent({Top, FlatClass, ClassDef, TypeAlias, Function});
+      }
+
+      return {};
+    }
+
+    Node path = TypeName;
+    size_t index = 0;
+
+    for (auto& elem : *name)
+    {
+      if (index++ == count)
+        break;
+
+      path << clone(elem);
+    }
+
+    auto def = find_def(top, path);
+    return def && (def == TypeParam) ? def : Node{};
   }
 
   void find_func_defs_from(Node def, NodeIt it, NodeIt end, Nodes& result)
@@ -105,8 +206,24 @@ namespace vc
     Nodes result;
 
     if (!funcname->empty())
-      find_func_defs_from(
-        top, funcname->begin(), funcname->end(), result);
+    {
+      size_t consumed = 0;
+      auto flat = find_flat_class(top, funcname, consumed);
+
+      if (flat)
+      {
+        auto it = funcname->begin();
+        std::advance(it, consumed);
+
+        if (it != funcname->end())
+          find_func_defs_from(flat, it, funcname->end(), result);
+      }
+      else
+      {
+        find_func_defs_from(
+          top, funcname->begin(), funcname->end(), result);
+      }
+    }
 
     return result;
   }
@@ -187,7 +304,23 @@ namespace vc
 
   Node make_selftype(Node node, bool fq)
   {
-    auto cls = node->parent(ClassDef);
+    auto cls = node->parent({FlatClass, ClassDef});
+    assert(cls);
+
+    if (cls == FlatClass)
+    {
+      Node tn = TypeName;
+
+      for (auto& segment : *(cls / ClassPath))
+      {
+        tn
+          << (NameElement << clone(segment / Ident)
+                          << clone(segment / TypeArgs));
+      }
+
+      return Type << tn;
+    }
+
     auto path = scope_path(cls);
 
     if (fq)

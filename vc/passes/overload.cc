@@ -73,7 +73,7 @@ namespace vc
 
   PassDef overload()
   {
-    PassDef p{"overload", wfPassANF, dir::once, {}};
+    PassDef p{"overload", wfPassFlatANF, dir::once, {}};
 
     p.post([](auto top) {
       top->traverse([&](auto node) {
