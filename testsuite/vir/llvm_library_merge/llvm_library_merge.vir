@@ -1,0 +1,18 @@
+// Multiple process-local Lib fragments share the same empty library path.
+// Calls to symbols from both fragments verify that assignids associates every
+// SymbolId with the single merged library.
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+lib
+  @malloc = "malloc"(usize): ptr
+  @free = "free"(ptr): none
+
+func @main(): none
+  $allocation_size = const usize 1
+  $allocation = ffi @malloc($allocation_size)
+  $_free = ffi @free($allocation)
+  $success = const i32 0
+  $_exit = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none

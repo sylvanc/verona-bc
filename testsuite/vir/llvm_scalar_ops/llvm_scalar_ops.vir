@@ -1,17 +1,7 @@
 lib
   @set_exit_code = "set_exit_code"(i32): none
 
-// A second process-local Lib fragment exercises assignids' library merging:
-// all three SymbolIds must point at the same LoweredLibrary.
-lib
-  @malloc = "malloc"(usize): ptr
-  @free = "free"(ptr): none
-
 func @main(): none
-  $allocation_size = const usize 1
-  $allocation = ffi @malloc($allocation_size)
-  $_free = ffi @free($allocation)
-
   $a = const i32 20
   $b = const i32 6
   $two = const i32 2
