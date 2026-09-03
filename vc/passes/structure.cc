@@ -961,7 +961,8 @@ namespace vc
           for (auto& child : *cls_body)
           {
             if (
-              (child == Function) && ((child / Lhs) == Rhs) &&
+              (child == Function) &&
+              (child / Lhs)->type().in({Rhs, Once}) &&
               (child / Ident)->location().view() == "create")
             {
               has_create = true;
