@@ -46,6 +46,8 @@ namespace vc
     Resolver::State& state;
     Node top;
     Node found;
+    Node omitted_generic;
+    Node omitted_generic_def;
 
   public:
     Processor(const Node& n_, NodeWorker<Resolver>& worker_)
@@ -111,6 +113,9 @@ namespace vc
       return Done;
     }
 
+    // Build an empty-TypeArgs definition path for a TypeParam. Unlike
+    // make_fq_name, this identifies the binder itself rather than a generic
+    // scope instantiated with symbolic arguments.
     static Node make_fq_name_from_typeparam(
       const Token& name_type, const Node& typeparam)
     {
@@ -124,6 +129,66 @@ namespace vc
 
       result << (NameElement << clone(typeparam / Ident) << TypeArgs);
       return result;
+    }
+
+    void
+    normalize_and_append_resolved_elem(Node& result, Node elem, const Node& def)
+    {
+      auto resolved = clone(elem);
+      auto ta = resolved / TypeArgs;
+      auto tps = def->in({ClassDef, TypeAlias, Function}) ?
+        def / TypeParams :
+        Node{};
+
+      if ((n == TypeName) && tps && !tps->empty())
+      {
+        // TODO: Allow omitted TypeArgs when this TypeName is nested inside
+        // an inference-bearing FuncName once infer can solve nested holes.
+        bool omitted = ta->empty();
+
+        for (auto& arg : *ta)
+        {
+          if ((arg == Type) && arg->front()->in({Unknown, TypeVar}))
+          {
+            omitted = true;
+            break;
+          }
+        }
+
+        if (omitted)
+        {
+          if (!omitted_generic)
+          {
+            omitted_generic = resolved / Ident;
+            omitted_generic_def = def;
+          }
+        }
+      }
+
+      // A Function name denotes an overload set until ANF makes arity and
+      // handedness explicit. Call resolution fills omitted TypeArgs after
+      // selecting the matching definition.
+      if (
+        (def != Function) && ta->empty() && tps && !tps->empty())
+      {
+        resolved->replace(ta, unknown_typeargs(tps));
+      }
+      else if (tps && !tps->empty())
+      {
+        Node normalized = TypeArgs;
+
+        for (auto& arg : *ta)
+        {
+          if ((arg == Type) && (arg->front() == TypeVar))
+            normalized << (Type << Unknown);
+          else
+            normalized << clone(arg);
+        }
+
+        resolved->replace(ta, normalized);
+      }
+
+      result << resolved;
     }
 
     // Build a fully qualified prefix from Top down to target_scope.
@@ -191,7 +256,7 @@ namespace vc
           {
             found = def;
             build_fq_prefix(state.result, curr_scope);
-            state.result << -elem;
+            normalize_and_append_resolved_elem(state.result, elem, found);
             return Continue;
           }
         }
@@ -200,9 +265,10 @@ namespace vc
         {
           assert(def == Use);
 
-          // Don't follow our own Use (self-referential include).
+          // A Use can depend on earlier imports, but not on itself or later
+          // imports. Continuing past it can create circular dependencies.
           if (n->parent() == def)
-            continue;
+            break;
 
           // Wait for the use to be resolved.
           STEP(block_on_children(def));
@@ -230,9 +296,8 @@ namespace vc
           for (auto& child : *use_name)
             state.result << clone(child);
 
-          state.result << -elem;
           found = defs.front();
-
+          normalize_and_append_resolved_elem(state.result, elem, found);
           return Continue;
         }
 
@@ -293,7 +358,7 @@ namespace vc
 
       // If we have multiple functions, it doesn't matter which one we use.
       found = defs.front();
-      state.result << -elem;
+      normalize_and_append_resolved_elem(state.result, elem, found);
       return Continue;
     }
 
@@ -316,6 +381,14 @@ namespace vc
         if (found == TypeParam)
         {
           state.result = make_fq_name_from_typeparam(TypeName, found);
+        }
+        else if (omitted_generic)
+        {
+          state.result = err(
+            omitted_generic,
+            "Generic types require explicit type arguments")
+            << errmsg("Resolving here:")
+            << errloc(omitted_generic_def / Ident);
         }
         else if (found == Function)
         {

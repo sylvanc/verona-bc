@@ -13,6 +13,7 @@ namespace vc
   static bool is_lambda_function(const Node& func);
 
   std::unordered_set<const void*> lambda_returns_omitted;
+  std::set<std::pair<const void*, size_t>> inferred_typearg_slots;
 
   static bool lambda_return_was_omitted(const Node& func)
   {
@@ -144,6 +145,11 @@ namespace vc
   {
     return type && !type->empty() &&
       type->front()->in({DefaultInt, DefaultFloat});
+  }
+
+  bool is_unknown_typearg(const Node& arg)
+  {
+    return (arg == Type) && arg->front()->in({Unknown, TypeVar});
   }
 
   bool contains_default_type(const Node& type)
@@ -1707,7 +1713,8 @@ namespace vc
     auto ta = typename_node->back() / TypeArgs;
     if (tps->size() == ta->size())
       for (size_t i = 0; i < tps->size(); i++)
-        subst[tps->at(i)] = ta->at(i);
+        if (!is_unknown_typearg(ta->at(i)))
+          subst[tps->at(i)] = ta->at(i);
     return subst;
   }
 
@@ -2228,19 +2235,38 @@ namespace vc
       if (tps->empty())
         continue;
 
-      bool all_constrained = true;
+      if (!ta->empty() && (ta->size() != tps->size()))
+        continue;
+
       Node new_ta = TypeArgs;
-      for (auto& tp : *tps)
+      bool changed = false;
+
+      for (size_t i = 0; i < tps->size(); i++)
       {
-        auto find = constraints.find(tp);
-        if (find == constraints.end())
+        Node old_arg =
+          ta->empty() ? (Type << Unknown) : clone(ta->at(i));
+        auto slot = std::make_pair(
+          static_cast<const void*>(scope.name_elem.get()), i);
+
+        if (
+          is_unknown_typearg(old_arg) ||
+          inferred_typearg_slots.contains(slot))
         {
-          all_constrained = false;
-          break;
+          inferred_typearg_slots.insert(slot);
+          auto find = constraints.find(tps->at(i));
+
+          if (find != constraints.end())
+          {
+            new_ta << clone(find->second.type);
+            changed = true;
+            continue;
+          }
         }
-        new_ta << clone(find->second.type);
+
+        new_ta << old_arg;
       }
-      if (all_constrained)
+
+      if (changed)
         replace_if_changed(scope.name_elem, ta, new_ta);
     }
 
@@ -2252,7 +2278,8 @@ namespace vc
       auto tps = scope.def / TypeParams;
       if (!ta->empty() && ta->size() == tps->size())
         for (size_t i = 0; i < tps->size(); i++)
-          subst[tps->at(i)] = ta->at(i);
+          if (!is_unknown_typearg(ta->at(i)))
+            subst[tps->at(i)] = ta->at(i);
     }
 
     std::map<Location, Node> const_defs;
@@ -2641,7 +2668,7 @@ namespace vc
 
         for (auto& t : *ta)
         {
-          if (t == Type && t->front() == TypeVar)
+          if (is_unknown_typearg(t))
           {
             needs_inference = true;
             break;
@@ -2685,32 +2712,35 @@ namespace vc
       if (tps->empty())
         continue;
 
-      if (!ta->empty())
+      if (!ta->empty() && (ta->size() != tps->size()))
+        continue;
+
+      Node new_ta = TypeArgs;
+      bool changed = ta->empty();
+
+      for (size_t i = 0; i < tps->size(); i++)
       {
-        bool needs_reinfer = false;
-        for (auto& t : *ta)
-          if (direct_typeparam(top, t) || (t == Type && t->front() == TypeVar))
+        Node old_arg =
+          ta->empty() ? (Type << Unknown) : clone(ta->at(i));
+
+        if (is_unknown_typearg(old_arg))
+        {
+          inferred_typearg_slots.insert(
+            {static_cast<const void*>(scope.name_elem.get()), i});
+          auto find = constraints.find(tps->at(i));
+
+          if (find != constraints.end())
           {
-            needs_reinfer = true;
-            break;
+            new_ta << clone(find->second.type);
+            changed = true;
+            continue;
           }
-        if (!needs_reinfer)
-          continue;
+        }
+
+        new_ta << old_arg;
       }
 
-      bool all_constrained = true;
-      Node new_ta = TypeArgs;
-      for (auto& tp : *tps)
-      {
-        auto find = constraints.find(tp);
-        if (find == constraints.end())
-        {
-          all_constrained = false;
-          break;
-        }
-        new_ta << clone(find->second.type);
-      }
-      if (all_constrained)
+      if (changed)
         replace_if_changed(scope.name_elem, ta, new_ta);
     }
 
@@ -3833,7 +3863,8 @@ namespace vc
           auto tps = scope.def / TypeParams;
           if (!ta->empty() && ta->size() == tps->size())
             for (size_t i = 0; i < tps->size(); i++)
-              subst[tps->at(i)] = ta->at(i);
+              if (!is_unknown_typearg(ta->at(i)))
+                subst[tps->at(i)] = ta->at(i);
         }
 
         // Forward: return type.
@@ -5473,6 +5504,7 @@ namespace vc
       Nodes deferred;
 
       lambda_returns_omitted.clear();
+      inferred_typearg_slots.clear();
       deferred_param_errors.clear();
       top->traverse([&](auto node) {
         if (
