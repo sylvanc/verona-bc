@@ -3219,6 +3219,9 @@ namespace vc
       if (type == Dyn)
         return clone(type);
 
+      if (type == Unknown)
+        return err(type, "Type argument was not inferred");
+
       if (type->in(
             {ClassId,
              TypeId,
@@ -4367,8 +4370,16 @@ namespace vc
               {
                 auto stps = def / TypeParams;
 
+                if (sta->size() != stps->size())
+                  return err(se, "Incorrect number of type arguments");
+
                 for (size_t i = 0; i < stps->size(); i++)
                 {
+                  if (
+                    (sta->at(i) == Type) &&
+                    (sta->at(i)->front() == Unknown))
+                    return err(sta->at(i), "Type argument was not inferred");
+
                   r.subst[stps->at(i)] = sta->at(i);
                   resolve_subst[stps->at(i)] = sta->at(i);
                 }
@@ -4408,6 +4419,10 @@ namespace vc
 
           for (size_t i = 0; i < tps->size(); i++)
           {
+            if (
+              (ta->at(i) == Type) && (ta->at(i)->front() == Unknown))
+              return err(ta->at(i), "Type argument was not inferred");
+
             // Substitute any TypeParam references in the TypeArg using the
             // full resolution context, to avoid self-referential cycles.
             auto arg = ta->at(i);
@@ -4418,13 +4433,9 @@ namespace vc
         }
         else if (!tps->empty())
         {
-          // No TypeArgs but the def has TypeParams (e.g., bare class name
-          // as return type from within a generic class). Inherit any
-          // existing substitutions from the resolution context.
-          // If not found in resolve_subst, check existing reifications of
-          // this def for a TypeParam binding (handles nested classes of
-          // generic outer classes, where the outer subst isn't in the
-          // immediate resolution context).
+          // Empty TypeArgs are only used by TypeParam definition paths.
+          // Resolve those paths from the current context, never from an
+          // arbitrary existing specialization.
           for (auto& tp : *tps)
           {
             auto find = resolve_subst.find(tp);
@@ -4436,17 +4447,38 @@ namespace vc
             }
             else
             {
+              Node inherited;
               auto map_it = map.find(def);
-              if (map_it != map.end() && !map_it->second.empty())
+
+              if (map_it != map.end())
               {
-                auto& existing = map_it->second.front();
-                auto existing_find = existing.subst.find(tp);
-                if (existing_find != existing.subst.end())
+                for (auto& existing : map_it->second)
                 {
-                  r.subst[tp] = existing_find->second;
-                  resolve_subst[tp] = existing_find->second;
+                  auto existing_find = existing.subst.find(tp);
+
+                  if (existing_find == existing.subst.end())
+                    continue;
+
+                  if (!inherited)
+                  {
+                    inherited = existing_find->second;
+                  }
+                  else if (!inherited->equals(existing_find->second))
+                  {
+                    return err(
+                      elem,
+                      "Generic definition path has ambiguous type "
+                      "arguments");
+                  }
                 }
               }
+
+              if (!inherited)
+                return err(
+                  elem, "Generic scope has no explicit type argument");
+
+              r.subst[tp] = inherited;
+              resolve_subst[tp] = inherited;
             }
           }
         }

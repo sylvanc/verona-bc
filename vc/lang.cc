@@ -146,6 +146,16 @@ namespace vc
     return ta;
   }
 
+  Node unknown_typeargs(Node tps)
+  {
+    Node ta = TypeArgs;
+
+    for (size_t i = 0; i < tps->size(); i++)
+      ta << (Type << Unknown);
+
+    return ta;
+  }
+
   Node fq_scope_typeargs(Node scope)
   {
     return fq_typeargs(scope_path(scope), scope / TypeParams);

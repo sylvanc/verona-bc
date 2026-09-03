@@ -53,6 +53,7 @@ namespace vc
   inline const auto Isect = TokenDef("isect");
   inline const auto FuncType = TokenDef("functype");
   inline const auto NoArgType = TokenDef("noargtype");
+  inline const auto Unknown = TokenDef("???");
   inline const auto TypeVar = TokenDef("typevar");
   inline const auto TypeSelf = TokenDef("typeself");
 
@@ -131,7 +132,8 @@ namespace vc
       DontCare);
 
   inline const auto wfType =
-    TypeName | Union | Isect | TupleType | FuncType | TypeVar | TypeSelf;
+    TypeName | Union | Isect | TupleType | FuncType | Unknown | TypeVar |
+    TypeSelf;
   inline const auto wfWhere = WhereAnd | WhereOr | WhereNot | SubType;
 
   inline const auto wfBody = Use | Break | Continue | Return | Raise | Expr;
@@ -467,6 +469,7 @@ namespace vc
   Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand);
   Node fq_typeparam(const Nodes& path, Node tp);
   Node fq_typeargs(const Nodes& path, Node tps);
+  Node unknown_typeargs(Node tps);
   Node fq_scope_typeargs(Node scope);
   Node make_fq_name(const Token& name_type, const Nodes& path);
   Node make_selftype(Node node, bool fq = false);

@@ -52,6 +52,20 @@ counter
 }
 ```
 
+For a generic class, the self type must include its type arguments explicitly:
+
+```verona
+box[A]
+{
+  get(self: box[A]): A
+  {
+    self.value
+  }
+}
+```
+
+Writing `self: box` is an incomplete generic type and is rejected.
+
 Functions without `self` are free functions scoped to the class. They must be called with a qualified name (e.g., `counter::create()`).
 
 ---

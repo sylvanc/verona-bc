@@ -61,6 +61,20 @@ use math
 use utils
 ```
 
+Imports are processed in source order when resolving subsequent `use`
+declarations. This allows a module imported by one declaration to provide the
+target of the next:
+
+```verona
+use collections
+use list          // resolves to collections::list
+```
+
+Only preceding imports participate in resolving a `use` target. The current
+and later imports are not searched, which keeps the dependency graph acyclic.
+This ordering applies to resolving import targets; declarations within a
+module remain order-independent.
+
 ---
 
 ## 16.4 `_builtin`
