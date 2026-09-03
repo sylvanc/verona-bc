@@ -1,0 +1,52 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
+  $one = const i32 1
+  $two = const i32 2
+  $three = const i32 3
+  $nine = const i32 9
+  $four = const i32 4
+
+  $one_f32 = convert f32 $one
+  $two_f32 = convert f32 $two
+  $three_f32 = convert f32 $three
+  $nine_f32 = convert f32 $nine
+  $four_f32 = convert f32 $four
+  $expected_positive_f32 = div $three_f32 $two_f32
+  $positive_fraction_f32 = div $nine_f32 $four_f32
+  $expected_negative_f32 = neg $positive_fraction_f32
+
+  $positive_f32 = const f32 1.5
+  $negative_f32 = const f32 -2.25
+  $positive_f32_ok = eq $positive_f32 $expected_positive_f32
+  $negative_f32_ok = eq $negative_f32 $expected_negative_f32
+  $positive_f32_ok_i32 = convert i32 $positive_f32_ok
+  $negative_f32_ok_i32 = convert i32 $negative_f32_ok
+  $positive_f32_error = sub $one $positive_f32_ok_i32
+  $negative_f32_error = sub $one $negative_f32_ok_i32
+
+  $one_f64 = convert f64 $one
+  $two_f64 = convert f64 $two
+  $three_f64 = convert f64 $three
+  $nine_f64 = convert f64 $nine
+  $four_f64 = convert f64 $four
+  $expected_positive_f64 = div $three_f64 $two_f64
+  $positive_fraction_f64 = div $nine_f64 $four_f64
+  $expected_negative_f64 = neg $positive_fraction_f64
+
+  $positive_f64 = const f64 1.5
+  $negative_f64 = const f64 -2.25
+  $positive_f64_ok = eq $positive_f64 $expected_positive_f64
+  $negative_f64_ok = eq $negative_f64 $expected_negative_f64
+  $positive_f64_ok_i32 = convert i32 $positive_f64_ok
+  $negative_f64_ok_i32 = convert i32 $negative_f64_ok
+  $positive_f64_error = sub $one $positive_f64_ok_i32
+  $negative_f64_error = sub $one $negative_f64_ok_i32
+
+  $f32_error = or $positive_f32_error $negative_f32_error
+  $f64_error = or $positive_f64_error $negative_f64_error
+  $error = or $f32_error $f64_error
+  $_exit = ffi @set_exit_code($error)
+  $_none = const none
+  ret $_none

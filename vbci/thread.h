@@ -8,6 +8,7 @@
 #include "register.h"
 #include "stack.h"
 
+#include <bit>
 #include <functional>
 #include <source_location>
 #include <type_traits>
@@ -148,9 +149,16 @@ namespace vbci
     template<typename T = size_t>
     SNMALLOC_FAST_PATH T leb()
     {
-      if constexpr (
-        (std::is_integral_v<T> && std::is_signed_v<T>) ||
-        std::is_floating_point_v<T>)
+      if constexpr (std::is_same_v<T, float>)
+      {
+        auto bits = static_cast<int32_t>(program->sleb(frame->pc));
+        return std::bit_cast<float>(bits);
+      }
+      else if constexpr (std::is_same_v<T, double>)
+      {
+        return std::bit_cast<double>(program->sleb(frame->pc));
+      }
+      else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>)
         return static_cast<T>(program->sleb(frame->pc));
       else
         return static_cast<T>(program->uleb(frame->pc));
