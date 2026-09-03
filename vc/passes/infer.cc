@@ -5881,7 +5881,7 @@ namespace vc
 
   PassDef infer()
   {
-    PassDef p{"infer", wfPassFlatInfer, dir::once, {}};
+    PassDef p{"infer", wfPassInfer, dir::once, {}};
 
     p.post([](auto top) {
       Nodes deferred;

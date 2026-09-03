@@ -11,7 +11,6 @@ add_executable(vc
   passes/reify.cc
   passes/sugar.cc
   passes/structure.cc
-  passes/unflatten.cc
   lang.cc
   main.cc
   subtype.cc

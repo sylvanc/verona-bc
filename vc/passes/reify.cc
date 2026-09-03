@@ -47,19 +47,169 @@ namespace vc
         ffi_primitive_types.find(name) != ffi_primitive_types.end();
     }
 
-    // Check if a def is transitively under the _builtin scope.
+    // The flat class a definition belongs to. A FlatClass owns itself.
+    Node owner_class(const Node& def) const
+    {
+      return (def == FlatClass) ? def : def->parent(FlatClass);
+    }
+
+    // The class path of the flat class a definition belongs to.
+    Node owner_class_path(const Node& def) const
+    {
+      auto cls = owner_class(def);
+      return cls ? (cls / ClassPath) : Node{};
+    }
+
+    // Check if a def is transitively under the _builtin scope. A flat class
+    // is under _builtin when its class path is rooted at _builtin and has at
+    // least one further segment; any other definition is under _builtin when
+    // its owning class is rooted there.
     bool is_under_builtin(const Node& def) const
     {
-      auto parent = def->parent(ClassDef);
+      if (!builtin)
+        return false;
 
-      while (parent)
+      auto path = owner_class_path(def);
+
+      if (!path)
+        return false;
+
+      if ((def == FlatClass) && (path->size() < 2))
+        return false;
+
+      return (path->front() / DefId)->location() ==
+        (builtin / DefId)->location();
+    }
+
+    // Locate a class nested under _builtin by its path of idents.
+    Node builtin_class(const std::vector<std::string_view>& names) const
+    {
+      Node tn = TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs);
+
+      for (auto& name : names)
+        tn << (NameElement << (Ident ^ std::string(name)) << TypeArgs);
+
+      size_t consumed = 0;
+      auto flat = find_flat_class_by_longest_prefix(top, tn, consumed);
+      return (flat && (consumed == tn->size())) ? flat : Node{};
+    }
+
+    // True when def is the universal shape _builtin::any.
+    bool is_builtin_any(const Node& def) const
+    {
+      if (def != FlatClass)
+        return false;
+
+      auto path = def / ClassPath;
+      return (path->size() == 2) && is_under_builtin(def) &&
+        ((path->back() / Ident)->location().view() == "any");
+    }
+
+    // The type parameters a reification of def is specialised over: the
+    // owning flat class's combined canonical binders, plus the definition's
+    // own binders when it is not a class itself.
+    Nodes reification_typeparams(const Node& def) const
+    {
+      Nodes tps;
+      auto cls = owner_class(def);
+
+      if (cls)
       {
-        if (parent == builtin)
-          return true;
-        parent = parent->parent(ClassDef);
+        for (auto& tp : *(cls / TypeParams))
+          tps.push_back(tp);
       }
 
-      return false;
+      if (def != FlatClass)
+      {
+        for (auto& tp : *(def / TypeParams))
+          tps.push_back(tp);
+      }
+
+      return tps;
+    }
+
+    // A name whose leading element is a lexically scoped type parameter
+    // reference, such as `T::create`. Flat class bodies keep type parameter
+    // references unqualified, so this resolves through the enclosing scopes.
+    Node find_leading_typeparam(const Node& name) const
+    {
+      return lookup_typeparam(
+        name->parent({Top, FlatClass, TypeAlias, Function}),
+        (name->front() / Ident)->location());
+    }
+
+    // Resolve an unqualified name against a scope chain, following the same
+    // shadowing rules as find_typeparam_def.
+    Node lookup_typeparam(Node scope, const Location& ident) const
+    {
+      while (scope)
+      {
+        for (auto& def : scope->look(ident))
+        {
+          if (def == TypeParam)
+            return def;
+
+          if (def->in({FlatClass, TypeAlias}))
+            return {};
+        }
+
+        if (scope == FlatClass)
+          return {};
+
+        scope = scope->parent({Top, FlatClass, TypeAlias, Function});
+      }
+
+      return {};
+    }
+
+    // Flat class bodies keep TypeParam references unqualified, which relies
+    // on their lexical position in the tree. Reification clones a function's
+    // labels before rewriting them, so qualify those references first: a
+    // fully qualified path resolves from Top and survives the copy.
+    void qualify_lexical_typeparam_refs(const Node& subtree, const Node& def)
+    {
+      std::vector<std::pair<Node, Node>> rewrites;
+
+      subtree->traverse([&](Node& n) {
+        if (!n->in({TypeName, FuncName}) || n->empty())
+          return true;
+
+        // Only the leading element of a name can be unqualified.
+        auto tp = lookup_typeparam(def, (n->front() / Ident)->location());
+
+        if (!tp)
+          return true;
+
+        auto path = fq_typeparam_ref(tp);
+
+        if (!path)
+          return true;
+
+        Node replacement = n->type();
+
+        for (auto& elem : *path)
+          replacement << clone(elem);
+
+        for (auto it = n->begin() + 1; it != n->end(); ++it)
+          replacement << clone(*it);
+
+        rewrites.emplace_back(n, replacement);
+        return true;
+      });
+
+      // Rewrite innermost names first so that an outer replacement clones the
+      // already-qualified children.
+      for (auto it = rewrites.rbegin(); it != rewrites.rend(); ++it)
+        it->first->parent()->replace(it->first, it->second);
+    }
+
+    // All flat classes whose class path is a prefix of name, longest first.
+    // A shorter prefix is only used when the longer one cannot produce an
+    // acceptable definition, so a class and a function that share a name
+    // never shadow each other.
+    ClassPrefixes flat_class_prefixes(const Node& name) const
+    {
+      return find_flat_class_prefixes(top, name);
     }
 
     bool contains_dyn(const Node& type) const
@@ -121,49 +271,21 @@ namespace vc
 
       if (type == TypeName)
       {
-        auto def = top;
-
-        for (auto it = type->begin(); it != type->end(); ++it)
+        for (auto& elem : *type)
         {
-          auto& elem = *it;
-
           for (auto& arg : *(elem / TypeArgs))
           {
             if (contains_typeparam_ref(arg))
               return true;
           }
-
-          auto defs = def->look((elem / Ident)->location());
-
-          if (defs.empty())
-            return false;
-
-          if (defs.size() > 1 && (it + 1) != type->end())
-          {
-            auto next_ident = (*(it + 1)) / Ident;
-            auto picked = defs.front();
-
-            for (auto& d : defs)
-            {
-              if (!d->look(next_ident->location()).empty())
-              {
-                picked = d;
-                break;
-              }
-            }
-
-            def = picked;
-          }
-          else
-          {
-            def = defs.front();
-          }
-
-          if (def == TypeParam)
-            return true;
         }
 
-        return false;
+        auto def = find_def(top, type);
+
+        if (def)
+          return def == TypeParam;
+
+        return find_leading_typeparam(type) != nullptr;
       }
 
       for (auto& child : *type)
@@ -189,64 +311,37 @@ namespace vc
 
       if (type == TypeName)
       {
-        auto def = top;
-
-        for (auto it = type->begin(); it != type->end(); ++it)
+        for (auto& elem : *type)
         {
-          auto& elem = *it;
-
           for (auto& arg : *(elem / TypeArgs))
           {
             if (has_unresolved_type(arg, subst, seen))
               return true;
           }
-
-          auto defs = def->look((elem / Ident)->location());
-
-          if (defs.empty())
-            return false;
-
-          if (defs.size() > 1 && (it + 1) != type->end())
-          {
-            auto next_ident = (*(it + 1)) / Ident;
-            auto picked = defs.front();
-
-            for (auto& d : defs)
-            {
-              if (!d->look(next_ident->location()).empty())
-              {
-                picked = d;
-                break;
-              }
-            }
-
-            def = picked;
-          }
-          else
-          {
-            def = defs.front();
-          }
-
-          if (def == TypeParam)
-          {
-            if (!seen.insert(def).second)
-              return true;
-
-            auto find = subst.find(def);
-
-            if (find == subst.end())
-            {
-              seen.erase(def);
-              return true;
-            }
-
-            auto unresolved = has_unresolved_type(find->second, subst, seen);
-            seen.erase(def);
-            return unresolved;
-          }
         }
 
-        return false;
+        auto def = find_def(top, type);
+
+        if (!def)
+          def = find_leading_typeparam(type);
+
+        if (!def || (def != TypeParam))
+          return false;
+
+        if (!seen.insert(def).second)
+          return true;
+
+        auto find = subst.find(def);
+
+        if (find == subst.end())
+        {
+          seen.erase(def);
+          return true;
+        }
+
+        auto unresolved = has_unresolved_type(find->second, subst, seen);
+        seen.erase(def);
+        return unresolved;
       }
 
       for (auto& child : *type)
@@ -282,11 +377,23 @@ namespace vc
     void run(Node& top_)
     {
       top = top_;
-      builtin = top->look(Location("_builtin")).front();
+
+      for (auto& flat : *top)
+      {
+        if (
+          (flat == FlatClass) && ((flat / ClassPath)->size() == 1) &&
+          ((flat / Ident)->location().view() == "_builtin"))
+        {
+          builtin = flat;
+          break;
+        }
+      }
+
+      assert(builtin);
 
       // Create a call to main and reify it.
       auto main_module = top->front();
-      assert(main_module == ClassDef);
+      assert(main_module == FlatClass);
       assert((main_module / TypeParams)->empty());
 
       // Check that main is defined under the main module and has no type
@@ -765,7 +872,7 @@ namespace vc
     }
 
   private:
-    // Each ClassDef (including primitives), TypeAlias, or Function that we
+    // Each FlatClass (including primitives), TypeAlias, or Function that we
     // reify gets a Reification struct.
     struct Reification
     {
@@ -835,7 +942,7 @@ namespace vc
         auto r = worklist.back();
         worklist.pop_back();
 
-        if (r->def == ClassDef)
+        if (r->def == FlatClass)
           reify_class(*r);
         else if (r->def == TypeAlias)
           reify_typealias(*r);
@@ -865,7 +972,7 @@ namespace vc
       {
         for (auto& r : map[key])
         {
-          if (r.def != ClassDef || (r.def / Shape) != Shape)
+          if (r.def != FlatClass || (r.def / Shape) != Shape)
             continue;
 
           assert(r.resolved_name);
@@ -875,7 +982,7 @@ namespace vc
           {
             for (auto& cr : map[ckey])
             {
-              if (cr.def != ClassDef || (cr.def / Shape) == Shape)
+              if (cr.def != FlatClass || (cr.def / Shape) == Shape)
                 continue;
               if (!cr.resolved_name)
                 continue;
@@ -1396,7 +1503,7 @@ namespace vc
       if (is_new_key)
         map_order.push_back(def);
 
-      if (is_under_builtin(def))
+      if ((def == FlatClass) && is_under_builtin(def))
       {
         auto name = (def / Ident)->location().view();
 
@@ -1451,12 +1558,8 @@ namespace vc
       }
 
       // All other defs: dedup using substitution map equality for the
-      // definition and every enclosing generic scope.
-      Nodes relevant_tps;
-
-      for (auto& scope : scope_path(def))
-        for (auto& tp : *(scope / TypeParams))
-          relevant_tps.push_back(tp);
+      // definition and its owning flat class.
+      auto relevant_tps = reification_typeparams(def);
 
       for (auto& existing : r_vec)
       {
@@ -1662,7 +1765,7 @@ namespace vc
               return clone(reif.reification / Type);
 
             // Not yet reified — eagerly compute the return type from the
-            // function's ClassDef so that receiver-type tracking for
+            // function's flat class so that receiver-type tracking for
             // downstream Lookup/CallDyn sites doesn't fall back to the
             // conservative "all classes" receiver set.
             auto def_type = reif.def / Type;
@@ -1721,7 +1824,7 @@ namespace vc
 
       for (auto& key : map_order)
       {
-        if (key != ClassDef)
+        if (key != FlatClass)
           continue;
 
         for (auto& reif : map[key])
@@ -1745,7 +1848,7 @@ namespace vc
 
       for (auto& key : map_order)
       {
-        if (key != ClassDef)
+        if (key != FlatClass)
           continue;
 
         for (auto& r : map[key])
@@ -2040,7 +2143,7 @@ namespace vc
       bool changed = false;
 
       auto find_create_field_def = [&](const Node& def_param) -> Node {
-        auto parent_cls = target.def->parent(ClassDef);
+        auto parent_cls = target.def->parent(FlatClass);
         if (!parent_cls)
           return {};
         if ((target.def / Ident)->location().view() != "create")
@@ -2061,7 +2164,7 @@ namespace vc
 
       auto sync_create_field_type =
         [&](const Node& def_param, const Node& refined_type) {
-          auto parent_cls = target.def->parent(ClassDef);
+          auto parent_cls = target.def->parent(FlatClass);
           if (!parent_cls)
             return false;
           if ((target.def / Ident)->location().view() != "create")
@@ -2139,7 +2242,7 @@ namespace vc
           {
             auto last_elem = tp_name->back();
             auto tp_ident = last_elem / Ident;
-            auto parent_cls = target.def->parent(ClassDef);
+            auto parent_cls = target.def->parent(FlatClass);
 
             if (parent_cls)
             {
@@ -2232,7 +2335,7 @@ namespace vc
 
       for (auto& key : map_order)
       {
-        if (key != ClassDef)
+        if (key != FlatClass)
           continue;
 
         for (auto& r : map[key])
@@ -2331,6 +2434,7 @@ namespace vc
       Node vars = Vars;
       std::vector<Location> var_locs;
       Node labels = clone(r.def / Labels);
+      qualify_lexical_typeparam_refs(labels, r.def);
 
       for (auto& l : *labels)
       {
@@ -2446,7 +2550,7 @@ namespace vc
                   (stmt == Call) && ((stmt / LocalId)->location() == trace_loc))
                 {
                   // Find the Function reification for this Call, then
-                  // trigger reification of its enclosing ClassDef.
+                  // trigger reification of its enclosing flat class.
                   auto funcid_loc = (stmt / FunctionId)->location().view();
                   NodeMap<Node> class_subst;
 
@@ -2459,7 +2563,7 @@ namespace vc
                     {
                       if (reif.id && (reif.id->location().view() == funcid_loc))
                       {
-                        auto enc = reif.def->parent(ClassDef);
+                        auto enc = reif.def->parent(FlatClass);
 
                         if (enc)
                         {
@@ -3153,7 +3257,7 @@ namespace vc
           {
             if ((stmt == Call) && ((stmt / LocalId)->location() == ret_loc))
             {
-              // Find the Function reification and its enclosing ClassDef.
+              // Find the Function reification and its enclosing class.
               auto funcid_loc = (stmt / FunctionId)->location().view();
               Node call_enc;
               NodeMap<Node> class_subst;
@@ -3167,7 +3271,7 @@ namespace vc
                 {
                   if (reif.id && (reif.id->location().view() == funcid_loc))
                   {
-                    auto enc = reif.def->parent(ClassDef);
+                    auto enc = reif.def->parent(FlatClass);
 
                     if (enc)
                     {
@@ -3297,8 +3401,7 @@ namespace vc
             // drop it. The post-shape cleanup pass (prune_empty_shape_unions)
             // handles any TypeIds that turn out to be empty after
             // resolve_shapes runs.
-            auto has_empty_shape = [&](const Node& tid) -> bool
-            {
+            auto has_empty_shape = [&](const Node& tid) -> bool {
               for (auto& key : map_order)
               {
                 for (auto& cr : map[key])
@@ -3393,8 +3496,9 @@ namespace vc
     // Get the reification and return the ClassId or TypeId.
     Node reify_typename(const Node& tn, const NodeMap<Node>& subst)
     {
-      return get_reification(
-        tn, subst, [](auto& def) { return def->in({ClassDef, TypeAlias}); });
+      return get_reification(tn, subst, [](auto& def) {
+        return def->in({FlatClass, TypeAlias});
+      });
     }
 
     // Ensure a primitive type is reified. Delegates to find_or_push which
@@ -3407,14 +3511,14 @@ namespace vc
         if (type->type() != v->type())
           continue;
 
-        auto defs = builtin->look(Location(std::string(k)));
-        assert(defs.size() == 1);
+        auto def = builtin_class({k});
+        assert(def);
 
         Node prim_name = TypeName
           << (NameElement << (Ident ^ "_builtin") << TypeArgs)
           << (NameElement << (Ident ^ std::string(k)) << TypeArgs);
 
-        find_or_push(defs.front(), {}, prim_name);
+        find_or_push(def, {}, prim_name);
         return;
       }
 
@@ -3424,19 +3528,15 @@ namespace vc
         if (type->type() != v->type())
           continue;
 
-        auto ffi_defs = builtin->look(Location("ffi"));
-        assert(ffi_defs.size() == 1);
-        auto ffi_def = ffi_defs.front();
-
-        auto defs = ffi_def->lookdown(Location(std::string(k)));
-        assert(defs.size() == 1);
+        auto def = builtin_class({"ffi", k});
+        assert(def);
 
         Node prim_name = TypeName
           << (NameElement << (Ident ^ "_builtin") << TypeArgs)
           << (NameElement << (Ident ^ "ffi") << TypeArgs)
           << (NameElement << (Ident ^ std::string(k)) << TypeArgs);
 
-        find_or_push(defs.front(), {}, prim_name);
+        find_or_push(def, {}, prim_name);
         return;
       }
     }
@@ -3452,7 +3552,7 @@ namespace vc
       {
         for (auto& r : map[key])
         {
-          if (!same_reification_id(r.id, classid) || (r.def != ClassDef))
+          if (!same_reification_id(r.id, classid) || (r.def != FlatClass))
             continue;
 
           if (r.reification)
@@ -3491,9 +3591,8 @@ namespace vc
       if (!inner_ir_type || (inner_ir_type == Dyn))
         return;
 
-      auto ref_defs = builtin->look(Location("ref"));
-      assert(!ref_defs.empty());
-      auto ref_def = ref_defs.front();
+      auto ref_def = builtin_class({"ref"});
+      assert(ref_def);
       auto tps = ref_def / TypeParams;
       assert(tps->size() == 1);
 
@@ -3541,9 +3640,8 @@ namespace vc
     void ensure_array_reified(
       const Node& elem_type, const NodeMap<Node>& outer_subst)
     {
-      auto array_defs = builtin->look(Location("array"));
-      assert(!array_defs.empty());
-      auto array_def = array_defs.front();
+      auto array_def = builtin_class({"array"});
+      assert(array_def);
 
       auto tps = array_def / TypeParams;
       assert(tps->size() == 1);
@@ -3596,20 +3694,12 @@ namespace vc
       auto type_node = n / Type;
       auto newargs = n / NewArgs;
 
-      // Navigate the TypeName to find the ClassDef for field ordering.
-      Node def = top;
+      // Navigate the TypeName to find the flat class for field ordering.
+      Node def;
       auto tn = (type_node == Type) ? type_node->front() : type_node;
 
       if (tn == TypeName)
-      {
-        for (auto& elem : *tn)
-        {
-          auto defs = def->look((elem / Ident)->location());
-
-          if (!defs.empty())
-            def = defs.front();
-        }
-      }
+        def = find_def(top, tn);
 
       // Reify the type to get a ClassId.
       auto classid =
@@ -3618,7 +3708,7 @@ namespace vc
       // Convert NewArgs to Args, ordered by field position in the class.
       Node args = Args;
 
-      if (def == ClassDef)
+      if (def == FlatClass)
       {
         for (auto& f : *(def / ClassBody))
         {
@@ -3696,7 +3786,7 @@ namespace vc
 
       for (size_t i = 0; i < map_order_size; i++)
       {
-        if (map_order[i] != ClassDef)
+        if (map_order[i] != FlatClass)
           continue;
 
         for (auto& r : map[map_order[i]])
@@ -3716,7 +3806,7 @@ namespace vc
     // If the class has a matching function, reify it and add a Method entry.
     void register_method(const MethodInvocation& mi, Reification& r)
     {
-      assert(r.def == ClassDef);
+      assert(r.def == FlatClass);
 
       if ((r.def / Shape) == Shape)
         return;
@@ -3856,7 +3946,7 @@ namespace vc
 
       for (auto& key : map_order)
       {
-        if (key != ClassDef)
+        if (key != FlatClass)
           continue;
 
         for (auto& r : map[key])
@@ -3880,7 +3970,7 @@ namespace vc
       if (!target_r->reification)
         reify_class(*target_r);
 
-      // Scan the ClassDef for a unique non-generic `apply` method.
+      // Scan the class body for a unique non-generic `apply` method.
       Node found_func;
       size_t match_count = 0;
       bool has_generic = false;
@@ -4105,12 +4195,9 @@ namespace vc
       auto sym_id = n / SymbolId;
       auto sym_name = sym_id->location();
 
-      // Walk up from the function definition to find the Lib that defines
-      // this symbol.
-      auto def = r.def;
-      auto parent = def->parent(ClassDef);
-
-      while (parent)
+      // Walk the logical class ancestry (innermost first): a Lib defined in
+      // an enclosing class is visible to functions in a nested class.
+      for (auto& parent : class_ancestry(top, r.def))
       {
         for (auto& child : *(parent / ClassBody))
         {
@@ -4141,7 +4228,7 @@ namespace vc
               }
 
               // Reify init functions from all Lib definitions for this
-              // library in the enclosing ClassDef.
+              // library in the enclosing class.
               for (auto& lib_child : *(parent / ClassBody))
               {
                 if (lib_child != Lib)
@@ -4175,8 +4262,6 @@ namespace vc
             }
           }
         }
-
-        parent = parent->parent(ClassDef);
       }
     }
 
@@ -4225,39 +4310,214 @@ namespace vc
       return result;
     }
 
-    // Given a TypeName or FuncName and a substitution map, find or create a
-    // reification and return the ClassId, TypeId, or FunctionId. The accept
-    // function is used to filter the final definition, such as looking for a
-    // function with a specific arity and handedness.
-    template<typename F>
-    Node get_reification(const Node& name, const NodeMap<Node>& subst, F accept)
+    // Bind the class path prefix of `name` (its first `consumed` elements)
+    // to the flat class's combined canonical TypeParams. Each
+    // ClassPathElement owns a contiguous slice of those binders, matching the
+    // distributed TypeArgs carried on the corresponding name element.
+    Node bind_flat_class_path_typeargs(
+      const Node& flat,
+      const Node& name,
+      size_t consumed,
+      Reification& r,
+      NodeMap<Node>& resolve_subst)
     {
-      assert(name->in({TypeName, FuncName}));
-      Node def = top;
+      auto tps = flat / TypeParams;
+      auto path = flat / ClassPath;
+      size_t base = 0;
 
-      // Navigate the fully qualified name from Top, collecting TypeParam
-      // substitutions from TypeArgs along the way.
-      // r.subst only contains entries for TypeParams encountered during
-      // navigation (the def's own params), not the caller's context.
-      // resolve_subst combines both for resolving TypeArg references.
-      Reification r{top, {}, {}, {}, {}};
-      NodeMap<Node> resolve_subst = subst;
+      for (size_t i = 0; i < consumed; i++)
+      {
+        auto elem = name->at(i);
+        auto ta = elem / TypeArgs;
+        auto count = (path->at(i) / SourceTypeParams)->size();
 
-      for (auto it = name->begin(); it != name->end(); ++it)
+        if (!ta->empty() && (ta->size() != count))
+        {
+          return err(
+                   elem,
+                   std::format(
+                     "Expected {} type arguments, got {}", count, ta->size()))
+            << errmsg("Resolving here:") << errloc(path->at(i) / Ident);
+        }
+
+        for (size_t j = 0; j < count; j++)
+        {
+          assert((base + j) < tps->size());
+          auto tp = tps->at(base + j);
+
+          if (!ta->empty())
+          {
+            auto arg = ta->at(j);
+
+            if ((arg == Type) && (arg->front() == Unknown))
+              return err(arg, "Type argument was not inferred");
+
+            auto resolved = resolve_typearg(arg, resolve_subst);
+            r.subst[tp] = resolved;
+            resolve_subst[tp] = resolved;
+            continue;
+          }
+
+          // Empty TypeArgs on a generic scope are a TypeParam definition
+          // path. Resolve those from the current context, never from an
+          // arbitrary existing specialization.
+          auto find = resolve_subst.find(tp);
+
+          if (find != resolve_subst.end())
+          {
+            r.subst[tp] = find->second;
+            resolve_subst[tp] = find->second;
+            continue;
+          }
+
+          auto inherited = inherit_unique_binding(flat, tp);
+
+          if (!inherited)
+            return err(elem, "Generic scope has no explicit type argument");
+
+          if (inherited == Error)
+            return err(
+              elem, "Generic definition path has ambiguous type arguments");
+
+          r.subst[tp] = inherited;
+          resolve_subst[tp] = inherited;
+        }
+
+        base += count;
+      }
+
+      return {};
+    }
+
+    // The unique binding an existing reification of `def` gives to `tp`.
+    // Returns an Error node when existing reifications disagree.
+    Node inherit_unique_binding(const Node& def, const Node& tp)
+    {
+      Node inherited;
+      auto map_it = map.find(def);
+
+      if (map_it == map.end())
+        return {};
+
+      for (auto& existing : map_it->second)
+      {
+        auto find = existing.subst.find(tp);
+
+        if (find == existing.subst.end())
+          continue;
+
+        if (!inherited)
+          inherited = find->second;
+        else if (!inherited->equals(find->second))
+          return Error;
+      }
+
+      return inherited;
+    }
+
+    // Bind a definition's own TypeParams from the TypeArgs on a name element.
+    Node bind_typeargs(
+      const Node& def,
+      const Node& elem,
+      Reification& r,
+      NodeMap<Node>& resolve_subst)
+    {
+      auto ta = elem / TypeArgs;
+      auto tps = def / TypeParams;
+
+      if (!ta->empty())
+      {
+        if (ta->size() != tps->size())
+        {
+          return err(
+                   elem,
+                   std::format(
+                     "Expected {} type arguments, got {}",
+                     tps->size(),
+                     ta->size()))
+            << errmsg("Resolving here:") << errloc(def / Ident);
+        }
+
+        for (size_t i = 0; i < tps->size(); i++)
+        {
+          if ((ta->at(i) == Type) && (ta->at(i)->front() == Unknown))
+            return err(ta->at(i), "Type argument was not inferred");
+
+          // Substitute any TypeParam references in the TypeArg using the
+          // full resolution context, to avoid self-referential cycles.
+          auto resolved = resolve_typearg(ta->at(i), resolve_subst);
+          r.subst[tps->at(i)] = resolved;
+          resolve_subst[tps->at(i)] = resolved;
+        }
+
+        return {};
+      }
+
+      // Empty TypeArgs are only used by TypeParam definition paths.
+      for (auto& tp : *tps)
+      {
+        auto find = resolve_subst.find(tp);
+
+        if (find != resolve_subst.end())
+        {
+          r.subst[tp] = find->second;
+          resolve_subst[tp] = find->second;
+          continue;
+        }
+
+        auto inherited = inherit_unique_binding(def, tp);
+
+        if (!inherited)
+          return err(elem, "Generic scope has no explicit type argument");
+
+        if (inherited == Error)
+          return err(
+            elem, "Generic definition path has ambiguous type arguments");
+
+        r.subst[tp] = inherited;
+        resolve_subst[tp] = inherited;
+      }
+
+      return {};
+    }
+
+    // Resolve the remainder of a fully qualified name inside a flat class,
+    // after its class path prefix has been consumed.
+    template<typename F>
+    Node resolve_name_in_flat_class(
+      const Node& flat,
+      size_t consumed,
+      const Node& name,
+      Reification& r,
+      NodeMap<Node>& resolve_subst,
+      F accept)
+    {
+      auto bind_error =
+        bind_flat_class_path_typeargs(flat, name, consumed, r, resolve_subst);
+
+      if (bind_error)
+        return bind_error;
+
+      Node def = flat;
+      auto it = name->begin();
+      std::advance(it, consumed);
+
+      if ((it == name->end()) && !accept(flat))
+      {
+        return err(name->back(), "No matching definition found")
+          << errmsg("Resolving here:") << errloc(flat / Ident);
+      }
+
+      for (; it != name->end(); ++it)
       {
         auto& elem = *it;
         assert(elem == NameElement);
         auto ident = elem / Ident;
-        auto ta = elem / TypeArgs;
-        bool is_last = (it + 1 == name->end());
-
+        bool is_last = ((it + 1) == name->end());
         auto defs = def->look(ident->location());
 
         if (defs.empty())
         {
-          if (def == Top)
-            return err(elem, "No top-level definition found");
-
           return err(
                    elem,
                    "Identifier not found: " +
@@ -4284,6 +4544,7 @@ namespace vc
 
           // Use the accept filter to find the highest-priority definition.
           size_t best = 0;
+          Node picked;
 
           for (auto& d : defs)
           {
@@ -4291,7 +4552,7 @@ namespace vc
 
             if (priority > best)
             {
-              def = d;
+              picked = d;
               best = priority;
             }
           }
@@ -4301,12 +4562,15 @@ namespace vc
             return err(elem, "No matching definition found")
               << errmsg("Resolving here:") << errloc(defs.front() / Ident);
           }
+
+          def = picked;
         }
         else
         {
-          // Intermediate elements must resolve to a scope (ClassDef).
-          // When multiple defs exist (e.g., function overloads), pick
-          // the one that contains the next element in the path.
+          // Nested classes are separate flat classes, so an intermediate
+          // element inside a class body owns the following type parameter.
+          // When multiple defs exist (e.g., function overloads), pick the one
+          // that contains the next element in the path.
           if (defs.size() > 1)
           {
             auto next_ident = (*(it + 1)) / Ident;
@@ -4314,9 +4578,7 @@ namespace vc
 
             for (auto& d : defs)
             {
-              auto next_defs = d->look(next_ident->location());
-
-              if (!next_defs.empty())
+              if (!d->look(next_ident->location()).empty())
               {
                 def = d;
                 break;
@@ -4333,167 +4595,28 @@ namespace vc
 
           if (def == TypeParam)
           {
-            // Look up the TypeParam in the substitution map and resolve
-            // through the substituted type to find the ClassDef.
-            auto find = resolve_subst.find(def);
-
-            if (find == resolve_subst.end())
-              return err(elem, "TypeParam has no substitution");
-
-            auto sub = find->second;
-
-            // Unwrap Type node.
-            if (sub == Type)
-              sub = sub->front();
-
-            if (sub == Dyn)
-              return err(
-                elem,
-                "Cannot resolve type — type arguments may need to be "
-                "specified explicitly");
-
-            if (sub != TypeName)
-            {
-              return err(
-                elem, "TypeParam substitution must be a type name here");
-            }
-
-            // Navigate from the substituted TypeName to find the ClassDef.
-            def = top;
-
-            for (auto& se : *sub)
-            {
-              auto si = se / Ident;
-              auto sta = se / TypeArgs;
-              auto sdefs = def->look(si->location());
-
-              if (sdefs.empty())
-                return err(se, "Definition not found in TypeParam resolution");
-
-              def = sdefs.front();
-
-              if (!sta->empty())
-              {
-                auto stps = def / TypeParams;
-
-                if (sta->size() != stps->size())
-                  return err(se, "Incorrect number of type arguments");
-
-                for (size_t i = 0; i < stps->size(); i++)
-                {
-                  if (
-                    (sta->at(i) == Type) &&
-                    (sta->at(i)->front() == Unknown))
-                    return err(sta->at(i), "Type argument was not inferred");
-
-                  r.subst[stps->at(i)] = sta->at(i);
-                  resolve_subst[stps->at(i)] = sta->at(i);
-                }
-              }
-            }
-
-            if (def != ClassDef)
-            {
-              return err(
-                elem,
-                "TypeParam substitution must resolve to a class for "
-                "intermediate navigation");
-            }
+            // Navigate through the type parameter's substituted type by
+            // splicing its class path in place of this element.
+            return resolve_name_through_typeparam(
+              name, it, def, resolve_subst, accept);
           }
-          else if (!def->in({ClassDef, Function}))
+
+          if (!def->in({TypeAlias, Function}))
           {
             return err(elem, "Intermediate name must be a class or function")
               << errmsg("Resolving here:") << errloc(def / Ident);
           }
         }
 
-        // Build substitution from TypeArgs when provided.
-        auto tps = def / TypeParams;
+        bind_error = bind_typeargs(def, elem, r, resolve_subst);
 
-        if (!ta->empty())
-        {
-          if (ta->size() != tps->size())
-          {
-            return err(
-                     elem,
-                     std::format(
-                       "Expected {} type arguments, got {}",
-                       tps->size(),
-                       ta->size()))
-              << errmsg("Resolving here:") << errloc(def / Ident);
-          }
-
-          for (size_t i = 0; i < tps->size(); i++)
-          {
-            if (
-              (ta->at(i) == Type) && (ta->at(i)->front() == Unknown))
-              return err(ta->at(i), "Type argument was not inferred");
-
-            // Substitute any TypeParam references in the TypeArg using the
-            // full resolution context, to avoid self-referential cycles.
-            auto arg = ta->at(i);
-            auto resolved = resolve_typearg(arg, resolve_subst);
-            r.subst[tps->at(i)] = resolved;
-            resolve_subst[tps->at(i)] = resolved;
-          }
-        }
-        else if (!tps->empty())
-        {
-          // Empty TypeArgs are only used by TypeParam definition paths.
-          // Resolve those paths from the current context, never from an
-          // arbitrary existing specialization.
-          for (auto& tp : *tps)
-          {
-            auto find = resolve_subst.find(tp);
-
-            if (find != resolve_subst.end())
-            {
-              r.subst[tp] = find->second;
-              resolve_subst[tp] = find->second;
-            }
-            else
-            {
-              Node inherited;
-              auto map_it = map.find(def);
-
-              if (map_it != map.end())
-              {
-                for (auto& existing : map_it->second)
-                {
-                  auto existing_find = existing.subst.find(tp);
-
-                  if (existing_find == existing.subst.end())
-                    continue;
-
-                  if (!inherited)
-                  {
-                    inherited = existing_find->second;
-                  }
-                  else if (!inherited->equals(existing_find->second))
-                  {
-                    return err(
-                      elem,
-                      "Generic definition path has ambiguous type "
-                      "arguments");
-                  }
-                }
-              }
-
-              if (!inherited)
-                return err(
-                  elem, "Generic scope has no explicit type argument");
-
-              r.subst[tp] = inherited;
-              resolve_subst[tp] = inherited;
-            }
-          }
-        }
+        if (bind_error)
+          return bind_error;
       }
 
       // Build a resolved TypeName with all TypeParam refs substituted.
       // This is stored on the Reification for use in shape checking.
-      Node resolved_name;
-      resolved_name = name->type();
+      Node resolved_name = name->type();
 
       for (auto& elem : *name)
       {
@@ -4508,23 +4631,130 @@ namespace vc
       // Shapes produce Dyn in function bodies (preserving method dispatch
       // behavior), but we record a map entry so the post-worklist phase
       // can build a Type << TypeId << Union of matching concrete classes.
-      if ((def == ClassDef) && ((def / Shape) == Shape))
-      {
-        // _builtin::any is the universal shape — remains pure Dyn.
-        if (
-          (def->parent(ClassDef) == builtin) &&
-          ((def / Ident)->location().view() == "any"))
-          return Dyn;
-
-        return find_or_push(def, std::move(r.subst), resolved_name);
-      }
+      // _builtin::any is the universal shape — it remains pure Dyn.
+      if ((def == FlatClass) && ((def / Shape) == Shape) && is_builtin_any(def))
+        return Dyn;
 
       return find_or_push(def, std::move(r.subst), resolved_name);
     }
 
+    // Resolve a name whose element at `pos` is a type parameter, such as
+    // `T::create`, by splicing in the class path the type parameter is bound
+    // to. Elements before `pos` have already been consumed to reach it.
+    template<typename F>
+    Node resolve_name_through_typeparam(
+      const Node& name,
+      NodeIt pos,
+      const Node& tp,
+      const NodeMap<Node>& subst,
+      F accept)
+    {
+      auto find = subst.find(tp);
+
+      if (find == subst.end())
+        return err(*pos, "TypeParam has no substitution");
+
+      auto sub = find->second;
+
+      // Unwrap Type node.
+      if (sub == Type)
+        sub = sub->front();
+
+      if (sub == Dyn)
+      {
+        return err(
+          *pos,
+          "Cannot resolve type — type arguments may need to be "
+          "specified explicitly");
+      }
+
+      if (sub != TypeName)
+        return err(*pos, "TypeParam substitution must be a type name here");
+
+      Node expanded = name->type();
+
+      for (auto& elem : *sub)
+        expanded << clone(elem);
+
+      for (auto it = pos + 1; it != name->end(); ++it)
+        expanded << clone(*it);
+
+      return get_reification(expanded, subst, accept);
+    }
+
+    // Given a TypeName or FuncName and a substitution map, find or create a
+    // reification and return the ClassId, TypeId, or FunctionId. The accept
+    // function is used to filter the final definition, such as looking for a
+    // function with a specific arity and handedness.
+    //
+    // Every fully qualified name is rooted at a class path. The longest flat
+    // class whose class path prefixes the name is consumed first, binding its
+    // combined canonical TypeParams from the distributed TypeArgs; the
+    // remaining elements are then resolved inside that class.
+    template<typename F>
+    Node get_reification(const Node& name, const NodeMap<Node>& subst, F accept)
+    {
+      assert(name->in({TypeName, FuncName}));
+
+      // A bare TypeName that denotes a type parameter resolves through the
+      // caller's substitution. Flat class bodies keep such references
+      // unqualified, so they are resolved against the enclosing scopes.
+      if ((name == TypeName) && (name->size() == 1))
+      {
+        auto tp = find_typeparam_def(top, name);
+
+        if (tp)
+        {
+          auto find = subst.find(tp);
+
+          if (find != subst.end())
+            return reify_type(find->second, subst);
+
+          return Dyn;
+        }
+      }
+
+      auto prefixes = flat_class_prefixes(name);
+
+      if (prefixes.empty())
+      {
+        if (name->size() > 1)
+        {
+          auto tp = find_leading_typeparam(name);
+
+          if (tp)
+            return resolve_name_through_typeparam(
+              name, name->begin(), tp, subst, accept);
+        }
+
+        return err(name->front(), "No top-level definition found");
+      }
+
+      // A shorter class path prefix is only tried when the longer one cannot
+      // produce an acceptable definition, so a class and a function that
+      // share a name never shadow each other.
+      Node first_error;
+
+      for (auto& [flat, consumed] : prefixes)
+      {
+        Reification r{top, {}, {}, {}, {}};
+        NodeMap<Node> resolve_subst = subst;
+        auto result = resolve_name_in_flat_class(
+          flat, consumed, name, r, resolve_subst, accept);
+
+        if (result && (result != Error))
+          return result;
+
+        if (!first_error)
+          first_error = result;
+      }
+
+      return first_error;
+    }
+
     Node make_id(const Node& def, size_t index, const NodeMap<Node>& subst)
     {
-      if (is_under_builtin(def) && (def == ClassDef))
+      if (is_under_builtin(def) && (def == FlatClass))
       {
         // Check for a bare primitive type.
         auto find = primitive_types.find((def / Ident)->location().view());
@@ -4559,16 +4789,23 @@ namespace vc
         }
       }
 
-      // Identifiers take the form `a::b::c::3`.
-      assert(def->in({ClassDef, TypeAlias, Function}));
-      auto id = std::string((def / Ident)->location().view());
-      auto parent = def->parent({Top, ClassDef, TypeAlias, Function});
+      // Identifiers take the form `a::b::c::3`. The lexical ancestry of a
+      // definition is its owning flat class's class path.
+      assert(def->in({FlatClass, TypeAlias, Function}));
+      auto path = owner_class_path(def);
+      assert(path);
+      std::string id;
 
-      while (parent && parent != Top)
+      for (auto& segment : *path)
       {
-        id = std::format("{}::{}", (parent / Ident)->location().view(), id);
-        parent = parent->parent({Top, ClassDef, TypeAlias, Function});
+        if (!id.empty())
+          id += "::";
+
+        id += std::string((segment / Ident)->location().view());
       }
+
+      if (def != FlatClass)
+        id = std::format("{}::{}", id, (def / Ident)->location().view());
 
       if (def == Function)
       {
@@ -4582,7 +4819,7 @@ namespace vc
 
       id = std::format("{}::{}", id, index);
 
-      if (def == ClassDef)
+      if (def == FlatClass)
       {
         if ((def / Shape) == Shape)
           return TypeId ^ id;

@@ -84,7 +84,7 @@ namespace vc
   {
     PassDef p{
       "anf",
-      wfPassFlatANF,
+      wfPassANF,
       dir::topdown,
       {
         // Turn an initial function body into a label.
