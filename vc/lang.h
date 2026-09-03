@@ -356,7 +356,7 @@ namespace vc
 
   // clang-format off
   inline const auto wfPassANF =
-      wfPassApplication
+      wfPassFlatten
     | (Function <<=
         wfFuncDefLhs * wfFuncId * TypeParams * Params * Type * Where * Labels)
         [Ident]
@@ -470,22 +470,6 @@ namespace vc
     ;
   // clang-format on
 
-  // clang-format off
-  inline const auto wfPassFlatANF =
-      wfPassANF
-    | (Top <<= FlatClass++)
-    | (FlatClass <<=
-        (Shape >>= Shape | None) * DefId * Ident * TypeParams * ClassPath *
-        ClassBodyOrder * ClassBody)[DefId]
-    | (ClassPath <<= ClassPathElement++[1])
-    | (ClassPathElement <<=
-        DefId * Ident * SourceTypeParams * TypeArgs * Where)
-    | (SourceTypeParams <<= Ident++)
-    | (ClassBodyOrder <<= (BodyMember | NestedClassId)++)
-    | (ClassBody <<= (TypeAlias | Lib | FieldDef | Function)++)
-    ;
-  // clang-format on
-
   inline const auto wfTypeInfer = wfTypeNoFunc;
   inline const auto wfBodyInfer = wfBodyANF - TypeAssertion;
 
@@ -498,22 +482,6 @@ namespace vc
     | (Union <<= wfTypeInfer++[2])
     | (Isect <<= wfTypeInfer++[2])
     | (TupleType <<= wfTypeInfer++[2])
-    ;
-  // clang-format on
-
-  // clang-format off
-  inline const auto wfPassFlatInfer =
-      wfPassInfer
-    | (Top <<= FlatClass++)
-    | (FlatClass <<=
-        (Shape >>= Shape | None) * DefId * Ident * TypeParams * ClassPath *
-        ClassBodyOrder * ClassBody)[DefId]
-    | (ClassPath <<= ClassPathElement++[1])
-    | (ClassPathElement <<=
-        DefId * Ident * SourceTypeParams * TypeArgs * Where)
-    | (SourceTypeParams <<= Ident++)
-    | (ClassBodyOrder <<= (BodyMember | NestedClassId)++)
-    | (ClassBody <<= (TypeAlias | Lib | FieldDef | Function)++)
     ;
   // clang-format on
 
@@ -608,6 +576,5 @@ namespace vc
   PassDef anf();
   PassDef overload();
   PassDef infer();
-  PassDef unflatten();
   PassDef reify();
 }

@@ -25,7 +25,6 @@ int main(int argc, char** argv)
       anf(),
       overload(),
       infer(),
-      unflatten(),
       reify(),
       vbcc::memo(),
       vbcc::assignids(state),

@@ -14,7 +14,7 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 ## 20.2 Pass Pipeline
 
-The compiler runs passes in two stages. The first 13 passes are the `vc`
+The compiler runs passes in two stages. The first 12 passes are the `vc`
 frontend, which transforms source code into monomorphized IR. The remaining
 passes are provided by the `vbcc` bytecode compiler library, which transforms
 IR into `.vbc` bytecode.
@@ -34,19 +34,18 @@ IR into `.vbc` bytecode.
 | 8 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
 | 9 | `overload` | once | Resolve canonical calls by value arity and handedness |
 | 10 | `infer` | once | Type inference and literal refinement |
-| 11 | `unflatten` | once | Temporary compatibility reconstruction for reification |
-| 12 | `reify` | once | Monomorphization — generic instantiation starting from `main` |
+| 11 | `reify` | once | Monomorphization — generic instantiation starting from `main` |
 
 ### Backend Passes (vbcc library)
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
-| 13 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
-| 14 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
-| 15 | `validids` | once | Validate identifier assignments for consistency |
-| 16 | `typecheck` | once | Validate statement and register types |
-| 17 | `optimize` | once | Apply bytecode-level optimizations |
-| 18 | `liveness` | once | Compute register liveness and insert required drops |
+| 12 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
+| 13 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
+| 14 | `validids` | once | Validate identifier assignments for consistency |
+| 15 | `typecheck` | once | Validate statement and register types |
+| 16 | `optimize` | once | Apply bytecode-level optimizations |
+| 17 | `liveness` | once | Compute register liveness and insert required drops |
 
 After all passes complete, bytecode generation produces a `.vbc` file. In practice, `vc build` invokes both stages — the user does not need to run them separately.
 
@@ -155,17 +154,17 @@ surviving candidate. Exact handedness takes precedence; an RHS call considers a
 parameter remain deferred until reification supplies the enclosing
 substitution.
 
-### Unflatten (`unflatten`)
-Temporarily reconstructs the nested class representation after inference. This
-compatibility boundary allows the FlatClass producer, ANF, overload resolution,
-inference, and subtype checking to be validated before reification is migrated.
-It is not part of the intended final pipeline.
-
 ### Infer (`infer`)
 Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation. For each resolved ANF call, it replaces inferable `???` arguments while preserving explicit symbolic arguments shared from enclosing scopes.
 
 ### Reify (`reify`)
-Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are not monomorphized — they use dynamic dispatch directly. Reification rejects unresolved `???` arguments. Late-bound generic definition paths may inherit an ambient binding only when all available reifications agree; ambiguous bindings are errors. Outputs IR suitable for bytecode generation.
+Monomorphization pass (`dir::once`). Starting from `main()`, transitively
+instantiates all reachable generic flat classes and functions. Each unique type
+argument combination produces a separate specialization. Logical class
+ancestry comes from `ClassPath`, not physical parent nodes. Reification rejects
+unresolved `???` arguments. Late-bound generic definition paths may inherit an
+ambient binding only when all available reifications agree; ambiguous bindings
+are errors. Outputs IR suitable for bytecode generation.
 
 ---
 
