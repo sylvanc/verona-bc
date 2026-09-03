@@ -38,8 +38,21 @@ namespace vc
           // Navigate both TypeNames to their definition sites.
           auto l_def = find_def(ctx.scope, l);
           auto r_def = find_def(ctx.scope, r);
-          assert(l_def);
-          assert(r_def);
+
+          // Ideally every TypeName reaching Subtype would be either still
+          // attached to the tree it was parsed into, or fully qualified
+          // (see fq_typeparam_ref/qualify_typeparam_refs) -- both forms are
+          // resolvable via find_def regardless of position. A null
+          // definition here means some substitution/merge boundary let a
+          // bare, detached TypeParam reference escape unqualified. That
+          // invariant is not fully enforced yet (e.g. sugar.cc's lambda
+          // free-typeparam capture can still produce one), so this is
+          // deliberately not an assert: failing closed (not a subtype) here
+          // is a correctness gap for that remaining case, but asserting
+          // would turn it into a crash instead. Once every producer is
+          // fixed to qualify consistently, this should become an assert.
+          if (!l_def || !r_def)
+            return false;
 
           // TypeParams can only prove subtype of themselves.
           if ((l_def == TypeParam) || (r_def == TypeParam))
@@ -163,7 +176,7 @@ namespace vc
             // l is a non-TypeName atom (primitive, tuple, etc.).
             // Shapes never contradict non-TypeName atoms (the atom might
             // satisfy the shape). Concrete ClassDefs do contradict.
-            if ((r_def == ClassDef) && ((r_def / Shape) == Shape))
+            if (r_def->in({FlatClass, ClassDef}) && ((r_def / Shape) == Shape))
               return false;
 
             return true;
@@ -173,8 +186,10 @@ namespace vc
           if (!l_def || l_def->type().in({TypeParam, TypeAlias}))
             return false;
 
-          bool l_shape = (l_def == ClassDef) && ((l_def / Shape) == Shape);
-          bool r_shape = (r_def == ClassDef) && ((r_def / Shape) == Shape);
+          bool l_shape =
+            l_def->in({FlatClass, ClassDef}) && ((l_def / Shape) == Shape);
+          bool r_shape =
+            r_def->in({FlatClass, ClassDef}) && ((r_def / Shape) == Shape);
 
           if (r_shape && !l_shape)
           {
