@@ -23,9 +23,10 @@ namespace vc
     ft->traverse([&](auto node) {
       if (node == TypeName)
       {
-        auto def = find_def(top, node);
+        // TypeParam references remain relative until flatten.
+        auto def = find_typeparam_def(top, node);
 
-        if (def && (def == TypeParam) && seen.insert(def).second)
+        if (def && seen.insert(def).second)
           result.push_back({def, node});
       }
 

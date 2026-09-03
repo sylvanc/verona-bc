@@ -14,7 +14,10 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 ## 20.2 Pass Pipeline
 
-The compiler runs passes in two stages. The first 11 passes are the `vc` frontend, which transforms source code into monomorphized IR. The remaining passes are provided by the `vbcc` bytecode compiler library, which transforms IR into `.vbc` bytecode.
+The compiler runs passes in two stages. The first 13 passes are the `vc`
+frontend, which transforms source code into monomorphized IR. The remaining
+passes are provided by the `vbcc` bytecode compiler library, which transforms
+IR into `.vbc` bytecode.
 
 ### Frontend Passes (vc)
 
@@ -27,20 +30,23 @@ The compiler runs passes in two stages. The first 11 passes are the `vc` fronten
 | 4 | `functype` | bottom-up | Function type (`->`) → synthetic shape conversion |
 | 5 | `dot` | top-down | Dot access, juxtaposition (application), `:::` builtin/FFI resolution |
 | 6 | `application` | top-down | Infix/prefix function/method calls, ref, hash, partial application |
-| 7 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
-| 8 | `overload` | once | Resolve canonical calls by value arity and handedness |
-| 9 | `infer` | once | Type inference and literal refinement |
-| 10 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
+| 7 | `flatten` | once | Replace nested classes with top-level `FlatClass` entries and structured class paths |
+| 8 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
+| 9 | `overload` | once | Resolve canonical calls by value arity and handedness |
+| 10 | `unflatten` | once | Temporary compatibility reconstruction for inference and reification |
+| 11 | `infer` | once | Type inference and literal refinement |
+| 12 | `reify` | once | Monomorphization — generic instantiation starting from `main` |
 
 ### Backend Passes (vbcc library)
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
-| 10 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
-| 11 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
-| 12 | `validids` | once | Validate identifier assignments for consistency |
-| 13 | `liveness` | once | Liveness analysis for register allocation |
-| 14 | `typecheck` | once | Final type checking |
+| 13 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
+| 14 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
+| 15 | `validids` | once | Validate identifier assignments for consistency |
+| 16 | `typecheck` | once | Validate statement and register types |
+| 17 | `optimize` | once | Apply bytecode-level optimizations |
+| 18 | `liveness` | once | Compute register liveness and insert required drops |
 
 After all passes complete, bytecode generation produces a `.vbc` file. In practice, `vc build` invokes both stages — the user does not need to run them separately.
 
@@ -122,6 +128,19 @@ Resolves dot access (`a.b`), juxtaposition (`a(b)` → `a.apply(b)`), type const
 ### Application (`application`)
 Resolves infix/prefix operators to method calls, handles `ref` and `#` prefixes, and desugars partial application (`_` placeholders) to anonymous classes.
 
+### Flatten (`flatten`)
+Replaces the nested source class tree with `FlatClass` entries stored directly
+under `Top`. Each flat class records its logical nesting in a structured
+`ClassPath`, while functions, fields, aliases, and library declarations remain
+inside their owning class.
+
+All source-level transformations that generate classes run before this pass, so
+ordinary nested classes, lambdas, function-type shapes, and partial-application
+classes are flattened uniformly. A flat class owns one canonical collection of
+the type parameters contributed by its class path. Source binder names and
+per-segment type arguments remain in path metadata for diagnostics and generic
+substitution.
+
 ### ANF (`anf`)
 Converts the AST to A-Normal Form: all intermediate values are named, expressions are flattened to sequences of simple statements. This prepares the code for type inference and bytecode generation.
 
@@ -135,6 +154,12 @@ surviving candidate. Exact handedness takes precedence; an RHS call considers a
 `once` overload only when no exact RHS candidate exists. Calls through a type
 parameter remain deferred until reification supplies the enclosing
 substitution.
+
+### Unflatten (`unflatten`)
+Temporarily reconstructs the nested class representation after overload
+resolution. This compatibility boundary allows the FlatClass producer, ANF,
+and overload resolution to be validated before inference and reification are
+migrated. It is not part of the intended final pipeline.
 
 ### Infer (`infer`)
 Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation. For each resolved ANF call, it replaces inferable `???` arguments while preserving explicit symbolic arguments shared from enclosing scopes.

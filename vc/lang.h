@@ -31,6 +31,8 @@ namespace vc
 
   inline const auto ClassDef = TokenDef(
     "classdef", flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
+  inline const auto FlatClass = TokenDef(
+    "flatclass", flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
   inline const auto TypeAlias = TokenDef(
     "typealias",
     flag::symtab | flag::lookup | flag::lookdown | flag::shadowing);
@@ -43,6 +45,13 @@ namespace vc
   inline const auto TypeName = TokenDef("typename");
   inline const auto NameElement = TokenDef("nameelement");
   inline const auto TypePath = TokenDef("typepath");
+  inline const auto ClassPath = TokenDef("classpath");
+  inline const auto ClassPathElement = TokenDef("classpathelement");
+  inline const auto SourceTypeParams = TokenDef("sourcetypeparams");
+  inline const auto ClassBodyOrder = TokenDef("classbodyorder");
+  inline const auto BodyMember = TokenDef("bodymember");
+  inline const auto NestedClassId = TokenDef("nestedclassid", flag::print);
+  inline const auto DefId = TokenDef("defid", flag::print);
   inline const auto TypeParams = TokenDef("typeparams");
   inline const auto TypeParam =
     TokenDef("typeparam", flag::lookup | flag::shadowing);
@@ -321,6 +330,22 @@ namespace vc
     ;
   // clang-format on
 
+  // clang-format off
+  inline const auto wfPassFlatten =
+      wfPassApplication
+    | (Top <<= FlatClass++)
+    | (FlatClass <<=
+        (Shape >>= Shape | None) * DefId * Ident * TypeParams * ClassPath *
+        ClassBodyOrder * ClassBody)[DefId]
+    | (ClassPath <<= ClassPathElement++[1])
+    | (ClassPathElement <<=
+        DefId * Ident * SourceTypeParams * TypeArgs * Where)
+    | (SourceTypeParams <<= Ident++)
+    | (ClassBodyOrder <<= (BodyMember | NestedClassId)++)
+    | (ClassBody <<= (TypeAlias | Lib | FieldDef | Function)++)
+    ;
+  // clang-format on
+
   inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
     RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | Stack | NewArray |
     NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
@@ -445,6 +470,22 @@ namespace vc
     ;
   // clang-format on
 
+  // clang-format off
+  inline const auto wfPassFlatANF =
+      wfPassANF
+    | (Top <<= FlatClass++)
+    | (FlatClass <<=
+        (Shape >>= Shape | None) * DefId * Ident * TypeParams * ClassPath *
+        ClassBodyOrder * ClassBody)[DefId]
+    | (ClassPath <<= ClassPathElement++[1])
+    | (ClassPathElement <<=
+        DefId * Ident * SourceTypeParams * TypeArgs * Where)
+    | (SourceTypeParams <<= Ident++)
+    | (ClassBodyOrder <<= (BodyMember | NestedClassId)++)
+    | (ClassBody <<= (TypeAlias | Lib | FieldDef | Function)++)
+    ;
+  // clang-format on
+
   inline const auto wfTypeInfer = wfTypeNoFunc;
   inline const auto wfBodyInfer = wfBodyANF - TypeAssertion;
 
@@ -466,6 +507,7 @@ namespace vc
   Node make_typeargs(Node typeparams);
   Nodes scope_path(Node node);
   Node find_def(Node top, const Node& name);
+  Node find_typeparam_def(Node top, const Node& name);
   Nodes find_func_defs(Node top, const Node& funcname);
   Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand);
   Node fq_typeparam(const Nodes& path, Node tp);
@@ -529,6 +571,8 @@ namespace vc
   Parse parser();
   PassDef structure(const Parse& parse);
   PassDef ident();
+  PassDef flatten();
+  PassDef unflatten();
   PassDef sugar();
   PassDef functype();
   PassDef dot();

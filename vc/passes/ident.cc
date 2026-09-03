@@ -733,6 +733,59 @@ namespace vc
     }
   }
 
+  Node find_lexical_typeparam(const Node& name, const Node& resolved)
+  {
+    auto ident = resolved / Ident;
+    auto scope = name->parent({Top, ClassDef, TypeAlias, Function});
+
+    while (scope)
+    {
+      for (auto& def : scope->look(ident->location()))
+      {
+        if (def->in({ClassDef, TypeAlias, TypeParam}))
+          return def == TypeParam ? def : Node{};
+      }
+
+      scope = scope->parent({Top, ClassDef, TypeAlias, Function});
+    }
+
+    return {};
+  }
+
+  void unqualify_typeparams(Node top)
+  {
+    Nodes refs;
+
+    top->traverse([&](auto node) {
+      auto is_qualified_type = (node == TypeName) && (node->size() > 1);
+      auto is_qualified_func = (node == FuncName) && (node->size() > 2);
+
+      if (is_qualified_type || is_qualified_func)
+      {
+        auto resolved = find_typeparam_def(top, node);
+
+        if (resolved && (find_lexical_typeparam(node, resolved) == resolved))
+          refs.push_back(node);
+      }
+
+      return true;
+    });
+
+    for (auto it = refs.rbegin(); it != refs.rend(); ++it)
+    {
+      auto& ref = *it;
+      auto def = find_typeparam_def(top, ref);
+      Node replacement = (ref == TypeName) ? TypeName : FuncName;
+      replacement
+        << (NameElement << clone(def / Ident) << TypeArgs);
+
+      if (ref == FuncName)
+        replacement << clone(ref->back());
+
+      ref->parent()->replace(ref, replacement);
+    }
+  }
+
   PassDef ident()
   {
     auto nw = std::make_shared<NodeWorker<Resolver>>(Resolver{});
@@ -785,6 +838,7 @@ namespace vc
         return true;
       });
 
+      unqualify_typeparams(top);
       return 0;
     });
 
