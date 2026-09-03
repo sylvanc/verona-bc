@@ -218,15 +218,15 @@ namespace vc
 
   PassDef unflatten()
   {
-    PassDef p{"unflatten", wfPassANF, dir::once, {}};
+    PassDef p{"unflatten", wfPassInfer, dir::once, {}};
 
     p.pre([](auto top) {
       auto legacy_top = reconstruct_legacy(top);
-      WFContext context(wfPassANF);
+      WFContext context(wfPassInfer);
 
       if (
-        !wfPassANF.build_st(legacy_top) ||
-        !wfPassANF.check(legacy_top))
+        !wfPassInfer.build_st(legacy_top) ||
+        !wfPassInfer.check(legacy_top))
         std::abort();
 
       top->erase(top->begin(), top->end());

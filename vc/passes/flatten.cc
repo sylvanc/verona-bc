@@ -9,22 +9,10 @@ namespace vc
 {
   namespace
   {
-    std::string class_def_id(const Nodes& path)
-    {
-      std::string id;
-
-      for (auto& cls : path)
-      {
-        auto name = (cls / Ident)->location().view();
-        id += std::format("{}:{};", name.size(), name);
-      }
-
-      return id;
-    }
-
     using TypeParamNames = NodeMap<Location>;
 
-    TypeParamNames typeparam_names(const Node& cls, const Nodes& path)
+    TypeParamNames
+    assign_flattened_typeparam_names(const Node& cls, const Nodes& path)
     {
       TypeParamNames names;
       std::set<std::string> used;
@@ -123,7 +111,8 @@ namespace vc
       return copy;
     }
 
-    Node flat_typeparams(const Nodes& path, const TypeParamNames& names)
+    Node
+    make_flat_class_typeparams(const Nodes& path, const TypeParamNames& names)
     {
       Node result = TypeParams;
 
@@ -139,7 +128,7 @@ namespace vc
       return result;
     }
 
-    Node class_path(
+    Node make_flat_class_path(
       const Node& top, const Nodes& path, const TypeParamNames& names)
     {
       Node result = ClassPath;
@@ -162,11 +151,10 @@ namespace vc
         }
 
         result
-          << (ClassPathElement << (DefId ^ class_def_id(prefix))
-                               << clone(cls / Ident) << source_typeparams
-                               << args
-                               << clone_rewrite_typeparams(
-                                    top, cls / Where, names));
+          << (ClassPathElement
+              << (DefId ^ encode_class_path_id(prefix)) << clone(cls / Ident)
+              << source_typeparams << args
+              << clone_rewrite_typeparams(top, cls / Where, names));
       }
 
       return result;
@@ -180,7 +168,7 @@ namespace vc
     {
       path.push_back(cls);
 
-      auto id = class_def_id(path);
+      auto id = encode_class_path_id(path);
       auto [_, inserted] = ids.insert(id);
       if (!inserted)
       {
@@ -193,7 +181,7 @@ namespace vc
       Node body_order = ClassBodyOrder;
       Nodes nested;
       auto top = cls->parent(Top);
-      auto names = typeparam_names(cls, path);
+      auto names = assign_flattened_typeparam_names(cls, path);
 
       for (auto& child : *(cls / ClassBody))
       {
@@ -202,7 +190,7 @@ namespace vc
           nested.push_back(child);
           auto child_path = path;
           child_path.push_back(child);
-          body_order << (NestedClassId ^ class_def_id(child_path));
+          body_order << (NestedClassId ^ encode_class_path_id(child_path));
         }
         else
         {
@@ -211,10 +199,10 @@ namespace vc
         }
       }
 
-      Node flat_class =
-        FlatClass << clone(cls / Shape) << (DefId ^ id)
-                  << clone(cls / Ident) << flat_typeparams(path, names)
-                  << class_path(top, path, names) << body_order << body;
+      Node flat_class = FlatClass
+        << clone(cls / Shape) << (DefId ^ id) << clone(cls / Ident)
+        << make_flat_class_typeparams(path, names)
+        << make_flat_class_path(top, path, names) << body_order << body;
       flat_top << flat_class;
 
       for (auto& child : nested)

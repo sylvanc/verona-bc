@@ -33,8 +33,8 @@ IR into `.vbc` bytecode.
 | 7 | `flatten` | once | Replace nested classes with top-level `FlatClass` entries and structured class paths |
 | 8 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
 | 9 | `overload` | once | Resolve canonical calls by value arity and handedness |
-| 10 | `unflatten` | once | Temporary compatibility reconstruction for inference and reification |
-| 11 | `infer` | once | Type inference and literal refinement |
+| 10 | `infer` | once | Type inference and literal refinement |
+| 11 | `unflatten` | once | Temporary compatibility reconstruction for reification |
 | 12 | `reify` | once | Monomorphization — generic instantiation starting from `main` |
 
 ### Backend Passes (vbcc library)
@@ -156,10 +156,10 @@ parameter remain deferred until reification supplies the enclosing
 substitution.
 
 ### Unflatten (`unflatten`)
-Temporarily reconstructs the nested class representation after overload
-resolution. This compatibility boundary allows the FlatClass producer, ANF,
-and overload resolution to be validated before inference and reification are
-migrated. It is not part of the intended final pipeline.
+Temporarily reconstructs the nested class representation after inference. This
+compatibility boundary allows the FlatClass producer, ANF, overload resolution,
+inference, and subtype checking to be validated before reification is migrated.
+It is not part of the intended final pipeline.
 
 ### Infer (`infer`)
 Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation. For each resolved ANF call, it replaces inferable `???` arguments while preserving explicit symbolic arguments shared from enclosing scopes.
