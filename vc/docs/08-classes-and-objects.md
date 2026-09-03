@@ -52,6 +52,20 @@ counter
 }
 ```
 
+For a generic class, the self type must include its type arguments explicitly:
+
+```verona
+box[A]
+{
+  get(self: box[A]): A
+  {
+    self.value
+  }
+}
+```
+
+Writing `self: box` is an incomplete generic type and is rejected.
+
 Functions without `self` are free functions scoped to the class. They must be called with a qualified name (e.g., `counter::create()`).
 
 ---
@@ -152,6 +166,18 @@ outer
 ```
 
 Access the inner class with a qualified name: `outer::inner`.
+
+### Compiler Representation
+
+Nested classes remain lexical during name resolution and source-level
+desugaring. After lambdas, function types, and partial applications have
+generated any additional classes, the compiler's `flatten` pass stores every
+class directly under the AST root as a `FlatClass`.
+
+The original nesting is retained in a structured class path. This gives later
+passes direct access to every class without losing enclosing generic binders,
+constraints, source names, or qualified lookup behavior. This representation
+is internal and does not change source-level nesting or visibility.
 
 ---
 

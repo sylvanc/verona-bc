@@ -14,7 +14,7 @@ box[A]
     new {c = cown a}
   }
 
-  get(self: box): none
+  get(self: box[A]): none
   {
     when self.c w ->
     {
@@ -22,7 +22,7 @@ box[A]
     }
   }
 
-  doit(self: box, s: string): none
+  doit(self: box[A], s: string): none
   {
     when self.c w ->
     {

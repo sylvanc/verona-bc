@@ -45,6 +45,8 @@ user-invocable: false
 ## Test Conventions
 
 - Tests in `testsuite/v/` must be self-contained. No external deps, no `use "https://..."`.
+- Every test source, including module fixtures, starts with a header explaining
+  the invariant under test, the observable failure mode, and its assumptions.
 - Do NOT write `use "_builtin"` — it is always implicitly available.
 - Bitmask exit code pattern: `var result = 0;` then `if cond { result = result + N; }` with powers of 2. Exit 0 = all passed.
 - Compile-error tests: `exit_code.txt: 1` in `compile/`, no `run/` directory.
@@ -72,7 +74,7 @@ user-invocable: false
 
 - Small, composable passes. Many small passes > few large ones.
 - Layered dependencies — lower layers never depend on higher ones.
-- Frontend (vc, passes 0–9): parse → structure → ident → sugar → functype → dot → application → anf → infer → reify.
+- Frontend (vc): parse → structure → ident → sugar → functype → dot → application → flatten → anf → overload → infer → reify.
 - Backend (vbcc library, passes 10–13): assignids → validids → liveness → typecheck.
 - `assert()` liberally for invariants.
 - Errors are AST nodes, not exceptions.

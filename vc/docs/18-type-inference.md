@@ -95,6 +95,21 @@ identity[T](x: T): T { x }
 identity(i32 42)                     // T inferred as i32
 ```
 
+Omissions directly on a called class or function path remain inference
+variables even when they occur on an enclosing generic scope. Inside
+`inner[C]`, `inner::callee(x)` means
+`inner[???]::callee(x)`, while `inner[C]::callee(x)` explicitly shares the
+enclosing `C`.
+
+Generic `TypeName`s in declarations require explicit arguments. Nested
+incomplete types inside a call's explicit type arguments are also rejected for
+now: `outer[list]::foo()` does not recursively infer `list`'s arguments.
+
+Compiler-generated qualification prefixes are different: when the compiler
+adds enclosing scopes to make a name fully qualified, it writes symbolic
+references to their lexical type parameters. See
+[Generics §10.3](10-generics.md) for an example.
+
 ### Through Wrapper Types
 
 ```verona

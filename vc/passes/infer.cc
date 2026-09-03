@@ -13,6 +13,7 @@ namespace vc
   static bool is_lambda_function(const Node& func);
 
   std::unordered_set<const void*> lambda_returns_omitted;
+  std::set<std::pair<const void*, size_t>> inferred_typearg_slots;
 
   static bool lambda_return_was_omitted(const Node& func)
   {
@@ -130,6 +131,14 @@ namespace vc
                                    << (TypeArgs << clone(inner))));
   }
 
+  Node array_type(const Node& inner)
+  {
+    return Type
+      << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
+                   << (NameElement << (Ident ^ "array")
+                                   << (TypeArgs << clone(inner))));
+  }
+
   Node cown_type(const Node& inner)
   {
     return Type
@@ -144,6 +153,11 @@ namespace vc
   {
     return type && !type->empty() &&
       type->front()->in({DefaultInt, DefaultFloat});
+  }
+
+  bool is_unknown_typearg(const Node& arg)
+  {
+    return (arg == Type) && arg->front()->in({Unknown, TypeVar});
   }
 
   bool contains_default_type(const Node& type)
@@ -412,7 +426,7 @@ namespace vc
     size_t same_type_tree_equal = 0;
     size_t same_type_env_calls = 0;
     size_t same_type_env_equal = 0;
-    size_t navigate_call_calls = 0;
+    size_t navigate_call_and_collect_scopes_calls = 0;
     size_t apply_subst_calls = 0;
     size_t infer_typeargs_calls = 0;
     size_t push_arg_types_to_params_calls = 0;
@@ -454,7 +468,7 @@ namespace vc
     InferClock::duration entry_update_time{};
     InferClock::duration same_type_tree_time{};
     InferClock::duration same_type_env_time{};
-    InferClock::duration navigate_call_time{};
+    InferClock::duration navigate_call_and_collect_scopes_time{};
     InferClock::duration apply_subst_time{};
     InferClock::duration infer_typeargs_time{};
     InferClock::duration push_arg_types_to_params_time{};
@@ -570,8 +584,10 @@ namespace vc
       << "\tresolve=" << stats.resolve_method_calls
       << "\tresolve_hit=" << stats.resolve_method_cache_hits
       << "\tresolve_miss=" << stats.resolve_method_cache_misses
-      << "\tresolve_scan=" << stats.resolve_method_scans
-      << "\tnavigate_call=" << stats.navigate_call_calls
+      << "\tresolve_scan="
+      << stats.resolve_method_scans
+      // Keep the profile field name stable for existing consumers.
+      << "\tnavigate_call=" << stats.navigate_call_and_collect_scopes_calls
       << "\tapply_subst=" << stats.apply_subst_calls
       << "\tinfer_typeargs=" << stats.infer_typeargs_calls
       << "\tpush_arg_types=" << stats.push_arg_types_to_params_calls
@@ -629,7 +645,8 @@ namespace vc
       << "\tcascade_seed_ms=" << infer_duration_ms(stats.cascade_seed_time)
       << "\tcascade_loop_ms=" << infer_duration_ms(stats.cascade_loop_time)
       << "\tresolve_ms=" << infer_duration_ms(stats.resolve_method_time)
-      << "\tnavigate_call_ms=" << infer_duration_ms(stats.navigate_call_time)
+      << "\tnavigate_call_ms="
+      << infer_duration_ms(stats.navigate_call_and_collect_scopes_time)
       << "\tapply_subst_ms=" << infer_duration_ms(stats.apply_subst_time)
       << "\tinfer_typeargs_ms=" << infer_duration_ms(stats.infer_typeargs_time)
       << "\tpush_arg_types_ms="
@@ -802,7 +819,10 @@ namespace vc
     Node subst_source = inner;
 
     // Follow TypeAlias chains to the underlying ClassDef.
-    while (class_def == TypeAlias)
+    // class_def may be null here (e.g. a bare TypeParam reference that
+    // isn't attached to the tree, so it can't be navigated back to its
+    // owning scope) -- guard before comparing against TypeAlias.
+    while (class_def && (class_def == TypeAlias))
     {
       auto alias_type = class_def / Type;
       if (alias_type->front() != TypeName)
@@ -812,21 +832,23 @@ namespace vc
         return {};
     }
 
-    if ((!class_def || class_def != ClassDef) && inner->size() > 1)
+    if (
+      (!class_def || !class_def->in({FlatClass, ClassDef})) &&
+      inner->size() > 1)
     {
       Node base = TypeName;
       for (size_t i = 0; i + 1 < inner->size(); i++)
         base << clone(inner->at(i));
 
       auto base_def = find_def(top, base);
-      if (base_def && base_def == ClassDef)
+      if (base_def && base_def->in({FlatClass, ClassDef}))
       {
         class_def = base_def;
         subst_source = base;
       }
     }
 
-    if (!class_def || class_def != ClassDef)
+    if (!class_def || !class_def->in({FlatClass, ClassDef}))
       return {};
 
     return {class_def, subst_source, typename_path_key(subst_source)};
@@ -1699,15 +1721,36 @@ namespace vc
 
   // ===== Generic type inference =====
 
-  NodeMap<Node>
-  build_class_subst(const Node& class_def, const Node& typename_node)
+  NodeMap<Node> build_class_typearg_subst(
+    Node top, const Node& class_def, const Node& typename_node)
   {
     NodeMap<Node> subst;
     auto tps = class_def / TypeParams;
-    auto ta = typename_node->back() / TypeArgs;
-    if (tps->size() == ta->size())
+    Nodes args;
+
+    if (class_def == FlatClass)
+    {
+      auto path_size = (class_def / ClassPath)->size();
+
+      if (typename_node->size() < path_size)
+        return subst;
+
+      for (size_t i = 0; i < path_size; i++)
+      {
+        for (auto& arg : *(typename_node->at(i) / TypeArgs))
+          args.push_back(arg);
+      }
+    }
+    else
+    {
+      for (auto& arg : *(typename_node->back() / TypeArgs))
+        args.push_back(arg);
+    }
+
+    if (tps->size() == args.size())
       for (size_t i = 0; i < tps->size(); i++)
-        subst[tps->at(i)] = ta->at(i);
+        if (!is_unknown_typearg(args[i]))
+          subst[tps->at(i)] = qualify_typeparam_refs(top, args[i]);
     return subst;
   }
 
@@ -1721,7 +1764,7 @@ namespace vc
     // Formal is a TypeParam reference.
     if (f_inner == TypeName)
     {
-      auto def = find_def(top, f_inner);
+      auto def = find_typeparam_def(top, f_inner);
       if (def && def == TypeParam)
       {
         Node actual_type = Type << clone(a_inner);
@@ -1780,13 +1823,13 @@ namespace vc
       auto f_def = find_def(top, f_inner);
       auto a_def = find_def(top, a_inner);
       if (
-        f_def && a_def && f_def == ClassDef && (f_def / Shape) == Shape &&
-        a_def == ClassDef)
+        f_def && a_def && f_def->in({FlatClass, ClassDef}) &&
+        (f_def / Shape) == Shape && a_def->in({FlatClass, ClassDef}))
       {
-        auto shape_to_formal = build_class_subst(f_def, f_inner);
+        auto shape_to_formal = build_class_typearg_subst(top, f_def, f_inner);
         if (!shape_to_formal.empty())
         {
-          auto actual_subst = build_class_subst(a_def, a_inner);
+          auto actual_subst = build_class_typearg_subst(top, a_def, a_inner);
           for (auto& sf : *(f_def / ClassBody))
           {
             if (sf != Function)
@@ -1853,19 +1896,20 @@ namespace vc
     }
   }
 
-  Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
+  // Core of apply_subst, operating on a bare (unwrapped) type node --
+  // TypeName, Union/Isect/TupleType, or another atom -- and returning a
+  // bare node in kind. Kept separate from the public, Type-wrapped
+  // apply_subst so that Union/Isect/TupleType members (which are stored
+  // bare, not wrapped in Type) can be substituted without first cloning
+  // them into a throwaway Type wrapper. Cloning first would detach them
+  // from the tree, and qualify_typeparam_refs/find_typeparam_def need
+  // that attachment to identify which TypeParam a bare reference
+  // resolves to.
+  static Node
+  apply_subst_bare(Node top, const Node& inner, const NodeMap<Node>& subst)
   {
-    if (active_infer_profile != nullptr)
-      active_infer_profile->apply_subst_calls++;
-    InferScopedTimer timer(
-      (active_infer_profile != nullptr) ?
-        &active_infer_profile->apply_subst_time :
-        nullptr);
-
-    if (type_node != Type || subst.empty())
-      return clone(type_node);
-
-    auto inner = type_node->front();
+    if (subst.empty())
+      return clone(inner);
 
     if (inner == TypeName)
     {
@@ -1874,7 +1918,36 @@ namespace vc
       {
         auto it = subst.find(def);
         if (it != subst.end())
-          return clone(it->second);
+        {
+          // The substitution value may itself be (or contain) a bare
+          // TypeParam reference -- e.g. a caller's own binder passed
+          // through as a still-generic type argument (`wrap[B]::extract`
+          // inside a generic `run`, where `B` is run's own TypeParam).
+          // Qualify it here, at the point it is copied out of `subst` and
+          // into the result type, so it stays resolvable via find_def
+          // regardless of where the result is later cloned/detached to.
+          // Crucially, qualify_typeparam_refs must see the value while it
+          // is still attached to the tree it was read from -- cloning it
+          // first would erase the parent chain find_typeparam_def needs
+          // to identify which TypeParam a bare reference resolves to.
+          auto& value = it->second;
+          if (value == Type)
+            return qualify_typeparam_refs(top, value)->front();
+          return qualify_typeparam_refs(top, Type << clone(value))->front();
+        }
+
+        // No substitution supplied for this TypeParam -- it remains
+        // generic at this call site (e.g. a caller's own TypeParam used
+        // as a type argument to a callee, still unresolved). Qualify it
+        // into a position-independent form so it stays resolvable via
+        // find_def after this Type gets cloned/detached and embedded
+        // elsewhere (e.g. propagate_shape_to_lambda copying it into a
+        // lambda's own parameter type). A bare reference would only be
+        // resolvable relative to its own lexical position, which is lost
+        // once it's copied out of its home scope.
+        auto fq = fq_typeparam_ref(def);
+        if (fq)
+          return fq;
       }
 
       Node new_tn = TypeName;
@@ -1885,19 +1958,229 @@ namespace vc
           new_ta << apply_subst(top, ta_child, subst);
         new_tn << (NameElement << clone(elem / Ident) << new_ta);
       }
-      return Type << new_tn;
+      return new_tn;
     }
 
     if (inner->in({Union, Isect, TupleType}))
     {
       Node new_inner = inner->type();
       for (auto& child : *inner)
-        new_inner << apply_subst(top, Type << clone(child), subst)->front();
-      return Type << new_inner;
+        new_inner << apply_subst_bare(top, child, subst);
+      return new_inner;
     }
 
-    return clone(type_node);
+    return clone(inner);
   }
+
+  Node apply_subst(Node top, const Node& type_node, const NodeMap<Node>& subst)
+  {
+    if (active_infer_profile != nullptr)
+      active_infer_profile->apply_subst_calls++;
+    InferScopedTimer timer(
+      (active_infer_profile != nullptr) ?
+        &active_infer_profile->apply_subst_time :
+        nullptr);
+
+    if (type_node != Type)
+      return clone(type_node);
+
+    return Type << apply_subst_bare(top, type_node->front(), subst);
+  }
+
+  // Inverse of qualify_typeparam_refs, operating on a bare (unwrapped) type
+  // node: replaces any fully-qualified, position-independent TypeParam
+  // reference (built by fq_typeparam_ref/qualify_typeparam_refs -- a
+  // multi-segment TypeName with empty TypeArgs at every segment, ending in
+  // the TypeParam's own ident) with a bare, single-segment reference using
+  // that same trailing ident.
+  //
+  // This exists for write-back sites that copy an inferred type from
+  // exit_envs into a still-attached, TypeVar-declared Param/FieldDef (see
+  // process_function, "Update params and fields"). Those declarations may
+  // belong to a sugar.cc-synthesized lambda/when class whose own TypeParam
+  // set mirrors an enclosing scope's TypeParams under the *same* names but
+  // as genuinely distinct declaration nodes (see rewrite_typeparam_refs /
+  // redirect_tp in lang.cc). A qualified reference naming the *original*
+  // TypeParam is semantically correct but points at the wrong node once
+  // written into the mirrored declaration: reify's class-path navigation
+  // (get_reification/bind_flat_class_path_typeargs) requires concrete
+  // TypeArgs to bind
+  // through a multi-segment path, and the mirrored class's own
+  // substitution is keyed by its own (renamed) TypeParam node, not the
+  // original -- so the qualified form resolves to nothing there. A bare
+  // reference, written into a declaration that is still attached to its
+  // own (possibly mirrored) scope, instead resolves via find_typeparam_def
+  // to whichever same-named TypeParam is locally visible -- which, by
+  // sugar.cc's mirroring convention (the same name is reused at every
+  // mirror level), is always the correct one for that scope.
+  static Node dequalify_for_scope_bare(Node top, const Node& inner)
+  {
+    if (inner == TypeName)
+    {
+      if (inner->size() > 1)
+      {
+        bool all_empty = std::all_of(
+          inner->begin(), inner->end(), [](auto& elem) {
+            return (elem / TypeArgs)->empty();
+          });
+
+        auto def = all_empty ? find_def(top, inner) : Node{};
+        if (def && def == TypeParam)
+          return TypeName
+            << (NameElement << clone(inner->back() / Ident) << TypeArgs);
+      }
+
+      Node new_tn = TypeName;
+      for (auto& elem : *inner)
+      {
+        Node new_ta = TypeArgs;
+        for (auto& ta_child : *(elem / TypeArgs))
+          new_ta << (Type << dequalify_for_scope_bare(top, ta_child->front()));
+        new_tn << (NameElement << clone(elem / Ident) << new_ta);
+      }
+      return new_tn;
+    }
+
+    if (inner->in({Union, Isect, TupleType}))
+    {
+      Node new_inner = inner->type();
+      for (auto& child : *inner)
+        new_inner << dequalify_for_scope_bare(top, child);
+      return new_inner;
+    }
+
+    if (inner->in({Ref, Cown, Array}))
+      return inner->type() << dequalify_for_scope_bare(top, inner->front());
+
+    return clone(inner);
+  }
+
+  static Node dequalify_for_scope(Node top, const Node& type_node)
+  {
+    if (type_node != Type)
+      return clone(type_node);
+
+    return Type << dequalify_for_scope_bare(top, type_node->front());
+  }
+
+  // Find the binder in target's flat-class scope that corresponds to
+  // source_tp by class-path identity and binder position.
+  static Node
+  find_typeparam_for_target_scope(const Node& target, const Node& source_tp)
+  {
+    auto target_class = target->parent(FlatClass);
+    auto source_owner =
+      source_tp->parent({FlatClass, TypeAlias, Function});
+    if (!target_class || !source_owner)
+      return {};
+
+    auto source_class = source_owner == FlatClass ?
+      source_owner :
+      source_owner->parent(FlatClass);
+    if (!source_class)
+      return {};
+
+    auto source_path = source_class / ClassPath;
+    auto target_path = target_class / ClassPath;
+    if (target_path->size() < source_path->size())
+      return {};
+
+    for (size_t i = 0; i < source_path->size(); i++)
+    {
+      if (
+        (source_path->at(i) / DefId)->location() !=
+        (target_path->at(i) / DefId)->location())
+        return {};
+    }
+
+    if (source_owner == FlatClass)
+    {
+      auto source_tps = source_class / TypeParams;
+      auto find = std::find(source_tps->begin(), source_tps->end(), source_tp);
+      if (find == source_tps->end())
+        return {};
+
+      auto index = static_cast<size_t>(std::distance(source_tps->begin(), find));
+      auto target_tps = target_class / TypeParams;
+      return index < target_tps->size() ? target_tps->at(index) : Node{};
+    }
+
+    size_t offset = 0;
+    for (size_t i = 0; i < source_path->size(); i++)
+      offset += (target_path->at(i) / SourceTypeParams)->size();
+
+    auto source_name = (source_tp / Ident)->location().view();
+    auto target_tps = target_class / TypeParams;
+    for (size_t i = source_path->size(); i < target_path->size(); i++)
+    {
+      auto source_tps = target_path->at(i) / SourceTypeParams;
+      for (size_t j = 0; j < source_tps->size(); j++)
+      {
+        if (source_tps->at(j)->location().view() == source_name)
+          return (offset + j < target_tps->size()) ?
+            target_tps->at(offset + j) :
+            Node{};
+      }
+      offset += source_tps->size();
+    }
+
+    return {};
+  }
+
+  // Rewrite an unwrapped type so its TypeParam references resolve against
+  // target's scope rather than the scope they originated in.
+  static Node retarget_typeparams_to_scope_bare(
+    Node top, const Node& target, const Node& inner)
+  {
+    if (inner == TypeName)
+    {
+      auto source_tp = find_def(top, inner);
+      if (source_tp && source_tp == TypeParam)
+      {
+        auto target_tp = find_typeparam_for_target_scope(target, source_tp);
+        if (target_tp)
+          return TypeName
+            << (NameElement << clone(target_tp / Ident) << TypeArgs);
+      }
+
+      Node result = TypeName;
+      for (auto& elem : *inner)
+      {
+        Node args = TypeArgs;
+        for (auto& arg : *(elem / TypeArgs))
+          args
+            << (Type << retarget_typeparams_to_scope_bare(
+                  top, target, arg->front()));
+        result << (NameElement << clone(elem / Ident) << args);
+      }
+      return result;
+    }
+
+    if (inner->in({Union, Isect, TupleType}))
+    {
+      Node result = inner->type();
+      for (auto& child : *inner)
+        result << retarget_typeparams_to_scope_bare(top, target, child);
+      return result;
+    }
+
+    if (inner->in({Ref, Cown, Array}))
+      return inner->type() << retarget_typeparams_to_scope_bare(
+               top, target, inner->front());
+
+    return clone(inner);
+  }
+
+  static Node
+  retarget_typeparams_to_scope(Node top, const Node& target, const Node& type)
+  {
+    if (type != Type)
+      return clone(type);
+
+    return Type << retarget_typeparams_to_scope_bare(
+             top, target, type->front());
+  }
+
 
   // ===== Method resolution =====
 
@@ -1919,7 +2202,8 @@ namespace vc
     auto owner = resolve_method_owner(top, receiver_type);
     if (owner.class_def)
     {
-      auto subst = build_class_subst(owner.class_def, owner.subst_source);
+      auto subst =
+        build_class_typearg_subst(top, owner.class_def, owner.subst_source);
       auto func = resolve_class_method(
         owner, method_ident->location().view(), hand, arity);
       if (func)
@@ -2038,13 +2322,15 @@ namespace vc
         return false;
     }
 
-    if (shape_def != ClassDef || actual_def != ClassDef)
+    if (
+      !shape_def->in({FlatClass, ClassDef}) ||
+      !actual_def->in({FlatClass, ClassDef}))
       return false;
     if ((shape_def / Shape) != Shape)
       return false;
 
     bool changed = false;
-    auto shape_subst = build_class_subst(shape_def, shape_inner);
+    auto shape_subst = build_class_typearg_subst(top, shape_def, shape_inner);
     for (auto& sf : *(shape_def / ClassBody))
     {
       if (sf != Function)
@@ -2074,7 +2360,8 @@ namespace vc
           auto spt = apply_subst(top, shape_params->at(j) / Type, shape_subst);
           if (!spt || spt->front() == TypeVar || spt->front() == TypeSelf)
             continue;
-          changed |= replace_if_changed(ap, apt, clone(spt));
+          changed |= replace_if_changed(
+            ap, apt, retarget_typeparams_to_scope(top, ap, spt));
         }
 
         auto actual_ret = af / Type;
@@ -2089,7 +2376,8 @@ namespace vc
             // context supplies the return obligation. Any concrete return
             // inferred in isolation is provisional until checked against that
             // context.
-            changed |= replace_if_changed(af, actual_ret, clone(shape_ret));
+            changed |= replace_if_changed(
+              af, actual_ret, retarget_typeparams_to_scope(top, af, shape_ret));
           }
         }
         break;
@@ -2104,7 +2392,7 @@ namespace vc
   struct ScopeInfo
   {
     Node name_elem;
-    Node def;
+    Nodes typeparams;
   };
 
   static bool is_lambda_function(const Node& func);
@@ -2119,13 +2407,14 @@ namespace vc
   static bool
   refine_function_return_consts(const Node& func, const Node& expected_prim);
 
-  Node navigate_call(Node call, Node top, std::vector<ScopeInfo>& scopes)
+  Node navigate_call_and_collect_scopes(
+    Node call, Node top, std::vector<ScopeInfo>& scopes)
   {
     if (active_infer_profile != nullptr)
-      active_infer_profile->navigate_call_calls++;
+      active_infer_profile->navigate_call_and_collect_scopes_calls++;
     InferScopedTimer timer(
       (active_infer_profile != nullptr) ?
-        &active_infer_profile->navigate_call_time :
+        &active_infer_profile->navigate_call_and_collect_scopes_time :
         nullptr);
 
     auto funcname = call / FuncName;
@@ -2134,19 +2423,93 @@ namespace vc
     if (!func_def)
       return {};
 
+    size_t consumed = 0;
+    auto flat = find_flat_class_by_longest_prefix(top, funcname, consumed);
+
+    if (flat)
+    {
+      auto name_it = funcname->begin();
+      auto tp_it = (flat / TypeParams)->begin();
+
+      for (auto& segment : *(flat / ClassPath))
+      {
+        Nodes typeparams;
+
+        for (size_t i = 0; i < (segment / SourceTypeParams)->size(); i++)
+        {
+          assert(tp_it != (flat / TypeParams)->end());
+          typeparams.push_back(*tp_it++);
+        }
+
+        scopes.push_back({*name_it++, std::move(typeparams)});
+      }
+
+      assert(tp_it == (flat / TypeParams)->end());
+
+      Node def = flat;
+
+      while (name_it != funcname->end())
+      {
+        bool is_last = (name_it + 1 == funcname->end());
+
+        if (is_last)
+        {
+          Nodes typeparams;
+
+          for (auto& tp : *(func_def / TypeParams))
+            typeparams.push_back(tp);
+
+          scopes.push_back({*name_it, std::move(typeparams)});
+        }
+        else
+        {
+          auto defs = def->look(((*name_it) / Ident)->location());
+
+          if (defs.empty())
+            return {};
+
+          def = defs.front();
+          Nodes typeparams;
+
+          for (auto& tp : *(def / TypeParams))
+            typeparams.push_back(tp);
+
+          scopes.push_back({*name_it, std::move(typeparams)});
+        }
+
+        name_it++;
+      }
+
+      return func_def;
+    }
+
     Node def = top;
     for (auto it = funcname->begin(); it != funcname->end(); ++it)
     {
       bool is_last = (it + 1 == funcname->end());
       if (is_last)
       {
-        scopes.push_back({*it, func_def});
+        Nodes typeparams;
+
+        for (auto& tp : *(func_def / TypeParams))
+          typeparams.push_back(tp);
+
+        scopes.push_back({*it, std::move(typeparams)});
       }
       else
       {
         auto defs = def->look(((*it) / Ident)->location());
+
+        if (defs.empty())
+          return {};
+
         def = defs.front();
-        scopes.push_back({*it, def});
+        Nodes typeparams;
+
+        for (auto& tp : *(def / TypeParams))
+          typeparams.push_back(tp);
+
+        scopes.push_back({*it, std::move(typeparams)});
       }
     }
     return func_def;
@@ -2156,7 +2519,7 @@ namespace vc
     Node prior_call, const Node& expected_type, TypeEnv& env, Node top)
   {
     std::vector<ScopeInfo> scopes;
-    auto func_def = navigate_call(prior_call, top, scopes);
+    auto func_def = navigate_call_and_collect_scopes(prior_call, top, scopes);
     if (!func_def)
       return;
 
@@ -2177,12 +2540,13 @@ namespace vc
       auto ret_def = find_def(top, ret_type->front());
       auto exp_def = find_def(top, expected_type->front());
       if (
-        ret_def && exp_def && ret_def == ClassDef &&
-        (ret_def / Shape) != Shape && exp_def == ClassDef &&
+        ret_def && exp_def && ret_def->in({FlatClass, ClassDef}) &&
+        (ret_def / Shape) != Shape &&
+        exp_def->in({FlatClass, ClassDef}) &&
         (exp_def / Shape) == Shape)
       {
         auto shape_to_concrete =
-          build_class_subst(exp_def, expected_type->front());
+          build_class_typearg_subst(top, exp_def, expected_type->front());
         if (!shape_to_concrete.empty())
         {
           for (auto& sf : *(exp_def / ClassBody))
@@ -2224,23 +2588,42 @@ namespace vc
     for (auto& scope : scopes)
     {
       auto ta = scope.name_elem / TypeArgs;
-      auto tps = scope.def / TypeParams;
-      if (tps->empty())
+      auto& tps = scope.typeparams;
+      if (tps.empty())
         continue;
 
-      bool all_constrained = true;
+      if (!ta->empty() && (ta->size() != tps.size()))
+        continue;
+
       Node new_ta = TypeArgs;
-      for (auto& tp : *tps)
+      bool changed = false;
+
+      for (size_t i = 0; i < tps.size(); i++)
       {
-        auto find = constraints.find(tp);
-        if (find == constraints.end())
+        Node old_arg =
+          ta->empty() ? (Type << Unknown) : clone(ta->at(i));
+        auto slot = std::make_pair(
+          static_cast<const void*>(scope.name_elem.get()), i);
+
+        if (
+          is_unknown_typearg(old_arg) ||
+          inferred_typearg_slots.contains(slot))
         {
-          all_constrained = false;
-          break;
+          inferred_typearg_slots.insert(slot);
+          auto find = constraints.find(tps[i]);
+
+          if (find != constraints.end())
+          {
+            new_ta << clone(find->second.type);
+            changed = true;
+            continue;
+          }
         }
-        new_ta << clone(find->second.type);
+
+        new_ta << old_arg;
       }
-      if (all_constrained)
+
+      if (changed)
         replace_if_changed(scope.name_elem, ta, new_ta);
     }
 
@@ -2249,10 +2632,11 @@ namespace vc
     for (auto& scope : scopes)
     {
       auto ta = scope.name_elem / TypeArgs;
-      auto tps = scope.def / TypeParams;
-      if (!ta->empty() && ta->size() == tps->size())
-        for (size_t i = 0; i < tps->size(); i++)
-          subst[tps->at(i)] = ta->at(i);
+      auto& tps = scope.typeparams;
+      if (!ta->empty() && ta->size() == tps.size())
+        for (size_t i = 0; i < tps.size(); i++)
+          if (!is_unknown_typearg(ta->at(i)))
+            subst[tps[i]] = ta->at(i);
     }
 
     std::map<Location, Node> const_defs;
@@ -2630,8 +3014,8 @@ namespace vc
     for (auto& scope : scopes)
     {
       auto ta = scope.name_elem / TypeArgs;
-      auto tps = scope.def / TypeParams;
-      if (!tps->empty())
+      auto& tps = scope.typeparams;
+      if (!tps.empty())
       {
         if (ta->empty())
         {
@@ -2641,7 +3025,7 @@ namespace vc
 
         for (auto& t : *ta)
         {
-          if (t == Type && t->front() == TypeVar)
+          if (is_unknown_typearg(t))
           {
             needs_inference = true;
             break;
@@ -2681,36 +3065,39 @@ namespace vc
     for (auto& scope : scopes)
     {
       auto ta = scope.name_elem / TypeArgs;
-      auto tps = scope.def / TypeParams;
-      if (tps->empty())
+      auto& tps = scope.typeparams;
+      if (tps.empty())
         continue;
 
-      if (!ta->empty())
+      if (!ta->empty() && (ta->size() != tps.size()))
+        continue;
+
+      Node new_ta = TypeArgs;
+      bool changed = ta->empty();
+
+      for (size_t i = 0; i < tps.size(); i++)
       {
-        bool needs_reinfer = false;
-        for (auto& t : *ta)
-          if (direct_typeparam(top, t) || (t == Type && t->front() == TypeVar))
+        Node old_arg =
+          ta->empty() ? (Type << Unknown) : clone(ta->at(i));
+
+        if (is_unknown_typearg(old_arg))
+        {
+          inferred_typearg_slots.insert(
+            {static_cast<const void*>(scope.name_elem.get()), i});
+          auto find = constraints.find(tps[i]);
+
+          if (find != constraints.end())
           {
-            needs_reinfer = true;
-            break;
+            new_ta << clone(find->second.type);
+            changed = true;
+            continue;
           }
-        if (!needs_reinfer)
-          continue;
+        }
+
+        new_ta << old_arg;
       }
 
-      bool all_constrained = true;
-      Node new_ta = TypeArgs;
-      for (auto& tp : *tps)
-      {
-        auto find = constraints.find(tp);
-        if (find == constraints.end())
-        {
-          all_constrained = false;
-          break;
-        }
-        new_ta << clone(find->second.type);
-      }
-      if (all_constrained)
+      if (changed)
         replace_if_changed(scope.name_elem, ta, new_ta);
     }
 
@@ -2719,7 +3106,7 @@ namespace vc
 
   // Push concrete arg types into TypeVar formal params (AST mutation).
   static void push_arg_types_to_params(
-    Node func_def, const Node& args, TypeEnv& env, Node /*top*/)
+    Node func_def, const Node& args, TypeEnv& env, Node top)
   {
     if (active_infer_profile != nullptr)
       active_infer_profile->push_arg_types_to_params_calls++;
@@ -2729,7 +3116,7 @@ namespace vc
         nullptr);
 
     auto params = func_def / Params;
-    auto parent_cls = func_def->parent(ClassDef);
+    auto parent_cls = func_def->parent({FlatClass, ClassDef});
 
     for (size_t i = 0; i < params->size() && i < args->size(); i++)
     {
@@ -2770,7 +3157,7 @@ namespace vc
         resolved = arg_it->second.type;
       }
 
-      replace_if_changed(param, formal_type, clone(resolved));
+      replace_if_changed(param, formal_type, dequalify_for_scope(top, resolved));
 
       // Keep FieldDef in sync.
       if (parent_cls)
@@ -2783,7 +3170,8 @@ namespace vc
           if ((child / Ident)->location().view() != pname)
             continue;
           if (contains_typevar(child / Type))
-            replace_if_changed(child, child / Type, clone(resolved));
+            replace_if_changed(
+              child, child / Type, dequalify_for_scope(top, resolved));
           break;
         }
       }
@@ -2795,7 +3183,7 @@ namespace vc
     auto class_def = func->parent(ClassBody);
     if (!class_def)
       return false;
-    class_def = class_def->parent(ClassDef);
+    class_def = class_def->parent({FlatClass, ClassDef});
     if (!class_def)
       return false;
 
@@ -3378,9 +3766,9 @@ namespace vc
           if (inner == TypeName)
           {
             auto class_def = find_def(top, inner);
-            if (class_def && class_def == ClassDef)
+            if (class_def && class_def->in({FlatClass, ClassDef}))
             {
-              auto subst = build_class_subst(class_def, inner);
+              auto subst = build_class_typearg_subst(top, class_def, inner);
               auto fname = (stmt / FieldId)->location().view();
               for (auto& f : *(class_def / ClassBody))
               {
@@ -3422,7 +3810,8 @@ namespace vc
 
                   if (
                     should_refine &&
-                    replace_if_changed(f, f / Type, clone(field_inner)))
+                    replace_if_changed(
+                      f, f / Type, dequalify_for_scope(top, field_inner)))
                     changes.forward = true;
                 }
                 break;
@@ -3618,7 +4007,17 @@ namespace vc
               !is_any_type(dst_it->second.type) &&
               (dst_it->second.type->front() != TypeVar)))
         {
-          merge(dst_loc, clone(init_type));
+          // NewArray's Type child records the array's element type, but
+          // the destination local holds an array[T] value -- wrap it
+          // before merging into the env so method resolution (e.g.
+          // fill_range) navigates to the array class, not the element
+          // type. NewArrayConst's Type child starts as `any` and is
+          // refined later via final_newarray_types (tuple/array-literal
+          // tracking), so leave it unwrapped.
+          if (stmt == NewArray)
+            merge(dst_loc, array_type(init_type));
+          else
+            merge(dst_loc, clone(init_type));
         }
 
         if (stmt == NewArrayConst)
@@ -3653,9 +4052,9 @@ namespace vc
         if (inner == TypeName)
         {
           auto class_def = find_def(top, inner);
-          if (class_def && class_def == ClassDef)
+          if (class_def && class_def->in({FlatClass, ClassDef}))
           {
-            auto subst = build_class_subst(class_def, inner);
+            auto subst = build_class_typearg_subst(top, class_def, inner);
             for (auto& na : *(stmt / NewArgs))
             {
               auto arg_loc = (na / Rhs)->location();
@@ -3690,7 +4089,8 @@ namespace vc
                   arg_it != env.end() && contains_typevar(f / Type) &&
                   !contains_typevar(arg_it->second.type) &&
                   !contains_default_type(arg_it->second.type))
-                  replace_if_changed(f, f / Type, clone(arg_it->second.type));
+                  replace_if_changed(
+                    f, f / Type, dequalify_for_scope(top, arg_it->second.type));
                 break;
               }
             }
@@ -3815,7 +4215,7 @@ namespace vc
       {
         InferStmtScope stmt_scope(InferStmtFamily::CallOps);
         std::vector<ScopeInfo> scopes;
-        auto func_def = navigate_call(stmt, top, scopes);
+        auto func_def = navigate_call_and_collect_scopes(stmt, top, scopes);
         if (!func_def)
           continue;
 
@@ -3830,10 +4230,11 @@ namespace vc
         for (auto& scope : scopes)
         {
           auto ta = scope.name_elem / TypeArgs;
-          auto tps = scope.def / TypeParams;
-          if (!ta->empty() && ta->size() == tps->size())
-            for (size_t i = 0; i < tps->size(); i++)
-              subst[tps->at(i)] = ta->at(i);
+          auto& tps = scope.typeparams;
+          if (!ta->empty() && ta->size() == tps.size())
+            for (size_t i = 0; i < tps.size(); i++)
+              if (!is_unknown_typearg(ta->at(i)))
+                subst[tps[i]] = ta->at(i);
         }
 
         // Forward: return type.
@@ -4131,9 +4532,7 @@ namespace vc
         InferStmtScope stmt_scope(InferStmtFamily::FFIWhenOps);
         auto dst_loc = (stmt / LocalId)->location();
         auto sym_name = (stmt / SymbolId)->location();
-        auto cls = body->parent(Function)->parent(ClassDef);
-
-        while (cls)
+        for (auto& cls : class_ancestry(top, body))
         {
           bool found = false;
           for (auto& child : *(cls / ClassBody))
@@ -4174,7 +4573,6 @@ namespace vc
           }
           if (found)
             break;
-          cls = cls->parent(ClassDef);
         }
       }
       // ----- When -----
@@ -4202,7 +4600,7 @@ namespace vc
             if (recv_inner == TypeName)
             {
               auto class_def = find_def(top, recv_inner);
-              if (class_def && class_def == ClassDef)
+              if (class_def && class_def->in({FlatClass, ClassDef}))
               {
                 Node apply_func;
                 for (auto& child : *(class_def / ClassBody))
@@ -4419,7 +4817,22 @@ namespace vc
     {
       auto type = pd / Type;
       bool fixed = type->front() != TypeVar;
-      exit_envs[0][(pd / Ident)->location()] = {clone(type), fixed, {}};
+
+      // `self`'s type is the class's own instance type (e.g.
+      // `async_writer[A]`); its TypeArgs are the class's own TypeParams,
+      // used purely structurally to anchor the class-level substitution
+      // (see build_class_typearg_subst, which already qualifies these TypeArgs
+      // on-demand every time it reads them). Pre-qualifying self's type
+      // here as well changes its structural shape and breaks receiver-type
+      // tracking downstream (e.g. reify's local_types/extract_receivers),
+      // so leave it untouched; qualify only ordinary value params, whose
+      // types may embed a caller's own generic TypeParam passed through
+      // and need to stay resolvable once detached from the tree.
+      bool is_self = (pd / Ident)->location().view() == "self";
+      exit_envs[0][(pd / Ident)->location()] = {
+        is_self ? clone(type) : qualify_typeparam_refs(top, type),
+        fixed,
+        {}};
     }
 
     // Backward envs: carry type expectations from downstream.
@@ -5270,7 +5683,7 @@ namespace vc
     }
 
     // 6. Update params and fields.
-    auto parent_cls = node->parent(ClassDef);
+    auto parent_cls = node->parent({FlatClass, ClassDef});
     for (auto& pd : *(node / Params))
     {
       auto type = pd / Type;
@@ -5282,7 +5695,7 @@ namespace vc
         auto it = ee.find(ident->location());
         if (it != ee.end() && it->second.type->front() != TypeVar)
         {
-          pd->replace(type, clone(it->second.type));
+          pd->replace(type, dequalify_for_scope(top, it->second.type));
           if (parent_cls)
           {
             for (auto& child : *(parent_cls / ClassBody))
@@ -5293,7 +5706,8 @@ namespace vc
                 (child / Ident)->location().view() != ident->location().view())
                 continue;
               if (contains_typevar(child / Type))
-                child->replace(child / Type, clone(it->second.type));
+                child->replace(
+                  child / Type, dequalify_for_scope(top, it->second.type));
               break;
             }
           }
@@ -5314,7 +5728,7 @@ namespace vc
           auto it = ee.find(fname);
           if (it != ee.end() && it->second.type->front() != TypeVar)
           {
-            child->replace(child / Type, clone(it->second.type));
+            child->replace(child / Type, dequalify_for_scope(top, it->second.type));
             break;
           }
         }
@@ -5323,8 +5737,8 @@ namespace vc
 
     // 4. Return type inference.
     bool in_generic = (node / TypeParams)->size() > 0 ||
-      (node->parent({ClassDef}) != nullptr &&
-       (node->parent({ClassDef}) / TypeParams)->size() > 0);
+      (node->parent({FlatClass, ClassDef}) != nullptr &&
+       (node->parent({FlatClass, ClassDef}) / TypeParams)->size() > 0);
 
     auto func_ret = node / Type;
     if (func_ret->front() == TypeVar)
@@ -5473,6 +5887,7 @@ namespace vc
       Nodes deferred;
 
       lambda_returns_omitted.clear();
+      inferred_typearg_slots.clear();
       deferred_param_errors.clear();
       top->traverse([&](auto node) {
         if (
@@ -5486,8 +5901,8 @@ namespace vc
 
       top->traverse([&](auto node) {
         if (node != Function)
-          return node == Top || node == ClassDef || node == ClassBody ||
-            node == Lib || node == Symbols;
+          return node == Top || node->in({FlatClass, ClassDef}) ||
+            node == ClassBody || node == Lib || node == Symbols;
         process_function(node, top, false);
         if (has_typevar(node))
           deferred.push_back(node);
@@ -5514,8 +5929,8 @@ namespace vc
 
       top->traverse([&](auto node) {
         if (node != Function)
-          return node == Top || node == ClassDef || node == ClassBody ||
-            node == Lib || node == Symbols;
+          return node == Top || node->in({FlatClass, ClassDef}) ||
+            node == ClassBody || node == Lib || node == Symbols;
         process_function(node, top, false);
         return false;
       });
