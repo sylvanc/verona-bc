@@ -30,6 +30,7 @@ function(vc_test_define test)
   testsuite_add_test(
     NAME "${compile_node}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}"
+    TIMEOUT 60
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ${artifact_metadata}
     COMMAND
