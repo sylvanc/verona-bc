@@ -151,9 +151,13 @@ func @main(): none
   $predicate8 = and $predicate3 $predicate4
   $predicate9 = and $predicate5 $predicate6
   $predicate10 = and $predicate7 $predicate8
-  $_predicate = and $predicate9 $predicate10
+  $predicate = and $predicate9 $predicate10
+  $predicate_i32 = convert i32 $predicate
+  $predicate_expected = const i32 1
+  $predicate_error = sub $predicate_expected $predicate_i32
+  $exit_code_with_predicates = or $exit_code $predicate_error
 
-  $_call = ffi @set_exit_code($exit_code)
+  $_call = ffi @set_exit_code($exit_code_with_predicates)
   $_none = const none
   ret $_none
 

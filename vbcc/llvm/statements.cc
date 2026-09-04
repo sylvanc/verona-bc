@@ -12,6 +12,9 @@ namespace vbcc
       if (statement == Const)
         return emit_const(statement);
 
+      if (statement == Convert)
+        return emit_convert(statement);
+
       if (statement->type().in({Add, Sub, Mul, Div, Mod, Pow,     And,
                                 Or,  Xor, Shl, Shr, Eq,  Ne,      Lt,
                                 Le,  Gt,  Ge,  Min, Max, LogBase, Atan2}))

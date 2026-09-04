@@ -91,6 +91,7 @@ namespace vbcc
       bool emit_function(const Node& func);
       bool emit_statement(const Node& statement);
       bool emit_const(const Node& statement);
+      bool emit_convert(const Node& statement);
       bool emit_binop(const Node& statement);
       bool emit_unop(const Node& statement);
       bool emit_copy(const Node& statement);
