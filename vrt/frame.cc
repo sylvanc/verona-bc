@@ -1,5 +1,6 @@
 #include "frame.h"
 
+#include "region.h"
 #include "thread.h"
 
 #include <cassert>
@@ -50,6 +51,9 @@ vrt_frame_enter(const vrt_function_descriptor* function)
   if (frame == nullptr)
     std::terminate();
 
+  // Match the interpreter's Frame invariant: every logical frame owns an RC
+  // region whose depth is the frame's stack depth.
+  vrt::frame_region(frame);
   thread->next_frame_id++;
   thread->current_frame = frame;
   return frame;
@@ -69,7 +73,9 @@ extern "C" VRT_EXPORT void vrt_frame_leave(void)
   if (frame == nullptr)
     return;
 
-  thread->current_frame = frame->parent;
+  auto* parent = frame->parent;
+  vrt::destroy_frame_region(frame);
+  thread->current_frame = parent;
   delete frame;
 }
 
@@ -88,9 +94,9 @@ vrt_frame_reuse(const vrt_function_descriptor* function)
   if (frame == nullptr)
     return;
 
-  // Compiler-emitted Drop operations currently perform all representable
-  // local teardown. Native stack objects, finalizers, and frame-local region
-  // cleanup will be added here as those representations reach this backend.
+  // Compiler-emitted Drop operations perform local register teardown. The
+  // logical frame and its frame-local region survive a tailcall and are
+  // reclaimed only when this frame is left or unwound.
   frame->function = function;
 }
 
@@ -138,7 +144,9 @@ extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
   while (thread->current_frame != target)
   {
     auto* frame = thread->current_frame;
-    thread->current_frame = frame->parent;
+    auto* parent = frame->parent;
+    vrt::destroy_frame_region(frame);
+    thread->current_frame = parent;
     delete frame;
   }
 

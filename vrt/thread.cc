@@ -1,6 +1,7 @@
 #include "thread.h"
 
 #include "frame.h"
+#include "region.h"
 #include "vrt.h"
 
 #include <cassert>
@@ -16,7 +17,9 @@ namespace
     while (thread->current_frame != nullptr)
     {
       auto* frame = thread->current_frame;
-      thread->current_frame = frame->parent;
+      auto* parent = frame->parent;
+      vrt::destroy_frame_region(frame);
+      thread->current_frame = parent;
       delete frame;
     }
   }

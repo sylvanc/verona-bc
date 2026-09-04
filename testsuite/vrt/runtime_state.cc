@@ -41,7 +41,7 @@ int main()
   if (
     (root == nullptr) || (vrt_thread_current_frame() != root) ||
     (vrt_frame_parent(root) != nullptr) ||
-    (vrt_frame_function(root) != &root_function) ||
+    (vrt_frame_function(root) != &root_function) || (root->region == nullptr) ||
     (root->raise_target != vrt_frame_id(root)))
     return 7;
 
@@ -62,7 +62,7 @@ int main()
     (child == nullptr) || (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) ||
     (vrt_frame_function(child) != &child_function) ||
-    (vrt_frame_id(child) == root_id) ||
+    (vrt_frame_id(child) == root_id) || (child->region == nullptr) ||
     (child->raise_target != vrt_frame_id(child)))
     return 9;
 
@@ -73,8 +73,7 @@ int main()
     (vrt_frame_get_raise_target() != root_id))
     return 24;
 
-  auto* const child_region = reinterpret_cast<vrt_region*>(thread);
-  child->region = child_region;
+  auto* const child_region = child->region;
   child->stack_mark = 4;
   child->finalizer_mark = 5;
   vrt_frame_reuse(&tail_function);
