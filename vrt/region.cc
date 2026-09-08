@@ -41,13 +41,17 @@ namespace vrt
     if (frame->region != nullptr)
       return frame->region;
 
-    uintptr_t depth = 0;
-    for (auto* cursor = frame; cursor != nullptr; cursor = cursor->parent)
+    uintptr_t depth = 1;
+    if (frame->parent != nullptr)
     {
-      if (depth == std::numeric_limits<uintptr_t>::max())
+      auto* parent_region = frame->parent->region;
+      if (
+        (parent_region == nullptr) || !parent_region->is_frame_local() ||
+        (parent_region->type != VRT_REGION_RC) ||
+        (parent_region->frame_depth == std::numeric_limits<uintptr_t>::max()))
         invalid_region_state();
 
-      depth++;
+      depth = parent_region->frame_depth + 1;
     }
 
     frame->region = create_region(VRT_REGION_RC, depth);
