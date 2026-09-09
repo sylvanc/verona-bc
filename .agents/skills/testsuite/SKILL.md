@@ -1,195 +1,280 @@
 ---
 name: testsuite
-description: Verona compiler test suite infrastructure — running tests, updating golden files, verifying pass completeness, checking error codes. Use when debugging test failures, regenerating golden files, or understanding the test framework.
+description: Verona compiler test infrastructure covering VBC golden tests, LLVM-native tests, and libvrt ABI/runtime tests. Use when adding or registering tests, running focused or full CTest suites, updating golden files, debugging failures, checking exit codes, or understanding the testsuite CMake layout.
 ---
 
 # Verona Test Suite Guide
 
-## Test Infrastructure Overview
+## Architecture
 
-The test suite uses Trieste's `testsuite.cmake` framework. Tests are defined in `testsuite/CMakeLists.txt`, which calls `testsuite(vbc)`. Two collection files define complete compile/run pipelines:
+`testsuite/CMakeLists.txt` includes Trieste's named-node runner and calls one
+entry point:
 
-| Collection | File | Pipeline | Input |
-|------------|------|----------|-------|
-| **vc** | `testsuite/vc.cmake` | Verona → bytecode → execute | `*.v` files |
-| **vir** | `testsuite/vir.cmake` | IR → bytecode → execute | `*.vir` files |
+```cmake
+include("${trieste_SOURCE_DIR}/cmake/testsuite.cmake")
+testsuite(vbc)
+```
 
-Each collection owns its compiler invocation and registers a dependent
-interpreter node. Sources under a `compile_only/` directory register only the
-compile node.
+The runner treats every `*.cmake` file directly under `testsuite/` as a test
+collection. Keep helpers in component subdirectories such as
+`testsuite/llvm/cmake/`; an adjacent helper would be mistaken for a
+collection.
 
-Each test produces `exit_code.txt`, `stdout.txt`, and `stderr.txt` in its output directory. The vc layer also produces per-pass `.trieste` dump files, a `*_final.trieste`, and a `.vbc` file (on success).
+The four collections are:
+
+| Collection | Selected input | Registered graph |
+|---|---|---|
+| `vc.cmake` | `*.v` | Verona compile -> bytecode run |
+| `vbc.cmake` | `*.vir` | VIR compile -> bytecode run |
+| `llvm.cmake` | `vir/llvm_*/*.vir` | emit IR -> assemble -> codegen -> link -> native run |
+| `vrt.cmake` | the four sources under `vrt/` | build C/C++ targets and register six run nodes |
+
+`vc.cmake` and `vbc.cmake` omit the run node for sources below a
+`compile_only/` directory. The source basename must match its parent
+directory, so a normal fixture has one clear root:
+
+```text
+testsuite/v/hello/hello.v
+testsuite/vir/simp1/simp1.vir
+```
+
+The `llvm_*` files remain ordinary VIR fixtures. Each is compiled and run as
+bytecode by `vbc.cmake` and also follows the native LLVM graph registered by
+`llvm.cmake`. There is no duplicate LLVM source tree.
+
+## Named Nodes
+
+A collection sets `TESTSUITE_REGEX`, sets `TESTSUITE_DEFINE` to a callback,
+and calls `testsuite_add_test()` from that callback. A node declares:
+
+- a suite-local `NAME`;
+- a `WORKING_DIRECTORY` and final `COMMAND`;
+- committed `GOLDENS` such as `exit_code.txt`, `stdout.txt`, and
+  `stderr.txt`;
+- transient `ARTIFACTS` that later nodes consume;
+- optional `DEPENDS`, `TIMEOUT`, and `VALIDATOR` metadata.
+
+Use `testsuite_output_path()` to obtain the deterministic build-tree path of
+an artifact produced by another node. Do not construct or depend on the
+runner's SHA-256 output directory directly.
+
+For every node, Trieste generates one private configuration file during CMake
+configuration. CTest and `ninja update-dump` both pass that file to
+`execute_test_node.cmake`, so verification and golden updates run the same
+command and validator.
+
+Each named node is one CTest test. Trieste fixtures make a selected dependent
+node execute its prerequisites and prevent downstream work after a failed
+node. The public CTest name is the suite name plus the node name, for example:
+
+```text
+vbc/v/hello/hello/compile
+vbc/v/hello/hello/run
+vbc/vir/simp1/simp1/compile
+vbc/vir/simp1/simp1/run
+vbc/vrt/behavior/set-exit/run
+```
+
+## Pipelines
+
+### Verona and VIR bytecode
+
+The compile node writes a `.vbc` artifact into its private build-tree output
+directory. The run node depends on compile and passes that exact artifact to
+the installed `vbci`:
+
+```text
+source -> compile -> .vbc -> run
+```
+
+The final `.trieste` AST and `.vbc` are transient build artifacts. They are
+not copied into the source tree as goldens. Pass dumps are produced only when
+`--dump_passes` is explicitly requested for diagnosis.
+
+### LLVM native
+
+`llvm.cmake` selects only fixtures named `vir/llvm_*/llvm_*.vir`. Each fixture
+has five nodes:
+
+```text
+emit-ir -> assemble -> codegen -> link -> run
+   .ll        .bc        .o       executable
+```
+
+The emit node uses installed `vbcc --emit llvm-ir`. Its validator rejects an
+`.ll` file without both a target data layout and target triple. `llvm-as`
+verifies and assembles the IR, `llc` emits the platform object, and the C++
+driver links it with installed `libvrt`.
+
+Every stage commits only the three process-result goldens. `.ll`, `.bc`,
+object, executable, and final-AST files remain transient artifacts under the
+hashed build output. The golden layout for one fixture is:
+
+```text
+testsuite/vir/llvm_scalar_ops/llvm_scalar_ops/
+├── compile/                 # ordinary bytecode compile
+├── run/                     # ordinary bytecode run
+└── llvm/
+    ├── emit-ir/
+    ├── assemble/
+    ├── codegen/
+    ├── link/
+    └── run/
+```
+
+Each leaf directory contains `exit_code.txt`, `stdout.txt`, and `stderr.txt`.
+When `VERONA_ENABLE_LLVM_BACKEND=OFF`, the LLVM collection selects no files
+but the other three collections continue to configure.
+
+### libvrt
+
+`vrt.cmake` creates ordinary CMake executable targets linked with `vbc::vrt`,
+then registers their execution as named nodes:
+
+- `vrt/abi/c/run` tests the public C11 ABI;
+- `vrt/abi/cxx/run` tests C++ inclusion and C-linkage signatures;
+- `vrt/behavior/default-exit/run` expects exit `0`;
+- `vrt/behavior/set-exit/run` expects exit `7`;
+- `vrt/behavior/last-write-wins/run` expects exit `3`;
+- `vrt/internal/state/run` tests private runtime state transitions.
+
+The named executor records the process's exact numeric exit status, so the
+nonzero behavioral expectations need no `WILL_FAIL` property or wrapper
+script. VRT nodes use the same three committed golden files as every other
+node.
+
+## Source Goldens and Build Artifacts
+
+For a standard fixture, committed goldens are colocated with the source:
+
+```text
+testsuite/{v,vir}/<name>/<name>/compile/
+├── exit_code.txt
+├── stderr.txt
+└── stdout.txt
+
+testsuite/{v,vir}/<name>/<name>/run/
+├── exit_code.txt
+├── stderr.txt
+└── stdout.txt
+```
+
+`exit_code.txt` is a plain number with no trailing newline. Compiler-error
+fixtures belong under `compile_only/`, normally have compile exit `1`, and
+have no run directory.
+
+Actual outputs and artifacts live below
+`build/testsuite/testsuite-output/<suite-hash>/<node-hash>/`. The hashes
+prevent logical node names such as `foo` and `foo/bar` from sharing physical
+directories. Use node names and `testsuite_output_path()`, not these hashes,
+when working with the graph.
+
+All declared goldens are compared with `cmake -E compare_files --ignore-eol`.
+This means stderr and stdout content are validated, not only the exit code.
+All declared artifacts must exist before a node is accepted.
 
 ## Running Tests
 
-### Full test suite
-```bash
-cd build && ctest --output-on-failure -j$(nproc)
-
-### Run specific test(s) by name
-```bash
-cd build && ctest --output-on-failure -R "^vbc/<name>" -j$(nproc)
-```
-
-The `^vbc/` prefix matches both compile and run tests for a given name. For example, `^vbc/hello` matches:
-- `vbc/hello/hello/compile` (the compilation test)
-- `vbc/hello/hello/compile-exit_code.txt` (exit code comparison)
-- `vbc/hello/hello/compile-stdout.txt` etc.
-- `vbc/hello/hello/run` (the runtime test, if it exists)
-- `vbc/hello/hello/run-exit_code.txt` etc.
-
-### Run only compile or only runtime tests
-```bash
-cd build && ctest --output-on-failure -R "compile" -j$(nproc)   # all compile tests
-cd build && ctest --output-on-failure -R "run" -j$(nproc)       # all runtime tests
-```
-
-### List available tests without running
-```bash
-cd build && ctest -N | grep <name>
-```
-
-## Golden Files
-
-### Structure
-
-Each test `testsuite/v/<name>/<name>.v` has golden files at:
-- `testsuite/v/<name>/<name>/compile/` — compilation golden output
-- `testsuite/v/<name>/<name>/run/` — runtime golden output (success tests only)
-
-### Expected compile/ contents (success tests)
-
-```
-00_parse.trieste          # Pass 0 output
-01_structure.trieste      # Pass 1 output
-02_ident.trieste          # Pass 2 output
-03_sugar.trieste          # Pass 3 output
-04_functype.trieste       # Pass 4 output
-05_dot.trieste            # Pass 5 output
-06_application.trieste    # Pass 6 output
-07_anf.trieste            # Pass 7 output
-08_infer.trieste          # Pass 8 output
-09_reify.trieste          # Pass 9 output
-10_assignids.trieste      # Pass 10 output
-11_validids.trieste       # Pass 11 output
-12_liveness.trieste       # Pass 12 output
-13_typecheck.trieste      # Pass 13 output
-<name>_final.trieste      # Final AST
-<name>.vbc                # Compiled bytecode
-exit_code.txt             # "0" (no trailing newline)
-stdout.txt                # Usually empty
-stderr.txt                # Usually empty
-```
-
-### Expected compile/ contents (error tests)
-
-Same pass dumps up to the point of failure. No `.vbc` file. `exit_code.txt` = `1`.
-
-### Expected run/ contents
-
-```
-exit_code.txt             # Expected exit code (no trailing newline)
-stdout.txt                # Expected stdout
-stderr.txt                # Expected stderr (usually empty)
-```
-
-### Regenerating golden files
-
-When source code changes, the golden files must be regenerated:
+Always build and install first so compiler tests use binaries below
+`build/dist/`; only the installed `vc` has `_builtin` beside it.
 
 ```bash
 cd build
-ninja install && ninja update-dump
+ninja install
+ctest --output-on-failure -j$(nproc)
 ```
 
-- `ninja install` — rebuild the compiler (needed so installed binary has `_builtin`)
-- `ninja update-dump` — regenerates golden output by running each test and copying results
-
-### When ALL golden files change
-
-Adding or modifying a `.v` file under `vc/_builtin/` changes compilation output for EVERY test, because `_builtin` is always parsed. In this case, you MUST regenerate ALL golden files:
+Useful focused commands:
 
 ```bash
-cd build && ninja install && ninja update-dump
+# One Verona fixture: compile and run
+ctest --output-on-failure -R '^vbc/v/hello/hello/'
+
+# One VIR fixture through bytecode
+ctest --output-on-failure -R '^vbc/vir/simp1/simp1/(compile|run)$'
+
+# All bytecode and native nodes for one LLVM fixture
+ctest --output-on-failure \
+  -R '^vbc/vir/llvm_scalar_ops/llvm_scalar_ops/'
+
+# Only that fixture's native LLVM stages
+ctest --output-on-failure \
+  -R '^vbc/vir/llvm_scalar_ops/llvm_scalar_ops/llvm/'
+
+# All VRT nodes
+ctest --output-on-failure -R '^vbc/vrt/'
+
+# List registered tests
+ctest -N
 ```
 
-This can take a while. All golden file changes must be committed.
+All collections are currently in the `vbc` suite and therefore have the
+`vbc` CTest label. Select LLVM and VRT subsets by their logical name prefixes,
+not by `-L llvm` or `-L vrt`.
 
-## Verifying Golden File Correctness
+After adding a fixture or changing CMake registration, run `ninja install`
+or `cmake ..` so CMake's configured globs refresh the registry.
 
-### Pass completeness check
+## Updating Goldens
 
-After generating golden files, verify the `compile/` directory has all 14 pass dumps (`00_parse.trieste` through `13_typecheck.trieste`). Missing passes indicate a WF (well-formedness) violation or pass failure.
+Run:
 
-**Common causes of missing passes:**
-- New token/op not added to the relevant WF definition in `vc/lang.h` (frontend WFs) or `include/vbcc.h` (backend WFs)
-- WF mismatch between what a pass produces and what the next pass expects
-
-**Debugging missing passes:**
 ```bash
-cd build && dist/vc/vc build ../testsuite/v/<name> --dump_passes=dump_<name>
+cd build
+ninja install
+ninja update-dump
 ```
-This dumps each pass output to the given directory. Check which pass produces the last `.trieste` file — the next pass is the one that fails.
 
-### Exit code verification
+The update target follows the same dependency graph as CTest. It executes a
+producer before its consumers and builds CMake targets referenced by node
+commands. It copies only files declared in `GOLDENS`; transient artifacts are
+never committed.
 
-- `exit_code.txt` contains the exit code as a plain number with NO trailing newline
-- The file is generated by cmake's `file(WRITE ...)` which doesn't append a newline
-- Success compile tests: `0`
-- Error compile tests: `1`
-- Runtime tests: depends on what `main` returns (typically `0` for passing tests)
+After updating, run `ninja update-dump` a second time and inspect `git status`.
+The second run should not change tracked files. Then run the focused and full
+CTest suites.
 
-### Checking for correct error codes
+Adding or changing a file in `vc/_builtin/` affects every Verona compile
+because `_builtin` is implicitly parsed. Regenerate and review the complete
+golden set in that case.
 
-For compile-error tests, verify:
-1. `compile/exit_code.txt` contains `1`
-2. No `run/` directory exists (compilation failed, nothing to run)
-3. No `.vbc` file in `compile/` (compilation didn't produce output)
-4. `stderr.txt` may contain error messages (but the framework doesn't validate error messages, only exit codes)
+## Diagnosing Failures
 
-For runtime tests with expected non-zero exit codes:
-1. `run/exit_code.txt` contains the expected value
-2. The bitmask pattern (`result + 1`, `result + 2`, `result + 4`, ...) helps diagnose which checks failed
+- A dependent node automatically pulls in its prerequisite nodes. Fix the
+  first failing stage in the chain.
+- Missing artifact errors mean the command exited but did not produce a file
+  listed in `ARTIFACTS`.
+- Missing golden errors mean `ninja update-dump` has not generated the
+  declared source result.
+- An LLVM emit validator failure means the `.ll` is missing target metadata,
+  even if `vbcc` returned zero.
+- Timeout or signal results are rejected because the executor requires a
+  numeric process exit code.
+- Do not use `WILL_FAIL` for an exact nonzero expectation; commit that number
+  in the node's `exit_code.txt`.
 
-## How the Framework Works
+Generate pass dumps manually when investigating compiler stages:
 
-### Test execution flow
-
-1. Trieste discovers each collection file (for example, `vc.cmake`)
-2. Its `TESTSUITE_DEFINE` callback registers a named node for each selected input
-3. CTest runs Trieste's node executor with the registered command
-4. stdout → `stdout.txt`, stderr → `stderr.txt`, exit code → `exit_code.txt`
-5. Declared artifacts are checked and declared goldens are compared
-6. Dependent run nodes execute only after their compile nodes pass
-
-### Golden file comparison
-
-1. Each file declared in `GOLDENS` is compared with the corresponding output
-2. Comparison ignores line-ending differences
-3. If a file differs, the node fails and shows a diff
-4. `exit_code.txt`, `stdout.txt`, and `stderr.txt` are declared for every node
-
-### Test naming convention
-
-Tests are named hierarchically: `vbc/<name>/<name>/compile` and `vbc/<name>/<name>/run`.
-
-Each node is one CTest test. Run nodes declare their compile node in `DEPENDS`, so
-CTest runs and verifies compilation first.
-
-## Common Pitfalls
-
-1. **Forgot `ninja install`**: The build binary at `build/vc/vc` does NOT have `_builtin` next to it. Only `build/dist/vc/vc` does. Always `ninja install` before `update-dump`.
-
-2. **Build was not regenerated**: Re-run `ninja` after adding a test so CMake's configured file globs discover it.
-
-3. **Stale golden files**: Remove files explicitly when they are no longer declared as golden outputs.
-
-4. **Hidden `.vbc` file**: Running `vc build .` from inside a test directory produces `.vbc` (hidden file) because the project name is ".". Always run from `build/`: `dist/vc/vc build ../testsuite/v/<name>`.
-
-5. **Timeout failures**: Tests that hang (infinite loops, deadlocks) are killed after 20 seconds and produce a non-zero exit code. The `exit_code.txt` will contain a timeout error string, not a number.
-
-6. **New `_builtin` files**: Changes to `vc/_builtin/` affect ALL tests. Must regenerate all golden files and commit all changes.
-
-7. **Missing pass dumps**: Usually a WF violation. Check which pass is the last one that produced output and investigate the next pass's WF definition.
-
+```bash
+cd build
+dist/vc/vc build ../testsuite/v/<name> --dump_passes=dump_<name>
 ```
+
+Run `vc` from `build/` with a source-directory argument. Running `vc build .`
+inside a source directory can derive a hidden output name from `.`.
+
+## Collection Rules and Pitfalls
+
+1. Every `*.cmake` file directly under `testsuite/` must define
+   `TESTSUITE_REGEX` and a callable `TESTSUITE_DEFINE`.
+2. Keep validators and other helper scripts below a component subdirectory.
+3. Node names, dependency names, golden paths, and artifact paths must be
+   relative and stable; do not put generator expressions in graph identity.
+4. Put `COMMAND` last in `testsuite_add_test()` because all following
+   arguments are treated as the opaque command argv.
+5. Use `testsuite_output_path()` for every cross-node artifact reference.
+6. Declare `exit_code.txt` in every `GOLDENS` list.
+7. Do not commit `.vbc`, `.ll`, `.bc`, `.o`, executables, or final/pass AST
+   files as runner goldens.
+8. Keep LLVM-capable `.vir` sources under `testsuite/vir/` so the ordinary
+   bytecode collection continues to test them too.

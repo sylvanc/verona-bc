@@ -1,0 +1,214 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
+  $a = const i32 20
+  $b = const i32 6
+  $two = const i32 2
+  $negative_a = const i32 -20
+
+  // Exercise every wfIntType and wfFloatType lowering family. These values do
+  // not contribute to the exit code; successful native compilation verifies
+  // that Const accepts and represents each primitive type.
+  $_i8 = const i8 -8
+  $_i16 = const i16 -16
+  $_i64 = const i64 -64
+  $_u8 = const u8 8
+  $_u16 = const u16 16
+  $_u32 = const u32 32
+  $_u64 = const u64 64
+  $_ilong = const ilong -65
+  $_ulong = const ulong 65
+  $_isize = const isize -66
+  $_usize = const usize 66
+  $_f32 = const f32 1.25
+  $_f64 = const f64 -2.5
+
+  $add_result = add $a $b
+  $add_expected = const i32 26
+  $add_error = sub $add_result $add_expected
+
+  $sub_result = sub $a $b
+  $sub_expected = const i32 14
+  $sub_error = sub $sub_result $sub_expected
+
+  $mul_result = mul $a $b
+  $mul_expected = const i32 120
+  $mul_error = sub $mul_result $mul_expected
+
+  $div_result = div $a $b
+  $div_expected = const i32 3
+  $div_error = sub $div_result $div_expected
+
+  $negative_div_result = div $negative_a $b
+  $negative_div_expected = const i32 -3
+  $negative_div_error = sub $negative_div_result $negative_div_expected
+
+  $mod_result = mod $a $b
+  $mod_expected = const i32 2
+  $mod_error = sub $mod_result $mod_expected
+
+  $negative_mod_result = mod $negative_a $b
+  $negative_mod_expected = const i32 -2
+  $negative_mod_error = sub $negative_mod_result $negative_mod_expected
+
+  $and_result = and $a $b
+  $and_expected = const i32 4
+  $and_error = sub $and_result $and_expected
+
+  $or_result = or $a $b
+  $or_expected = const i32 22
+  $or_error = sub $or_result $or_expected
+
+  $xor_result = xor $a $b
+  $xor_expected = const i32 18
+  $xor_error = sub $xor_result $xor_expected
+
+  $shl_result = shl $a $two
+  $shl_expected = const i32 80
+  $shl_error = sub $shl_result $shl_expected
+
+  $shr_result = shr $a $two
+  $shr_expected = const i32 5
+  $shr_error = sub $shr_result $shr_expected
+
+  $negative_shr_result = shr $negative_a $two
+  $negative_shr_expected = const i32 -5
+  $negative_shr_error = sub $negative_shr_result $negative_shr_expected
+
+  $min_result = min $a $b
+  $min_error = sub $min_result $b
+
+  $max_result = max $a $b
+  $max_error = sub $max_result $a
+
+  $signed_min_result = min $negative_a $b
+  $signed_min_error = sub $signed_min_result $negative_a
+
+  $signed_max_result = max $negative_a $b
+  $signed_max_error = sub $signed_max_result $b
+
+  $neg_result = neg $a
+  $neg_error = sub $neg_result $negative_a
+
+  $abs_result = abs $neg_result
+  $abs_error = sub $abs_result $a
+
+  $not_result = not $a
+  $not_expected = const i32 -21
+  $not_error = sub $not_result $not_expected
+
+  $error0 = or $add_error $sub_error
+  $error1 = or $mul_error $div_error
+  $error2 = or $mod_error $and_error
+  $error3 = or $or_error $xor_error
+  $error4 = or $shl_error $shr_error
+  $error5 = or $min_error $max_error
+  $error6 = or $neg_error $abs_error
+  $error7 = or $not_error $error0
+  $error8 = or $error1 $error2
+  $error9 = or $error3 $error4
+  $error10 = or $error5 $error6
+  $error11 = or $error7 $error8
+  $error12 = or $error9 $error10
+  $error13 = or $negative_div_error $negative_mod_error
+  $error14 = or $negative_shr_error $signed_min_error
+  $error15 = or $signed_max_error $error13
+  $error16 = or $error14 $error15
+  $error17 = or $error11 $error12
+  $exit_code = or $error16 $error17
+
+  $true = const bool true
+  $false = const bool false
+  $bool_and = and $true $false
+  $bool_or = or $true $false
+  $bool_xor = xor $true $true
+  $bool_not = not $false
+  $bool_min = min $true $false
+  $bool_max = max $true $false
+  $eq_result = eq $a $a
+  $ne_result = ne $a $b
+  $lt_result = lt $b $a
+  $le_result = le $b $b
+  $gt_result = gt $a $b
+  $ge_result = ge $a $a
+  $signed_lt_result = lt $negative_a $b
+  $bool_check0 = eq $bool_and $false
+  $bool_check1 = eq $bool_or $true
+  $bool_check2 = eq $bool_xor $false
+  $bool_check3 = eq $bool_not $true
+  $bool_check4 = eq $bool_min $false
+  $bool_check5 = eq $bool_max $true
+  $predicate0 = and $eq_result $ne_result
+  $predicate1 = and $lt_result $le_result
+  $predicate2 = and $gt_result $ge_result
+  $predicate_signed = and $signed_lt_result $true
+  $predicate3 = and $bool_check0 $bool_check1
+  $predicate4 = and $bool_check2 $bool_check3
+  $predicate5 = and $bool_check4 $bool_check5
+  $predicate6 = and $predicate0 $predicate1
+  $predicate7 = and $predicate2 $predicate_signed
+  $predicate8 = and $predicate3 $predicate4
+  $predicate9 = and $predicate5 $predicate6
+  $predicate10 = and $predicate7 $predicate8
+  $predicate = and $predicate9 $predicate10
+  $predicate_i32 = convert i32 $predicate
+  $predicate_expected = const i32 1
+  $predicate_error = sub $predicate_expected $predicate_i32
+  $exit_code_with_predicates = or $exit_code $predicate_error
+
+  $_call = ffi @set_exit_code($exit_code_with_predicates)
+  $_none = const none
+  ret $_none
+
+func @const_i8(): i8
+  $value = const i8 -8
+  ret $value
+
+func @const_i16(): i16
+  $value = const i16 -16
+  ret $value
+
+func @const_i64(): i64
+  $value = const i64 -64
+  ret $value
+
+func @const_u8(): u8
+  $value = const u8 8
+  ret $value
+
+func @const_u16(): u16
+  $value = const u16 16
+  ret $value
+
+func @const_u32(): u32
+  $value = const u32 32
+  ret $value
+
+func @const_u64(): u64
+  $value = const u64 64
+  ret $value
+
+func @const_ilong(): ilong
+  $value = const ilong -65
+  ret $value
+
+func @const_ulong(): ulong
+  $value = const ulong 65
+  ret $value
+
+func @const_isize(): isize
+  $value = const isize -66
+  ret $value
+
+func @const_usize(): usize
+  $value = const usize 66
+  ret $value
+
+func @const_f32(): f32
+  $value = const f32 1.25
+  ret $value
+
+func @const_f64(): f64
+  $value = const f64 -2.5
+  ret $value

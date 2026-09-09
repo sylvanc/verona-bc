@@ -29,9 +29,10 @@ function(vir_test_define test)
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ${artifact_metadata}
     COMMAND
-      "${CMAKE_INSTALL_PREFIX}/vbcc/vbcc"
+      "${CMAKE_INSTALL_PREFIX}/vbcc/$<TARGET_FILE_NAME:vbcc>"
       build "${test_file}"
-      -b "${bytecode}"
+      --emit vbc
+      --output-file "${bytecode}"
       -o "${final_ast}")
 
   if(register_run)
@@ -40,6 +41,8 @@ function(vir_test_define test)
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}"
       DEPENDS "${compile_node}"
       GOLDENS exit_code.txt stderr.txt stdout.txt
-      COMMAND "${CMAKE_INSTALL_PREFIX}/vbci/vbci" "${bytecode}")
+      COMMAND
+        "${CMAKE_INSTALL_PREFIX}/vbci/$<TARGET_FILE_NAME:vbci>"
+        "${bytecode}")
   endif()
 endfunction()

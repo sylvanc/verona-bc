@@ -1,0 +1,11 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @finish($code: i32): none
+  $_result = ffi @set_exit_code($code)
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $success = const i32 0
+  tailcall @finish($success)

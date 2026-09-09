@@ -2,6 +2,7 @@
 
 #include "lang.h"
 
+#include <type_traits>
 #include <zstd.h>
 
 namespace vbcc
@@ -34,7 +35,12 @@ namespace vbcc
   std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<T>&& s)
   {
     // This uses zigzag encoding.
-    auto value = (s.value << 1) ^ (s.value >> ((sizeof(T) * 8) - 1));
+    static_assert(std::is_signed_v<T>);
+
+    using U = std::make_unsigned_t<T>;
+    auto bits = static_cast<U>(s.value);
+    auto sign_mask = U{} - static_cast<U>(s.value < 0);
+    auto value = (bits << 1) ^ sign_mask;
     return b << uleb(value);
   }
 
@@ -508,7 +514,7 @@ namespace vbcc
     libraries.push_back(lib);
   }
 
-  void Bytecode::gen(std::filesystem::path output, bool strip)
+  void Bytecode::gen_vbc(std::filesystem::path output, bool strip)
   {
     wf::push_back(wfIR);
 

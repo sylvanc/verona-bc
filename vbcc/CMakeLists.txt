@@ -26,6 +26,10 @@ target_link_libraries(libvbcc PUBLIC
 
 add_library(vbc::vbcc ALIAS libvbcc)
 
+if(VERONA_ENABLE_LLVM_BACKEND)
+  add_subdirectory(llvm)
+endif()
+
 add_executable(vbcc
   passes/labels.cc
   passes/parser.cc
@@ -41,9 +45,15 @@ else()
 endif()
 
 target_link_libraries(vbcc
-  vbc::vbcc
   CLI11::CLI11
 )
+
+if(VERONA_ENABLE_LLVM_BACKEND)
+  target_compile_definitions(vbcc PRIVATE VERONA_ENABLE_LLVM_BACKEND=1)
+  target_link_libraries(vbcc vbc::vbcllvm)
+else()
+  target_link_libraries(vbcc vbc::vbcc)
+endif()
 
 install(TARGETS libvbcc RUNTIME DESTINATION libvbcc)
 install(TARGETS vbcc RUNTIME DESTINATION vbcc)

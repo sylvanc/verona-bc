@@ -1,34 +1,30 @@
 lib
   @set_exit_code = "set_exit_code"(i32): none
 
-// Test non-local return via raise.
+// Test non-local return via raise across static calls.
 //
-// main calls outer, which calls inner.
-// inner gets main's raise target (passed as an argument), sets it, and raises.
-// The raise skips inner's and outer's frames, returning directly to main.
-// main returns the raised value (42).
+// enclosing captures its i32 frame as the raise target and passes it through
+// middle to inner. Raising 42 skips inner, middle, and enclosing, so main
+// receives 42 as the result of its ordinary call to enclosing.
 
-// inner(val, raise_target): i32
-//   Sets the raise target and raises val.
-func @inner($val: i32, $target: u64): i32
+func @inner($value: i32, $target: u64): i32
   $prev = setraise $target
-  raise $val i32
+  raise $value i32
 
-// outer(raise_target): i32
-//   Calls inner with 42 and the raise target.
-//   If inner raised, we never reach the const 99 line.
-func @outer($target: u64): i32
-  $val = const i32 42
-  $result = call @inner($val, $target)
-  // This should never execute because inner raises.
+func @middle($target: u64): i32
+  $value = const i32 42
+  $result = call @inner($value, $target)
   $bad = const i32 99
   ret $bad
 
-// main(): i32
-//   Gets its own raise target, calls outer, returns result.
-func @main(): none
+func @enclosing(): i32
   $target = getraise
-  $result = call @outer($target)
+  $result = call @middle($target)
+  $bad = const i32 99
+  ret $bad
+
+func @main(): none
+  $result = call @enclosing()
   $_ = ffi @set_exit_code($result)
   $_none = const none
   ret $_none

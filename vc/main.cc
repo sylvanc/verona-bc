@@ -92,6 +92,6 @@ int main(int argc, char** argv)
   if (!opts.path.empty())
     state->add_path(opts.path);
 
-  state->gen(opts.bytecode_file, opts.strip);
+  state->gen_vbc(opts.bytecode_file, opts.strip);
   return 0;
 }

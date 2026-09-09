@@ -48,7 +48,9 @@ user-invocable: false
 - Do NOT write `use "_builtin"` — it is always implicitly available.
 - Bitmask exit code pattern: `var result = 0;` then `if cond { result = result + N; }` with powers of 2. Exit 0 = all passed.
 - Compile-error tests: `exit_code.txt: 1` in `compile/`, no `run/` directory.
-- Structure: `testsuite/v/<name>/<name>.v` with golden dirs `<name>/<name>/compile/` and `<name>/<name>/run/`.
+- Structure: `testsuite/v/<name>/<name>.v` with golden dirs
+  `<name>/<name>/compile/` and `<name>/<name>/run/`. Expected compile errors
+  use `testsuite/v/compile_only/<name>/<name>.v` and have no run node.
 - FFI tests must include at least one reachable FFI call from their lib to trigger init function reification.
 
 ## Verona Source Syntax
