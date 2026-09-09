@@ -436,7 +436,8 @@ namespace vbcc
             if (r)
               return r;
 
-            return RegionArray << _(LocalId) << _(Lhs) << _(Type) << _(Rhs);
+            return RegionArrayConst << _(LocalId) << _(Lhs) << _(Type)
+                                    << _(Rhs);
           },
 
         // Register operations.
