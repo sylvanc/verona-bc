@@ -20,8 +20,14 @@ func @main(): none
   $region_expected = const usize 6
   $region_ok = eq $region_len $region_expected
 
+  $region_const_array = region rc [i32] 7
+  $region_const_len = len $region_const_array
+  $region_const_expected = const usize 7
+  $region_const_ok = eq $region_const_len $region_const_expected
+
   $new_stack_ok = and $new_ok $stack_ok
-  $all_ok = and $new_stack_ok $region_ok
+  $region_all_ok = and $region_ok $region_const_ok
+  $all_ok = and $new_stack_ok $region_all_ok
   cond $all_ok ^pass ^fail
 ^pass
   $r = const i32 0
