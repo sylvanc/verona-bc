@@ -337,19 +337,23 @@ namespace vbci::writebarrier
     }
   };
 
-  inline void init(Location store_loc, void* addr, ValueType t, Register next)
+  inline Error init(Location store_loc, void* addr, ValueType t, Register next)
   {
     if (next->is_readonly())
-      Value::error(Error::BadStore);
+      return Error::BadStore;
+      //Value::error(Error::BadStore);
 
     auto ops =
       write_ops<true>().prepare_store(store_loc).prepare_in(next->location());
 
     if (!ops.ok)
-      Value::error(Error::BadAllocTarget);
+      return Error::BadAllocTarget;
+      //Value::error(Error::BadAllocTarget);
 
     if (!ops.apply_in(addr, t, std::forward<Register>(next)))
-      Value::error(Error::BadStore);
+      return Error::BadStore;
+      //Value::error(Error::BadStore);
+    return Error::Ok;
   }
 
   template<bool is_move>

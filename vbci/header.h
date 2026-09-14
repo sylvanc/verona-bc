@@ -156,7 +156,7 @@ namespace vbci
         find(this)->reg_dec();
         return;
       }
-
+      
       // If stack_dec returns false, the region has been freed, so we can
       // return early without doing anything else.
       if (loc.is_region() && !loc.to_region()->stack_dec())
