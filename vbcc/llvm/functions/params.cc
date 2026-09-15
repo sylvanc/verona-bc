@@ -22,7 +22,7 @@ namespace vbcc
         if (!lowered)
           return {};
 
-        if (lowered->kind == ValueKind::None)
+        if (lowered->ir_type == IRValueType::None)
         {
           fail(type, "none cannot be used as an LLVM parameter type");
           return {};

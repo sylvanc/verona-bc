@@ -30,11 +30,11 @@ namespace vbcc
         width = 64;
       }
 
-      auto kind = type->type().in({I8, I16, I32, I64, ILong, ISize}) ?
-        ValueKind::SignedInteger :
-        ValueKind::UnsignedInteger;
+      auto ir_type = type->type().in({I8, I16, I32, I64, ILong, ISize}) ?
+        IRValueType::SignedInteger :
+        IRValueType::UnsignedInteger;
       auto* llvm_type = llvm::IntegerType::get(context, width);
-      return LoweredType{kind, RuntimeValueKind::Scalar, llvm_type, llvm_type};
+      return LoweredType{ir_type, vrt::ValueType::scalar, llvm_type, llvm_type};
     }
   }
 }

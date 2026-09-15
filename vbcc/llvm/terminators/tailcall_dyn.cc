@@ -35,7 +35,8 @@ namespace vbcc
         return false;
 
       if (
-        (target->type.kind != ValueKind::Pointer) || (target->value == nullptr))
+        (target->type.ir_type != IRValueType::Pointer) ||
+        (target->value == nullptr))
       {
         fail(statement, "dynamic tailcall target representation is not ptr");
         return false;
@@ -49,7 +50,7 @@ namespace vbcc
 
       for (const auto& arg : args)
       {
-        if ((arg.type.kind == ValueKind::None) || (arg.value == nullptr))
+        if ((arg.type.ir_type == IRValueType::None) || (arg.value == nullptr))
         {
           fail(
             statement,
@@ -57,7 +58,7 @@ namespace vbcc
           return false;
         }
 
-        param_types.push_back(arg.type.value_type);
+        param_types.push_back(arg.type.llvm_type);
         llvm_args.push_back(arg.value);
       }
 
@@ -67,12 +68,12 @@ namespace vbcc
         return false;
 
       auto* function_type =
-        llvm::FunctionType::get(return_type.value_type, param_types, false);
+        llvm::FunctionType::get(return_type.llvm_type, param_types, false);
       auto* call = builder.CreateCall(function_type, target->value, llvm_args);
       call->setCallingConv(llvm::CallingConv::Tail);
       call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 
-      if (return_type.kind == ValueKind::None)
+      if (return_type.ir_type == IRValueType::None)
         builder.CreateRetVoid();
       else
         builder.CreateRet(call);

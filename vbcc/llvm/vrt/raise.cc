@@ -41,7 +41,7 @@ namespace vbcc
       if (!emit_leave_frame(function))
         return false;
 
-      if (return_type.kind == ValueKind::None)
+      if (return_type.ir_type == IRValueType::None)
         builder.CreateRetVoid();
       else
         builder.CreateRet(unpack_raised_value(return_type, value));
@@ -54,7 +54,7 @@ namespace vbcc
     {
       auto* word_type = llvm::Type::getInt64Ty(context);
 
-      if (value.type.kind == ValueKind::None)
+      if (value.type.ir_type == IRValueType::None)
         return llvm::ConstantInt::get(word_type, 0);
 
       if (value.value == nullptr)
@@ -63,15 +63,15 @@ namespace vbcc
         return {};
       }
 
-      switch (value.type.kind)
+      switch (value.type.ir_type)
       {
-        case ValueKind::Bool:
-        case ValueKind::SignedInteger:
-        case ValueKind::UnsignedInteger:
+        case IRValueType::Bool:
+        case IRValueType::SignedInteger:
+        case IRValueType::UnsignedInteger:
           return builder.CreateZExtOrTrunc(
             value.value, word_type, "raise.bits");
 
-        case ValueKind::Float:
+        case IRValueType::Float:
         {
           auto width = value.value->getType()->getPrimitiveSizeInBits();
           auto* bits_type = llvm::IntegerType::get(context, width);
@@ -80,10 +80,10 @@ namespace vbcc
           return builder.CreateZExt(bits, word_type, "raise.bits");
         }
 
-        case ValueKind::Pointer:
+        case IRValueType::Pointer:
           return builder.CreatePtrToInt(value.value, word_type, "raise.bits");
 
-        case ValueKind::None:
+        case IRValueType::None:
           break;
       }
 
@@ -94,28 +94,27 @@ namespace vbcc
     llvm::Value* LLVMCodegen::unpack_raised_value(
       const LoweredType& type, llvm::Value* value)
     {
-      switch (type.kind)
+      switch (type.ir_type)
       {
-        case ValueKind::Bool:
-        case ValueKind::SignedInteger:
-        case ValueKind::UnsignedInteger:
+        case IRValueType::Bool:
+        case IRValueType::SignedInteger:
+        case IRValueType::UnsignedInteger:
           return builder.CreateTruncOrBitCast(
-            value, type.value_type, "raised.result");
+            value, type.llvm_type, "raised.result");
 
-        case ValueKind::Float:
+        case IRValueType::Float:
         {
-          auto width = type.value_type->getPrimitiveSizeInBits();
+          auto width = type.llvm_type->getPrimitiveSizeInBits();
           auto* bits_type = llvm::IntegerType::get(context, width);
           auto* bits =
             builder.CreateTruncOrBitCast(value, bits_type, "raised.float.bits");
-          return builder.CreateBitCast(bits, type.value_type, "raised.result");
+          return builder.CreateBitCast(bits, type.llvm_type, "raised.result");
         }
 
-        case ValueKind::Pointer:
-          return builder.CreateIntToPtr(
-            value, type.value_type, "raised.result");
+        case IRValueType::Pointer:
+          return builder.CreateIntToPtr(value, type.llvm_type, "raised.result");
 
-        case ValueKind::None:
+        case IRValueType::None:
           return nullptr;
       }
 

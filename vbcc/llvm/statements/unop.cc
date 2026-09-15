@@ -21,18 +21,19 @@ namespace vbcc
         return false;
       }
 
-      if (source->type.kind == ValueKind::None)
+      if (source->type.ir_type == IRValueType::None)
       {
         fail(statement, "unary operation on none");
         return false;
       }
 
       auto name = strip_sigil(node_text(dst));
-      auto is_signed_integer = source->type.kind == ValueKind::SignedInteger;
+      auto is_signed_integer =
+        source->type.ir_type == IRValueType::SignedInteger;
       auto is_unsigned_integer =
-        source->type.kind == ValueKind::UnsignedInteger;
+        source->type.ir_type == IRValueType::UnsignedInteger;
       auto is_integer = is_signed_integer || is_unsigned_integer;
-      auto is_bool = source->type.kind == ValueKind::Bool;
+      auto is_bool = source->type.ir_type == IRValueType::Bool;
       llvm::Value* result = nullptr;
 
       if (!is_integer && !is_bool)
@@ -63,7 +64,7 @@ namespace vbcc
           return false;
         }
 
-        auto* zero = llvm::ConstantInt::get(source->type.value_type, 0);
+        auto* zero = llvm::ConstantInt::get(source->type.llvm_type, 0);
         auto* negative =
           builder.CreateICmpSLT(source->value, zero, name + ".negative");
         auto* negated = builder.CreateNeg(source->value, name + ".negated");

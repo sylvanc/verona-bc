@@ -264,6 +264,10 @@ The experimental LLVM backend lowers backend Trieste IR (`.vir`) directly to
 textual LLVM IR (`.ll`). It is enabled by default, so the default configuration
 requires an LLVM installation discoverable by CMake:
 
+Each physical value type is described by a `LoweredType`. Its `IRValueType`
+selects LLVM instruction semantics, while the canonical `vrt::ValueType`
+selects runtime representation and lifetime operations.
+
 ```bash
 cmake -S . -B build -G Ninja \
   -DLLVM_DIR=/path/to/llvm/lib/cmake/llvm

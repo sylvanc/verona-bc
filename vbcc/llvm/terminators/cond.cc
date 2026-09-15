@@ -18,7 +18,7 @@ namespace vbcc
       }
 
       if (
-        (condition->type.kind != ValueKind::Bool) ||
+        (condition->type.ir_type != IRValueType::Bool) ||
         (condition->value == nullptr))
       {
         fail(statement, "condition representation is not bool");

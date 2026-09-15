@@ -44,10 +44,10 @@ namespace vbcc
           llvm_params.reserve(lowered_params->size());
 
           for (const auto& param_type : *lowered_params)
-            llvm_params.push_back(param_type.value_type);
+            llvm_params.push_back(param_type.llvm_type);
 
           auto* function_type = llvm::FunctionType::get(
-            lowered_return->value_type, llvm_params, false);
+            lowered_return->llvm_type, llvm_params, false);
 
           auto* function = module.getFunction(linker_name_text);
 

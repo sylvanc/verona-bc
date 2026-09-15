@@ -50,7 +50,7 @@ namespace vbcc
       {
         llvm::Constant* constant = nullptr;
 
-        if (lowered.kind == ValueKind::SignedInteger)
+        if (lowered.ir_type == IRValueType::SignedInteger)
         {
           std::optional<int64_t> value;
 
@@ -69,11 +69,11 @@ namespace vbcc
             return {};
           }
 
-          constant = llvm::ConstantInt::getSigned(lowered.value_type, *value);
+          constant = llvm::ConstantInt::getSigned(lowered.llvm_type, *value);
         }
         else
         {
-          assert(lowered.kind == ValueKind::UnsignedInteger);
+          assert(lowered.ir_type == IRValueType::UnsignedInteger);
           std::optional<uint64_t> value;
 
           if (type == U8)
@@ -91,7 +91,7 @@ namespace vbcc
             return {};
           }
 
-          constant = llvm::ConstantInt::get(lowered.value_type, *value, false);
+          constant = llvm::ConstantInt::get(lowered.llvm_type, *value, false);
         }
 
         return LoweredValue{lowered, constant};

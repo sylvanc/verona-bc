@@ -53,7 +53,7 @@ namespace vbcc
         }
 
         auto* constant =
-          llvm::ConstantInt::get(lowered.value_type, literal == True);
+          llvm::ConstantInt::get(lowered.llvm_type, literal == True);
         return LoweredValue{lowered, constant};
       }
 
@@ -77,13 +77,13 @@ namespace vbcc
         {
           auto value = parse_literal<float>(literal);
           if (value)
-            constant = llvm::ConstantFP::get(lowered.value_type, *value);
+            constant = llvm::ConstantFP::get(lowered.llvm_type, *value);
         }
         else
         {
           auto value = parse_literal<double>(literal);
           if (value)
-            constant = llvm::ConstantFP::get(lowered.value_type, *value);
+            constant = llvm::ConstantFP::get(lowered.llvm_type, *value);
         }
 
         if (!constant)

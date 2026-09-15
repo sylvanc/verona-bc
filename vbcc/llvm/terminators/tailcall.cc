@@ -60,7 +60,7 @@ namespace vbcc
       {
         auto& arg = args.at(i);
 
-        if ((arg.type.kind == ValueKind::None) || (arg.value == nullptr))
+        if ((arg.type.ir_type == IRValueType::None) || (arg.value == nullptr))
         {
           fail(move_args, "tailcall argument has no runtime representation");
           return false;
@@ -82,7 +82,7 @@ namespace vbcc
       call->setCallingConv(callee.function->getCallingConv());
       call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 
-      if (return_type.kind == ValueKind::None)
+      if (return_type.ir_type == IRValueType::None)
         builder.CreateRetVoid();
       else
         builder.CreateRet(call);

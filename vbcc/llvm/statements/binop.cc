@@ -37,17 +37,18 @@ namespace vbcc
         return false;
       }
 
-      if (lhs->type.kind == ValueKind::None)
+      if (lhs->type.ir_type == IRValueType::None)
       {
         fail(statement, "binary operation on none");
         return false;
       }
 
       auto name = strip_sigil(node_text(dst));
-      auto is_signed_integer = lhs->type.kind == ValueKind::SignedInteger;
-      auto is_unsigned_integer = lhs->type.kind == ValueKind::UnsignedInteger;
+      auto is_signed_integer = lhs->type.ir_type == IRValueType::SignedInteger;
+      auto is_unsigned_integer =
+        lhs->type.ir_type == IRValueType::UnsignedInteger;
       auto is_integer = is_signed_integer || is_unsigned_integer;
-      auto is_bool = lhs->type.kind == ValueKind::Bool;
+      auto is_bool = lhs->type.ir_type == IRValueType::Bool;
       llvm::Value* result = nullptr;
       auto result_type = lhs->type;
 

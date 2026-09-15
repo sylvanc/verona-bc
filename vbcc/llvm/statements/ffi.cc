@@ -85,13 +85,13 @@ namespace vbcc
       }
 
       auto dst_name = node_text(dst);
-      auto result_name = symbol.return_type.kind == ValueKind::None ?
+      auto result_name = symbol.return_type.ir_type == IRValueType::None ?
         std::string() :
         strip_sigil(dst_name);
       auto* call = builder.CreateCall(symbol.function, llvm_args, result_name);
       call->setCallingConv(symbol.function->getCallingConv());
 
-      if (symbol.return_type.kind == ValueKind::None)
+      if (symbol.return_type.ir_type == IRValueType::None)
       {
         return locals.bind_value(
           statement, dst, LoweredValue{symbol.return_type, nullptr});

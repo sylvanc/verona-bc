@@ -17,8 +17,8 @@ namespace vbcc
       LoweredType lower_none_type(llvm::LLVMContext& context)
       {
         return LoweredType{
-          ValueKind::None,
-          RuntimeValueKind::None,
+          IRValueType::None,
+          vrt::ValueType::none,
           llvm::Type::getVoidTy(context),
           nullptr};
       }
@@ -27,15 +27,15 @@ namespace vbcc
       {
         auto* llvm_type = llvm::Type::getInt1Ty(context);
         return LoweredType{
-          ValueKind::Bool, RuntimeValueKind::Scalar, llvm_type, llvm_type};
+          IRValueType::Bool, vrt::ValueType::scalar, llvm_type, llvm_type};
       }
 
       LoweredType lower_pointer_type(llvm::LLVMContext& context)
       {
         auto* llvm_type = llvm::PointerType::getUnqual(context);
         return LoweredType{
-          ValueKind::Pointer,
-          RuntimeValueKind::RawPointer,
+          IRValueType::Pointer,
+          vrt::ValueType::raw_pointer,
           llvm_type,
           llvm_type};
       }

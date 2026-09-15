@@ -76,7 +76,7 @@ namespace vbcc
         ++i;
       }
 
-      auto result_name = callee.return_type.kind == ValueKind::None ?
+      auto result_name = callee.return_type.ir_type == IRValueType::None ?
         std::string() :
         strip_sigil(node_text(dst));
 
@@ -86,7 +86,7 @@ namespace vbcc
       auto* call = builder.CreateCall(callee.function, llvm_args, result_name);
       call->setCallingConv(callee.function->getCallingConv());
 
-      if (callee.return_type.kind == ValueKind::None)
+      if (callee.return_type.ir_type == IRValueType::None)
       {
         return locals.bind_value(
           statement, dst, LoweredValue{callee.return_type, nullptr});

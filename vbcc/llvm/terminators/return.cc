@@ -26,7 +26,7 @@ namespace vbcc
       if (!emit_leave_frame(statement))
         return false;
 
-      if (return_type.kind == ValueKind::None)
+      if (return_type.ir_type == IRValueType::None)
         builder.CreateRetVoid();
       else
         builder.CreateRet(value->value);

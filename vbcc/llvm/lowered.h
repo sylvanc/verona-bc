@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../include/vrt/value.h"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -17,7 +19,7 @@ namespace vbcc
 {
   namespace llvm_backend
   {
-    enum class ValueKind
+    enum class IRValueType
     {
       None,
       Bool,
@@ -27,26 +29,13 @@ namespace vbcc
       Pointer,
     };
 
-    enum class RuntimeValueKind
-    {
-      None,
-      Scalar,
-      RawPointer,
-      Object,
-      Array,
-      Reference,
-      Cown,
-      Dynamic,
-      Aggregate,
-    };
-
     struct LoweredType
     {
-      ValueKind kind;
+      IRValueType ir_type;
       // Selects the runtime representation and lifetime operations associated
       // with values of this type.
-      RuntimeValueKind runtime_kind;
-      llvm::Type* value_type;
+      vrt::ValueType runtime_type;
+      llvm::Type* llvm_type;
 
       // LLVM layout used when a VIR value needs addressable storage. The
       // mutable Vars use this for their function-local slots. None has no

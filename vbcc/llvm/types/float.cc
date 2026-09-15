@@ -15,7 +15,7 @@ namespace vbcc
       auto* llvm_type = type == F32 ? llvm::Type::getFloatTy(context) :
                                       llvm::Type::getDoubleTy(context);
       return LoweredType{
-        ValueKind::Float, RuntimeValueKind::Scalar, llvm_type, llvm_type};
+        IRValueType::Float, vrt::ValueType::scalar, llvm_type, llvm_type};
     }
   }
 }
