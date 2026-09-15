@@ -24,7 +24,7 @@ namespace vbci
       size_t stride)
     : Header(loc, type_id), size(size), stride(stride), value_type(value_type)
     {
-      if (value_type == ValueType::Invalid)
+      if (value_type == ValueType::Dyn)
       {
         auto data = reinterpret_cast<Value*>(this + 1);
 
@@ -206,7 +206,7 @@ namespace vbci
       {
         case ValueType::Object:
         case ValueType::Array:
-        case ValueType::Invalid:
+        case ValueType::Dyn:
         {
           for (size_t i = 0; i < size; i++)
           {
@@ -234,7 +234,7 @@ namespace vbci
       {
         case ValueType::Object:
         case ValueType::Array:
-        case ValueType::Invalid:
+        case ValueType::Dyn:
         {
           for (size_t i = 0; i < size; i++)
             load(i).immortalize();
@@ -252,7 +252,7 @@ namespace vbci
       {
         case ValueType::Object:
         case ValueType::Array:
-        case ValueType::Invalid:
+        case ValueType::Dyn:
         {
           for (size_t i = 0; i < size; i++)
           {

@@ -1562,7 +1562,7 @@ namespace vbci
               vt = rep.first;
             }
 
-            if (vt == ValueType::Invalid)
+            if (vt == ValueType::Dyn)
             {
               // Dynamic type: pass a pointer to the Value.
               ffi_arg_vals.at(i) = &arg;
@@ -2684,7 +2684,7 @@ namespace vbci
     {
       auto vt = cc->arg_value_types[i];
 
-      if (vt == ValueType::Invalid)
+      if (vt == ValueType::Dyn)
       {
         auto* val = static_cast<Value*>(args_[i]);
         arg(args++) = ValueBorrow(*val);
@@ -2703,7 +2703,7 @@ namespace vbci
       {
         return;
       }
-      else if (cc->return_value_type == ValueType::Invalid)
+      else if (cc->return_value_type == ValueType::Dyn)
       {
         *static_cast<Value*>(ret) = result.extract();
       }

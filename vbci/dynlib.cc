@@ -35,7 +35,7 @@ namespace vbci
     return_value_type = rep.first;
     return_ffi_type = rep.second;
 
-    if (return_value_type == ValueType::Invalid)
+    if (return_value_type == ValueType::Dyn)
       return_ffi_type = program.value_type();
 
     if (vararg)
@@ -109,7 +109,7 @@ namespace vbci
     // into this space.
     Value ret;
 
-    if (return_value_type == ValueType::Invalid)
+    if (return_value_type == ValueType::Dyn)
     {
       // Expect the ffi call to not modify the args in place.
       // Hence, the const_cast.

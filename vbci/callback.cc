@@ -41,7 +41,7 @@ namespace vbci
       auto rep = program.layout_type_id(func->param_types[i]);
       cc->arg_value_types.push_back(rep.first);
 
-      if (rep.first == ValueType::Invalid)
+      if (rep.first == ValueType::Dyn)
         cc->arg_ffi_types.push_back(program.value_type());
       else
         cc->arg_ffi_types.push_back(rep.second);
@@ -52,7 +52,7 @@ namespace vbci
     cc->return_value_type = ret_rep.first;
     cc->return_ffi_type = ret_rep.second;
 
-    if (cc->return_value_type == ValueType::Invalid)
+    if (cc->return_value_type == ValueType::Dyn)
       cc->return_ffi_type = program.value_type();
 
     // Prepare the cif.
