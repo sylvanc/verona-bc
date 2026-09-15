@@ -1558,11 +1558,16 @@ namespace vbci
             else
             {
               auto rep = program.layout_type_id(arg->type_id());
-              symbol.varparam(rep.second);
+              // See Symbol::prepare: `Value`s cross the boundary as pointers,
+              // so the CIF must declare pointer-sized args, not the 16-byte
+              // by-value struct that layout_type_id returns for `Dyn`.
+              auto* cif_type =
+                (rep.first == ValueType::Dyn) ? &ffi_type_pointer : rep.second;
+              symbol.varparam(cif_type);
               vt = rep.first;
             }
 
-            if (vt == ValueType::Invalid)
+            if (vt == ValueType::Dyn)
             {
               // Dynamic type: pass a pointer to the Value.
               ffi_arg_vals.at(i) = &arg;
@@ -2684,7 +2689,7 @@ namespace vbci
     {
       auto vt = cc->arg_value_types[i];
 
-      if (vt == ValueType::Invalid)
+      if (vt == ValueType::Dyn)
       {
         auto* val = static_cast<Value*>(args_[i]);
         arg(args++) = ValueBorrow(*val);
@@ -2703,7 +2708,7 @@ namespace vbci
       {
         return;
       }
-      else if (cc->return_value_type == ValueType::Invalid)
+      else if (cc->return_value_type == ValueType::Dyn)
       {
         *static_cast<Value*>(ret) = result.extract();
       }
