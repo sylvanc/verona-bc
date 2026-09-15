@@ -41,8 +41,12 @@ namespace vbci
       auto rep = program.layout_type_id(func->param_types[i]);
       cc->arg_value_types.push_back(rep.first);
 
+      // `Value` crosses the FFI boundary as a pointer (thread_handle_callback
+      // interprets args[i] as `Value*` for `Dyn`), so the CIF must declare
+      // pointer-sized params, not a 16-byte by-value struct. This covers
+      // `any`, `ref`, and heterogeneous unions.
       if (rep.first == ValueType::Dyn)
-        cc->arg_ffi_types.push_back(program.value_type());
+        cc->arg_ffi_types.push_back(&ffi_type_pointer);
       else
         cc->arg_ffi_types.push_back(rep.second);
     }

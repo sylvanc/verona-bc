@@ -53,6 +53,12 @@ jobs:
             build-type: "Release"
             cmake-flags: "-G Ninja -DSANITIZER=address,undefined -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
             dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+
+          - variant: "Sanitizer"
+            platform: "ubuntu-24.04-arm"
+            build-type: "Release"
+            cmake-flags: "-G Ninja -DSANITIZER=address,undefined -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
+            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{matrix.platform}}

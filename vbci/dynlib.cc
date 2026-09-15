@@ -28,7 +28,15 @@ namespace vbci
     {
       auto rep = program.layout_type_id(param);
       param_value_types.push_back(rep.first);
-      param_ffi_types.push_back(rep.second);
+      // A Verona `Value` crosses the FFI boundary as a pointer (`Value&`/
+      // `Value*`), not as a 16-byte struct-by-value: the buffer that libffi
+      // reads through avalue[i] is `ffi_arg_vals[i]`, which is only pointer-
+      // sized. This applies to `any`, `ref`, and heterogeneous unions, all of
+      // which map to `ValueType::Dyn` in layout_type_id.
+      if (rep.first == ValueType::Dyn)
+        param_ffi_types.push_back(&ffi_type_pointer);
+      else
+        param_ffi_types.push_back(rep.second);
     }
 
     auto rep = program.layout_type_id(return_type);

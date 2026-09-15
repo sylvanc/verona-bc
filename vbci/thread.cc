@@ -1558,7 +1558,12 @@ namespace vbci
             else
             {
               auto rep = program.layout_type_id(arg->type_id());
-              symbol.varparam(rep.second);
+              // See Symbol::prepare: `Value`s cross the boundary as pointers,
+              // so the CIF must declare pointer-sized args, not the 16-byte
+              // by-value struct that layout_type_id returns for `Dyn`.
+              auto* cif_type =
+                (rep.first == ValueType::Dyn) ? &ffi_type_pointer : rep.second;
+              symbol.varparam(cif_type);
               vt = rep.first;
             }
 
