@@ -1,0 +1,9 @@
+class @Foo
+    @f : i32
+
+func @main(): none
+    $bad = const bool true
+    $a1 = region rc @Foo($bad)
+    $a2 = heap $a1 @Foo($bad)
+    $_none = const none
+    ret $_none

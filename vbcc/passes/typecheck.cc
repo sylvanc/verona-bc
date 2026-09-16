@@ -660,7 +660,7 @@ namespace vbcc
           else
             set_type(env, node / LocalId, Dyn);
         }
-        else if (node->in({New, Stack}))
+        else if (node->in({New, Stack, Heap, Region}))
         {
           // dst gets the ClassId type. Check arg types vs field types.
           auto class_id = node / ClassId;
@@ -683,8 +683,8 @@ namespace vbcc
                 type_err(
                   *a_it,
                   std::format(
-                    "new: argument type '{}' is not a subtype of field type "
-                    "'{}'",
+                    "constructor: argument type '{}' is not a subtype of "
+                    "field type '{}'",
                     type_name(arg_type),
                     type_name(field_type)));
                 return true;
@@ -695,12 +695,6 @@ namespace vbcc
             }
           }
 
-          set_type(env, node / LocalId, clone(class_id));
-        }
-        else if (node->in({Heap, Region}))
-        {
-          // Like New but with extra leading args (region source / region type).
-          auto class_id = node / ClassId;
           set_type(env, node / LocalId, clone(class_id));
         }
         else if (node->in({NewArray, StackArray}))
