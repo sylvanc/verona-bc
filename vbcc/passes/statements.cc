@@ -358,6 +358,11 @@ namespace vbcc
           [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },
 
         // Object allocation.
+        Dst * T(Singleton) * T(GlobalId)[GlobalId] >>
+          [](Match& _) {
+            return Singleton << _(LocalId) << (ClassId ^ _(GlobalId));
+          },
+
         Dst * T(New) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
             return New << _(LocalId) << (ClassId ^ _(GlobalId))

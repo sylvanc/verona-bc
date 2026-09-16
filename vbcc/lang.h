@@ -76,6 +76,7 @@ namespace vbcc
     T(Const,
       ConstStr,
       Convert,
+      Singleton,
       New,
       Stack,
       Heap,

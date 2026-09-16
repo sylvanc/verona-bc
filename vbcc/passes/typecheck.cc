@@ -662,7 +662,8 @@ namespace vbcc
         }
         else if (node->in({New, Stack, Heap, Region}))
         {
-          // dst gets the ClassId type. Check arg types vs field types.
+          // dst gets the ClassId type. Check arg types vs field types, and
+          // require a non-singleton class (singletons must use Op::Singleton).
           auto class_id = node / ClassId;
           auto args = node / Args;
           auto cls = find_class(class_id);
@@ -670,6 +671,20 @@ namespace vbcc
           if (cls)
           {
             auto fields = cls / Fields;
+
+            if (fields->empty())
+            {
+              if (node == Region)
+                type_err(
+                  node,
+                  "region entry point cannot be a singleton (empty) class");
+              else
+                type_err(
+                  node,
+                  "constructor: class has no fields; use singleton instead");
+              return true;
+            }
+
             auto f_it = fields->begin();
             auto a_it = args->begin();
 
@@ -693,6 +708,23 @@ namespace vbcc
               ++f_it;
               ++a_it;
             }
+          }
+
+          set_type(env, node / LocalId, clone(class_id));
+        }
+        else if (node == Singleton)
+        {
+          // Immortal empty object; class must have no fields.
+          auto class_id = node / ClassId;
+          auto cls = find_class(class_id);
+
+          if (cls && !(cls / Fields)->empty())
+          {
+            type_err(
+              node,
+              "singleton: class has fields; use new/stack/heap/region "
+              "instead");
+            return true;
           }
 
           set_type(env, node / LocalId, clone(class_id));
