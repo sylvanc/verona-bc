@@ -1,10 +1,23 @@
+#include <vrt/error.h>
 #include <vrt/frame.h>
 #include <vrt/function.h>
 #include <vrt/program.h>
 #include <vrt/region.h>
 #include <vrt/thread.h>
 
+_Static_assert(sizeof(vrt_error) == sizeof(uint32_t), "error ABI");
+_Static_assert(VRT_ERROR_NONE == 0, "no error ABI");
+_Static_assert(VRT_ERROR_BAD_RAISE_TARGET == 1, "raise error ABI");
+_Static_assert(VRT_ERROR_BAD_ALLOC_TARGET == 2, "allocation error ABI");
+
+static const vrt_error bad_array_index = VRT_ERROR_BAD_ARRAY_INDEX;
+
 static void (*const set_exit_code_signature)(int32_t) = set_exit_code;
+static const char* (*const error_message_signature)(vrt_error) =
+  vrt_error_message;
+static int (*const try_invoke_signature)(
+  vrt_invocation_function, void*, vrt_error_info*) = vrt_try_invoke;
+static void (*const error_raise_signature)(vrt_error) = vrt_error_raise;
 static void (*const program_entry_signature)(void) = verona_program_entry;
 static vrt_thread* (*const thread_current_signature)(void) = vrt_thread_current;
 static vrt_frame* (*const thread_current_frame_signature)(void) =
@@ -34,6 +47,9 @@ static vrt_func_ptr (*const func_get_ptr_signature)(const vrt_func*) =
 void verona_program_entry(void)
 {
   set_exit_code_signature(0);
+  (void)error_message_signature;
+  (void)try_invoke_signature;
+  (void)error_raise_signature;
   (void)program_entry_signature;
   (void)thread_current_signature;
   (void)thread_current_frame_signature;
@@ -49,4 +65,5 @@ void verona_program_entry(void)
   (void)frame_id_signature;
   (void)frame_func_signature;
   (void)func_get_ptr_signature;
+  (void)bad_array_index;
 }

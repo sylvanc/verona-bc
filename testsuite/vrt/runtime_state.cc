@@ -5,6 +5,7 @@
 #include <csetjmp>
 #include <thread>
 #include <type_traits>
+#include <vrt/error.h>
 
 static_assert(sizeof(vrt::Location) == sizeof(uintptr_t));
 static_assert(std::is_trivially_copyable_v<vrt::Location>);
@@ -18,6 +19,20 @@ static_assert(sizeof(vrt::Thread) == sizeof(vrt::Frame*));
 namespace
 {
   void test_entry() {}
+
+  struct RaiseErrorContext
+  {
+    const vrt_func* func;
+  };
+
+  void complete_invocation(void*) {}
+
+  void fail_invocation(void* context)
+  {
+    auto* error_context = static_cast<RaiseErrorContext*>(context);
+    vrt_frame_enter(error_context->func);
+    vrt_error_raise(VRT_ERROR_BAD_ARRAY_INDEX);
+  }
 }
 
 int main()
@@ -203,6 +218,26 @@ int main()
     (thread == nullptr) || (vrt_frame_enter(&root_function) == nullptr) ||
     (vrt_frame_id(vrt_thread_current_frame()) != 1))
     return 19;
+
+  vrt::deinit_thread();
+
+  // Runtime errors retain their originating function descriptor after the
+  // failed invocation's logical frames have been unwound.
+  vrt::init_thread();
+  vrt_error_info error{VRT_ERROR_BAD_STORE, &root_function, 42};
+  if (
+    !vrt_try_invoke(complete_invocation, nullptr, &error) ||
+    (error.code != VRT_ERROR_NONE) || (error.func != nullptr) ||
+    (error.site != 0))
+    return 28;
+
+  RaiseErrorContext error_context{&child_function};
+  if (
+    vrt_try_invoke(fail_invocation, &error_context, &error) ||
+    (error.code != VRT_ERROR_BAD_ARRAY_INDEX) ||
+    (error.func != &child_function) || (error.site != 0) ||
+    (vrt_thread_current_frame() != nullptr))
+    return 29;
 
   vrt::deinit_thread();
 

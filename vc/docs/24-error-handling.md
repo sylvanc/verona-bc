@@ -13,7 +13,8 @@ Verona does not have exceptions or `try`/`catch`. Instead, it provides:
 - **`raise`** — non-local return from a block lambda to the enclosing function.
 - **`nomatch`** — a sentinel type for signaling the absence of a result.
 - **`else` on expressions** — handling the `nomatch` case in `if`, `match` and other fallible expressions.
-- **Runtime errors** — fatal to the current behavior (not recoverable).
+- **Runtime errors** — fatal to the current behavior (not catchable in Verona
+  source).
 
 ---
 
@@ -160,6 +161,17 @@ In the context of `when` blocks:
 - The result cown of the failed `when` block receives no value.
 
 For synchronous code (not inside a `when` block), a runtime error terminates the program.
+
+The native VRT distinguishes these language/runtime errors from corrupt
+private runtime state. A runtime error unwinds the logical frames for the
+current Verona invocation and reports a stable error code to the embedding
+boundary. The reported `vrt_error_info` also identifies the active generated
+function before its frame is unwound; its reserved instruction-site field is
+zero until the LLVM backend supplies stable site identifiers. The standalone
+LLVM executable then prints the message and exits unsuccessfully. An internal
+invariant failure cannot be handled safely and terminates immediately. This
+native boundary does not add a Verona `try`/`catch` construct: programs should
+still represent expected failures as values using unions and `nomatch`.
 
 ---
 

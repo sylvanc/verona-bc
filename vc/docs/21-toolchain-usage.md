@@ -321,6 +321,20 @@ generated function descriptor, and can be rebound without changing identity
 in preparation for a tailcall. Their concrete C++ layouts remain private to
 `libvrt`.
 
+The native entry point invokes generated code through `vrt_try_invoke`.
+When a runtime-dependent language error occurs, `vrt_error_raise` records its
+`vrt_error_info`, including the stable error code and active generated function
+descriptor, destroys all logical frames created by that invocation, and
+returns control to the caller of `vrt_try_invoke`. Its `site` field is reserved
+for a stable source or instruction-site identifier and is zero until the LLVM
+backend supplies one. The failed invocation is abandoned rather than resumed.
+Embedders may use the same API between Verona invocations, after initializing
+the calling thread and while no logical frame is active. This is separate from
+private `vrt::Failure` checks: a malformed descriptor, impossible reference
+count, or other corrupt runtime state still terminates because continuing
+would be unsafe. Runtime errors are observable to the native caller, but are
+not catchable from Verona source.
+
 `libvrt` binds one logical `vrt_thread` to each participating native thread
 using thread-local storage. Runtime-owned startup and teardown perform that
 binding; generated code does not create or destroy threads. Code that needs

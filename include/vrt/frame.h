@@ -25,7 +25,8 @@ typedef struct vrt_frame vrt_frame;
    * Push a logical frame for an immediately following Verona function call.
    *
    * func may be null. Non-null function metadata must remain alive until the
-   * frame is left or rebound by a tailcall.
+   * frame is left or rebound by a tailcall. If an error reports func through
+   * vrt_error_info, it must also remain alive while that record is inspected.
    *
    * A logical thread must already be bound to this native thread by libvrt.
   * Failure to allocate a frame or assign its stack Location terminates the
@@ -89,7 +90,8 @@ typedef struct vrt_frame vrt_frame;
    * This tears down every logical frame above the target and transfers
    * control to the continuation saved by the target function. The payload is
    * recovered there with vrt_frame_take_raised_value. This function does not
-   * return. An invalid or inactive target terminates the process.
+   * return. An invalid or inactive target raises
+   * VRT_ERROR_BAD_RAISE_TARGET to the active invocation catch point.
    */
   VRT_EXPORT void vrt_frame_raise(uint64_t value);
 

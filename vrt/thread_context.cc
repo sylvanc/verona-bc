@@ -55,15 +55,15 @@ namespace vrt
     auto* frame = thread.frame;
     internal_check(frame != nullptr, Failure::invalid_thread_state);
 
-    internal_check(
-      target_id.is_stack() && (target_id < frame->frame_id),
-      Failure::invalid_frame_state);
+    if (!target_id.is_stack() || (target_id >= frame->frame_id))
+      raise_error(Error::bad_raise_target);
 
     auto* target = frame->parent;
     while ((target != nullptr) && (target->frame_id != target_id))
       target = target->parent;
 
-    internal_check(target != nullptr, Failure::invalid_frame_state);
+    if (target == nullptr)
+      raise_error(Error::bad_raise_target);
 
     unwind_frames(target);
 

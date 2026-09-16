@@ -6,9 +6,12 @@
 #include <csetjmp>
 #include <cstdint>
 #include <optional>
+#include <vrt/error.h>
 
 namespace vrt
 {
+  struct ErrorCatchPoint;
+
   /** Native control state associated with one active logical frame. */
   struct Continuation
   {
@@ -23,6 +26,7 @@ namespace vrt
   {
     Thread thread{};
     Continuation* continuation = nullptr;
+    ErrorCatchPoint* error_catch_point = nullptr;
 
     /** Return the context bound to the calling native thread. */
     static ThreadContext& get();
@@ -38,6 +42,13 @@ namespace vrt
 
     /** Raise a type-erased value through an older active stack Location. */
     [[noreturn]] void raise(uint64_t value, Location target);
+
+    /** Raise a runtime Error to the innermost invocation catch point. */
+    [[noreturn]] void raise_error(Error error);
+
+    /** Invoke function under a nested runtime Error catch point. */
+    [[nodiscard]] ErrorInfo
+    try_invoke(InvocationFunction function, void* user_context);
 
     /** Destroy frames through, but not including, target. */
     void unwind_frames(Frame* target);
