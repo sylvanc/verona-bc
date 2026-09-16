@@ -14,8 +14,9 @@ namespace vrt
 {
   Region* create_region(RegionType type, uintptr_t frame_depth)
   {
-    if ((type != VRT_REGION_RC) && (type != VRT_REGION_ARENA))
-      fail(Failure::invalid_region_state);
+    internal_check(
+      (type == VRT_REGION_RC) || (type == VRT_REGION_ARENA),
+      Failure::invalid_region_state);
 
     auto* region = new (std::nothrow) Region{type, frame_depth};
     if (region == nullptr)
@@ -26,8 +27,7 @@ namespace vrt
 
   Region* frame_region(Frame* frame)
   {
-    if (frame == nullptr)
-      fail(Failure::invalid_region_state);
+    internal_check(frame != nullptr, Failure::invalid_region_state);
 
     if (frame->region != nullptr)
       return frame->region;
@@ -44,8 +44,9 @@ namespace vrt
 
   void destroy_frame_region(Frame* frame)
   {
-    if ((frame == nullptr) || (frame->region == nullptr))
-      fail(Failure::invalid_region_state);
+    internal_check(
+      (frame != nullptr) && (frame->region != nullptr),
+      Failure::invalid_region_state);
 
     auto* region = frame->region;
     frame->region = nullptr;

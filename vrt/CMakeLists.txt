@@ -13,6 +13,9 @@ target_link_libraries(libvrt PUBLIC
   vbc::include
 )
 
+target_compile_definitions(
+  libvrt PRIVATE $<$<CONFIG:Debug>:VRT_ENABLE_INTERNAL_CHECKS>)
+
 add_library(vbc::vrt ALIAS libvrt)
 
 set_target_properties(libvrt PROPERTIES OUTPUT_NAME vrt)

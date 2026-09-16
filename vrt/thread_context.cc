@@ -22,8 +22,7 @@ namespace vrt
   ThreadContext& ThreadContext::get()
   {
     auto* context = try_get();
-    if (context == nullptr)
-      fail(Failure::invalid_thread_state);
+    internal_check(context != nullptr, Failure::invalid_thread_state);
 
     return *context;
   }
@@ -37,8 +36,7 @@ namespace vrt
   void ThreadContext::init()
   {
     auto& context = context_slot();
-    if (context.has_value())
-      fail(Failure::invalid_thread_state);
+    internal_check(!context.has_value(), Failure::invalid_thread_state);
 
     context.emplace();
   }
@@ -46,8 +44,7 @@ namespace vrt
   void ThreadContext::deinit()
   {
     auto& context = context_slot();
-    if (!context.has_value())
-      fail(Failure::invalid_thread_state);
+    internal_check(context.has_value(), Failure::invalid_thread_state);
 
     context->unwind_frames(nullptr);
     context.reset();
@@ -56,27 +53,26 @@ namespace vrt
   [[noreturn]] void ThreadContext::raise(uint64_t value, Location target_id)
   {
     auto* frame = thread.frame;
-    if (frame == nullptr)
-      fail(Failure::invalid_thread_state);
+    internal_check(frame != nullptr, Failure::invalid_thread_state);
 
-    if (!target_id.is_stack() || (target_id >= frame->frame_id))
-      fail(Failure::invalid_frame_state);
+    internal_check(
+      target_id.is_stack() && (target_id < frame->frame_id),
+      Failure::invalid_frame_state);
 
     auto* target = frame->parent;
     while ((target != nullptr) && (target->frame_id != target_id))
       target = target->parent;
 
-    if (target == nullptr)
-      fail(Failure::invalid_frame_state);
+    internal_check(target != nullptr, Failure::invalid_frame_state);
 
     unwind_frames(target);
 
     auto* target_continuation = continuation;
-    if (
-      (target_continuation == nullptr) ||
-      (target_continuation->frame != target) || (thread.frame != target) ||
-      target_continuation->raised_value.has_value())
-      fail(Failure::invalid_frame_state);
+    internal_check(
+      (target_continuation != nullptr) &&
+        (target_continuation->frame == target) && (thread.frame == target) &&
+        !target_continuation->raised_value.has_value(),
+      Failure::invalid_frame_state);
 
     target_continuation->raised_value = value;
     std::longjmp(target_continuation->state, 1);
@@ -88,11 +84,11 @@ namespace vrt
     {
       auto* frame = thread.frame;
       auto* current_continuation = continuation;
-      if (
-        (frame == nullptr) || (current_continuation == nullptr) ||
-        (current_continuation->frame != frame) ||
-        current_continuation->raised_value.has_value())
-        fail(Failure::invalid_frame_state);
+      internal_check(
+        (frame != nullptr) && (current_continuation != nullptr) &&
+          (current_continuation->frame == frame) &&
+          !current_continuation->raised_value.has_value(),
+        Failure::invalid_frame_state);
 
       auto* parent = frame->parent;
       destroy_frame_region(frame);
@@ -102,10 +98,10 @@ namespace vrt
       delete frame;
     }
 
-    if (
-      ((target == nullptr) && (continuation != nullptr)) ||
-      ((target != nullptr) &&
-       ((continuation == nullptr) || (continuation->frame != target))))
-      fail(Failure::invalid_frame_state);
+    internal_check(
+      (target == nullptr) ?
+        (continuation == nullptr) :
+        ((continuation != nullptr) && (continuation->frame == target)),
+      Failure::invalid_frame_state);
   }
 }

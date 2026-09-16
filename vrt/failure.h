@@ -1,5 +1,7 @@
 #pragma once
 
+#include <source_location>
+
 namespace vrt
 {
   enum class Failure
@@ -19,5 +21,22 @@ namespace vrt
     out_of_memory,
   };
 
-  [[noreturn]] void fail(Failure reason);
+  [[nodiscard]] const char* failure_message(Failure reason) noexcept;
+
+  [[noreturn]] void fail(
+    Failure reason,
+    std::source_location location = std::source_location::current());
+
+  void internal_check_impl(
+    bool guard,
+    Failure reason,
+    std::source_location location = std::source_location::current());
 }
+
+#ifdef VRT_ENABLE_INTERNAL_CHECKS
+#  define internal_check(guard, code) \
+    ::vrt::internal_check_impl((guard), (code))
+#else
+#  define internal_check(guard, code) \
+  ((void)sizeof(guard), (void)sizeof(code))
+#endif
