@@ -324,7 +324,7 @@ namespace vbcc
     | (StackArray <<= wfDst * (Type >>= wfType) * wfRhs)
     | (StackArrayConst <<= wfDst * (Type >>= wfType) * wfLit)
     | (HeapArray <<= wfDst * wfLhs * (Type >>= wfType) * wfRhs)
-    | (HeapArrayConst <<= wfDst * wfSrc * (Type >>= wfType) * wfLit)
+    | (HeapArrayConst <<= wfDst * wfLhs * (Type >>= wfType) * wfLit)
     | (RegionArray <<=  wfDst * wfRgn * (Type >>= wfType) * wfRhs)
     | (RegionArrayConst <<= wfDst * wfRgn * (Type >>= wfType) * wfLit)
     | (Copy <<= wfDst * wfSrc)
