@@ -12,6 +12,8 @@ static_assert(!std::is_default_constructible_v<vrt::Location>);
 static_assert(
   std::is_same_v<decltype(vrt::Frame::raise_target), vrt::Location>);
 static_assert(std::is_same_v<decltype(vrt::Frame::frame_id), vrt::Location>);
+static_assert(std::is_same_v<decltype(vrt::Thread::frame), vrt::Frame*>);
+static_assert(sizeof(vrt::Thread) == sizeof(vrt::Frame*));
 
 namespace
 {

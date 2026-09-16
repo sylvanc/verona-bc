@@ -1,40 +1,28 @@
 #include "frame.h"
 
 #include "failure.h"
+#include "native_context.h"
 #include "region.h"
 #include "thread.h"
 
-#include <csetjmp>
 #include <limits>
 #include <new>
 
-namespace
+extern "C" VRT_EXPORT vrt_frame* vrt_frame_enter(const vrt_func* func)
 {
-  vrt::Frame* current_frame()
-  {
-    auto* thread = vrt::current_thread();
-    if (thread == nullptr)
-      vrt::fail(vrt::Failure::invalid_frame_state);
+  auto& context = vrt::NativeContext::get();
+  auto& thread = context.thread;
 
-    auto* frame = thread->frame;
-    if (frame == nullptr)
-      vrt::fail(vrt::Failure::invalid_frame_state);
-
-    return frame;
-  }
-}
-
-extern "C" VRT_EXPORT vrt_frame*
-vrt_frame_enter(const vrt_func* func)
-{
-  auto* thread = vrt::current_thread();
-  if (thread == nullptr)
+  if (
+    ((thread.frame == nullptr) != (context.continuation == nullptr)) ||
+    ((thread.frame != nullptr) &&
+     (context.continuation->frame != thread.frame)))
     vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto frame_id = vrt::Location::stack();
-  if (thread->frame != nullptr)
+  if (thread.frame != nullptr)
   {
-    auto parent_id = thread->frame->frame_id;
+    auto parent_id = thread.frame->frame_id;
     if (
       parent_id.raw() >
       (std::numeric_limits<uintptr_t>::max() - vrt::Location::FrameInc))
@@ -43,49 +31,47 @@ vrt_frame_enter(const vrt_func* func)
     frame_id = parent_id.next_stack_level();
   }
 
-  auto* frame = new (std::nothrow) vrt::Frame{
-    thread->frame,
-    nullptr,
-    0,
-    0,
-    frame_id,
-    func,
-    frame_id};
+  auto* frame = new (std::nothrow)
+    vrt::Frame{thread.frame, nullptr, 0, 0, func, frame_id, frame_id};
   if (frame == nullptr)
     vrt::fail(vrt::Failure::out_of_memory);
+
+  auto* continuation =
+    new (std::nothrow) vrt::NativeContinuation{context.continuation, frame};
+  if (continuation == nullptr)
+  {
+    delete frame;
+    vrt::fail(vrt::Failure::out_of_memory);
+  }
 
   // Match the interpreter's Frame invariant: every logical frame owns an RC
   // region whose depth is the frame's stack depth.
   vrt::frame_region(frame);
-  thread->frame = frame;
+  thread.frame = frame;
+  context.continuation = continuation;
   return frame;
 }
 
 extern "C" VRT_EXPORT void vrt_frame_leave(void)
 {
-  auto* thread = vrt::current_thread();
-  if (thread == nullptr)
-    vrt::fail(vrt::Failure::invalid_frame_state);
-
-  auto* frame = thread->frame;
+  auto& context = vrt::NativeContext::get();
+  auto& thread = context.thread;
+  auto* frame = thread.frame;
   if (frame == nullptr)
     vrt::fail(vrt::Failure::invalid_frame_state);
 
-  auto* parent = frame->parent;
-  vrt::destroy_frame_region(frame);
-  thread->frame = parent;
-  delete frame;
+  vrt::unwind_frames(context, frame->parent);
 }
 
-extern "C" VRT_EXPORT void
-vrt_frame_reuse(const vrt_func* func)
+extern "C" VRT_EXPORT void vrt_frame_reuse(const vrt_func* func)
 {
-  auto* thread = vrt::current_thread();
-  if (thread == nullptr)
-    vrt::fail(vrt::Failure::invalid_frame_state);
-
-  auto* frame = thread->frame;
-  if (frame == nullptr)
+  auto& context = vrt::NativeContext::get();
+  auto& thread = context.thread;
+  auto* frame = thread.frame;
+  if (
+    (frame == nullptr) || (context.continuation == nullptr) ||
+    (context.continuation->frame != frame) ||
+    context.continuation->raised_value.has_value())
     vrt::fail(vrt::Failure::invalid_frame_state);
 
   // Compiler-emitted Drop operations perform local register teardown. The
@@ -96,12 +82,19 @@ vrt_frame_reuse(const vrt_func* func)
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_get_raise_target(void)
 {
-  return current_frame()->raise_target.raw();
+  auto* frame = vrt::Thread::get().frame;
+  if (frame == nullptr)
+    vrt::fail(vrt::Failure::invalid_frame_state);
+
+  return frame->raise_target.raw();
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target)
 {
-  auto* frame = current_frame();
+  auto* frame = vrt::Thread::get().frame;
+  if (frame == nullptr)
+    vrt::fail(vrt::Failure::invalid_frame_state);
+
   auto previous = frame->raise_target.raw();
   frame->raise_target = vrt::Location::from_raw(target);
   return previous;
@@ -109,54 +102,39 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target)
 
 extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(void)
 {
-  return current_frame()->raise_continuation;
+  auto& context = vrt::NativeContext::get();
+  auto* continuation = context.continuation;
+  if (
+    (context.thread.frame == nullptr) || (continuation == nullptr) ||
+    (continuation->frame != context.thread.frame) ||
+    continuation->raised_value.has_value())
+    vrt::fail(vrt::Failure::invalid_frame_state);
+
+  return continuation->state;
 }
 
 extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
 {
-  auto* thread = vrt::current_thread();
-  if (thread == nullptr)
+  auto& thread = vrt::Thread::get();
+  auto* frame = thread.frame;
+  if (frame == nullptr)
     vrt::fail(vrt::Failure::invalid_frame_state);
 
-  auto* current = thread->frame;
-  if (current == nullptr)
-    vrt::fail(vrt::Failure::invalid_frame_state);
-
-  auto* target = current->parent;
-  while ((target != nullptr) && (target->frame_id != current->raise_target))
-    target = target->parent;
-
-  if (target == nullptr)
-    vrt::fail(vrt::Failure::invalid_frame_state);
-
-  thread->pending_raise_value = value;
-  thread->pending_raise_target = target;
-  thread->raise_pending = true;
-
-  while (thread->frame != target)
-  {
-    auto* frame = thread->frame;
-    auto* parent = frame->parent;
-    vrt::destroy_frame_region(frame);
-    thread->frame = parent;
-    delete frame;
-  }
-
-  std::longjmp(target->raise_continuation, 1);
+  thread.raise(value, frame->raise_target);
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_take_raised_value(void)
 {
-  auto* thread = vrt::current_thread();
+  auto& context = vrt::NativeContext::get();
+  auto* continuation = context.continuation;
   if (
-    (thread == nullptr) || !thread->raise_pending ||
-    (thread->frame != thread->pending_raise_target))
+    (context.thread.frame == nullptr) || (continuation == nullptr) ||
+    (continuation->frame != context.thread.frame) ||
+    !continuation->raised_value.has_value())
     vrt::fail(vrt::Failure::invalid_frame_state);
 
-  auto value = thread->pending_raise_value;
-  thread->pending_raise_value = 0;
-  thread->pending_raise_target = nullptr;
-  thread->raise_pending = false;
+  auto value = *continuation->raised_value;
+  continuation->raised_value.reset();
   return value;
 }
 

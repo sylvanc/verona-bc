@@ -2,65 +2,71 @@
 
 #include "failure.h"
 #include "frame.h"
-#include "region.h"
+#include "native_context.h"
 #include "vrt.h"
 
-#include <new>
-
-namespace
-{
-  thread_local vrt::Thread* current_thread_state = nullptr;
-
-  void destroy_frames(vrt::Thread* thread)
-  {
-    while (thread->frame != nullptr)
-    {
-      auto* frame = thread->frame;
-      auto* parent = frame->parent;
-      vrt::destroy_frame_region(frame);
-      thread->frame = parent;
-      delete frame;
-    }
-  }
-}
+#include <csetjmp>
 
 namespace vrt
 {
-  Thread* current_thread()
+  Thread& Thread::get()
   {
-    return current_thread_state;
+    return NativeContext::get().thread;
+  }
+
+  Thread* Thread::try_get()
+  {
+    auto* context = NativeContext::try_get();
+    return context == nullptr ? nullptr : &context->thread;
+  }
+
+  [[noreturn]] void Thread::raise(uint64_t value, Location target_id)
+  {
+    auto& context = NativeContext::get();
+    if ((&context.thread != this) || (frame == nullptr))
+      fail(Failure::invalid_thread_state);
+
+    if (!target_id.is_stack() || (target_id >= frame->frame_id))
+      fail(Failure::invalid_frame_state);
+
+    auto* target = frame->parent;
+    while ((target != nullptr) && (target->frame_id != target_id))
+      target = target->parent;
+
+    if (target == nullptr)
+      fail(Failure::invalid_frame_state);
+
+    unwind_frames(context, target);
+
+    auto* continuation = context.continuation;
+    if (
+      (continuation == nullptr) || (continuation->frame != target) ||
+      (frame != target) || continuation->raised_value.has_value())
+      fail(Failure::invalid_frame_state);
+
+    continuation->raised_value = value;
+    std::longjmp(continuation->state, 1);
   }
 
   void init_thread()
   {
-    if (current_thread_state != nullptr)
-      fail(Failure::invalid_thread_state);
-
-    current_thread_state = new (std::nothrow) Thread{};
-
-    if (current_thread_state == nullptr)
-      fail(Failure::out_of_memory);
+    NativeContext::init();
   }
 
   void deinit_thread()
   {
-    if (current_thread_state == nullptr)
-      fail(Failure::invalid_thread_state);
-
-    destroy_frames(current_thread_state);
-    delete current_thread_state;
-    current_thread_state = nullptr;
+    NativeContext::deinit();
   }
 }
 
 extern "C" VRT_EXPORT vrt_thread* vrt_thread_current(void)
 {
-  return vrt::current_thread();
+  return vrt::Thread::try_get();
 }
 
 extern "C" VRT_EXPORT vrt_frame* vrt_thread_current_frame(void)
 {
-  auto* thread = vrt::current_thread();
+  auto* thread = vrt::Thread::try_get();
   if (thread == nullptr)
     return nullptr;
 

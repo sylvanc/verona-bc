@@ -1,19 +1,23 @@
 #pragma once
 
+#include "location.h"
+
 #include <cstdint>
-#include <vrt/frame.h>
 #include <vrt/thread.h>
 
 namespace vrt
 {
   struct Thread
   {
-    Frame* frame = nullptr;
-    uint64_t pending_raise_value = 0;
-    Frame* pending_raise_target = nullptr;
-    bool raise_pending = false;
-  };
+    /** Return the logical thread bound to the calling native thread. */
+    static Thread& get();
 
-  /** Return the logical thread bound to the calling native thread. */
-  Thread* current_thread();
+    /** Return the bound logical thread, or null if it is uninitialized. */
+    static Thread* try_get();
+
+    /** Raise a type-erased value through an older active stack Location. */
+    [[noreturn]] void raise(uint64_t value, Location target);
+
+    Frame* frame = nullptr;
+  };
 }

@@ -74,10 +74,12 @@ typedef struct vrt_frame vrt_frame;
   VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target);
 
   /**
-   * Return the current frame's setjmp-compatible continuation storage.
+   * Return the setjmp-compatible native continuation storage associated with
+   * the current logical frame.
    *
-   * Generated function prologues save their native continuation here. The
-   * storage remains valid until the current logical frame is left.
+   * Generated function prologues save their native continuation in sidecar
+   * storage associated with the current native-thread context. It remains
+   * valid until the current logical frame is left.
    */
   VRT_EXPORT void* vrt_frame_raise_continuation(void);
 
@@ -94,8 +96,8 @@ typedef struct vrt_frame vrt_frame;
   /**
    * Consume the value associated with a raise resumed in the current frame.
    *
-   * Calling this without a pending raise for the current frame terminates the
-   * process.
+  * Calling this unless the current frame has just been resumed by a raise, or
+  * consuming the same payload twice, terminates the process.
    */
   VRT_EXPORT uint64_t vrt_frame_take_raised_value(void);
 
