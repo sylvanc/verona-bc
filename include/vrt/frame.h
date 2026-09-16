@@ -1,26 +1,30 @@
 #pragma once
 
 #include "export.h"
-#include "types.h"
+#include "function.h"
 
 #include <stdint.h>
 
 #if defined(__cplusplus)
+namespace vrt
+{
+  struct Frame;
+}
+
+/** Logical Verona function frame. */
+using vrt_frame = vrt::Frame;
+
 extern "C"
 {
+#else
+/** Logical Verona function frame. */
+typedef struct vrt_frame vrt_frame;
 #endif
-
-  /** Static metadata describing a generated Verona function. */
-  typedef struct vrt_function_descriptor
-  {
-    uint64_t id;
-    const char* name;
-  } vrt_function_descriptor;
 
   /**
    * Push a logical frame for an immediately following Verona function call.
    *
-   * function may be null. A non-null descriptor must remain alive until the
+   * func may be null. Non-null function metadata must remain alive until the
    * frame is left or rebound by a tailcall.
    *
    * A logical thread must already be bound to this native thread by libvrt.
@@ -28,7 +32,7 @@ extern "C"
    * process.
    */
   VRT_EXPORT vrt_frame*
-  vrt_frame_enter(const vrt_function_descriptor* function);
+  vrt_frame_enter(const vrt_func* func);
 
   /**
    * Leave and destroy the current logical frame.
@@ -41,15 +45,15 @@ extern "C"
    * Reuse the current logical frame for an immediately following tailcall.
    *
    * The current frame keeps its identity, parent, region, and teardown
-   * boundaries. Its function descriptor is replaced before this function
+   * boundaries. Its function metadata is replaced before this function
    * returns; the tailcalled function must not enter another frame.
    *
    * Lowering is responsible for moving arguments and releasing other locals
-   * before calling this function. function may be null; a non-null descriptor
-   * must remain alive until the frame is left or rebound again.
+   * before calling this function. func may be null; non-null function
+   * metadata must remain alive until the frame is left or rebound again.
    */
   VRT_EXPORT void
-  vrt_frame_reuse(const vrt_function_descriptor* function);
+  vrt_frame_reuse(const vrt_func* func);
 
   /**
    * Return the current logical frame's raise target identity.
@@ -101,8 +105,7 @@ extern "C"
   VRT_EXPORT uint64_t vrt_frame_id(const vrt_frame* frame);
 
   /** Return the function currently associated with a frame. */
-  VRT_EXPORT const vrt_function_descriptor*
-  vrt_frame_function(const vrt_frame* frame);
+  VRT_EXPORT const vrt_func* vrt_frame_func(const vrt_frame* frame);
 
 #if defined(__cplusplus)
 }

@@ -4,25 +4,25 @@
 
 #include <cstdint>
 
-struct vrt_frame;
-
-/** Internal state for the RC region owned by a logical frame. */
-struct vrt_region
-{
-  uintptr_t frame_depth = 0;
-  vrt_region_type type;
-
-  vrt_region(vrt_region_type type, uintptr_t frame_depth)
-  : frame_depth(frame_depth), type(type)
-  {}
-
-  bool is_frame_local() const;
-};
-
 namespace vrt
 {
-  vrt_region* create_region(vrt_region_type type, uintptr_t frame_depth = 0);
-  vrt_region* frame_region(vrt_frame* frame);
-  void destroy_region(vrt_region* region);
-  void destroy_frame_region(vrt_frame* frame);
+  struct Frame;
+
+  /** Internal state for the RC region owned by a logical frame. */
+  struct Region
+  {
+    uintptr_t frame_depth = 0;
+    RegionType type;
+
+    Region(RegionType type, uintptr_t frame_depth)
+    : frame_depth(frame_depth), type(type)
+    {}
+
+    bool is_frame_local() const;
+  };
+
+  Region* create_region(RegionType type, uintptr_t frame_depth = 0);
+  Region* frame_region(Frame* frame);
+  void destroy_region(Region* region);
+  void destroy_frame_region(Frame* frame);
 }

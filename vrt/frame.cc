@@ -10,7 +10,7 @@
 
 namespace
 {
-  vrt_frame* current_frame()
+  vrt::Frame* current_frame()
   {
     auto* thread = vrt::current_thread();
     assert(thread != nullptr);
@@ -18,7 +18,7 @@ namespace
     if (thread == nullptr)
       std::terminate();
 
-    auto* frame = thread->current_frame;
+    auto* frame = thread->frame;
     assert(frame != nullptr);
 
     if (frame == nullptr)
@@ -29,7 +29,7 @@ namespace
 }
 
 extern "C" VRT_EXPORT vrt_frame*
-vrt_frame_enter(const vrt_function_descriptor* function)
+vrt_frame_enter(const vrt_func* func)
 {
   auto* thread = vrt::current_thread();
   assert(thread != nullptr);
@@ -40,13 +40,13 @@ vrt_frame_enter(const vrt_function_descriptor* function)
   if (thread->next_frame_id == 0)
     std::terminate();
 
-  auto* frame = new (std::nothrow) vrt_frame{
-    thread->current_frame,
+  auto* frame = new (std::nothrow) vrt::Frame{
+    thread->frame,
     nullptr,
     0,
     0,
     thread->next_frame_id,
-    function,
+    func,
     thread->next_frame_id};
   if (frame == nullptr)
     std::terminate();
@@ -55,7 +55,7 @@ vrt_frame_enter(const vrt_function_descriptor* function)
   // region whose depth is the frame's stack depth.
   vrt::frame_region(frame);
   thread->next_frame_id++;
-  thread->current_frame = frame;
+  thread->frame = frame;
   return frame;
 }
 
@@ -67,7 +67,7 @@ extern "C" VRT_EXPORT void vrt_frame_leave(void)
   if (thread == nullptr)
     return;
 
-  auto* frame = thread->current_frame;
+  auto* frame = thread->frame;
   assert(frame != nullptr);
 
   if (frame == nullptr)
@@ -75,12 +75,12 @@ extern "C" VRT_EXPORT void vrt_frame_leave(void)
 
   auto* parent = frame->parent;
   vrt::destroy_frame_region(frame);
-  thread->current_frame = parent;
+  thread->frame = parent;
   delete frame;
 }
 
 extern "C" VRT_EXPORT void
-vrt_frame_reuse(const vrt_function_descriptor* function)
+vrt_frame_reuse(const vrt_func* func)
 {
   auto* thread = vrt::current_thread();
   assert(thread != nullptr);
@@ -88,7 +88,7 @@ vrt_frame_reuse(const vrt_function_descriptor* function)
   if (thread == nullptr)
     return;
 
-  auto* frame = thread->current_frame;
+  auto* frame = thread->frame;
   assert(frame != nullptr);
 
   if (frame == nullptr)
@@ -97,7 +97,7 @@ vrt_frame_reuse(const vrt_function_descriptor* function)
   // Compiler-emitted Drop operations perform local register teardown. The
   // logical frame and its frame-local region survive a tailcall and are
   // reclaimed only when this frame is left or unwound.
-  frame->function = function;
+  frame->func = func;
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_get_raise_target(void)
@@ -126,7 +126,7 @@ extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
   if (thread == nullptr)
     std::terminate();
 
-  auto* current = thread->current_frame;
+  auto* current = thread->frame;
   if (current == nullptr)
     std::terminate();
 
@@ -141,12 +141,12 @@ extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
   thread->pending_raise_target = target;
   thread->raise_pending = true;
 
-  while (thread->current_frame != target)
+  while (thread->frame != target)
   {
-    auto* frame = thread->current_frame;
+    auto* frame = thread->frame;
     auto* parent = frame->parent;
     vrt::destroy_frame_region(frame);
-    thread->current_frame = parent;
+    thread->frame = parent;
     delete frame;
   }
 
@@ -158,7 +158,7 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_take_raised_value(void)
   auto* thread = vrt::current_thread();
   if (
     (thread == nullptr) || !thread->raise_pending ||
-    (thread->current_frame != thread->pending_raise_target))
+    (thread->frame != thread->pending_raise_target))
     std::terminate();
 
   auto value = thread->pending_raise_value;
@@ -184,11 +184,10 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_id(const vrt_frame* frame)
   return frame->frame_id;
 }
 
-extern "C" VRT_EXPORT const vrt_function_descriptor*
-vrt_frame_function(const vrt_frame* frame)
+extern "C" VRT_EXPORT const vrt_func* vrt_frame_func(const vrt_frame* frame)
 {
   if (frame == nullptr)
     return nullptr;
 
-  return frame->function;
+  return frame->func;
 }

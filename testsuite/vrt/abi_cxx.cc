@@ -1,9 +1,16 @@
 #include <cstdint>
 #include <type_traits>
 #include <vrt/frame.h>
+#include <vrt/function.h>
 #include <vrt/program.h>
+#include <vrt/region.h>
 #include <vrt/thread.h>
 
+static_assert(std::is_same_v<vrt_func, vrt::Func>);
+static_assert(std::is_same_v<vrt_func_ptr, vrt::FuncPtr>);
+static_assert(std::is_same_v<vrt_frame, vrt::Frame>);
+static_assert(std::is_same_v<vrt_thread, vrt::Thread>);
+static_assert(std::is_same_v<vrt_region_type, vrt::RegionType>);
 static_assert(std::is_same_v<decltype(&set_exit_code), void (*)(std::int32_t)>);
 static_assert(std::is_same_v<decltype(&verona_program_entry), void (*)(void)>);
 static_assert(
@@ -12,11 +19,11 @@ static_assert(
   std::is_same_v<decltype(&vrt_thread_current_frame), vrt_frame* (*)(void)>);
 static_assert(std::is_same_v<
               decltype(&vrt_frame_enter),
-              vrt_frame* (*)(const vrt_function_descriptor*)>);
+              vrt_frame* (*)(const vrt_func*)>);
 static_assert(std::is_same_v<decltype(&vrt_frame_leave), void (*)(void)>);
 static_assert(std::is_same_v<
               decltype(&vrt_frame_reuse),
-              void (*)(const vrt_function_descriptor*)>);
+              void (*)(const vrt_func*)>);
 static_assert(std::is_same_v<
               decltype(&vrt_frame_get_raise_target),
               std::uint64_t (*)(void)>);
@@ -36,8 +43,11 @@ static_assert(
 static_assert(
   std::is_same_v<decltype(&vrt_frame_id), std::uint64_t (*)(const vrt_frame*)>);
 static_assert(std::is_same_v<
-              decltype(&vrt_frame_function),
-              const vrt_function_descriptor* (*)(const vrt_frame*)>);
+              decltype(&vrt_frame_func),
+              const vrt_func* (*)(const vrt_frame*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_func_get_ptr),
+              vrt_func_ptr (*)(const vrt_func*)>);
 
 extern "C" void verona_program_entry(void)
 {

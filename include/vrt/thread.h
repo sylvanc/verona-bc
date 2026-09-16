@@ -1,11 +1,22 @@
 #pragma once
 
 #include "export.h"
-#include "types.h"
+#include "frame.h"
 
 #if defined(__cplusplus)
+namespace vrt
+{
+  struct Thread;
+}
+
+/** Logical execution state for one Verona invocation. */
+using vrt_thread = vrt::Thread;
+
 extern "C"
 {
+#else
+/** Logical execution state for one Verona invocation. */
+typedef struct vrt_thread vrt_thread;
 #endif
 
   /** Return the logical thread bound to this native thread, or null. */

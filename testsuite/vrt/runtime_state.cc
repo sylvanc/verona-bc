@@ -4,6 +4,11 @@
 
 #include <thread>
 
+namespace
+{
+  void test_entry() {}
+}
+
 int main()
 {
   vrt::reset_exit_code();
@@ -18,15 +23,18 @@ int main()
   if (vrt::get_exit_code() != 3)
     return 3;
 
-  const vrt_function_descriptor root_function{1, "root"};
-  const vrt_function_descriptor child_function{2, "child"};
-  const vrt_function_descriptor tail_function{3, "tail"};
+  const vrt_func root_function{1, "root", test_entry};
+  const vrt_func child_function{2, "child", test_entry};
+  const vrt_func tail_function{3, "tail", test_entry};
+
+  if (vrt_func_get_ptr(&root_function) != test_entry)
+    return 26;
 
   if (
     (vrt_thread_current() != nullptr) ||
     (vrt_thread_current_frame() != nullptr) ||
     (vrt_frame_parent(nullptr) != nullptr) || (vrt_frame_id(nullptr) != 0) ||
-    (vrt_frame_function(nullptr) != nullptr))
+    (vrt_frame_func(nullptr) != nullptr))
     return 4;
 
   vrt::init_thread();
@@ -41,7 +49,7 @@ int main()
   if (
     (root == nullptr) || (vrt_thread_current_frame() != root) ||
     (vrt_frame_parent(root) != nullptr) ||
-    (vrt_frame_function(root) != &root_function) || (root->region == nullptr) ||
+    (vrt_frame_func(root) != &root_function) || (root->region == nullptr) ||
     (root->raise_target != vrt_frame_id(root)))
     return 7;
 
@@ -61,7 +69,7 @@ int main()
   if (
     (child == nullptr) || (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) ||
-    (vrt_frame_function(child) != &child_function) ||
+    (vrt_frame_func(child) != &child_function) ||
     (vrt_frame_id(child) == root_id) || (child->region == nullptr) ||
     (child->raise_target != vrt_frame_id(child)))
     return 9;
@@ -80,7 +88,7 @@ int main()
   if (
     (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) || (vrt_frame_id(child) != child_id) ||
-    (vrt_frame_function(child) != &tail_function) ||
+    (vrt_frame_func(child) != &tail_function) ||
     (child->region != child_region) || (child->stack_mark != 4) ||
     (child->finalizer_mark != 5) || (child->raise_target != root_id))
     return 10;
@@ -114,14 +122,14 @@ int main()
   vrt_frame_reuse(nullptr);
   if (
     (vrt_thread_current_frame() != root) ||
-    (vrt_frame_function(root) != nullptr))
+    (vrt_frame_func(root) != nullptr))
     return 13;
 
   vrt_frame_reuse(&tail_function);
   if (
     (vrt_thread_current_frame() != root) || (vrt_frame_parent(root) != nullptr) ||
     (vrt_frame_id(root) != root_id) ||
-    (vrt_frame_function(root) != &tail_function))
+    (vrt_frame_func(root) != &tail_function))
     return 14;
 
   vrt_frame_leave();

@@ -14,7 +14,7 @@ namespace vbcc
       auto* pointer_type = llvm::PointerType::getUnqual(context);
       auto* id_type = llvm::Type::getInt64Ty(context);
       auto* descriptor_type =
-        llvm::StructType::get(context, {id_type, pointer_type});
+        llvm::StructType::get(context, {id_type, pointer_type, pointer_type});
       uint64_t descriptor_id = 1;
 
       for (const auto& func_state : state.functions)
@@ -48,7 +48,8 @@ namespace vbcc
         auto* descriptor_value = llvm::ConstantStruct::get(
           descriptor_type,
           llvm::ConstantInt::get(id_type, descriptor_id++),
-          name_pointer);
+          name_pointer,
+          lowered.function);
         lowered.descriptor = new llvm::GlobalVariable(
           module,
           descriptor_type,

@@ -10,16 +10,16 @@
 
 namespace
 {
-  thread_local vrt_thread* current_thread_state = nullptr;
+  thread_local vrt::Thread* current_thread_state = nullptr;
 
-  void destroy_frames(vrt_thread* thread)
+  void destroy_frames(vrt::Thread* thread)
   {
-    while (thread->current_frame != nullptr)
+    while (thread->frame != nullptr)
     {
-      auto* frame = thread->current_frame;
+      auto* frame = thread->frame;
       auto* parent = frame->parent;
       vrt::destroy_frame_region(frame);
-      thread->current_frame = parent;
+      thread->frame = parent;
       delete frame;
     }
   }
@@ -27,7 +27,7 @@ namespace
 
 namespace vrt
 {
-  vrt_thread* current_thread()
+  Thread* current_thread()
   {
     return current_thread_state;
   }
@@ -39,7 +39,7 @@ namespace vrt
     if (current_thread_state != nullptr)
       return;
 
-    current_thread_state = new (std::nothrow) vrt_thread{};
+    current_thread_state = new (std::nothrow) Thread{};
 
     if (current_thread_state == nullptr)
       std::terminate();
@@ -69,5 +69,5 @@ extern "C" VRT_EXPORT vrt_frame* vrt_thread_current_frame(void)
   if (thread == nullptr)
     return nullptr;
 
-  return thread->current_frame;
+  return thread->frame;
 }

@@ -1,5 +1,7 @@
 #include <vrt/frame.h>
+#include <vrt/function.h>
 #include <vrt/program.h>
+#include <vrt/region.h>
 #include <vrt/thread.h>
 
 static void (*const set_exit_code_signature)(int32_t) = set_exit_code;
@@ -8,9 +10,9 @@ static vrt_thread* (*const thread_current_signature)(void) = vrt_thread_current;
 static vrt_frame* (*const thread_current_frame_signature)(void) =
   vrt_thread_current_frame;
 static vrt_frame* (*const frame_enter_signature)(
-  const vrt_function_descriptor*) = vrt_frame_enter;
+  const vrt_func*) = vrt_frame_enter;
 static void (*const frame_leave_signature)(void) = vrt_frame_leave;
-static void (*const frame_reuse_signature)(const vrt_function_descriptor*) =
+static void (*const frame_reuse_signature)(const vrt_func*) =
   vrt_frame_reuse;
 static uint64_t (*const frame_get_raise_target_signature)(void) =
   vrt_frame_get_raise_target;
@@ -24,8 +26,10 @@ static uint64_t (*const frame_take_raised_value_signature)(void) =
 static vrt_frame* (*const frame_parent_signature)(vrt_frame*) =
   vrt_frame_parent;
 static uint64_t (*const frame_id_signature)(const vrt_frame*) = vrt_frame_id;
-static const vrt_function_descriptor* (*const frame_function_signature)(
-  const vrt_frame*) = vrt_frame_function;
+static const vrt_func* (*const frame_func_signature)(const vrt_frame*) =
+  vrt_frame_func;
+static vrt_func_ptr (*const func_get_ptr_signature)(const vrt_func*) =
+  vrt_func_get_ptr;
 
 void verona_program_entry(void)
 {
@@ -43,5 +47,6 @@ void verona_program_entry(void)
   (void)frame_take_raised_value_signature;
   (void)frame_parent_signature;
   (void)frame_id_signature;
-  (void)frame_function_signature;
+  (void)frame_func_signature;
+  (void)func_get_ptr_signature;
 }
