@@ -28,7 +28,7 @@ typedef struct vrt_frame vrt_frame;
    * frame is left or rebound by a tailcall.
    *
    * A logical thread must already be bound to this native thread by libvrt.
-   * Failure to allocate a frame or assign it an identity terminates the
+  * Failure to allocate a frame or assign its stack Location terminates the
    * process.
    */
   VRT_EXPORT vrt_frame*
@@ -44,7 +44,7 @@ typedef struct vrt_frame vrt_frame;
   /**
    * Reuse the current logical frame for an immediately following tailcall.
    *
-   * The current frame keeps its identity, parent, region, and teardown
+  * The current frame keeps its stack Location, parent, region, and teardown
    * boundaries. Its function metadata is replaced before this function
    * returns; the tailcalled function must not enter another frame.
    *
@@ -56,17 +56,18 @@ typedef struct vrt_frame vrt_frame;
   vrt_frame_reuse(const vrt_func* func);
 
   /**
-   * Return the current logical frame's raise target identity.
+  * Return the raw Location encoding of the current frame's raise target.
    *
    * The calling native thread must have a current logical frame.
    */
   VRT_EXPORT uint64_t vrt_frame_get_raise_target(void);
 
   /**
-   * Replace the current logical frame's raise target and return the old one.
+  * Replace the current logical frame's raw Location raise target and return
+  * the old encoding.
    *
-   * target is stored without validation. vrt_frame_raise validates that the
-   * target still names an active ancestor when a raise is performed. The
+  * target is stored without validation. vrt_frame_raise validates that it is
+  * a stack Location naming an active ancestor when a raise is performed. The
    * calling native thread must have a current logical frame and no pending
    * tailcall.
    */
@@ -101,7 +102,7 @@ typedef struct vrt_frame vrt_frame;
   /** Return the parent frame, or null for a root frame. */
   VRT_EXPORT vrt_frame* vrt_frame_parent(vrt_frame* frame);
 
-  /** Return the stable identity of a frame, or zero for a null frame. */
+  /** Return a frame's raw stack Location, or zero for a null frame. */
   VRT_EXPORT uint64_t vrt_frame_id(const vrt_frame* frame);
 
   /** Return the function currently associated with a frame. */

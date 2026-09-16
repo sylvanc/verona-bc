@@ -3,7 +3,6 @@
 #include "failure.h"
 #include "frame.h"
 
-#include <limits>
 #include <new>
 
 bool vrt::Region::is_frame_local() const
@@ -33,20 +32,8 @@ namespace vrt
     if (frame->region != nullptr)
       return frame->region;
 
-    uintptr_t depth = 1;
-    if (frame->parent != nullptr)
-    {
-      auto* parent_region = frame->parent->region;
-      if (
-        (parent_region == nullptr) || !parent_region->is_frame_local() ||
-        (parent_region->type != VRT_REGION_RC) ||
-        (parent_region->frame_depth == std::numeric_limits<uintptr_t>::max()))
-        fail(Failure::invalid_region_state);
-
-      depth = parent_region->frame_depth + 1;
-    }
-
-    frame->region = create_region(VRT_REGION_RC, depth);
+    frame->region = create_region(
+      VRT_REGION_RC, frame->frame_id.stack_index() + 1);
     return frame->region;
   }
 

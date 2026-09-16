@@ -1,5 +1,7 @@
 #pragma once
 
+#include "location.h"
+
 #include <csetjmp>
 #include <cstddef>
 #include <cstdint>
@@ -15,9 +17,9 @@ namespace vrt
     Region* region = nullptr;
     size_t stack_mark = 0;
     size_t finalizer_mark = 0;
-    uint64_t frame_id = 0;
+    Location frame_id = Location::stack();
     const Func* func = nullptr;
-    uint64_t raise_target = 0;
+    Location raise_target = Location::stack();
     std::jmp_buf raise_continuation{};
   };
 }

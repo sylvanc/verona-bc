@@ -5,6 +5,7 @@
 #include "thread.h"
 
 #include <csetjmp>
+#include <limits>
 #include <new>
 
 namespace
@@ -30,24 +31,32 @@ vrt_frame_enter(const vrt_func* func)
   if (thread == nullptr)
     vrt::fail(vrt::Failure::invalid_frame_state);
 
-  if (thread->next_frame_id == 0)
-    vrt::fail(vrt::Failure::invalid_frame_state);
+  auto frame_id = vrt::Location::stack();
+  if (thread->frame != nullptr)
+  {
+    auto parent_id = thread->frame->frame_id;
+    if (
+      parent_id.raw() >
+      (std::numeric_limits<uintptr_t>::max() - vrt::Location::FrameInc))
+      vrt::fail(vrt::Failure::invalid_frame_state);
+
+    frame_id = parent_id.next_stack_level();
+  }
 
   auto* frame = new (std::nothrow) vrt::Frame{
     thread->frame,
     nullptr,
     0,
     0,
-    thread->next_frame_id,
+    frame_id,
     func,
-    thread->next_frame_id};
+    frame_id};
   if (frame == nullptr)
     vrt::fail(vrt::Failure::out_of_memory);
 
   // Match the interpreter's Frame invariant: every logical frame owns an RC
   // region whose depth is the frame's stack depth.
   vrt::frame_region(frame);
-  thread->next_frame_id++;
   thread->frame = frame;
   return frame;
 }
@@ -87,14 +96,14 @@ vrt_frame_reuse(const vrt_func* func)
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_get_raise_target(void)
 {
-  return current_frame()->raise_target;
+  return current_frame()->raise_target.raw();
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target)
 {
   auto* frame = current_frame();
-  auto previous = frame->raise_target;
-  frame->raise_target = target;
+  auto previous = frame->raise_target.raw();
+  frame->raise_target = vrt::Location::from_raw(target);
   return previous;
 }
 
@@ -164,7 +173,7 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_id(const vrt_frame* frame)
   if (frame == nullptr)
     return 0;
 
-  return frame->frame_id;
+  return frame->frame_id.raw();
 }
 
 extern "C" VRT_EXPORT const vrt_func* vrt_frame_func(const vrt_frame* frame)
