@@ -28,6 +28,7 @@ namespace vbcc
   //   BadType:          arg type vs param type, return type, field store type
   //   MethodNotFound:   Lookup on a class without that method
   //   BadConversion:    Cond on non-Bool
+  //   BadRegionEntryPoint: Region allocation of a singleton class
   //
   // What this does NOT catch (Category C - runtime only):
   //   BadArrayIndex, BadStore (regions), BadStoreTarget (immutability),
@@ -660,9 +661,10 @@ namespace vbcc
           else
             set_type(env, node / LocalId, Dyn);
         }
-        else if (node->in({New, Stack}))
+        else if (node->in({New, Stack, Heap, Region}))
         {
-          // dst gets the ClassId type. Check arg types vs field types.
+          // Object allocation always initializes the class fields, regardless
+          // of which region supplies the storage.
           auto class_id = node / ClassId;
           auto args = node / Args;
           auto cls = find_class(class_id);
@@ -670,6 +672,17 @@ namespace vbcc
           if (cls)
           {
             auto fields = cls / Fields;
+
+            if ((node == Region) && fields->empty())
+            {
+              type_err(
+                node,
+                std::format(
+                  "region: singleton class '{}' cannot be a region entry "
+                  "point",
+                  type_name(class_id)));
+            }
+
             auto f_it = fields->begin();
             auto a_it = args->begin();
 
@@ -695,12 +708,6 @@ namespace vbcc
             }
           }
 
-          set_type(env, node / LocalId, clone(class_id));
-        }
-        else if (node->in({Heap, Region}))
-        {
-          // Like New but with extra leading args (region source / region type).
-          auto class_id = node / ClassId;
           set_type(env, node / LocalId, clone(class_id));
         }
         else if (node->in({NewArray, StackArray}))

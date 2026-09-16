@@ -260,4 +260,8 @@ Freezing will convert a mutable region into a permanently immutable snapshot. On
 
 ### Compile-Time Region Safety
 
-Currently, region violations (stack escape, invalid stores, lifetime errors) are caught at **runtime**. The planned feature will catch many of these errors at **compile time** through static analysis, reducing the chance of runtime crashes and giving programmers earlier feedback.
+Most region violations (stack escape, invalid stores, lifetime errors) are
+caught at **runtime**. The compiler already rejects cases determined entirely
+by static class layout, such as creating a region whose entry-point class is
+an empty singleton. Planned analysis will move more checks to compile time,
+giving programmers earlier feedback.
