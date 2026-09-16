@@ -1,11 +1,10 @@
 #include "frame.h"
 
+#include "failure.h"
 #include "region.h"
 #include "thread.h"
 
-#include <cassert>
 #include <csetjmp>
-#include <exception>
 #include <new>
 
 namespace
@@ -13,16 +12,12 @@ namespace
   vrt::Frame* current_frame()
   {
     auto* thread = vrt::current_thread();
-    assert(thread != nullptr);
-
     if (thread == nullptr)
-      std::terminate();
+      vrt::fail(vrt::Failure::invalid_frame_state);
 
     auto* frame = thread->frame;
-    assert(frame != nullptr);
-
     if (frame == nullptr)
-      std::terminate();
+      vrt::fail(vrt::Failure::invalid_frame_state);
 
     return frame;
   }
@@ -32,13 +27,11 @@ extern "C" VRT_EXPORT vrt_frame*
 vrt_frame_enter(const vrt_func* func)
 {
   auto* thread = vrt::current_thread();
-  assert(thread != nullptr);
-
   if (thread == nullptr)
-    std::terminate();
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   if (thread->next_frame_id == 0)
-    std::terminate();
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto* frame = new (std::nothrow) vrt::Frame{
     thread->frame,
@@ -49,7 +42,7 @@ vrt_frame_enter(const vrt_func* func)
     func,
     thread->next_frame_id};
   if (frame == nullptr)
-    std::terminate();
+    vrt::fail(vrt::Failure::out_of_memory);
 
   // Match the interpreter's Frame invariant: every logical frame owns an RC
   // region whose depth is the frame's stack depth.
@@ -62,16 +55,12 @@ vrt_frame_enter(const vrt_func* func)
 extern "C" VRT_EXPORT void vrt_frame_leave(void)
 {
   auto* thread = vrt::current_thread();
-  assert(thread != nullptr);
-
   if (thread == nullptr)
-    return;
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto* frame = thread->frame;
-  assert(frame != nullptr);
-
   if (frame == nullptr)
-    return;
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto* parent = frame->parent;
   vrt::destroy_frame_region(frame);
@@ -83,16 +72,12 @@ extern "C" VRT_EXPORT void
 vrt_frame_reuse(const vrt_func* func)
 {
   auto* thread = vrt::current_thread();
-  assert(thread != nullptr);
-
   if (thread == nullptr)
-    return;
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto* frame = thread->frame;
-  assert(frame != nullptr);
-
   if (frame == nullptr)
-    return;
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   // Compiler-emitted Drop operations perform local register teardown. The
   // logical frame and its frame-local region survive a tailcall and are
@@ -121,21 +106,19 @@ extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(void)
 extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
 {
   auto* thread = vrt::current_thread();
-  assert(thread != nullptr);
-
   if (thread == nullptr)
-    std::terminate();
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto* current = thread->frame;
   if (current == nullptr)
-    std::terminate();
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto* target = current->parent;
   while ((target != nullptr) && (target->frame_id != current->raise_target))
     target = target->parent;
 
   if (target == nullptr)
-    std::terminate();
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   thread->pending_raise_value = value;
   thread->pending_raise_target = target;
@@ -159,7 +142,7 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_take_raised_value(void)
   if (
     (thread == nullptr) || !thread->raise_pending ||
     (thread->frame != thread->pending_raise_target))
-    std::terminate();
+    vrt::fail(vrt::Failure::invalid_frame_state);
 
   auto value = thread->pending_raise_value;
   thread->pending_raise_value = 0;

@@ -1,18 +1,10 @@
 #include "region.h"
 
+#include "failure.h"
 #include "frame.h"
 
-#include <exception>
 #include <limits>
 #include <new>
-
-namespace
-{
-  [[noreturn]] void invalid_region_state()
-  {
-    std::terminate();
-  }
-}
 
 bool vrt::Region::is_frame_local() const
 {
@@ -24,11 +16,11 @@ namespace vrt
   Region* create_region(RegionType type, uintptr_t frame_depth)
   {
     if ((type != VRT_REGION_RC) && (type != VRT_REGION_ARENA))
-      invalid_region_state();
+      fail(Failure::invalid_region_state);
 
     auto* region = new (std::nothrow) Region{type, frame_depth};
     if (region == nullptr)
-      std::terminate();
+      fail(Failure::out_of_memory);
 
     return region;
   }
@@ -36,7 +28,7 @@ namespace vrt
   Region* frame_region(Frame* frame)
   {
     if (frame == nullptr)
-      invalid_region_state();
+      fail(Failure::invalid_region_state);
 
     if (frame->region != nullptr)
       return frame->region;
@@ -49,7 +41,7 @@ namespace vrt
         (parent_region == nullptr) || !parent_region->is_frame_local() ||
         (parent_region->type != VRT_REGION_RC) ||
         (parent_region->frame_depth == std::numeric_limits<uintptr_t>::max()))
-        invalid_region_state();
+        fail(Failure::invalid_region_state);
 
       depth = parent_region->frame_depth + 1;
     }
@@ -66,7 +58,7 @@ namespace vrt
   void destroy_frame_region(Frame* frame)
   {
     if ((frame == nullptr) || (frame->region == nullptr))
-      invalid_region_state();
+      fail(Failure::invalid_region_state);
 
     auto* region = frame->region;
     frame->region = nullptr;

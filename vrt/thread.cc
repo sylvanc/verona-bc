@@ -1,11 +1,10 @@
 #include "thread.h"
 
+#include "failure.h"
 #include "frame.h"
 #include "region.h"
 #include "vrt.h"
 
-#include <cassert>
-#include <exception>
 #include <new>
 
 namespace
@@ -34,23 +33,19 @@ namespace vrt
 
   void init_thread()
   {
-    assert(current_thread_state == nullptr);
-
     if (current_thread_state != nullptr)
-      return;
+      fail(Failure::invalid_thread_state);
 
     current_thread_state = new (std::nothrow) Thread{};
 
     if (current_thread_state == nullptr)
-      std::terminate();
+      fail(Failure::out_of_memory);
   }
 
   void deinit_thread()
   {
-    assert(current_thread_state != nullptr);
-
     if (current_thread_state == nullptr)
-      return;
+      fail(Failure::invalid_thread_state);
 
     destroy_frames(current_thread_state);
     delete current_thread_state;

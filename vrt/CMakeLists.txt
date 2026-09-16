@@ -1,5 +1,6 @@
 add_library(libvrt STATIC
   exit_code.cc
+  failure.cc
   frame.cc
   function.cc
   native_main.cc
