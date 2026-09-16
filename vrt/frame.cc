@@ -1,16 +1,15 @@
 #include "frame.h"
 
 #include "failure.h"
-#include "native_context.h"
+#include "thread_context.h"
 #include "region.h"
-#include "thread.h"
 
 #include <limits>
 #include <new>
 
 extern "C" VRT_EXPORT vrt_frame* vrt_frame_enter(const vrt_func* func)
 {
-  auto& context = vrt::NativeContext::get();
+  auto& context = vrt::ThreadContext::get();
   auto& thread = context.thread;
 
   if (
@@ -37,7 +36,7 @@ extern "C" VRT_EXPORT vrt_frame* vrt_frame_enter(const vrt_func* func)
     vrt::fail(vrt::Failure::out_of_memory);
 
   auto* continuation =
-    new (std::nothrow) vrt::NativeContinuation{context.continuation, frame};
+    new (std::nothrow) vrt::Continuation{context.continuation, frame};
   if (continuation == nullptr)
   {
     delete frame;
@@ -54,18 +53,18 @@ extern "C" VRT_EXPORT vrt_frame* vrt_frame_enter(const vrt_func* func)
 
 extern "C" VRT_EXPORT void vrt_frame_leave(void)
 {
-  auto& context = vrt::NativeContext::get();
+  auto& context = vrt::ThreadContext::get();
   auto& thread = context.thread;
   auto* frame = thread.frame;
   if (frame == nullptr)
     vrt::fail(vrt::Failure::invalid_frame_state);
 
-  vrt::unwind_frames(context, frame->parent);
+  context.unwind_frames(frame->parent);
 }
 
 extern "C" VRT_EXPORT void vrt_frame_reuse(const vrt_func* func)
 {
-  auto& context = vrt::NativeContext::get();
+  auto& context = vrt::ThreadContext::get();
   auto& thread = context.thread;
   auto* frame = thread.frame;
   if (
@@ -82,7 +81,7 @@ extern "C" VRT_EXPORT void vrt_frame_reuse(const vrt_func* func)
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_get_raise_target(void)
 {
-  auto* frame = vrt::Thread::get().frame;
+  auto* frame = vrt::ThreadContext::get().thread.frame;
   if (frame == nullptr)
     vrt::fail(vrt::Failure::invalid_frame_state);
 
@@ -91,7 +90,7 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_get_raise_target(void)
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target)
 {
-  auto* frame = vrt::Thread::get().frame;
+  auto* frame = vrt::ThreadContext::get().thread.frame;
   if (frame == nullptr)
     vrt::fail(vrt::Failure::invalid_frame_state);
 
@@ -102,7 +101,7 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_set_raise_target(uint64_t target)
 
 extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(void)
 {
-  auto& context = vrt::NativeContext::get();
+  auto& context = vrt::ThreadContext::get();
   auto* continuation = context.continuation;
   if (
     (context.thread.frame == nullptr) || (continuation == nullptr) ||
@@ -115,17 +114,17 @@ extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(void)
 
 extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
 {
-  auto& thread = vrt::Thread::get();
-  auto* frame = thread.frame;
+  auto& context = vrt::ThreadContext::get();
+  auto* frame = context.thread.frame;
   if (frame == nullptr)
     vrt::fail(vrt::Failure::invalid_frame_state);
 
-  thread.raise(value, frame->raise_target);
+  context.raise(value, frame->raise_target);
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_take_raised_value(void)
 {
-  auto& context = vrt::NativeContext::get();
+  auto& context = vrt::ThreadContext::get();
   auto* continuation = context.continuation;
   if (
     (context.thread.frame == nullptr) || (continuation == nullptr) ||

@@ -3,7 +3,7 @@ add_library(libvrt STATIC
   failure.cc
   frame.cc
   function.cc
-  native_context.cc
+  thread_context.cc
   native_main.cc
   region.cc
   thread.cc
