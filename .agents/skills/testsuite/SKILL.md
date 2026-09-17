@@ -27,7 +27,7 @@ The four collections are:
 | `vc.cmake` | `*.v` | Verona compile -> bytecode run |
 | `vbc.cmake` | `*.vir` | VIR compile -> bytecode run |
 | `llvm.cmake` | `vir/llvm_*/*.vir` | emit IR -> assemble -> codegen -> link -> native run |
-| `vrt.cmake` | the four sources under `vrt/` | build C/C++ targets and register six run nodes |
+| `vrt.cmake` | selected C/C++ sources under `vrt/` | build libvrt test targets and register run nodes |
 
 `vc.cmake` and `vbc.cmake` omit the run node for sources below a
 `compile_only/` directory. The source basename must match its parent
@@ -72,7 +72,7 @@ vbc/v/hello/hello/compile
 vbc/v/hello/hello/run
 vbc/vir/simp1/simp1/compile
 vbc/vir/simp1/simp1/run
-vbc/vrt/behavior/set-exit/run
+vbc/vrt/behavior/set-exit
 ```
 
 ## Pipelines
@@ -131,17 +131,42 @@ but the other three collections continue to configure.
 `vrt.cmake` creates ordinary CMake executable targets linked with `vbc::vrt`,
 then registers their execution as named nodes:
 
-- `vrt/abi/c/run` tests the public C11 ABI;
-- `vrt/abi/cxx/run` tests C++ inclusion and C-linkage signatures;
-- `vrt/behavior/default-exit/run` expects exit `0`;
-- `vrt/behavior/set-exit/run` expects exit `7`;
-- `vrt/behavior/last-write-wins/run` expects exit `3`;
-- `vrt/internal/state/run` tests private runtime state transitions.
+- `vrt/abi/{c,cxx}` tests public C11/C++ layout, inclusion, linkage, and
+  signatures;
+- `vrt/api/{error,frame,function,thread}` tests one
+  exported VRT API family per executable;
+- `vrt/behavior/{default-exit,set-exit,last-write-wins}` tests generated
+  program exit behavior with expected statuses `0`, `7`, and `3`;
+- `vrt/internal/{failure,location}` tests private diagnostics and tagged
+  location representation.
 
-The named executor records the process's exact numeric exit status, so the
-nonzero behavioral expectations need no `WILL_FAIL` property or wrapper
-script. VRT nodes use the same three committed golden files as every other
-node.
+The API fixtures are hand-written stand-ins for generated native code. They
+call the same exported functions as generated code and construct
+`vrt::Func` descriptors where required. Numeric IDs and sample values are
+deliberately small synthetic test data.
+
+The other fixture categories exercise different boundaries. ABI fixtures
+check that public declarations and layouts are usable from C11 and C++.
+Behavior fixtures provide the symbols normally supplied by generated code and
+check process-level results. API and internal fixtures may include private VRT
+headers to inspect headers, reference counts, regions, or thread state. Such
+inspection is test-only: API fixtures still drive behavior through exported
+VRT functions, while internal fixtures directly test runtime invariants.
+
+Each VRT node is a self-contained fixture whose source name matches
+its directory name and whose expected outputs are next to the source:
+
+```text
+testsuite/vrt/api/error/
+├── error.cc
+├── exit_code.txt
+├── stderr.txt
+└── stdout.txt
+```
+
+The fixture directory is also the node name (`vrt/api/error` in this example).
+Unlike compiler pipelines, VRT tests have no separate compile and run nodes,
+so they do not add a redundant `run/` level.
 
 ## Source Goldens and Build Artifacts
 

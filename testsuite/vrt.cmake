@@ -1,5 +1,5 @@
 set(TESTSUITE_REGEX
-  "^vrt/(abi_c\\.c|abi_cxx\\.cc|exit_code_program\\.c|runtime_state\\.cc)$")
+  "^vrt/(abi|api|behavior|internal)/[^/]+/[^/]+\\.(c|cc)$")
 set(TESTSUITE_DEFINE vrt_test_define)
 
 function(vrt_test_compile_options target)
@@ -22,54 +22,53 @@ function(vrt_c_test_properties target)
   vrt_test_compile_options(${target})
 endfunction()
 
-function(vrt_add_run_node name target)
+function(vrt_add_run_node name target working_directory)
   testsuite_add_test(
     NAME "${name}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/vrt"
+    WORKING_DIRECTORY "${working_directory}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
     COMMAND "$<TARGET_FILE:${target}>")
 endfunction()
 
-function(vrt_add_exit_code_test target test_name)
-  add_executable(
-    ${target}
-    "${CMAKE_CURRENT_SOURCE_DIR}/vrt/exit_code_program.c")
-  vrt_c_test_properties(${target})
+function(vrt_add_fixture_test test)
+  get_filename_component(fixture_dir "${test}" DIRECTORY)
+  get_filename_component(source_name "${test}" NAME_WE)
+  get_filename_component(fixture_name "${fixture_dir}" NAME)
+  get_filename_component(category_dir "${fixture_dir}" DIRECTORY)
+  get_filename_component(category "${category_dir}" NAME)
+  get_filename_component(extension "${test}" EXT)
+
+  if(NOT source_name STREQUAL fixture_name)
+    message(FATAL_ERROR
+      "VRT fixture source '${test}' must match its directory name")
+  endif()
+
+  string(REPLACE "-" "_" target_name "${category}_${fixture_name}")
+  set(target "vrt_${target_name}")
+  add_executable(${target} "${CMAKE_CURRENT_SOURCE_DIR}/${test}")
+
+  if(extension STREQUAL ".c")
+    vrt_c_test_properties(${target})
+  else()
+    vrt_test_compile_options(${target})
+  endif()
+
+  if(category STREQUAL "api" OR category STREQUAL "internal")
+    target_include_directories(${target} PRIVATE "${PROJECT_SOURCE_DIR}/vrt")
+  endif()
+
   target_link_libraries(${target} PRIVATE vbc::vrt)
-  vrt_add_run_node("vrt/behavior/${test_name}/run" ${target})
+  if(category STREQUAL "api" AND fixture_name STREQUAL "thread")
+    target_link_libraries(${target} PRIVATE Threads::Threads)
+  endif()
+
+  vrt_add_run_node(
+    "${fixture_dir}" ${target} "${CMAKE_CURRENT_SOURCE_DIR}/${fixture_dir}")
 endfunction()
 
 function(vrt_test_define test)
-  if(test STREQUAL "vrt/abi_c.c")
-    add_executable(vrt_abi_c "${CMAKE_CURRENT_SOURCE_DIR}/${test}")
-    vrt_c_test_properties(vrt_abi_c)
-    target_link_libraries(vrt_abi_c PRIVATE vbc::vrt)
-    vrt_add_run_node("vrt/abi/c/run" vrt_abi_c)
-  elseif(test STREQUAL "vrt/abi_cxx.cc")
-    add_executable(vrt_abi_cxx "${CMAKE_CURRENT_SOURCE_DIR}/${test}")
-    vrt_test_compile_options(vrt_abi_cxx)
-    target_link_libraries(vrt_abi_cxx PRIVATE vbc::vrt)
-    vrt_add_run_node("vrt/abi/cxx/run" vrt_abi_cxx)
-  elseif(test STREQUAL "vrt/exit_code_program.c")
-    vrt_add_exit_code_test(vrt_default_exit default-exit)
-
-    vrt_add_exit_code_test(vrt_set_exit set-exit)
-    target_compile_definitions(
-      vrt_set_exit PRIVATE VRT_TEST_FIRST_EXIT_CODE=7)
-
-    vrt_add_exit_code_test(vrt_last_exit last-write-wins)
-    target_compile_definitions(
-      vrt_last_exit
-      PRIVATE
-        VRT_TEST_FIRST_EXIT_CODE=7
-        VRT_TEST_LAST_EXIT_CODE=3)
-  elseif(test STREQUAL "vrt/runtime_state.cc")
-    add_executable(vrt_runtime_state "${CMAKE_CURRENT_SOURCE_DIR}/${test}")
-    vrt_test_compile_options(vrt_runtime_state)
-    target_include_directories(
-      vrt_runtime_state PRIVATE "${PROJECT_SOURCE_DIR}/vrt")
-    target_link_libraries(vrt_runtime_state PRIVATE vbc::vrt Threads::Threads)
-    vrt_add_run_node("vrt/internal/state/run" vrt_runtime_state)
+  if(test MATCHES "^vrt/(abi|api|behavior|internal)/[^/]+/[^/]+\\.(c|cc)$")
+    vrt_add_fixture_test("${test}")
   else()
     message(FATAL_ERROR "Unexpected VRT test source '${test}'")
   endif()
