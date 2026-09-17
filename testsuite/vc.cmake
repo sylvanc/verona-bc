@@ -34,7 +34,7 @@ function(vc_test_define test)
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ${artifact_metadata}
     COMMAND
-      "${CMAKE_INSTALL_PREFIX}/vc/vc"
+      "${CMAKE_INSTALL_PREFIX}/vc/$<TARGET_FILE_NAME:vc>"
       build .
       -b "${bytecode}"
       -o "${final_ast}")
@@ -45,6 +45,8 @@ function(vc_test_define test)
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}"
       DEPENDS "${compile_node}"
       GOLDENS exit_code.txt stderr.txt stdout.txt
-      COMMAND "${CMAKE_INSTALL_PREFIX}/vbci/vbci" "${bytecode}")
+      COMMAND
+        "${CMAKE_INSTALL_PREFIX}/vbci/$<TARGET_FILE_NAME:vbci>"
+        "${bytecode}")
   endif()
 endfunction()

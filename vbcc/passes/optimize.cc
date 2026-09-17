@@ -262,13 +262,15 @@ namespace vbcc
               if (target == FuncOnce)
                 continue;
 
-              // Don't inline functions that capture a raise target into an
-              // ordinary caller. Inlining would move block-lambda creation
-              // and change the captured frame. The synthetic @main wrapper is
-              // safe because it immediately delegates to main and returns.
-              if (
-                captures_raise_target(target) &&
-                (func_node / FunctionId)->location().view() != "@main")
+              // Don't inline functions that capture a raise target. Inlining
+              // would move block-lambda creation into the caller's frame,
+              // changing which frame the lambda captures as its raise target.
+              // This applies to @main as well — although @main starts as a
+              // simple delegating wrapper, earlier inlining iterations may
+              // have already inlined `main`'s body into it, after which
+              // inlining a raise-capturing callee would similarly miscapture
+              // the @main frame instead of the original caller's frame.
+              if (captures_raise_target(target))
                 continue;
 
               // Don't inline self-recursive calls.

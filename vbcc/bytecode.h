@@ -128,7 +128,10 @@ namespace vbcc
     std::optional<size_t> get_library_id(Node id);
     void add_library(Node lib);
 
-    void gen(std::filesystem::path output, bool strip);
+    void gen_vbc(std::filesystem::path output, bool strip);
+
+    // Implemented by the optional libvbcllvm target.
+    bool gen_llvm(const std::filesystem::path& output) const;
     size_t typ(Node type);
   };
 }

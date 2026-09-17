@@ -1,0 +1,54 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+// Raise payloads use a uniform runtime word while the target continuation
+// reconstructs the enclosing function's native return representation.
+func @raise_i32($value: i32): i32
+  raise $value i32
+
+func @raise_f64($value: f64): f64
+  raise $value f64
+
+func @raise_ptr($value: ptr): ptr
+  raise $value ptr
+
+func @raise_none(): none
+  $_none = const none
+  raise $_none none
+
+// Raise through two ordinary call frames to enclosing's continuation.
+func @inner($value: i32, $target: u64): i32
+  $_previous = setraise $target
+  raise $value i32
+
+func @middle($target: u64): i32
+  $value = const i32 42
+  $result = call @inner($value, $target)
+  // Keep middle multi-block so the single-label inliner cannot erase the
+  // intermediate frame this test is intended to unwind through.
+  jump ^bad
+^bad
+  $bad = const i32 99
+  ret $bad
+
+func @enclosing(): i32
+  $target = getraise
+  $result = call @middle($target)
+  $bad = const i32 99
+  ret $bad
+
+func @main(): none
+  $result = call @enclosing()
+  $expected = const i32 42
+  $ok = eq $result $expected
+  cond $ok ^success ^fail
+^fail
+  $failure = const i32 1
+  $_failure_result = ffi @set_exit_code($failure)
+  $_failure_none = const none
+  ret $_failure_none
+^success
+  $success = const i32 0
+  $_success_result = ffi @set_exit_code($success)
+  $_success_none = const none
+  ret $_success_none

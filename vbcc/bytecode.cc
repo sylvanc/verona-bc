@@ -514,7 +514,7 @@ namespace vbcc
     libraries.push_back(lib);
   }
 
-  void Bytecode::gen(std::filesystem::path output, bool strip)
+  void Bytecode::gen_vbc(std::filesystem::path output, bool strip)
   {
     wf::push_back(wfIR);
 
@@ -952,7 +952,7 @@ namespace vbcc
           }
           else if (stmt == HeapArrayConst)
           {
-            code << uleb(+Op::HeapArrayConst) << dst(stmt) << src(stmt)
+            code << uleb(+Op::HeapArrayConst) << dst(stmt) << lhs(stmt)
                  << uleb(typ(stmt / Type))
                  << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }

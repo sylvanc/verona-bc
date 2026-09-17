@@ -1,8 +1,16 @@
-cmake_minimum_required(VERSION 3.14.0)
-project(vbc VERSION 1.0.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.28)
+project(vbc VERSION 1.0.0 LANGUAGES C CXX)
 
 include(FetchContent)
+include(GNUInstallDirs)
 find_package(Threads REQUIRED)
+
+option(VERONA_ENABLE_LLVM_BACKEND "Build the LLVM backend" ON)
+
+if(VERONA_ENABLE_LLVM_BACKEND)
+  find_package(LLVM REQUIRED CONFIG)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -85,6 +93,7 @@ install(CODE [[
   file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
   ]])
 
+add_subdirectory(vrt)
 add_subdirectory(vbcc)
 add_subdirectory(vbci)
 add_subdirectory(vc)

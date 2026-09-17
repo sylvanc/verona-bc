@@ -1,0 +1,31 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @finish($code: i32): none
+  $_result = ffi @set_exit_code($code)
+  $_none = const none
+  ret $_none
+
+func @raise_to_reused($value: i32, $target: u64): i32
+  $_previous = setraise $target
+  raise $value i32
+
+// Keep these functions multi-block so the single-label inliner cannot erase
+// the logical frame reuse and non-local return exercised by this test.
+func @tail_target($target: u64): i32
+  $success = const i32 0
+  $result = call @raise_to_reused($success, $target)
+  jump ^fail
+^fail
+  $failure = const i32 1
+  ret $failure
+
+func @tail_source(): i32
+  $target = getraise
+  jump ^tail
+^tail
+  tailcall @tail_target($target)
+
+func @main(): none
+  $result = call @tail_source()
+  tailcall @finish($result)

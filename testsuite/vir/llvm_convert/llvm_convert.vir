@@ -1,0 +1,220 @@
+lib
+  @malloc = "malloc"(usize): ptr
+  @free = "free"(ptr): none
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none var $error: i32
+  $error = const i32 0
+  $minus_one = const i64 -1
+  $expected_minus_one = const i32 -1
+
+  // Integer conversions use the source signedness when extending and truncate
+  // when narrowing. Exercise every integer target representation.
+  $as_i8 = convert i8 $minus_one
+  $i8_i32 = convert i32 $as_i8
+  $i8_error = sub $i8_i32 $expected_minus_one
+  $error = or $error $i8_error
+
+  $as_i16 = convert i16 $minus_one
+  $i16_i32 = convert i32 $as_i16
+  $i16_error = sub $i16_i32 $expected_minus_one
+  $error = or $error $i16_error
+
+  $as_i32 = convert i32 $minus_one
+  $i32_error = sub $as_i32 $expected_minus_one
+  $error = or $error $i32_error
+
+  $as_i64 = convert i64 $minus_one
+  $i64_i32 = convert i32 $as_i64
+  $i64_error = sub $i64_i32 $expected_minus_one
+  $error = or $error $i64_error
+
+  $as_u8 = convert u8 $minus_one
+  $u8_i32 = convert i32 $as_u8
+  $expected_u8 = const i32 255
+  $u8_error = sub $u8_i32 $expected_u8
+  $error = or $error $u8_error
+
+  $as_u16 = convert u16 $minus_one
+  $u16_i32 = convert i32 $as_u16
+  $expected_u16 = const i32 65535
+  $u16_error = sub $u16_i32 $expected_u16
+  $error = or $error $u16_error
+
+  $as_u32 = convert u32 $minus_one
+  $u32_i32 = convert i32 $as_u32
+  $u32_error = sub $u32_i32 $expected_minus_one
+  $error = or $error $u32_error
+
+  $as_u64 = convert u64 $minus_one
+  $u64_i32 = convert i32 $as_u64
+  $u64_error = sub $u64_i32 $expected_minus_one
+  $error = or $error $u64_error
+
+  $as_ilong = convert ilong $minus_one
+  $ilong_i32 = convert i32 $as_ilong
+  $ilong_error = sub $ilong_i32 $expected_minus_one
+  $error = or $error $ilong_error
+
+  $as_ulong = convert ulong $minus_one
+  $ulong_i32 = convert i32 $as_ulong
+  $ulong_error = sub $ulong_i32 $expected_minus_one
+  $error = or $error $ulong_error
+
+  $as_isize = convert isize $minus_one
+  $isize_i32 = convert i32 $as_isize
+  $isize_error = sub $isize_i32 $expected_minus_one
+  $error = or $error $isize_error
+
+  $as_usize = convert usize $minus_one
+  $usize_i32 = convert i32 $as_usize
+  $usize_error = sub $usize_i32 $expected_minus_one
+  $error = or $error $usize_error
+
+  // Integer/float and float/integer conversions.
+  $positive = const i32 42
+  $as_f32 = convert f32 $positive
+  $f32_i32 = convert i32 $as_f32
+  $f32_error = sub $f32_i32 $positive
+  $error = or $error $f32_error
+
+  $as_f64 = convert f64 $positive
+  $f64_i32 = convert i32 $as_f64
+  $f64_error = sub $f64_i32 $positive
+  $error = or $error $f64_error
+
+  // Floating-point source conversions.
+  $positive_float = const f64 42.0
+  $fraction_i8 = convert i8 $positive_float
+  $fraction_i8_i32 = convert i32 $fraction_i8
+  $fraction_i8_error = sub $fraction_i8_i32 $positive
+  $error = or $error $fraction_i8_error
+
+  $fraction_i16 = convert i16 $positive_float
+  $fraction_i16_i32 = convert i32 $fraction_i16
+  $fraction_i16_error = sub $fraction_i16_i32 $positive
+  $error = or $error $fraction_i16_error
+
+  $fraction_i64 = convert i64 $positive_float
+  $fraction_i64_i32 = convert i32 $fraction_i64
+  $fraction_i64_error = sub $fraction_i64_i32 $positive
+  $error = or $error $fraction_i64_error
+
+  $fraction_u8 = convert u8 $positive_float
+  $fraction_u8_i32 = convert i32 $fraction_u8
+  $fraction_u8_error = sub $fraction_u8_i32 $positive
+  $error = or $error $fraction_u8_error
+
+  $fraction_u16 = convert u16 $positive_float
+  $fraction_u16_i32 = convert i32 $fraction_u16
+  $fraction_u16_error = sub $fraction_u16_i32 $positive
+  $error = or $error $fraction_u16_error
+
+  $fraction_u32 = convert u32 $positive_float
+  $fraction_u32_i32 = convert i32 $fraction_u32
+  $fraction_u32_error = sub $fraction_u32_i32 $positive
+  $error = or $error $fraction_u32_error
+
+  $fraction_u64 = convert u64 $positive_float
+  $fraction_u64_i32 = convert i32 $fraction_u64
+  $fraction_u64_error = sub $fraction_u64_i32 $positive
+  $error = or $error $fraction_u64_error
+
+  $fraction_ilong = convert ilong $positive_float
+  $fraction_ilong_i32 = convert i32 $fraction_ilong
+  $fraction_ilong_error = sub $fraction_ilong_i32 $positive
+  $error = or $error $fraction_ilong_error
+
+  $fraction_ulong = convert ulong $positive_float
+  $fraction_ulong_i32 = convert i32 $fraction_ulong
+  $fraction_ulong_error = sub $fraction_ulong_i32 $positive
+  $error = or $error $fraction_ulong_error
+
+  $fraction_isize = convert isize $positive_float
+  $fraction_isize_i32 = convert i32 $fraction_isize
+  $fraction_isize_error = sub $fraction_isize_i32 $positive
+  $error = or $error $fraction_isize_error
+
+  $fraction_usize = convert usize $positive_float
+  $fraction_usize_i32 = convert i32 $fraction_usize
+  $fraction_usize_error = sub $fraction_usize_i32 $positive
+  $error = or $error $fraction_usize_error
+
+  $fraction_f32 = convert f32 $positive_float
+  $fraction_f32_i32 = convert i32 $fraction_f32
+  $fraction_f32_error = sub $fraction_f32_i32 $positive
+  $error = or $error $fraction_f32_error
+
+  $seventeen = const i32 17
+  $source_f32 = convert f32 $seventeen
+  $source_f32_f64 = convert f64 $source_f32
+  $source_f32_i32 = convert i32 $source_f32_f64
+  $source_f32_error = sub $source_f32_i32 $seventeen
+  $error = or $error $source_f32_error
+
+  // bool and none conversions.
+  $negative_bool = convert bool $minus_one
+  $negative_bool_i32 = convert i32 $negative_bool
+  $one = const i32 1
+  $negative_bool_error = sub $negative_bool_i32 $one
+  $error = or $error $negative_bool_error
+
+  $zero_f64 = const f64 0.0
+  $zero_bool = convert bool $zero_f64
+  $zero_bool_i32 = convert i32 $zero_bool
+  $zero = const i32 0
+  $zero_bool_error = sub $zero_bool_i32 $zero
+  $error = or $error $zero_bool_error
+
+  $true = const bool true
+  $true_f64 = convert f64 $true
+  $true_f64_i32 = convert i32 $true_f64
+  $true_f64_error = sub $true_f64_i32 $one
+  $error = or $error $true_f64_error
+
+  $none = const none
+  $none_i32 = convert i32 $none
+  $none_i32_error = sub $none_i32 $zero
+  $error = or $error $none_i32_error
+
+  $none_f64 = convert f64 $none
+  $none_f64_i32 = convert i32 $none_f64
+  $none_f64_error = sub $none_f64_i32 $zero
+  $error = or $error $none_f64_error
+
+  $none_bool = convert bool $none
+  $none_bool_i32 = convert i32 $none_bool
+  $none_bool_error = sub $none_bool_i32 $zero
+  $error = or $error $none_bool_error
+
+  $_integer_none = convert none $positive
+  $_float_none = convert none $positive_float
+  $_bool_none = convert none $true
+
+  // Raw pointers convert through their integer address representation.
+  $allocation_size = const usize 1
+  $allocation = ffi @malloc($allocation_size)
+  $pointer_bool = convert bool $allocation
+  $pointer_bool_i32 = convert i32 $pointer_bool
+  $pointer_bool_error = sub $pointer_bool_i32 $one
+  $error = or $error $pointer_bool_error
+
+  $pointer_usize = convert usize $allocation
+  $zero_usize = const usize 0
+  $pointer_nonzero = gt $pointer_usize $zero_usize
+  $pointer_nonzero_i32 = convert i32 $pointer_nonzero
+  $pointer_nonzero_error = sub $pointer_nonzero_i32 $one
+  $error = or $error $pointer_nonzero_error
+
+  $pointer_f64 = convert f64 $allocation
+  $pointer_f64_bool = convert bool $pointer_f64
+  $pointer_f64_i32 = convert i32 $pointer_f64_bool
+  $pointer_f64_error = sub $pointer_f64_i32 $one
+  $error = or $error $pointer_f64_error
+
+  $_pointer_none = convert none $allocation
+  $_free = ffi @free($allocation)
+
+  $_exit = ffi @set_exit_code($error)
+  $_none = const none
+  ret $_none

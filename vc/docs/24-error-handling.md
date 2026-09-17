@@ -13,7 +13,8 @@ Verona does not have exceptions or `try`/`catch`. Instead, it provides:
 - **`raise`** — non-local return from a block lambda to the enclosing function.
 - **`nomatch`** — a sentinel type for signaling the absence of a result.
 - **`else` on expressions** — handling the `nomatch` case in `if`, `match` and other fallible expressions.
-- **Runtime errors** — fatal to the current behavior (not recoverable).
+- **Runtime errors** — fatal to the current behavior (not catchable in Verona
+  source).
 
 ---
 
@@ -160,6 +161,108 @@ In the context of `when` blocks:
 - The result cown of the failed `when` block receives no value.
 
 For synchronous code (not inside a `when` block), a runtime error terminates the program.
+
+The native VRT distinguishes these language/runtime errors from corrupt
+private runtime state. A runtime error unwinds the logical frames for the
+current Verona invocation and reports a stable error code to the embedding
+boundary. The reported `vrt_error_info` also identifies the active generated
+function before its frame is unwound; its reserved instruction-site field is
+zero until the LLVM backend supplies stable site identifiers. The standalone
+LLVM executable then prints the message and exits unsuccessfully. An internal
+invariant failure cannot be handled safely and terminates immediately. This
+native boundary does not add a Verona `try`/`catch` construct: programs should
+still represent expected failures as values using unions and `nomatch`.
+
+### VBCI, LLVM, and VRT Error Responsibilities
+
+VBCI's `Error` enumeration combines three kinds of failure:
+
+- malformed or unsupported interpreter input;
+- statically detectable program errors;
+- language errors that depend on runtime values and ownership state.
+
+The native pipeline deliberately splits those responsibilities. The compiler
+rejects errors it can prove before execution, while VRT reports genuinely
+dynamic language errors through `vrt_error_info`. Private VRT invariant
+failures use `vrt::Failure` and terminate immediately; they must not be used as
+a substitute for a language error.
+
+An error name appearing in `vrt::Error` only reserves its stable ABI value. It
+is considered implemented only when an executable VRT path calls
+`vrt::raise_error` with that value.
+
+#### Implemented VRT Language Errors
+
+These errors currently unwind the active native invocation and return an
+`ErrorInfo` to `vrt_try_invoke`:
+
+| VBCI error | Native runtime condition |
+|---|---|
+| `BadRaiseTarget` | A saved raise target is not an active older stack frame. |
+| `BadAllocTarget` | A value cannot identify a valid target region for allocation or ownership transfer. |
+| `BadStore` | A write violates region ownership or graph-relocation rules. |
+| `BadStackEscape` | A frame-local graph cannot be relocated safely while returning, raising, or otherwise escaping. |
+
+> **Status:** These four errors are implemented in VRT and observable at the native invocation
+> boundary. These errors remain uncatchable from Verona source.
+
+#### Errors Rejected Before Native Execution
+
+The compiler and LLVM backend handle these as diagnostics rather than emitting
+code that raises a VRT error:
+
+| VBCI error | Native pipeline handling |
+|---|---|
+| `UnknownFFI` | LLVM lowering rejects unknown or unsupported FFI symbols. |
+| `BadLabel` | ID validation rejects undefined labels. |
+| `BadField` | ID validation rejects unknown field IDs. Field-reference lowering is not yet complete. |
+| `BadRefTarget` | IR type checking rejects field or array references on incompatible values. Valid reference operations are not yet lowered by LLVM. |
+| `BadLoadTarget` | IR type checking rejects loads from non-reference values. Valid loads are not yet lowered by LLVM. |
+| `BadConversion` | IR type checking and primitive-conversion lowering reject incompatible conversions. |
+| `BadOperand` | IR type checking rejects operators applied to the wrong type family. |
+| `MismatchedTypes` | IR type checking rejects incompatible binary operands. |
+| `BadArgs` | ID validation, type checking, and call lowering validate argument arity and types. |
+| `BadType` | IR type checking validates arguments, return values, and stored value types. Runtime checks for unrestricted `dyn` values are deferred until that representation is implemented. |
+| `BadRegionEntryPoint` | Implemented as a compile-time error: IR type checking rejects region allocation whose entry-point class is an immortal singleton. VRT retains the error code and runtime check only as a defensive fallback for invalid IR or direct ABI callers that bypass compiler validation. |
+
+`BadRegionEntryPoint` is therefore a compiler error for normal generated
+programs, not a runtime error expected during compiled execution.
+
+The statically resolvable form of `MethodNotFound` is also rejected by type
+checking. Its genuinely dynamic form remains a runtime TODO below.
+
+#### Interpreter-Specific Errors
+
+These VBCI errors do not require corresponding VRT language errors for normal
+compiler-generated LLVM:
+
+| VBCI error | Native pipeline handling |
+|---|---|
+| `UnknownString` | VBCI uses a bytecode string table. Native code has no equivalent runtime string-ID lookup; LLVM `ConstStr` lowering is not yet implemented. |
+| `UnknownRegionType` | The VIR grammar admits only `rc` and `arena`. An invalid value supplied manually through the C ABI is corrupt runtime state. |
+| `UnknownOpcode` | The parser and well-formedness passes reject unknown VIR statements before LLVM lowering. |
+
+#### Native Runtime TODOs
+
+The following ABI values exist in `vrt::Error`, but native execution does not
+yet raise them correctly end to end:
+
+| VBCI error | Current status and required work |
+|---|---|
+| `BadArrayIndex` | Array-reference lowering is missing. Bulk array range failures currently terminate as `Failure::invalid_array_state`; user-controlled bounds failures must instead raise `BadArrayIndex`. |
+| `BadStoreTarget` | Reference stores and immutable-target checks are not yet lowered. They must raise this error rather than an invariant failure. |
+| `MethodNotFound` | Runtime lookup can return null, but an ordinary dynamic call currently reaches an internal callable check. It must raise `MethodNotFound`; `TryCallDyn` must take its non-match path. |
+| `BadFreeze` | `Freeze` lowering and its VRT service are not implemented. |
+| `BadMerge` | `Merge` lowering and its VRT service are not implemented. |
+| `SchedulerAlreadyRunning` | The native scheduler lifecycle is not implemented. |
+
+> **Status:** These are explicit LLVM/VRT TODOs. Merely retaining their enum
+> values preserves the intended ABI but does not constitute runtime support.
+
+The source-of-truth lists and checks are in
+[`vbci/ident.h`](../../vbci/ident.h),
+[`vbcc/passes/typecheck.cc`](../../vbcc/passes/typecheck.cc), and
+[`include/vrt/error.h`](../../include/vrt/error.h).
 
 ---
 

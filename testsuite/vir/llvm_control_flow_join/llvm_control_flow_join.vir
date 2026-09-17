@@ -1,0 +1,16 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none var $res : i32
+  $true = const bool true
+  cond $true ^check_false ^fail
+^check_false
+  $res = const i32 1
+  jump ^exit
+^fail
+  $res = const i32 2
+  jump ^exit
+^exit
+  $_success = ffi @set_exit_code($res)
+  $_success_none = const none
+  ret $_success_none
