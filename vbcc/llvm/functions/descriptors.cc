@@ -9,7 +9,7 @@ namespace vbcc
 {
   namespace llvm_backend
   {
-    bool LLVMCodegen::define_function_descriptors()
+    bool LLVMCodegen::define_function_metadata()
     {
       auto* pointer_type = llvm::PointerType::getUnqual(context);
       auto* id_type = llvm::Type::getInt64Ty(context);

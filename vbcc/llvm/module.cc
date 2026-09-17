@@ -22,22 +22,22 @@ namespace vbcc
       if (!configure_target())
         return false;
 
-      if (!predeclare_nominal_types())
+      if (!declare_class_types())
         return false;
 
-      if (!define_type_layouts())
+      if (!define_class_types())
         return false;
 
       if (!declare_callables())
         return false;
 
-      if (!define_globals_and_metadata())
+      if (!define_metadata())
         return false;
 
       if (!define_functions())
         return false;
 
-      if (!define_program_descriptor())
+      if (!define_program_metadata())
         return false;
 
       if (!emit_initializers())
@@ -90,7 +90,7 @@ namespace vbcc
       return true;
     }
 
-    bool LLVMCodegen::predeclare_nominal_types()
+    bool LLVMCodegen::declare_class_types()
     {
       // The currently supported scalar VIR types are LLVM context-owned
       // primitives created on demand by lower_type(), so they need no module
@@ -99,11 +99,11 @@ namespace vbcc
       return true;
     }
 
-    bool LLVMCodegen::define_type_layouts()
+    bool LLVMCodegen::define_class_types()
     {
       // Type aliases do not produce LLVM entities. Future class lowering will
       // resolve field storage types and set the bodies of the opaque
-      // StructTypes declared by predeclare_nominal_types().
+      // StructTypes declared by declare_class_types().
       return true;
     }
 
@@ -122,15 +122,15 @@ namespace vbcc
       return !failed;
     }
 
-    bool LLVMCodegen::define_globals_and_metadata()
+    bool LLVMCodegen::define_metadata()
     {
-      // Class and primitive descriptors will also belong here because their
-      // method tables refer to the functions declared by declare_callables().
+      // Emit metadata required while lowering function bodies. Program-wide
+      // metadata is emitted after function lowering.
       //
       // Memo globals also belong here so MemoSlot can refer to them while
       // define_functions() emits function bodies. emit_initializers() will
       // later generate the code that fills those globals.
-      return define_function_descriptors();
+      return define_function_metadata();
     }
 
     bool LLVMCodegen::define_functions()
@@ -148,7 +148,7 @@ namespace vbcc
     {
       // This phase will eventually call the initialization functions in
       // MemoInit order and store their results in the globals declared by
-      // define_globals_and_metadata().
+      // define_metadata().
       for (const auto& child : *state.top)
       {
         if ((child->type() == MemoInit) && (child->size() != 0))

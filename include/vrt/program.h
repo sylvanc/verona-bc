@@ -15,10 +15,10 @@ namespace vrt
   {
     uintptr_t id;
     /** Runtime lifetime and tracing category. */
-    ValueType representation;
+    ValueType value_type;
     /** Native storage size of a value with this type. */
-    uintptr_t size;
-    /** Element type ID for arrays; zero for all other representations. */
+    uintptr_t storage_size;
+    /** Element type ID for arrays; zero for all other value types. */
     uintptr_t element_type_id;
   };
 
@@ -49,8 +49,8 @@ typedef struct vrt_class vrt_class;
 typedef struct vrt_type
 {
   uintptr_t id;
-  uintptr_t representation;
-  uintptr_t size;
+  uintptr_t value_type;
+  uintptr_t storage_size;
   uintptr_t element_type_id;
 } vrt_type;
 

@@ -59,10 +59,10 @@ namespace vbcc
       // Module construction phases consume the normalized VIR tree and lookup
       // indexes already built in Bytecode by assignids.
       bool configure_target();
-      bool predeclare_nominal_types();
-      bool define_type_layouts();
+      bool declare_class_types();
+      bool define_class_types();
       bool declare_callables();
-      bool define_globals_and_metadata();
+      bool define_metadata();
       bool define_functions();
       bool emit_initializers();
       bool verify_and_write(const std::filesystem::path& output);
@@ -72,8 +72,8 @@ namespace vbcc
       void declare_functions();
       bool declare_program_entry();
       bool declare_runtime_functions();
-      bool define_function_descriptors();
-      bool define_program_descriptor();
+      bool define_function_metadata();
+      bool define_program_metadata();
       bool emit_program_entry();
       bool emit_enter_frame(
         const Node& statement, llvm::Value* function_descriptor);

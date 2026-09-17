@@ -311,9 +311,10 @@ echo $? # 0
 `libvrt.a` supplies the native entry point and the process-local
 `set_exit_code(i32)` FFI function used by this first backend slice.
 The compiler/runtime boundary is declared by the installed, C-compatible VRT
-headers. `<vrt/program.h>` defines the generated program descriptor and
-declares the process-, program-, and invocation-lifetime runtime boundaries,
-plus `verona_program_entry(void)` as the generated entry point.
+headers. `<vrt/program.h>` defines the generated program descriptor and its
+runtime type table. It declares the process-, program-, and
+invocation-lifetime runtime boundaries, plus `verona_program_entry(void)` as
+the generated entry point.
 `<vrt/thread.h>` exposes logical-thread access, while `<vrt/frame.h>` exposes
 logical-frame operations and generated function descriptors. Frame and thread
 implementation types remain opaque at the C ABI boundary. Logical frames form
@@ -340,7 +341,7 @@ Native startup separates state by lifetime:
 ```text
 vrt_runtime_init()              process-wide runtime services
 vrt_program_init(&verona_program)
-  program metadata phases      once per generated program
+  register primitive types     once per generated program
 vrt_thread_init()               current native thread
 vrt_invocation_begin()          reset per-invocation state
 verona_program_entry()          execute generated main
@@ -349,7 +350,7 @@ verona_program_entry()          execute generated main
 | Lifetime | Boundary | State initialized | Repetition |
 |----------|----------|-------------------|------------|
 | Process | `vrt_runtime_init` | Scheduler and other process-wide runtime services | Once per process |
-| Generated program | `vrt_program_init` | Compiler-emitted program state; type, singleton, memo, and FFI phases live here | Once per `vrt_program` descriptor |
+| Generated program | `vrt_program_init` | Compiler-emitted primitive type metadata; later singleton, memo, and FFI phases also live here | Once per `vrt_program` descriptor |
 | Native thread | `vrt_thread_init` / `vrt_thread_deinit` | Thread-local native context and logical Verona thread | Once for each participating native thread at a time |
 | Invocation | `vrt_invocation_begin` | Per-run state such as the requested process exit code | Before every call to `verona_program_entry` |
 
@@ -358,6 +359,14 @@ state. Starting another invocation therefore resets only invocation state; it
 does not repeat process or program initialization, and it does not replace the
 calling thread's logical runtime context. Runtime and program initialization
 reject invalid ordering or duplicate initialization.
+
+The generated program descriptor references a sorted table mapping primitive
+type IDs to their runtime value type and native storage size. Program
+initialization registers that table once, and private runtime services can
+subsequently resolve a type ID with `layout_type_id()`. The element type ID is
+reserved for the later array representation and must be zero in this runtime
+slice. Nominal class entries are likewise added with nominal-class lowering,
+rather than being emitted before class values have a native representation.
 
 `libvrt` binds one logical `vrt_thread` to each participating native thread
 using thread-local storage. `vrt_thread_init` and `vrt_thread_deinit` perform
