@@ -90,23 +90,6 @@ namespace vbcc
       return true;
     }
 
-    bool LLVMCodegen::declare_class_types()
-    {
-      // The currently supported scalar VIR types are LLVM context-owned
-      // primitives created on demand by lower_type(), so they need no module
-      // declarations. Future class lowering will create opaque named
-      // StructTypes here, allowing recursive references before layouts exist.
-      return true;
-    }
-
-    bool LLVMCodegen::define_class_types()
-    {
-      // Type aliases do not produce LLVM entities. Future class lowering will
-      // resolve field storage types and set the bodies of the opaque
-      // StructTypes declared by declare_class_types().
-      return true;
-    }
-
     bool LLVMCodegen::declare_callables()
     {
       // Declare every native symbol and Verona function before emitting any
@@ -130,7 +113,7 @@ namespace vbcc
       // Memo globals also belong here so MemoSlot can refer to them while
       // define_functions() emits function bodies. emit_initializers() will
       // later generate the code that fills those globals.
-      return define_function_metadata();
+      return define_function_metadata() && define_class_metadata();
     }
 
     bool LLVMCodegen::define_functions()

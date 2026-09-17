@@ -11,6 +11,7 @@ namespace llvm
 {
   class Function;
   class GlobalVariable;
+  class StructType;
   class Type;
   class Value;
 }
@@ -56,6 +57,14 @@ namespace vbcc
       llvm::Function* function;
       LoweredType return_type;
       std::vector<LoweredType> param_types;
+      llvm::GlobalVariable* descriptor = nullptr;
+    };
+
+    struct LoweredClass
+    {
+      std::size_t type_id;
+      llvm::StructType* payload_type;
+      std::vector<LoweredType> field_types;
       llvm::GlobalVariable* descriptor = nullptr;
     };
 

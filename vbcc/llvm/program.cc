@@ -98,6 +98,23 @@ namespace vbcc
         return false;
       }
 
+      for (const auto& [name, cls] : classes)
+      {
+        (void)name;
+        if (
+          !types
+             .emplace(
+               cls.type_id,
+               EmittedType{
+                 vrt::ValueType::object,
+                 module.getDataLayout().getPointerSize()})
+             .second)
+        {
+          fail(state.top, "duplicate nominal runtime type metadata ID");
+          return false;
+        }
+      }
+
       const auto word = [word_type](std::size_t value) {
         return llvm::ConstantInt::get(word_type, value);
       };

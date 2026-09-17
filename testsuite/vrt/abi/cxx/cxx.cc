@@ -3,12 +3,16 @@
 #include <vrt/error.h>
 #include <vrt/frame.h>
 #include <vrt/function.h>
+#include <vrt/object.h>
 #include <vrt/program.h>
 #include <vrt/region.h>
 #include <vrt/thread.h>
 
 static_assert(std::is_same_v<vrt_func, vrt::Func>);
 static_assert(std::is_same_v<vrt_func_ptr, vrt::FuncPtr>);
+static_assert(std::is_same_v<vrt_field, vrt::Field>);
+static_assert(std::is_same_v<vrt_method, vrt::Method>);
+static_assert(std::is_same_v<vrt_class, vrt::Class>);
 static_assert(std::is_same_v<vrt_frame, vrt::Frame>);
 static_assert(std::is_same_v<vrt_program, vrt::Program>);
 static_assert(std::is_same_v<vrt_thread, vrt::Thread>);

@@ -341,7 +341,7 @@ Native startup separates state by lifetime:
 ```text
 vrt_runtime_init()              process-wide runtime services
 vrt_program_init(&verona_program)
-  register primitive types     once per generated program
+  register primitive and nominal types
 vrt_thread_init()               current native thread
 vrt_invocation_begin()          reset per-invocation state
 verona_program_entry()          execute generated main
@@ -350,7 +350,7 @@ verona_program_entry()          execute generated main
 | Lifetime | Boundary | State initialized | Repetition |
 |----------|----------|-------------------|------------|
 | Process | `vrt_runtime_init` | Scheduler and other process-wide runtime services | Once per process |
-| Generated program | `vrt_program_init` | Compiler-emitted primitive type metadata; later singleton, memo, and FFI phases also live here | Once per `vrt_program` descriptor |
+| Generated program | `vrt_program_init` | Compiler-emitted primitive and nominal type metadata; later singleton, memo, and FFI phases also live here | Once per `vrt_program` descriptor |
 | Native thread | `vrt_thread_init` / `vrt_thread_deinit` | Thread-local native context and logical Verona thread | Once for each participating native thread at a time |
 | Invocation | `vrt_invocation_begin` | Per-run state such as the requested process exit code | Before every call to `verona_program_entry` |
 
@@ -361,12 +361,19 @@ calling thread's logical runtime context. Runtime and program initialization
 reject invalid ordering or duplicate initialization.
 
 The generated program descriptor references a sorted table mapping primitive
-type IDs to their runtime value type and native storage size. Program
-initialization registers that table once, and private runtime services can
-subsequently resolve a type ID with `layout_type_id()`. The element type ID is
-reserved for the later array representation and must be zero in this runtime
-slice. Nominal class entries are likewise added with nominal-class lowering,
-rather than being emitted before class values have a native representation.
+and nominal-class type IDs to their runtime value type and native storage size.
+Program initialization registers that table once, and private runtime services
+can subsequently resolve a type ID with `layout_type_id()`. The element type ID
+is reserved for the later array representation and must be zero in this runtime
+slice.
+
+Nominal class values lower to native pointers. The backend first declares
+opaque payload structures for every class so recursive class fields can be
+resolved, then defines their native field layouts. Immutable class metadata
+records the class ID and name, payload size and alignment, ordered fields, and
+method table. Method entries are sorted by method ID and refer to the existing
+generated function metadata. The singleton pointer remains null until the
+separate empty-class singleton initialization slice.
 
 `libvrt` binds one logical `vrt_thread` to each participating native thread
 using thread-local storage. `vrt_thread_init` and `vrt_thread_deinit` perform
@@ -423,6 +430,7 @@ tailcall teardown while preserving the logical frame, its identity, and its
 frame-local region.
 
 > **Status:** The LLVM backend currently supports scalar primitive types,
+> nominal class layouts and metadata,
 > multi-block conditional control flow, scalar operations, copy/move/drop,
 > static calls, process-local non-variadic FFI calls, returns,
 > scalar/raw-pointer `raise` payloads, and static tailcalls. Dynamic tailcalls

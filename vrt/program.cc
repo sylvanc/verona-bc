@@ -25,6 +25,7 @@ namespace
       case vrt::ValueType::none:
       case vrt::ValueType::scalar:
       case vrt::ValueType::raw_pointer:
+      case vrt::ValueType::object:
         return true;
 
       default:

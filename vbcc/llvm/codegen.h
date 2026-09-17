@@ -33,6 +33,7 @@ namespace vbcc
       std::vector<LoweredLibrary> libraries;
       std::unordered_map<std::string, LoweredSymbol> symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
+      std::unordered_map<std::string, LoweredClass> classes;
       LoweredRuntime runtime;
       llvm::Function* program_entry = nullptr;
       BasicBlockState blocks;
@@ -51,6 +52,7 @@ namespace vbcc
       void fail(const Node& node, const std::string& message);
 
       std::optional<LoweredType> lower_type(const Node& type);
+      std::optional<LoweredType> lower_class_id_type(const Node& type);
       std::optional<std::vector<LoweredType>> lower_params(const Node& params);
 
       bool emit_retain(const Node& use, const LoweredValue& value);
@@ -73,6 +75,7 @@ namespace vbcc
       bool declare_program_entry();
       bool declare_runtime_functions();
       bool define_function_metadata();
+      bool define_class_metadata();
       bool define_program_metadata();
       bool emit_program_entry();
       bool emit_enter_frame(

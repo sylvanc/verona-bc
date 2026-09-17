@@ -13,9 +13,6 @@ namespace vbcc
     lower_dyn_type(llvm::LLVMContext& context, const Node& type);
 
     std::optional<LoweredType>
-    lower_class_id_type(llvm::LLVMContext& context, const Node& type);
-
-    std::optional<LoweredType>
     lower_type_id_type(llvm::LLVMContext& context, const Node& type);
 
     std::optional<LoweredType>
@@ -41,7 +38,7 @@ namespace vbcc
       else if (type == Dyn)
         lowered = lower_dyn_type(context, type);
       else if (type == ClassId)
-        lowered = lower_class_id_type(context, type);
+        lowered = lower_class_id_type(type);
       else if (type == TypeId)
         lowered = lower_type_id_type(context, type);
       else if (type == Union)

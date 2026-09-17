@@ -1,6 +1,7 @@
 #include <vrt/error.h>
 #include <vrt/frame.h>
 #include <vrt/function.h>
+#include <vrt/object.h>
 #include <vrt/program.h>
 #include <vrt/region.h>
 #include <vrt/thread.h>
@@ -9,6 +10,10 @@ _Static_assert(sizeof(vrt_error) == sizeof(uint32_t), "error ABI");
 _Static_assert(VRT_ERROR_NONE == 0, "no error ABI");
 _Static_assert(VRT_ERROR_BAD_RAISE_TARGET == 1, "raise error ABI");
 _Static_assert(VRT_ERROR_BAD_ALLOC_TARGET == 2, "allocation error ABI");
+_Static_assert(
+  sizeof(vrt_field) == (4 * sizeof(uintptr_t)), "field metadata ABI");
+_Static_assert(
+  sizeof(((vrt_class*)0)->singleton) == sizeof(void*), "class metadata ABI");
 
 static const vrt_error bad_array_index = VRT_ERROR_BAD_ARRAY_INDEX;
 
