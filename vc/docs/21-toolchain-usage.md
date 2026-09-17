@@ -311,15 +311,15 @@ echo $? # 0
 `libvrt.a` supplies the native entry point and the process-local
 `set_exit_code(i32)` FFI function used by this first backend slice.
 The compiler/runtime boundary is declared by the installed, C-compatible VRT
-headers. `<vrt/program.h>` declares `set_exit_code(int32_t)` as a
-runtime-provided function and `verona_program_entry(void)` as the generated
-program entry point. `<vrt/thread.h>` exposes logical-thread access, while
-`<vrt/frame.h>` exposes logical-frame operations and generated function
-descriptors. Both use the opaque types declared by `<vrt/types.h>`. Logical
-frames form a parent chain, carry a stable runtime-assigned identity and
-generated function descriptor, and can be rebound without changing identity
-in preparation for a tailcall. Their concrete C++ layouts remain private to
-`libvrt`.
+headers. `<vrt/program.h>` defines the generated program descriptor and
+declares the process-, program-, and invocation-lifetime runtime boundaries,
+plus `verona_program_entry(void)` as the generated entry point.
+`<vrt/thread.h>` exposes logical-thread access, while `<vrt/frame.h>` exposes
+logical-frame operations and generated function descriptors. Frame and thread
+implementation types remain opaque at the C ABI boundary. Logical frames form
+a parent chain, carry a stable runtime-assigned identity and generated function
+descriptor, and can be rebound without changing identity in preparation for a
+tailcall. Their concrete C++ layouts remain private to `libvrt`.
 
 The native entry point invokes generated code through `vrt_try_invoke`.
 When a runtime-dependent language error occurs, `vrt_error_raise` records its
@@ -335,11 +335,35 @@ count, or other corrupt runtime state still terminates because continuing
 would be unsafe. Runtime errors are observable to the native caller, but are
 not catchable from Verona source.
 
+Native startup separates state by lifetime:
+
+```text
+vrt_runtime_init()              process-wide runtime services
+vrt_program_init(&verona_program)
+  program metadata phases      once per generated program
+vrt_thread_init()               current native thread
+vrt_invocation_begin()          reset per-invocation state
+verona_program_entry()          execute generated main
+```
+
+| Lifetime | Boundary | State initialized | Repetition |
+|----------|----------|-------------------|------------|
+| Process | `vrt_runtime_init` | Scheduler and other process-wide runtime services | Once per process |
+| Generated program | `vrt_program_init` | Compiler-emitted program state; type, singleton, memo, and FFI phases live here | Once per `vrt_program` descriptor |
+| Native thread | `vrt_thread_init` / `vrt_thread_deinit` | Thread-local native context and logical Verona thread | Once for each participating native thread at a time |
+| Invocation | `vrt_invocation_begin` | Per-run state such as the requested process exit code | Before every call to `verona_program_entry` |
+
+The ordering proceeds from the longest-lived state to the shortest-lived
+state. Starting another invocation therefore resets only invocation state; it
+does not repeat process or program initialization, and it does not replace the
+calling thread's logical runtime context. Runtime and program initialization
+reject invalid ordering or duplicate initialization.
+
 `libvrt` binds one logical `vrt_thread` to each participating native thread
-using thread-local storage. Runtime-owned startup and teardown perform that
-binding; generated code does not create or destroy threads. Code that needs
-the runtime thread can probe it with `vrt_thread_current()` instead of carrying
-a hidden thread argument through every Verona call.
+using thread-local storage. `vrt_thread_init` and `vrt_thread_deinit` perform
+that binding; generated code does not create or destroy threads. Code that
+needs the runtime thread can probe it with `vrt_thread_current()` instead of
+carrying a hidden thread argument through every Verona call.
 
 Internal Verona functions receive only their declared user parameters; runtime
 context is not carried in hidden LLVM arguments. Ordinary call sites call
@@ -348,7 +372,7 @@ context is not carried in hidden LLVM arguments. Ordinary call sites call
 the LLVM `musttail` call. Generated returns call `vrt_frame_leave`, while a
 tailcall transfers the frame without leaving it. The C-compatible
 `verona_program_entry` wrapper enters the `@main` frame and calls the internal
-function without performing thread setup or teardown.
+function without performing runtime, program, thread, or invocation setup.
 
 A static VIR `call` resolves its `FunctionId` through the module's predeclared
 function table, applies each argument's `ArgMove` or `ArgCopy` ownership

@@ -22,6 +22,16 @@ extern "C" VRT_EXPORT vrt_thread* vrt_thread_current(void)
   return context == nullptr ? nullptr : &context->thread;
 }
 
+extern "C" VRT_EXPORT void vrt_thread_init(void)
+{
+  vrt::init_thread();
+}
+
+extern "C" VRT_EXPORT void vrt_thread_deinit(void)
+{
+  vrt::deinit_thread();
+}
+
 extern "C" VRT_EXPORT vrt_frame* vrt_thread_current_frame(void)
 {
   auto* context = vrt::ThreadContext::try_get();

@@ -13,6 +13,10 @@ _Static_assert(VRT_ERROR_BAD_ALLOC_TARGET == 2, "allocation error ABI");
 static const vrt_error bad_array_index = VRT_ERROR_BAD_ARRAY_INDEX;
 
 static void (*const set_exit_code_signature)(int32_t) = set_exit_code;
+static void (*const runtime_init_signature)(void) = vrt_runtime_init;
+static void (*const program_init_signature)(const vrt_program*) =
+  vrt_program_init;
+static void (*const invocation_begin_signature)(void) = vrt_invocation_begin;
 static const char* (*const error_message_signature)(vrt_error) =
   vrt_error_message;
 static int (*const try_invoke_signature)(
@@ -20,6 +24,8 @@ static int (*const try_invoke_signature)(
 static void (*const error_raise_signature)(vrt_error) = vrt_error_raise;
 static void (*const program_entry_signature)(void) = verona_program_entry;
 static vrt_thread* (*const thread_current_signature)(void) = vrt_thread_current;
+static void (*const thread_init_signature)(void) = vrt_thread_init;
+static void (*const thread_deinit_signature)(void) = vrt_thread_deinit;
 static vrt_frame* (*const thread_current_frame_signature)(void) =
   vrt_thread_current_frame;
 static vrt_frame* (*const frame_enter_signature)(
@@ -47,11 +53,16 @@ static vrt_func_ptr (*const func_get_ptr_signature)(const vrt_func*) =
 void verona_program_entry(void)
 {
   set_exit_code_signature(0);
+  (void)runtime_init_signature;
+  (void)program_init_signature;
+  (void)invocation_begin_signature;
   (void)error_message_signature;
   (void)try_invoke_signature;
   (void)error_raise_signature;
   (void)program_entry_signature;
   (void)thread_current_signature;
+  (void)thread_init_signature;
+  (void)thread_deinit_signature;
   (void)thread_current_frame_signature;
   (void)frame_enter_signature;
   (void)frame_leave_signature;
@@ -67,3 +78,5 @@ void verona_program_entry(void)
   (void)func_get_ptr_signature;
   (void)bad_array_index;
 }
+
+const vrt_program verona_program = {0, 0, 0, 0};

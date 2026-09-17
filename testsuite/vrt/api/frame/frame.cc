@@ -1,5 +1,4 @@
 #include "frame.h"
-#include "vrt.h"
 
 #include <vrt/thread.h>
 
@@ -16,7 +15,7 @@ int main()
     (vrt_frame_func(nullptr) != nullptr))
     return 1;
 
-  vrt::init_thread();
+  vrt_thread_init();
   if (vrt_thread_current_frame() != nullptr)
     return 2;
 
@@ -114,6 +113,6 @@ int main()
   if (vrt_thread_current_frame() != nullptr)
     return 16;
 
-  vrt::deinit_thread();
+  vrt_thread_deinit();
   return 0;
 }

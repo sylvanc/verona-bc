@@ -10,6 +10,7 @@
 static_assert(std::is_same_v<vrt_func, vrt::Func>);
 static_assert(std::is_same_v<vrt_func_ptr, vrt::FuncPtr>);
 static_assert(std::is_same_v<vrt_frame, vrt::Frame>);
+static_assert(std::is_same_v<vrt_program, vrt::Program>);
 static_assert(std::is_same_v<vrt_thread, vrt::Thread>);
 static_assert(std::is_same_v<vrt_region_type, vrt::RegionType>);
 static_assert(std::is_same_v<vrt_error, vrt::Error>);
@@ -20,6 +21,10 @@ static_assert(
   std::is_same_v<std::underlying_type_t<vrt::Error>, std::uint32_t>);
 static_assert(VRT_ERROR_BAD_ARRAY_INDEX == vrt::Error::bad_array_index);
 static_assert(std::is_same_v<decltype(&set_exit_code), void (*)(std::int32_t)>);
+static_assert(std::is_same_v<decltype(&vrt_runtime_init), void (*)(void)>);
+static_assert(
+  std::is_same_v<decltype(&vrt_program_init), void (*)(const vrt_program*)>);
+static_assert(std::is_same_v<decltype(&vrt_invocation_begin), void (*)(void)>);
 static_assert(
   std::is_same_v<decltype(&vrt_error_message), const char* (*)(vrt::Error)>);
 static_assert(std::is_same_v<
@@ -29,6 +34,8 @@ static_assert(std::is_same_v<decltype(&vrt_error_raise), void (*)(vrt::Error)>);
 static_assert(std::is_same_v<decltype(&verona_program_entry), void (*)(void)>);
 static_assert(
   std::is_same_v<decltype(&vrt_thread_current), vrt_thread* (*)(void)>);
+static_assert(std::is_same_v<decltype(&vrt_thread_init), void (*)(void)>);
+static_assert(std::is_same_v<decltype(&vrt_thread_deinit), void (*)(void)>);
 static_assert(
   std::is_same_v<decltype(&vrt_thread_current_frame), vrt_frame* (*)(void)>);
 static_assert(std::is_same_v<
@@ -67,3 +74,5 @@ extern "C" void verona_program_entry(void)
 {
   set_exit_code(0);
 }
+
+extern "C" const vrt_program verona_program{0, nullptr, 0, nullptr};

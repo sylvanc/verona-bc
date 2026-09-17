@@ -73,6 +73,7 @@ namespace vbcc
       bool declare_program_entry();
       bool declare_runtime_functions();
       bool define_function_descriptors();
+      bool define_program_descriptor();
       bool emit_program_entry();
       bool emit_enter_frame(
         const Node& statement, llvm::Value* function_descriptor);

@@ -37,6 +37,9 @@ namespace vbcc
       if (!define_functions())
         return false;
 
+      if (!define_program_descriptor())
+        return false;
+
       if (!emit_initializers())
         return false;
 

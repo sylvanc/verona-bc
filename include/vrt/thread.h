@@ -19,6 +19,12 @@ extern "C"
 typedef struct vrt_thread vrt_thread;
 #endif
 
+  /** Bind a fresh logical Verona thread to the calling native thread. */
+  VRT_EXPORT void vrt_thread_init(void);
+
+  /** Destroy the logical Verona thread bound to the calling native thread. */
+  VRT_EXPORT void vrt_thread_deinit(void);
+
   /** Return the logical thread bound to this native thread, or null. */
   VRT_EXPORT vrt_thread* vrt_thread_current(void);
 
