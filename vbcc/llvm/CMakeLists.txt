@@ -59,8 +59,10 @@ target_include_directories(libvbcllvm SYSTEM PRIVATE
   ${LLVM_INCLUDE_DIRS}
 )
 
+separate_arguments(
+  VERONA_LLVM_DEFINITIONS NATIVE_COMMAND "${LLVM_DEFINITIONS}")
 target_compile_options(libvbcllvm PRIVATE
-  ${LLVM_DEFINITIONS}
+  ${VERONA_LLVM_DEFINITIONS}
 )
 
 target_link_libraries(libvbcllvm PUBLIC

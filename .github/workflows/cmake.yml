@@ -29,30 +29,43 @@ jobs:
         include:
           - platform: "ubuntu-latest"
             cmake-flags: "-G Ninja"
-            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+            dependencies: |
+              sudo apt-get update
+              sudo apt-get install -y ninja-build pkg-config libssl-dev libzstd-dev libffi-dev libgit2-dev llvm-18-dev
+              echo "LLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm" >> "$GITHUB_ENV"
 
           - platform: "ubuntu-24.04-arm"
             cmake-flags: "-G Ninja"
-            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+            dependencies: |
+              sudo apt-get update
+              sudo apt-get install -y ninja-build pkg-config libssl-dev libzstd-dev libffi-dev libgit2-dev llvm-18-dev
+              echo "LLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm" >> "$GITHUB_ENV"
 
           - platform: "macos-latest"
             cmake-flags: "-G Ninja"
             dependencies: |
-              brew install ninja libffi libgit2 zstd openssl pkg-config
+              brew install ninja libffi libgit2 zstd openssl pkg-config llvm@20
               echo "PKG_CONFIG_PATH=$(brew --prefix libffi)/lib/pkgconfig:$(brew --prefix zstd)/lib/pkgconfig:$(brew --prefix libgit2)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
               echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+              echo "LLVM_DIR=$(brew --prefix llvm@20)/lib/cmake/llvm" >> "$GITHUB_ENV"
 
           - variant: "Clang"
             platform: "ubuntu-latest"
             build-type: "Release"
             cmake-flags: "-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
-            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+            dependencies: |
+              sudo apt-get update
+              sudo apt-get install -y ninja-build pkg-config libssl-dev libzstd-dev libffi-dev libgit2-dev llvm-18-dev
+              echo "LLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm" >> "$GITHUB_ENV"
 
           - variant: "Sanitizer"
             platform: "ubuntu-latest"
             build-type: "Release"
             cmake-flags: "-G Ninja -DSANITIZER=address,undefined -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
-            dependencies: "sudo apt update && sudo apt install ninja-build libzstd-dev libffi-dev libgit2-dev"
+            dependencies: |
+              sudo apt-get update
+              sudo apt-get install -y ninja-build pkg-config libssl-dev libzstd-dev libffi-dev libgit2-dev llvm-18-dev
+              echo "LLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm" >> "$GITHUB_ENV"
       # Don't abort runners if a single one fails
       fail-fast: false
     runs-on: ${{matrix.platform}}
@@ -64,7 +77,7 @@ jobs:
       run: ${{ matrix.dependencies }}
     
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DVERONA_CI_BUILD=On ${{matrix.cmake-flags}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DVERONA_CI_BUILD=On -DLLVM_DIR="$LLVM_DIR" ${{matrix.cmake-flags}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.build-type}} --parallel 4
@@ -84,13 +97,13 @@ jobs:
 
     - name: Install build dependencies
       run: |
-        sudo apt update
-        sudo apt install clang-format-20 libzstd-dev libffi-dev libgit2-dev
+        sudo apt-get update
+        sudo apt-get install -y clang-format-20 pkg-config libssl-dev libzstd-dev libffi-dev libgit2-dev llvm-18-dev
 
     # We don't need to do the build for this job, but we need to configure it to get the clangformat
     # and copyright targets
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build
+      run: cmake -B ${{github.workspace}}/build -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm
 
     - name: Run clangformat
       working-directory: ${{github.workspace}}/build
