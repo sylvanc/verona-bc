@@ -168,6 +168,48 @@ The fixture directory is also the node name (`vrt/api/error` in this example).
 Unlike compiler pipelines, VRT tests have no separate compile and run nodes,
 so they do not add a redundant `run/` level.
 
+## Fixture Coverage Documentation
+
+Every non-trivial LLVM or VRT fixture must document the boundary it verifies.
+Keep a short explanation at the top of the fixture source when it fits without
+obscuring the test. For LLVM-native fixtures, prefer this structure:
+
+```text
+Coverage
+Native VRT coverage
+Non-goals
+```
+
+- **Coverage** names the compiler constructs, emitted metadata, or runtime
+  operations that the fixture directly exercises.
+- **Native VRT coverage** names the generated metadata or calls that VRT
+  actually consumes. Do not claim that a successful link or execution proves
+  a descriptor was consumed when the program only emitted it.
+- **Non-goals** records adjacent behavior intentionally left to another
+  fixture, such as allocation, singleton initialization, or dynamic dispatch.
+
+Adapt the runtime heading when appropriate, for example `VBCI coverage` or
+`Runtime coverage`. Very small regression fixtures may use a compact paragraph
+instead of all three headings, but the verified behavior must remain explicit.
+
+For a long fixture or one covering several distinct scenarios, put the detailed
+explanation in an adjacent `README.md` rather than adding a large comment block
+that pushes the test body out of view. Keep a one- or two-line source header
+pointing to that README. Place it beside the source, for example:
+
+```text
+testsuite/vir/llvm_object_alloc/
+├── README.md
+├── llvm_object_alloc.vir
+└── llvm_object_alloc/
+    └── ... goldens ...
+```
+
+The README should summarize the fixture's purpose, exercised pipelines, major
+scenarios, runtime boundary, and non-goals. It should not duplicate a
+line-by-line walkthrough of the source or live inside a generated golden
+directory.
+
 ## Source Goldens and Build Artifacts
 
 For a standard fixture, committed goldens are colocated with the source:
