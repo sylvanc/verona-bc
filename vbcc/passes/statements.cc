@@ -531,6 +531,22 @@ namespace vbcc
             return CallDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
           },
 
+        // Bulk array operations.
+        Dst * T(ArrayCopy)[Type] * CallArgs[Args] >>
+          [](Match& _) {
+            return ArrayCopy << _(LocalId) << callargs(_[Args]);
+          },
+
+        Dst * T(ArrayFill)[Type] * CallArgs[Args] >>
+          [](Match& _) {
+            return ArrayFill << _(LocalId) << callargs(_[Args]);
+          },
+
+        Dst * T(ArrayCompare)[Type] * CallArgs[Args] >>
+          [](Match& _) {
+            return ArrayCompare << _(LocalId) << callargs(_[Args]);
+          },
+
         // FFI call.
         Dst * T(FFI) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {

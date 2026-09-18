@@ -81,6 +81,9 @@ namespace vbcc
         "store\\b" >> [](auto& m) { m.add(Store); },
         "lookup\\b" >> [](auto& m) { m.add(Lookup); },
         "call\\b" >> [](auto& m) { m.add(Call); },
+        "arraycopy\\b" >> [](auto& m) { m.add(ArrayCopy); },
+        "arrayfill\\b" >> [](auto& m) { m.add(ArrayFill); },
+        "arraycmp\\b" >> [](auto& m) { m.add(ArrayCompare); },
 
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
         "when\\b" >> [](auto& m) { m.add(When); },

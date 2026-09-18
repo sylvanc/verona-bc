@@ -177,6 +177,28 @@ namespace vbcc
           return NoChange;
         },
 
+        T(ArrayCopy, ArrayCompare)[New] >> [state](Match& _) -> Node {
+          auto operation = _(New);
+          if ((operation / Args)->size() != 5)
+          {
+            state->error = true;
+            return err(operation / Args, "wrong number of arguments");
+          }
+
+          return NoChange;
+        },
+
+        T(ArrayFill)[New] >> [state](Match& _) -> Node {
+          auto operation = _(New);
+          if ((operation / Args)->size() != 4)
+          {
+            state->error = true;
+            return err(operation / Args, "wrong number of arguments");
+          }
+
+          return NoChange;
+        },
+
         T(New, Stack, Heap, Region)[New] >> [state](Match& _) -> Node {
           auto alloc = _(New);
           auto id = state->get_class_id(alloc / ClassId);

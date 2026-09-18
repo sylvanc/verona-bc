@@ -1774,15 +1774,112 @@ namespace vbcc
           // These produce None.
           set_type(env, node / LocalId, None);
         }
-        else if (node->type().in({ArrayCopy, ArrayFill}))
+        else if (node->type().in({ArrayCopy, ArrayFill, ArrayCompare}))
         {
-          // Bulk array ops that return None.
-          set_type(env, node / LocalId, None);
-        }
-        else if (node == ArrayCompare)
-        {
-          // ArrayCompare produces I64.
-          set_type(env, node / LocalId, I64);
+          auto args = node / Args;
+          const auto operation = std::string(node->type().str());
+          const std::size_t expected_arity = node == ArrayFill ? 4 : 5;
+
+          if (args->size() != expected_arity)
+          {
+            type_err(node, operation + ": wrong number of arguments");
+            return true;
+          }
+
+          auto first_array = typed(args->at(0) / Rhs);
+          if (first_array && !is_array_type(first_array))
+          {
+            type_err(
+              args->at(0),
+              std::format(
+                "{}: operand type '{}' is not an array type",
+                operation,
+                type_name(first_array)));
+            return true;
+          }
+
+          const auto check_size_arg = [&](std::size_t index) {
+            auto size_type = typed(args->at(index) / Rhs);
+            if (size_type && !all_leaves_are(size_type, USize))
+            {
+              type_err(
+                args->at(index),
+                std::format(
+                  "{}: offset and length type '{}' is not usize",
+                  operation,
+                  type_name(size_type)));
+              return false;
+            }
+
+            return true;
+          };
+
+          if (
+            !check_size_arg(1) ||
+            ((node != ArrayFill) && !check_size_arg(3)) ||
+            !check_size_arg(node == ArrayFill ? 2 : 4))
+            return true;
+
+          if (node == ArrayFill)
+          {
+            auto fill_type = typed(args->at(3) / Rhs);
+            if (
+              first_array && (first_array == Array) && fill_type &&
+              !IRSubtype.invariant(top, resolve_type(first_array / Type), fill_type))
+            {
+              type_err(
+                args->at(3),
+                std::format(
+                  "arrayfill: value type '{}' does not match element type '{}'",
+                  type_name(fill_type),
+                  type_name(resolve_type(first_array / Type))));
+              return true;
+            }
+
+            set_type(env, node / LocalId, None);
+            return true;
+          }
+
+          auto second_array = typed(args->at(2) / Rhs);
+          if (second_array && !is_array_type(second_array))
+          {
+            type_err(
+              args->at(2),
+              std::format(
+                "{}: operand type '{}' is not an array type",
+                operation,
+                type_name(second_array)));
+            return true;
+          }
+
+          if (
+            first_array && second_array &&
+            !IRSubtype.invariant(top, first_array, second_array))
+          {
+            type_err(
+              node,
+              std::format(
+                "{}: mismatched array types '{}' and '{}'",
+                operation,
+                type_name(first_array),
+                type_name(second_array)));
+            return true;
+          }
+
+          if (
+            (node == ArrayCompare) && first_array && (first_array == Array) &&
+            !is_primitive(resolve_type(first_array / Type)))
+          {
+            type_err(
+              node,
+              std::format(
+                "arraycmp: element type '{}' is not primitive",
+                type_name(resolve_type(first_array / Type))));
+            return true;
+          }
+
+          set_type(
+            env, node / LocalId, node == ArrayCompare ? I64 : None);
         }
         else if (node->type().in({MakeCallback, CodePtrCallback}))
         {
