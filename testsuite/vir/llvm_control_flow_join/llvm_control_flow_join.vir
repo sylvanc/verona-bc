@@ -1,3 +1,13 @@
+// Coverage:
+// - Lowers assignments to one mutable local from alternative predecessor
+//   blocks and reads the joined value in their shared successor.
+//
+// Native VRT coverage:
+// - Starts the generated program and records the joined result as its status.
+//
+// Non-goals:
+// - Does not exercise nested joins, loops, or object-valued locals.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 

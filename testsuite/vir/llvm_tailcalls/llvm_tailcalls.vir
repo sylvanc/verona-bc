@@ -1,3 +1,12 @@
+// Coverage:
+// - Lowers a direct tail call with an i32 argument from @main to @finish.
+//
+// Native VRT coverage:
+// - Runs the generated tail-call path through the VRT program entry point.
+//
+// Non-goals:
+// - Does not exercise dynamic tail calls, non-local returns, or object values.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 

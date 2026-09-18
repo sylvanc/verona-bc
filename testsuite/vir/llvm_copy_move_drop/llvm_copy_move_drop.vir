@@ -1,3 +1,13 @@
+// Coverage:
+// - Lowers scalar Copy, Move, and Drop statements while preserving the copied
+//   source and consuming the mutable move source.
+//
+// Native VRT coverage:
+// - Starts the generated program and records both scalar values as statuses.
+//
+// Non-goals:
+// - Does not exercise object ownership, region transfer, or finalization.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 

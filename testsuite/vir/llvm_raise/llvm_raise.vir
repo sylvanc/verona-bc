@@ -1,3 +1,15 @@
+// Coverage:
+// - Lowers raise payloads for i32, f64, ptr, and none return representations.
+// - Transfers an i32 non-locally through two preserved ordinary call frames.
+//
+// Native VRT coverage:
+// - Starts the generated program and records whether the recovered payload
+//   equals its expected value.
+// - The raise transfer itself remains within generated native control flow.
+//
+// Non-goals:
+// - Does not exercise tail-call frame reuse, object payloads, or handlers.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 

@@ -1,3 +1,13 @@
+// Coverage:
+// - Lowers conditional branches, forward jumps, and multiple return blocks.
+// - Executes both true and false branch outcomes before reaching success.
+//
+// Native VRT coverage:
+// - Starts the generated program and records its status through set_exit_code.
+//
+// Non-goals:
+// - Does not exercise loops, joined block parameters, or non-local returns.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 

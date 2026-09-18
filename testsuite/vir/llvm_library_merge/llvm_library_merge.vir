@@ -1,6 +1,15 @@
-// Multiple process-local Lib fragments share the same empty library path.
-// Calls to symbols from both fragments verify that assignids associates every
-// SymbolId with the single merged library.
+// Coverage:
+// - Merges multiple process-local Lib fragments with the same empty path and
+//   resolves symbols from both fragments through the combined library.
+//
+// Native VRT coverage:
+// - Starts the generated program and records its status through set_exit_code.
+// - malloc and free resolve to the host C library rather than VRT.
+//
+// Non-goals:
+// - Does not exercise separate library paths, library initialization, or
+//   generated object metadata.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 

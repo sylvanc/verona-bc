@@ -1,3 +1,15 @@
+// Coverage:
+// - Combines direct tail-call frame reuse with an i32 non-local return targeted
+//   at the source frame's continuation.
+// - Preserves multi-block functions so optimization cannot erase that path.
+//
+// Native VRT coverage:
+// - Starts the generated program and records the recovered payload as status.
+// - Tail-call and raise transfers remain within generated native control flow.
+//
+// Non-goals:
+// - Does not exercise dynamic tail calls, object payloads, or region changes.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 
