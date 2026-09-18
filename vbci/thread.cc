@@ -1147,7 +1147,18 @@ namespace vbci
             }
 
             self.check_args(cls.fields);
-            dst = ValueTransfer(&frame.region->object(cls)->init(frame, cls));
+            auto obj = frame.region->object(cls);
+          try
+          {
+            LOG(Trace) << "I'm trying to initialize";
+            dst = ValueTransfer(&obj->init(frame, cls));
+          }
+          catch(...)
+          {
+            LOG(Trace) << "I caught an exception";
+            obj->field_dec();
+            throw;
+          }
           });
         break;
       }
@@ -1183,6 +1194,7 @@ namespace vbci
                   Thread& self,
                   Frame& frame) INLINE {
           auto region = region_loc->region();
+          auto obj = region->object(cls);
 
           if (cls.singleton)
           {
@@ -1191,7 +1203,17 @@ namespace vbci
           }
 
           self.check_args(cls.fields);
-          dst = ValueTransfer(&region->object(cls)->init(frame, cls));
+          try
+          {
+            LOG(Trace) << "I'm trying to initialize";
+            dst = ValueTransfer(&obj->init(frame, cls));
+          }
+          catch(...)
+          {
+            LOG(Trace) << "I caught an exception";
+            obj->field_dec();
+            throw;
+          }
         });
         break;
       }
@@ -1211,7 +1233,20 @@ namespace vbci
 
           self.check_args(cls.fields);
           auto region = Region::create(region_type);
-          dst = ValueTransfer(&region->object(cls)->init(frame, cls));
+          auto obj = region->object(cls);
+          try
+          {
+            LOG(Trace) << "I'm trying to initialize";
+            dst = ValueTransfer(&obj->init(frame, cls));
+          }
+          catch(...)
+          {
+            LOG(Trace) << "I caught an exception";
+            obj->field_dec();
+            region->stack_dec();
+            throw;
+          }
+         
         });
         break;
       }
