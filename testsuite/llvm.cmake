@@ -1,5 +1,5 @@
 if(VERONA_ENABLE_LLVM_BACKEND)
-  set(TESTSUITE_REGEX "^vir/llvm_[^/]+/llvm_[^/]+\\.vir$")
+  set(TESTSUITE_REGEX "^vir/(llvm|vrt)_[^/]+/(llvm|vrt)_[^/]+\\.vir$")
 
   find_program(
     VERONA_LLVM_AS

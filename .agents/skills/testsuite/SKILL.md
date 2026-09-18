@@ -26,7 +26,7 @@ The four collections are:
 |---|---|---|
 | `vc.cmake` | `*.v` | Verona compile -> bytecode run |
 | `vbc.cmake` | `*.vir` | VIR compile -> bytecode run |
-| `llvm.cmake` | `vir/llvm_*/*.vir` | emit IR -> assemble -> codegen -> link -> native run |
+| `llvm.cmake` | `vir/{llvm,vrt}_*/{llvm,vrt}_*.vir` | emit IR -> assemble -> codegen -> link -> native run |
 | `vrt.cmake` | selected C/C++ sources under `vrt/` | build libvrt test targets and register run nodes |
 
 `vc.cmake` and `vbc.cmake` omit the run node for sources below a
@@ -40,7 +40,9 @@ testsuite/vir/simp1/simp1.vir
 
 The `llvm_*` files remain ordinary VIR fixtures. Each is compiled and run as
 bytecode by `vbc.cmake` and also follows the native LLVM graph registered by
-`llvm.cmake`. There is no duplicate LLVM source tree.
+`llvm.cmake`. The `vrt_*` VIR fixtures exercise native VRT-specific behavior:
+they are compiled to validate the shared VIR input but do not register a VBCI
+run node. There is no duplicate LLVM source tree.
 
 ## Named Nodes
 
@@ -93,8 +95,8 @@ not copied into the source tree as goldens. Pass dumps are produced only when
 
 ### LLVM native
 
-`llvm.cmake` selects only fixtures named `vir/llvm_*/llvm_*.vir`. Each fixture
-has five nodes:
+`llvm.cmake` selects fixtures named `vir/llvm_*/llvm_*.vir` or
+`vir/vrt_*/vrt_*.vir`. Each fixture has five nodes:
 
 ```text
 emit-ir -> assemble -> codegen -> link -> run
@@ -133,7 +135,7 @@ then registers their execution as named nodes:
 
 - `vrt/abi/{c,cxx}` tests public C11/C++ layout, inclusion, linkage, and
   signatures;
-- `vrt/api/{error,frame,function,object,thread}` tests one
+- `vrt/api/{array,error,frame,function,object,program,thread}` tests one
   exported VRT API family per executable;
 - `vrt/behavior/{default-exit,set-exit,last-write-wins}` tests generated
   program exit behavior with expected statuses `0`, `7`, and `3`;
@@ -158,18 +160,21 @@ headers to inspect headers, reference counts, regions, or thread state. Such
 inspection is test-only: API fixtures still drive behavior through exported
 VRT functions, while internal fixtures directly test runtime invariants.
 
+The region test covers object and array allocation in frame-local regions,
+existing RC/arena regions, and fresh RC/arena regions.
+
 Each VRT node is a self-contained fixture whose source name matches
 its directory name and whose expected outputs are next to the source:
 
 ```text
-testsuite/vrt/api/error/
-├── error.cc
+testsuite/vrt/api/array/
+├── array.cc
 ├── exit_code.txt
 ├── stderr.txt
 └── stdout.txt
 ```
 
-The fixture directory is also the node name (`vrt/api/error` in this example).
+The fixture directory is also the node name (`vrt/api/array` in this example).
 Unlike compiler pipelines, VRT tests have no separate compile and run nodes,
 so they do not add a redundant `run/` level.
 
@@ -348,5 +353,7 @@ inside a source directory can derive a hidden output name from `.`.
 6. Declare `exit_code.txt` in every `GOLDENS` list.
 7. Do not commit `.vbc`, `.ll`, `.bc`, `.o`, executables, or final/pass AST
    files as runner goldens.
-8. Keep LLVM-capable `.vir` sources under `testsuite/vir/` so the ordinary
-   bytecode collection continues to test them too.
+8. Keep LLVM-capable `.vir` sources under `testsuite/vir/`. Use an `llvm_*`
+  fixture for tests that run under both VBCI and native VRT. Reserve `vrt_*`
+  for VRT-specific behavior: these fixtures compile to VBC to validate the
+  shared VIR input, but skip VBCI execution and run only as native programs.
