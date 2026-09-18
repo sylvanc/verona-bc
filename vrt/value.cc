@@ -5,6 +5,7 @@
 #include "failure.h"
 #include "header.h"
 #include "object.h"
+#include "thread_context.h"
 
 namespace vrt
 {
@@ -99,6 +100,13 @@ namespace vrt
 
   void Value::escape() const
   {
-    escape_header(header());
+    auto* value_header = header();
+    if (value_header->location().is_immortal())
+      return;
+
+    auto* context = ThreadContext::try_get();
+    internal_check(context != nullptr, Failure::invalid_header_state);
+
+    context->escape(value_header);
   }
 }

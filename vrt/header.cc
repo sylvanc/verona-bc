@@ -1,15 +1,11 @@
 #include "header.h"
 
 #include "array.h"
-#include "error.h"
 #include "failure.h"
-#include "frame.h"
-#include "thread_context.h"
 #include "object.h"
 #include "program.h"
 #include "region.h"
 #include "value.h"
-#include "writebarrier.h"
 
 #include <limits>
 
@@ -17,25 +13,6 @@ namespace vrt
 {
   namespace
   {
-    void escape_to_frame(Header* header, Frame* destination_frame)
-    {
-      if (header->location().is_immortal())
-        return;
-
-      auto* source = header->region();
-      if ((source == nullptr) || !source->is_frame_local())
-        return;
-
-      auto* destination = frame_region(destination_frame);
-      if (
-        (source == destination) ||
-        (source->frame_depth <= destination->frame_depth))
-        return;
-
-      if (!writebarrier::drag(destination, header, false))
-        raise_error(Error::bad_stack_escape);
-    }
-
     void collect_header(Header* header)
     {
       if (
@@ -192,37 +169,4 @@ namespace vrt
     }
   }
 
-  void escape_header(Header* header)
-  {
-    internal_check(header != nullptr, Failure::invalid_header_state);
-
-    if (header->location().is_immortal())
-      return;
-
-    auto* context = ThreadContext::try_get();
-    internal_check(
-      (context != nullptr) && (context->thread.frame != nullptr),
-      Failure::invalid_header_state);
-
-    auto* frame = context->thread.frame;
-    auto* source = header->region();
-    if ((source == nullptr) || !source->is_frame_local())
-      return;
-
-    if (frame->region != source)
-      return;
-
-    if (frame->parent != nullptr)
-    {
-      escape_to_frame(header, frame->parent);
-      return;
-    }
-
-    auto* destination = Region::create(RegionType::rc);
-    if (!writebarrier::drag(destination, header, false))
-    {
-      destroy_region(destination);
-      raise_error(Error::bad_stack_escape);
-    }
-  }
 }

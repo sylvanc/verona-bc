@@ -53,6 +53,39 @@ namespace vrt
     context.reset();
   }
 
+  void ThreadContext::escape(Header* header)
+  {
+    internal_check(header != nullptr, Failure::invalid_header_state);
+
+    if (header->location().is_immortal())
+      return;
+
+    internal_check(thread.frame != nullptr, Failure::invalid_header_state);
+
+    auto* frame = thread.frame;
+    auto* source = header->region();
+    if ((source == nullptr) || !source->is_frame_local())
+      return;
+
+    if (frame->region != source)
+      return;
+
+    if (frame->parent != nullptr)
+    {
+      if (!writebarrier::drag(frame_region(frame->parent), header, false))
+        raise_error(Error::bad_stack_escape);
+
+      return;
+    }
+
+    auto* destination = Region::create(RegionType::rc);
+    if (!writebarrier::drag(destination, header, false))
+    {
+      destroy_region(destination);
+      raise_error(Error::bad_stack_escape);
+    }
+  }
+
   [[noreturn]] void ThreadContext::raise(
     ValueType value_type, uint64_t value, Location target_id)
   {

@@ -70,6 +70,4 @@ namespace vrt
   /** Recover the exposed payload pointer for a managed allocation header. */
   void* payload_from_header(Header* header);
   const void* payload_from_header(const Header* header);
-
-  void escape_header(Header* header);
 }

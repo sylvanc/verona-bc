@@ -12,6 +12,7 @@
 namespace vrt
 {
   struct ErrorCatchPoint;
+  struct Header;
 
   /** Native control state associated with one active logical frame. */
   struct Continuation
@@ -40,6 +41,9 @@ namespace vrt
 
     /** Destroy the context bound to the calling native thread. */
     static void deinit();
+
+    /** Relocate a current-frame allocation so it survives a normal return. */
+    void escape(Header* header);
 
     /** Raise a type-erased value through an older active stack Location. */
     [[noreturn]] void
