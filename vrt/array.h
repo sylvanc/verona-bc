@@ -80,6 +80,20 @@ namespace vrt
     void* load(uintptr_t index);
     const void* load(uintptr_t index) const;
 
+    bool is_primitive() const;
+
+    void bulk_copy(
+      uintptr_t destination_offset,
+      Array* source,
+      uintptr_t source_offset,
+      uintptr_t length);
+    void bulk_fill(uintptr_t offset, uintptr_t length, const void* fill_value);
+    int bulk_compare(
+      uintptr_t offset,
+      const Array* other,
+      uintptr_t other_offset,
+      uintptr_t length) const;
+
     template<typename F>
     void trace_fn(F&& function)
     {

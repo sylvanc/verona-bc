@@ -8,6 +8,7 @@
 #include <cstring>
 #include <limits>
 #include <new>
+#include <vector>
 #include <vrt/array.h>
 
 namespace vrt
@@ -28,6 +29,12 @@ namespace vrt
         default:
           return false;
       }
+    }
+
+    void check_range(uintptr_t size, uintptr_t offset, uintptr_t length)
+    {
+      if ((offset > size) || (length > (size - offset)))
+        fail(Failure::invalid_array_state);
     }
   }
 
@@ -112,6 +119,144 @@ namespace vrt
     return static_cast<const std::byte*>(get_pointer()) + (stride * index);
   }
 
+  bool Array::is_primitive() const
+  {
+    switch (element_value_type)
+    {
+      case ValueType::none:
+      case ValueType::scalar:
+      case ValueType::raw_pointer:
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  void Array::bulk_copy(
+    uintptr_t destination_offset,
+    Array* source,
+    uintptr_t source_offset,
+    uintptr_t length)
+  {
+    if (length == 0)
+      return;
+
+    if (source == nullptr)
+      fail(Failure::invalid_array_state);
+
+    check_range(size, destination_offset, length);
+    check_range(source->size, source_offset, length);
+    if (
+      (element_value_type != source->element_value_type) ||
+      (content_type_id() != source->content_type_id()) ||
+      (stride != source->stride))
+      fail(Failure::invalid_array_state);
+
+    auto* destination_data =
+      static_cast<std::byte*>(get_pointer()) + (stride * destination_offset);
+    auto* source_data = static_cast<const std::byte*>(source->get_pointer()) +
+      (stride * source_offset);
+
+    if (is_primitive())
+    {
+      std::memmove(destination_data, source_data, length * stride);
+      return;
+    }
+
+    auto element_descriptor = element();
+    if ((this == source) && (destination_offset > source_offset))
+    {
+      for (uintptr_t index = length; index > 0; index--)
+      {
+        writebarrier::copy(
+          region(),
+          load(destination_offset + index - 1),
+          element_descriptor,
+          source->load(source_offset + index - 1));
+      }
+      return;
+    }
+
+    for (uintptr_t index = 0; index < length; index++)
+    {
+      writebarrier::copy(
+        region(),
+        load(destination_offset + index),
+        element_descriptor,
+        source->load(source_offset + index));
+    }
+  }
+
+  void
+  Array::bulk_fill(uintptr_t offset, uintptr_t length, const void* fill_value)
+  {
+    if (length == 0)
+      return;
+
+    check_range(size, offset, length);
+    if (fill_value == nullptr)
+      fail(Failure::invalid_array_state);
+
+    auto* destination =
+      static_cast<std::byte*>(get_pointer()) + (stride * offset);
+    if (is_primitive())
+    {
+      if (stride == 1)
+      {
+        std::memset(
+          destination, *static_cast<const uint8_t*>(fill_value), length);
+        return;
+      }
+
+      std::vector<std::byte> value(stride);
+      std::memcpy(value.data(), fill_value, stride);
+      for (uintptr_t index = 0; index < length; index++)
+        std::memcpy(destination + (stride * index), value.data(), stride);
+      return;
+    }
+
+    void* payload = nullptr;
+    std::memcpy(&payload, fill_value, sizeof(payload));
+    auto element_descriptor = element();
+    for (uintptr_t index = 0; index < length; index++)
+    {
+      writebarrier::copy(
+        region(),
+        load(offset + index),
+        element_descriptor,
+        static_cast<const void*>(&payload));
+    }
+  }
+
+  int Array::bulk_compare(
+    uintptr_t offset,
+    const Array* other,
+    uintptr_t other_offset,
+    uintptr_t length) const
+  {
+    if (length == 0)
+      return 0;
+
+    if (other == nullptr)
+      fail(Failure::invalid_array_state);
+
+    check_range(size, offset, length);
+    check_range(other->size, other_offset, length);
+    if (
+      !is_primitive() || !other->is_primitive() ||
+      (element_value_type != other->element_value_type) ||
+      (content_type_id() != other->content_type_id()) ||
+      (stride != other->stride))
+      fail(Failure::invalid_array_state);
+
+    auto* left =
+      static_cast<const std::byte*>(get_pointer()) + (stride * offset);
+    auto* right = static_cast<const std::byte*>(other->get_pointer()) +
+      (stride * other_offset);
+    return std::memcmp(left, right, length * stride);
+  }
+
   void Array::finalize()
   {
     if (location().is_immortal() || finalizing)
@@ -173,4 +318,45 @@ extern "C" VRT_EXPORT void vrt_array_release(void* payload)
 extern "C" VRT_EXPORT void vrt_array_escape(void* payload)
 {
   vrt::Value{vrt::ValueType::array, payload}.escape();
+}
+
+extern "C" VRT_EXPORT void vrt_array_copy(
+  void* destination_payload,
+  uintptr_t destination_offset,
+  void* source_payload,
+  uintptr_t source_offset,
+  uintptr_t length)
+{
+  auto* destination = static_cast<vrt::Array*>(
+    vrt::Value{vrt::ValueType::array, destination_payload}.header());
+  auto* source = static_cast<vrt::Array*>(
+    vrt::Value{vrt::ValueType::array, source_payload}.header());
+  destination->bulk_copy(
+    destination_offset, source, source_offset, length);
+}
+
+extern "C" VRT_EXPORT void vrt_array_fill(
+  void* destination_payload,
+  uintptr_t offset,
+  uintptr_t length,
+  const void* fill_value)
+{
+  auto* destination = static_cast<vrt::Array*>(
+    vrt::Value{vrt::ValueType::array, destination_payload}.header());
+  destination->bulk_fill(offset, length, fill_value);
+}
+
+extern "C" VRT_EXPORT int64_t vrt_array_compare(
+  void* left_payload,
+  uintptr_t left_offset,
+  void* right_payload,
+  uintptr_t right_offset,
+  uintptr_t length)
+{
+  auto* left = static_cast<vrt::Array*>(
+    vrt::Value{vrt::ValueType::array, left_payload}.header());
+  auto* right = static_cast<vrt::Array*>(
+    vrt::Value{vrt::ValueType::array, right_payload}.header());
+  return static_cast<int64_t>(
+    left->bulk_compare(left_offset, right, right_offset, length));
 }

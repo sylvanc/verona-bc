@@ -1,4 +1,4 @@
-// See README.md for the allocation, ownership, and runtime boundaries covered.
+// See README.md for the array-runtime coverage and test boundaries.
 
 #include "array.h"
 
@@ -163,6 +163,7 @@ int main()
     (scalar_array->get_size() != 4) ||
     (scalar_array->get_stride() != sizeof(uint32_t)) ||
     (scalar_array->get_value_type() != vrt::ValueType::scalar) ||
+    !scalar_array->is_primitive() ||
     (scalar_array->allocation_size_bytes() !=
      vrt::Array::size_of(4, sizeof(uint32_t))) ||
     (scalar_values[0] != 0) || (scalar_values[1] != 0) ||
@@ -171,7 +172,46 @@ int main()
     (vrt::payload_from_header(scalar_array) != scalar_payload) ||
     !frame_region->contains(scalar_array))
     return 9;
+
+  uint32_t fill = 7;
+  vrt_array_fill(
+    scalar_payload, 0, scalar_array->get_size(), &fill);
+  if (
+    (scalar_values[0] != 7) || (scalar_values[1] != 7) ||
+    (scalar_values[2] != 7) || (scalar_values[3] != 7))
+    return 22;
+
+  scalar_values[0] = 1;
+  scalar_values[1] = 2;
+  scalar_values[2] = 3;
+  scalar_values[3] = 4;
+  vrt_array_copy(scalar_payload, 1, scalar_payload, 0, 3);
+  if (
+    (scalar_values[0] != 1) || (scalar_values[1] != 1) ||
+    (scalar_values[2] != 2) || (scalar_values[3] != 3))
+    return 23;
+
+  auto* scalar_copy = frame_region->array(scalar_array_type_id, 4);
+  auto* scalar_copy_payload = scalar_copy->get_payload();
+  vrt_array_copy(scalar_copy_payload, 0, scalar_payload, 0, 4);
+  if (
+    vrt_array_compare(
+      scalar_copy_payload, 0, scalar_payload, 0, 4) != 0)
+    return 24;
+
+  // Match VBCI's no-op contract: zero-length bulk operations do not inspect
+  // offsets or fill values.
+  vrt_array_copy(scalar_payload, 99, scalar_copy_payload, 99, 0);
+  vrt_array_fill(scalar_payload, 99, 0, nullptr);
+  if (
+    vrt_array_compare(
+      scalar_payload, 99, scalar_copy_payload, 99, 0) != 0)
+    return 25;
+
   scalar_array->reg_dec();
+  scalar_copy->reg_dec();
+  if (frame_region->header_count() != 0)
+    return 26;
 
   auto* object_array = frame_region->array(object_array_type_id, 3);
   ValuePayload array_value_args{41};
@@ -181,16 +221,8 @@ int main()
     0, sizeof(void*), value_class_id, vrt::ValueType::object};
   vrt::writebarrier::init(
     frame_region, object_array->load(0), object_element, &array_value);
-  vrt::writebarrier::copy(
-    frame_region,
-    object_array->load(1),
-    object_element,
-    object_array->load(0));
-  vrt::writebarrier::copy(
-    frame_region,
-    object_array->load(2),
-    object_element,
-    object_array->load(0));
+  vrt_array_fill(
+    object_array->get_payload(), 1, 2, object_array->load(0));
 
   uintptr_t traced = 0;
   object_array->trace_fn([&](vrt::Header* element) {
@@ -201,6 +233,25 @@ int main()
     (traced != 3) || (array_value_header->reference_count != 3) ||
     (frame_region->header_count() != 2))
     return 10;
+
+  auto* object_copy = frame_region->array(object_array_type_id, 3);
+  vrt_array_copy(
+    object_copy->get_payload(), 0, object_array->get_payload(), 0, 3);
+  uintptr_t copied = 0;
+  object_copy->trace_fn([&](vrt::Header* element) {
+    if (element == array_value_header)
+      copied++;
+  });
+  if (
+    (copied != 3) || (array_value_header->reference_count != 6) ||
+    (frame_region->header_count() != 3))
+    return 27;
+
+  object_copy->reg_dec();
+  if (
+    (array_value_header->reference_count != 3) ||
+    (frame_region->header_count() != 2))
+    return 28;
 
   object_array->reg_dec();
   if (frame_region->header_count() != 0)

@@ -88,6 +88,28 @@ static_assert(std::is_same_v<
 static_assert(std::is_same_v<decltype(&vrt_array_retain), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_release), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_escape), void (*)(void*)>);
+static_assert(
+  std::is_same_v<
+    decltype(&vrt_array_copy),
+    void (*)(
+      void*,
+      std::uintptr_t,
+      void*,
+      std::uintptr_t,
+      std::uintptr_t)>);
+static_assert(
+  std::is_same_v<
+    decltype(&vrt_array_fill),
+    void (*)(void*, std::uintptr_t, std::uintptr_t, const void*)>);
+static_assert(
+  std::is_same_v<
+    decltype(&vrt_array_compare),
+    std::int64_t (*)(
+      void*,
+      std::uintptr_t,
+      void*,
+      std::uintptr_t,
+      std::uintptr_t)>);
 static_assert(std::is_same_v<
               decltype(&vrt_object_new),
               void* (*)(const vrt_class*, std::uintptr_t, const void*)>);

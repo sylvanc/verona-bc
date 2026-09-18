@@ -1,7 +1,7 @@
-# VRT array allocation and ownership fixture
+# VRT array runtime fixture
 
-This fixture exercises the public array allocation and ownership ABI together
-with the private representation needed to validate its effects.
+This fixture exercises the public array allocation, ownership, and bulk-operation
+ABI together with the private representation needed to validate its effects.
 
 ## Coverage
 
@@ -11,8 +11,9 @@ with the private representation needed to validate its effects.
 - Register retain/release and collection through generic `Header` dispatch.
 - Managed object and nested-array element tracing and finalization.
 - Graph dragging when an array is returned or raised across frame teardown.
+- Primitive and managed-element copy/fill plus primitive comparison.
 
 ## Non-goals
 
-Bulk copy, fill, comparison, LLVM array lowering, freezing, and immutable-array
-ownership are covered by later fixtures.
+LLVM array lowering, freezing, and immutable-array ownership are covered by
+separate fixtures.

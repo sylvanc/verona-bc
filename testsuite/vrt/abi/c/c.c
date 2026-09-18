@@ -64,6 +64,12 @@ static void* (*const array_region_signature)(
 static void (*const array_retain_signature)(void*) = vrt_array_retain;
 static void (*const array_release_signature)(void*) = vrt_array_release;
 static void (*const array_escape_signature)(void*) = vrt_array_escape;
+static void (*const array_copy_signature)(
+  void*, uintptr_t, void*, uintptr_t, uintptr_t) = vrt_array_copy;
+static void (*const array_fill_signature)(
+  void*, uintptr_t, uintptr_t, const void*) = vrt_array_fill;
+static int64_t (*const array_compare_signature)(
+  void*, uintptr_t, void*, uintptr_t, uintptr_t) = vrt_array_compare;
 static void* (*const object_new_signature)(
   const vrt_class*, uintptr_t, const void*) = vrt_object_new;
 static void* (*const object_heap_signature)(
@@ -109,6 +115,9 @@ void verona_program_entry(void)
   (void)array_retain_signature;
   (void)array_release_signature;
   (void)array_escape_signature;
+  (void)array_copy_signature;
+  (void)array_fill_signature;
+  (void)array_compare_signature;
   (void)object_new_signature;
   (void)object_heap_signature;
   (void)object_region_signature;
