@@ -903,6 +903,10 @@ namespace vbcc
             code << uleb(+Op::Convert) << dst(stmt) << uleb(+val(stmt / Type))
                  << rhs(stmt);
           }
+          else if (stmt == Singleton)
+          {
+            code << uleb(+Op::Singleton) << dst(stmt) << cls(stmt);
+          }
           else if (stmt == New)
           {
             args(stmt / Args);

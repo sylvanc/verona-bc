@@ -60,6 +60,7 @@ namespace vbcc
   // Op codes.
   inline const auto Const = TokenDef("const");
   inline const auto Convert = TokenDef("convert");
+  inline const auto Singleton = TokenDef("singleton");
   inline const auto New = TokenDef("new");
   inline const auto Stack = TokenDef("stack");
   inline const auto Heap = TokenDef("heap");
@@ -253,8 +254,8 @@ namespace vbcc
     Const_E | Const_Pi | Const_Inf | Const_NaN | AddExternal | RemoveExternal;
 
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
-    New | Stack | Heap | Region | NewArray | NewArrayConst | StackArray |
-    StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
+    Singleton | New | Stack | Heap | Region | NewArray | NewArrayConst |
+    StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
     RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | Merge |
     FFIStruct | FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn | TryCallDyn |
@@ -315,6 +316,7 @@ namespace vbcc
     | (Const <<= wfDst * (Type >>= wfPrimitiveType) * (Rhs >>= wfLiteral))
     | (ConstStr <<= wfDst * (String >>= String | RawString))
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
+    | (Singleton <<= wfDst * ClassId)
     | (New <<= wfDst * ClassId * Args)
     | (Stack <<= wfDst * ClassId * Args)
     | (Heap <<= wfDst * wfSrc * ClassId * Args)

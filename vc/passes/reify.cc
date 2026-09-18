@@ -393,7 +393,7 @@ namespace vc
                     merge_refined_type(dst_it->second, src_it->second);
                 }
               }
-              else if (stmt->in({New, Stack}))
+              else if (stmt->in({New, Stack, Singleton}))
               {
                 local_types[(stmt / LocalId)->location()] =
                   clone(stmt / ClassId);
@@ -2448,7 +2448,7 @@ namespace vc
                   break;
 
                 if (
-                  stmt->in({New, Stack}) &&
+                  stmt->in({New, Stack, Singleton}) &&
                   ((stmt / LocalId)->location() == trace_loc))
                 {
                   callback_type = clone(stmt / ClassId);
@@ -2716,7 +2716,16 @@ namespace vc
               n / Type, r.subst, n / Type, "constructed type");
             reify_new(n, r.subst);
             // After reify_new, dst is first child.
-            local_types[(n / LocalId)->location()] = new_type;
+            auto dst_loc = (n / LocalId)->location();
+            local_types[dst_loc] = new_type;
+
+            // Empty class: replace with Singleton (immortal load).
+            if ((n / Args)->empty())
+            {
+              auto s = Singleton << clone(n / LocalId) << clone(n / ClassId);
+              n->parent()->replace(n, s);
+              n = s;
+            }
           }
           else if (n == Lookup)
           {

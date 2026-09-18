@@ -46,27 +46,39 @@ namespace vbci
     // Arg2 = src.
     Convert,
 
+    // Loads the immortal singleton object for a class with no fields. The
+    // class must have zero fields; this is checked statically by the compiler
+    // and asserted by the runtime.
+    // Arg0 = dst.
+    // Arg1 = class ID.
+    Singleton,
+
     // Allocates a new object in the frame-local region. Fields are initialized
-    // from arguments.
+    // from arguments. The class must not be a singleton (i.e. must have at
+    // least one field); use Singleton for empty classes instead.
     // Arg0 = dst.
     // Arg1 = class ID.
     New,
 
     // Allocates a new object in the current frame. Fields are initialized from
-    // arguments.
+    // arguments. The class must not be a singleton; use Singleton for empty
+    // classes instead.
     // Arg0 = dst.
     // Arg1 = class ID.
     Stack,
 
     // Allocates a new object in the same region. Fields are initialized from
-    // arguments.
+    // arguments. The class must not be a singleton; use Singleton for empty
+    // classes instead.
     // Arg0 = dst.
     // Arg1 = allocation in the target region.
     // Arg2 = class ID.
     Heap,
 
     // Allocates a new object in a new region. Fields are initialized from
-    // arguments.
+    // arguments. The class must not be a singleton — singletons are immortal
+    // and cannot be region entry points; this is enforced by the compiler
+    // and asserted by the runtime.
     // Arg0 = dst.
     // Arg1 = region type.
     // Arg2 = class ID.
