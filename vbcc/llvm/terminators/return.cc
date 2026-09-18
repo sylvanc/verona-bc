@@ -33,6 +33,16 @@ namespace vbcc
 
         builder.CreateCall(runtime.object_escape, {value->value});
       }
+      else if (return_type.runtime_type == vrt::ValueType::array)
+      {
+        if ((runtime.array_escape == nullptr) || (value->value == nullptr))
+        {
+          fail(statement, "array escape runtime is unavailable");
+          return false;
+        }
+
+        builder.CreateCall(runtime.array_escape, {value->value});
+      }
 
       if (!emit_leave_frame(statement))
         return false;

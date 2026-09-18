@@ -84,6 +84,12 @@ namespace vbcc
       llvm::Function* frame_raise_continuation = nullptr;
       llvm::Function* frame_raise = nullptr;
       llvm::Function* frame_take_raised_value = nullptr;
+      llvm::Function* array_new = nullptr;
+      llvm::Function* array_heap = nullptr;
+      llvm::Function* array_region = nullptr;
+      llvm::Function* array_retain = nullptr;
+      llvm::Function* array_release = nullptr;
+      llvm::Function* array_escape = nullptr;
       llvm::Function* object_new = nullptr;
       llvm::Function* object_heap = nullptr;
       llvm::Function* object_region = nullptr;

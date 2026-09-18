@@ -52,6 +52,16 @@ namespace vbcc
 
         builder.CreateCall(runtime.object_escape, {result});
       }
+      else if (return_type.runtime_type == vrt::ValueType::array)
+      {
+        if ((runtime.array_escape == nullptr) || (result == nullptr))
+        {
+          fail(function, "array escape runtime is unavailable");
+          return false;
+        }
+
+        builder.CreateCall(runtime.array_escape, {result});
+      }
 
       if (!emit_leave_frame(function))
         return false;

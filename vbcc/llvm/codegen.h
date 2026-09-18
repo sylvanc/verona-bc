@@ -34,6 +34,7 @@ namespace vbcc
       std::unordered_map<std::string, LoweredSymbol> symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
       std::unordered_map<std::string, LoweredClass> classes;
+      std::vector<Node> runtime_types;
       std::vector<LoweredSingleton> singletons;
       LoweredRuntime runtime;
       llvm::Function* program_entry = nullptr;
@@ -107,8 +108,18 @@ namespace vbcc
       bool emit_drop(const Node& statement);
       bool emit_ffi(const Node& statement);
       bool emit_new(const Node& statement);
+      bool emit_new_array(const Node& statement);
+      bool emit_new_array_const(const Node& statement);
       bool emit_heap(const Node& statement);
+      bool emit_heap_array(const Node& statement);
       bool emit_region(const Node& statement);
+      bool emit_region_array(const Node& statement);
+      std::optional<std::size_t> runtime_type_id(const Node& type);
+      std::optional<llvm::Value*> lower_array_size(const Node& statement);
+      bool emit_array_allocation(
+        const Node& statement,
+        llvm::Function* allocation_function,
+        std::vector<llvm::Value*> prefix_arguments);
       bool emit_object_allocation(
         const Node& statement,
         llvm::Function* allocation_function,

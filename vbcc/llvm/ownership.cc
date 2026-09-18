@@ -8,18 +8,6 @@ namespace vbcc
   {
     namespace
     {
-      bool
-      emit_array_retain(llvm::Module&, llvm::IRBuilder<>&, const LoweredValue&)
-      {
-        return false;
-      }
-
-      bool
-      emit_array_release(llvm::Module&, llvm::IRBuilder<>&, const LoweredValue&)
-      {
-        return false;
-      }
-
       bool emit_reference_retain(
         llvm::Module&, llvm::IRBuilder<>&, const LoweredValue&)
       {
@@ -89,11 +77,14 @@ namespace vbcc
           return true;
 
         case vrt::ValueType::array:
-          if (emit_array_retain(module, builder, value))
-            return true;
+          if ((runtime.array_retain == nullptr) || (value.value == nullptr))
+          {
+            fail(use, "array retain runtime is unavailable");
+            return false;
+          }
 
-          fail(use, "array retain lowering is not implemented");
-          return false;
+          builder.CreateCall(runtime.array_retain, {value.value});
+          return true;
 
         case vrt::ValueType::reference:
           if (emit_reference_retain(module, builder, value))
@@ -148,11 +139,14 @@ namespace vbcc
           return true;
 
         case vrt::ValueType::array:
-          if (emit_array_release(module, builder, value))
-            return true;
+          if ((runtime.array_release == nullptr) || (value.value == nullptr))
+          {
+            fail(use, "array release runtime is unavailable");
+            return false;
+          }
 
-          fail(use, "array release lowering is not implemented");
-          return false;
+          builder.CreateCall(runtime.array_release, {value.value});
+          return true;
 
         case vrt::ValueType::reference:
           if (emit_reference_release(module, builder, value))

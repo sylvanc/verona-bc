@@ -58,14 +58,15 @@ namespace vbcc
       {
         vrt::ValueType value_type;
         std::size_t storage_size;
+        std::size_t element_type_id;
       };
 
       std::map<std::size_t, EmittedType> types;
-      const auto add_primitive = [&](const auto& token) {
-        Node type = token;
+      const auto metadata_for = [&](const Node& type)
+        -> std::optional<EmittedType> {
         auto lowered = lower_type(type);
         if (!lowered)
-          return false;
+          return {};
 
         std::size_t storage_size = 0;
         if (lowered->runtime_type != vrt::ValueType::none)
@@ -73,7 +74,7 @@ namespace vbcc
           if (lowered->storage_type == nullptr)
           {
             fail(type, "runtime type has no storage representation");
-            return false;
+            return {};
           }
 
           storage_size = module.getDataLayout()
@@ -81,10 +82,33 @@ namespace vbcc
                            .getFixedValue();
         }
 
-        return types
-          .emplace(
-            +val(type), EmittedType{lowered->runtime_type, storage_size})
-          .second;
+        std::size_t element_type_id = 0;
+        if (type == Array)
+        {
+          if (type->size() != 1)
+          {
+            fail(type, "array runtime type requires one element type");
+            return {};
+          }
+
+          auto element_id = runtime_type_id(type / Type);
+          if (!element_id)
+            return {};
+
+          element_type_id = *element_id;
+        }
+
+        return EmittedType{
+          lowered->runtime_type, storage_size, element_type_id};
+      };
+
+      const auto add_primitive = [&](const auto& token) {
+        Node type = token;
+        auto metadata = metadata_for(type);
+        if (!metadata)
+          return false;
+
+        return types.emplace(+val(type), *metadata).second;
       };
 
       if (
@@ -109,10 +133,44 @@ namespace vbcc
                cls.type_id,
                EmittedType{
                  vrt::ValueType::object,
-                 module.getDataLayout().getPointerSize()})
+                 module.getDataLayout().getPointerSize(),
+                 0})
              .second)
         {
           fail(state.top, "duplicate nominal runtime type metadata ID");
+          return false;
+        }
+      }
+
+      const auto complex_base = state.classes.size() + NumPrimitiveClasses;
+      for (std::size_t index = 0; index < state.complex_primitives.size();
+           ++index)
+      {
+        const auto& primitive = state.complex_primitives.at(index);
+        if (!primitive || ((primitive / Type) != Array))
+          continue;
+
+        auto metadata = metadata_for(primitive / Type);
+        if (!metadata)
+          return false;
+
+        if (!types.emplace(complex_base + index, *metadata).second)
+        {
+          fail(state.top, "duplicate array runtime type metadata ID");
+          return false;
+        }
+      }
+
+      const auto runtime_base = complex_base + state.complex_primitives.size();
+      for (std::size_t index = 0; index < runtime_types.size(); ++index)
+      {
+        auto metadata = metadata_for(runtime_types.at(index));
+        if (!metadata)
+          return false;
+
+        if (!types.emplace(runtime_base + index, *metadata).second)
+        {
+          fail(state.top, "duplicate runtime type metadata ID");
           return false;
         }
       }
@@ -130,7 +188,7 @@ namespace vbcc
             {word(type_id),
              word(static_cast<std::size_t>(metadata.value_type)),
              word(metadata.storage_size),
-             word(0)}));
+             word(metadata.element_type_id)}));
       }
 
       auto* null_pointer = llvm::ConstantPointerNull::get(pointer_type);

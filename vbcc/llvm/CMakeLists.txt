@@ -23,6 +23,7 @@ add_library(libvbcllvm STATIC
   vrt/tailcall.cc
   statements.cc
   statements/args.cc
+  statements/array.cc
   statements/binop.cc
   statements/call.cc
   statements/constant.cc
@@ -31,11 +32,15 @@ add_library(libvbcllvm STATIC
   statements/drop.cc
   statements/ffi.cc
   statements/heap.cc
+  statements/heap_array.cc
   statements/move.cc
   statements/new.cc
+  statements/new_array.cc
+  statements/new_array_const.cc
   statements/object.cc
   statements/raise_target.cc
   statements/region.cc
+  statements/region_array.cc
   statements/unop.cc
   terminators.cc
   terminators/cond.cc

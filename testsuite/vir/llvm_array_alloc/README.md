@@ -10,7 +10,7 @@ bytecode and native LLVM pipelines.
   enclosing continuation.
 - Dynamic and constant-size heap arrays attached to an RC-region locator.
 - Direct allocation in RC and arena regions.
-- Filling and dropping arrays created by each allocation path.
+- Retaining and dropping arrays created by each allocation path.
 
 ## Native VRT coverage
 

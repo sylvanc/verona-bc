@@ -51,6 +51,18 @@ namespace vbcc
       if (statement == New)
         return emit_new(statement);
 
+      if (statement == NewArray)
+        return emit_new_array(statement);
+
+      if (statement == NewArrayConst)
+        return emit_new_array_const(statement);
+
+      if (statement->type().in({HeapArray, HeapArrayConst}))
+        return emit_heap_array(statement);
+
+      if (statement->type().in({RegionArray, RegionArrayConst}))
+        return emit_region_array(statement);
+
       if (statement == Heap)
         return emit_heap(statement);
 
