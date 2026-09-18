@@ -49,6 +49,8 @@ namespace vbcc
       auto* type_metadata_type =
         llvm::StructType::get(
           context, {word_type, word_type, word_type, word_type});
+      auto* singleton_metadata_type =
+        llvm::StructType::get(context, {pointer_type, pointer_type});
       auto* program_metadata_type = llvm::StructType::get(
         context, {word_type, pointer_type, word_type, pointer_type});
 
@@ -131,8 +133,8 @@ namespace vbcc
              word(0)}));
       }
 
-      auto* null = llvm::ConstantPointerNull::get(pointer_type);
-      llvm::Constant* types_pointer = null;
+      auto* null_pointer = llvm::ConstantPointerNull::get(pointer_type);
+      llvm::Constant* types_pointer = null_pointer;
       if (!type_metadata.empty())
       {
         auto* array_type =
@@ -147,9 +149,35 @@ namespace vbcc
         types_pointer = type_table;
       }
 
+      llvm::Constant* singletons_pointer = null_pointer;
+      if (!singletons.empty())
+      {
+        std::vector<llvm::Constant*> singleton_metadata;
+        singleton_metadata.reserve(singletons.size());
+        for (const auto& singleton : singletons)
+        {
+          singleton_metadata.push_back(
+            llvm::ConstantStruct::get(
+              singleton_metadata_type, {singleton.storage, singleton.cls}));
+        }
+
+        auto* array_type =
+          llvm::ArrayType::get(singleton_metadata_type, singletons.size());
+        singletons_pointer = new llvm::GlobalVariable(
+          module,
+          array_type,
+          true,
+          llvm::GlobalValue::PrivateLinkage,
+          llvm::ConstantArray::get(array_type, singleton_metadata),
+          "verona.program.singletons");
+      }
+
       auto* program_metadata = llvm::ConstantStruct::get(
         program_metadata_type,
-        {word(type_metadata.size()), types_pointer, word(0), null});
+        {word(type_metadata.size()),
+         types_pointer,
+         word(singletons.size()),
+         singletons_pointer});
 
       new llvm::GlobalVariable(
         module,

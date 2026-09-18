@@ -1,0 +1,27 @@
+// Coverage:
+// - Emits aligned storage and a class-descriptor payload pointer for an empty
+//   nominal class.
+// - Adds the storage and class descriptor to the generated program singleton
+//   table.
+//
+// Native VRT coverage:
+// - Program initialization consumes the singleton table and constructs the
+//   immortal object header before entering generated main.
+//
+// Non-goals:
+// - Does not exercise New, Heap, Region, or dynamic method lookup.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Unit
+  @touch @Unit_touch
+
+func @Unit_touch($self: @Unit): i32
+  $result = const i32 0
+  ret $result
+
+func @main(): none
+  $result = const i32 0
+  $_exit = ffi @set_exit_code($result)
+  ret $_exit

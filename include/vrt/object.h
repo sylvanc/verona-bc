@@ -35,7 +35,11 @@ namespace vrt
     const Field* fields;
     uintptr_t method_count;
     const Method* methods;
-    /** Reserved for compiler-emitted empty-class singleton payloads. */
+    /**
+     * Compiler-emitted immortal payload for an empty class.
+     *
+     * Non-empty classes set this to null.
+     */
     void* singleton;
   };
 }

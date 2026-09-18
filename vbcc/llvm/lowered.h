@@ -60,12 +60,18 @@ namespace vbcc
       llvm::GlobalVariable* descriptor = nullptr;
     };
 
+    struct LoweredSingleton
+    {
+      llvm::GlobalVariable* storage;
+      llvm::GlobalVariable* cls;
+    };
+
     struct LoweredClass
     {
       std::size_t type_id;
       llvm::StructType* payload_type;
       std::vector<LoweredType> field_types;
-      llvm::GlobalVariable* descriptor = nullptr;
+      llvm::GlobalVariable* cls = nullptr;
     };
 
     struct LoweredRuntime

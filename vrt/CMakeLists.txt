@@ -6,6 +6,7 @@ add_library(libvrt STATIC
   function.cc
   thread_context.cc
   native_main.cc
+  object.cc
   program.cc
   region.cc
   thread.cc

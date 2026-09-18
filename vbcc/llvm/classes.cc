@@ -1,4 +1,4 @@
-#include "../../include/vrt/object.h"
+#include "../../vrt/object.h"
 #include "codegen.h"
 
 #include <algorithm>
@@ -6,6 +6,7 @@
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/GlobalVariable.h>
+#include <llvm/Support/Alignment.h>
 #include <utility>
 
 namespace vbcc
@@ -26,7 +27,10 @@ namespace vbcc
                .emplace(
                  name,
                  LoweredClass{
-                   NumPrimitiveClasses + index, payload_type, {}, nullptr})
+                   NumPrimitiveClasses + index,
+                   payload_type,
+                   {},
+                   nullptr})
                .second)
         {
           fail(class_id, "duplicate LLVM class '" + name + "'");
@@ -311,6 +315,31 @@ namespace vbcc
         llvm::Constant* name_indices[] = {zero, zero};
         auto* name_pointer = llvm::ConstantExpr::getInBoundsGetElementPtr(
           name_value->getType(), name_global, name_indices);
+
+        llvm::GlobalVariable* singleton_storage = nullptr;
+        llvm::Constant* singleton_pointer = null_pointer;
+        if (fields->empty())
+        {
+          auto* storage_type = llvm::ArrayType::get(
+            llvm::Type::getInt8Ty(context),
+            vrt::Object::singleton_storage_size());
+          singleton_storage = new llvm::GlobalVariable(
+            module,
+            storage_type,
+            false,
+            llvm::GlobalValue::PrivateLinkage,
+            llvm::ConstantAggregateZero::get(storage_type),
+            "verona.class." + std::to_string(index) + ".singleton");
+          singleton_storage->setAlignment(llvm::Align(alignof(vrt::Object)));
+
+          auto* singleton_offset = llvm::ConstantInt::get(
+            word_type, vrt::Object::singleton_payload_offset());
+          singleton_pointer = llvm::ConstantExpr::getInBoundsGetElementPtr(
+            llvm::Type::getInt8Ty(context),
+            singleton_storage,
+            singleton_offset);
+        }
+
         auto* metadata = llvm::ConstantStruct::get(
           class_metadata_type,
           {word(lowered_class.type_id),
@@ -323,14 +352,17 @@ namespace vbcc
            fields_pointer,
            word(methods->size()),
            methods_pointer,
-           null_pointer});
-        lowered_class.descriptor = new llvm::GlobalVariable(
+           singleton_pointer});
+        lowered_class.cls = new llvm::GlobalVariable(
           module,
           class_metadata_type,
           true,
           llvm::GlobalValue::PrivateLinkage,
           metadata,
           "verona.class." + std::to_string(index) + ".descriptor");
+
+        if (singleton_storage != nullptr)
+          singletons.push_back({singleton_storage, lowered_class.cls});
       }
 
       return true;

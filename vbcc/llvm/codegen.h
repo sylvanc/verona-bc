@@ -34,6 +34,7 @@ namespace vbcc
       std::unordered_map<std::string, LoweredSymbol> symbols;
       std::unordered_map<std::string, LoweredFunction> functions;
       std::unordered_map<std::string, LoweredClass> classes;
+      std::vector<LoweredSingleton> singletons;
       LoweredRuntime runtime;
       llvm::Function* program_entry = nullptr;
       BasicBlockState blocks;

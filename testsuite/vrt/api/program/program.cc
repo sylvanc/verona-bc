@@ -1,7 +1,10 @@
+#include "object.h"
 #include "program.h"
 #include "vrt.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <vrt/object.h>
 #include <vrt/program.h>
 #include <vrt/thread.h>
 
@@ -14,7 +17,21 @@ namespace
     {none_type_id, vrt::ValueType::none, 0, 0},
     {scalar_type_id, vrt::ValueType::scalar, sizeof(uint32_t), 0},
     {object_type_id, vrt::ValueType::object, sizeof(void*), 0}};
-  const vrt::Program program{3, types, 0, nullptr};
+  alignas(vrt::Object) std::byte
+    singleton_storage[vrt::Object::singleton_storage_size()]{};
+  const vrt::Class singleton_class{
+    object_type_id,
+    "ProgramSingleton",
+    0,
+    1,
+    0,
+    nullptr,
+    0,
+    nullptr,
+    singleton_storage + vrt::Object::singleton_payload_offset()};
+  const vrt::Singleton singletons[] = {
+    {singleton_storage, &singleton_class}};
+  const vrt::Program program{3, types, 1, singletons};
 }
 
 int main()
@@ -34,17 +51,33 @@ int main()
     (object_layout.storage_size != sizeof(void*)))
     return 1;
 
+  auto* singleton = reinterpret_cast<vrt::Object*>(
+    static_cast<std::byte*>(singleton_class.singleton) -
+    vrt::Object::singleton_payload_offset());
+  if (
+    (singleton->cls != &singleton_class) ||
+    (singleton->get_type_id() != object_type_id) ||
+    !singleton->location().is_immortal() ||
+    (singleton->get_payload() != singleton_class.singleton) ||
+    (singleton->reference_count != 1) ||
+    (singleton->allocation != singleton_storage) || singleton->finalizing)
+    return 2;
+
   vrt_thread_init();
 
+  *static_cast<std::byte*>(singleton_class.singleton) = std::byte{0x5a};
   set_exit_code(7);
   vrt_invocation_begin();
   if (vrt::get_exit_code() != 0)
-    return 2;
+    return 3;
 
   set_exit_code(9);
   vrt_invocation_begin();
   if (vrt::get_exit_code() != 0)
-    return 3;
+    return 4;
+
+  if (*static_cast<std::byte*>(singleton_class.singleton) != std::byte{0x5a})
+    return 5;
 
   vrt_thread_deinit();
   return 0;

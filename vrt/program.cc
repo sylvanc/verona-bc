@@ -1,6 +1,7 @@
 #include "program.h"
 
 #include "failure.h"
+#include "object.h"
 #include "thread_context.h"
 #include "vrt.h"
 
@@ -18,7 +19,7 @@ namespace
   std::unordered_set<const vrt::Program*> initialized_programs;
   std::unordered_map<uintptr_t, vrt::TypeInfo> type_registry;
 
-  bool is_valid_value_type(vrt::ValueType value_type)
+  [[maybe_unused]] bool is_valid_value_type(vrt::ValueType value_type)
   {
     switch (value_type)
     {
@@ -38,10 +39,23 @@ namespace
     // TODO: Initialize process-wide scheduler and runtime services here.
   }
 
+  void init_memo_slots(const vrt::Program& program)
+  {
+    (void)program;
+    // TODO: Initialize compiler-emitted memo slots in dependency order.
+  }
+
+  void run_ffi_initializers(const vrt::Program& program)
+  {
+    (void)program;
+    // TODO: Run compiler-emitted FFI initializers after memo initialization.
+  }
+
   void register_types(const vrt::Program& program)
   {
-    if ((program.type_count != 0) && (program.types == nullptr))
-      vrt::fail(vrt::Failure::invalid_program_state);
+    internal_check(
+      (program.type_count == 0) || (program.types != nullptr),
+      vrt::Failure::invalid_program_state);
 
     std::unique_lock guard(type_registry_mutex);
 
@@ -50,21 +64,21 @@ namespace
       for (uintptr_t index = 0; index < program.type_count; index++)
       {
         const auto& type = program.types[index];
-        if (
-          !is_valid_value_type(type.value_type) ||
-          ((type.value_type == vrt::ValueType::none) !=
-           (type.storage_size == 0)) ||
-          (type.element_type_id != 0) ||
-          ((index != 0) && (program.types[index - 1].id >= type.id)))
-          vrt::fail(vrt::Failure::invalid_program_state);
+        internal_check(
+          is_valid_value_type(type.value_type) &&
+            ((type.value_type == vrt::ValueType::none) ==
+             (type.storage_size == 0)) &&
+            (type.element_type_id == 0) &&
+            ((index == 0) || (program.types[index - 1].id < type.id)),
+          vrt::Failure::invalid_program_state);
 
         auto [entry, inserted] = type_registry.emplace(type.id, type);
-        if (
-          !inserted &&
-          ((entry->second.value_type != type.value_type) ||
-           (entry->second.storage_size != type.storage_size) ||
-           (entry->second.element_type_id != type.element_type_id)))
-          vrt::fail(vrt::Failure::invalid_program_state);
+        internal_check(
+          inserted ||
+            ((entry->second.value_type == type.value_type) &&
+             (entry->second.storage_size == type.storage_size) &&
+             (entry->second.element_type_id == type.element_type_id)),
+          vrt::Failure::invalid_program_state);
       }
     }
     catch (const std::bad_alloc&)
@@ -75,13 +89,20 @@ namespace
 
   void init_program_state(const vrt::Program& program)
   {
-    if ((program.singleton_count != 0) || (program.singletons != nullptr))
-      vrt::fail(vrt::Failure::invalid_program_state);
+    internal_check(
+      (program.singleton_count == 0) || (program.singletons != nullptr),
+      vrt::Failure::invalid_program_state);
 
     register_types(program);
 
-    // TODO: Initialize compiler-emitted memo slots, then run FFI
-    // initializers. The ordering belongs here rather than in each invocation.
+    for (uintptr_t index = 0; index < program.singleton_count; index++)
+    {
+      const auto& singleton = program.singletons[index];
+      vrt::init_singleton(singleton.storage, singleton.cls);
+    }
+
+    init_memo_slots(program);
+    run_ffi_initializers(program);
   }
 }
 
@@ -89,8 +110,8 @@ vrt::TypeLayout vrt::layout_type_id(uintptr_t type_id)
 {
   std::shared_lock guard(type_registry_mutex);
   auto type = type_registry.find(type_id);
-  if (type == type_registry.end())
-    fail(Failure::invalid_program_state);
+  internal_check(
+    type != type_registry.end(), Failure::invalid_program_state);
 
   return {type->second.value_type, type->second.storage_size};
 }
@@ -107,15 +128,15 @@ extern "C" VRT_EXPORT void vrt_runtime_init(void)
 
 extern "C" VRT_EXPORT void vrt_program_init(const vrt::Program* program)
 {
-  if (program == nullptr)
-    vrt::fail(vrt::Failure::invalid_program_state);
+  internal_check(program != nullptr, vrt::Failure::invalid_program_state);
 
   std::lock_guard guard(lifecycle_mutex);
   if (!runtime_initialized)
     vrt::fail(vrt::Failure::invalid_runtime_state);
 
-  if (initialized_programs.contains(program))
-    vrt::fail(vrt::Failure::invalid_program_state);
+  internal_check(
+    !initialized_programs.contains(program),
+    vrt::Failure::invalid_program_state);
 
   init_program_state(*program);
 

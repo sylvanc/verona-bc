@@ -100,6 +100,35 @@ vbci my_project.vbc -l Debug
 
 ## 21.3 Development Workflow
 
+### Native Program Initialization
+
+The native runtime separates state by lifetime:
+
+```text
+native main
+  ├── vrt_runtime_init()              once per process
+  ├── vrt_program_init(&verona_program)
+  │     ├── register compiler-emitted type metadata
+  │     ├── initialize immortal singleton headers
+  │     ├── initialize memo slots     (reserved)
+  │     └── run FFI initializers      (reserved)
+  ├── vrt_thread_init()               current native thread
+  ├── vrt_invocation_begin()          reset per-invocation state
+  └── verona_program_entry()          execute generated main
+```
+
+Every empty nominal class has aligned singleton storage emitted as a mutable
+LLVM global. Its class descriptor points at the exposed payload, while the
+generated `verona_program` singleton table pairs the allocation base with the
+class descriptor. `vrt_program_init()` first registers the program type table
+and then constructs the private immortal object header in that storage.
+
+Singleton initialization is once per generated program, not once per
+invocation. `vrt_invocation_begin()` resets invocation-local state such as the
+exit code without reconstructing singleton headers or clearing their payloads.
+Memo-slot and FFI initialization are explicit reserved phases so their future
+ordering remains visible without doing work prematurely.
+
 ### Build, Install, Test
 
 ```bash
