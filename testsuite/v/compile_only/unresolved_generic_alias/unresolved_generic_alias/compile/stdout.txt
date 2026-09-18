@@ -1,0 +1,30 @@
+Errors:
+Generic types require explicit type arguments
+-- unresolved_generic_alias.v:12:10
+  value: identity;
+         ~~~~~~~~
+
+Resolving here:
+-- unresolved_generic_alias.v:8:5
+use identity[T] = T;
+    ~~~~~~~~
+
+----------------
+Could not resolve name
+-- unresolved_generic_alias.v:12:3
+  value: identity;
+  ~~~~~~~~~~~~~~~
+
+----------------
+Generic types require explicit type arguments
+-- unresolved_generic_alias.v:12:10
+  value: identity;
+         ~~~~~~~~
+
+Resolving here:
+-- unresolved_generic_alias.v:8:5
+use identity[T] = T;
+    ~~~~~~~~
+
+Pass ident failed with 3 errors!
+

@@ -50,6 +50,44 @@ namespace vc
     return path;
   }
 
+  Nodes class_ancestry(Node top, Node node)
+  {
+    Nodes result;
+    auto cls = node->parent({FlatClass, ClassDef});
+
+    if (!cls)
+      return result;
+
+    if (cls == ClassDef)
+    {
+      while (cls)
+      {
+        result.push_back(cls);
+        cls = cls->parent(ClassDef);
+      }
+
+      return result;
+    }
+
+    auto path = cls / ClassPath;
+
+    for (auto it = path->rbegin(); it != path->rend(); ++it)
+    {
+      auto defs = top->look((*it / DefId)->location());
+
+      for (auto& def : defs)
+      {
+        if (def == FlatClass)
+        {
+          result.push_back(def);
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
   Node find_def_from(Node def, const Node& name, NodeIt it, NodeIt end)
   {
     if (it == end)
@@ -70,59 +108,396 @@ namespace vc
     return {};
   }
 
+  void append_class_path_id_segment(std::string& id, std::string_view name)
+  {
+    id += std::to_string(name.size());
+    id += ':';
+    id += name;
+    id += ';';
+  }
+
+  std::string encode_class_path_id(const Nodes& path)
+  {
+    std::string id;
+
+    for (auto& cls : path)
+      append_class_path_id_segment(id, (cls / Ident)->location().view());
+
+    return id;
+  }
+
+  namespace
+  {
+    // Flat classes live directly under Top, keyed in its symbol table by
+    // DefId. Resolving a name means finding the longest class path that
+    // prefixes it, which is a hot inner loop for every type comparison. Index
+    // the classes by their innermost name, with their class path spelled out
+    // as views, so a candidate check is a handful of string comparisons and
+    // touches no nodes.
+    struct FlatClassEntry
+    {
+      Node flat;
+      std::vector<std::string_view> path;
+    };
+
+    struct FlatClassIndex
+    {
+      Node top;
+      size_t size = 0;
+      std::vector<FlatClassEntry> entries;
+      std::map<std::string_view, std::vector<size_t>> by_name;
+
+      void rebuild(const Node& new_top)
+      {
+        top = new_top;
+        size = new_top->size();
+        entries.clear();
+        by_name.clear();
+
+        for (auto& flat : *new_top)
+        {
+          if (flat != FlatClass)
+            continue;
+
+          FlatClassEntry entry{flat, {}};
+
+          for (auto& segment : *(flat / ClassPath))
+            entry.path.push_back((segment / Ident)->location().view());
+
+          by_name[entry.path.back()].push_back(entries.size());
+          entries.push_back(std::move(entry));
+        }
+      }
+    };
+
+    thread_local FlatClassIndex flat_class_index;
+
+    // Top's children are only replaced wholesale between passes, so the
+    // identity of the Top node and its child count are enough to detect that
+    // the index needs rebuilding.
+    const FlatClassIndex& get_flat_class_index(const Node& top)
+    {
+      if (
+        (flat_class_index.top != top) || (flat_class_index.size != top->size()))
+        flat_class_index.rebuild(top);
+
+      return flat_class_index;
+    }
+
+    std::vector<std::string_view> name_idents(const Node& name)
+    {
+      std::vector<std::string_view> idents;
+      idents.reserve(name->size());
+
+      for (auto& elem : *name)
+        idents.push_back((elem / Ident)->location().view());
+
+      return idents;
+    }
+
+    Node find_flat_class_by_exact_prefix(
+      const FlatClassIndex& index,
+      const std::vector<std::string_view>& idents,
+      size_t len)
+    {
+      auto find = index.by_name.find(idents[len - 1]);
+
+      if (find == index.by_name.end())
+        return {};
+
+      for (auto& candidate : find->second)
+      {
+        auto& entry = index.entries[candidate];
+
+        if (entry.path.size() != len)
+          continue;
+
+        if (std::equal(entry.path.begin(), entry.path.end(), idents.begin()))
+          return entry.flat;
+      }
+
+      return {};
+    }
+  }
+
+  Node find_flat_class_by_longest_prefix(
+    Node top, const Node& name, size_t& consumed)
+  {
+    // Keep the longest class path that prefixes the name, so a class always
+    // wins over a shorter enclosing scope of the same name.
+    auto& index = get_flat_class_index(top);
+    auto idents = name_idents(name);
+    consumed = 0;
+
+    for (size_t len = idents.size(); len > 0; len--)
+    {
+      auto flat = find_flat_class_by_exact_prefix(index, idents, len);
+
+      if (flat)
+      {
+        consumed = len;
+        return flat;
+      }
+    }
+
+    return {};
+  }
+
+  ClassPrefixes find_flat_class_prefixes(Node top, const Node& name)
+  {
+    auto& index = get_flat_class_index(top);
+    auto idents = name_idents(name);
+    ClassPrefixes result;
+
+    for (size_t len = idents.size(); len > 0; len--)
+    {
+      auto flat = find_flat_class_by_exact_prefix(index, idents, len);
+
+      if (flat)
+        result.emplace_back(flat, len);
+    }
+
+    return result;
+  }
+
   Node find_def(Node top, const Node& name)
   {
     assert(name->in({FuncName, TypeName}));
+
+    if ((name == TypeName) && (name->size() == 1))
+    {
+      auto def = find_typeparam_def(top, name);
+
+      if (def)
+        return def;
+    }
+
+    size_t consumed = 0;
+    auto flat = find_flat_class_by_longest_prefix(top, name, consumed);
+
+    if (flat)
+    {
+      auto it = name->begin();
+      std::advance(it, consumed);
+      return find_def_from(flat, name, it, name->end());
+    }
+
     return find_def_from(top, name, name->begin(), name->end());
+  }
+
+  Node find_typeparam_def(Node top, const Node& name)
+  {
+    assert(name->in({FuncName, TypeName}));
+    auto count = name->size();
+
+    if (name == FuncName)
+    {
+      if (count < 2)
+        return {};
+
+      count--;
+    }
+
+    if (count == 1)
+    {
+      auto ident = name->front() / Ident;
+      auto scope =
+        name->parent({Top, FlatClass, ClassDef, TypeAlias, Function});
+
+      while (scope)
+      {
+        for (auto& def : scope->look(ident->location()))
+        {
+          if (def->in({ClassDef, TypeAlias, TypeParam}))
+            return def == TypeParam ? def : Node{};
+        }
+
+        scope = scope->parent({Top, FlatClass, ClassDef, TypeAlias, Function});
+      }
+
+      return {};
+    }
+
+    Node path = TypeName;
+    size_t index = 0;
+
+    for (auto& elem : *name)
+    {
+      if (index++ == count)
+        break;
+
+      path << clone(elem);
+    }
+
+    auto def = find_def(top, path);
+    return def && (def == TypeParam) ? def : Node{};
+  }
+
+  void
+  collect_func_defs_from_path(Node def, NodeIt it, NodeIt end, Nodes& result)
+  {
+    auto& elem = *it;
+    assert(elem == NameElement);
+    auto defs = def->look((elem / Ident)->location());
+    bool is_last = (it + 1 == end);
+
+    for (auto& candidate : defs)
+    {
+      if (is_last)
+      {
+        if (
+          candidate == Function &&
+          std::find(result.begin(), result.end(), candidate) == result.end())
+          result.push_back(candidate);
+      }
+      else
+      {
+        collect_func_defs_from_path(candidate, it + 1, end, result);
+      }
+    }
+  }
+
+  Nodes find_func_defs(Node top, const Node& funcname)
+  {
+    assert(funcname == FuncName);
+    Nodes result;
+
+    if (!funcname->empty())
+    {
+      size_t consumed = 0;
+      auto flat = find_flat_class_by_longest_prefix(top, funcname, consumed);
+
+      if (flat)
+      {
+        auto it = funcname->begin();
+        std::advance(it, consumed);
+
+        if (it != funcname->end())
+          collect_func_defs_from_path(flat, it, funcname->end(), result);
+      }
+      else
+      {
+        collect_func_defs_from_path(
+          top, funcname->begin(), funcname->end(), result);
+      }
+    }
+
+    return result;
   }
 
   Node find_func_def(Node top, const Node& funcname, size_t arity, Node hand)
   {
     assert(funcname == FuncName);
-    Node def = top;
+    auto defs = find_func_defs(top, funcname);
 
-    for (auto it = funcname->begin(); it != funcname->end(); ++it)
+    for (auto& def : defs)
     {
-      auto& elem = *it;
-      assert(elem == NameElement);
-      auto defs = def->look((elem / Ident)->location());
+      if (
+        (!hand || (def / Lhs)->type() == hand->type()) &&
+        (def / Params)->size() == arity)
+        return def;
+    }
 
-      if (defs.empty())
-        return {};
-
-      bool is_last = (it + 1 == funcname->end());
-
-      if (is_last)
+    if (hand && hand->type() == Rhs)
+    {
+      for (auto& def : defs)
       {
-        for (auto& d : defs)
-        {
-          if (d != Function)
-            continue;
-
-          auto def_hand = (d / Lhs)->type();
-          if (
-            hand && def_hand != hand->type() &&
-            !(def_hand == Once && hand->type() == Rhs))
-            continue;
-
-          if ((d / Params)->size() != arity)
-            continue;
-
-          return d;
-        }
-
-        return {};
-      }
-      else
-      {
-        def = defs.front();
-
-        if (def == TypeParam)
-          return {};
+        if ((def / Lhs)->type() == Once && (def / Params)->size() == arity)
+          return def;
       }
     }
 
     return {};
+  }
+
+  // Build a fully-qualified, position-independent TypeName for a TypeParam
+  // definition node in a flat class. A bare reference like "B" is only
+  // resolvable via find_typeparam_def's scope walk relative to its own
+  // lexical position in the tree. Type expressions are routinely copied out
+  // of that position -- into another scope, into a freshly built parentless
+  // expression, or into a clone of a function body -- at which point the bare
+  // name can no longer be resolved. Qualifying it keeps it resolvable via
+  // find_def from anywhere.
+  Node fq_typeparam_ref(const Node& tp)
+  {
+    auto owner = tp->parent({FlatClass, TypeAlias, Function});
+
+    if (!owner)
+      return {};
+
+    auto cls = (owner == FlatClass) ? owner : owner->parent(FlatClass);
+
+    if (!cls)
+      return {};
+
+    Node tn = TypeName;
+
+    for (auto& segment : *(cls / ClassPath))
+      tn << (NameElement << clone(segment / Ident) << TypeArgs);
+
+    if (owner != FlatClass)
+      tn << (NameElement << clone(owner / Ident) << TypeArgs);
+
+    tn << (NameElement << clone(tp / Ident) << TypeArgs);
+    return tn;
+  }
+
+  // Recursively qualify any bare TypeParam reference within a type (see
+  // fq_typeparam_ref) so it stays resolvable via find_def once the type is
+  // detached from the tree position it was read from -- e.g. stored as a
+  // substitution value and later cloned into an unrelated scope. Leaves
+  // everything else (concrete classes, references that don't resolve to a
+  // TypeParam, etc.) as a plain clone.
+  // Core of qualify_typeparam_refs, operating on a bare (unwrapped) type
+  // node and returning a bare node in kind. Kept separate from the public,
+  // Type-wrapped qualify_typeparam_refs so that Union/Isect/TupleType
+  // members (stored bare, not wrapped in Type) can be qualified without
+  // first cloning them into a throwaway Type wrapper -- cloning first
+  // would detach them from the tree, and find_typeparam_def needs that
+  // attachment to identify which TypeParam a bare reference resolves to.
+  Node qualify_typeparam_refs_bare(Node top, const Node& inner)
+  {
+    if (inner == TypeName)
+    {
+      if (inner->size() == 1)
+      {
+        auto tp_def = find_typeparam_def(top, inner);
+        if (tp_def && tp_def == TypeParam)
+        {
+          auto fq = fq_typeparam_ref(tp_def);
+          if (fq)
+            return fq;
+        }
+      }
+
+      Node new_tn = TypeName;
+      for (auto& elem : *inner)
+      {
+        Node new_ta = TypeArgs;
+        for (auto& ta_child : *(elem / TypeArgs))
+          new_ta << qualify_typeparam_refs(top, ta_child);
+        new_tn << (NameElement << clone(elem / Ident) << new_ta);
+      }
+      return new_tn;
+    }
+
+    if (inner->in({Union, Isect, TupleType}))
+    {
+      Node new_inner = inner->type();
+      for (auto& child : *inner)
+        new_inner << qualify_typeparam_refs_bare(top, child);
+      return new_inner;
+    }
+
+    return clone(inner);
+  }
+
+  Node qualify_typeparam_refs(Node top, const Node& type_node)
+  {
+    if (type_node != Type)
+      return clone(type_node);
+
+    return Type << qualify_typeparam_refs_bare(top, type_node->front());
   }
 
   Node fq_typeparam(const Nodes& path, Node tp)
@@ -146,22 +521,66 @@ namespace vc
     return ta;
   }
 
+  Node unknown_typeargs(Node tps)
+  {
+    Node ta = TypeArgs;
+
+    for (size_t i = 0; i < tps->size(); i++)
+      ta << (Type << Unknown);
+
+    return ta;
+  }
+
+  Node fq_scope_typeargs(Node scope)
+  {
+    return fq_typeargs(scope_path(scope), scope / TypeParams);
+  }
+
+  // Build a name for a lexical scope path. Generic scopes carry symbolic
+  // references to their own TypeParams; definition paths use separate
+  // helpers because they require empty TypeArgs instead.
+  Node make_fq_name(const Token& name_type, const Nodes& path)
+  {
+    assert((name_type == TypeName) || (name_type == FuncName));
+    Node name = name_type;
+
+    for (auto& scope : path)
+      name << (NameElement << clone(scope / Ident) << fq_scope_typeargs(scope));
+
+    return name;
+  }
+
   Node make_selftype(Node node, bool fq)
   {
-    auto cls = node->parent(ClassDef);
-    auto tps = cls / TypeParams;
+    auto cls = node->parent({FlatClass, ClassDef});
+    assert(cls);
+
+    if (cls == FlatClass)
+    {
+      Node tn = TypeName;
+
+      for (auto& segment : *(cls / ClassPath))
+      {
+        tn
+          << (NameElement << clone(segment / Ident)
+                          << clone(segment / TypeArgs));
+      }
+
+      return Type << tn;
+    }
+
     auto path = scope_path(cls);
-    auto ta = fq ? fq_typeargs(path, tps) : make_typeargs(tps);
+
+    if (fq)
+    {
+      Node tn = make_fq_name(TypeName, path);
+      return Type << tn;
+    }
 
     Node tn = TypeName;
 
     for (auto& s : path)
-    {
-      if (s == cls)
-        tn << (NameElement << clone(cls / Ident) << ta);
-      else
-        tn << (NameElement << clone(s / Ident) << TypeArgs);
-    }
+      tn << (NameElement << clone(s / Ident) << make_typeargs(s / TypeParams));
 
     return Type << tn;
   }
@@ -264,10 +683,7 @@ namespace vc
     const Nodes& cls_path,
     Location new_class_id)
   {
-    Node new_tn = TypeName;
-
-    for (auto& s : cls_path)
-      new_tn << (NameElement << clone(s / Ident) << TypeArgs);
+    Node new_tn = make_fq_name(TypeName, cls_path);
 
     new_tn << (NameElement << (Ident ^ new_class_id) << TypeArgs);
     new_tn << (NameElement << (Ident ^ free_tps[idx].name) << TypeArgs);
@@ -314,7 +730,6 @@ namespace vc
     auto enclosing_cls = context_node->parent(ClassDef);
     assert(enclosing_cls);
     auto cls_path = scope_path(enclosing_cls);
-    auto cls_ta = fq_typeargs(cls_path, enclosing_cls / TypeParams);
 
     // Build TypeParams for the new class.
     Node typeparams = TypeParams;
@@ -328,10 +743,7 @@ namespace vc
 
     for (auto& ftp : free_tps)
     {
-      Node tp_tn = TypeName;
-
-      for (auto& s : cls_path)
-        tp_tn << (NameElement << clone(s / Ident) << TypeArgs);
+      Node tp_tn = make_fq_name(TypeName, cls_path);
 
       tp_tn << (NameElement << (Ident ^ id) << TypeArgs);
       tp_tn << (NameElement << (Ident ^ ftp.name) << TypeArgs);
@@ -354,30 +766,13 @@ namespace vc
     }
 
     // Build FQ TypeName for use inside the class (self type).
-    Node fq_tn = TypeName;
-
-    for (auto& s : cls_path)
-    {
-      if (s == enclosing_cls)
-        fq_tn << (NameElement << clone(enclosing_cls / Ident) << clone(cls_ta));
-      else
-        fq_tn << (NameElement << clone(s / Ident) << TypeArgs);
-    }
+    Node fq_tn = make_fq_name(TypeName, cls_path);
 
     fq_tn << (NameElement << (Ident ^ id) << clone(internal_ta));
     auto self_type = Type << clone(fq_tn);
 
     // Build FQ TypeName for the creation site call.
-    Node fq_tn_create = TypeName;
-
-    for (auto& s : cls_path)
-    {
-      if (s == enclosing_cls)
-        fq_tn_create
-          << (NameElement << clone(enclosing_cls / Ident) << clone(cls_ta));
-      else
-        fq_tn_create << (NameElement << clone(s / Ident) << TypeArgs);
-    }
+    Node fq_tn_create = make_fq_name(TypeName, cls_path);
 
     fq_tn_create << (NameElement << (Ident ^ id) << clone(outer_ta));
 

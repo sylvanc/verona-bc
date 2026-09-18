@@ -30,7 +30,8 @@ async_writer[A]
     new {c = cown w, terminal = t}
   }
 
-  log(self: async_writer, log_level: log::level, msg: to_string): none
+  log(
+    self: async_writer[A], log_level: log::level, msg: to_string): none
   {
     when self.c w ->
     {

@@ -2,9 +2,11 @@ add_executable(vc
   passes/anf.cc
   passes/application.cc
   passes/dot.cc
+  passes/flatten.cc
   passes/functype.cc
   passes/ident.cc
   passes/infer.cc
+  passes/overload.cc
   passes/parser.cc
   passes/reify.cc
   passes/sugar.cc
