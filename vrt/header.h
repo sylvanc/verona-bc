@@ -72,5 +72,4 @@ namespace vrt
   void finalize_header(Header* header);
   void destroy_header_storage(Header* header);
   void escape_header(Header* header);
-  void prepare_raise_header(Header* header);
 }

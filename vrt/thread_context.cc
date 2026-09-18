@@ -2,7 +2,10 @@
 
 #include "failure.h"
 #include "frame.h"
+#include "header.h"
 #include "region.h"
+#include "value.h"
+#include "writebarrier.h"
 
 #include <optional>
 
@@ -50,7 +53,8 @@ namespace vrt
     context.reset();
   }
 
-  [[noreturn]] void ThreadContext::raise(uint64_t value, Location target_id)
+  [[noreturn]] void ThreadContext::raise(
+    ValueType value_type, uint64_t value, Location target_id)
   {
     auto* frame = thread.frame;
     internal_check(frame != nullptr, Failure::invalid_thread_state);
@@ -64,6 +68,24 @@ namespace vrt
 
     if (target == nullptr)
       raise_error(Error::bad_raise_target);
+
+    if (value_type == ValueType::object)
+    {
+      auto* payload =
+        reinterpret_cast<void*>(static_cast<uintptr_t>(value));
+      auto* header = Value{value_type, payload}.header();
+      auto* source = header->region();
+
+      if ((source != nullptr) && source->is_frame_local())
+      {
+        auto* destination = frame_region(target);
+        if (
+          (source != destination) &&
+          (source->frame_depth > destination->frame_depth) &&
+          !writebarrier::drag(destination, header, false))
+          raise_error(Error::bad_stack_escape);
+      }
+    }
 
     unwind_frames(target);
 

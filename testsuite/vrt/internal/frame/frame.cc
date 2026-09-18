@@ -170,9 +170,8 @@ int main()
   if (frame_region->header_count() != 0)
     return 5;
 
-  // Preparing an object-valued raise relocates an intermediate frame's
-  // object directly into the configured target frame before both intervening
-  // frames are unwound.
+  // An object-valued raise preserves an intermediate frame's object in the
+  // configured target frame before both intervening frames are unwound.
   auto* continuation =
     static_cast<std::jmp_buf*>(vrt_frame_raise_continuation());
   if (continuation == nullptr)
@@ -199,15 +198,9 @@ int main()
       !intermediate_region->contains(raised_object))
       return 7;
 
-    vrt_object_prepare_raise(raised);
-    if (
-      (raised_object->region() != frame_region) ||
-      !frame_region->contains(raised_object) ||
-      intermediate_region->contains(raised_object) ||
-      (intermediate_region->header_count() != 0))
-      return 8;
-
-    vrt_frame_raise(static_cast<uint64_t>(reinterpret_cast<uintptr_t>(raised)));
+    vrt_frame_raise(
+      VRT_VALUE_TYPE_OBJECT,
+      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(raised)));
   }
 
   auto* raised = reinterpret_cast<void*>(

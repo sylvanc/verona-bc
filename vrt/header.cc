@@ -216,31 +216,4 @@ namespace vrt
       raise_error(Error::bad_stack_escape);
     }
   }
-
-  void prepare_raise_header(Header* header)
-  {
-    internal_check(header != nullptr, Failure::invalid_header_state);
-
-    if ((header->region() == nullptr) || !header->region()->is_frame_local())
-      return;
-
-    auto* context = ThreadContext::try_get();
-    internal_check(
-      (context != nullptr) && (context->thread.frame != nullptr),
-      Failure::invalid_header_state);
-
-    auto* current = context->thread.frame;
-    auto raise_target = current->raise_target;
-    if (!raise_target.is_stack() || (raise_target >= current->frame_id))
-      raise_error(Error::bad_raise_target);
-
-    auto* target = current->parent;
-    while ((target != nullptr) && (target->frame_id != raise_target))
-      target = target->parent;
-
-    if (target == nullptr)
-      raise_error(Error::bad_raise_target);
-
-    escape_to_frame(header, target);
-  }
 }

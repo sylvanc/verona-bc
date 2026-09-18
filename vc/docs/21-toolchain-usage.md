@@ -428,13 +428,15 @@ the arguments; the callee's return epilogue pops it.
 
 Each generated function also saves a native `setjmp` continuation in its
 logical frame. A VIR `raise` consumes its source value, encodes the currently
-supported scalar or raw-pointer representation in a 64-bit runtime word, and
-calls `vrt_frame_raise`. The runtime validates the active target, removes the
-intermediate logical frames, and resumes the target continuation. That target
-then consumes the payload, reconstructs its native return representation,
-leaves its frame, and returns to its caller. Tailcalled functions overwrite the
-continuation in the reused logical frame, so the stable frame identity still
-names the current native activation.
+supported native representation in a 64-bit runtime word, and passes its
+runtime value category and payload bits to `vrt_frame_raise`. The runtime
+validates the active target and, for a managed object payload, relocates a
+frame-local object into the target frame before removing the intermediate
+logical frames and resuming the target continuation. That target then consumes
+the payload, reconstructs its native return representation, leaves its frame,
+and returns to its caller. Tailcalled functions overwrite the continuation in
+the reused logical frame, so the stable frame identity still names the current
+native activation.
 
 VIR `getraise` and `setraise` are ordinary side-effecting statements around
 that control transfer. `getraise` reads the current logical frame's target,

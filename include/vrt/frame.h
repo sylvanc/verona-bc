@@ -2,6 +2,7 @@
 
 #include "export.h"
 #include "function.h"
+#include "value.h"
 
 #include <stdint.h>
 
@@ -89,11 +90,12 @@ typedef struct vrt_frame vrt_frame;
    *
    * This tears down every logical frame above the target and transfers
    * control to the continuation saved by the target function. The payload is
-   * recovered there with vrt_frame_take_raised_value. This function does not
-   * return. An invalid or inactive target raises
+   * recovered there with vrt_frame_take_raised_value. Managed payloads are
+   * relocated to the target frame before intervening frames are destroyed.
+   * This function does not return. An invalid or inactive target raises
    * VRT_ERROR_BAD_RAISE_TARGET to the active invocation catch point.
    */
-  VRT_EXPORT void vrt_frame_raise(uint64_t value);
+  VRT_EXPORT void vrt_frame_raise(vrt_value_type type, uint64_t value);
 
   /**
    * Consume the value associated with a raise resumed in the current frame.

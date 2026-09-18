@@ -96,9 +96,4 @@ namespace vrt
   {
     escape_header(header());
   }
-
-  void Value::prepare_raise() const
-  {
-    prepare_raise_header(header());
-  }
 }

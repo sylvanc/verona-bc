@@ -137,9 +137,6 @@ extern "C"
    */
   VRT_EXPORT void vrt_object_escape(void* payload);
 
-  /** Relocate a frame-local object to the current raise-target frame. */
-  VRT_EXPORT void vrt_object_prepare_raise(void* payload);
-
 #if defined(__cplusplus)
 }
 #endif

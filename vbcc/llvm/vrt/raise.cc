@@ -38,14 +38,29 @@ namespace vbcc
       auto* value =
         builder.CreateCall(runtime.frame_take_raised_value, {}, "raised.value");
 
+      llvm::Value* result = nullptr;
+      if (return_type.ir_type != IRValueType::None)
+        result = unpack_raised_value(return_type, value);
+
+      if (return_type.runtime_type == vrt::ValueType::object)
+      {
+        if ((runtime.object_escape == nullptr) || (result == nullptr))
+        {
+          fail(function, "object escape runtime is unavailable");
+          return false;
+        }
+
+        builder.CreateCall(runtime.object_escape, {result});
+      }
+
       if (!emit_leave_frame(function))
         return false;
 
       if (return_type.ir_type == IRValueType::None)
         builder.CreateRetVoid();
       else
-        builder.CreateRet(unpack_raised_value(return_type, value));
 
+        builder.CreateRet(result);
       return true;
     }
 

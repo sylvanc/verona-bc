@@ -109,13 +109,14 @@ extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(void)
   return continuation->state;
 }
 
-extern "C" VRT_EXPORT void vrt_frame_raise(uint64_t value)
+extern "C" VRT_EXPORT void
+vrt_frame_raise(vrt_value_type type, uint64_t value)
 {
   auto& context = vrt::ThreadContext::get();
   auto* frame = context.thread.frame;
   internal_check(frame != nullptr, vrt::Failure::invalid_frame_state);
 
-  context.raise(value, frame->raise_target);
+  context.raise(type, value, frame->raise_target);
 }
 
 extern "C" VRT_EXPORT uint64_t vrt_frame_take_raised_value(void)

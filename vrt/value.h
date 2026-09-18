@@ -35,6 +35,5 @@ namespace vrt
     void field_inc() const;
     void field_dec() const;
     void escape() const;
-    void prepare_raise() const;
   };
 }

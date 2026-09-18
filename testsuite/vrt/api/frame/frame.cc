@@ -90,7 +90,7 @@ int main()
     if (vrt_frame_set_raise_target(root_target) != child->frame_id.raw())
       return 12;
 
-    vrt_frame_raise(42);
+    vrt_frame_raise(VRT_VALUE_TYPE_SCALAR, 42);
   }
 
   if (

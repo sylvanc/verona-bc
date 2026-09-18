@@ -172,7 +172,6 @@ int main()
 
   vrt_object_retain(singleton_new);
   vrt_object_escape(singleton_new);
-  vrt_object_prepare_raise(singleton_new);
   vrt_object_release(singleton_again);
   vrt_object_release(singleton_heap);
   if (
@@ -235,15 +234,9 @@ int main()
       !intermediate_region->contains(raised_object))
       return 16;
 
-    vrt_object_prepare_raise(raised);
-    if (
-      (raised_object->region() != frame_region) ||
-      !frame_region->contains(raised_object) ||
-      intermediate_region->contains(raised_object) ||
-      (intermediate_region->header_count() != 0))
-      return 17;
-
-    vrt_frame_raise(static_cast<uint64_t>(reinterpret_cast<uintptr_t>(raised)));
+    vrt_frame_raise(
+      VRT_VALUE_TYPE_OBJECT,
+      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(raised)));
   }
 
   auto* raised = reinterpret_cast<void*>(

@@ -59,7 +59,9 @@ static_assert(std::is_same_v<
               decltype(&vrt_frame_raise_continuation),
               void* (*)(void)>);
 static_assert(
-  std::is_same_v<decltype(&vrt_frame_raise), void (*)(std::uint64_t)>);
+  std::is_same_v<
+    decltype(&vrt_frame_raise),
+    void (*)(vrt_value_type, std::uint64_t)>);
 static_assert(std::is_same_v<
               decltype(&vrt_frame_take_raised_value),
               std::uint64_t (*)(void)>);
@@ -87,8 +89,6 @@ static_assert(
 static_assert(std::is_same_v<decltype(&vrt_object_retain), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_release), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_escape), void (*)(void*)>);
-static_assert(
-  std::is_same_v<decltype(&vrt_object_prepare_raise), void (*)(void*)>);
 
 extern "C" void verona_program_entry(void)
 {

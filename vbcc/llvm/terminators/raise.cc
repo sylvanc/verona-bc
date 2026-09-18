@@ -1,5 +1,7 @@
 #include "../codegen.h"
 
+#include <llvm/IR/Constants.h>
+
 namespace vbcc
 {
   namespace llvm_backend
@@ -32,7 +34,10 @@ namespace vbcc
       if (!bits)
         return false;
 
-      builder.CreateCall(runtime.frame_raise, {*bits});
+      auto* value_type = llvm::ConstantInt::get(
+        module.getDataLayout().getIntPtrType(context),
+        static_cast<std::size_t>(value->type.runtime_type));
+      builder.CreateCall(runtime.frame_raise, {value_type, *bits});
       builder.CreateUnreachable();
       return true;
     }

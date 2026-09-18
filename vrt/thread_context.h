@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <optional>
 #include <vrt/error.h>
+#include <vrt/value.h>
 
 namespace vrt
 {
@@ -41,7 +42,8 @@ namespace vrt
     static void deinit();
 
     /** Raise a type-erased value through an older active stack Location. */
-    [[noreturn]] void raise(uint64_t value, Location target);
+    [[noreturn]] void
+    raise(ValueType value_type, uint64_t value, Location target);
 
     /** Raise a runtime Error to the innermost invocation catch point. */
     [[noreturn]] void raise_error(Error error);

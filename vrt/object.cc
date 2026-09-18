@@ -293,8 +293,3 @@ extern "C" VRT_EXPORT void vrt_object_escape(void* payload)
 {
   vrt::Value{vrt::ValueType::object, payload}.escape();
 }
-
-extern "C" VRT_EXPORT void vrt_object_prepare_raise(void* payload)
-{
-  vrt::Value{vrt::ValueType::object, payload}.prepare_raise();
-}

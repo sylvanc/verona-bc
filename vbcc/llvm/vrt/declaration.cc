@@ -12,6 +12,7 @@ namespace vbcc
       auto* void_type = llvm::Type::getVoidTy(context);
       auto* i32_type = llvm::Type::getInt32Ty(context);
       auto* i64_type = llvm::Type::getInt64Ty(context);
+      auto* word_type = module.getDataLayout().getIntPtrType(context);
 
       const auto declare = [this](
                              const char* name,
@@ -51,9 +52,12 @@ namespace vbcc
         declare("vrt_frame_set_raise_target", i64_type, {i64_type});
       runtime.frame_raise_continuation =
         declare("vrt_frame_raise_continuation", pointer_type, {});
-      runtime.frame_raise = declare("vrt_frame_raise", void_type, {i64_type});
+      runtime.frame_raise =
+        declare("vrt_frame_raise", void_type, {word_type, i64_type});
       runtime.frame_take_raised_value =
         declare("vrt_frame_take_raised_value", i64_type, {});
+      runtime.object_escape =
+        declare("vrt_object_escape", void_type, {pointer_type});
       runtime.setjmp = declare("setjmp", i32_type, {pointer_type});
 
       if (runtime.frame_raise != nullptr)
