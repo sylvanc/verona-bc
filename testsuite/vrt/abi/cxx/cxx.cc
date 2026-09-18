@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <type_traits>
+#include <vrt/array.h>
 #include <vrt/error.h>
 #include <vrt/frame.h>
 #include <vrt/function.h>
@@ -75,6 +76,18 @@ static_assert(std::is_same_v<
 static_assert(std::is_same_v<
               decltype(&vrt_func_get_ptr),
               vrt_func_ptr (*)(const vrt_func*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_array_new),
+              void* (*)(std::uintptr_t, std::uintptr_t)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_array_heap),
+              void* (*)(const void*, std::uintptr_t, std::uintptr_t)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_array_region),
+              void* (*)(vrt_region_type, std::uintptr_t, std::uintptr_t)>);
+static_assert(std::is_same_v<decltype(&vrt_array_retain), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_array_release), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_array_escape), void (*)(void*)>);
 static_assert(std::is_same_v<
               decltype(&vrt_object_new),
               void* (*)(const vrt_class*, std::uintptr_t, const void*)>);

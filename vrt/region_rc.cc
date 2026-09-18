@@ -1,8 +1,10 @@
 #include "region_rc.h"
 
+#include "array.h"
 #include "failure.h"
 #include "header.h"
 #include "object.h"
+#include "program.h"
 
 #include <new>
 #include <vector>
@@ -19,6 +21,32 @@ namespace vrt
       fail(Failure::out_of_memory);
 
     auto* result = Object::create(allocation, cls, this);
+    insert(result);
+    stack_inc();
+    return result;
+  }
+
+  Array* RegionRC::array(uintptr_t type_id, uintptr_t size)
+  {
+    if (destroying || finalizing)
+      fail(Failure::invalid_region_state);
+
+    auto content_type_id = unarray(type_id);
+    auto layout = layout_type_id(content_type_id);
+    auto* allocation =
+      new (std::nothrow)
+        std::byte[Array::size_of(size, layout.storage_size)];
+    if (allocation == nullptr)
+      fail(Failure::out_of_memory);
+
+    auto location = Location(this);
+    auto* result = Array::create(
+      allocation,
+      location,
+      type_id,
+      layout.value_type,
+      size,
+      layout.storage_size);
     insert(result);
     stack_inc();
     return result;

@@ -1,5 +1,6 @@
 #include "value.h"
 
+#include "array.h"
 #include "error.h"
 #include "failure.h"
 #include "header.h"
@@ -35,6 +36,10 @@ namespace vrt
         result = reinterpret_cast<Object*>(const_cast<void*>(payload)) - 1;
         break;
 
+      case ValueType::array:
+        result = reinterpret_cast<Array*>(const_cast<void*>(payload)) - 1;
+        break;
+
       default:
         fail(Failure::invalid_value_state);
     }
@@ -58,7 +63,7 @@ namespace vrt
 
   Region* Value::region() const
   {
-    if (value_type == ValueType::object)
+    if ((value_type == ValueType::object) || (value_type == ValueType::array))
     {
       auto* result = header()->region();
       if (result != nullptr)

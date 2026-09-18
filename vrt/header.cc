@@ -1,5 +1,6 @@
 #include "header.h"
 
+#include "array.h"
 #include "error.h"
 #include "failure.h"
 #include "frame.h"
@@ -67,7 +68,8 @@ namespace vrt
 
   bool is_header_type(ValueType value_type)
   {
-    return value_type == ValueType::object;
+    return (value_type == ValueType::object) ||
+      (value_type == ValueType::array);
   }
 
   ValueType Header::value_type() const
@@ -148,6 +150,9 @@ namespace vrt
       case ValueType::object:
         return static_cast<const Object*>(header)->get_payload();
 
+      case ValueType::array:
+        return static_cast<const Array*>(header)->get_payload();
+
       default:
         fail(Failure::invalid_header_state);
     }
@@ -161,6 +166,10 @@ namespace vrt
         finalize_object(static_cast<Object*>(this));
         return;
 
+      case ValueType::array:
+        finalize_array(static_cast<Array*>(this));
+        return;
+
       default:
         fail(Failure::invalid_header_state);
     }
@@ -172,6 +181,10 @@ namespace vrt
     {
       case ValueType::object:
         destroy_object_storage(static_cast<Object*>(this));
+        return;
+
+      case ValueType::array:
+        destroy_array_storage(static_cast<Array*>(this));
         return;
 
       default:

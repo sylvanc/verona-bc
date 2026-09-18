@@ -1,3 +1,4 @@
+#include <vrt/array.h>
 #include <vrt/error.h>
 #include <vrt/frame.h>
 #include <vrt/function.h>
@@ -55,6 +56,14 @@ static const vrt_func* (*const frame_func_signature)(const vrt_frame*) =
   vrt_frame_func;
 static vrt_func_ptr (*const func_get_ptr_signature)(const vrt_func*) =
   vrt_func_get_ptr;
+static void* (*const array_new_signature)(uintptr_t, uintptr_t) = vrt_array_new;
+static void* (*const array_heap_signature)(
+  const void*, uintptr_t, uintptr_t) = vrt_array_heap;
+static void* (*const array_region_signature)(
+  vrt_region_type, uintptr_t, uintptr_t) = vrt_array_region;
+static void (*const array_retain_signature)(void*) = vrt_array_retain;
+static void (*const array_release_signature)(void*) = vrt_array_release;
+static void (*const array_escape_signature)(void*) = vrt_array_escape;
 static void* (*const object_new_signature)(
   const vrt_class*, uintptr_t, const void*) = vrt_object_new;
 static void* (*const object_heap_signature)(
@@ -94,6 +103,12 @@ void verona_program_entry(void)
   (void)frame_id_signature;
   (void)frame_func_signature;
   (void)func_get_ptr_signature;
+  (void)array_new_signature;
+  (void)array_heap_signature;
+  (void)array_region_signature;
+  (void)array_retain_signature;
+  (void)array_release_signature;
+  (void)array_escape_signature;
   (void)object_new_signature;
   (void)object_heap_signature;
   (void)object_region_signature;

@@ -69,7 +69,9 @@ namespace vrt
     if (target == nullptr)
       raise_error(Error::bad_raise_target);
 
-    if (value_type == ValueType::object)
+    if (
+      (value_type == ValueType::object) ||
+      (value_type == ValueType::array))
     {
       auto* payload =
         reinterpret_cast<void*>(static_cast<uintptr_t>(value));

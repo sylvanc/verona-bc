@@ -1,5 +1,6 @@
 #include "writebarrier.h"
 
+#include "array.h"
 #include "error.h"
 #include "failure.h"
 #include "header.h"
@@ -61,6 +62,10 @@ namespace
       case vrt::ValueType::object:
         trace_object(
           static_cast<vrt::Object*>(header), std::forward<F>(function));
+        return;
+
+      case vrt::ValueType::array:
+        static_cast<vrt::Array*>(header)->trace_fn(std::forward<F>(function));
         return;
 
       default:

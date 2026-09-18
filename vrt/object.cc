@@ -28,6 +28,7 @@ namespace
       case vrt::ValueType::scalar:
       case vrt::ValueType::raw_pointer:
       case vrt::ValueType::object:
+      case vrt::ValueType::array:
         return true;
 
       default:

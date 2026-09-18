@@ -27,6 +27,7 @@ namespace
       case vrt::ValueType::scalar:
       case vrt::ValueType::raw_pointer:
       case vrt::ValueType::object:
+      case vrt::ValueType::array:
         return true;
 
       default:
@@ -68,9 +69,24 @@ namespace
           is_valid_value_type(type.value_type) &&
             ((type.value_type == vrt::ValueType::none) ==
              (type.storage_size == 0)) &&
-            (type.element_type_id == 0) &&
+            ((type.value_type == vrt::ValueType::array) ||
+             (type.element_type_id == 0)) &&
             ((index == 0) || (program.types[index - 1].id < type.id)),
           vrt::Failure::invalid_program_state);
+
+        if (type.value_type == vrt::ValueType::array)
+        {
+          bool found = type_registry.contains(type.element_type_id);
+          for (
+            uintptr_t element_index = 0;
+            !found && (element_index < program.type_count);
+            element_index++)
+          {
+            found = program.types[element_index].id == type.element_type_id;
+          }
+
+          internal_check(found, vrt::Failure::invalid_program_state);
+        }
 
         auto [entry, inserted] = type_registry.emplace(type.id, type);
         internal_check(
@@ -114,6 +130,18 @@ vrt::TypeLayout vrt::layout_type_id(uintptr_t type_id)
     type != type_registry.end(), Failure::invalid_program_state);
 
   return {type->second.value_type, type->second.storage_size};
+}
+
+uintptr_t vrt::unarray(uintptr_t type_id)
+{
+  std::shared_lock guard(type_registry_mutex);
+  auto type = type_registry.find(type_id);
+  internal_check(
+    (type != type_registry.end()) &&
+      (type->second.value_type == ValueType::array),
+    Failure::invalid_program_state);
+
+  return type->second.element_type_id;
 }
 
 extern "C" VRT_EXPORT void vrt_runtime_init(void)

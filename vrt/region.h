@@ -7,6 +7,7 @@
 
 namespace vrt
 {
+  struct Array;
   struct Class;
   struct Frame;
   struct Header;
@@ -32,6 +33,7 @@ namespace vrt
     static Region* create(RegionType type, uintptr_t frame_depth = 0);
 
     virtual Object* object(const Class* cls) = 0;
+    virtual Array* array(uintptr_t type_id, uintptr_t size) = 0;
     virtual void insert(Header* header) = 0;
     virtual bool remove(Header* header) = 0;
     virtual bool contains(Header* header) const = 0;

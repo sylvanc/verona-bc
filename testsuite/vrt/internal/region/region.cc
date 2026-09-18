@@ -1,5 +1,6 @@
 #include "region.h"
 
+#include "array.h"
 #include "frame.h"
 #include "object.h"
 #include "region_arena.h"
@@ -8,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <vrt/array.h>
 #include <vrt/program.h>
 #include <vrt/thread.h>
 
@@ -17,8 +19,10 @@ static_assert(std::is_base_of_v<vrt::RegionRC, vrt::RegionArena>);
 
 namespace
 {
+  constexpr uintptr_t scalar_type_id = 0x100;
   constexpr uintptr_t value_class_id = 0x101;
   constexpr uintptr_t holder_class_id = 0x102;
+  constexpr uintptr_t scalar_array_type_id = 0x201;
 
   struct ValuePayload
   {
@@ -70,9 +74,14 @@ namespace
     nullptr};
 
   const vrt::TypeInfo types[] = {
+    {scalar_type_id, vrt::ValueType::scalar, sizeof(uint32_t), 0},
     {value_class_id, vrt::ValueType::object, sizeof(void*), 0},
-    {holder_class_id, vrt::ValueType::object, sizeof(void*), 0}};
-  const vrt::Program program{2, types, 0, nullptr};
+    {holder_class_id, vrt::ValueType::object, sizeof(void*), 0},
+    {scalar_array_type_id,
+     vrt::ValueType::array,
+     sizeof(void*),
+     scalar_type_id}};
+  const vrt::Program program{4, types, 0, nullptr};
 
   vrt::Object* object_from_payload(void* payload)
   {
@@ -108,6 +117,50 @@ int main()
     return 2;
 
   auto* frame_region = root_frame->region;
+
+  auto* frame_array_payload = vrt_array_new(scalar_array_type_id, 2);
+  auto* frame_array = static_cast<vrt::Array*>(
+    vrt::header_from_payload(vrt::ValueType::array, frame_array_payload));
+  if (
+    (frame_array->region() != frame_region) ||
+    !frame_region->contains(frame_array) ||
+    (frame_region->header_count() != 1))
+    return 18;
+
+  vrt_array_release(frame_array_payload);
+  if (frame_region->header_count() != 0)
+    return 19;
+
+  auto* rc_array_payload =
+    vrt_array_region(vrt::RegionType::rc, scalar_array_type_id, 2);
+  auto* rc_array = static_cast<vrt::Array*>(
+    vrt::header_from_payload(vrt::ValueType::array, rc_array_payload));
+  auto* rc_array_region = rc_array->region();
+  if (
+    (rc_array_region == nullptr) || rc_array_region->is_frame_local() ||
+    (rc_array_region->type != vrt::RegionType::rc) ||
+    (dynamic_cast<vrt::RegionRC*>(rc_array_region) == nullptr) ||
+    (dynamic_cast<vrt::RegionArena*>(rc_array_region) != nullptr) ||
+    (rc_array_region->stack_reference_count != 1) ||
+    (rc_array_region->header_count() != 1) ||
+    !rc_array_region->contains(rc_array))
+    return 20;
+  vrt_array_release(rc_array_payload);
+
+  auto* arena_array_payload =
+    vrt_array_region(vrt::RegionType::arena, scalar_array_type_id, 2);
+  auto* arena_array = static_cast<vrt::Array*>(
+    vrt::header_from_payload(vrt::ValueType::array, arena_array_payload));
+  auto* arena_array_region = arena_array->region();
+  if (
+    (arena_array_region == nullptr) || arena_array_region->is_frame_local() ||
+    (arena_array_region->type != vrt::RegionType::arena) ||
+    (dynamic_cast<vrt::RegionArena*>(arena_array_region) == nullptr) ||
+    (arena_array_region->stack_reference_count != 1) ||
+    (arena_array_region->header_count() != 1) ||
+    !arena_array_region->contains(arena_array))
+    return 21;
+  vrt_array_release(arena_array_payload);
 
   // Region initialization drags a frame-local object graph into the new RC
   // region. The argument ownership becomes the Holder field ownership.
@@ -146,12 +199,23 @@ int main()
   ValuePayload rc_heap_args{2};
   auto* rc_heap = vrt_object_heap(rc_root, &value_class, 1, &rc_heap_args);
   auto* rc_heap_object = object_from_payload(rc_heap);
+  auto* rc_heap_array_payload =
+    vrt_array_heap(rc_root, scalar_array_type_id, 2);
+  auto* rc_heap_array = static_cast<vrt::Array*>(
+    vrt::header_from_payload(vrt::ValueType::array, rc_heap_array_payload));
   if (
     (rc_heap_object->region() != rc_region) ||
+    (rc_heap_array->region() != rc_region) ||
     (static_cast<ValuePayload*>(rc_heap)->value != 2) ||
-    (rc_region->stack_reference_count != 2) ||
-    (rc_region->header_count() != 2))
+    (rc_region->stack_reference_count != 3) ||
+    (rc_region->header_count() != 3) || !rc_region->contains(rc_heap_array))
     return 5;
+
+  vrt_array_release(rc_heap_array_payload);
+  if (
+    (rc_region->stack_reference_count != 2) ||
+    (rc_region->header_count() != 2) || rc_region->contains(rc_heap_array))
+    return 22;
 
   vrt_object_release(rc_heap);
   if (
@@ -172,20 +236,33 @@ int main()
   auto* arena_heap =
     vrt_object_heap(arena_root, &value_class, 1, &arena_heap_args);
   auto* arena_heap_object = object_from_payload(arena_heap);
+  auto* arena_heap_array_payload =
+    vrt_array_heap(arena_root, scalar_array_type_id, 2);
+  auto* arena_heap_array = static_cast<vrt::Array*>(
+    vrt::header_from_payload(vrt::ValueType::array, arena_heap_array_payload));
   if (
     !arena_region->is_arena() ||
     (arena_region->type != vrt::RegionType::arena) ||
     (dynamic_cast<vrt::RegionArena*>(arena_region) == nullptr) ||
     (arena_heap_object->region() != arena_region) ||
-    (arena_region->stack_reference_count != 2) ||
-    (arena_region->header_count() != 2))
+    (arena_heap_array->region() != arena_region) ||
+    (arena_region->stack_reference_count != 3) ||
+    (arena_region->header_count() != 3))
     return 7;
+
+  vrt_array_release(arena_heap_array_payload);
+  if (
+    (arena_region->stack_reference_count != 2) ||
+    (arena_region->header_count() != 3) ||
+    !arena_region->contains(arena_heap_array))
+    return 23;
 
   vrt_object_release(arena_heap);
   if (
     (arena_region->stack_reference_count != 1) ||
-    (arena_region->header_count() != 2) ||
-    !arena_region->contains(arena_heap_object))
+    (arena_region->header_count() != 3) ||
+    !arena_region->contains(arena_heap_object) ||
+    !arena_region->contains(arena_heap_array))
     return 8;
 
   vrt_object_release(arena_root);

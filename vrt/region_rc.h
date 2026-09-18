@@ -22,6 +22,7 @@ namespace vrt
 
   public:
     Object* object(const Class* cls) override;
+    Array* array(uintptr_t type_id, uintptr_t size) override;
     void insert(Header* header) override;
     bool remove(Header* header) override;
     bool contains(Header* header) const override;
