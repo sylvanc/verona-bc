@@ -126,20 +126,14 @@ namespace vrt
       writebarrier::drop(region(), element_descriptor, load(index));
   }
 
-  void finalize_array(Array* array)
+  void Array::destroy_storage()
   {
-    if (array != nullptr)
-      array->finalize();
-  }
-
-  void destroy_array_storage(Array* array)
-  {
-    if ((array == nullptr) || array->location().is_immortal())
+    if (location().is_immortal())
       return;
 
-    auto* allocation = array->allocation;
-    array->magic = 0;
-    array->~Array();
+    auto* allocation = this->allocation;
+    this->magic = 0;
+    this->~Array();
     delete[] allocation;
   }
 }

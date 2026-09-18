@@ -163,11 +163,11 @@ namespace vrt
     switch (value_type())
     {
       case ValueType::object:
-        finalize_object(static_cast<Object*>(this));
+        static_cast<Object*>(this)->finalize();
         return;
 
       case ValueType::array:
-        finalize_array(static_cast<Array*>(this));
+        static_cast<Array*>(this)->finalize();
         return;
 
       default:
@@ -180,11 +180,11 @@ namespace vrt
     switch (value_type())
     {
       case ValueType::object:
-        destroy_object_storage(static_cast<Object*>(this));
+        static_cast<Object*>(this)->destroy_storage();
         return;
 
       case ValueType::array:
-        destroy_array_storage(static_cast<Array*>(this));
+        static_cast<Array*>(this)->destroy_storage();
         return;
 
       default:

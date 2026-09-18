@@ -186,33 +186,31 @@ namespace vrt
     return *this;
   }
 
-  void finalize_object(Object* object)
+  void Object::finalize()
   {
-    if (
-      (object == nullptr) || object->location().is_immortal() ||
-      object->finalizing)
+    if (location().is_immortal() || finalizing)
       return;
 
-    object->finalizing = true;
-    auto* cls = object->cls;
-    auto* payload = static_cast<std::byte*>(object->get_payload());
+    finalizing = true;
+    auto* cls = this->cls;
+    auto* payload = static_cast<std::byte*>(get_payload());
 
     for (uintptr_t index = 0; index < cls->field_count; index++)
     {
       const auto& field = cls->fields[index];
       if (is_header_type(field.value_type))
-        writebarrier::drop(object->region(), field, payload + field.offset);
+        writebarrier::drop(region(), field, payload + field.offset);
     }
   }
 
-  void destroy_object_storage(Object* object)
+  void Object::destroy_storage()
   {
-    if ((object == nullptr) || object->location().is_immortal())
+    if (location().is_immortal())
       return;
 
-    auto* allocation = object->allocation;
-    object->magic = 0;
-    object->~Object();
+    auto* allocation = this->allocation;
+    this->magic = 0;
+    this->~Object();
     delete[] allocation;
   }
 }

@@ -39,6 +39,9 @@ namespace vrt
 
     Object& init(uintptr_t argc, const void* packed_args);
 
+    void finalize();
+    void destroy_storage();
+
     void* get_payload()
     {
       return this + 1;
@@ -51,6 +54,4 @@ namespace vrt
   };
 
   void init_singleton(void* storage, const Class* cls);
-  void finalize_object(Object* object);
-  void destroy_object_storage(Object* object);
 }

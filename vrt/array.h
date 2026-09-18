@@ -96,6 +96,7 @@ namespace vrt
     }
 
     void finalize();
+    void destroy_storage();
 
     size_t allocation_size_bytes() const
     {
@@ -103,6 +104,4 @@ namespace vrt
     }
   };
 
-  void finalize_array(Array* array);
-  void destroy_array_storage(Array* array);
 }
