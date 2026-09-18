@@ -48,6 +48,15 @@ namespace vbcc
       if (statement == Drop)
         return emit_drop(statement);
 
+      if (statement == New)
+        return emit_new(statement);
+
+      if (statement == Heap)
+        return emit_heap(statement);
+
+      if (statement == Region)
+        return emit_region(statement);
+
       fail(
         statement,
         "unsupported statement '" + std::string(statement->type().str()) + "'");

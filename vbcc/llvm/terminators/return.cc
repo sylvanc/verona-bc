@@ -23,6 +23,17 @@ namespace vbcc
         return false;
       }
 
+      if (return_type.runtime_type == vrt::ValueType::object)
+      {
+        if ((runtime.object_escape == nullptr) || (value->value == nullptr))
+        {
+          fail(statement, "object escape runtime is unavailable");
+          return false;
+        }
+
+        builder.CreateCall(runtime.object_escape, {value->value});
+      }
+
       if (!emit_leave_frame(statement))
         return false;
 

@@ -106,6 +106,13 @@ namespace vbcc
       bool emit_call(const Node& statement);
       bool emit_drop(const Node& statement);
       bool emit_ffi(const Node& statement);
+      bool emit_new(const Node& statement);
+      bool emit_heap(const Node& statement);
+      bool emit_region(const Node& statement);
+      bool emit_object_allocation(
+        const Node& statement,
+        llvm::Function* allocation_function,
+        std::vector<llvm::Value*> prefix_arguments);
 
       bool
       emit_terminator(const Node& terminator, const LoweredType& return_type);

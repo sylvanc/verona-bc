@@ -1,0 +1,63 @@
+// See README.md for object-allocation coverage and native-runtime boundaries.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+// The allocation chain exercises frame-local allocation, dragging into a new
+// RC region during field initialization, and allocation in that same region.
+class @Leaf
+  @value: i32
+
+class @Root
+  @leaf: @Leaf
+
+class @Child
+  @root: @Root
+  @flag: bool
+
+class @ArenaRoot
+  @value: i64
+
+class @NoneBox
+  @value: none
+
+// Empty classes are represented by one immortal singleton even when they have
+// methods. The method body deliberately uses only already-supported lowering.
+class @Unit
+  @touch @Unit_touch
+
+func @Unit_touch($self: @Unit): i32
+  $success = const i32 0
+  ret $success
+
+// Keep this multi-block so the optimizer preserves the callee frame. Returning
+// the New object exercises relocation out of that frame-local region.
+func @make_leaf(): @Leaf
+  $leaf_value = const i32 7
+  $leaf = new @Leaf($leaf_value)
+  jump ^return
+^return
+  ret $leaf
+
+func @main(): none
+  $leaf = call @make_leaf()
+  $root = region rc @Root($leaf)
+
+  $child_flag = const bool true
+  $child = heap $root @Child($root, $child_flag)
+
+  $arena_value = const i64 11
+  $arena_root = region arena @ArenaRoot($arena_value)
+
+  $none_value = const none
+  $none_box = new @NoneBox($none_value)
+
+  $unit_new = new @Unit()
+  $unit_heap = heap $root @Unit()
+  $new_result = call @Unit_touch($unit_new)
+  $heap_result = call @Unit_touch($unit_heap)
+  $result = or $new_result $heap_result
+
+  $_exit = ffi @set_exit_code($result)
+  $_none = const none
+  ret $_none

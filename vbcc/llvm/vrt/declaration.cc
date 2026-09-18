@@ -10,6 +10,7 @@ namespace vbcc
     {
       auto* pointer_type = llvm::PointerType::getUnqual(context);
       auto* void_type = llvm::Type::getVoidTy(context);
+      auto* i8_type = llvm::Type::getInt8Ty(context);
       auto* i32_type = llvm::Type::getInt32Ty(context);
       auto* i64_type = llvm::Type::getInt64Ty(context);
       auto* word_type = module.getDataLayout().getIntPtrType(context);
@@ -56,6 +57,22 @@ namespace vbcc
         declare("vrt_frame_raise", void_type, {word_type, i64_type});
       runtime.frame_take_raised_value =
         declare("vrt_frame_take_raised_value", i64_type, {});
+      runtime.object_new = declare(
+        "vrt_object_new",
+        pointer_type,
+        {pointer_type, word_type, pointer_type});
+      runtime.object_heap = declare(
+        "vrt_object_heap",
+        pointer_type,
+        {pointer_type, pointer_type, word_type, pointer_type});
+      runtime.object_region = declare(
+        "vrt_object_region",
+        pointer_type,
+        {i8_type, pointer_type, word_type, pointer_type});
+      runtime.object_retain =
+        declare("vrt_object_retain", void_type, {pointer_type});
+      runtime.object_release =
+        declare("vrt_object_release", void_type, {pointer_type});
       runtime.object_escape =
         declare("vrt_object_escape", void_type, {pointer_type});
       runtime.setjmp = declare("setjmp", i32_type, {pointer_type});

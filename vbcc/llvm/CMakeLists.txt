@@ -30,8 +30,12 @@ add_library(libvbcllvm STATIC
   statements/copy.cc
   statements/drop.cc
   statements/ffi.cc
+  statements/heap.cc
   statements/move.cc
+  statements/new.cc
+  statements/object.cc
   statements/raise_target.cc
+  statements/region.cc
   statements/unop.cc
   terminators.cc
   terminators/cond.cc
