@@ -1,0 +1,35 @@
+{
+  "name": "verona-lang",
+  "displayName": "Verona Language",
+  "description": "Syntax highlighting for the Verona programming language",
+  "version": "0.1.0",
+  "publisher": "verona",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "verona",
+        "aliases": [
+          "Verona",
+          "verona"
+        ],
+        "extensions": [
+          ".v"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "verona",
+        "scopeName": "source.verona",
+        "path": "./syntaxes/verona.tmLanguage.json"
+      }
+    ]
+  }
+}
