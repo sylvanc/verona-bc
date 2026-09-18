@@ -73,6 +73,22 @@ static_assert(std::is_same_v<
 static_assert(std::is_same_v<
               decltype(&vrt_func_get_ptr),
               vrt_func_ptr (*)(const vrt_func*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_object_new),
+              void* (*)(const vrt_class*, std::uintptr_t, const void*)>);
+static_assert(
+  std::is_same_v<
+    decltype(&vrt_object_heap),
+    void* (*)(const void*, const vrt_class*, std::uintptr_t, const void*)>);
+static_assert(
+  std::is_same_v<
+    decltype(&vrt_object_region),
+    void* (*)(vrt_region_type, const vrt_class*, std::uintptr_t, const void*)>);
+static_assert(std::is_same_v<decltype(&vrt_object_retain), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_object_release), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_object_escape), void (*)(void*)>);
+static_assert(
+  std::is_same_v<decltype(&vrt_object_prepare_raise), void (*)(void*)>);
 
 extern "C" void verona_program_entry(void)
 {

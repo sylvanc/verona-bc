@@ -133,17 +133,22 @@ then registers their execution as named nodes:
 
 - `vrt/abi/{c,cxx}` tests public C11/C++ layout, inclusion, linkage, and
   signatures;
-- `vrt/api/{error,frame,function,thread}` tests one
+- `vrt/api/{error,frame,function,object,thread}` tests one
   exported VRT API family per executable;
 - `vrt/behavior/{default-exit,set-exit,last-write-wins}` tests generated
   program exit behavior with expected statuses `0`, `7`, and `3`;
-- `vrt/internal/{failure,location}` tests private diagnostics and tagged
-  location representation.
+- `vrt/internal/{failure,frame,location,region}` tests private diagnostics,
+  frame-region transitions, tagged location representation, and ownership
+  invariants.
 
 The API fixtures are hand-written stand-ins for generated native code. They
-call the same exported functions as generated code and construct
-`vrt::Func` descriptors where required. Numeric IDs and sample values are
-deliberately small synthetic test data.
+call the same exported functions as generated code and provide the subset of
+compiler-emitted metadata required by the API under test. Where needed, they
+construct `vrt::Func`, `vrt::Field`, `vrt::Method`, `vrt::Class`,
+`vrt::TypeInfo`, `vrt::Singleton`, and `vrt::Program` descriptors using the
+same ABI layouts and relationships emitted by the LLVM backend. Numeric IDs,
+payload structs, and sample values are deliberately small synthetic test
+data.
 
 The other fixture categories exercise different boundaries. ABI fixtures
 check that public declarations and layouts are usable from C11 and C++.

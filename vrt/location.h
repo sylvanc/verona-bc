@@ -6,6 +6,8 @@
 
 namespace vrt
 {
+  struct Region;
+
   struct Location
   {
     static constexpr auto Stack = uintptr_t(0x1);
@@ -34,6 +36,10 @@ namespace vrt
     {
       return Location(Immortal);
     }
+
+    explicit Location(Region* region)
+    : value(reinterpret_cast<uintptr_t>(region))
+    {}
 
     constexpr uintptr_t raw() const
     {
@@ -70,6 +76,11 @@ namespace vrt
       return value >= other.value;
     }
 
+    bool is_region() const
+    {
+      return (value & Mask) == 0;
+    }
+
     bool is_stack() const
     {
       return (value & Mask) == Stack;
@@ -78,6 +89,12 @@ namespace vrt
     bool is_immortal() const
     {
       return (value & Mask) == Immortal;
+    }
+
+    Region* to_region() const
+    {
+      assert(is_region());
+      return reinterpret_cast<Region*>(value);
     }
 
     Location next_stack_level() const

@@ -4,9 +4,12 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vrt/value.h>
 
 namespace vrt
 {
+  struct Region;
+
   /** State shared by every managed VRT allocation. */
   struct Header
   {
@@ -31,9 +34,43 @@ namespace vrt
       return loc;
     }
 
+    void set_location(Location location)
+    {
+      loc = location;
+    }
+
+    Region* region() const
+    {
+      if (!loc.is_region())
+        return nullptr;
+
+      return loc.to_region();
+    }
+
     uintptr_t get_type_id() const
     {
       return type_id;
     }
+
+    ValueType value_type() const;
+
+    void reg_inc();
+    void reg_dec();
+    void field_inc();
+    void field_dec();
   };
+
+  bool is_header_type(ValueType value_type);
+
+  /** Recover a managed allocation header from its exposed payload pointer. */
+  Header* header_from_payload(ValueType value_type, const void* payload);
+
+  /** Recover the exposed payload pointer for a managed allocation header. */
+  void* payload_from_header(Header* header);
+  const void* payload_from_header(const Header* header);
+
+  void finalize_header(Header* header);
+  void destroy_header_storage(Header* header);
+  void escape_header(Header* header);
+  void prepare_raise_header(Header* header);
 }

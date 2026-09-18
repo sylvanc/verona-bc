@@ -1,6 +1,8 @@
 #pragma once
 
+#include "export.h"
 #include "function.h"
+#include "region.h"
 #include "value.h"
 
 #include <stdint.h>
@@ -24,7 +26,12 @@ namespace vrt
     const Func* func;
   };
 
-  /** Static metadata for one generated class. */
+  /**
+   * Static metadata for one generated class.
+   *
+   * Generated descriptors for empty classes point singleton at their
+   * compiler-emitted immortal payload. Non-empty classes set it to null.
+   */
   struct Class
   {
     uintptr_t id;
@@ -35,11 +42,6 @@ namespace vrt
     const Field* fields;
     uintptr_t method_count;
     const Method* methods;
-    /**
-     * Compiler-emitted immortal payload for an empty class.
-     *
-     * Non-empty classes set this to null.
-     */
     void* singleton;
   };
 }
@@ -77,4 +79,67 @@ typedef struct vrt_class
   const vrt_method* methods;
   void* singleton;
 } vrt_class;
+
+#endif
+
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
+  /**
+   * Allocate and initialize an object in the current frame-local region.
+   *
+   * packed_args points at a payload-shaped argument packet: every argument is
+   * stored at the offset and with the representation described by the
+   * corresponding field metadata. The call consumes the ownership carried
+   * by managed values in the packet.
+   */
+  VRT_EXPORT void*
+  vrt_object_new(const vrt_class* cls, uintptr_t argc, const void* packed_args);
+
+  /**
+   * Allocate in the region containing region_locator.
+   *
+   * region_locator is a borrowed object payload pointer and is resolved before
+   * singleton handling. packed_args has the same form and ownership contract
+   * as for vrt_object_new.
+   */
+  VRT_EXPORT void* vrt_object_heap(
+    const void* region_locator,
+    const vrt_class* cls,
+    uintptr_t argc,
+    const void* packed_args);
+
+  /**
+   * Create a region and allocate its entry-point object.
+   *
+   * Empty classes cannot be region entry points. packed_args has the same
+   * form and ownership contract as for vrt_object_new.
+   */
+  VRT_EXPORT void* vrt_object_region(
+    vrt_region_type region_type,
+    const vrt_class* cls,
+    uintptr_t argc,
+    const void* packed_args);
+
+  /** Add one owning register reference to an object payload. */
+  VRT_EXPORT void vrt_object_retain(void* payload);
+
+  /** Consume one owning register reference to an object payload. */
+  VRT_EXPORT void vrt_object_release(void* payload);
+
+  /**
+   * Relocate a current-frame-local object so it can be returned safely.
+   *
+   * Objects that already outlive the current frame, including immortal
+   * singletons and heap-region objects, are left unchanged.
+   */
+  VRT_EXPORT void vrt_object_escape(void* payload);
+
+  /** Relocate a frame-local object to the current raise-target frame. */
+  VRT_EXPORT void vrt_object_prepare_raise(void* payload);
+
+#if defined(__cplusplus)
+}
 #endif

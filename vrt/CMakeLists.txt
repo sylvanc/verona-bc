@@ -4,12 +4,16 @@ add_library(libvrt STATIC
   failure.cc
   frame.cc
   function.cc
+  header.cc
   thread_context.cc
   native_main.cc
   object.cc
   program.cc
   region.cc
+  region_rc.cc
   thread.cc
+  value.cc
+  writebarrier.cc
 )
 
 target_link_libraries(libvrt PUBLIC

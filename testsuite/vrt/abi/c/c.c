@@ -54,6 +54,20 @@ static const vrt_func* (*const frame_func_signature)(const vrt_frame*) =
   vrt_frame_func;
 static vrt_func_ptr (*const func_get_ptr_signature)(const vrt_func*) =
   vrt_func_get_ptr;
+static void* (*const object_new_signature)(
+  const vrt_class*, uintptr_t, const void*) = vrt_object_new;
+static void* (*const object_heap_signature)(
+  const void*, const vrt_class*, uintptr_t, const void*) = vrt_object_heap;
+static void* (*const object_region_signature)(
+  vrt_region_type,
+  const vrt_class*,
+  uintptr_t,
+  const void*) = vrt_object_region;
+static void (*const object_retain_signature)(void*) = vrt_object_retain;
+static void (*const object_release_signature)(void*) = vrt_object_release;
+static void (*const object_escape_signature)(void*) = vrt_object_escape;
+static void (*const object_prepare_raise_signature)(void*) =
+  vrt_object_prepare_raise;
 
 void verona_program_entry(void)
 {
@@ -81,6 +95,13 @@ void verona_program_entry(void)
   (void)frame_id_signature;
   (void)frame_func_signature;
   (void)func_get_ptr_signature;
+  (void)object_new_signature;
+  (void)object_heap_signature;
+  (void)object_region_signature;
+  (void)object_retain_signature;
+  (void)object_release_signature;
+  (void)object_escape_signature;
+  (void)object_prepare_raise_signature;
   (void)bad_array_index;
 }
 

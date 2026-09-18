@@ -401,8 +401,9 @@ opaque payload structures for every class so recursive class fields can be
 resolved, then defines their native field layouts. Immutable class metadata
 records the class ID and name, payload size and alignment, ordered fields, and
 method table. Method entries are sorted by method ID and refer to the existing
-generated function metadata. The singleton pointer remains null until the
-separate empty-class singleton initialization slice.
+generated function metadata. Empty-class descriptors point at
+compiler-emitted singleton storage whose private immortal object header is
+constructed once by `vrt_program_init`.
 
 `libvrt` binds one logical `vrt_thread` to each participating native thread
 using thread-local storage. `vrt_thread_init` and `vrt_thread_deinit` perform
@@ -452,11 +453,28 @@ null function identity until dynamic callables carry both code and metadata.
 The liveness pass expresses non-transferred register cleanup as explicit `Drop`
 statements before the terminator.
 
-Frame-local regions, stack-object finalization, and managed ownership
-operations are not yet implemented by the native runtime. As those
-representations are added, `vrt_frame_reuse` will perform the old activation's
-tailcall teardown while preserving the logical frame, its identity, and its
-frame-local region.
+The native runtime creates an RC frame-local region for every entered logical
+frame. `vrt_object_new` allocates there, `vrt_object_heap` allocates in the
+region identified by a borrowed object payload, and `vrt_object_region`
+creates an RC or arena region whose first object is its entry point. The
+private hierarchy follows the interpreter's `Region` -> `RegionRC` ->
+`RegionArena` structure: `Region` defines allocation and lifetime operations,
+`RegionRC` tracks contained object headers, and `RegionArena` reuses that
+tracking for bulk reclamation.
+
+Object initializer arguments use the generated class payload layout and are
+consumed by the runtime write barrier. Managed fields can therefore drag
+frame-local object graphs into an older frame or heap region, or establish
+ownership between heap regions. The exported retain, release, return-escape,
+and raise-escape operations maintain register ownership and relocate values
+before their source frames are destroyed. A tailcall preserves the current
+frame-local region; leaving the reused frame finalizes its remaining objects
+and managed fields.
+
+Empty classes use the immortal singleton storage initialized by
+`vrt_program_init`. Object allocation services return that existing payload
+without allocating. An empty class cannot be the entry point of a fresh
+region.
 
 > **Status:** The LLVM backend currently supports scalar primitive types,
 > nominal class layouts and metadata,

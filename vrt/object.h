@@ -4,16 +4,20 @@
 #include "header.h"
 
 #include <cstddef>
+#include <cstdint>
 
 namespace vrt
 {
+  struct Region;
+
   /** Runtime object stored immediately before its exposed payload. */
   struct Object final : Header
   {
     const Class* cls = nullptr;
 
   private:
-    Object(std::byte* allocation, const Class* cls);
+    Object(
+      Region* region, const Class* cls, std::byte* allocation, bool immortal);
 
   public:
     static constexpr size_t singleton_payload_offset()
@@ -26,7 +30,14 @@ namespace vrt
       return singleton_payload_offset() + 1;
     }
 
-    static Object* create_singleton(std::byte* storage, const Class* cls);
+    static size_t size_of(const Class* cls);
+    static Object* create(
+      std::byte* allocation,
+      const Class* cls,
+      Region* region,
+      bool immortal = false);
+
+    Object& init(uintptr_t argc, const void* packed_args);
 
     void* get_payload()
     {
@@ -39,6 +50,7 @@ namespace vrt
     }
   };
 
-  /** Construct one immortal object header in compiler-emitted storage. */
   void init_singleton(void* storage, const Class* cls);
+  void finalize_object(Object* object);
+  void destroy_object_storage(Object* object);
 }
