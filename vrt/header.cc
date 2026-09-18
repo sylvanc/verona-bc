@@ -59,8 +59,8 @@ namespace vrt
         return;
       }
 
-      finalize_header(header);
-      destroy_header_storage(header);
+      header->finalize();
+      header->destroy_storage();
       region->stack_dec();
     }
   }
@@ -153,14 +153,12 @@ namespace vrt
     }
   }
 
-  void finalize_header(Header* header)
+  void Header::finalize()
   {
-    internal_check(header != nullptr, Failure::invalid_header_state);
-
-    switch (header->value_type())
+    switch (value_type())
     {
       case ValueType::object:
-        finalize_object(static_cast<Object*>(header));
+        finalize_object(static_cast<Object*>(this));
         return;
 
       default:
@@ -168,14 +166,12 @@ namespace vrt
     }
   }
 
-  void destroy_header_storage(Header* header)
+  void Header::destroy_storage()
   {
-    internal_check(header != nullptr, Failure::invalid_header_state);
-
-    switch (header->value_type())
+    switch (value_type())
     {
       case ValueType::object:
-        destroy_object_storage(static_cast<Object*>(header));
+        destroy_object_storage(static_cast<Object*>(this));
         return;
 
       default:

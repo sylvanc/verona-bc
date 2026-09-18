@@ -67,7 +67,7 @@ namespace vrt
       fail(Failure::invalid_region_state);
 
     for (auto* header : headers)
-      finalize_header(header);
+      header->finalize();
   }
 
   void RegionRC::release_dead_objects()
@@ -82,7 +82,7 @@ namespace vrt
 
     headers.clear();
     for (auto* header : dead)
-      destroy_header_storage(header);
+      header->destroy_storage();
 
     delete this;
   }

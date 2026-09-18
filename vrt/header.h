@@ -54,6 +54,8 @@ namespace vrt
 
     ValueType value_type() const;
 
+    void finalize();
+    void destroy_storage();
     void reg_inc();
     void reg_dec();
     void field_inc();
@@ -69,7 +71,5 @@ namespace vrt
   void* payload_from_header(Header* header);
   const void* payload_from_header(const Header* header);
 
-  void finalize_header(Header* header);
-  void destroy_header_storage(Header* header);
   void escape_header(Header* header);
 }
