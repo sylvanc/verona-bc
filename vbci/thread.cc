@@ -379,15 +379,15 @@ namespace vbci
 
     auto construction =
       BehaviourCore::make(1, sizeof(Value) * 2, alignof(Value), run_behavior);
-    auto values = static_cast<Value*>(construction.body);
-    new (&values[0]) Value(func);
-    new (&values[1]) Value();
     BehaviourCore::initialise_request(
       construction,
       0,
       result,
       verona::rt::AccessMode::Write,
       verona::rt::Ownership::Borrowed);
+    auto values = static_cast<Value*>(construction.body);
+    new (&values[0]) Value(func);
+    new (&values[1]) Value();
     BehaviourCore::schedule(BehaviourCore::finish_construction(construction));
 
     // Safe to convert to use Register this only contains a cown pointer, so
@@ -2566,9 +2566,6 @@ namespace vbci
     // Request 0 is the result cown.
     auto construction = BehaviourCore::make(
       num_cowns + 1, sizeof(Value) * 2, alignof(Value), run_behavior);
-    auto values = static_cast<Value*>(construction.body);
-    new (&values[0]) Value(func);
-    new (&values[1]) Value();
     BehaviourCore::initialise_request(
       construction,
       0,
@@ -2592,6 +2589,10 @@ namespace vbci
         readonly ? verona::rt::AccessMode::Read : verona::rt::AccessMode::Write,
         verona::rt::Ownership::Transferred);
     }
+
+    auto values = static_cast<Value*>(construction.body);
+    new (&values[0]) Value(func);
+    new (&values[1]) Value();
 
     if (is_closure)
     {
