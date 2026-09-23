@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <dlfcn.h>
 #include <format>
-#include <verona.h>
+#include <sched/schedulerthread.h>
 #include <zstd.h>
 
 namespace vbci

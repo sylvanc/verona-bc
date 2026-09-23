@@ -4,30 +4,69 @@
 #include "header.h"
 #include "program.h"
 #include "region.h"
-#include "thread.h"
 #include "value.h"
 
+#include <atomic>
+#include <boc/behaviourcore.h>
+#include <ds/heap.h>
 #include <format>
-#include <verona.h>
+#include <new>
 
 namespace vbci
 {
-  struct Cown : public verona::rt::VCown<Cown>
+  struct VbciObjectModel;
+
+  struct alignas(8) Cown
   {
   private:
+    friend VbciObjectModel;
+
+    union LifetimeState
+    {
+      std::atomic<size_t> references;
+      Cown* next_to_delete;
+
+      LifetimeState() : references(1) {}
+      ~LifetimeState() {}
+    };
+
+    verona::rt::CownSchedulerState<VbciObjectModel> scheduler_state;
+    LifetimeState lifetime;
     uint32_t type_id;
     Value content;
 
-    Cown(uint32_t type_id) : type_id(type_id)
+    Cown(uint32_t type_id) : type_id(type_id) {}
+
+    static void destroy(Cown* cown) noexcept
     {
-      if (!Program::get().is_cown(type_id))
-        Value::error(Error::BadType);
+      thread_local Cown* pending = nullptr;
+      thread_local bool draining = false;
+
+      cown->lifetime.next_to_delete = pending;
+      pending = cown;
+
+      if (draining)
+        return;
+
+      draining = true;
+      while (pending != nullptr)
+      {
+        auto* current = pending;
+        pending = current->lifetime.next_to_delete;
+        current->~Cown();
+        verona::rt::heap::dealloc<sizeof(Cown)>(current);
+      }
+      draining = false;
     }
 
   public:
     static Cown* create(uint32_t type_id)
     {
-      auto cown = new Cown(type_id);
+      if (!Program::get().is_cown(type_id))
+        Value::error(Error::BadType);
+
+      auto* memory = verona::rt::heap::alloc<sizeof(Cown)>();
+      auto* cown = new (memory) Cown(type_id);
       LOG(Trace) << "Created cown @" << cown;
       return cown;
     }
@@ -71,13 +110,19 @@ namespace vbci
     void inc()
     {
       LOG(Trace) << "Incrementing cown @" << this;
-      acquire(this);
+      assert(lifetime.references.load(std::memory_order_relaxed) > 0);
+      lifetime.references.fetch_add(1, std::memory_order_relaxed);
     }
 
-    void dec()
+    void dec() noexcept
     {
       LOG(Trace) << "Decrementing cown @" << this;
-      release(this);
+      assert(lifetime.references.load(std::memory_order_relaxed) > 0);
+      if (lifetime.references.fetch_sub(1, std::memory_order_release) != 1)
+        return;
+
+      std::atomic_thread_fence(std::memory_order_acquire);
+      destroy(this);
     }
 
     ValueBorrow load()
@@ -210,4 +255,32 @@ namespace vbci
       return std::format("cown: {}", static_cast<void*>(this));
     }
   };
+
+  struct VbciObjectModel
+  {
+    using Cown = vbci::Cown;
+
+    static verona::rt::CownSchedulerState<VbciObjectModel>&
+    get_cown_scheduler_state(Cown& cown) noexcept
+    {
+      return cown.scheduler_state;
+    }
+
+    static void acquire(Cown& cown) noexcept
+    {
+      cown.inc();
+    }
+
+    static void release(Cown& cown) noexcept
+    {
+      cown.dec();
+    }
+
+    static uintptr_t get_cown_identity(const Cown& cown) noexcept
+    {
+      return reinterpret_cast<uintptr_t>(&cown);
+    }
+  };
+
+  using BehaviourCore = verona::rt::boc::BehaviourCore<VbciObjectModel>;
 }
