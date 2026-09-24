@@ -120,6 +120,8 @@ namespace vbci
 
     if (slot->is_header())
       freeze(slot->get_header());
+
+    slot.borrow().immortalize();
   }
 
   uint32_t Program::get_typeid_arg()
@@ -225,9 +227,8 @@ namespace vbci
 
     fini_callbacks.clear();
 
-    // Drop memo slot values, releasing their reference counts.
-    for (auto& slot : memo_slots)
-      slot = ValueTransfer(Value());
+    // Once values and their reachable object graphs have process lifetime.
+    // Clearing the slots is safe because their values have been immortalized.
     memo_slots.clear();
     memo_slot_initializing.clear();
 
