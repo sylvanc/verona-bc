@@ -65,7 +65,6 @@ namespace virc
         // Op codes.
         "const\\b" >> [](auto& m) { m.add(Const); },
         "convert\\b" >> [](auto& m) { m.add(Convert); },
-        "singleton\\b" >> [](auto& m) { m.add(Singleton); },
         "new\\b" >> [](auto& m) { m.add(New); },
         "stack\\b" >> [](auto& m) { m.add(Stack); },
         "heap\\b" >> [](auto& m) { m.add(Heap); },

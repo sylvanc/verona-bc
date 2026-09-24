@@ -766,8 +766,6 @@ namespace vbc
         return os << "String";
       case Op::Convert:
         return os << "Convert";
-      case Op::Singleton:
-        return os << "Singleton";
       case Op::New:
         return os << "New";
       case Op::Stack:
@@ -1153,20 +1151,10 @@ namespace vbci
         break;
       }
 
-      case Op::Singleton:
-      {
-        process([](Register& dst, Class& cls) INLINE {
-          assert(cls.singleton && "Op::Singleton requires an empty class");
-          dst = ValueImmortal(cls.singleton);
-        });
-        break;
-      }
-
       case Op::New:
       {
         process(
           [](Register& dst, Class& cls, Thread& self, Frame& frame) INLINE {
-            assert(!cls.singleton && "Op::New must not be used for singletons");
             self.check_args(cls.fields);
             dst = ValueTransfer(&frame.region->object(cls)->init(frame, cls));
           });
@@ -1179,8 +1167,6 @@ namespace vbci
           [](
             Register& dst, Class& cls, Thread& self, Frame& frame, Stack& stack)
             INLINE {
-              assert(
-                !cls.singleton && "Op::Stack must not be used for singletons");
               self.check_args(cls.fields);
               auto mem = stack.alloc(cls.size);
               auto obj =
@@ -1199,7 +1185,6 @@ namespace vbci
                   Class& cls,
                   Thread& self,
                   Frame& frame) INLINE {
-          assert(!cls.singleton && "Op::Heap must not be used for singletons");
           auto region = region_loc->region();
           self.check_args(cls.fields);
           dst = ValueTransfer(&region->object(cls)->init(frame, cls));
@@ -1215,8 +1200,6 @@ namespace vbci
                   Class& cls,
                   Thread& self,
                   Frame& frame) INLINE {
-          assert(
-            !cls.singleton && "Op::Region must not be used for singletons");
           self.check_args(cls.fields);
           auto region = Region::create(region_type);
           dst = ValueTransfer(&region->object(cls)->init(frame, cls));

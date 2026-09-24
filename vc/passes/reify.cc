@@ -393,10 +393,16 @@ namespace vc
                     merge_refined_type(dst_it->second, src_it->second);
                 }
               }
-              else if (stmt->in({New, Stack, Singleton}))
+              else if (stmt->in({New, Stack}))
               {
                 local_types[(stmt / LocalId)->location()] =
                   clone(stmt / ClassId);
+              }
+              else if (stmt == MemoSlot)
+              {
+                auto type = empty_class_type(stmt / MemoId);
+                if (type)
+                  local_types[(stmt / LocalId)->location()] = type;
               }
               else if (stmt == FieldRef)
               {
@@ -710,6 +716,9 @@ namespace vc
           if (r.reification && r.reification != Primitive)
             top << r.reification;
 
+      for (auto& [_, instance] : empty_class_memos)
+        top << instance.memo << instance.initializer;
+
       // Emit Primitives, deduplicating wrappers whose inner types are
       // invariantly equivalent after alias/shape resolution. Rebuild the
       // wfIR symbol table after populating top so IRSubtype can resolve
@@ -799,12 +808,20 @@ namespace vc
       bool required;
     };
 
+    struct EmptyClassMemo
+    {
+      Node type;
+      Node memo;
+      Node initializer;
+    };
+
     Node top;
     Node builtin;
     NodeMap<std::deque<Reification>> map;
     std::vector<Node> map_order;
     std::vector<Reification*> worklist;
     std::map<Location, Node> libs;
+    std::map<std::string, EmptyClassMemo> empty_class_memos;
     NodeMap<Node> init_sources;
     std::set<Node> processed_initfini;
     Nodes errors;
@@ -827,6 +844,45 @@ namespace vc
       Location recv_loc;
     };
     std::map<Location, LookupInfo> lookup_info;
+
+    Node empty_class_type(const Node& memo_id)
+    {
+      auto find =
+        empty_class_memos.find(std::string(memo_id->location().view()));
+      if (find == empty_class_memos.end())
+        return {};
+
+      return clone(find->second.type);
+    }
+
+    Node ensure_empty_class_memo(const Node& class_id)
+    {
+      auto class_name = std::string(class_id->location().view());
+      auto memo_id = class_name + "$instance";
+      auto find = empty_class_memos.find(memo_id);
+      if (find != empty_class_memos.end())
+        return clone(find->second.memo / MemoId);
+
+      auto initializer_id = class_name + "$instance_init";
+      Node instance = LocalId ^ "$instance";
+
+      Node initializer = Func
+        << (FunctionId ^ initializer_id) << Params << clone(class_id)
+        << (Vars << (VarDef << clone(instance) << clone(class_id)))
+        << (Labels
+            << (Label
+                << (LabelId ^ "entry")
+                << (Body << (New << clone(instance) << clone(class_id) << Args))
+                << (Return << clone(instance))));
+
+      Node memo = Memo << (MemoId ^ memo_id) << (FunctionId ^ initializer_id);
+
+      empty_class_memos.emplace(
+        memo_id,
+        EmptyClassMemo{
+          clone(class_id), std::move(memo), std::move(initializer)});
+      return MemoId ^ memo_id;
+    }
 
     void drain_worklist(std::vector<Reification*>& deferred_typevar)
     {
@@ -2448,10 +2504,16 @@ namespace vc
                   break;
 
                 if (
-                  stmt->in({New, Stack, Singleton}) &&
+                  stmt->in({New, Stack}) &&
                   ((stmt / LocalId)->location() == trace_loc))
                 {
                   callback_type = clone(stmt / ClassId);
+                }
+                else if (
+                  (stmt == MemoSlot) &&
+                  ((stmt / LocalId)->location() == trace_loc))
+                {
+                  callback_type = empty_class_type(stmt / MemoId);
                 }
                 else if (
                   (stmt == Call) && ((stmt / LocalId)->location() == trace_loc))
@@ -2719,10 +2781,11 @@ namespace vc
             auto dst_loc = (n / LocalId)->location();
             local_types[dst_loc] = new_type;
 
-            // Empty class: replace with Singleton (immortal load).
+            // Empty class: load its memoized instance.
             if ((n / Args)->empty())
             {
-              auto s = Singleton << clone(n / LocalId) << clone(n / ClassId);
+              auto s = MemoSlot << clone(n / LocalId)
+                                << ensure_empty_class_memo(n / ClassId);
               n->parent()->replace(n, s);
               n = s;
             }

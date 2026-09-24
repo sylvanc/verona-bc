@@ -230,7 +230,7 @@ namespace virc
             use(node / Rhs);
             def(node / LocalId);
           }
-          else if (node->in({New, Stack, Region, Singleton, Call, When}))
+          else if (node->in({New, Stack, Region, Call, When}))
           {
             def(node / LocalId);
           }
