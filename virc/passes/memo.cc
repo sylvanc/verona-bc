@@ -359,6 +359,7 @@ namespace virc
         auto orig_id = func_once / FunctionId;
         auto orig_id_str = std::string(orig_id->location().view());
         auto init_id_str = orig_id_str + "$once";
+        auto slot_id_str = orig_id_str + "$slot";
         auto r_type = func_once / Type;
         auto params = func_once / Params;
         auto vars = func_once / Vars;
@@ -368,7 +369,7 @@ namespace virc
         Node init_func = Func << (FunctionId ^ init_id_str) << params
                               << clone(r_type) << vars << labels;
 
-        // Stub function: original id, MemoSlot load.
+        // Stub function: original id, memo load.
         Node stub_func = Func
           << (FunctionId ^ orig_id_str) << Params << clone(r_type)
           << (Vars << (VarDef << (LocalId ^ "$memo") << Dyn))
@@ -376,7 +377,7 @@ namespace virc
               << (Label << (LabelId ^ "entry")
                         << (Body
                             << (MemoSlot << (LocalId ^ "$memo")
-                                         << (FunctionId ^ init_id_str)))
+                                         << (MemoId ^ slot_id_str)))
                         << (Return << (LocalId ^ "$memo"))));
 
         // Replace FuncOnce with both Func nodes.
@@ -391,15 +392,14 @@ namespace virc
         func_map[init_id_str] = init_func;
       }
 
-      // --- Emit MemoInit ---
+      // --- Emit memo declarations ---
 
-      Node memo_init = MemoInit;
       for (auto& id : sorted)
       {
         auto init_id_str = id + "$once";
-        memo_init << (FunctionId ^ init_id_str);
+        auto slot_id_str = id + "$slot";
+        top << (Memo << (MemoId ^ slot_id_str) << (FunctionId ^ init_id_str));
       }
-      top << memo_init;
 
       return 0;
     });

@@ -1,0 +1,74 @@
+// Memo initializers run eagerly once, and later calls load their cached values.
+// @answer_init sets 7 before main; main clears it to 0, verifies two loads of
+// 42, and loads the memo-owned cown twice. Reinitialization leaves exit code 7;
+// a wrong cached value returns 1. Expected exit code: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+
+class @Payload
+  @value : i32
+
+
+memo @answer_slot @answer_init
+memo @owner_slot @owner_init
+
+
+func @make_payload() : @Payload
+  $value = const i32 42
+  $payload = new @Payload($value)
+  ret $payload
+
+
+func @answer_init() : i32
+  // Eager initialization happens before main. Loads from main must use the
+  // cached value and must not repeat this observable side effect.
+  $initialized = const i32 7
+  $_ = ffi @set_exit_code($initialized)
+  $answer = const i32 42
+  ret $answer
+
+
+func @answer() : i32
+  $answer = memoslot @answer_slot
+  ret $answer
+
+
+func @owner_init() : cown @Payload
+  $owner = when @make_payload() : @Payload
+  ret $owner
+
+
+func @owner() : cown @Payload
+  $owner = memoslot @owner_slot
+  ret $owner
+
+
+func @main() : none
+  $success = const i32 0
+  $_success = ffi @set_exit_code($success)
+
+  $first = call @answer()
+  $second = call @answer()
+  $expected = const i32 42
+  $first_ok = eq $first $expected
+  cond $first_ok ^check_second ^fail
+
+^check_second
+  $second_ok = eq $second $expected
+  cond $second_ok ^check_owner ^fail
+
+^check_owner
+  $first_owner = call @owner()
+  $second_owner = call @owner()
+  drop $first_owner
+  drop $second_owner
+  $_none = const none
+  ret $_none
+
+^fail
+  $failure = const i32 1
+  $_failure = ffi @set_exit_code($failure)
+  $_none = const none
+  ret $_none

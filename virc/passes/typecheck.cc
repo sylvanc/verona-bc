@@ -503,6 +503,29 @@ namespace virc
         return {};
       };
 
+      std::unordered_map<std::string, Node> memo_initializers;
+      for (auto& child : *top)
+      {
+        if (child != Memo)
+          continue;
+
+        auto slot = std::string((child / MemoId)->location().view());
+        if (!memo_initializers.emplace(slot, child / FunctionId).second)
+        {
+          state->error = true;
+          errors.push_back({child / MemoId, "duplicate memo slot"});
+          continue;
+        }
+
+        auto initializer = find_func(child / FunctionId);
+        if (initializer && !(initializer / Params)->empty())
+        {
+          state->error = true;
+          errors.push_back(
+            {child / FunctionId, "memo initializer must take no parameters"});
+        }
+      }
+
       // Look up a class definition by ClassId.
       auto find_class = [&](const Node& class_id) -> Node {
         for (auto& child : *top)
@@ -1060,15 +1083,22 @@ namespace virc
         }
         else if (node == MemoSlot)
         {
-          // MemoSlot loads the result of a once-function init.
-          // The type is the return type of the init function.
-          auto func_id = node / FunctionId;
-          auto target_func = find_func(func_id);
+          auto slot = std::string((node / MemoId)->location().view());
+          auto initializer = memo_initializers.find(slot);
 
-          if (target_func)
-            set_type(env, node / LocalId, resolve_type(target_func / Type));
-          else
+          if (initializer == memo_initializers.end())
+          {
+            type_err(node / MemoId, "unknown memo slot");
             set_type(env, node / LocalId, Dyn);
+          }
+          else
+          {
+            auto target_func = find_func(initializer->second);
+            if (target_func)
+              set_type(env, node / LocalId, resolve_type(target_func / Type));
+            else
+              set_type(env, node / LocalId, Dyn);
+          }
         }
         else if (node->in({CallDyn, TryCallDyn}))
         {

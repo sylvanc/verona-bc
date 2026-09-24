@@ -16,11 +16,12 @@ namespace vir
   inline const auto FuncOnce = TokenDef("funconce");
   inline const auto Vars = TokenDef("vars");
   inline const auto VarDef = TokenDef("vardef");
-  inline const auto MemoInit = TokenDef("memoinit");
+  inline const auto Memo = TokenDef("memo");
   inline const auto MemoSlot = TokenDef("memoslot");
 
   // Identifiers.
   inline const auto SymbolId = TokenDef("symbolid", flag::print);
+  inline const auto MemoId = TokenDef("memoid", flag::print);
   inline const auto TypeId = TokenDef("typeid", flag::print);
   inline const auto GlobalId = TokenDef("globalid", flag::print);
   inline const auto ClassId = TokenDef("classid", flag::print);
@@ -281,7 +282,7 @@ namespace vir
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Type | Func | FuncOnce | Lib | MemoInit)++)
+      (Top <<= (Primitive | Class | Type | Func | FuncOnce | Lib | Memo)++)
     | (Array <<= (Type >>= wfType))
     | (Ref <<= (Type >>= wfType))
     | (Cown <<= (Type >>= wfType))
@@ -302,8 +303,8 @@ namespace vir
     | (Method <<= MethodId * FunctionId)
     | (Func <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
     | (FuncOnce <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
-    | (MemoInit <<= FunctionId++)
-    | (MemoSlot <<= wfDst * FunctionId)
+    | (Memo <<= MemoId * FunctionId)
+    | (MemoSlot <<= wfDst * MemoId)
     | (Params <<= Param++)
     | (Param <<= LocalId * (Type >>= wfType))
     | (Vars <<= VarDef++)

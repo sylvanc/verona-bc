@@ -29,7 +29,7 @@ namespace virc
   const auto wfPassStatements =
       wfIR
     | (Top <<= (
-        Lib | Primitive | Class | Type | Func | LabelId | wfStatement
+        Lib | Primitive | Class | Type | Func | Memo | LabelId | wfStatement
       | wfTerminator)++)
     ;
   // clang-format on
@@ -258,6 +258,12 @@ namespace virc
           [](Match& _) {
             (_(Lib) / Symbols) << _(Symbol);
             return _(Lib);
+          },
+
+        // Memo slots.
+        (T(Memo) << End) * T(GlobalId)[MemoId] * T(GlobalId)[FunctionId] >>
+          [](Match& _) {
+            return Memo << (MemoId ^ _(MemoId)) << (FunctionId ^ _(FunctionId));
           },
 
         // FFI symbols.
@@ -528,6 +534,12 @@ namespace virc
           [](Match& _) {
             return Call << _(LocalId) << (FunctionId ^ _(GlobalId))
                         << callargs(_[Args]);
+          },
+
+        // Memo load.
+        Dst * T(MemoSlot) * T(GlobalId)[MemoId] >>
+          [](Match& _) {
+            return MemoSlot << _(LocalId) << (MemoId ^ _(MemoId));
           },
 
         // Dynamic call.
