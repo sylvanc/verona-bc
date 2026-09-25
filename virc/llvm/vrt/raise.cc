@@ -35,12 +35,18 @@ namespace virc
         builder.CreateICmpEQ(state, zero), normal_entry, raised);
 
       builder.SetInsertPoint(raised);
-      auto* value =
-        builder.CreateCall(runtime.frame_take_raised_value, {}, "raised.value");
+      auto type_id = runtime_type_id(function / Type);
+      if (!type_id)
+        return false;
 
-      llvm::Value* result = nullptr;
-      if (return_type.ir_type != IRValueType::None)
-        result = unpack_raised_value(return_type, value);
+      auto* storage =
+        allocate_value_storage(return_type, "raised.value.storage");
+      auto* type_id_value = llvm::ConstantInt::get(
+        module.getDataLayout().getIntPtrType(context), *type_id);
+      builder.CreateCall(
+        runtime.frame_take_raised_value, {type_id_value, storage});
+      auto* result =
+        load_value_storage(return_type, storage, "raised.result");
 
       if (return_type.runtime_type == vrt::ValueType::object)
       {
@@ -74,80 +80,44 @@ namespace virc
       return true;
     }
 
-    // Encode a typed value in the runtime's 64-bit raised-value transport.
-    std::optional<llvm::Value*> LLVMCodegen::pack_raised_value(
-      const Node& statement, const LoweredValue& value)
+    llvm::Value* LLVMCodegen::allocate_value_storage(
+      const LoweredType& type, const std::string& name)
     {
-      auto* word_type = llvm::Type::getInt64Ty(context);
+      if (type.storage_type == nullptr)
+        return llvm::ConstantPointerNull::get(
+          llvm::PointerType::getUnqual(context));
 
+      return builder.CreateAlloca(type.storage_type, nullptr, name);
+    }
+
+    std::optional<llvm::Value*> LLVMCodegen::materialize_value_storage(
+      const Node& statement,
+      const LoweredValue& value,
+      const std::string& name)
+    {
       if (value.type.ir_type == IRValueType::None)
-        return llvm::ConstantInt::get(word_type, 0);
+        return allocate_value_storage(value.type, name);
 
-      if (value.value == nullptr)
+      if ((value.value == nullptr) || (value.type.storage_type == nullptr))
       {
         fail(statement, "raised value has no runtime representation");
         return {};
       }
 
-      switch (value.type.ir_type)
-      {
-        case IRValueType::Bool:
-        case IRValueType::SignedInteger:
-        case IRValueType::UnsignedInteger:
-          return builder.CreateZExtOrTrunc(
-            value.value, word_type, "raise.bits");
-
-        case IRValueType::Float:
-        {
-          auto width = value.value->getType()->getPrimitiveSizeInBits();
-          auto* bits_type = llvm::IntegerType::get(context, width);
-          auto* bits =
-            builder.CreateBitCast(value.value, bits_type, "raise.float.bits");
-          return builder.CreateZExt(bits, word_type, "raise.bits");
-        }
-
-        case IRValueType::Pointer:
-        case IRValueType::Function:
-          return builder.CreatePtrToInt(value.value, word_type, "raise.bits");
-
-        case IRValueType::None:
-          break;
-      }
-
-      fail(statement, "unsupported raised value representation");
-      return {};
+      auto* storage = allocate_value_storage(value.type, name);
+      builder.CreateStore(value.value, storage);
+      return storage;
     }
 
-    // Decode the runtime's raised-value transport into a function return type.
-    llvm::Value* LLVMCodegen::unpack_raised_value(
-      const LoweredType& type, llvm::Value* value)
+    llvm::Value* LLVMCodegen::load_value_storage(
+      const LoweredType& type,
+      llvm::Value* storage,
+      const std::string& name)
     {
-      switch (type.ir_type)
-      {
-        case IRValueType::Bool:
-        case IRValueType::SignedInteger:
-        case IRValueType::UnsignedInteger:
-          return builder.CreateTruncOrBitCast(
-            value, type.llvm_type, "raised.result");
+      if (type.storage_type == nullptr)
+        return nullptr;
 
-        case IRValueType::Float:
-        {
-          auto width = type.llvm_type->getPrimitiveSizeInBits();
-          auto* bits_type = llvm::IntegerType::get(context, width);
-          auto* bits =
-            builder.CreateTruncOrBitCast(value, bits_type, "raised.float.bits");
-          return builder.CreateBitCast(bits, type.llvm_type, "raised.result");
-        }
-
-        case IRValueType::Pointer:
-        case IRValueType::Function:
-          return builder.CreateIntToPtr(value, type.llvm_type, "raised.result");
-
-        case IRValueType::None:
-          return nullptr;
-      }
-
-      return nullptr;
+      return builder.CreateLoad(type.storage_type, storage, name);
     }
   }
 }

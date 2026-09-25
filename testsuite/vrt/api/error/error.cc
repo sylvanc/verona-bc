@@ -121,7 +121,7 @@ namespace
     vrt_frame_enter(&root_function);
     vrt_frame_enter(&child_function);
     vrt_frame_set_raise_target(UINT64_MAX);
-    vrt_frame_raise(VRT_VALUE_TYPE_OBJECT, 1);
+    vrt_frame_raise(0, nullptr);
   }
 
   void allocate_region_singleton(void*)

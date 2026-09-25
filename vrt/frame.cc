@@ -4,6 +4,7 @@
 #include "region.h"
 #include "thread_context.h"
 
+#include <cstring>
 #include <limits>
 #include <new>
 
@@ -109,16 +110,18 @@ extern "C" VRT_EXPORT void* vrt_frame_raise_continuation(void)
   return continuation->state;
 }
 
-extern "C" VRT_EXPORT void vrt_frame_raise(vrt_value_type type, uint64_t value)
+extern "C" VRT_EXPORT void
+vrt_frame_raise(uintptr_t type_id, const void* value_storage)
 {
   auto& context = vrt::ThreadContext::get();
   auto* frame = context.thread.frame;
   internal_check(frame != nullptr, vrt::Failure::invalid_frame_state);
 
-  context.raise(type, value, frame->raise_target);
+  context.raise(type_id, value_storage, frame->raise_target);
 }
 
-extern "C" VRT_EXPORT uint64_t vrt_frame_take_raised_value(void)
+extern "C" VRT_EXPORT void vrt_frame_take_raised_value(
+  uintptr_t expected_type_id, void* output_storage)
 {
   auto& context = vrt::ThreadContext::get();
   auto* continuation = context.continuation;
@@ -128,9 +131,18 @@ extern "C" VRT_EXPORT uint64_t vrt_frame_take_raised_value(void)
       continuation->raised_value.has_value(),
     vrt::Failure::invalid_frame_state);
 
-  auto value = *continuation->raised_value;
+  const auto& value = *continuation->raised_value;
+  internal_check(
+    value.type_id == expected_type_id, vrt::Failure::invalid_frame_state);
+
+  if (!value.storage.empty())
+  {
+    internal_check(output_storage != nullptr, vrt::Failure::invalid_write);
+    std::memcpy(
+      output_storage, value.storage.data(), value.storage.size());
+  }
+
   continuation->raised_value.reset();
-  return value;
 }
 
 extern "C" VRT_EXPORT vrt_frame* vrt_frame_parent(vrt_frame* frame)

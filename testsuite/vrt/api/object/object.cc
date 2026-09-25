@@ -298,13 +298,11 @@ int main()
       !intermediate_region->contains(raised_object))
       return 16;
 
-    vrt_frame_raise(
-      VRT_VALUE_TYPE_OBJECT,
-      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(raised_object_data)));
+    vrt_frame_raise(value_class_id, &raised_object_data);
   }
 
-  auto* raised_object_data = reinterpret_cast<void*>(
-    static_cast<uintptr_t>(vrt_frame_take_raised_value()));
+  void* raised_object_data = nullptr;
+  vrt_frame_take_raised_value(value_class_id, &raised_object_data);
   auto* raised_object = object_from_data(raised_object_data);
   if (
     (vrt_thread_current_frame() != root_frame) ||

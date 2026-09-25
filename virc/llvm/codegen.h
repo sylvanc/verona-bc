@@ -173,10 +173,16 @@ namespace virc
         const Node& function,
         llvm::BasicBlock* normal_entry,
         const LoweredType& return_type);
-      std::optional<llvm::Value*>
-      pack_raised_value(const Node& statement, const LoweredValue& value);
-      llvm::Value*
-      unpack_raised_value(const LoweredType& type, llvm::Value* value);
+      llvm::Value* allocate_value_storage(
+        const LoweredType& type, const std::string& name);
+      std::optional<llvm::Value*> materialize_value_storage(
+        const Node& statement,
+        const LoweredValue& value,
+        const std::string& name);
+      llvm::Value* load_value_storage(
+        const LoweredType& type,
+        llvm::Value* storage,
+        const std::string& name);
     };
 
     bool emit(

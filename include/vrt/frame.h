@@ -84,24 +84,34 @@ typedef struct vrt_frame vrt_frame;
   VRT_EXPORT void* vrt_frame_raise_continuation(void);
 
   /**
-   * Raise a type-erased value to the current frame's raise target.
+   * Raise an owned value to the current frame's raise target.
    *
    * This tears down every logical frame above the target and transfers
    * control to the continuation saved by the target function. The payload is
    * recovered there with vrt_frame_take_raised_value. Managed payloads are
    * relocated to the target frame before intervening frames are destroyed.
+   * type_id identifies the value's compiler-emitted storage layout.
+   * value_storage points to that encoded representation and is copied before
+   * this function unwinds any frame. It may be null only for a zero-sized
+   * representation. The ownership carried by the encoded value is transferred
+   * to the target continuation.
    * This function does not return. An invalid or inactive target raises
    * VRT_ERROR_BAD_RAISE_TARGET to the active invocation catch point.
    */
-  VRT_EXPORT void vrt_frame_raise(vrt_value_type type, uint64_t value);
+  VRT_EXPORT void
+  vrt_frame_raise(uintptr_t type_id, const void* value_storage);
 
   /**
    * Consume the value associated with a raise resumed in the current frame.
    *
+   * expected_type_id must match the type passed to vrt_frame_raise.
+   * output_storage receives the encoded representation and may be null only
+   * for a zero-sized representation.
    * Calling this unless the current frame has just been resumed by a raise, or
    * consuming the same payload twice, terminates the process.
    */
-  VRT_EXPORT uint64_t vrt_frame_take_raised_value(void);
+  VRT_EXPORT void vrt_frame_take_raised_value(
+    uintptr_t expected_type_id, void* output_storage);
 
   /** Return the parent frame, or null for a root frame. */
   VRT_EXPORT vrt_frame* vrt_frame_parent(vrt_frame* frame);

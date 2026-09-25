@@ -55,9 +55,11 @@ namespace virc
       runtime.frame_raise_continuation =
         declare("vrt_frame_raise_continuation", pointer_type, {});
       runtime.frame_raise =
-        declare("vrt_frame_raise", void_type, {word_type, i64_type});
-      runtime.frame_take_raised_value =
-        declare("vrt_frame_take_raised_value", i64_type, {});
+        declare("vrt_frame_raise", void_type, {word_type, pointer_type});
+      runtime.frame_take_raised_value = declare(
+        "vrt_frame_take_raised_value",
+        void_type,
+        {word_type, pointer_type});
       runtime.array_new =
         declare("vrt_array_new", pointer_type, {word_type, word_type});
       runtime.array_heap = declare(

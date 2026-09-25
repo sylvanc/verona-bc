@@ -1,10 +1,16 @@
 #include "frame.h"
 
+#include <cstdint>
 #include <csetjmp>
+#include <vrt/program.h>
 #include <vrt/thread.h>
 
 int main()
 {
+  constexpr uintptr_t scalar_type_id = 0x100;
+  const vrt::TypeInfo types[] = {
+    {scalar_type_id, vrt::ValueType::scalar, sizeof(uint64_t), 0}};
+  const vrt::Program program{1, types, 0, nullptr};
   const vrt::Function root_function{1, "root", nullptr};
   const vrt::Function child_function{2, "child", nullptr};
   const vrt::Function tail_function{3, "tail", nullptr};
@@ -14,6 +20,8 @@ int main()
     (vrt_frame_func(nullptr) != nullptr))
     return 1;
 
+  vrt_runtime_init();
+  vrt_program_init(&program);
   vrt_thread_init();
   if (vrt_thread_current_frame() != nullptr)
     return 2;
@@ -89,12 +97,14 @@ int main()
     if (vrt_frame_set_raise_target(root_target) != child->frame_id.raw())
       return 12;
 
-    vrt_frame_raise(VRT_VALUE_TYPE_SCALAR, 42);
+    const uint64_t raised = 42;
+    vrt_frame_raise(scalar_type_id, &raised);
   }
 
+  uint64_t raised = 0;
+  vrt_frame_take_raised_value(scalar_type_id, &raised);
   if (
-    (vrt_thread_current_frame() != root) ||
-    (vrt_frame_take_raised_value() != 42))
+    (vrt_thread_current_frame() != root) || (raised != 42))
     return 13;
 
   vrt_frame_reuse(nullptr);

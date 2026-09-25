@@ -30,14 +30,19 @@ namespace virc
         return false;
       }
 
-      auto bits = pack_raised_value(statement, *value);
-      if (!bits)
+      auto storage =
+        materialize_value_storage(statement, *value, "raise.value.storage");
+      if (!storage)
         return false;
 
-      auto* value_type = llvm::ConstantInt::get(
+      auto type_id = runtime_type_id(statement / Type);
+      if (!type_id)
+        return false;
+
+      auto* type_id_value = llvm::ConstantInt::get(
         module.getDataLayout().getIntPtrType(context),
-        static_cast<std::size_t>(value->type.runtime_type));
-      builder.CreateCall(runtime.frame_raise, {value_type, *bits});
+        *type_id);
+      builder.CreateCall(runtime.frame_raise, {type_id_value, *storage});
       builder.CreateUnreachable();
       return true;
     }

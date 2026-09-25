@@ -4,8 +4,10 @@
 #include "thread.h"
 
 #include <csetjmp>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <vector>
 #include <vrt/error.h>
 #include <vrt/value.h>
 
@@ -14,13 +16,19 @@ namespace vrt
   struct ErrorBoundary;
   struct Header;
 
+  struct RaisedValue
+  {
+    uintptr_t type_id;
+    std::vector<std::byte> storage;
+  };
+
   /** Language-raise target associated with one active logical frame. */
   struct Continuation
   {
     Continuation* parent = nullptr;
     Frame* frame = nullptr;
     std::jmp_buf state{};
-    std::optional<uint64_t> raised_value{};
+    std::optional<RaisedValue> raised_value{};
   };
 
   /** Runtime state bound to one native thread and native call stack. */
@@ -45,9 +53,9 @@ namespace vrt
     /** Relocate a current-frame allocation so it survives a normal return. */
     void escape(Header* header);
 
-    /** Raise a type-erased value through an older active stack Location. */
+    /** Raise an encoded value through an older active stack Location. */
     [[noreturn]] void
-    raise(ValueType value_type, uint64_t value, Location target);
+    raise(uintptr_t type_id, const void* value_storage, Location target);
 
     /** Raise a runtime Error to the innermost error boundary. */
     [[noreturn]] void raise_error(Error error);

@@ -153,10 +153,10 @@ static_assert(
   std::is_same_v<decltype(&vrt_frame_raise_continuation), void* (*)(void)>);
 static_assert(std::is_same_v<
               decltype(&vrt_frame_raise),
-              void (*)(vrt_value_type, std::uint64_t)>);
+              void (*)(std::uintptr_t, const void*)>);
 static_assert(std::is_same_v<
               decltype(&vrt_frame_take_raised_value),
-              std::uint64_t (*)(void)>);
+              void (*)(std::uintptr_t, void*)>);
 static_assert(
   std::is_same_v<decltype(&vrt_frame_parent), vrt_frame* (*)(vrt_frame*)>);
 static_assert(

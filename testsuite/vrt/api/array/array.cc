@@ -351,14 +351,12 @@ int main()
       !intermediate_region->contains(raised_array))
       return 18;
 
-    vrt_frame_raise(
-      VRT_VALUE_TYPE_ARRAY,
-      static_cast<uint64_t>(
-        reinterpret_cast<uintptr_t>(raised_array_elements)));
+    vrt_frame_raise(scalar_array_type_id, &raised_array_elements);
   }
 
-  auto* raised_array_elements = reinterpret_cast<void*>(
-    static_cast<uintptr_t>(vrt_frame_take_raised_value()));
+  void* raised_array_elements = nullptr;
+  vrt_frame_take_raised_value(
+    scalar_array_type_id, &raised_array_elements);
   auto* raised_array = static_cast<vrt::Array*>(
     vrt::Value{vrt::ValueType::array, raised_array_elements}.header());
   if (
