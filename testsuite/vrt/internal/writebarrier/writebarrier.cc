@@ -1,6 +1,7 @@
 // Coverage: immutable copy/drop ARC accounting, immutable children during
-// graph drag, child-parent reuse during overwrite, rejection of writes to
-// immutable or immortal storage, and conflicting region-parent stores.
+// graph drag, child-parent reuse during overwrite, ownership-transferring
+// exchange, rejection of writes to immutable or immortal storage, and
+// conflicting region-parent stores.
 // Non-goals: return/raise dragging is covered by the frame and array fixtures;
 // SCC reclamation is covered by the SCC fixture.
 
@@ -222,6 +223,47 @@ int main()
 
   second_parent->root_ref_dec();
   first_parent->root_ref_dec();
+
+  auto* exchange_destination_region =
+    vrt::Region::create(vrt::RegionType::rc);
+  auto* exchange_destination =
+    exchange_destination_region->object(&node_class);
+  auto* exchange_destination_fields =
+    static_cast<NodeFields*>(exchange_destination->fields());
+  auto* exchange_outgoing_region =
+    vrt::Region::create(vrt::RegionType::rc);
+  auto* exchange_outgoing =
+    exchange_outgoing_region->object(&node_class);
+  auto* exchange_outgoing_data = exchange_outgoing->data();
+  vrt::writebarrier::init(
+    exchange_destination->location(),
+    &exchange_destination_fields->next,
+    node_fields[0],
+    &exchange_outgoing_data);
+
+  auto* exchange_incoming_region =
+    vrt::Region::create(vrt::RegionType::rc);
+  auto* exchange_incoming =
+    exchange_incoming_region->object(&node_class);
+  auto* exchange_incoming_data = exchange_incoming->data();
+  void* exchanged_data = nullptr;
+  vrt::writebarrier::exchange(
+    exchange_destination->location(),
+    &exchange_destination_fields->next,
+    node_fields[0],
+    &exchange_incoming_data,
+    &exchanged_data);
+  if (
+    (exchanged_data != exchange_outgoing_data) ||
+    (exchange_destination_fields->next != exchange_incoming_data) ||
+    exchange_outgoing_region->has_parent() ||
+    (exchange_outgoing_region->stack_reference_count != 1) ||
+    (exchange_incoming_region->parent != exchange_destination_region) ||
+    (exchange_incoming_region->stack_reference_count != 0))
+    return 23;
+
+  exchange_outgoing->root_ref_dec();
+  exchange_destination->root_ref_dec();
 
   immutable->root_ref_dec();
   vrt::deinit_thread();

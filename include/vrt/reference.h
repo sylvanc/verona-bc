@@ -98,6 +98,22 @@ extern "C"
   VRT_EXPORT void
   vrt_reference_validate_tailcall(const vrt_reference* reference);
 
+  /**
+   * Copy the referenced value into output_storage and create one root
+   * ownership obligation for managed results.
+   */
+  VRT_EXPORT void
+  vrt_reference_load(const vrt_reference* reference, void* output_storage);
+
+  /**
+   * Replace the referenced value with one owned value and return the previous
+   * value with one root ownership obligation.
+   */
+  VRT_EXPORT void vrt_reference_exchange(
+    const vrt_reference* reference,
+    const void* owned_incoming_storage,
+    void* outgoing_storage);
+
 #if defined(__cplusplus)
 }
 #endif

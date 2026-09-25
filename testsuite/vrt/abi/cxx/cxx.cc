@@ -191,6 +191,12 @@ static_assert(std::is_same_v<
 static_assert(std::is_same_v<
               decltype(&vrt_reference_validate_tailcall),
               void (*)(const vrt_reference*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_load),
+              void (*)(const vrt_reference*, void*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_exchange),
+              void (*)(const vrt_reference*, const void*, void*)>);
 static_assert(
   std::is_same_v<decltype(&vrt_func_entry), vrt_func_ptr (*)(const vrt_func*)>);
 static_assert(std::is_same_v<

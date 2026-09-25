@@ -25,6 +25,17 @@ namespace vrt::writebarrier
     const Field& field,
     const void* source);
 
+  /**
+   * Consume one root-owned encoded value into a field and return the previous
+   * field value with root ownership.
+   */
+  void exchange(
+    Location store_location,
+    void* target,
+    const Field& field,
+    const void* incoming,
+    void* outgoing);
+
   /** Drop a field while finalizing its containing object. */
   void drop(Location store_location, const Field& field, void* source);
 }

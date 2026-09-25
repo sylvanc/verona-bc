@@ -191,6 +191,10 @@ static void (*const reference_escape_signature)(const vrt_reference*) =
   vrt_reference_escape;
 static void (*const reference_validate_tailcall_signature)(
   const vrt_reference*) = vrt_reference_validate_tailcall;
+static void (*const reference_load_signature)(
+  const vrt_reference*, void*) = vrt_reference_load;
+static void (*const reference_exchange_signature)(
+  const vrt_reference*, const void*, void*) = vrt_reference_exchange;
 static vrt_func_ptr (*const func_entry_signature)(const vrt_func*) =
   vrt_func_entry;
 static void* (*const array_new_signature)(uintptr_t, uintptr_t) = vrt_array_new;
@@ -258,6 +262,8 @@ void verona_program_entry(void)
   (void)reference_release_signature;
   (void)reference_escape_signature;
   (void)reference_validate_tailcall_signature;
+  (void)reference_load_signature;
+  (void)reference_exchange_signature;
   (void)func_entry_signature;
   (void)array_new_signature;
   (void)array_heap_signature;

@@ -127,6 +127,19 @@ int main()
     (field_reference.content_type_id != scalar_type_id))
     return 1;
 
+  uint64_t loaded = 0;
+  vrt_reference_load(&field_reference, &loaded);
+  if (loaded != 10)
+    return 15;
+  const uint64_t replacement = 20;
+  uint64_t previous = 0;
+  vrt_reference_exchange(
+    &field_reference, &replacement, &previous);
+  if (
+    (previous != 10) ||
+    (static_cast<ValueFields*>(object_data)->value != 20))
+    return 16;
+
   vrt_reference_retain(&field_reference);
   if (object->get_rc() != 2)
     return 2;
@@ -149,6 +162,18 @@ int main()
     (array_reference.target != array->load(1)) ||
     (array_reference.content_type_id != scalar_type_id))
     return 5;
+  *static_cast<uint64_t*>(array_reference.target) = 30;
+  vrt_reference_load(&array_reference, &loaded);
+  if (loaded != 30)
+    return 17;
+  const uint64_t array_replacement = 40;
+  vrt_reference_exchange(
+    &array_reference, &array_replacement, &previous);
+  if (
+    (previous != 30) ||
+    (*static_cast<uint64_t*>(array_reference.target) != 40))
+    return 18;
+
   vrt_reference_retain(&array_reference);
   if (array->get_rc() != 2)
     return 6;
@@ -161,6 +186,15 @@ int main()
   vrt::Reference register_reference{};
   vrt_reference_from_register(
     &register_reference, root, &root_slot, scalar_type_id);
+  vrt_reference_load(&register_reference, &loaded);
+  if (loaded != 4)
+    return 19;
+  const uint64_t register_replacement = 5;
+  vrt_reference_exchange(
+    &register_reference, &register_replacement, &previous);
+  if ((previous != 4) || (root_slot != 5))
+    return 20;
+
   auto* child = vrt_frame_enter(&child_function);
   vrt_reference_escape(&register_reference);
   vrt_reference_validate_tailcall(&register_reference);
@@ -202,6 +236,9 @@ int main()
     (raised_object->region() != root_region) ||
     (static_cast<ValueFields*>(raised_reference.owner)->value != 11))
     return 11;
+  vrt_reference_load(&raised_reference, &loaded);
+  if (loaded != 11)
+    return 21;
   vrt_reference_release(&raised_reference);
 
   vrt_frame_leave();

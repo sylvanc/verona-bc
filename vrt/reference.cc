@@ -11,7 +11,9 @@
 #include "region.h"
 #include "thread_context.h"
 #include "value.h"
+#include "writebarrier.h"
 
+#include <cstring>
 namespace
 {
   constexpr uintptr_t kind_mask = 0xff;
@@ -63,6 +65,60 @@ namespace
   vrt::Header* owner_header(const vrt::Reference& reference)
   {
     return owner_value(reference).header();
+  }
+
+  void validate(const vrt::Reference& reference)
+  {
+    if (kind(reference) == vrt::ReferenceKind::register_slot)
+    {
+      (void)active_register_frame(reference);
+      return;
+    }
+
+    if ((reference.owner == nullptr) || (reference.target == nullptr))
+      vrt::raise_error(vrt::Error::bad_reference_target);
+
+    (void)owner_header(reference);
+  }
+
+  void retain_encoded(
+    const vrt::TypeLayout& layout, const void* storage)
+  {
+    switch (layout.value_type)
+    {
+      case vrt::ValueType::none:
+      case vrt::ValueType::scalar:
+      case vrt::ValueType::raw_pointer:
+        return;
+
+      case vrt::ValueType::object:
+      case vrt::ValueType::array:
+      {
+        void* data_address = nullptr;
+        std::memcpy(&data_address, storage, sizeof(data_address));
+        vrt::ownership::retain_root(
+          vrt::Value{layout.value_type, data_address});
+        return;
+      }
+
+      case vrt::ValueType::reference:
+      {
+        internal_check(
+          layout.storage_size == sizeof(vrt::Reference),
+          vrt::Failure::invalid_value_state);
+        vrt::Reference reference;
+        std::memcpy(&reference, storage, sizeof(reference));
+        vrt_reference_retain(&reference);
+        return;
+      }
+
+      case vrt::ValueType::cown:
+      case vrt::ValueType::dynamic:
+      case vrt::ValueType::aggregate:
+        vrt::fail(vrt::Failure::invalid_value_state);
+    }
+
+    vrt::fail(vrt::Failure::invalid_value_state);
   }
 
   bool frame_survives(vrt::Frame* owner, vrt::Frame* target)
@@ -221,4 +277,65 @@ vrt_reference_validate_tailcall(const vrt::Reference* reference)
   auto* owner = active_register_frame(*reference);
   if (owner == vrt::ThreadContext::get().thread.frame)
     vrt::raise_error(vrt::Error::bad_stack_escape);
+}
+
+extern "C" VRT_EXPORT void vrt_reference_load(
+  const vrt::Reference* reference, void* output_storage)
+{
+  internal_check(reference != nullptr, vrt::Failure::invalid_value_state);
+  validate(*reference);
+
+  const auto layout = vrt::layout_type_id(reference->content_type_id);
+  internal_check(
+    (layout.storage_size == 0) || (output_storage != nullptr),
+    vrt::Failure::invalid_write);
+
+  if (layout.storage_size == 0)
+    return;
+
+  std::memmove(output_storage, reference->target, layout.storage_size);
+  retain_encoded(layout, output_storage);
+}
+
+extern "C" VRT_EXPORT void vrt_reference_exchange(
+  const vrt::Reference* reference,
+  const void* owned_incoming_storage,
+  void* outgoing_storage)
+{
+  internal_check(reference != nullptr, vrt::Failure::invalid_value_state);
+  validate(*reference);
+
+  const auto layout = vrt::layout_type_id(reference->content_type_id);
+  internal_check(
+    (layout.storage_size == 0) ||
+      ((owned_incoming_storage != nullptr) && (outgoing_storage != nullptr)),
+    vrt::Failure::invalid_write);
+
+  if (layout.storage_size == 0)
+    return;
+
+  if (kind(*reference) == vrt::ReferenceKind::register_slot)
+  {
+    std::memmove(
+      outgoing_storage, reference->target, layout.storage_size);
+    std::memmove(
+      reference->target, owned_incoming_storage, layout.storage_size);
+    return;
+  }
+
+  internal_check(
+    vrt::is_supported_storage_type(layout.value_type),
+    vrt::Failure::invalid_value_state);
+  const vrt::Field field{
+    0,
+    layout.storage_size,
+    reference->content_type_id,
+    layout.value_type,
+    0};
+  vrt::writebarrier::exchange(
+    owner_header(*reference)->location(),
+    reference->target,
+    field,
+    owned_incoming_storage,
+    outgoing_storage);
 }

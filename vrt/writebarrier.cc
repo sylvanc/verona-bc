@@ -172,6 +172,44 @@ namespace
 
     vrt::ownership::release_field(value(outgoing));
   }
+
+  void transfer_outgoing(
+    vrt::Location store_location,
+    vrt::Header* outgoing,
+    bool preserve_parent = false)
+  {
+    if (outgoing == nullptr)
+      return;
+
+    const auto outgoing_location = outgoing->location();
+    if (
+      outgoing_location.is_immortal() || outgoing_location.is_immutable() ||
+      outgoing_location.is_stack())
+      return;
+
+    auto* outgoing_region = outgoing->region();
+    internal_check(outgoing_region != nullptr, vrt::Failure::invalid_write);
+
+    if (
+      !outgoing_region->is_frame_local() &&
+      !is_frame_storage(store_location))
+      outgoing_region->stack_inc();
+
+    if (store_location == outgoing_location)
+      return;
+
+    if (preserve_parent)
+    {
+      internal_check(
+        store_location.is_region() && outgoing_region->has_parent() &&
+          (outgoing_region->parent == store_location.to_region()),
+        vrt::Failure::invalid_write);
+      return;
+    }
+
+    if (outgoing_region->has_parent())
+      outgoing_region->clear_parent();
+  }
 }
 
 namespace vrt::writebarrier
@@ -364,6 +402,117 @@ namespace vrt::writebarrier
     incoming_region->set_parent(destination, incoming);
     store_header(target, incoming);
     drop_header(store_location, outgoing);
+  }
+
+  void exchange(
+    Location store_location,
+    void* target,
+    const Field& field,
+    const void* incoming_storage,
+    void* outgoing_storage)
+  {
+    validate_store(store_location, target, incoming_storage);
+    internal_check(outgoing_storage != nullptr, Failure::invalid_write);
+
+    if (!is_header_type(field.value_type))
+    {
+      std::memmove(outgoing_storage, target, field.size);
+      std::memmove(target, incoming_storage, field.size);
+      return;
+    }
+
+    auto* incoming = load_header(field.value_type, incoming_storage);
+    auto* outgoing = load_header(field.value_type, target);
+    internal_check(
+      (incoming != nullptr) && !incoming->finalizing &&
+        (incoming->get_type_id() == field.type_id),
+      Failure::invalid_write);
+
+    auto* outgoing_data = outgoing == nullptr ? nullptr : outgoing->data();
+    std::memcpy(outgoing_storage, &outgoing_data, sizeof(outgoing_data));
+
+    if (incoming == outgoing)
+      return;
+
+    const auto incoming_location = incoming->location();
+    if (incoming_location.is_immortal() || incoming_location.is_immutable())
+    {
+      store_header(target, incoming);
+      transfer_outgoing(store_location, outgoing);
+      return;
+    }
+
+    auto* incoming_region = incoming->region();
+    internal_check(
+      (incoming_region != nullptr) && !incoming_region->destroying,
+      Failure::invalid_write);
+
+    if (incoming_region->is_frame_local())
+    {
+      auto* destination = store_region(store_location);
+      const bool must_drag =
+        (store_location.is_stack() &&
+         (store_location.stack_index() < incoming_region->frame_depth)) ||
+        (store_location.is_region() &&
+         (!destination->is_frame_local() ||
+          ((destination != incoming_region) &&
+           (destination->frame_depth < incoming_region->frame_depth))));
+
+      bool preserve_outgoing_parent = false;
+      if (must_drag)
+      {
+        auto result = drag_allocation(
+          destination,
+          incoming,
+          DragOptions{
+            RootReference::transferred,
+            replaced_child_region(store_location, outgoing)});
+        if (!result)
+          raise_error(Error::bad_store);
+
+        preserve_outgoing_parent = result->replaced_child_reused;
+      }
+
+      store_header(target, incoming);
+      transfer_outgoing(
+        store_location, outgoing, preserve_outgoing_parent);
+      return;
+    }
+
+    if (is_frame_storage(store_location))
+    {
+      store_header(target, incoming);
+      transfer_outgoing(store_location, outgoing);
+      return;
+    }
+
+    auto* destination = store_location.to_region();
+    if (destination == incoming_region)
+    {
+      transfer_outgoing(store_location, outgoing);
+      store_header(target, incoming);
+      const bool incoming_region_alive = incoming_region->stack_dec();
+      internal_check(incoming_region_alive, Failure::invalid_write);
+      return;
+    }
+
+    const bool reuse_parent =
+      (outgoing != nullptr) && (outgoing->region() == incoming_region) &&
+      incoming_region->has_parent() &&
+      (incoming_region->parent == destination);
+
+    if (
+      (!reuse_parent && incoming_region->has_parent()) ||
+      incoming_region->is_ancestor_of(destination))
+      raise_error(Error::bad_store);
+
+    if (!reuse_parent)
+      incoming_region->set_parent(destination, incoming);
+
+    transfer_outgoing(store_location, outgoing, reuse_parent);
+    store_header(target, incoming);
+    const bool incoming_region_alive = incoming_region->stack_dec();
+    internal_check(incoming_region_alive, Failure::invalid_write);
   }
 
   void drop(Location store_location, const Field& field, void* source)
