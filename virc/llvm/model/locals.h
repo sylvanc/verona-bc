@@ -39,6 +39,12 @@ namespace virc
       std::optional<LoweredValue> extract_value(const Node& local_id);
 
     public:
+      struct VariableAddress
+      {
+        LoweredType type;
+        llvm::Value* storage;
+      };
+
       explicit LocalState(LLVMCodegen& codegen);
 
       void reset();
@@ -50,6 +56,8 @@ namespace virc
         const Node& local_id,
         const LoweredValue& value);
       std::optional<LoweredValue> find_value(const Node& local_id);
+      std::optional<VariableAddress>
+      find_variable_address(const Node& local_id);
       std::optional<LoweredValue> move_value(const Node& use, const Node& src);
       std::optional<LoweredValue> copy_value(const Node& use, const Node& src);
       bool drop_value(const Node& use, const Node& src);

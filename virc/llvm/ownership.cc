@@ -8,18 +8,6 @@ namespace virc
   {
     namespace
     {
-      bool emit_reference_retain(
-        llvm::Module&, llvm::IRBuilder<>&, const LoweredValue&)
-      {
-        return false;
-      }
-
-      bool emit_reference_release(
-        llvm::Module&, llvm::IRBuilder<>&, const LoweredValue&)
-      {
-        return false;
-      }
-
       bool
       emit_cown_retain(llvm::Module&, llvm::IRBuilder<>&, const LoweredValue&)
       {
@@ -87,11 +75,21 @@ namespace virc
           return true;
 
         case vrt::ValueType::reference:
-          if (emit_reference_retain(module, builder, value))
-            return true;
+        {
+          if ((runtime.reference_retain == nullptr) || (value.value == nullptr))
+          {
+            fail(use, "reference retain runtime is unavailable");
+            return false;
+          }
 
-          fail(use, "reference retain lowering is not implemented");
-          return false;
+          auto storage =
+            materialize_value_storage(use, value, "reference.retain.storage");
+          if (!storage)
+            return false;
+
+          builder.CreateCall(runtime.reference_retain, {*storage});
+          return true;
+        }
 
         case vrt::ValueType::cown:
           if (emit_cown_retain(module, builder, value))
@@ -149,11 +147,22 @@ namespace virc
           return true;
 
         case vrt::ValueType::reference:
-          if (emit_reference_release(module, builder, value))
-            return true;
+        {
+          if (
+            (runtime.reference_release == nullptr) || (value.value == nullptr))
+          {
+            fail(use, "reference release runtime is unavailable");
+            return false;
+          }
 
-          fail(use, "reference release lowering is not implemented");
-          return false;
+          auto storage =
+            materialize_value_storage(use, value, "reference.release.storage");
+          if (!storage)
+            return false;
+
+          builder.CreateCall(runtime.reference_release, {*storage});
+          return true;
+        }
 
         case vrt::ValueType::cown:
           if (emit_cown_release(module, builder, value))
@@ -181,5 +190,85 @@ namespace virc
       return false;
     }
 
+    bool LLVMCodegen::emit_escape(
+      const Node& use, const LoweredValue& value)
+    {
+      switch (value.type.runtime_type)
+      {
+        case vrt::ValueType::none:
+        case vrt::ValueType::scalar:
+        case vrt::ValueType::raw_pointer:
+          return true;
+
+        case vrt::ValueType::object:
+          if ((runtime.object_escape == nullptr) || (value.value == nullptr))
+          {
+            fail(use, "object escape runtime is unavailable");
+            return false;
+          }
+
+          builder.CreateCall(runtime.object_escape, {value.value});
+          return true;
+
+        case vrt::ValueType::array:
+          if ((runtime.array_escape == nullptr) || (value.value == nullptr))
+          {
+            fail(use, "array escape runtime is unavailable");
+            return false;
+          }
+
+          builder.CreateCall(runtime.array_escape, {value.value});
+          return true;
+
+        case vrt::ValueType::reference:
+        {
+          if ((runtime.reference_escape == nullptr) || (value.value == nullptr))
+          {
+            fail(use, "reference escape runtime is unavailable");
+            return false;
+          }
+
+          auto storage =
+            materialize_value_storage(use, value, "reference.escape.storage");
+          if (!storage)
+            return false;
+
+          builder.CreateCall(runtime.reference_escape, {*storage});
+          return true;
+        }
+
+        case vrt::ValueType::cown:
+        case vrt::ValueType::dynamic:
+        case vrt::ValueType::aggregate:
+          fail(use, "escape lowering is unavailable for this value type");
+          return false;
+      }
+
+      assert(false && "unhandled runtime value type");
+      return false;
+    }
+
+    bool LLVMCodegen::emit_validate_tailcall(
+      const Node& use, const LoweredValue& value)
+    {
+      if (value.type.runtime_type != vrt::ValueType::reference)
+        return true;
+
+      if (
+        (runtime.reference_validate_tailcall == nullptr) ||
+        (value.value == nullptr))
+      {
+        fail(use, "reference tailcall validation runtime is unavailable");
+        return false;
+      }
+
+      auto storage = materialize_value_storage(
+        use, value, "reference.tailcall.storage");
+      if (!storage)
+        return false;
+
+      builder.CreateCall(runtime.reference_validate_tailcall, {*storage});
+      return true;
+    }
   }
 }

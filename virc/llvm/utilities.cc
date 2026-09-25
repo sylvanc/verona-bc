@@ -86,6 +86,33 @@ namespace virc
       return {};
     }
 
+    std::optional<Node>
+    LLVMCodegen::resolve_local_type(const Node& local_id)
+    {
+      auto function = local_id->parent(Func);
+      if (!function)
+      {
+        fail(local_id, "local has no containing function");
+        return {};
+      }
+
+      auto types = state.func_types.find(node_text(function / FunctionId));
+      if (types == state.func_types.end())
+      {
+        fail(local_id, "function has no persisted type environment");
+        return {};
+      }
+
+      auto type = types->second.find(node_text(local_id));
+      if (type == types->second.end())
+      {
+        fail(local_id, "local has no inferred type");
+        return {};
+      }
+
+      return type->second;
+    }
+
     std::string LLVMCodegen::node_text(const Node& node)
     {
       return std::string(node->location().view());

@@ -23,26 +23,8 @@ namespace virc
         return false;
       }
 
-      if (return_type.runtime_type == vrt::ValueType::object)
-      {
-        if ((runtime.object_escape == nullptr) || (value->value == nullptr))
-        {
-          fail(statement, "object escape runtime is unavailable");
-          return false;
-        }
-
-        builder.CreateCall(runtime.object_escape, {value->value});
-      }
-      else if (return_type.runtime_type == vrt::ValueType::array)
-      {
-        if ((runtime.array_escape == nullptr) || (value->value == nullptr))
-        {
-          fail(statement, "array escape runtime is unavailable");
-          return false;
-        }
-
-        builder.CreateCall(runtime.array_escape, {value->value});
-      }
+      if (!emit_escape(statement, *value))
+        return false;
 
       if (!emit_leave_frame(statement))
         return false;

@@ -92,6 +92,7 @@ namespace virc
 
       // Resolvers.
       std::optional<std::size_t> runtime_type_id(const Node& type);
+      std::optional<Node> resolve_local_type(const Node& local_id);
       std::optional<LookupPlan> resolve_lookup(const Node& statement);
 
       // wfStatement emitters, in token order.
@@ -152,6 +153,9 @@ namespace virc
       // Ownership helpers.
       bool emit_retain(const Node& use, const LoweredValue& value);
       bool emit_release(const Node& use, const LoweredValue& value);
+      bool emit_escape(const Node& use, const LoweredValue& value);
+      bool
+      emit_validate_tailcall(const Node& use, const LoweredValue& value);
 
       // Argument helpers.
       bool emit_release_args(

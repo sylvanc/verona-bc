@@ -97,6 +97,16 @@ namespace virc
       return value->second;
     }
 
+    std::optional<LocalState::VariableAddress>
+    LocalState::find_variable_address(const Node& local_id)
+    {
+      auto variable = variables.find(LLVMCodegen::node_text(local_id));
+      if (variable == variables.end())
+        return {};
+
+      return VariableAddress{variable->second.type, variable->second.storage};
+    }
+
     std::optional<LoweredValue> LocalState::extract_value(const Node& local_id)
     {
       auto name = LLVMCodegen::node_text(local_id);

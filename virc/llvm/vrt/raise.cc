@@ -48,26 +48,8 @@ namespace virc
       auto* result =
         load_value_storage(return_type, storage, "raised.result");
 
-      if (return_type.runtime_type == vrt::ValueType::object)
-      {
-        if ((runtime.object_escape == nullptr) || (result == nullptr))
-        {
-          fail(function, "object escape runtime is unavailable");
-          return false;
-        }
-
-        builder.CreateCall(runtime.object_escape, {result});
-      }
-      else if (return_type.runtime_type == vrt::ValueType::array)
-      {
-        if ((runtime.array_escape == nullptr) || (result == nullptr))
-        {
-          fail(function, "array escape runtime is unavailable");
-          return false;
-        }
-
-        builder.CreateCall(runtime.array_escape, {result});
-      }
+      if (!emit_escape(function, LoweredValue{return_type, result}))
+        return false;
 
       if (!emit_leave_frame(function))
         return false;
@@ -87,7 +69,12 @@ namespace virc
         return llvm::ConstantPointerNull::get(
           llvm::PointerType::getUnqual(context));
 
-      return builder.CreateAlloca(type.storage_type, nullptr, name);
+      auto* block = builder.GetInsertBlock();
+      assert(block != nullptr);
+      auto& entry = block->getParent()->getEntryBlock();
+      llvm::IRBuilder<> entry_builder(context);
+      entry_builder.SetInsertPoint(&entry, entry.begin());
+      return entry_builder.CreateAlloca(type.storage_type, nullptr, name);
     }
 
     std::optional<llvm::Value*> LLVMCodegen::materialize_value_storage(
@@ -100,7 +87,7 @@ namespace virc
 
       if ((value.value == nullptr) || (value.type.storage_type == nullptr))
       {
-        fail(statement, "raised value has no runtime representation");
+        fail(statement, "value has no storage representation");
         return {};
       }
 

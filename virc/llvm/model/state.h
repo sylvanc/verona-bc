@@ -54,6 +54,7 @@ namespace virc
       llvm::Function* frame_raise_continuation = nullptr;
       llvm::Function* frame_raise = nullptr;
       llvm::Function* frame_take_raised_value = nullptr;
+      llvm::Function* thread_current_frame = nullptr;
       llvm::Function* array_new = nullptr;
       llvm::Function* array_heap = nullptr;
       llvm::Function* array_region = nullptr;
@@ -73,6 +74,15 @@ namespace virc
       llvm::Function* object_freeze = nullptr;
       llvm::Function* object_escape = nullptr;
       llvm::Function* object_lookup = nullptr;
+      llvm::Function* reference_from_register = nullptr;
+      llvm::Function* reference_from_field = nullptr;
+      llvm::Function* reference_from_array = nullptr;
+      llvm::Function* reference_retain = nullptr;
+      llvm::Function* reference_release = nullptr;
+      llvm::Function* reference_escape = nullptr;
+      llvm::Function* reference_validate_tailcall = nullptr;
+      llvm::Function* reference_load = nullptr;
+      llvm::Function* reference_exchange = nullptr;
       llvm::Function* func_entry = nullptr;
       llvm::Function* setjmp = nullptr;
     };

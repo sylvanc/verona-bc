@@ -26,6 +26,7 @@ namespace virc
       Float,
       Pointer,
       Function,
+      Aggregate,
     };
 
     struct LoweredType

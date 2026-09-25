@@ -60,6 +60,8 @@ namespace virc
         "vrt_frame_take_raised_value",
         void_type,
         {word_type, pointer_type});
+      runtime.thread_current_frame =
+        declare("vrt_thread_current_frame", pointer_type, {});
       runtime.array_new =
         declare("vrt_array_new", pointer_type, {word_type, word_type});
       runtime.array_heap = declare(
@@ -110,6 +112,34 @@ namespace virc
         declare("vrt_object_freeze", void_type, {pointer_type});
       runtime.object_escape =
         declare("vrt_object_escape", void_type, {pointer_type});
+      runtime.reference_from_register = declare(
+        "vrt_reference_from_register",
+        void_type,
+        {pointer_type, pointer_type, pointer_type, word_type});
+      runtime.reference_from_field = declare(
+        "vrt_reference_from_field",
+        void_type,
+        {pointer_type, pointer_type, word_type});
+      runtime.reference_from_array = declare(
+        "vrt_reference_from_array",
+        void_type,
+        {pointer_type, pointer_type, word_type});
+      runtime.reference_retain =
+        declare("vrt_reference_retain", void_type, {pointer_type});
+      runtime.reference_release =
+        declare("vrt_reference_release", void_type, {pointer_type});
+      runtime.reference_escape =
+        declare("vrt_reference_escape", void_type, {pointer_type});
+      runtime.reference_validate_tailcall = declare(
+        "vrt_reference_validate_tailcall", void_type, {pointer_type});
+      runtime.reference_load = declare(
+        "vrt_reference_load",
+        void_type,
+        {pointer_type, pointer_type});
+      runtime.reference_exchange = declare(
+        "vrt_reference_exchange",
+        void_type,
+        {pointer_type, pointer_type, pointer_type});
       runtime.func_entry =
         declare("vrt_func_entry", pointer_type, {pointer_type});
       runtime.setjmp = declare("setjmp", i32_type, {pointer_type});
