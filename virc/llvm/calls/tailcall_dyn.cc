@@ -94,6 +94,9 @@ namespace virc
           return false;
         }
 
+        if (!emit_validate_tailcall(move_args->at(index), arg))
+          return false;
+
         param_types.push_back(arg.type.llvm_type);
         llvm_args.push_back(arg.value);
       }

@@ -92,6 +92,24 @@ namespace virc
       if (statement->type().in({RegionArray, RegionArrayConst}))
         return emit_region_array(statement);
 
+      if (statement == RegisterRef)
+        return emit_register_ref(statement);
+
+      if (statement == FieldRef)
+        return emit_field_ref(statement);
+
+      if (statement == ArrayRef)
+        return emit_array_ref(statement);
+
+      if (statement == ArrayRefConst)
+        return emit_array_ref_const(statement);
+
+      if (statement == Load)
+        return emit_load(statement);
+
+      if (statement == Store)
+        return emit_store(statement);
+
       if (statement == ArrayCopy)
         return emit_array_copy(statement);
 

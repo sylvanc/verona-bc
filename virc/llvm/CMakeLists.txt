@@ -55,15 +55,21 @@ add_library(virc_llvm STATIC
   statements/arraycompare.cc
   statements/arraycopy.cc
   statements/arrayfill.cc
+  statements/array_ref.cc
+  statements/array_ref_const.cc
   statements/binop.cc
   statements/convert.cc
   statements/copy.cc
   statements/drop.cc
   statements/ffi.cc
   statements/freeze.cc
+  statements/field_ref.cc
   statements/get_raise.cc
+  statements/load.cc
   statements/move.cc
+  statements/register_ref.cc
   statements/set_raise.cc
+  statements/store.cc
   statements/unop.cc
   terminators.cc
   terminators/cond.cc

@@ -72,6 +72,9 @@ namespace virc
           return false;
         }
 
+        if (!emit_validate_tailcall(move_args->at(i), arg))
+          return false;
+
         llvm_args.push_back(arg.value);
       }
 

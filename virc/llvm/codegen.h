@@ -107,6 +107,12 @@ namespace virc
       bool emit_new_array_const(const Node& statement);
       bool emit_heap_array(const Node& statement);
       bool emit_region_array(const Node& statement);
+      bool emit_register_ref(const Node& statement);
+      bool emit_field_ref(const Node& statement);
+      bool emit_array_ref(const Node& statement);
+      bool emit_array_ref_const(const Node& statement);
+      bool emit_load(const Node& statement);
+      bool emit_store(const Node& statement);
       bool emit_copy(const Node& statement);
       bool emit_move(const Node& statement);
       bool emit_freeze(const Node& statement);
@@ -160,6 +166,7 @@ namespace virc
       // Argument helpers.
       bool emit_release_args(
         const Node& args, const std::vector<LoweredValue>& values);
+      std::optional<LoweredValue> transfer_arg(const Node& arg);
 
       // Callable helpers.
       std::optional<llvm::Value*>
