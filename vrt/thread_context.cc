@@ -12,6 +12,7 @@
 #include <cstring>
 #include <new>
 #include <optional>
+#include <utility>
 
 namespace
 {
@@ -129,10 +130,9 @@ namespace vrt
       (layout.storage_size == 0) || (value_storage != nullptr),
       Failure::invalid_write);
 
+    RaisedValue raised{type_id, {}};
     try
     {
-      auto& raised = target_continuation->raised_value.emplace(
-        RaisedValue{type_id, {}});
       raised.storage.resize(layout.storage_size);
       if (layout.storage_size != 0)
       {
@@ -176,6 +176,7 @@ namespace vrt
       vrt::reference::escape_to(reference, target);
     }
 
+    target_continuation->raised_value.emplace(std::move(raised));
     unwind_frames(target);
 
     internal_check(

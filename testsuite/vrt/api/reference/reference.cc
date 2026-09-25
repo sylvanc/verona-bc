@@ -100,6 +100,25 @@ namespace
     vrt_frame_reuse(&tail_function);
     vrt_reference_retain(&reference);
   }
+
+  void reject_raised_register_reference(void*)
+  {
+    auto* root = vrt_frame_enter(&root_function);
+    auto* continuation =
+      static_cast<std::jmp_buf*>(vrt_frame_raise_continuation());
+    if (setjmp(*continuation) != 0)
+      vrt_error_raise(VRT_ERROR_BAD_REFERENCE_TARGET);
+
+    auto* owner = vrt_frame_enter(&child_function);
+    uint64_t slot = 1;
+    vrt::Reference reference{};
+    vrt_reference_from_register(
+      &reference, owner, &slot, scalar_type_id);
+    auto* raiser = vrt_frame_enter(&child_function);
+    (void)raiser;
+    vrt_frame_set_raise_target(root->frame_id.raw());
+    vrt_frame_raise(scalar_reference_type_id, &reference);
+  }
 }
 
 int main()
@@ -256,6 +275,10 @@ int main()
     vrt_try_invoke(reject_stale_register_reference, nullptr, &error) ||
     (error.code != VRT_ERROR_BAD_REFERENCE_TARGET))
     return 14;
+  if (
+    vrt_try_invoke(reject_raised_register_reference, nullptr, &error) ||
+    (error.code != VRT_ERROR_BAD_STACK_ESCAPE))
+    return 22;
 
   vrt_thread_deinit();
   return 0;
