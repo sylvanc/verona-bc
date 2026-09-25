@@ -119,6 +119,48 @@ namespace
     vrt_frame_set_raise_target(root->frame_id.raw());
     vrt_frame_raise(scalar_reference_type_id, &reference);
   }
+
+  void reject_younger_reference_store(void*)
+  {
+    auto* root = vrt_frame_enter(&root_function);
+    uint64_t root_value = 1;
+    vrt::Reference root_value_reference{};
+    vrt_reference_from_register(
+      &root_value_reference, root, &root_value, scalar_type_id);
+    vrt::Reference reference_slot = root_value_reference;
+    vrt::Reference slot_reference{};
+    vrt_reference_from_register(
+      &slot_reference,
+      root,
+      &reference_slot,
+      scalar_reference_type_id);
+
+    auto* child = vrt_frame_enter(&child_function);
+    uint64_t child_value = 2;
+    vrt::Reference child_reference{};
+    vrt_reference_from_register(
+      &child_reference, child, &child_value, scalar_type_id);
+    vrt::Reference outgoing{};
+    vrt_reference_exchange(
+      &slot_reference, &child_reference, &outgoing);
+  }
+
+  void reject_unknown_field(void*)
+  {
+    vrt_frame_enter(&root_function);
+    ValueFields args{1};
+    auto* object = vrt_object_new(&value_class, 1, &args);
+    vrt::Reference reference{};
+    vrt_reference_from_field(&reference, object, value_field_id + 1);
+  }
+
+  void reject_bad_array_index(void*)
+  {
+    vrt_frame_enter(&root_function);
+    auto* array = vrt_array_new(scalar_array_type_id, 1);
+    vrt::Reference reference{};
+    vrt_reference_from_array(&reference, array, 1);
+  }
 }
 
 int main()
@@ -214,6 +256,32 @@ int main()
   if ((previous != 4) || (root_slot != 5))
     return 20;
 
+  ValueFields old_args{50};
+  void* managed_slot = vrt_object_new(&value_class, 1, &old_args);
+  vrt::Reference managed_register_reference{};
+  vrt_reference_from_register(
+    &managed_register_reference, root, &managed_slot, value_class_id);
+  auto* managed_child = vrt_frame_enter(&child_function);
+  ValueFields new_args{60};
+  void* incoming_object = vrt_object_new(&value_class, 1, &new_args);
+  void* outgoing_object = nullptr;
+  vrt_reference_exchange(
+    &managed_register_reference, &incoming_object, &outgoing_object);
+  auto* incoming_header = static_cast<vrt::Object*>(
+    vrt::Value{vrt::ValueType::object, managed_slot}.header());
+  if (
+    (outgoing_object == nullptr) || (managed_slot != incoming_object) ||
+    (incoming_header->region() != root_region) ||
+    (managed_child->region == root_region))
+    return 23;
+  vrt_frame_leave();
+  if (
+    (vrt_thread_current_frame() != root) ||
+    (static_cast<ValueFields*>(managed_slot)->value != 60))
+    return 24;
+  vrt_object_release(outgoing_object);
+  vrt_object_release(managed_slot);
+
   auto* child = vrt_frame_enter(&child_function);
   vrt_reference_escape(&register_reference);
   vrt_reference_validate_tailcall(&register_reference);
@@ -279,6 +347,18 @@ int main()
     vrt_try_invoke(reject_raised_register_reference, nullptr, &error) ||
     (error.code != VRT_ERROR_BAD_STACK_ESCAPE))
     return 22;
+  if (
+    vrt_try_invoke(reject_younger_reference_store, nullptr, &error) ||
+    (error.code != VRT_ERROR_BAD_STACK_ESCAPE))
+    return 25;
+  if (
+    vrt_try_invoke(reject_unknown_field, nullptr, &error) ||
+    (error.code != VRT_ERROR_BAD_REFERENCE_TARGET))
+    return 26;
+  if (
+    vrt_try_invoke(reject_bad_array_index, nullptr, &error) ||
+    (error.code != VRT_ERROR_BAD_ARRAY_INDEX))
+    return 27;
 
   vrt_thread_deinit();
   return 0;

@@ -191,11 +191,14 @@ extern "C" VRT_EXPORT void vrt_reference_from_field(
     (out != nullptr) && (owned_object != nullptr),
     vrt::Failure::invalid_value_state);
 
-  auto* object = static_cast<vrt::Object*>(
-    vrt::Value{vrt::ValueType::object, owned_object}.header());
+  const vrt::Value owner{vrt::ValueType::object, owned_object};
+  auto* object = static_cast<vrt::Object*>(owner.header());
   const auto* field = object->cls->field(field_id);
   if (field == nullptr)
+  {
+    vrt::ownership::release_root(owner);
     vrt::raise_error(vrt::Error::bad_reference_target);
+  }
 
   (void)vrt::layout_type_id(field->type_id);
   *out = {
@@ -213,10 +216,13 @@ extern "C" VRT_EXPORT void vrt_reference_from_array(
     (out != nullptr) && (owned_array != nullptr),
     vrt::Failure::invalid_value_state);
 
-  auto* array = static_cast<vrt::Array*>(
-    vrt::Value{vrt::ValueType::array, owned_array}.header());
+  const vrt::Value owner{vrt::ValueType::array, owned_array};
+  auto* array = static_cast<vrt::Array*>(owner.header());
   if (index >= array->get_size())
+  {
+    vrt::ownership::release_root(owner);
     vrt::raise_error(vrt::Error::bad_array_index);
+  }
 
   *out = {
     static_cast<uintptr_t>(vrt::ReferenceKind::array_element),
@@ -316,11 +322,60 @@ extern "C" VRT_EXPORT void vrt_reference_exchange(
 
   if (kind(*reference) == vrt::ReferenceKind::register_slot)
   {
-    std::memmove(
-      outgoing_storage, reference->target, layout.storage_size);
-    std::memmove(
-      reference->target, owned_incoming_storage, layout.storage_size);
-    return;
+    auto* owner = active_register_frame(*reference);
+    switch (layout.value_type)
+    {
+      case vrt::ValueType::none:
+        return;
+
+      case vrt::ValueType::scalar:
+      case vrt::ValueType::raw_pointer:
+        std::memmove(
+          outgoing_storage, reference->target, layout.storage_size);
+        std::memmove(
+          reference->target, owned_incoming_storage, layout.storage_size);
+        return;
+
+      case vrt::ValueType::object:
+      case vrt::ValueType::array:
+      {
+        const vrt::Field field{
+          0,
+          layout.storage_size,
+          reference->content_type_id,
+          layout.value_type,
+          0};
+        vrt::writebarrier::exchange(
+          owner->frame_id,
+          reference->target,
+          field,
+          owned_incoming_storage,
+          outgoing_storage);
+        return;
+      }
+
+      case vrt::ValueType::reference:
+      {
+        internal_check(
+          layout.storage_size == sizeof(vrt::Reference),
+          vrt::Failure::invalid_value_state);
+        vrt::Reference incoming;
+        std::memcpy(&incoming, owned_incoming_storage, sizeof(incoming));
+        vrt::reference::escape_to(incoming, owner);
+        std::memmove(
+          outgoing_storage, reference->target, layout.storage_size);
+        std::memmove(
+          reference->target, owned_incoming_storage, layout.storage_size);
+        return;
+      }
+
+      case vrt::ValueType::cown:
+      case vrt::ValueType::dynamic:
+      case vrt::ValueType::aggregate:
+        vrt::fail(vrt::Failure::invalid_value_state);
+    }
+
+    vrt::fail(vrt::Failure::invalid_value_state);
   }
 
   internal_check(

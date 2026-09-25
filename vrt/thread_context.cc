@@ -12,7 +12,6 @@
 #include <cstring>
 #include <new>
 #include <optional>
-#include <utility>
 
 namespace
 {
@@ -130,21 +129,6 @@ namespace vrt
       (layout.storage_size == 0) || (value_storage != nullptr),
       Failure::invalid_write);
 
-    RaisedValue raised{type_id, {}};
-    try
-    {
-      raised.storage.resize(layout.storage_size);
-      if (layout.storage_size != 0)
-      {
-        std::memcpy(
-          raised.storage.data(), value_storage, layout.storage_size);
-      }
-    }
-    catch (const std::bad_alloc&)
-    {
-      fail(Failure::out_of_memory);
-    }
-
     if (
       (layout.value_type == ValueType::object) ||
       (layout.value_type == ValueType::array))
@@ -176,7 +160,23 @@ namespace vrt
       vrt::reference::escape_to(reference, target);
     }
 
-    target_continuation->raised_value.emplace(std::move(raised));
+    try
+    {
+      auto& raised = target_continuation->raised_value.emplace(
+        RaisedValue{type_id, {}});
+      raised.storage.resize(layout.storage_size);
+      if (layout.storage_size != 0)
+      {
+        std::memcpy(
+          raised.storage.data(), value_storage, layout.storage_size);
+      }
+    }
+    catch (const std::bad_alloc&)
+    {
+      target_continuation->raised_value.reset();
+      fail(Failure::out_of_memory);
+    }
+
     unwind_frames(target);
 
     internal_check(
