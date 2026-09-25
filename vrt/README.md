@@ -1,8 +1,9 @@
 # VRT
 
 VRT is the native runtime targeted by VIRC's LLVM emitter. It owns the public C
-ABI for program startup, generated function metadata, frames, values, objects,
-arrays, regions, errors, and runtime services used by native code.
+ABI for program startup, generated function metadata, frames, values,
+references, objects, arrays, regions, errors, and runtime services used by
+native code.
 
 The `libvrt` target is linked with generated native objects. Public ABI headers
 are under `include/vrt/`; implementation headers and C++ types remain private

@@ -421,9 +421,8 @@ object header is constructed once by `vrt_program_init`.
 
 The thunk passes `self` as a borrowed pointer and does not retain or release
 it. The native backend does not yet encode Verona's transitive read-only
-capability in that pointer; reference-store lowering is also outside the
-current native subset. Finalizers that depend on native enforcement of
-read-only values remain unsupported until those representations are added.
+capability in that pointer. Finalizers that depend on native enforcement of
+read-only values remain unsupported until readonly references are added.
 
 `libvrt` binds one logical `vrt_thread` to each participating native thread
 using thread-local storage. `vrt_thread_init` and `vrt_thread_deinit` perform
@@ -463,16 +462,15 @@ object-class unions therefore retain their dynamic lookup in the native
 backend.
 
 Each generated function also saves a native `setjmp` continuation in its
-logical frame. A VIR `raise` consumes its source value, encodes the currently
-supported native representation in a 64-bit runtime word, and passes its
-runtime value category and payload bits to `vrt_frame_raise`. The runtime
-validates the active target and, for a managed object payload, relocates a
-frame-local object into the target frame before removing the intermediate
-logical frames and resuming the target continuation. That target then consumes
-the payload, reconstructs its native return representation, leaves its frame,
-and returns to its caller. Tailcalled functions overwrite the continuation in
-the reused logical frame, so the stable frame identity still names the current
-native activation.
+logical frame. A VIR `raise` consumes its source value and passes its runtime
+type ID plus a pointer to encoded native storage to `vrt_frame_raise`. The
+runtime copies that storage into the target continuation, relocates a
+frame-local object, array, or reference owner when required, and removes the
+intermediate logical frames before resuming the target continuation. That
+target consumes the payload, reconstructs its native return representation,
+leaves its frame, and returns to its caller. Tailcalled functions overwrite
+the continuation in the reused logical frame, so the stable frame identity
+still names the current native activation.
 
 VIR `getraise` and `setraise` are ordinary side-effecting statements around
 that control transfer. `getraise` reads the current logical frame's target,
@@ -491,6 +489,16 @@ the same frame metadata for both forms.
 The liveness pass expresses non-transferred register cleanup as explicit `Drop`
 statements before the terminator.
 
+VIR `RegisterRef`, `FieldRef`, `ArrayRef`, `ArrayRefConst`, `Load`, and `Store`
+lower through the public VRT reference ABI. Native references carry a target
+address and either an owning object/array root or a borrowed frame plus storage
+epoch. Copies retain the reference owner; moves transfer it. Loads create root
+ownership for managed results, while stores consume the incoming root and
+return the outgoing value as a root. Returning or raising a field/array
+reference relocates its owner as needed. A register reference is rejected when
+its defining native activation would be destroyed by a return, raise, or
+tailcall.
+
 The native runtime creates an RC frame-local region for every entered logical
 frame. `vrt_object_new` allocates there, `vrt_object_heap` allocates in the
 region identified by a borrowed object payload, and `vrt_object_region`
@@ -504,7 +512,7 @@ Object initializer arguments use the generated class payload layout and are
 consumed by the runtime write barrier. Managed fields can therefore drag
 frame-local object graphs into an older frame or heap region, or establish
 ownership between heap regions. The exported retain, release, return-escape,
-and raise-escape operations maintain register ownership and relocate values
+and raise-escape operations maintain root ownership and relocate values
 before their source frames are destroyed. A tailcall preserves the current
 frame-local region; leaving the reused frame finalizes its remaining objects
 and managed fields.
@@ -524,14 +532,16 @@ is a no-op, while unsupported stack and arena roots raise `BadFreeze`.
 > nominal class layouts and metadata,
 > multi-block conditional control flow, scalar operations, copy/move/drop,
 > static calls, process-local non-variadic FFI calls, returns,
-> scalar/raw-pointer `raise` payloads, static tailcalls, object/array Freeze,
-> and generated object finalizers.
+> register/field/array references, reference load/store,
+> scalar/raw-pointer/reference `raise` payloads, static tailcalls,
+> object/array Freeze, and generated object finalizers.
 > Object method lookup, dynamic calls, and dynamic tailcalls are supported
 > when lookup can determine one compatible callable signature; homogeneous
 > type aliases and unions are supported as receivers.
 > Verona functions use LLVM `tailcc`; the exported C-compatible
 > `verona_program_entry` wrapper enters the internal Verona calling convention.
-> Managed runtime representations, unrestricted `dyn` values, fallible dynamic
+> Cowns, unrestricted `dyn` values, readonly references, non-reference
+> aggregates, fallible dynamic
 > calls, and `when` dynamic calls are not yet lowered, so source-level
 > block-lambda raise is not yet available end to end through the native backend.
 > Unsupported operations,

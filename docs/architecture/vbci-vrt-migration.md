@@ -35,6 +35,28 @@ identifiers belong to the neutral VBC contract, not to either live value type.
 Adapters, when required, must be scoped to a concrete migrated subsystem and
 must name the ownership conversion they perform.
 
+## Canonical Ownership and References
+
+**Current:** VRT owns the canonical native contracts for root and field
+ownership, escape, and register/field/array references. `vrt::Value` is a
+non-owning view. The internal ownership module performs root and field
+retain/release and escape dispatch. `vrt_reference` records the referenced
+storage, its content type ID, and the owner or frame lifetime that keeps that
+storage valid.
+
+The LLVM backend normalizes VIR `ArgMove` and `ArgCopy` before calling VRT:
+moves transfer an existing root obligation, while copies retain through the
+VRT ABI. Reference construction and exchange therefore consume already-owned
+inputs. VRT alone implements owner lifetime, frame validation, load ownership,
+and region-aware exchange.
+
+**Migration:** VBCI retains its interpreter-local `Register`, `Value`, and
+write-barrier implementation. Equivalent VBCI operations remain the
+compatibility behavior until a later subsystem migration adapts bytecode
+execution to the VRT contracts. The `llvm_reference` fixture runs one VIR
+program through both execution backends to detect semantic divergence in the
+interim.
+
 ## Dependency Rules
 
 - VBCI may depend on public VRT interfaces for migrated subsystems.
@@ -47,10 +69,10 @@ must name the ownership conversion they perform.
 
 ## Candidate Subsystems
 
-Examples include type-layout lookup, object/array operations, regions,
-freezing, cowns, scheduling, and failure reporting. This list is not a migration
-order. Each subsystem needs a separate readiness review using the invariant
-above.
+Examples still awaiting migration include VBCI reference execution,
+type-layout lookup, object/array operations, regions, freezing, cowns,
+scheduling, and failure reporting. This list is not a migration order. Each
+subsystem needs a separate readiness review using the invariant above.
 
 ## Validation
 

@@ -8,6 +8,7 @@ Each VIR label becomes an LLVM basic block. Conditional and jump terminators
 branch to the mapped block; return and raise terminators leave normal control
 flow through their dedicated lowering paths.
 
-Generated functions enter, leave, or reuse VRT frames. Raise handling uses the
-public frame continuation API and a raised-value slot, as described in
-[VRT Threads and Frames](../../../vrt/docs/threads-and-frames.md).
+Generated functions enter, leave, or reuse VRT frames. Raise handling
+materializes the source value, transfers its type ID and encoded storage
+through the public frame continuation API, and reloads it at the target, as
+described in [VRT Threads and Frames](../../../vrt/docs/threads-and-frames.md).

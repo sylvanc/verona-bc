@@ -9,5 +9,10 @@ layouts for their fields while object values use runtime-managed pointers.
 Arrays carry an element runtime type ID. Dynamic and aggregate forms have local
 lowering rules and are not VBCI boxed values.
 
+`ref[T]` lowers to the named `%vrt.reference` aggregate matching the public
+`vrt_reference` layout. Generated Verona functions pass and return that
+aggregate by value. Calls across the C ABI materialize it in temporary storage
+and pass a pointer, which avoids platform-specific aggregate-return rules.
+
 The public runtime categories are defined in `include/vrt/value.h`. Private
 VBCI register tags do not participate in native representation.
