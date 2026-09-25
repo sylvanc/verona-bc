@@ -19,5 +19,6 @@ namespace vrt
     const Function* func = nullptr;
     Location frame_id = Location::stack();
     Location raise_target = Location::stack();
+    uintptr_t storage_epoch = 1;
   };
 }

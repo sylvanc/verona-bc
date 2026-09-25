@@ -37,6 +37,8 @@ namespace
         return "cannot merge regions: both have owners";
       case vrt::Error::scheduler_already_running:
         return "scheduler already running";
+      case vrt::Error::bad_reference_target:
+        return "bad reference target";
     }
 
     vrt::fail(vrt::Failure::invalid_error_state);

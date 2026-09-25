@@ -9,6 +9,7 @@
 #include <vrt/function.h>
 #include <vrt/object.h>
 #include <vrt/program.h>
+#include <vrt/reference.h>
 #include <vrt/region.h>
 #include <vrt/thread.h>
 
@@ -27,6 +28,8 @@ _Static_assert(VRT_ERROR_BAD_FREEZE == 9, "freeze error ABI");
 _Static_assert(VRT_ERROR_BAD_MERGE == 10, "merge error ABI");
 _Static_assert(
   VRT_ERROR_SCHEDULER_ALREADY_RUNNING == 11, "scheduler error ABI");
+_Static_assert(
+  VRT_ERROR_BAD_REFERENCE_TARGET == 12, "reference target error ABI");
 _Static_assert(VRT_REGION_RC == 0, "RC region ABI");
 _Static_assert(VRT_REGION_ARENA == 1, "arena region ABI");
 _Static_assert(VRT_VALUE_TYPE_NONE == 0, "none value type ABI");
@@ -38,6 +41,9 @@ _Static_assert(VRT_VALUE_TYPE_REFERENCE == 5, "reference value type ABI");
 _Static_assert(VRT_VALUE_TYPE_COWN == 6, "cown value type ABI");
 _Static_assert(VRT_VALUE_TYPE_DYNAMIC == 7, "dynamic value type ABI");
 _Static_assert(VRT_VALUE_TYPE_AGGREGATE == 8, "aggregate value type ABI");
+_Static_assert(VRT_REFERENCE_REGISTER == 0, "register reference ABI");
+_Static_assert(VRT_REFERENCE_FIELD == 1, "field reference ABI");
+_Static_assert(VRT_REFERENCE_ARRAY == 2, "array reference ABI");
 
 static const vrt_value_type object_value_type = VRT_VALUE_TYPE_OBJECT;
 static const vrt_error bad_array_index = VRT_ERROR_BAD_ARRAY_INDEX;
@@ -66,6 +72,7 @@ _Static_assert(
   VRT_TYPE_IS(((vrt_field*)0)->type_id, uintptr_t), "field type ABI");
 _Static_assert(
   VRT_TYPE_IS(((vrt_field*)0)->value_type, uintptr_t), "field value type ABI");
+_Static_assert(VRT_TYPE_IS(((vrt_field*)0)->id, uintptr_t), "field id ABI");
 _Static_assert(VRT_TYPE_IS(((vrt_method*)0)->id, uintptr_t), "method id ABI");
 _Static_assert(
   VRT_TYPE_IS(((vrt_method*)0)->func, const vrt_func*), "method function ABI");
@@ -118,6 +125,19 @@ _Static_assert(
 _Static_assert(
   VRT_TYPE_IS(((vrt_program*)0)->singletons, const vrt_singleton*),
   "program singletons ABI");
+_Static_assert(
+  VRT_TYPE_IS(((vrt_reference*)0)->kind_flags, uintptr_t),
+  "reference kind ABI");
+_Static_assert(
+  VRT_TYPE_IS(((vrt_reference*)0)->owner, void*), "reference owner ABI");
+_Static_assert(
+  VRT_TYPE_IS(((vrt_reference*)0)->target, void*), "reference target ABI");
+_Static_assert(
+  VRT_TYPE_IS(((vrt_reference*)0)->content_type_id, uintptr_t),
+  "reference content type ABI");
+_Static_assert(
+  VRT_TYPE_IS(((vrt_reference*)0)->storage_epoch, uintptr_t),
+  "reference storage epoch ABI");
 
 #undef VRT_TYPE_IS
 
@@ -156,6 +176,21 @@ static vrt_frame* (*const frame_parent_signature)(vrt_frame*) =
 static uint64_t (*const frame_id_signature)(const vrt_frame*) = vrt_frame_id;
 static const vrt_func* (*const frame_func_signature)(const vrt_frame*) =
   vrt_frame_func;
+static void (*const reference_from_register_signature)(
+  vrt_reference*, vrt_frame*, void*, uintptr_t) =
+  vrt_reference_from_register;
+static void (*const reference_from_field_signature)(
+  vrt_reference*, void*, uintptr_t) = vrt_reference_from_field;
+static void (*const reference_from_array_signature)(
+  vrt_reference*, void*, uintptr_t) = vrt_reference_from_array;
+static void (*const reference_retain_signature)(const vrt_reference*) =
+  vrt_reference_retain;
+static void (*const reference_release_signature)(const vrt_reference*) =
+  vrt_reference_release;
+static void (*const reference_escape_signature)(const vrt_reference*) =
+  vrt_reference_escape;
+static void (*const reference_validate_tailcall_signature)(
+  const vrt_reference*) = vrt_reference_validate_tailcall;
 static vrt_func_ptr (*const func_entry_signature)(const vrt_func*) =
   vrt_func_entry;
 static void* (*const array_new_signature)(uintptr_t, uintptr_t) = vrt_array_new;
@@ -216,6 +251,13 @@ void verona_program_entry(void)
   (void)frame_parent_signature;
   (void)frame_id_signature;
   (void)frame_func_signature;
+  (void)reference_from_register_signature;
+  (void)reference_from_field_signature;
+  (void)reference_from_array_signature;
+  (void)reference_retain_signature;
+  (void)reference_release_signature;
+  (void)reference_escape_signature;
+  (void)reference_validate_tailcall_signature;
   (void)func_entry_signature;
   (void)array_new_signature;
   (void)array_heap_signature;

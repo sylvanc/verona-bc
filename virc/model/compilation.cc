@@ -249,7 +249,7 @@ namespace virc
     return true;
   }
 
-  std::optional<size_t> Compilation::get_field_id(Node id)
+  std::optional<size_t> Compilation::get_field_id(Node id) const
   {
     auto name = ST::di().string(id);
     auto find = field_ids.find(name);

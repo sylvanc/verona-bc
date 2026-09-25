@@ -11,6 +11,7 @@
 #include <vrt/function.h>
 #include <vrt/object.h>
 #include <vrt/program.h>
+#include <vrt/reference.h>
 #include <vrt/region.h>
 #include <vrt/thread.h>
 
@@ -37,6 +38,8 @@ static_assert(VRT_ERROR_BAD_MERGE == vrt::Error::bad_merge);
 static_assert(
   VRT_ERROR_SCHEDULER_ALREADY_RUNNING == vrt::Error::scheduler_already_running);
 static_assert(
+  VRT_ERROR_BAD_REFERENCE_TARGET == vrt::Error::bad_reference_target);
+static_assert(
   std::is_same_v<std::underlying_type_t<vrt::RegionType>, std::uint8_t>);
 static_assert(VRT_REGION_RC == vrt::RegionType::rc);
 static_assert(VRT_REGION_ARENA == vrt::RegionType::arena);
@@ -49,6 +52,7 @@ static_assert(std::is_same_v<vrt_finalizer_thunk, vrt::FinalizerThunk>);
 static_assert(std::is_same_v<vrt_type, vrt::TypeInfo>);
 static_assert(std::is_same_v<vrt_singleton, vrt::Singleton>);
 static_assert(std::is_same_v<vrt_program, vrt::Program>);
+static_assert(std::is_same_v<vrt_reference, vrt::Reference>);
 static_assert(std::is_same_v<vrt_value_type, vrt::ValueType>);
 static_assert(
   std::is_same_v<std::underlying_type_t<vrt::ValueType>, std::uintptr_t>);
@@ -68,6 +72,7 @@ static_assert(std::is_standard_layout_v<vrt::Class>);
 static_assert(std::is_standard_layout_v<vrt::TypeInfo>);
 static_assert(std::is_standard_layout_v<vrt::Singleton>);
 static_assert(std::is_standard_layout_v<vrt::Program>);
+static_assert(std::is_standard_layout_v<vrt::Reference>);
 static_assert(std::is_standard_layout_v<vrt::Function>);
 static_assert(std::is_standard_layout_v<vrt::ErrorInfo>);
 static_assert(std::is_same_v<decltype(vrt::ErrorInfo{}.code), vrt::Error>);
@@ -83,6 +88,7 @@ static_assert(std::is_same_v<decltype(vrt::Field{}.size), std::uintptr_t>);
 static_assert(std::is_same_v<decltype(vrt::Field{}.type_id), std::uintptr_t>);
 static_assert(
   std::is_same_v<decltype(vrt::Field{}.value_type), vrt::ValueType>);
+static_assert(std::is_same_v<decltype(vrt::Field{}.id), std::uintptr_t>);
 static_assert(std::is_same_v<decltype(vrt::Method{}.id), std::uintptr_t>);
 static_assert(
   std::is_same_v<decltype(vrt::Method{}.func), const vrt::Function*>);
@@ -164,6 +170,27 @@ static_assert(
 static_assert(std::is_same_v<
               decltype(&vrt_frame_func),
               const vrt_func* (*)(const vrt_frame*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_from_register),
+              void (*)(vrt_reference*, vrt_frame*, void*, std::uintptr_t)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_from_field),
+              void (*)(vrt_reference*, void*, std::uintptr_t)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_from_array),
+              void (*)(vrt_reference*, void*, std::uintptr_t)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_retain),
+              void (*)(const vrt_reference*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_release),
+              void (*)(const vrt_reference*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_escape),
+              void (*)(const vrt_reference*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_reference_validate_tailcall),
+              void (*)(const vrt_reference*)>);
 static_assert(
   std::is_same_v<decltype(&vrt_func_entry), vrt_func_ptr (*)(const vrt_func*)>);
 static_assert(std::is_same_v<

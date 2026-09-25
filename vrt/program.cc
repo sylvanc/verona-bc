@@ -51,7 +51,7 @@ namespace
       {
         const auto& type = program.types[index];
         internal_check(
-          vrt::is_supported_storage_type(type.value_type) &&
+          vrt::is_valid_value_type(type.value_type) &&
             ((type.value_type == vrt::ValueType::none) ==
              (type.storage_size == 0)) &&
             ((type.value_type == vrt::ValueType::array) ||

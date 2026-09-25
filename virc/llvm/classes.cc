@@ -94,7 +94,7 @@ namespace virc
       auto* word_type = module.getDataLayout().getIntPtrType(context);
       auto* pointer_type = llvm::PointerType::getUnqual(context);
       auto* field_metadata_type = llvm::StructType::get(
-        context, {word_type, word_type, word_type, word_type});
+        context, {word_type, word_type, word_type, word_type, word_type});
       auto* method_metadata_type =
         llvm::StructType::get(context, {word_type, pointer_type});
       auto* class_metadata_type = llvm::StructType::get(
@@ -197,6 +197,13 @@ namespace virc
             module.getDataLayout()
               .getTypeAllocSize(field_type.storage_type)
               .getFixedValue();
+          auto field_id = state.get_field_id(field / FieldId);
+          if (!field_id)
+          {
+            fail(field / FieldId, "class field has no assigned ID");
+            return false;
+          }
+
           field_metadata.push_back(
             llvm::ConstantStruct::get(
               field_metadata_type,
@@ -204,7 +211,8 @@ namespace virc
                  fields_layout->getElementOffset(field_index).getFixedValue()),
                word(field_size),
                word(type_id),
-               word(static_cast<std::size_t>(field_type.runtime_type))}));
+               word(static_cast<std::size_t>(field_type.runtime_type)),
+               word(*field_id)}));
         }
 
         llvm::Constant* fields_pointer = null_pointer;

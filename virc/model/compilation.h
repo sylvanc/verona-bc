@@ -107,7 +107,7 @@ namespace virc
     std::optional<size_t> get_class_id(Node id);
     bool add_class(Node cls);
 
-    std::optional<size_t> get_field_id(Node id);
+    std::optional<size_t> get_field_id(Node id) const;
     void add_field(Node field);
 
     std::optional<size_t> get_method_id(Node id);

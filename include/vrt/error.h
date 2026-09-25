@@ -23,6 +23,7 @@ namespace vrt
     bad_freeze = 9,
     bad_merge = 10,
     scheduler_already_running = 11,
+    bad_reference_target = 12,
   };
 
   /**
@@ -60,6 +61,8 @@ inline constexpr auto VRT_ERROR_BAD_FREEZE = vrt::Error::bad_freeze;
 inline constexpr auto VRT_ERROR_BAD_MERGE = vrt::Error::bad_merge;
 inline constexpr auto VRT_ERROR_SCHEDULER_ALREADY_RUNNING =
   vrt::Error::scheduler_already_running;
+inline constexpr auto VRT_ERROR_BAD_REFERENCE_TARGET =
+  vrt::Error::bad_reference_target;
 #else
 typedef uint32_t vrt_error;
 typedef void (*vrt_invocation_function)(void*);
@@ -77,7 +80,8 @@ enum
   VRT_ERROR_BAD_REGION_ENTRY_POINT = 8,
   VRT_ERROR_BAD_FREEZE = 9,
   VRT_ERROR_BAD_MERGE = 10,
-  VRT_ERROR_SCHEDULER_ALREADY_RUNNING = 11
+  VRT_ERROR_SCHEDULER_ALREADY_RUNNING = 11,
+  VRT_ERROR_BAD_REFERENCE_TARGET = 12
 };
 
 /**

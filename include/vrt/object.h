@@ -20,6 +20,7 @@ namespace vrt
     uintptr_t size;
     uintptr_t type_id;
     ValueType value_type;
+    uintptr_t id = 0;
   };
 
   /** Runtime representation used for a method dispatch-table entry. */
@@ -51,6 +52,7 @@ namespace vrt
     FinalizerThunk finalizer_thunk = nullptr;
 
     const Function* method(uintptr_t method_id) const;
+    const Field* field(uintptr_t field_id) const;
     const Function* finalizer() const;
   };
 }
@@ -70,6 +72,7 @@ typedef struct vrt_field
   uintptr_t size;
   uintptr_t type_id;
   uintptr_t value_type;
+  uintptr_t id;
 } vrt_field;
 
 /** Runtime representation used for a method dispatch-table entry. */

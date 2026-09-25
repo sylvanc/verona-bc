@@ -5,6 +5,7 @@
 #include "frame.h"
 #include "header.h"
 #include "program.h"
+#include "reference.h"
 #include "region.h"
 #include "value.h"
 
@@ -165,6 +166,14 @@ namespace vrt
             {.root_reference = RootReference::retained}))
           raise_error(Error::bad_stack_escape);
       }
+    }
+    else if (layout.value_type == ValueType::reference)
+    {
+      internal_check(
+        layout.storage_size == sizeof(Reference), Failure::invalid_value_state);
+      Reference reference;
+      std::memcpy(&reference, value_storage, sizeof(reference));
+      vrt::reference::escape_to(reference, target);
     }
 
     unwind_frames(target);

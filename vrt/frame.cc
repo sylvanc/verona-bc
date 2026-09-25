@@ -73,6 +73,11 @@ extern "C" VRT_EXPORT void vrt_frame_reuse(const vrt::Function* func)
       !context.continuation->raised_value.has_value(),
     vrt::Failure::invalid_frame_state);
 
+  internal_check(
+    frame->storage_epoch != std::numeric_limits<uintptr_t>::max(),
+    vrt::Failure::invalid_frame_state);
+  frame->storage_epoch++;
+
   // Compiler-emitted Drop operations perform local register teardown. The
   // logical frame and its frame-local region survive a tailcall and are
   // reclaimed only when this frame is left or unwound.

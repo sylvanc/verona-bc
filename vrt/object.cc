@@ -89,6 +89,17 @@ namespace
 
 namespace vrt
 {
+  const Field* Class::field(uintptr_t field_id) const
+  {
+    for (uintptr_t index = 0; index < field_count; index++)
+    {
+      if (fields[index].id == field_id)
+        return &fields[index];
+    }
+
+    return nullptr;
+  }
+
   const Function* Class::method(uintptr_t method_id) const
   {
     uintptr_t first = 0;
