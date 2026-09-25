@@ -16,7 +16,6 @@ namespace virc
   Parse parser();
   PassDef statements();
   PassDef labels();
-  PassDef memo();
   PassDef assign_ids(std::shared_ptr<Compilation> state);
   PassDef validate_ids(std::shared_ptr<Compilation> state);
   PassDef liveness(std::shared_ptr<Compilation> state);

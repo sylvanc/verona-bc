@@ -13,7 +13,6 @@ namespace vir
   inline const auto Primitive = TokenDef("primitive");
   inline const auto Class = TokenDef("class");
   inline const auto Func = TokenDef("func");
-  inline const auto FuncOnce = TokenDef("funconce");
   inline const auto Vars = TokenDef("vars");
   inline const auto VarDef = TokenDef("vardef");
   inline const auto Memo = TokenDef("memo");
@@ -283,7 +282,7 @@ namespace vir
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Type | Func | FuncOnce | Lib | Memo)++)
+      (Top <<= (Primitive | Class | Type | Func | Lib | Memo)++)
     | (Array <<= (Type >>= wfType))
     | (Ref <<= (Type >>= wfType))
     | (Cown <<= (Type >>= wfType))
@@ -303,7 +302,6 @@ namespace vir
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
     | (Func <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
-    | (FuncOnce <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
     | (Memo <<= MemoId * FunctionId)
     | (MemoSlot <<= wfDst * MemoId)
     | (Params <<= Param++)

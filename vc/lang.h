@@ -531,4 +531,11 @@ namespace vc
   PassDef anf();
   PassDef infer();
   PassDef reify();
+
+  // caller FunctionId -> callee FunctionId -> source call site.
+  using CallGraph = std::map<Location, std::map<Location, Node>>;
+  using OnceFunctions = std::set<Location>;
+
+  int lower_once(
+    Node top, const OnceFunctions& once_funcs, const CallGraph& call_graph);
 }

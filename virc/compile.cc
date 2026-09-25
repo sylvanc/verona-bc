@@ -9,7 +9,6 @@ namespace virc
   std::vector<Pass> pipeline(std::shared_ptr<Compilation> state)
   {
     return {
-      memo(),
       assign_ids(state),
       validate_ids(state),
       typecheck(state),

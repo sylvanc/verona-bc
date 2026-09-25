@@ -64,7 +64,7 @@ namespace virc
         for (auto& child : *top)
         {
           if (
-            child->type().in({Func, FuncOnce}) &&
+            child == Func &&
             (child / FunctionId)->location() == func_id->location())
             return child;
         }
@@ -129,7 +129,7 @@ namespace virc
       // Process each function.
       for (auto& func_node : *top)
       {
-        if (!func_node->type().in({Func, FuncOnce}))
+        if (func_node != Func)
           continue;
 
         auto func_key =
@@ -256,10 +256,6 @@ namespace virc
               auto target = find_func(stmt / FunctionId);
 
               if (!target)
-                continue;
-
-              // Don't inline FuncOnce (has memoization semantics).
-              if (target == FuncOnce)
                 continue;
 
               // Don't inline functions that capture a raise target into an
