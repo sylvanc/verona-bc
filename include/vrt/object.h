@@ -149,10 +149,10 @@ extern "C"
   VRT_EXPORT const vrt_func*
   vrt_object_lookup(const void* data_address, uintptr_t method_id);
 
-  /** Add one owning register reference to an object data address. */
+  /** Add one owning root reference to an object data address. */
   VRT_EXPORT void vrt_object_retain(void* data_address);
 
-  /** Consume one owning register reference to an object data address. */
+  /** Consume one owning root reference to an object data address. */
   VRT_EXPORT void vrt_object_release(void* data_address);
 
   /** Make the graph reachable from an object deeply immutable. */

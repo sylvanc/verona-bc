@@ -21,10 +21,10 @@ extern "C"
   VRT_EXPORT void* vrt_array_region(
     vrt_region_type region_type, uintptr_t type_id, uintptr_t size);
 
-  /** Add one owning register reference to an array element-storage pointer. */
+  /** Add one owning root reference to an array element-storage pointer. */
   VRT_EXPORT void vrt_array_retain(void* elements);
 
-  /** Consume one owning register reference to an array element-storage pointer.
+  /** Consume one owning root reference to an array element-storage pointer.
    */
   VRT_EXPORT void vrt_array_release(void* elements);
 

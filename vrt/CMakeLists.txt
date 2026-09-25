@@ -12,6 +12,7 @@ add_library(libvrt STATIC
   thread_context.cc
   native_main.cc
   object.cc
+  ownership.cc
   program.cc
   region.cc
   region_rc.cc

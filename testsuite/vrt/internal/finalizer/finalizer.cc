@@ -260,7 +260,7 @@ int main()
     (cycle_a->representative() != cycle_b->representative()))
     return 7;
 
-  cycle_a->reg_dec();
+  cycle_a->root_ref_dec();
   if (cycle_calls != 2)
     return 8;
 

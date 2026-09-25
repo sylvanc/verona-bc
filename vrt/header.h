@@ -84,10 +84,10 @@ namespace vrt
 
     void finalize();
     void destroy_storage();
-    void reg_inc();
-    void reg_dec();
-    void field_inc();
-    void field_dec();
+    void root_ref_inc();
+    void root_ref_dec();
+    void field_ref_inc();
+    void field_ref_dec();
   };
 
   static_assert(

@@ -124,8 +124,8 @@ int main()
     (immutable_destination_region->stack_reference_count != 2))
     return 20;
 
-  immutable_source->reg_dec();
-  immutable_destination->reg_dec();
+  immutable_source->root_ref_dec();
+  immutable_destination->root_ref_dec();
   if (immutable->get_arc() != 1)
     return 21;
 
@@ -167,10 +167,10 @@ int main()
     (reuse_destination_region->stack_reference_count != 2))
     return 22;
 
-  reuse_source->reg_dec();
-  reuse_destination->reg_dec();
+  reuse_source->root_ref_dec();
+  reuse_destination->root_ref_dec();
 
-  holder->reg_dec();
+  holder->root_ref_dec();
   vrt_frame_leave();
 
   RejectedStore immutable_store{
@@ -220,10 +220,10 @@ int main()
     (child_region->parent != first_parent_region))
     return 10;
 
-  second_parent->reg_dec();
-  first_parent->reg_dec();
+  second_parent->root_ref_dec();
+  first_parent->root_ref_dec();
 
-  immutable->reg_dec();
+  immutable->root_ref_dec();
   vrt::deinit_thread();
   return vrt_thread_current() == nullptr ? 0 : 11;
 }

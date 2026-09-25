@@ -51,6 +51,13 @@ namespace vrt
       (value_type == ValueType::array);
   }
 
+  inline constexpr bool is_unmanaged_value_type(ValueType value_type)
+  {
+    return (value_type == ValueType::none) ||
+      (value_type == ValueType::scalar) ||
+      (value_type == ValueType::raw_pointer);
+  }
+
   /** Non-owning, type-erased view over one runtime value. */
   class Value final
   {
@@ -71,11 +78,5 @@ namespace vrt
     Header* header() const;
     Location location() const;
     Region* region() const;
-
-    void reg_inc() const;
-    void reg_dec() const;
-    void field_inc() const;
-    void field_dec() const;
-    void escape() const;
   };
 }

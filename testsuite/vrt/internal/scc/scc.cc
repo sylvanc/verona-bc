@@ -95,7 +95,7 @@ namespace
   void set_outgoing(vrt::Object* source, vrt::Object* target)
   {
     static_cast<NodeFields*>(source->fields())->outgoing = target->data();
-    target->field_inc();
+    target->field_ref_inc();
   }
 
   void publish_scc(
@@ -149,14 +149,14 @@ int main()
     (pair_a->get_arc() != 2) || (first_target->get_rc() != 2))
     return 1;
 
-  pair_b->reg_dec();
+  pair_b->root_ref_dec();
   if ((pair_a->get_arc() != 1) || (first_target->get_rc() != 2))
     return 2;
 
-  pair_a->reg_dec();
+  pair_a->root_ref_dec();
   if (first_target->get_rc() != 1)
     return 3;
-  first_target->reg_dec();
+  first_target->root_ref_dec();
 
   // A self-cycle suppresses its internal decrement while still dropping its
   // outgoing mutable edge exactly once.
@@ -166,10 +166,10 @@ int main()
   set_next(self, self);
   set_outgoing(self, self_target);
   publish_scc(self_region, self, {self}, 1);
-  self->reg_dec();
+  self->root_ref_dec();
   if (self_target->get_rc() != 1)
     return 4;
-  self_target->reg_dec();
+  self_target->root_ref_dec();
 
   // A three-object component owns one reference to another immutable
   // component. Collecting the first decrements, but does not collect, the
@@ -194,14 +194,14 @@ int main()
     (triple_c->representative() != triple_a))
     return 5;
 
-  triple_a->reg_dec();
+  triple_a->root_ref_dec();
   if ((sink->get_arc() != 1) || (chained_target->get_rc() != 2))
     return 6;
 
-  sink->reg_dec();
+  sink->root_ref_dec();
   if (chained_target->get_rc() != 1)
     return 7;
-  chained_target->reg_dec();
+  chained_target->root_ref_dec();
 
   // Concurrent retainers race on ARC before all references are released.
   // Only the one-to-zero releasing thread may collect and drop the outgoing
@@ -223,7 +223,7 @@ int main()
       ready.fetch_add(1, std::memory_order_relaxed);
       while (!start.load(std::memory_order_acquire))
         std::this_thread::yield();
-      concurrent->reg_inc();
+      concurrent->root_ref_inc();
     });
   }
 
@@ -246,7 +246,7 @@ int main()
       ready.fetch_add(1, std::memory_order_relaxed);
       while (!start.load(std::memory_order_acquire))
         std::this_thread::yield();
-      concurrent->reg_dec();
+      concurrent->root_ref_dec();
     });
   }
 
@@ -259,7 +259,7 @@ int main()
 
   if (concurrent_target->get_rc() != 1)
     return 9;
-  concurrent_target->reg_dec();
+  concurrent_target->root_ref_dec();
 
   if (frame_region->header_count() != 0)
     return 10;

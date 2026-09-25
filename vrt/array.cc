@@ -3,6 +3,7 @@
 #include "error.h"
 #include "failure.h"
 #include "freeze.h"
+#include "ownership.h"
 #include "program.h"
 #include "region.h"
 #include "value.h"
@@ -285,12 +286,12 @@ vrt_array_region(vrt::RegionType region_type, uintptr_t type_id, uintptr_t size)
 
 extern "C" VRT_EXPORT void vrt_array_retain(void* elements)
 {
-  vrt::Value{vrt::ValueType::array, elements}.reg_inc();
+  vrt::ownership::retain_root(vrt::Value{vrt::ValueType::array, elements});
 }
 
 extern "C" VRT_EXPORT void vrt_array_release(void* elements)
 {
-  vrt::Value{vrt::ValueType::array, elements}.reg_dec();
+  vrt::ownership::release_root(vrt::Value{vrt::ValueType::array, elements});
 }
 
 extern "C" VRT_EXPORT void vrt_array_freeze(void* elements)
@@ -302,7 +303,7 @@ extern "C" VRT_EXPORT void vrt_array_freeze(void* elements)
 
 extern "C" VRT_EXPORT void vrt_array_escape(void* elements)
 {
-  vrt::Value{vrt::ValueType::array, elements}.escape();
+  vrt::ownership::escape(vrt::Value{vrt::ValueType::array, elements});
 }
 
 extern "C" VRT_EXPORT void vrt_array_copy(

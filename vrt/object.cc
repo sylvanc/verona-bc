@@ -4,6 +4,7 @@
 #include "failure.h"
 #include "frame.h"
 #include "freeze.h"
+#include "ownership.h"
 #include "program.h"
 #include "region.h"
 #include "thread_context.h"
@@ -320,12 +321,14 @@ vrt_object_lookup(const void* data_address, uintptr_t method_id)
 
 extern "C" VRT_EXPORT void vrt_object_retain(void* data_address)
 {
-  vrt::Value{vrt::ValueType::object, data_address}.reg_inc();
+  vrt::ownership::retain_root(
+    vrt::Value{vrt::ValueType::object, data_address});
 }
 
 extern "C" VRT_EXPORT void vrt_object_release(void* data_address)
 {
-  vrt::Value{vrt::ValueType::object, data_address}.reg_dec();
+  vrt::ownership::release_root(
+    vrt::Value{vrt::ValueType::object, data_address});
 }
 
 extern "C" VRT_EXPORT void vrt_object_freeze(void* data_address)
@@ -337,5 +340,5 @@ extern "C" VRT_EXPORT void vrt_object_freeze(void* data_address)
 
 extern "C" VRT_EXPORT void vrt_object_escape(void* data_address)
 {
-  vrt::Value{vrt::ValueType::object, data_address}.escape();
+  vrt::ownership::escape(vrt::Value{vrt::ValueType::object, data_address});
 }

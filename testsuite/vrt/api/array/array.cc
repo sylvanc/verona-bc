@@ -212,8 +212,8 @@ int main()
       scalar_array_elements, 99, scalar_copy_array_elements, 99, 0) != 0)
     return 25;
 
-  scalar_array->reg_dec();
-  scalar_copy_array->reg_dec();
+  scalar_array->root_ref_dec();
+  scalar_copy_array->root_ref_dec();
   if (frame_region->header_count() != 0)
     return 26;
 
@@ -261,13 +261,13 @@ int main()
     (frame_region->header_count() != 3))
     return 27;
 
-  object_copy_array->reg_dec();
+  object_copy_array->root_ref_dec();
   if (
     (array_value_object->reference_count != 3) ||
     (frame_region->header_count() != 2))
     return 28;
 
-  object_array->reg_dec();
+  object_array->root_ref_dec();
   if (frame_region->header_count() != 0)
     return 11;
 
@@ -292,7 +292,7 @@ int main()
     (frame_region->header_count() != 2))
     return 12;
 
-  nested_parent_array->reg_dec();
+  nested_parent_array->root_ref_dec();
   if (frame_region->header_count() != 0)
     return 13;
 

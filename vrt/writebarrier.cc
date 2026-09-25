@@ -6,6 +6,7 @@
 #include "frame.h"
 #include "header.h"
 #include "object.h"
+#include "ownership.h"
 #include "region.h"
 #include "thread_context.h"
 #include "value.h"
@@ -14,6 +15,11 @@
 
 namespace
 {
+  vrt::Value value(vrt::Header* header)
+  {
+    return vrt::Value{header->value_type(), header->data()};
+  }
+
   vrt::Header* load_header(vrt::ValueType value_type, const void* source)
   {
     void* data_address = nullptr;
@@ -123,7 +129,7 @@ namespace
 
     if (outgoing_location.is_immutable())
     {
-      outgoing->field_dec();
+      vrt::ownership::release_field(value(outgoing));
       return;
     }
 
@@ -132,7 +138,7 @@ namespace
 
     if (outgoing_region->is_frame_local())
     {
-      outgoing->field_dec();
+      vrt::ownership::release_field(value(outgoing));
       return;
     }
 
@@ -144,7 +150,7 @@ namespace
 
     if (store_location == outgoing_location)
     {
-      outgoing->field_dec();
+      vrt::ownership::release_field(value(outgoing));
       return;
     }
 
@@ -154,7 +160,7 @@ namespace
         store_location.is_region() && outgoing_region->has_parent() &&
           (outgoing_region->parent == store_location.to_region()),
         vrt::Failure::invalid_write);
-      outgoing->field_dec();
+      vrt::ownership::release_field(value(outgoing));
       return;
     }
 
@@ -164,7 +170,7 @@ namespace
       return;
     }
 
-    outgoing->field_dec();
+    vrt::ownership::release_field(value(outgoing));
   }
 }
 
@@ -290,7 +296,7 @@ namespace vrt::writebarrier
 
     if (incoming->location().is_immutable())
     {
-      incoming->field_inc();
+      vrt::ownership::retain_field(value(incoming));
       store_header(target, incoming);
       drop_header(store_location, outgoing);
       return;
@@ -325,7 +331,7 @@ namespace vrt::writebarrier
         preserve_outgoing_parent = result->replaced_child_reused;
       }
 
-      incoming->field_inc();
+      vrt::ownership::retain_field(value(incoming));
       store_header(target, incoming);
       drop_header(store_location, outgoing, preserve_outgoing_parent);
       return;
@@ -333,7 +339,7 @@ namespace vrt::writebarrier
 
     if (is_frame_storage(store_location))
     {
-      incoming->field_inc();
+      vrt::ownership::retain_field(value(incoming));
       incoming_region->stack_inc();
       store_header(target, incoming);
       drop_header(store_location, outgoing);
@@ -343,7 +349,7 @@ namespace vrt::writebarrier
     auto* destination = store_location.to_region();
     if (destination == incoming_region)
     {
-      incoming->field_inc();
+      vrt::ownership::retain_field(value(incoming));
       store_header(target, incoming);
       drop_header(store_location, outgoing);
       return;
@@ -354,7 +360,7 @@ namespace vrt::writebarrier
       incoming_region->is_ancestor_of(destination))
       raise_error(Error::bad_store);
 
-    incoming->field_inc();
+    vrt::ownership::retain_field(value(incoming));
     incoming_region->set_parent(destination, incoming);
     store_header(target, incoming);
     drop_header(store_location, outgoing);

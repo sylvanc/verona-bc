@@ -166,26 +166,26 @@ namespace vrt
     }
   }
 
-  void Header::reg_inc()
+  void Header::root_ref_inc()
   {
-    field_inc();
+    field_ref_inc();
     if (loc.is_region())
       loc.to_region()->stack_inc();
   }
 
-  void Header::reg_dec()
+  void Header::root_ref_dec()
   {
     if (loc.is_region() && !loc.to_region()->stack_dec())
       return;
 
-    field_dec();
+    field_ref_dec();
   }
 
-  void Header::field_inc()
+  void Header::field_ref_inc()
   {
     if (loc.is_scc_ptr())
     {
-      representative()->field_inc();
+      representative()->field_ref_inc();
       return;
     }
 
@@ -212,11 +212,11 @@ namespace vrt
     reference_count++;
   }
 
-  void Header::field_dec()
+  void Header::field_ref_dec()
   {
     if (loc.is_scc_ptr())
     {
-      representative()->field_dec();
+      representative()->field_ref_dec();
       return;
     }
 

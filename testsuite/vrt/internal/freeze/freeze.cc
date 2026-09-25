@@ -182,7 +182,7 @@ int main()
   vrt_object_freeze(acyclic_root->data());
   if ((acyclic_root->get_arc() != 1) || (acyclic_child->get_arc() != 1))
     return 3;
-  acyclic_root->reg_dec();
+  acyclic_root->root_ref_dec();
   if (probe->get_arc() != 1)
     return 4;
 
@@ -201,7 +201,7 @@ int main()
     (cycle_representative->location() != vrt::Location::immutable()) ||
     (cycle_representative->get_arc() != 1) || (probe->get_arc() != 2))
     return 5;
-  cycle_a->reg_dec();
+  cycle_a->root_ref_dec();
   if (probe->get_arc() != 1)
     return 6;
 
@@ -219,10 +219,10 @@ int main()
     !partial_region->contains(survivor) ||
     (partial_region->stack_reference_count != 1))
     return 7;
-  partial_root->reg_dec();
+  partial_root->root_ref_dec();
   if ((partial_root->get_arc() != 1) || (probe->get_arc() != 2))
     return 8;
-  survivor->reg_dec();
+  survivor->root_ref_dec();
   if (probe->get_arc() != 1)
     return 9;
 
@@ -241,7 +241,7 @@ int main()
     (parent->get_arc() != 1) || (child->get_arc() != 1) ||
     (probe->get_arc() != 2))
     return 10;
-  parent->reg_dec();
+  parent->root_ref_dec();
   if (probe->get_arc() != 1)
     return 11;
 
@@ -256,7 +256,7 @@ int main()
     (local_child->location() != vrt::Location::immutable()) ||
     (frame_region->header_count() != 0) || (probe->get_arc() != 2))
     return 12;
-  local_root->reg_dec();
+  local_root->root_ref_dec();
   if (probe->get_arc() != 1)
     return 13;
 
@@ -323,11 +323,11 @@ int main()
     !later_region->contains(later_survivor) ||
     (prior_representative->get_arc() != 2))
     return 15;
-  later_root->reg_dec();
+  later_root->root_ref_dec();
   if (prior_representative->get_arc() != 1)
     return 16;
-  later_survivor->reg_dec();
-  prior_a->reg_dec();
+  later_survivor->root_ref_dec();
+  prior_a->root_ref_dec();
   if (probe->get_arc() != 1)
     return 17;
 
@@ -348,7 +348,7 @@ int main()
     !chain_middle->location().is_immutable() ||
     !chain_leaf->location().is_immutable() || (probe->get_arc() != 2))
     return 18;
-  chain_root->reg_dec();
+  chain_root->root_ref_dec();
   if (probe->get_arc() != 1)
     return 19;
 
@@ -367,7 +367,7 @@ int main()
     !arena_child_region->has_parent() ||
     (arena_child_region->parent != rejecting_region))
     return 21;
-  rejecting_root->reg_dec();
+  rejecting_root->root_ref_dec();
 
   // Freezing an interior object does not consume the parent's ownership edge
   // when the child region's entry point remains mutable.
@@ -375,7 +375,7 @@ int main()
   auto* owned_entry = new_node(owned_region);
   auto* owned_interior = new_node(owned_region);
   move_next(owned_entry, owned_interior);
-  owned_interior->reg_inc();
+  owned_interior->root_ref_inc();
   copy_outgoing(owned_interior, probe);
   auto* owner_region = vrt::Region::create(vrt::RegionType::rc);
   auto* owner = new_node(owner_region);
@@ -388,12 +388,12 @@ int main()
     (owned_region->stack_reference_count != 0) ||
     (owner_region->stack_reference_count != 1) || !owned_region->has_parent())
     return 22;
-  owned_interior->reg_dec();
-  owner->reg_dec();
+  owned_interior->root_ref_dec();
+  owner->root_ref_dec();
   if (probe->get_arc() != 1)
     return 23;
 
-  probe->reg_dec();
+  probe->root_ref_dec();
   vrt_frame_leave();
 
   // A stack Location cannot transition to immutable storage. The public API
@@ -418,7 +418,7 @@ int main()
     !arena->contains(arena_root) || (arena->header_count() != 1) ||
     (arena->stack_reference_count != 1))
     return 25;
-  arena_root->reg_dec();
+  arena_root->root_ref_dec();
 
   vrt::deinit_thread();
   return vrt_thread_current() == nullptr ? 0 : 26;
