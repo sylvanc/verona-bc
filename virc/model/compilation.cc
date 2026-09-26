@@ -2,8 +2,12 @@
 
 #include "../lang.h"
 
+#include <vbci.h>
+
 namespace virc
 {
+  using namespace vbci;
+
   void LabelState::resize(size_t size)
   {
     first_def.resize(size);
@@ -168,7 +172,7 @@ namespace virc
 
   Compilation::Compilation()
   {
-    primitives.resize(NumPrimitiveClasses);
+    primitives.resize(PrimitiveTypeCount);
 
     // Reserve a function ID for `@main`.
     auto main_name = ST::di().string("@main");
@@ -397,6 +401,88 @@ namespace virc
 
     library_ids.insert({name, library_ids.size()});
     libraries.push_back(lib);
+  }
+
+  size_t Compilation::type_id(Node type)
+  {
+    while (type == TypeId)
+      type = get_typealias(type) / Type;
+
+    if (type == Dyn)
+    {
+      return DynId;
+    }
+    else if (type->in(
+               {None,
+                Bool,
+                I8,
+                U8,
+                I16,
+                U16,
+                I32,
+                U32,
+                I64,
+                U64,
+                ILong,
+                ULong,
+                ISize,
+                USize,
+                F32,
+                F64,
+                Ptr}))
+    {
+      return +val(type);
+    }
+    else if (type == ClassId)
+    {
+      return *get_class_id(type) + PrimitiveTypeCount;
+    }
+
+    TypeInfo info;
+
+    if (type == Array)
+    {
+      info = {TypeKind::Array, {type_id(type / Type)}};
+    }
+    else if (type == Cown)
+    {
+      info = {TypeKind::Cown, {type_id(type / Type)}};
+    }
+    else if (type == Ref)
+    {
+      info = {TypeKind::Ref, {type_id(type / Type)}};
+    }
+    else if (type == Union)
+    {
+      for (auto& child : *type)
+        info.elements.push_back(type_id(child));
+
+      info.kind = TypeKind::Union;
+      std::sort(info.elements.begin(), info.elements.end());
+      info.elements.erase(
+        std::unique(info.elements.begin(), info.elements.end()),
+        info.elements.end());
+    }
+    else if (type == TupleType)
+    {
+      info.kind = TypeKind::Tuple;
+
+      for (auto& child : *type)
+        info.elements.push_back(type_id(child));
+    }
+    else
+    {
+      assert(false);
+    }
+
+    auto find = type_info_ids.find(info);
+    if (find != type_info_ids.end())
+      return find->second;
+
+    auto id = types.size() + classes.size() + PrimitiveTypeCount;
+    type_info_ids.emplace(info, id);
+    types.push_back(std::move(info));
+    return id;
   }
 
 }

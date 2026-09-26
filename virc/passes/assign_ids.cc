@@ -1,8 +1,12 @@
 #include "../analysis/ir_subtype.h"
 #include "../lang.h"
 
+#include <vbci.h>
+
 namespace virc
 {
+  using namespace vbci;
+
   PassDef assign_ids(std::shared_ptr<Compilation> state)
   {
     PassDef p{

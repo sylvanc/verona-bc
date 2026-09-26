@@ -1,7 +1,11 @@
 #include "../lang.h"
 
+#include <vbci.h>
+
 namespace virc
 {
+  using namespace vbci;
+
   PassDef validate_ids(std::shared_ptr<Compilation> state)
   {
     return {

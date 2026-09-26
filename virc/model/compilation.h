@@ -5,7 +5,6 @@
 #include "type_table.h"
 
 #include <vir.h>
-#include <vbci.h>
 
 namespace virc
 {
@@ -17,8 +16,6 @@ namespace virc
     Node src_type;
     Node method_id;
   };
-  using namespace vbci;
-
   struct LabelState
   {
     std::vector<size_t> pred;
@@ -84,8 +81,8 @@ namespace virc
     std::vector<Node> symbols;
     std::vector<Node> libraries;
 
-    std::unordered_map<std::vector<uint8_t>, size_t, VecHash> type_map;
-    std::vector<std::vector<uint8_t>> types;
+    std::vector<TypeInfo> types;
+    std::unordered_map<TypeInfo, size_t, TypeInfoHash> type_info_ids;
 
     // Per-function type environments from typecheck.
     // Outer key: FunctionId string. Inner key: register name.

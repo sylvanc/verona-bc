@@ -3,6 +3,7 @@
 #include "../lang.h"
 
 #include <type_traits>
+#include <vbci.h>
 #include <zstd.h>
 
 namespace virc
@@ -1020,7 +1021,41 @@ namespace virc
     hdr << uleb(types.size());
 
     for (auto& type : types)
-      hdr.insert(hdr.end(), type.begin(), type.end());
+    {
+      switch (type.kind)
+      {
+        case TypeKind::Array:
+          hdr << uleb(+TypeTag::Array);
+          break;
+        case TypeKind::Cown:
+          hdr << uleb(+TypeTag::Cown);
+          break;
+        case TypeKind::Ref:
+          hdr << uleb(+TypeTag::Ref);
+          break;
+        case TypeKind::Union:
+          hdr << uleb(+TypeTag::Union);
+          break;
+        case TypeKind::Tuple:
+          hdr << uleb(+TypeTag::Tuple);
+          break;
+      }
+
+      if (
+        type.kind == TypeKind::Array || type.kind == TypeKind::Cown ||
+        type.kind == TypeKind::Ref)
+      {
+        assert(type.elements.size() == 1);
+        hdr << uleb(type.elements.front());
+      }
+      else
+      {
+        hdr << uleb(type.elements.size());
+
+        for (auto element : type.elements)
+          hdr << uleb(element);
+      }
+    }
 
     // Memo init list.
     if (memo_init_node)
@@ -1083,98 +1118,6 @@ namespace virc
       logging::Error() << "Error writing to: " << output << std::endl;
 
     wf::pop_front();
-  }
-
-  size_t Compilation::type_id(Node type)
-  {
-    // If it's a TypeId, encode what it maps to instead.
-    // Loop to follow chained aliases (e.g., cb -> fn$N -> Union).
-    while (type == TypeId)
-      type = get_typealias(type) / Type;
-
-    if (type == Dyn)
-    {
-      return DynId;
-    }
-    else if (type->in(
-               {None,
-                Bool,
-                I8,
-                U8,
-                I16,
-                U16,
-                I32,
-                U32,
-                I64,
-                U64,
-                ILong,
-                ULong,
-                ISize,
-                USize,
-                F32,
-                F64,
-                Ptr}))
-    {
-      return +val(type);
-    }
-    else if (type == ClassId)
-    {
-      // Class IDs are offset for primitive types.
-      return *get_class_id(type) + NumPrimitiveClasses;
-    }
-
-    // Encode complex types.
-    std::vector<uint8_t> b;
-
-    if (type == Array)
-    {
-      b << uleb(+TypeTag::Array) << uleb(type_id(type / Type));
-    }
-    else if (type == Cown)
-    {
-      b << uleb(+TypeTag::Cown) << uleb(type_id(type / Type));
-    }
-    else if (type == Ref)
-    {
-      b << uleb(+TypeTag::Ref) << uleb(type_id(type / Type));
-    }
-    else if (type == Union)
-    {
-      std::vector<size_t> child_types;
-
-      for (auto& child : *type)
-        child_types.push_back(type_id(child));
-
-      std::sort(child_types.begin(), child_types.end());
-      child_types.erase(
-        std::unique(child_types.begin(), child_types.end()), child_types.end());
-
-      b << uleb(+TypeTag::Union);
-      b << uleb(child_types.size());
-
-      for (auto t : child_types)
-        b << uleb(t);
-    }
-    else if (type == TupleType)
-    {
-      b << uleb(+TypeTag::Tuple);
-      b << uleb(type->size());
-
-      for (auto& child : *type)
-        b << uleb(type_id(child));
-    }
-
-    // Check if we already have this type encoded.
-    auto find = type_map.find(b);
-    if (find != type_map.end())
-      return find->second;
-
-    // Otherwise, add it to the type map. Complex type IDs are offset for
-    // primitive types and class IDs.
-    auto id = type_map.size() + classes.size() + NumPrimitiveClasses;
-    type_map.insert({b, id});
-    types.push_back(b);
-    return id;
   }
 
   void vbc_backend::emit(

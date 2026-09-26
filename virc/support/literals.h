@@ -1,19 +1,20 @@
 #pragma once
 
-#include "../model/compilation.h"
+#include "../model/type_table.h"
 #include "from_chars.h"
 
 #include <limits>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <vir.h>
 
 namespace virc
 {
   using namespace trieste;
   using namespace vir;
 
-  ValueType val(Node ptype);
+  PrimitiveKind val(Node ptype);
   Node ffi_struct_result_type();
   std::string unescape(const std::string_view& in);
 
