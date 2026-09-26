@@ -38,6 +38,10 @@ target_link_libraries(virc_reader PUBLIC virc_core)
 add_library(libvbcc ALIAS virc_core)
 add_library(vbc::vbcc ALIAS virc_core)
 
+add_executable(virc
+  main.cc
+)
+
 add_executable(vbcc
   main.cc
 )
@@ -49,11 +53,14 @@ else()
     -Wall -Wextra -Werror -Wno-zero-length-array)
 endif()
 
-target_link_libraries(vbcc
-  CLI11::CLI11
-  virc_reader
-  virc_vbc
-)
+foreach(tool IN ITEMS virc vbcc)
+  target_link_libraries(${tool}
+    CLI11::CLI11
+    virc_reader
+    virc_vbc
+  )
+endforeach()
 
 install(TARGETS virc_core virc_reader ARCHIVE DESTINATION lib/virc)
+install(TARGETS virc RUNTIME DESTINATION virc)
 install(TARGETS vbcc RUNTIME DESTINATION vbcc)
