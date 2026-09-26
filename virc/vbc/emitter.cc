@@ -1,4 +1,5 @@
 #include "emitter.h"
+#include "debug_info.h"
 #include "encoder.h"
 #include "instruction_encoder.h"
 #include "string_table.h"
@@ -7,7 +8,6 @@
 #include "../lang.h"
 
 #include <vbc/format.h>
-#include <zstd.h>
 
 namespace virc
 {
@@ -39,9 +39,8 @@ namespace virc
       output = "out.vbc";
 
     std::vector<uint8_t> hdr;
-    std::vector<uint8_t> di;
     std::vector<uint8_t> code;
-    std::map<ST::Index, trieste::Source> di_source;
+    DebugInfo di{code, source_paths};
 
     // Build memo slot mapping: init FunctionId string → 0-based index.
     std::unordered_map<std::string, size_t> memo_slot_map;
@@ -93,7 +92,7 @@ namespace virc
     for (auto& c : classes)
     {
       hdr << uleb(di.size());
-      di << uleb(ST::di().string(c / ClassId));
+      di.output() << uleb(ST::di().string(c / ClassId));
 
       auto fields = c / Fields;
       hdr << uleb(fields->size());
@@ -102,7 +101,7 @@ namespace virc
       {
         hdr << uleb(*get_field_id(field / FieldId));
         hdr << uleb(type_id(field / Type));
-        di << uleb(ST::di().string(field / FieldId));
+        di.output() << uleb(ST::di().string(field / FieldId));
       }
 
       auto methods = c / Methods;
@@ -112,7 +111,7 @@ namespace virc
       {
         hdr << uleb(*get_method_id(method / MethodId))
             << uleb(*get_func_id(method / FunctionId));
-        di << uleb(ST::di().string(method / MethodId));
+        di.output() << uleb(ST::di().string(method / MethodId));
       }
     }
 
@@ -195,81 +194,13 @@ namespace virc
       hdr << uleb(func_state.label_idxs.size());
 
       // Function name.
-      di << uleb(func_state.name);
+      di.output() << uleb(func_state.name);
 
       // Register names.
       for (auto& name : func_state.register_names)
-        di << uleb(name);
+        di.output() << uleb(name);
 
-
-      constexpr size_t no_value = size_t(-1);
-      size_t di_file = no_value;
-      size_t di_offset = 0;
-      size_t di_last_pc = code.size();
-      bool explicit_di = false;
-
-      // Keep track of all included source files.
-      auto di_source_curr = di_source.end();
-
-      auto adv_di = [&]() {
-        auto di_cur_pc = code.size();
-
-        if (di_cur_pc > di_last_pc)
-        {
-          di << d(DIOp::Skip, di_cur_pc - di_last_pc);
-          di_last_pc = di_cur_pc;
-        }
-      };
-
-      auto stmt_di = [&](Node& stmt) {
-        // Record nothing for empty or synthetic source locations.
-        if (
-          !stmt->location().source || stmt->location().source->origin().empty())
-          return;
-
-        // Use the source and offset in the AST.
-        if (
-          (di_source_curr == di_source.end()) ||
-          (di_source_curr->second != stmt->location().source))
-        {
-          // Pick a non-relative path.
-          std::filesystem::path rel_path;
-
-          for (auto& path : source_paths)
-          {
-            rel_path = std::filesystem::relative(
-              stmt->location().source->origin(), path);
-
-            if (!rel_path.empty() && (rel_path.c_str()[0] != '.'))
-              break;
-          }
-
-          if (rel_path.empty() || (rel_path.c_str()[0] == '.'))
-            rel_path = stmt->location().source->origin();
-
-          di_source_curr =
-            di_source
-              .emplace(
-                ST::di().string(rel_path.string()), stmt->location().source)
-              .first;
-
-          adv_di();
-          di << d(DIOp::File, di_source_curr->first);
-          di_file = di_source_curr->first;
-          di_offset = 0;
-        }
-
-        auto pos = stmt->location().pos;
-
-        if (pos != di_offset)
-        {
-          // Offset will also advance the PC by one, so reduce any Skip by one.
-          di_last_pc++;
-          adv_di();
-          di << d(DIOp::Offset, pos - di_offset);
-          di_offset = pos;
-        }
-      };
+      di.begin_function();
 
       for (auto label : *(func_state.func / Labels))
       {
@@ -280,36 +211,23 @@ namespace virc
         {
           if (stmt == Source)
           {
-            adv_di();
-            di_file = ST::di().string(stmt / String);
-            di_offset = 0;
-            explicit_di = true;
-            di << d(DIOp::File, di_file);
+            di.record_explicit_file(stmt / String);
             continue;
           }
           else if (stmt == Offset)
           {
-            adv_di();
-            di_offset = from_chars_sep_v<size_t>(stmt / Int);
-            explicit_di = true;
-            di << d(DIOp::Offset, di_offset);
+            di.record_explicit_offset(
+              from_chars_sep_v<size_t>(stmt / Int));
             continue;
           }
-          else if (!explicit_di)
-          {
-            stmt_di(stmt);
-          }
+
+          di.record_statement(stmt);
 
           encode_statement(*this, func_state, memo_slot_map, code, stmt);
         }
 
         Node term = label / Return;
-
-        if (explicit_di)
-          adv_di();
-        else
-          stmt_di(term);
-
+        di.finish_function(term);
         encode_terminator(*this, func_state, code, term);
       }
     }
@@ -335,43 +253,7 @@ namespace virc
     f.write(reinterpret_cast<const char*>(code.data()), code.size());
 
     if (!strip)
-    {
-      std::vector<uint8_t> di_strs;
-
-      // Debug info string table.
-      di_strs << uleb(ST::di().size());
-
-      for (size_t i = 0; i < ST::di().size(); i++)
-        di_strs << ST::di().at(i);
-
-      // Debug info source files.
-      di_strs << uleb(di_source.size());
-
-      for (auto& [id, source] : di_source)
-      {
-        di_strs << uleb(id);
-        di_strs << source->view();
-      }
-
-      // Debug info ops.
-      di_strs.insert(di_strs.end(), di.begin(), di.end());
-
-      // Compress debug info.
-      auto cap = ZSTD_compressBound(di_strs.size());
-      di.resize(cap);
-      auto compressed_size =
-        ZSTD_compress(di.data(), cap, di_strs.data(), di_strs.size(), 12);
-
-      if (!ZSTD_isError(compressed_size))
-      {
-        f.write(reinterpret_cast<const char*>(di.data()), compressed_size);
-      }
-      else
-      {
-        logging::Error() << "Error compressing debug info for: " << output
-                         << std::endl;
-      }
-    }
+      di.write_to(f, output);
 
     if (!f)
       logging::Error() << "Error writing to: " << output << std::endl;

@@ -1,4 +1,5 @@
 add_library(virc_vbc STATIC
+  debug_info.cc
   emitter.cc
   encoder.cc
   instruction_encoder.cc
