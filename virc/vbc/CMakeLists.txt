@@ -1,6 +1,7 @@
 add_library(virc_vbc STATIC
   emitter.cc
   encoder.cc
+  instruction_encoder.cc
   string_table.cc
   type_encoding.cc
 )
