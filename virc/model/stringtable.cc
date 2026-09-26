@@ -1,6 +1,6 @@
 #include "stringtable.h"
 
-#include "lang.h"
+#include "../lang.h"
 
 namespace virc
 {
