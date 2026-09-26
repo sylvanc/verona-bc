@@ -16,564 +16,564 @@ namespace virc::vbc_backend
     class InstructionEncoder
     {
     private:
-      Compilation& state;
-      FuncState& func_state;
-      const MemoSlots& memo_slot_map;
-      ByteBuffer& code;
+      Compilation& compilation;
+      FuncState& function;
+      const MemoSlots& memo_slots;
+      ByteBuffer& output;
 
-      uleb<size_t> dst(Node stmt)
+      uleb<size_t> dst(Node statement)
       {
-        return uleb(*func_state.get_register_id(stmt / LocalId));
+        return uleb(*function.get_register_id(statement / LocalId));
       }
 
-      uleb<size_t> lhs(Node stmt)
+      uleb<size_t> lhs(Node statement)
       {
-        return uleb(*func_state.get_register_id(stmt / Lhs));
+        return uleb(*function.get_register_id(statement / Lhs));
       }
 
-      uleb<size_t> rhs(Node stmt)
+      uleb<size_t> rhs(Node statement)
       {
-        return uleb(*func_state.get_register_id(stmt / Rhs));
+        return uleb(*function.get_register_id(statement / Rhs));
       }
 
-      uleb<size_t> src(Node stmt)
+      uleb<size_t> src(Node statement)
       {
-        return rhs(stmt);
+        return rhs(statement);
       }
 
-      uleb<size_t> cls(Node stmt)
+      uleb<size_t> cls(Node statement)
       {
-        return uleb(state.type_id(stmt / ClassId));
+        return uleb(compilation.type_id(statement / ClassId));
       }
 
-      uleb<size_t> fld(Node stmt)
+      uleb<size_t> fld(Node statement)
       {
-        return uleb(*state.get_field_id(stmt / FieldId));
+        return uleb(*compilation.get_field_id(statement / FieldId));
       }
 
-      uleb<size_t> mth(Node stmt)
+      uleb<size_t> mth(Node statement)
       {
-        return uleb(*state.get_method_id(stmt / MethodId));
+        return uleb(*compilation.get_method_id(statement / MethodId));
       }
 
-      uleb<size_t> fn(Node stmt)
+      uleb<size_t> fn(Node statement)
       {
-        return uleb(*state.get_func_id(stmt / FunctionId));
+        return uleb(*compilation.get_func_id(statement / FunctionId));
       }
 
-      void onearg(Node onearg)
+      void argument(Node argument)
       {
-        if ((onearg / Type) == ArgMove)
-          code << uleb(+Op::ArgMove) << uleb(src(onearg));
+        if ((argument / Type) == ArgMove)
+          output << uleb(+Op::ArgMove) << uleb(src(argument));
         else
-          code << uleb(+Op::ArgCopy) << uleb(src(onearg));
+          output << uleb(+Op::ArgCopy) << uleb(src(argument));
       }
 
-      void args(Node args)
+      void arguments(Node arguments)
       {
-        for (auto argument_node : *args)
-          onearg(argument_node);
+        for (auto argument_node : *arguments)
+          argument(argument_node);
       }
 
-      void binary(Node stmt, Op op)
+      void binary(Node statement, Op op)
       {
-        code << uleb(+op) << dst(stmt) << lhs(stmt) << rhs(stmt);
+        output << uleb(+op) << dst(statement) << lhs(statement) << rhs(statement);
       }
 
-      void unary(Node stmt, Op op)
+      void unary(Node statement, Op op)
       {
-        code << uleb(+op) << dst(stmt) << src(stmt);
+        output << uleb(+op) << dst(statement) << src(statement);
       }
 
     public:
       InstructionEncoder(
-        Compilation& state,
-        FuncState& func_state,
-        const MemoSlots& memo_slot_map,
-        ByteBuffer& code)
-      : state(state),
-        func_state(func_state),
-        memo_slot_map(memo_slot_map),
-        code(code)
+        Compilation& compilation,
+        FuncState& function,
+        const MemoSlots& memo_slots,
+        ByteBuffer& output)
+      : compilation(compilation),
+        function(function),
+        memo_slots(memo_slots),
+        output(output)
       {}
 
-      void stmt(Node stmt)
+      void statement(Node statement)
       {
-        if (stmt == Const)
+        if (statement == Const)
         {
-          auto type = stmt / Type;
-          auto value = stmt / Rhs;
+          auto type = statement / Type;
+          auto value = statement / Rhs;
 
           if (type == None)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type));
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type));
           }
           else if (type == Bool)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type));
-            code << uleb(((stmt / Rhs) == True) ? 1 : 0);
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type));
+            output << uleb(((statement / Rhs) == True) ? 1 : 0);
           }
           else if (type == I8)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << sleb(from_chars_sep_v<int8_t>(value));
           }
           else if (type == U8)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << uleb(from_chars_sep_v<uint8_t>(value));
           }
           else if (type == I16)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << sleb(from_chars_sep_v<int16_t>(value));
           }
           else if (type == U16)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << uleb(from_chars_sep_v<uint16_t>(value));
           }
           else if (type == I32)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << sleb(from_chars_sep_v<int32_t>(value));
           }
           else if (type == U32)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << uleb(from_chars_sep_v<uint32_t>(value));
           }
           else if (type->in({I64, ILong, ISize}))
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << sleb(from_chars_sep_v<int64_t>(value));
           }
           else if (type->in({U64, ULong, USize, Ptr}))
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << uleb(from_chars_sep_v<uint64_t>(value));
           }
           else if (type == F32)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << sleb(from_chars_sep_v<float>(value));
           }
           else if (type == F64)
           {
-            code << uleb(+Op::Const) << dst(stmt) << uleb(+val(type))
+            output << uleb(+Op::Const) << dst(statement) << uleb(+val(type))
                    << sleb(from_chars_sep_v<double>(value));
           }
         }
-        else if (stmt == ConstStr)
+        else if (statement == ConstStr)
         {
-          code << uleb(+Op::String) << dst(stmt)
-                 << uleb(ST::exec().string(stmt / String));
+          output << uleb(+Op::String) << dst(statement)
+                 << uleb(ST::exec().string(statement / String));
         }
-        else if (stmt == Convert)
+        else if (statement == Convert)
         {
-          code << uleb(+Op::Convert) << dst(stmt)
-                 << uleb(+val(stmt / Type)) << rhs(stmt);
+          output << uleb(+Op::Convert) << dst(statement)
+                 << uleb(+val(statement / Type)) << rhs(statement);
         }
-        else if (stmt == Singleton)
+        else if (statement == Singleton)
         {
-          code << uleb(+Op::Singleton) << dst(stmt) << cls(stmt);
+          output << uleb(+Op::Singleton) << dst(statement) << cls(statement);
         }
-        else if (stmt == New)
+        else if (statement == New)
         {
-          args(stmt / Args);
-          code << uleb(+Op::New) << dst(stmt) << cls(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::New) << dst(statement) << cls(statement);
         }
-        else if (stmt == Stack)
+        else if (statement == Stack)
         {
-          args(stmt / Args);
-          code << uleb(+Op::Stack) << dst(stmt) << cls(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::Stack) << dst(statement) << cls(statement);
         }
-        else if (stmt == Heap)
+        else if (statement == Heap)
         {
-          args(stmt / Args);
-          code << uleb(+Op::Heap) << dst(stmt) << rhs(stmt)
-                 << cls(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::Heap) << dst(statement) << rhs(statement)
+                 << cls(statement);
         }
-        else if (stmt == Region)
+        else if (statement == Region)
         {
-          args(stmt / Args);
-          code << uleb(+Op::Region) << dst(stmt)
-                 << encode_region(stmt) << cls(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::Region) << dst(statement)
+                 << encode_region(statement) << cls(statement);
         }
-        else if (stmt == NewArray)
+        else if (statement == NewArray)
         {
-          code << uleb(+Op::NewArray) << dst(stmt) << rhs(stmt)
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::NewArray) << dst(statement) << rhs(statement)
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == NewArrayConst)
+        else if (statement == NewArrayConst)
         {
-          code << uleb(+Op::NewArrayConst) << dst(stmt)
-                 << uleb(state.type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
+          output << uleb(+Op::NewArrayConst) << dst(statement)
+                 << uleb(compilation.type_id(statement / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(statement / Rhs));
         }
-        else if (stmt == StackArray)
+        else if (statement == StackArray)
         {
-          code << uleb(+Op::StackArray) << dst(stmt) << rhs(stmt)
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::StackArray) << dst(statement) << rhs(statement)
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == StackArrayConst)
+        else if (statement == StackArrayConst)
         {
-          code << uleb(+Op::StackArrayConst) << dst(stmt)
-                 << uleb(state.type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
+          output << uleb(+Op::StackArrayConst) << dst(statement)
+                 << uleb(compilation.type_id(statement / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(statement / Rhs));
         }
-        else if (stmt == HeapArray)
+        else if (statement == HeapArray)
         {
-          code << uleb(+Op::HeapArray) << dst(stmt) << lhs(stmt)
-                 << rhs(stmt)
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::HeapArray) << dst(statement) << lhs(statement)
+                 << rhs(statement)
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == HeapArrayConst)
+        else if (statement == HeapArrayConst)
         {
-          code << uleb(+Op::HeapArrayConst) << dst(stmt)
-                 << lhs(stmt)
-                 << uleb(state.type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
+          output << uleb(+Op::HeapArrayConst) << dst(statement)
+                 << lhs(statement)
+                 << uleb(compilation.type_id(statement / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(statement / Rhs));
         }
-        else if (stmt == RegionArray)
+        else if (statement == RegionArray)
         {
-          code << uleb(+Op::RegionArray) << dst(stmt)
-                 << encode_region(stmt) << rhs(stmt)
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::RegionArray) << dst(statement)
+                 << encode_region(statement) << rhs(statement)
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == RegionArrayConst)
+        else if (statement == RegionArrayConst)
         {
-          code << uleb(+Op::RegionArrayConst) << dst(stmt)
-                 << encode_region(stmt)
-                 << uleb(state.type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
+          output << uleb(+Op::RegionArrayConst) << dst(statement)
+                 << encode_region(statement)
+                 << uleb(compilation.type_id(statement / Type))
+                 << uleb(from_chars_sep_v<uint64_t>(statement / Rhs));
         }
-        else if (stmt == Copy)
+        else if (statement == Copy)
         {
-          code << uleb(+Op::Copy) << dst(stmt) << src(stmt);
+          output << uleb(+Op::Copy) << dst(statement) << src(statement);
         }
-        else if (stmt == Move)
+        else if (statement == Move)
         {
-          code << uleb(+Op::Move) << dst(stmt) << src(stmt);
+          output << uleb(+Op::Move) << dst(statement) << src(statement);
         }
-        else if (stmt == Drop)
+        else if (statement == Drop)
         {
-          code << uleb(+Op::Drop) << dst(stmt);
+          output << uleb(+Op::Drop) << dst(statement);
         }
-        else if (stmt == Freeze)
+        else if (statement == Freeze)
         {
-          code << uleb(+Op::Freeze) << dst(stmt) << src(stmt);
+          output << uleb(+Op::Freeze) << dst(statement) << src(statement);
         }
-        else if (stmt == RegisterRef)
+        else if (statement == RegisterRef)
         {
-          code << uleb(+Op::RegisterRef) << dst(stmt) << src(stmt);
+          output << uleb(+Op::RegisterRef) << dst(statement) << src(statement);
         }
-        else if (stmt == FieldRef)
+        else if (statement == FieldRef)
         {
-          auto argument_node = stmt / Arg;
-          code << uleb(
+          auto argument_node = statement / Arg;
+          output << uleb(
             +(((argument_node / Type) == ArgMove) ? Op::FieldRefMove :
                                                     Op::FieldRefCopy));
-          code << dst(stmt) << src(argument_node) << fld(stmt);
+          output << dst(statement) << src(argument_node) << fld(statement);
         }
-        else if (stmt == ArrayRef)
+        else if (statement == ArrayRef)
         {
-          auto argument_node = stmt / Arg;
-          code << uleb(
+          auto argument_node = statement / Arg;
+          output << uleb(
             +(((argument_node / Type) == ArgMove) ? Op::ArrayRefMove :
                                                     Op::ArrayRefCopy));
-          code << dst(stmt) << src(argument_node) << rhs(stmt);
+          output << dst(statement) << src(argument_node) << rhs(statement);
         }
-        else if (stmt == ArrayRefConst)
+        else if (statement == ArrayRefConst)
         {
-          auto argument_node = stmt / Arg;
-          code << uleb(
+          auto argument_node = statement / Arg;
+          output << uleb(
             +(((argument_node / Type) == ArgMove) ? Op::ArrayRefMoveConst :
                                                     Op::ArrayRefCopyConst));
-          code << dst(stmt) << src(argument_node)
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
+          output << dst(statement) << src(argument_node)
+                 << uleb(from_chars_sep_v<uint64_t>(statement / Rhs));
         }
-        else if (stmt == Load)
+        else if (statement == Load)
         {
-          code << uleb(+Op::Load) << dst(stmt) << rhs(stmt);
+          output << uleb(+Op::Load) << dst(statement) << rhs(statement);
         }
-        else if (stmt == Store)
+        else if (statement == Store)
         {
-          auto argument_node = stmt / Arg;
-          code << uleb(
+          auto argument_node = statement / Arg;
+          output << uleb(
             +(((argument_node / Type) == ArgMove) ? Op::StoreMove :
                                                     Op::StoreCopy));
-          code << dst(stmt) << src(stmt) << src(argument_node);
+          output << dst(statement) << src(statement) << src(argument_node);
         }
-        else if (stmt == Lookup)
+        else if (statement == Lookup)
         {
-          code << uleb(+Op::LookupDynamic) << dst(stmt) << src(stmt)
-                 << mth(stmt);
+          output << uleb(+Op::LookupDynamic) << dst(statement) << src(statement)
+                 << mth(statement);
         }
-        else if (stmt == Call)
+        else if (statement == Call)
         {
-          args(stmt / Args);
-          code << uleb(+Op::CallStatic) << dst(stmt) << fn(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::CallStatic) << dst(statement) << fn(statement);
         }
-        else if (stmt == MemoSlot)
+        else if (statement == MemoSlot)
         {
           auto function_id =
-            std::string((stmt / FunctionId)->location().view());
-          auto slot = memo_slot_map.find(function_id);
-          assert(slot != memo_slot_map.end());
-          code << uleb(+Op::MemoLoad) << dst(stmt) << uleb(slot->second);
+            std::string((statement / FunctionId)->location().view());
+          auto slot = memo_slots.find(function_id);
+          assert(slot != memo_slots.end());
+          output << uleb(+Op::MemoLoad) << dst(statement) << uleb(slot->second);
         }
-        else if (stmt == CallDyn)
+        else if (statement == CallDyn)
         {
-          args(stmt / Args);
-          code << uleb(+Op::CallDynamic) << dst(stmt) << src(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::CallDynamic) << dst(statement) << src(statement);
         }
-        else if (stmt == TryCallDyn)
+        else if (statement == TryCallDyn)
         {
-          args(stmt / Args);
-          code << uleb(+Op::TryCallDynamic) << dst(stmt)
-                 << src(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::TryCallDynamic) << dst(statement)
+                 << src(statement);
         }
-        else if (stmt == FFI)
+        else if (statement == FFI)
         {
-          args(stmt / Args);
-          code << uleb(+Op::FFI) << dst(stmt)
-                 << uleb(*state.get_symbol_id(stmt / SymbolId));
+          arguments(statement / Args);
+          output << uleb(+Op::FFI) << dst(statement)
+                 << uleb(*compilation.get_symbol_id(statement / SymbolId));
         }
-        else if (stmt == FFIStruct)
+        else if (statement == FFIStruct)
         {
-          code << uleb(+Op::FFIStruct) << dst(stmt)
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::FFIStruct) << dst(statement)
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == FFILoad)
+        else if (statement == FFILoad)
         {
-          code << uleb(+Op::FFILoad) << dst(stmt) << lhs(stmt)
-                 << rhs(stmt)
-                 << uleb(*func_state.get_register_id(stmt / Kind))
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::FFILoad) << dst(statement) << lhs(statement)
+                 << rhs(statement)
+                 << uleb(*function.get_register_id(statement / Kind))
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == FFIStore)
+        else if (statement == FFIStore)
         {
-          code << uleb(+Op::FFIStore) << dst(stmt) << lhs(stmt)
-                 << rhs(stmt)
-                 << uleb(*func_state.get_register_id(stmt / Kind))
-                 << uleb(*func_state.get_register_id(stmt / ValueSrc))
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::FFIStore) << dst(statement) << lhs(statement)
+                 << rhs(statement)
+                 << uleb(*function.get_register_id(statement / Kind))
+                 << uleb(*function.get_register_id(statement / ValueSrc))
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == ArrayCopy)
+        else if (statement == ArrayCopy)
         {
-          args(stmt / Args);
-          code << uleb(+Op::ArrayCopy) << dst(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::ArrayCopy) << dst(statement);
         }
-        else if (stmt == ArrayFill)
+        else if (statement == ArrayFill)
         {
-          args(stmt / Args);
-          code << uleb(+Op::ArrayFill) << dst(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::ArrayFill) << dst(statement);
         }
-        else if (stmt == ArrayCompare)
+        else if (statement == ArrayCompare)
         {
-          args(stmt / Args);
-          code << uleb(+Op::ArrayCompare) << dst(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::ArrayCompare) << dst(statement);
         }
-        else if (stmt == When)
+        else if (statement == When)
         {
-          args(stmt / Args);
-          code << uleb(+Op::WhenStatic) << dst(stmt)
-                 << uleb(state.type_id(stmt / Cown)) << fn(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::WhenStatic) << dst(statement)
+                 << uleb(compilation.type_id(statement / Cown)) << fn(statement);
         }
-        else if (stmt == WhenDyn)
+        else if (statement == WhenDyn)
         {
-          args(stmt / Args);
-          code << uleb(+Op::WhenDynamic) << dst(stmt)
-                 << uleb(state.type_id(stmt / Cown))
-                 << src(stmt);
+          arguments(statement / Args);
+          output << uleb(+Op::WhenDynamic) << dst(statement)
+                 << uleb(compilation.type_id(statement / Cown))
+                 << src(statement);
         }
-        else if (stmt == Add)
-          binary(stmt, Op::Add);
-        else if (stmt == Sub)
-          binary(stmt, Op::Sub);
-        else if (stmt == Mul)
-          binary(stmt, Op::Mul);
-        else if (stmt == Div)
-          binary(stmt, Op::Div);
-        else if (stmt == Mod)
-          binary(stmt, Op::Mod);
-        else if (stmt == Pow)
-          binary(stmt, Op::Pow);
-        else if (stmt == And)
-          binary(stmt, Op::And);
-        else if (stmt == Or)
-          binary(stmt, Op::Or);
-        else if (stmt == Xor)
-          binary(stmt, Op::Xor);
-        else if (stmt == Shl)
-          binary(stmt, Op::Shl);
-        else if (stmt == Shr)
-          binary(stmt, Op::Shr);
-        else if (stmt == Eq)
-          binary(stmt, Op::Eq);
-        else if (stmt == Ne)
-          binary(stmt, Op::Ne);
-        else if (stmt == Lt)
-          binary(stmt, Op::Lt);
-        else if (stmt == Le)
-          binary(stmt, Op::Le);
-        else if (stmt == Gt)
-          binary(stmt, Op::Gt);
-        else if (stmt == Ge)
-          binary(stmt, Op::Ge);
-        else if (stmt == Min)
-          binary(stmt, Op::Min);
-        else if (stmt == Max)
-          binary(stmt, Op::Max);
-        else if (stmt == LogBase)
-          binary(stmt, Op::LogBase);
-        else if (stmt == Atan2)
-          binary(stmt, Op::Atan2);
-        else if (stmt == Neg)
-          unary(stmt, Op::Neg);
-        else if (stmt == Not)
-          unary(stmt, Op::Not);
-        else if (stmt == Abs)
-          unary(stmt, Op::Abs);
-        else if (stmt == Ceil)
-          unary(stmt, Op::Ceil);
-        else if (stmt == Floor)
-          unary(stmt, Op::Floor);
-        else if (stmt == Exp)
-          unary(stmt, Op::Exp);
-        else if (stmt == Log)
-          unary(stmt, Op::Log);
-        else if (stmt == Sqrt)
-          unary(stmt, Op::Sqrt);
-        else if (stmt == Cbrt)
-          unary(stmt, Op::Cbrt);
-        else if (stmt == IsInf)
-          unary(stmt, Op::IsInf);
-        else if (stmt == IsNaN)
-          unary(stmt, Op::IsNaN);
-        else if (stmt == Sin)
-          unary(stmt, Op::Sin);
-        else if (stmt == Cos)
-          unary(stmt, Op::Cos);
-        else if (stmt == Tan)
-          unary(stmt, Op::Tan);
-        else if (stmt == Asin)
-          unary(stmt, Op::Asin);
-        else if (stmt == Acos)
-          unary(stmt, Op::Acos);
-        else if (stmt == Atan)
-          unary(stmt, Op::Atan);
-        else if (stmt == Sinh)
-          unary(stmt, Op::Sinh);
-        else if (stmt == Cosh)
-          unary(stmt, Op::Cosh);
-        else if (stmt == Tanh)
-          unary(stmt, Op::Tanh);
-        else if (stmt == Asinh)
-          unary(stmt, Op::Asinh);
-        else if (stmt == Acosh)
-          unary(stmt, Op::Acosh);
-        else if (stmt == Atanh)
-          unary(stmt, Op::Atanh);
-        else if (stmt == Bits)
-          unary(stmt, Op::Bits);
-        else if (stmt == Len)
-          unary(stmt, Op::Len);
-        else if (stmt == MakePtr)
-          unary(stmt, Op::Ptr);
-        else if (stmt == Read)
-          unary(stmt, Op::Read);
-        else if (stmt == Const_E)
-          code << uleb(+Op::Const_E) << dst(stmt);
-        else if (stmt == Const_Pi)
-          code << uleb(+Op::Const_Pi) << dst(stmt);
-        else if (stmt == Const_Inf)
-          code << uleb(+Op::Const_Inf) << dst(stmt);
-        else if (stmt == Const_NaN)
-          code << uleb(+Op::Const_NaN) << dst(stmt);
-        else if (stmt == MakeCallback)
-          unary(stmt, Op::MakeCallback);
-        else if (stmt == CodePtrCallback)
-          unary(stmt, Op::CodePtrCallback);
-        else if (stmt == FreeCallback)
-          unary(stmt, Op::FreeCallback);
-        else if (stmt == Pin)
-          unary(stmt, Op::Pin);
-        else if (stmt == Unpin)
-          unary(stmt, Op::Unpin);
-        else if (stmt == Merge)
-          binary(stmt, Op::Merge);
-        else if (stmt == AddExternal)
-          code << uleb(+Op::AddExternal) << dst(stmt);
-        else if (stmt == RemoveExternal)
-          code << uleb(+Op::RemoveExternal) << dst(stmt);
-        else if (stmt == Typetest)
+        else if (statement == Add)
+          binary(statement, Op::Add);
+        else if (statement == Sub)
+          binary(statement, Op::Sub);
+        else if (statement == Mul)
+          binary(statement, Op::Mul);
+        else if (statement == Div)
+          binary(statement, Op::Div);
+        else if (statement == Mod)
+          binary(statement, Op::Mod);
+        else if (statement == Pow)
+          binary(statement, Op::Pow);
+        else if (statement == And)
+          binary(statement, Op::And);
+        else if (statement == Or)
+          binary(statement, Op::Or);
+        else if (statement == Xor)
+          binary(statement, Op::Xor);
+        else if (statement == Shl)
+          binary(statement, Op::Shl);
+        else if (statement == Shr)
+          binary(statement, Op::Shr);
+        else if (statement == Eq)
+          binary(statement, Op::Eq);
+        else if (statement == Ne)
+          binary(statement, Op::Ne);
+        else if (statement == Lt)
+          binary(statement, Op::Lt);
+        else if (statement == Le)
+          binary(statement, Op::Le);
+        else if (statement == Gt)
+          binary(statement, Op::Gt);
+        else if (statement == Ge)
+          binary(statement, Op::Ge);
+        else if (statement == Min)
+          binary(statement, Op::Min);
+        else if (statement == Max)
+          binary(statement, Op::Max);
+        else if (statement == LogBase)
+          binary(statement, Op::LogBase);
+        else if (statement == Atan2)
+          binary(statement, Op::Atan2);
+        else if (statement == Neg)
+          unary(statement, Op::Neg);
+        else if (statement == Not)
+          unary(statement, Op::Not);
+        else if (statement == Abs)
+          unary(statement, Op::Abs);
+        else if (statement == Ceil)
+          unary(statement, Op::Ceil);
+        else if (statement == Floor)
+          unary(statement, Op::Floor);
+        else if (statement == Exp)
+          unary(statement, Op::Exp);
+        else if (statement == Log)
+          unary(statement, Op::Log);
+        else if (statement == Sqrt)
+          unary(statement, Op::Sqrt);
+        else if (statement == Cbrt)
+          unary(statement, Op::Cbrt);
+        else if (statement == IsInf)
+          unary(statement, Op::IsInf);
+        else if (statement == IsNaN)
+          unary(statement, Op::IsNaN);
+        else if (statement == Sin)
+          unary(statement, Op::Sin);
+        else if (statement == Cos)
+          unary(statement, Op::Cos);
+        else if (statement == Tan)
+          unary(statement, Op::Tan);
+        else if (statement == Asin)
+          unary(statement, Op::Asin);
+        else if (statement == Acos)
+          unary(statement, Op::Acos);
+        else if (statement == Atan)
+          unary(statement, Op::Atan);
+        else if (statement == Sinh)
+          unary(statement, Op::Sinh);
+        else if (statement == Cosh)
+          unary(statement, Op::Cosh);
+        else if (statement == Tanh)
+          unary(statement, Op::Tanh);
+        else if (statement == Asinh)
+          unary(statement, Op::Asinh);
+        else if (statement == Acosh)
+          unary(statement, Op::Acosh);
+        else if (statement == Atanh)
+          unary(statement, Op::Atanh);
+        else if (statement == Bits)
+          unary(statement, Op::Bits);
+        else if (statement == Len)
+          unary(statement, Op::Len);
+        else if (statement == MakePtr)
+          unary(statement, Op::Ptr);
+        else if (statement == Read)
+          unary(statement, Op::Read);
+        else if (statement == Const_E)
+          output << uleb(+Op::Const_E) << dst(statement);
+        else if (statement == Const_Pi)
+          output << uleb(+Op::Const_Pi) << dst(statement);
+        else if (statement == Const_Inf)
+          output << uleb(+Op::Const_Inf) << dst(statement);
+        else if (statement == Const_NaN)
+          output << uleb(+Op::Const_NaN) << dst(statement);
+        else if (statement == MakeCallback)
+          unary(statement, Op::MakeCallback);
+        else if (statement == CodePtrCallback)
+          unary(statement, Op::CodePtrCallback);
+        else if (statement == FreeCallback)
+          unary(statement, Op::FreeCallback);
+        else if (statement == Pin)
+          unary(statement, Op::Pin);
+        else if (statement == Unpin)
+          unary(statement, Op::Unpin);
+        else if (statement == Merge)
+          binary(statement, Op::Merge);
+        else if (statement == AddExternal)
+          output << uleb(+Op::AddExternal) << dst(statement);
+        else if (statement == RemoveExternal)
+          output << uleb(+Op::RemoveExternal) << dst(statement);
+        else if (statement == Typetest)
         {
-          code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
-                 << uleb(state.type_id(stmt / Type));
+          output << uleb(+Op::Typetest) << dst(statement) << src(statement)
+                 << uleb(compilation.type_id(statement / Type));
         }
-        else if (stmt == GetRaise)
-          code << uleb(+Op::GetRaise) << dst(stmt);
-        else if (stmt == SetRaise)
-          unary(stmt, Op::SetRaise);
+        else if (statement == GetRaise)
+          output << uleb(+Op::GetRaise) << dst(statement);
+        else if (statement == SetRaise)
+          unary(statement, Op::SetRaise);
       }
 
-      void term(Node term)
+      void terminator(Node terminator)
       {
-        if (term == Tailcall)
+        if (terminator == Tailcall)
         {
-          args(term / MoveArgs);
-          code << uleb(+Op::TailcallStatic) << fn(term);
+          arguments(terminator / MoveArgs);
+          output << uleb(+Op::TailcallStatic) << fn(terminator);
         }
-        else if (term == TailcallDyn)
+        else if (terminator == TailcallDyn)
         {
-          args(term / MoveArgs);
-          code << uleb(+Op::TailcallDynamic) << dst(term);
+          arguments(terminator / MoveArgs);
+          output << uleb(+Op::TailcallDynamic) << dst(terminator);
         }
-        else if (term == Return)
+        else if (terminator == Return)
         {
-          code << uleb(+Op::Return) << dst(term);
+          output << uleb(+Op::Return) << dst(terminator);
         }
-        else if (term == Raise)
+        else if (terminator == Raise)
         {
-          code << uleb(+Op::Raise) << dst(term);
+          output << uleb(+Op::Raise) << dst(terminator);
         }
-        else if (term == Cond)
+        else if (terminator == Cond)
         {
-          auto true_label = *func_state.get_label_id(term / Lhs);
-          auto false_label = *func_state.get_label_id(term / Rhs);
-          code << uleb(+Op::Cond) << dst(term) << uleb(true_label)
+          auto true_label = *function.get_label_id(terminator / Lhs);
+          auto false_label = *function.get_label_id(terminator / Rhs);
+          output << uleb(+Op::Cond) << dst(terminator) << uleb(true_label)
                  << uleb(false_label);
         }
-        else if (term == Jump)
+        else if (terminator == Jump)
         {
-          code << uleb(+Op::Jump)
-                 << uleb(*func_state.get_label_id(term / LabelId));
+          output << uleb(+Op::Jump)
+                 << uleb(*function.get_label_id(terminator / LabelId));
         }
       }
     };
   }
 
   void encode_statement(
-    Compilation& state,
-    FuncState& func_state,
-    const MemoSlots& memo_slot_map,
-    ByteBuffer& code,
-    Node stmt)
+    Compilation& compilation,
+    FuncState& function,
+    const MemoSlots& memo_slots,
+    ByteBuffer& output,
+    Node statement)
   {
-    InstructionEncoder{state, func_state, memo_slot_map, code}.stmt(
-      stmt);
+    InstructionEncoder{compilation, function, memo_slots, output}.statement(
+      statement);
   }
 
   void encode_terminator(
-    Compilation& state,
-    FuncState& func_state,
-    ByteBuffer& code,
-    Node term)
+    Compilation& compilation,
+    FuncState& function,
+    ByteBuffer& output,
+    Node terminator)
   {
     const MemoSlots no_memo_slots;
-    InstructionEncoder{state, func_state, no_memo_slots, code}.term(
-      term);
+    InstructionEncoder{compilation, function, no_memo_slots, output}.terminator(
+      terminator);
   }
 }
