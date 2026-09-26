@@ -1,6 +1,7 @@
 #include "emitter.h"
 #include "encoder.h"
 #include "string_table.h"
+#include "type_encoding.h"
 
 #include "../lang.h"
 
@@ -18,24 +19,6 @@ namespace virc
   using ::vbc::Op;
   using ::vbc::RegionType;
   using ::vbc::TypeTag;
-
-  static_assert(virc::MainFunctionId == ::vbc::MainFunctionId);
-  static_assert(virc::FinalizerMethodId == ::vbc::FinalizerMethodId);
-  static_assert(virc::CallbackMethodId == ::vbc::CallbackMethodId);
-  static_assert(virc::DynamicTypeId == ::vbc::DynamicTypeId);
-  static_assert(PrimitiveTypeCount == NumPrimitiveClasses);
-  uleb<size_t> rgn(Node node)
-  {
-    auto region = node / Region;
-
-    if (region == RegionRC)
-      return +RegionType::RegionRC;
-    else if (region == RegionArena)
-      return +RegionType::RegionArena;
-
-    assert(false);
-    return size_t(-1);
-  }
 
   namespace
   {
@@ -454,7 +437,7 @@ namespace virc
           else if (stmt == Region)
           {
             args(stmt / Args);
-            code << uleb(+Op::Region) << dst(stmt) << rgn(stmt) << cls(stmt);
+            code << uleb(+Op::Region) << dst(stmt) << encode_region(stmt) << cls(stmt);
           }
           else if (stmt == NewArray)
           {
@@ -491,12 +474,12 @@ namespace virc
           }
           else if (stmt == RegionArray)
           {
-            code << uleb(+Op::RegionArray) << dst(stmt) << rgn(stmt)
+            code << uleb(+Op::RegionArray) << dst(stmt) << encode_region(stmt)
                  << rhs(stmt) << uleb(type_id(stmt / Type));
           }
           else if (stmt == RegionArrayConst)
           {
-            code << uleb(+Op::RegionArrayConst) << dst(stmt) << rgn(stmt)
+            code << uleb(+Op::RegionArrayConst) << dst(stmt) << encode_region(stmt)
                  << uleb(type_id(stmt / Type))
                  << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
@@ -940,45 +923,7 @@ namespace virc
       }
     }
 
-    // Types.
-    hdr << uleb(types.size());
-
-    for (auto& type : types)
-    {
-      switch (type.kind)
-      {
-        case TypeKind::Array:
-          hdr << uleb(+TypeTag::Array);
-          break;
-        case TypeKind::Cown:
-          hdr << uleb(+TypeTag::Cown);
-          break;
-        case TypeKind::Ref:
-          hdr << uleb(+TypeTag::Ref);
-          break;
-        case TypeKind::Union:
-          hdr << uleb(+TypeTag::Union);
-          break;
-        case TypeKind::Tuple:
-          hdr << uleb(+TypeTag::Tuple);
-          break;
-      }
-
-      if (
-        type.kind == TypeKind::Array || type.kind == TypeKind::Cown ||
-        type.kind == TypeKind::Ref)
-      {
-        assert(type.elements.size() == 1);
-        hdr << uleb(type.elements.front());
-      }
-      else
-      {
-        hdr << uleb(type.elements.size());
-
-        for (auto element : type.elements)
-          hdr << uleb(element);
-      }
-    }
+    encode_type_table(hdr, types);
 
     // Memo init list.
     if (memo_init_node)
