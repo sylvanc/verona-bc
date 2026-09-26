@@ -73,9 +73,10 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 # Installation instructions
 set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/dist)
 
-add_library(CommonIncludes INTERFACE)
-add_library(vbc::include ALIAS CommonIncludes)
-target_include_directories(CommonIncludes INTERFACE
+add_library(verona_headers INTERFACE)
+add_library(verona::include ALIAS verona_headers)
+add_library(vbc::include ALIAS verona_headers)
+target_include_directories(verona_headers INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )

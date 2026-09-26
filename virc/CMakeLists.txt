@@ -24,7 +24,7 @@ target_link_libraries(libvbcc PUBLIC
   Threads::Threads
   snmalloc-new-override
   trieste::trieste
-  vbc::include
+  verona::include
   deps::zstd
 )
 
