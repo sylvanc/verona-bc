@@ -752,6 +752,11 @@ namespace vbci
 #endif
   }
 
+}
+
+namespace vbc
+{
+
   std::ostream& operator<<(std::ostream& os, Op op)
   {
     switch (op)
@@ -992,6 +997,11 @@ namespace vbci
         return os << "Unknown";
     }
   }
+
+}
+
+namespace vbci
+{
 
   void Thread::step()
   {

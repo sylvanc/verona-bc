@@ -5,7 +5,7 @@
 
 namespace virc
 {
-  using namespace vbci;
+  using namespace vbc;
 
   PassDef assign_ids(std::shared_ptr<Compilation> state)
   {

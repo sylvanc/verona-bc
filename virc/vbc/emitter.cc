@@ -8,7 +8,7 @@
 
 namespace virc
 {
-  using namespace vbci;
+  using namespace vbc;
 
   template<typename T>
   struct sleb

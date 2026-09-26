@@ -15,7 +15,7 @@
 #  include <windows.h>
 #endif
 
-namespace vbci
+namespace vbc
 {
   inline const auto MagicNumber = size_t(0xDEC0ADDE);
   inline const auto CurrentVersion = size_t(0);

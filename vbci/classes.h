@@ -5,7 +5,7 @@
 
 #include <ffi.h>
 #include <unordered_map>
-#include <vbc/format.h>
+#include <vbci.h>
 #include <vector>
 
 namespace vbci

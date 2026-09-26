@@ -6,7 +6,7 @@
 
 namespace virc
 {
-  using namespace vbci;
+  using namespace vbc;
 
   void LabelState::resize(size_t size)
   {
