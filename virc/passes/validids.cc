@@ -2,7 +2,7 @@
 
 namespace virc
 {
-  PassDef validids(std::shared_ptr<Bytecode> state)
+  PassDef validate_ids(std::shared_ptr<Bytecode> state)
   {
     return {
       "validids",

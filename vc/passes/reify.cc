@@ -4176,7 +4176,7 @@ namespace vc
                 sym / Type, r.subst, sym / SymbolId, "FFI return type");
 
               // Add the reified symbol. Duplicate detection and type
-              // compatibility checking is done in the VIRC assignids pass.
+              // compatibility checking is done in the VIRC assign_ids pass.
               auto reified_symbols = reified_lib / Symbols;
               reified_symbols
                 << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)

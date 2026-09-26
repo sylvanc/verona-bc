@@ -3,7 +3,7 @@
 
 namespace virc
 {
-  PassDef assignids(std::shared_ptr<Bytecode> state)
+  PassDef assign_ids(std::shared_ptr<Bytecode> state)
   {
     PassDef p{
       "assignids",
@@ -235,7 +235,7 @@ namespace virc
       }
 
       // Build CFG pred/succ edges from terminators. This must happen in
-      // assignids (not liveness) because typecheck needs pred/succ for
+      // assign_ids (not liveness) because typecheck needs pred/succ for
       // its flow analysis, and liveness may run after typecheck/optimize.
       for (auto& func_node : *top)
       {

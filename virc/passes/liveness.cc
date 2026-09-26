@@ -210,7 +210,7 @@ namespace virc
           }
           else if (node == Jump)
           {
-            // pred/succ edges are built by assignids.
+            // pred/succ edges are built by assign_ids.
           }
           else if (node == Cond)
           {

@@ -22,7 +22,7 @@ namespace virc
   //   BadRefTarget:     FieldRef on non-object, ArrayRef on non-array
   //   BadLoadTarget:    Load on non-ref
   //   BadConversion:    Convert between incompatible types
-  //   BadArgs (arity):  already checked by validids, but types checked here
+  //   BadArgs (arity):  already checked by validate_ids, but types checked here
   //
   // What this catches (Category B - flow-sensitive):
   //   BadType:          arg type vs param type, return type, field store type
@@ -399,7 +399,7 @@ namespace virc
       };
 
       // Resolve TypeId to its definition (typically a Union) through the
-      // assignids-built Bytecode map. Recursively resolves through Union,
+      // assign_ids-built Bytecode map. Recursively resolves through Union,
       // Array, Cown, and Ref.
       std::function<Node(const Node&)> resolve_type =
         [&](const Node& t) -> Node {
