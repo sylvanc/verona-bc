@@ -6,6 +6,7 @@
 namespace vbcc
 {
   using namespace trieste;
+  using namespace vir;
 
   inline Node IRResolveAlias(const SequentCtx& ctx, const Node& t)
   {

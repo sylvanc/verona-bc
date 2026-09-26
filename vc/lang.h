@@ -9,6 +9,7 @@ namespace vc
 {
   using namespace trieste;
   using namespace trieste::wf::ops;
+  using namespace vir;
   using namespace vbcc;
 
   inline const auto Paren = TokenDef("paren");

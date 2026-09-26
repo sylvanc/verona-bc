@@ -8,6 +8,8 @@
 namespace vbcc
 {
   using namespace trieste;
+  using namespace vir;
+  using vir::Source;
 
   // Symbols.
   inline const auto Equals = TokenDef("=");

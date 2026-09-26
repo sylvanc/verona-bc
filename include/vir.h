@@ -2,7 +2,7 @@
 
 #include <trieste/trieste.h>
 
-namespace vbcc
+namespace vir
 {
   using namespace trieste;
   using namespace trieste::wf::ops;

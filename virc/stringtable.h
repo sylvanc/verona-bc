@@ -8,6 +8,8 @@
 
 namespace vbcc
 {
+  using namespace vir;
+
   struct ST
   {
     using Index = size_t;

@@ -9,6 +9,7 @@
 namespace vbcc
 {
   using namespace trieste;
+  using namespace vir;
 
   struct LookupInfo
   {
