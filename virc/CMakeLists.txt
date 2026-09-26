@@ -28,9 +28,9 @@ target_link_libraries(libvbcc PUBLIC
 add_library(vbc::vbcc ALIAS libvbcc)
 
 add_executable(vbcc
-  passes/labels.cc
-  passes/parser.cc
-  passes/statements.cc
+  reader/labels.cc
+  reader/parser.cc
+  reader/statements.cc
   main.cc
 )
 
