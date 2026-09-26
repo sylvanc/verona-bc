@@ -246,45 +246,45 @@ namespace vbci
     else if (type_id < NumPrimitiveClasses)
     {
       // Primitive type.
-      switch (ValueType(type_id))
+      switch (PrimitiveType(type_id))
       {
-        case ValueType::None:
+        case PrimitiveType::None:
           return {ValueType::None, &ffi_type_void};
-        case ValueType::Bool:
+        case PrimitiveType::Bool:
           return {ValueType::Bool, &ffi_type_uint8};
-        case ValueType::I8:
+        case PrimitiveType::I8:
           return {ValueType::I8, &ffi_type_sint8};
-        case ValueType::I16:
+        case PrimitiveType::I16:
           return {ValueType::I16, &ffi_type_sint16};
-        case ValueType::I32:
+        case PrimitiveType::I32:
           return {ValueType::I32, &ffi_type_sint32};
-        case ValueType::I64:
+        case PrimitiveType::I64:
           return {ValueType::I64, &ffi_type_sint64};
-        case ValueType::U8:
+        case PrimitiveType::U8:
           return {ValueType::U8, &ffi_type_uint8};
-        case ValueType::U16:
+        case PrimitiveType::U16:
           return {ValueType::U16, &ffi_type_uint16};
-        case ValueType::U32:
+        case PrimitiveType::U32:
           return {ValueType::U32, &ffi_type_uint32};
-        case ValueType::U64:
+        case PrimitiveType::U64:
           return {ValueType::U64, &ffi_type_uint64};
-        case ValueType::F32:
+        case PrimitiveType::F32:
           return {ValueType::F32, &ffi_type_float};
-        case ValueType::F64:
+        case PrimitiveType::F64:
           return {ValueType::F64, &ffi_type_double};
-        case ValueType::ILong:
+        case PrimitiveType::ILong:
           return {ValueType::ILong, &ffi_type_slong};
-        case ValueType::ULong:
+        case PrimitiveType::ULong:
           return {ValueType::ULong, &ffi_type_ulong};
-        case ValueType::ISize:
+        case PrimitiveType::ISize:
           return {
             ValueType::ISize,
             sizeof(ssize_t) == 4 ? &ffi_type_sint32 : &ffi_type_sint64};
-        case ValueType::USize:
+        case PrimitiveType::USize:
           return {
             ValueType::USize,
             sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64};
-        case ValueType::Ptr:
+        case PrimitiveType::Ptr:
           return {ValueType::Ptr, &ffi_type_pointer};
         default:
           break;

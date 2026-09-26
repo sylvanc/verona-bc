@@ -3,6 +3,7 @@
 #include "ident.h"
 #include "logging.h"
 #include "platform.h"
+#include "value_type.h"
 
 #include <cmath>
 #include <cstring>
