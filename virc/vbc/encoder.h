@@ -10,7 +10,7 @@
 
 namespace virc::vbc_backend
 {
-  using namespace ::vbc;
+  using ByteBuffer = std::vector<uint8_t>;
 
   template<typename T>
   struct sleb
@@ -29,63 +29,59 @@ namespace virc::vbc_backend
   template<typename T>
   struct d
   {
-    DIOp op;
+    ::vbc::DIOp op;
     T value;
-    d(DIOp op, T value) : op(op), value(value) {}
+    d(::vbc::DIOp op, T value) : op(op), value(value) {}
   };
 
   template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<T>&& s)
+  ByteBuffer& operator<<(ByteBuffer& buffer, uleb<T>&& encoded)
+  {
+    auto value = encoded.value;
+
+    while (value > 0x7F)
+    {
+      buffer.push_back((value & 0x7F) | 0x80);
+      value >>= 7;
+    }
+
+    buffer.push_back(value);
+    return buffer;
+  }
+
+  template<typename T>
+  ByteBuffer& operator<<(ByteBuffer& buffer, sleb<T>&& encoded)
   {
     static_assert(std::is_signed_v<T>);
 
     using U = std::make_unsigned_t<T>;
-    auto bits = static_cast<U>(s.value);
-    auto sign_mask = U{} - static_cast<U>(s.value < 0);
+    auto bits = static_cast<U>(encoded.value);
+    auto sign_mask = U{} - static_cast<U>(encoded.value < 0);
     auto value = (bits << 1) ^ sign_mask;
-    return b << uleb(value);
+    return buffer << uleb(value);
   }
 
   template<>
-  inline std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, sleb<float>&& s)
+  inline ByteBuffer& operator<<(ByteBuffer& buffer, sleb<float>&& encoded)
   {
-    auto value = std::bit_cast<int32_t>(s.value);
-    return b << sleb(value);
+    auto value = std::bit_cast<int32_t>(encoded.value);
+    return buffer << sleb(value);
   }
 
   template<>
-  inline std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, sleb<double>&& s)
+  inline ByteBuffer& operator<<(ByteBuffer& buffer, sleb<double>&& encoded)
   {
-    auto value = std::bit_cast<int64_t>(s.value);
-    return b << sleb(value);
+    auto value = std::bit_cast<int64_t>(encoded.value);
+    return buffer << sleb(value);
   }
 
   template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, uleb<T>&& u)
+  ByteBuffer& operator<<(ByteBuffer& buffer, d<T>&& encoded)
   {
-    auto value = u.value;
-
-    while (value > 0x7F)
-    {
-      b.push_back((value & 0x7F) | 0x80);
-      value >>= 7;
-    }
-
-    b.push_back(value);
-    return b;
+    auto value = (encoded.value << 2) | +encoded.op;
+    return buffer << uleb(value);
   }
 
-  template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, d<T>&& d)
-  {
-    auto value = (d.value << 2) | +d.op;
-    return b << uleb(value);
-  }
-
-  std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, const std::string& str);
-  std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, const std::string_view& str);
+  ByteBuffer& operator<<(ByteBuffer& buffer, const std::string& string);
+  ByteBuffer& operator<<(ByteBuffer& buffer, std::string_view string);
 }

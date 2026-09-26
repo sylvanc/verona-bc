@@ -10,6 +10,13 @@ namespace virc
 {
   using namespace ::vbc;
   using namespace vbc_backend;
+  using ::vbc::CurrentVersion;
+  using ::vbc::DIOp;
+  using ::vbc::MagicNumber;
+  using ::vbc::NumPrimitiveClasses;
+  using ::vbc::Op;
+  using ::vbc::RegionType;
+  using ::vbc::TypeTag;
 
   static_assert(virc::MainFunctionId == ::vbc::MainFunctionId);
   static_assert(virc::FinalizerMethodId == ::vbc::FinalizerMethodId);

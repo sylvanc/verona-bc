@@ -2,19 +2,17 @@
 
 namespace virc::vbc_backend
 {
-  std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, const std::string& str)
+  ByteBuffer& operator<<(ByteBuffer& buffer, const std::string& string)
   {
-    b << uleb(str.size());
-    b.insert(b.end(), str.begin(), str.end());
-    return b;
+    buffer << uleb(string.size());
+    buffer.insert(buffer.end(), string.begin(), string.end());
+    return buffer;
   }
 
-  std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, const std::string_view& str)
+  ByteBuffer& operator<<(ByteBuffer& buffer, std::string_view string)
   {
-    b << uleb(str.size());
-    b.insert(b.end(), str.begin(), str.end());
-    return b;
+    buffer << uleb(string.size());
+    buffer.insert(buffer.end(), string.begin(), string.end());
+    return buffer;
   }
 }
