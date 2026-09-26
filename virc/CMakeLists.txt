@@ -8,6 +8,7 @@ add_library(libvbcc STATIC
   analysis/bitset.cc
   model/compilation.cc
   model/name_table.cc
+  model/type_table.cc
   support/diagnostics.cc
   support/literals.cc
   vbc/emitter.cc

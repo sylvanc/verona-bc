@@ -2,6 +2,7 @@
 
 #include "../analysis/bitset.h"
 #include "name_table.h"
+#include "type_table.h"
 
 #include <vir.h>
 #include <vbci.h>
@@ -17,11 +18,6 @@ namespace virc
     Node method_id;
   };
   using namespace vbci;
-
-  struct VecHash
-  {
-    size_t operator()(const std::vector<uint8_t>& v) const noexcept;
-  };
 
   struct LabelState
   {
