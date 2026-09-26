@@ -2,7 +2,7 @@
 
 #include "../lang.h"
 
-#include <vbci.h>
+#include <vbc/format.h>
 
 namespace virc
 {

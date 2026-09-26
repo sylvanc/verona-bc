@@ -1,7 +1,7 @@
 #include "../analysis/ir_subtype.h"
 #include "../lang.h"
 
-#include <vbci.h>
+#include <vbc/format.h>
 
 namespace virc
 {

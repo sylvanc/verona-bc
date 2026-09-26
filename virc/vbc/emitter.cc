@@ -3,7 +3,7 @@
 #include "../lang.h"
 
 #include <type_traits>
-#include <vbci.h>
+#include <vbc/format.h>
 #include <zstd.h>
 
 namespace virc

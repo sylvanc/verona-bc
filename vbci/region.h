@@ -8,7 +8,7 @@
 
 #include <cstdint>
 #include <iostream>
-#include <vbci.h>
+#include <vbc/format.h>
 #include <vector>
 
 namespace vbci

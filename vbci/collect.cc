@@ -20,7 +20,7 @@
 
 #include <queue>
 #include <type_traits>
-#include <vbci.h>
+#include <vbc/format.h>
 #include <vector>
 
 namespace vbci
