@@ -9,6 +9,7 @@ add_library(libvbcc STATIC
   bytecode.cc
   lang.cc
   stringtable.cc
+  support/diagnostics.cc
 )
 
 target_include_directories(libvbcc INTERFACE

@@ -2,6 +2,7 @@
 
 #include "bytecode.h"
 #include "from_chars.h"
+#include "support/diagnostics.h"
 
 #include <vir.h>
 
@@ -136,10 +137,6 @@ namespace virc
   PassDef typecheck(std::shared_ptr<Bytecode> state);
   PassDef optimize(std::shared_ptr<Bytecode> state);
 
-  Node err(const std::string& msg);
-  Node err(Node node, const std::string& msg);
-  Node errmsg(const std::string& msg);
-  Node errloc(Node node);
   ValueType val(Node ptype);
   Node ffi_struct_result_type();
   std::string unescape(const std::string_view& in);
