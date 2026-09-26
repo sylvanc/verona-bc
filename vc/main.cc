@@ -88,6 +88,6 @@ int main(int argc, char** argv)
   if (!opts.path.empty())
     state->add_path(opts.path);
 
-  virc::vbc_backend::emit(*state, opts.bytecode_file, opts.strip);
+  virc::vbc::emit(*state, opts.bytecode_file, opts.strip);
   return 0;
 }

@@ -8,12 +8,12 @@
 
 namespace virc
 {
-  using namespace vbc;
+  using namespace ::vbc;
 
-  static_assert(virc::MainFunctionId == vbc::MainFunctionId);
-  static_assert(virc::FinalizerMethodId == vbc::FinalizerMethodId);
-  static_assert(virc::CallbackMethodId == vbc::CallbackMethodId);
-  static_assert(virc::DynamicTypeId == vbc::DynamicTypeId);
+  static_assert(virc::MainFunctionId == ::vbc::MainFunctionId);
+  static_assert(virc::FinalizerMethodId == ::vbc::FinalizerMethodId);
+  static_assert(virc::CallbackMethodId == ::vbc::CallbackMethodId);
+  static_assert(virc::DynamicTypeId == ::vbc::DynamicTypeId);
   static_assert(PrimitiveTypeCount == NumPrimitiveClasses);
 
   template<typename T>
@@ -1133,4 +1133,13 @@ namespace virc
   {
     VBCEmitter(bytecode).emit(output, strip);
   }
+}
+
+
+void virc::vbc::emit(
+  const virc::Compilation& compilation,
+  const std::filesystem::path& output,
+  bool strip)
+{
+  virc::vbc_backend::emit(compilation, output, strip);
 }
