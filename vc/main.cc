@@ -9,7 +9,7 @@ int main(int argc, char** argv)
 {
   using namespace vc;
 
-  auto state = std::make_shared<Bytecode>();
+  auto state = std::make_shared<Compilation>();
   auto parse = vc::parser();
   auto struc = vc::structure(parse);
 

@@ -5,7 +5,7 @@
 
 namespace virc
 {
-  PassDef liveness(std::shared_ptr<Bytecode> state)
+  PassDef liveness(std::shared_ptr<Compilation> state)
   {
     PassDef p{"liveness", wfIR, dir::topdown | dir::once, {}};
 

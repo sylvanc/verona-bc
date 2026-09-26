@@ -3,7 +3,7 @@
 
 namespace virc
 {
-  PassDef assign_ids(std::shared_ptr<Bytecode> state)
+  PassDef assign_ids(std::shared_ptr<Compilation> state)
   {
     PassDef p{
       "assignids",

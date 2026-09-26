@@ -9,7 +9,7 @@ int main(int argc, char** argv)
   using namespace trieste;
   using namespace virc;
 
-  auto state = std::make_shared<Bytecode>();
+  auto state = std::make_shared<Compilation>();
   Reader reader{
     "vbcc",
     {statements(),

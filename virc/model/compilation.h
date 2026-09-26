@@ -66,7 +66,7 @@ namespace virc
     bool add_register(Node id);
   };
 
-  struct Bytecode
+  struct Compilation
   {
     std::vector<std::filesystem::path> source_paths;
     bool error = false;
@@ -101,7 +101,7 @@ namespace virc
     std::unordered_map<std::string, std::unordered_map<std::string, LookupInfo>>
       func_lookups;
 
-    Bytecode();
+    Compilation();
 
     void add_path(const std::filesystem::path& path);
 
@@ -131,6 +131,8 @@ namespace virc
 
     size_t typ(Node type);
   };
+
+  using Bytecode = Compilation;
 }
 
 namespace vbcc

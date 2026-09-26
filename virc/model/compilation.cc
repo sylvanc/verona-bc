@@ -177,7 +177,7 @@ namespace virc
     return true;
   }
 
-  Bytecode::Bytecode()
+  Compilation::Compilation()
   {
     primitives.resize(NumPrimitiveClasses);
 
@@ -195,7 +195,7 @@ namespace virc
     method_ids.insert({ST::di().string("@callback"), CallbackMethodId});
   }
 
-  void Bytecode::add_path(const std::filesystem::path& path)
+  void Compilation::add_path(const std::filesystem::path& path)
   {
     auto full = std::filesystem::canonical(path);
 
@@ -205,7 +205,7 @@ namespace virc
     source_paths.push_back(full);
   }
 
-  std::optional<size_t> Bytecode::get_typealias_id(Node id)
+  std::optional<size_t> Compilation::get_typealias_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = type_ids.find(name);
@@ -216,14 +216,14 @@ namespace virc
     return find->second;
   }
 
-  Node Bytecode::get_typealias(Node id)
+  Node Compilation::get_typealias(Node id)
   {
     auto name = ST::di().string(id);
     auto find = type_ids.find(name);
     return typealiases.at(find->second);
   }
 
-  bool Bytecode::add_typealias(Node type)
+  bool Compilation::add_typealias(Node type)
   {
     auto name = ST::di().string(type / TypeId);
     auto find = type_ids.find(name);
@@ -236,7 +236,7 @@ namespace virc
     return true;
   }
 
-  std::optional<size_t> Bytecode::get_class_id(Node id)
+  std::optional<size_t> Compilation::get_class_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = class_ids.find(name);
@@ -247,7 +247,7 @@ namespace virc
     return find->second;
   }
 
-  bool Bytecode::add_class(Node cls)
+  bool Compilation::add_class(Node cls)
   {
     auto name = ST::di().string(cls / ClassId);
     auto find = class_ids.find(name);
@@ -260,7 +260,7 @@ namespace virc
     return true;
   }
 
-  std::optional<size_t> Bytecode::get_field_id(Node id)
+  std::optional<size_t> Compilation::get_field_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = field_ids.find(name);
@@ -271,7 +271,7 @@ namespace virc
     return find->second;
   }
 
-  void Bytecode::add_field(Node field)
+  void Compilation::add_field(Node field)
   {
     auto name = ST::di().string(field / FieldId);
     auto find = field_ids.find(name);
@@ -280,7 +280,7 @@ namespace virc
       field_ids.insert({name, field_ids.size()});
   }
 
-  std::optional<size_t> Bytecode::get_method_id(Node id)
+  std::optional<size_t> Compilation::get_method_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = method_ids.find(name);
@@ -291,7 +291,7 @@ namespace virc
     return find->second;
   }
 
-  void Bytecode::add_method(Node method)
+  void Compilation::add_method(Node method)
   {
     auto name = ST::di().string(method / MethodId);
     auto find = method_ids.find(name);
@@ -300,7 +300,7 @@ namespace virc
       method_ids.insert({name, method_ids.size()});
   }
 
-  std::optional<size_t> Bytecode::get_func_id(Node id)
+  std::optional<size_t> Compilation::get_func_id(Node id)
   {
     auto name = ST::di().string(id);
     auto find = func_ids.find(name);
@@ -317,14 +317,14 @@ namespace virc
     return func_id;
   }
 
-  FuncState& Bytecode::get_func(Node id)
+  FuncState& Compilation::get_func(Node id)
   {
     auto name = ST::di().string(id);
     auto find = func_ids.find(name);
     return functions.at(find->second);
   }
 
-  FuncState& Bytecode::add_func(Node func)
+  FuncState& Compilation::add_func(Node func)
   {
     auto name = ST::di().string(func / FunctionId);
     auto find = func_ids.find(name);
@@ -350,7 +350,7 @@ namespace virc
     return func_state;
   }
 
-  std::optional<size_t> Bytecode::get_symbol_id(Node id)
+  std::optional<size_t> Compilation::get_symbol_id(Node id)
   {
     auto name = ST::noemit().string(id);
     auto find = symbol_ids.find(name);
@@ -361,7 +361,7 @@ namespace virc
     return find->second;
   }
 
-  Node Bytecode::get_symbol(Node id)
+  Node Compilation::get_symbol(Node id)
   {
     auto name = ST::noemit().string(id);
     auto find = symbol_ids.find(name);
@@ -372,7 +372,7 @@ namespace virc
     return symbols[find->second];
   }
 
-  bool Bytecode::add_symbol(Node symbol)
+  bool Compilation::add_symbol(Node symbol)
   {
     auto name = ST::noemit().string(symbol / SymbolId);
     auto find = symbol_ids.find(name);
@@ -387,7 +387,7 @@ namespace virc
     return true;
   }
 
-  std::optional<size_t> Bytecode::get_library_id(Node lib)
+  std::optional<size_t> Compilation::get_library_id(Node lib)
   {
     auto name = ST::exec().string(lib / String);
     auto find = library_ids.find(name);
@@ -398,7 +398,7 @@ namespace virc
     return find->second;
   }
 
-  void Bytecode::add_library(Node lib)
+  void Compilation::add_library(Node lib)
   {
     auto name = ST::exec().string(lib / String);
     auto find = library_ids.find(name);

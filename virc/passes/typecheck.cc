@@ -373,7 +373,7 @@ namespace virc
     return result;
   }
 
-  PassDef typecheck(std::shared_ptr<Bytecode> state)
+  PassDef typecheck(std::shared_ptr<Compilation> state)
   {
     PassDef p{"typecheck", wfIR, dir::topdown | dir::once, {}};
 
@@ -399,7 +399,7 @@ namespace virc
       };
 
       // Resolve TypeId to its definition (typically a Union) through the
-      // assign_ids-built Bytecode map. Recursively resolves through Union,
+      // assign_ids-built Compilation map. Recursively resolves through Union,
       // Array, Cown, and Ref.
       std::function<Node(const Node&)> resolve_type =
         [&](const Node& t) -> Node {

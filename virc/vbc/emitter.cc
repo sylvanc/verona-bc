@@ -111,9 +111,9 @@ namespace virc
 
   namespace
   {
-    struct VBCEmitter : Bytecode
+    struct VBCEmitter : Compilation
     {
-      explicit VBCEmitter(const Bytecode& bytecode) : Bytecode(bytecode) {}
+      explicit VBCEmitter(const Compilation& bytecode) : Compilation(bytecode) {}
 
       void emit(std::filesystem::path output, bool strip);
     };
@@ -1085,7 +1085,7 @@ namespace virc
     wf::pop_front();
   }
 
-  size_t Bytecode::typ(Node type)
+  size_t Compilation::typ(Node type)
   {
     // If it's a TypeId, encode what it maps to instead.
     // Loop to follow chained aliases (e.g., cb -> fn$N -> Union).
@@ -1178,7 +1178,7 @@ namespace virc
   }
 
   void vbc_backend::emit(
-    const Bytecode& bytecode,
+    const Compilation& bytecode,
     const std::filesystem::path& output,
     bool strip)
   {
