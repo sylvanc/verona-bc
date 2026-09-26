@@ -14,7 +14,10 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 ## 20.2 Pass Pipeline
 
-The compiler runs passes in two stages. The first 10 passes are the `vc` frontend, which transforms source code into monomorphized IR. The remaining passes are provided by the `vbcc` bytecode compiler library, which transforms IR into `.vbc` bytecode.
+The compiler runs passes in two stages. The first 10 passes are the `vc`
+frontend, which transforms source code into monomorphized VIR. The remaining
+passes are provided by `virc_core`, which validates and analyzes VIR into an
+output-neutral `Compilation`. The VBC emitter then serializes that state.
 
 ### Frontend Passes (vc)
 
@@ -31,7 +34,7 @@ The compiler runs passes in two stages. The first 10 passes are the `vc` fronten
 | 8 | `infer` | once | Type inference and literal refinement |
 | 9 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
 
-### Backend Passes (vbcc library)
+### Shared VIRC Passes
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
@@ -41,7 +44,9 @@ The compiler runs passes in two stages. The first 10 passes are the `vc` fronten
 | 13 | `liveness` | once | Liveness analysis for register allocation |
 | 14 | `typecheck` | once | Final type checking |
 
-After all passes complete, bytecode generation produces a `.vbc` file. In practice, `vc build` invokes both stages — the user does not need to run them separately.
+After all passes complete, `virc_vbc` produces a `.vbc` file. In practice,
+`vc build` invokes both stages and the emitter; the user does not need to run
+them separately.
 
 ---
 
@@ -138,9 +143,10 @@ This creates one `.trieste` file per pass in the dump directory, letting you ins
 
 ---
 
-## 20.8 Standalone Bytecode Compiler (vbcc)
+## 20.8 Standalone VIR Compiler (VIRC)
 
-The `vbcc` tool can also be run standalone on Trieste IR files (produced by `vc` with `-p reify`). When used standalone, `vbcc` prepends two additional passes before the shared backend passes:
+The `virc` tool can also run standalone on textual VIR files. When used
+standalone, it prepends two reader passes before the shared VIRC pipeline:
 
 | # | Pass | Purpose |
 |---|------|---------|
@@ -148,4 +154,6 @@ The `vbcc` tool can also be run standalone on Trieste IR files (produced by `vc`
 | 1 | `labels` | Resolve jump targets and label offsets |
 | 2–5 | (shared) | `assignids` → `validids` → `liveness` → `typecheck` |
 
-When `vc build` is used (the normal workflow), these two additional passes are not needed — `vc` passes the AST directly to the `vbcc` library's backend passes.
+When `vc build` is used, these reader passes are not needed because VC passes
+the reified tree directly to `virc_core`. The `vbcc` command remains available
+as a migration alias for the standalone VIRC tool.

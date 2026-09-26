@@ -57,6 +57,19 @@ Use `-b` to override.
 
 Always use `build/dist/vc/vc`, not `build/vc/vc`. The installed binary has the `_builtin` standard library directory next to it, which the compiler requires for name resolution.
 
+### Compiling Textual VIR
+
+Use the installed VIRC command to compile a textual `.vir` file to VBC:
+
+```bash
+cd build
+dist/virc/virc build ../testsuite/vir/simp1/simp1.vir
+```
+
+VIRC accepts the same `-b`, `-s`, `-p`, `--dump_passes`, and `-o` output
+options for its VBC pipeline. The installed `dist/vbcc/vbcc` command remains
+as a migration alias.
+
 ---
 
 ## 21.2 Running (`vbci`)
