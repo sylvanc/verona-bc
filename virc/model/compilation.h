@@ -125,7 +125,7 @@ namespace virc
     std::optional<size_t> get_library_id(Node id);
     void add_library(Node lib);
 
-    size_t typ(Node type);
+    size_t type_id(Node type);
   };
 
   using Bytecode = Compilation;

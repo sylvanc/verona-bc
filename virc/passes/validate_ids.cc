@@ -10,13 +10,13 @@ namespace virc
       dir::bottomup | dir::once,
       {
         // Accumulate complex primitive classes. This happens in this pass to
-        // be able to call state->typ(), which depends on all user-defined
+        // be able to call state->type_id(), which depends on all user-defined
         // classes already having been assigned an id.
         T(Primitive)[Primitive] << (T(Array, Ref, Cown)[Type] * T(Methods)) >>
           [state](Match& _) -> Node {
           auto primitive = _(Primitive);
           auto type = _(Type);
-          auto type_id = state->typ(type);
+          auto type_id = state->type_id(type);
           auto idx = type_id - (state->classes.size() + NumPrimitiveClasses);
 
           if (state->complex_primitives.size() <= idx)

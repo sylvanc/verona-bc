@@ -193,7 +193,7 @@ namespace virc
       for (auto& field : *fields)
       {
         hdr << uleb(*get_field_id(field / FieldId));
-        hdr << uleb(typ(field / Type));
+        hdr << uleb(type_id(field / Type));
         di << uleb(ST::di().string(field / FieldId));
       }
 
@@ -255,9 +255,9 @@ namespace virc
           << uleb((symbol / FFIParams)->size());
 
       for (auto& param : *(symbol / FFIParams))
-        hdr << uleb(typ(param));
+        hdr << uleb(type_id(param));
 
-      hdr << uleb(typ(symbol / Return));
+      hdr << uleb(type_id(symbol / Return));
     }
 
     // Functions.
@@ -272,16 +272,16 @@ namespace virc
       hdr << uleb(func_state.params);
 
       for (auto& param : *(func_state.func / Params))
-        hdr << uleb(typ(param / Type));
+        hdr << uleb(type_id(param / Type));
 
-      hdr << uleb(typ(func_state.func / Type));
+      hdr << uleb(type_id(func_state.func / Type));
 
       // Variable types.
       auto vars_node = func_state.func / Vars;
       hdr << uleb(vars_node->size());
 
       for (auto& var : *vars_node)
-        hdr << uleb(typ(var / Type));
+        hdr << uleb(type_id(var / Type));
 
       // Labels.
       hdr << uleb(func_state.label_idxs.size());
@@ -307,7 +307,7 @@ namespace virc
 
       auto src = rhs;
 
-      auto cls = [&](Node stmt) { return uleb(typ(stmt / ClassId)); };
+      auto cls = [&](Node stmt) { return uleb(type_id(stmt / ClassId)); };
 
       auto fld = [&](Node stmt) { return uleb(*get_field_id(stmt / FieldId)); };
 
@@ -535,45 +535,45 @@ namespace virc
           else if (stmt == NewArray)
           {
             code << uleb(+Op::NewArray) << dst(stmt) << rhs(stmt)
-                 << uleb(typ(stmt / Type));
+                 << uleb(type_id(stmt / Type));
           }
           else if (stmt == NewArrayConst)
           {
             code << uleb(+Op::NewArrayConst) << dst(stmt)
-                 << uleb(typ(stmt / Type))
+                 << uleb(type_id(stmt / Type))
                  << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == StackArray)
           {
             code << uleb(+Op::StackArray) << dst(stmt) << rhs(stmt)
-                 << uleb(typ(stmt / Type));
+                 << uleb(type_id(stmt / Type));
           }
           else if (stmt == StackArrayConst)
           {
             code << uleb(+Op::StackArrayConst) << dst(stmt)
-                 << uleb(typ(stmt / Type))
+                 << uleb(type_id(stmt / Type))
                  << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == HeapArray)
           {
             code << uleb(+Op::HeapArray) << dst(stmt) << lhs(stmt) << rhs(stmt)
-                 << uleb(typ(stmt / Type));
+                 << uleb(type_id(stmt / Type));
           }
           else if (stmt == HeapArrayConst)
           {
             code << uleb(+Op::HeapArrayConst) << dst(stmt) << lhs(stmt)
-                 << uleb(typ(stmt / Type))
+                 << uleb(type_id(stmt / Type))
                  << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == RegionArray)
           {
             code << uleb(+Op::RegionArray) << dst(stmt) << rgn(stmt)
-                 << rhs(stmt) << uleb(typ(stmt / Type));
+                 << rhs(stmt) << uleb(type_id(stmt / Type));
           }
           else if (stmt == RegionArrayConst)
           {
             code << uleb(+Op::RegionArrayConst) << dst(stmt) << rgn(stmt)
-                 << uleb(typ(stmt / Type))
+                 << uleb(type_id(stmt / Type))
                  << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
           }
           else if (stmt == Copy)
@@ -680,20 +680,20 @@ namespace virc
           }
           else if (stmt == FFIStruct)
           {
-            code << uleb(+Op::FFIStruct) << dst(stmt) << uleb(typ(stmt / Type));
+            code << uleb(+Op::FFIStruct) << dst(stmt) << uleb(type_id(stmt / Type));
           }
           else if (stmt == FFILoad)
           {
             code << uleb(+Op::FFILoad) << dst(stmt) << lhs(stmt) << rhs(stmt)
                  << uleb(*func_state.get_register_id(stmt / Kind))
-                 << uleb(typ(stmt / Type));
+                 << uleb(type_id(stmt / Type));
           }
           else if (stmt == FFIStore)
           {
             code << uleb(+Op::FFIStore) << dst(stmt) << lhs(stmt) << rhs(stmt)
                  << uleb(*func_state.get_register_id(stmt / Kind))
                  << uleb(*func_state.get_register_id(stmt / ValueSrc))
-                 << uleb(typ(stmt / Type));
+                 << uleb(type_id(stmt / Type));
           }
           else if (stmt == ArrayCopy)
           {
@@ -713,14 +713,14 @@ namespace virc
           else if (stmt == When)
           {
             args(stmt / Args);
-            code << uleb(+Op::WhenStatic) << dst(stmt) << uleb(typ(stmt / Cown))
+            code << uleb(+Op::WhenStatic) << dst(stmt) << uleb(type_id(stmt / Cown))
                  << fn(stmt);
           }
           else if (stmt == WhenDyn)
           {
             args(stmt / Args);
             code << uleb(+Op::WhenDynamic) << dst(stmt)
-                 << uleb(typ(stmt / Cown)) << src(stmt);
+                 << uleb(type_id(stmt / Cown)) << src(stmt);
           }
           else if (stmt == Add)
           {
@@ -965,7 +965,7 @@ namespace virc
           else if (stmt == Typetest)
           {
             code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
-                 << uleb(typ(stmt / Type));
+                 << uleb(type_id(stmt / Type));
           }
           else if (stmt == GetRaise)
           {
@@ -1085,7 +1085,7 @@ namespace virc
     wf::pop_front();
   }
 
-  size_t Compilation::typ(Node type)
+  size_t Compilation::type_id(Node type)
   {
     // If it's a TypeId, encode what it maps to instead.
     // Loop to follow chained aliases (e.g., cb -> fn$N -> Union).
@@ -1128,22 +1128,22 @@ namespace virc
 
     if (type == Array)
     {
-      b << uleb(+TypeTag::Array) << uleb(typ(type / Type));
+      b << uleb(+TypeTag::Array) << uleb(type_id(type / Type));
     }
     else if (type == Cown)
     {
-      b << uleb(+TypeTag::Cown) << uleb(typ(type / Type));
+      b << uleb(+TypeTag::Cown) << uleb(type_id(type / Type));
     }
     else if (type == Ref)
     {
-      b << uleb(+TypeTag::Ref) << uleb(typ(type / Type));
+      b << uleb(+TypeTag::Ref) << uleb(type_id(type / Type));
     }
     else if (type == Union)
     {
       std::vector<size_t> child_types;
 
       for (auto& child : *type)
-        child_types.push_back(typ(child));
+        child_types.push_back(type_id(child));
 
       std::sort(child_types.begin(), child_types.end());
       child_types.erase(
@@ -1161,7 +1161,7 @@ namespace virc
       b << uleb(type->size());
 
       for (auto& child : *type)
-        b << uleb(typ(child));
+        b << uleb(type_id(child));
     }
 
     // Check if we already have this type encoded.
