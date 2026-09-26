@@ -6,7 +6,7 @@
 #include <vir.h>
 #include <vbci.h>
 
-namespace vbcc
+namespace virc
 {
   using namespace trieste;
   using namespace vir;
@@ -132,4 +132,9 @@ namespace vbcc
     void gen(std::filesystem::path output, bool strip);
     size_t typ(Node type);
   };
+}
+
+namespace vbcc
+{
+  using namespace virc;
 }

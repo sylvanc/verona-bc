@@ -10,7 +10,7 @@ namespace vc
   using namespace trieste;
   using namespace trieste::wf::ops;
   using namespace vir;
-  using namespace vbcc;
+  using namespace virc;
 
   inline const auto Paren = TokenDef("paren");
   inline const auto Bracket = TokenDef("bracket");

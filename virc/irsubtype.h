@@ -3,7 +3,7 @@
 #include "sequent.h"
 #include <vir.h>
 
-namespace vbcc
+namespace virc
 {
   using namespace trieste;
   using namespace vir;

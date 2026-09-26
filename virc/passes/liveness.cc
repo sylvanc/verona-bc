@@ -3,7 +3,7 @@
 
 #include <queue>
 
-namespace vbcc
+namespace virc
 {
   PassDef liveness(std::shared_ptr<Bytecode> state)
   {

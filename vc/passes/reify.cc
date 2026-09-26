@@ -737,7 +737,7 @@ namespace vc
 
               for (auto& [ew, ei] : emitted)
               {
-                if (ew == wrapper && vbcc::IRSubtype.invariant(top, inner, ei))
+                if (ew == wrapper && virc::IRSubtype.invariant(top, inner, ei))
                 {
                   dup = true;
                   break;
@@ -1956,7 +1956,7 @@ namespace vc
           contains_dyn(resolved_param) || contains_typeid(resolved_param))
           continue;
 
-        if (!vbcc::IRSubtype(top, resolved_actual, resolved_param))
+        if (!virc::IRSubtype(top, resolved_actual, resolved_param))
           return false;
       }
 
@@ -2133,7 +2133,7 @@ namespace vc
            has_unresolved_type(field_def / Type, target.subst));
         bool constructor_seed = is_create && generic_create_field &&
           contains_typeid(current) && !contains_typeid(actual) &&
-          vbcc::IRSubtype(top, actual, current);
+          virc::IRSubtype(top, actual, current);
         bool replacing_seed = unresolved_seed &&
           current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
 
@@ -4176,7 +4176,7 @@ namespace vc
                 sym / Type, r.subst, sym / SymbolId, "FFI return type");
 
               // Add the reified symbol. Duplicate detection and type
-              // compatibility checking is done in the vbcc assignids pass.
+              // compatibility checking is done in the VIRC assignids pass.
               auto reified_symbols = reified_lib / Symbols;
               reified_symbols
                 << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)

@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vir.h>
 
-namespace vbcc
+namespace virc
 {
   using namespace vir;
 

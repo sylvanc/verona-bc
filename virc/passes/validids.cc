@@ -1,6 +1,6 @@
 #include "../lang.h"
 
-namespace vbcc
+namespace virc
 {
   PassDef validids(std::shared_ptr<Bytecode> state)
   {

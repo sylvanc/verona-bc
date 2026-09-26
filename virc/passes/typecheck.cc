@@ -4,7 +4,7 @@
 #include <map>
 #include <queue>
 
-namespace vbcc
+namespace virc
 {
   // Static type checker for the IR. Runs after liveness to catch type errors
   // at compile time that would otherwise be runtime errors in the interpreter.

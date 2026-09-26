@@ -2,7 +2,7 @@
 
 #include "lang.h"
 
-namespace vbcc
+namespace virc
 {
   ST& ST::noemit()
   {

@@ -24,12 +24,12 @@ int main(int argc, char** argv)
       anf(),
       infer(),
       reify(),
-      vbcc::memo(),
-      vbcc::assignids(state),
-      vbcc::validids(state),
-      vbcc::typecheck(state),
-      vbcc::optimize(state),
-      vbcc::liveness(state),
+      virc::memo(),
+      virc::assignids(state),
+      virc::validids(state),
+      virc::typecheck(state),
+      virc::optimize(state),
+      virc::liveness(state),
     },
     parse};
 

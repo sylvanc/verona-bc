@@ -2,7 +2,7 @@
 
 #include <CLI/CLI.hpp>
 
-namespace vbcc
+namespace virc
 {
   Node err(const std::string& msg)
   {

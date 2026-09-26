@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <zstd.h>
 
-namespace vbcc
+namespace virc
 {
   using namespace vbci;
 
