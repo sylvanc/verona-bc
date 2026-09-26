@@ -7,7 +7,7 @@ add_library(libvbcc STATIC
   passes/validate_ids.cc
   analysis/bitset.cc
   model/compilation.cc
-  model/stringtable.cc
+  model/name_table.cc
   support/diagnostics.cc
   support/literals.cc
   vbc/emitter.cc

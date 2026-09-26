@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../analysis/bitset.h"
-#include "stringtable.h"
+#include "name_table.h"
 
 #include <vir.h>
 #include <vbci.h>

@@ -1,4 +1,4 @@
-#include "stringtable.h"
+#include "name_table.h"
 
 #include "../lang.h"
 
