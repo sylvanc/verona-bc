@@ -1,11 +1,7 @@
 #include "../lang.h"
 
-#include <vbc/format.h>
-
 namespace virc
 {
-  using namespace vbc;
-
   PassDef validate_ids(std::shared_ptr<Compilation> state)
   {
     return {
@@ -21,7 +17,7 @@ namespace virc
           auto primitive = _(Primitive);
           auto type = _(Type);
           auto type_id = state->type_id(type);
-          auto idx = type_id - (state->classes.size() + NumPrimitiveClasses);
+          auto idx = type_id - (state->classes.size() + PrimitiveTypeCount);
 
           if (state->complex_primitives.size() <= idx)
             state->complex_primitives.resize(idx + 1);
@@ -131,7 +127,7 @@ namespace virc
           auto method = _(Method);
           auto id = state->get_method_id(method / MethodId);
 
-          if (*id == FinalMethodId)
+          if (*id == FinalizerMethodId)
           {
             auto func_id = state->get_func_id(method / FunctionId);
             if (state->functions.at(*func_id).params != 1)

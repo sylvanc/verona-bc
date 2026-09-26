@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../analysis/bitset.h"
+#include "ids.h"
 #include "name_table.h"
 #include "type_table.h"
 

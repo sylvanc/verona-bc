@@ -205,7 +205,7 @@ namespace vbci
       init_memo_slot(i);
 
     ValueTransfer ret =
-      Thread::run_async(typeid_cown_none, &functions.at(MainFuncId));
+      Thread::run_async(typeid_cown_none, &functions.at(MainFunctionId));
     sched.run();
 
     auto ret_val = ret.get_cown()->load();
@@ -238,7 +238,7 @@ namespace vbci
 
   std::pair<ValueType, ffi_type*> Program::layout_type_id(uint32_t type_id)
   {
-    if (type_id == DynId)
+    if (type_id == DynamicTypeId)
     {
       // Dynamic.
       return {ValueType::Dyn, &ffi_type_value};
@@ -392,7 +392,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag == TypeTag::Tuple)
-      return DynId;
+      return DynamicTypeId;
 
     if (t.tag != TypeTag::Array)
       Value::error(Error::BadType);
@@ -433,11 +433,11 @@ namespace vbci
   bool Program::subtype(uint32_t sub, uint32_t super)
   {
     // Everything is a subtype of dynamic.
-    if (super == DynId)
+    if (super == DynamicTypeId)
       return true;
 
     // Dynamic is a subtype of nothing.
-    if (sub == DynId)
+    if (sub == DynamicTypeId)
       return false;
 
     // If it's the same, we're done.
@@ -883,13 +883,13 @@ namespace vbci
         return false;
     }
 
-    if (functions.at(MainFuncId).param_types.size() != 0)
+    if (functions.at(MainFunctionId).param_types.size() != 0)
     {
       LOG(Error) << file << ": `main` must take zero parameters" << std::endl;
       return false;
     }
 
-    if (!subtype(functions.at(MainFuncId).return_type, +ValueType::None))
+    if (!subtype(functions.at(MainFunctionId).return_type, +ValueType::None))
     {
       LOG(Error) << file << ": `main` must return none" << std::endl;
       return false;
@@ -916,7 +916,7 @@ namespace vbci
 
     typeid_ref_dyn = min_complex_type_id + 3;
     assert(complex_type(typeid_ref_dyn).tag == TypeTag::Ref);
-    assert(complex_type(typeid_ref_dyn).children.at(0) == DynId);
+    assert(complex_type(typeid_ref_dyn).children.at(0) == DynamicTypeId);
 
     typeid_array_usize = min_complex_type_id + 4;
     assert(complex_type(typeid_array_usize).tag == TypeTag::Array);
@@ -1051,7 +1051,7 @@ namespace vbci
       auto& func = functions.at(idx);
       method.second = &func;
 
-      if (method.first == FinalMethodId)
+      if (method.first == FinalizerMethodId)
       {
         if (func.param_types.size() != 1)
         {

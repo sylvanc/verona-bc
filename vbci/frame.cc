@@ -114,7 +114,7 @@ namespace vbci
     auto var_type = func->var_types.at(idx - params);
 
     // Skip type check for Dyn (untyped vars).
-    if (var_type == DynId)
+    if (var_type == DynamicTypeId)
       return;
 
     auto& reg = locals.at(base + idx);

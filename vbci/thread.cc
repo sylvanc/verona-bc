@@ -93,7 +93,7 @@ namespace vbci
     Program& program, uint32_t type_id, ValueType& kind, ffi_type*& rep)
   {
     if (
-      (type_id == DynId) || program.is_tuple(type_id) ||
+      (type_id == DynamicTypeId) || program.is_tuple(type_id) ||
       program.is_ref(type_id) || program.is_union(type_id))
       return false;
 
@@ -2679,7 +2679,7 @@ namespace vbci
 
         auto var_type = it->func->var_types.at(local_idx - params);
 
-        if (var_type == DynId)
+        if (var_type == DynamicTypeId)
           return;
 
         if (!thread.program->subtype(v.type_id(), var_type))

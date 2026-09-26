@@ -1,12 +1,8 @@
 #include "../analysis/ir_subtype.h"
 #include "../lang.h"
 
-#include <vbc/format.h>
-
 namespace virc
 {
-  using namespace vbc;
-
   PassDef assign_ids(std::shared_ptr<Compilation> state)
   {
     PassDef p{
@@ -174,7 +170,7 @@ namespace virc
             return err(func_id, "function has no labels");
           }
 
-          if (*state->get_func_id(func_id) == MainFuncId)
+          if (*state->get_func_id(func_id) == MainFunctionId)
           {
             if (func_state.params != 0)
             {
@@ -226,7 +222,7 @@ namespace virc
 
     p.post([state](auto top) {
       state->top = top;
-      if (!state->functions.at(MainFuncId).func)
+      if (!state->functions.at(MainFunctionId).func)
       {
         state->error = true;
         top << err(Func, "missing main function");

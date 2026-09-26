@@ -9,10 +9,10 @@ namespace vbc
 {
   inline const auto MagicNumber = size_t(0xDEC0ADDE);
   inline const auto CurrentVersion = size_t(0);
-  inline const auto MainFuncId = size_t(0);
-  inline const auto FinalMethodId = size_t(0);
+  inline const auto MainFunctionId = size_t(0);
+  inline const auto FinalizerMethodId = size_t(0);
   inline const auto CallbackMethodId = size_t(1);
-  inline const auto DynId = uint32_t(-1);
+  inline const auto DynamicTypeId = uint32_t(-1);
 
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're
   // known to be signed integers (zigzag SLEB128) or floats (bitcast zigzag

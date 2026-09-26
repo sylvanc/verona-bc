@@ -10,6 +10,12 @@ namespace virc
 {
   using namespace vbc;
 
+  static_assert(virc::MainFunctionId == vbc::MainFunctionId);
+  static_assert(virc::FinalizerMethodId == vbc::FinalizerMethodId);
+  static_assert(virc::CallbackMethodId == vbc::CallbackMethodId);
+  static_assert(virc::DynamicTypeId == vbc::DynamicTypeId);
+  static_assert(PrimitiveTypeCount == NumPrimitiveClasses);
+
   template<typename T>
   struct sleb
   {

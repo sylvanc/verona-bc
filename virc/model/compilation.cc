@@ -2,12 +2,8 @@
 
 #include "../lang.h"
 
-#include <vbc/format.h>
-
 namespace virc
 {
-  using namespace vbc;
-
   void LabelState::resize(size_t size)
   {
     first_def.resize(size);
@@ -179,10 +175,10 @@ namespace virc
     auto func_main = FuncState(nullptr);
     func_main.name = main_name;
     functions.push_back(func_main);
-    func_ids.insert({main_name, MainFuncId});
+    func_ids.insert({main_name, MainFunctionId});
 
     // Reserve a method ID for `@final`.
-    method_ids.insert({ST::di().string("@final"), FinalMethodId});
+    method_ids.insert({ST::di().string("@final"), FinalizerMethodId});
 
     // Reserve a method ID for `@callback`.
     method_ids.insert({ST::di().string("@callback"), CallbackMethodId});
@@ -410,7 +406,7 @@ namespace virc
 
     if (type == Dyn)
     {
-      return DynId;
+      return DynamicTypeId;
     }
     else if (type->in(
                {None,
