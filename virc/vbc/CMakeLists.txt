@@ -1,6 +1,7 @@
 add_library(virc_vbc STATIC
   emitter.cc
   encoder.cc
+  string_table.cc
 )
 
 target_link_libraries(virc_vbc PUBLIC

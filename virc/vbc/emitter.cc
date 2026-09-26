@@ -1,5 +1,6 @@
 #include "emitter.h"
 #include "encoder.h"
+#include "string_table.h"
 
 #include "../lang.h"
 
@@ -78,11 +79,7 @@ namespace virc
     hdr << uleb(MagicNumber);
     hdr << uleb(CurrentVersion);
 
-    // Exec string table.
-    hdr << uleb(ST::exec().size());
-
-    for (size_t i = 0; i < ST::exec().size(); i++)
-      hdr << ST::exec().at(i);
+    encode_string_table(hdr, ST::exec());
 
     // Class and complex primitive count.
     hdr << uleb(classes.size());
