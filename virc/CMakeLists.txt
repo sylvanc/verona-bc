@@ -1,4 +1,5 @@
 add_library(libvbcc STATIC
+  compile.cc
   passes/assign_ids.cc
   passes/liveness.cc
   passes/memo.cc

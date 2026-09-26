@@ -1,4 +1,4 @@
-#include "model/compilation.h"
+#include "compile.h"
 #include "lang.h"
 #include "vbc/emitter.h"
 
@@ -10,17 +10,10 @@ int main(int argc, char** argv)
   using namespace virc;
 
   auto state = std::make_shared<Compilation>();
-  Reader reader{
-    "vbcc",
-    {statements(),
-     labels(),
-     memo(),
-     assign_ids(state),
-     validate_ids(state),
-     typecheck(state),
-     optimize(state),
-     liveness(state)},
-    parser()};
+  auto passes = pipeline(state);
+  passes.insert(passes.begin(), labels());
+  passes.insert(passes.begin(), statements());
+  Reader reader{"vbcc", passes, parser()};
 
   struct Options : public trieste::Options
   {
