@@ -1,4 +1,4 @@
-#include "bytecode.h"
+#include "model/bytecode.h"
 #include "lang.h"
 
 #include <trieste/driver.h>

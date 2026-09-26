@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../bytecode.h"
+#include "../model/bytecode.h"
 #include "from_chars.h"
 
 #include <limits>

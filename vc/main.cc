@@ -2,7 +2,7 @@
 
 #include <git2.h>
 #include <trieste/driver.h>
-#include <virc/bytecode.h>
+#include <virc/model/bytecode.h>
 
 int main(int argc, char** argv)
 {
