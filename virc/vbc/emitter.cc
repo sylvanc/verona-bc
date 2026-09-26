@@ -1,11 +1,10 @@
-#include "emitter.h"
+#include "../lang.h"
 #include "debug_info.h"
 #include "encoder.h"
+#include "emitter.h"
 #include "instruction_encoder.h"
 #include "string_table.h"
 #include "type_encoding.h"
-
-#include "../lang.h"
 
 #include <vbc/format.h>
 
@@ -14,18 +13,15 @@ namespace virc
   using namespace ::vbc;
   using namespace vbc_backend;
   using ::vbc::CurrentVersion;
-  using ::vbc::DIOp;
   using ::vbc::MagicNumber;
-  using ::vbc::NumPrimitiveClasses;
-  using ::vbc::Op;
-  using ::vbc::RegionType;
-  using ::vbc::TypeTag;
 
   namespace
   {
     struct VBCEmitter : Compilation
     {
-      explicit VBCEmitter(const Compilation& bytecode) : Compilation(bytecode) {}
+      explicit VBCEmitter(const Compilation& compilation)
+      : Compilation(compilation)
+      {}
 
       void emit(std::filesystem::path output, bool strip);
     };
@@ -38,238 +34,225 @@ namespace virc
     if (output.empty())
       output = "out.vbc";
 
-    std::vector<uint8_t> hdr;
-    std::vector<uint8_t> code;
-    DebugInfo di{code, source_paths};
+    ByteBuffer header;
+    ByteBuffer code;
+    DebugInfo debug{code, source_paths};
 
-    // Build memo slot mapping: init FunctionId string → 0-based index.
-    std::unordered_map<std::string, size_t> memo_slot_map;
-    Node memo_init_node;
+    MemoSlots memo_slots;
+    Node memo_init;
+
     for (auto& child : *top)
     {
       if (child == MemoInit)
       {
-        memo_init_node = child;
-        size_t idx = 0;
-        for (auto& fid : *child)
-        {
-          memo_slot_map[std::string(fid->location().view())] = idx++;
-        }
+        memo_init = child;
+        size_t index = 0;
+
+        for (auto& function_id : *child)
+          memo_slots[std::string(function_id->location().view())] = index++;
+
         break;
       }
     }
 
-    hdr << uleb(MagicNumber);
-    hdr << uleb(CurrentVersion);
+    header << uleb(MagicNumber);
+    header << uleb(CurrentVersion);
+    encode_string_table(header, ST::exec());
 
-    encode_string_table(hdr, ST::exec());
+    header << uleb(classes.size());
+    header << uleb(complex_primitives.size());
 
-    // Class and complex primitive count.
-    hdr << uleb(classes.size());
-    hdr << uleb(complex_primitives.size());
-
-    // Primitive classes.
-    for (auto& p : primitives)
+    for (auto& primitive : primitives)
     {
-      if (p)
+      if (primitive)
       {
-        auto methods = p / Methods;
-        hdr << uleb(methods->size());
+        auto methods = primitive / Methods;
+        header << uleb(methods->size());
 
         for (auto& method : *methods)
         {
-          hdr << uleb(*get_method_id(method / MethodId))
-              << uleb(*get_func_id(method / FunctionId));
+          header << uleb(*get_method_id(method / MethodId))
+                 << uleb(*get_func_id(method / FunctionId));
         }
       }
       else
       {
-        hdr << uleb(0);
+        header << uleb(0);
       }
     }
 
-    // Classes.
-    for (auto& c : classes)
+    for (auto& class_node : classes)
     {
-      hdr << uleb(di.size());
-      di.output() << uleb(ST::di().string(c / ClassId));
+      header << uleb(debug.size());
+      debug.output() << uleb(ST::di().string(class_node / ClassId));
 
-      auto fields = c / Fields;
-      hdr << uleb(fields->size());
+      auto fields = class_node / Fields;
+      header << uleb(fields->size());
 
       for (auto& field : *fields)
       {
-        hdr << uleb(*get_field_id(field / FieldId));
-        hdr << uleb(type_id(field / Type));
-        di.output() << uleb(ST::di().string(field / FieldId));
+        header << uleb(*get_field_id(field / FieldId));
+        header << uleb(type_id(field / Type));
+        debug.output() << uleb(ST::di().string(field / FieldId));
       }
 
-      auto methods = c / Methods;
-      hdr << uleb(methods->size());
+      auto methods = class_node / Methods;
+      header << uleb(methods->size());
 
       for (auto& method : *methods)
       {
-        hdr << uleb(*get_method_id(method / MethodId))
-            << uleb(*get_func_id(method / FunctionId));
-        di.output() << uleb(ST::di().string(method / MethodId));
+        header << uleb(*get_method_id(method / MethodId))
+               << uleb(*get_func_id(method / FunctionId));
+        debug.output() << uleb(ST::di().string(method / MethodId));
       }
     }
 
-    // Complex primitive classes.
-    for (auto& p : complex_primitives)
+    for (auto& primitive : complex_primitives)
     {
-      if (p)
+      if (primitive)
       {
-        auto methods = p / Methods;
-        hdr << uleb(methods->size());
+        auto methods = primitive / Methods;
+        header << uleb(methods->size());
 
         for (auto& method : *methods)
         {
-          hdr << uleb(*get_method_id(method / MethodId))
-              << uleb(*get_func_id(method / FunctionId));
+          header << uleb(*get_method_id(method / MethodId))
+                 << uleb(*get_func_id(method / FunctionId));
         }
       }
       else
       {
-        hdr << uleb(0);
+        header << uleb(0);
       }
     }
 
-    // FFI libraries.
-    hdr << uleb(libraries.size());
+    header << uleb(libraries.size());
 
-    for (auto& lib : libraries)
+    for (auto& library : libraries)
     {
-      hdr << uleb(ST::exec().string(lib / String));
+      header << uleb(ST::exec().string(library / String));
 
-      // Encode init function ID. 0 means no function, otherwise
-      // func_id + 1.
-      auto init = lib / InitFunc;
+      auto init = library / InitFunc;
+        // Zero means no init function; otherwise the value is func_id + 1.
       if (init->type() == FunctionId)
-        hdr << uleb(*get_func_id(init) + 1);
+        header << uleb(*get_func_id(init) + 1);
       else
-        hdr << uleb(0);
+        header << uleb(0);
     }
 
-    hdr << uleb(symbols.size());
+    header << uleb(symbols.size());
 
     for (auto& symbol : symbols)
     {
-      hdr << uleb(*get_library_id(symbol->parent(Lib)))
-          << uleb(ST::exec().string(symbol / Lhs))
-          << uleb(ST::exec().string(symbol / Rhs))
-          << uleb(((symbol / Vararg) == Vararg) ? 1 : 0)
-          << uleb((symbol / FFIParams)->size());
+      header << uleb(*get_library_id(symbol->parent(Lib)))
+             << uleb(ST::exec().string(symbol / Lhs))
+             << uleb(ST::exec().string(symbol / Rhs))
+             << uleb(((symbol / Vararg) == Vararg) ? 1 : 0)
+             << uleb((symbol / FFIParams)->size());
 
-      for (auto& param : *(symbol / FFIParams))
-        hdr << uleb(type_id(param));
+      for (auto& parameter : *(symbol / FFIParams))
+        header << uleb(type_id(parameter));
 
-      hdr << uleb(type_id(symbol / Return));
+      header << uleb(type_id(symbol / Return));
     }
 
-    // Functions.
-    hdr << uleb(functions.size());
+    header << uleb(functions.size());
 
-    for (auto& func_state : functions)
+    for (auto& function : functions)
     {
-      hdr << uleb(func_state.register_idxs.size());
-      hdr << uleb(di.size());
+      header << uleb(function.register_idxs.size());
+      header << uleb(debug.size());
+      header << uleb(function.params);
 
-      // Parameter and return types.
-      hdr << uleb(func_state.params);
+      for (auto& parameter : *(function.func / Params))
+        header << uleb(type_id(parameter / Type));
 
-      for (auto& param : *(func_state.func / Params))
-        hdr << uleb(type_id(param / Type));
+      header << uleb(type_id(function.func / Type));
 
-      hdr << uleb(type_id(func_state.func / Type));
+      auto variables = function.func / Vars;
+      header << uleb(variables->size());
 
-      // Variable types.
-      auto vars_node = func_state.func / Vars;
-      hdr << uleb(vars_node->size());
+      for (auto& variable : *variables)
+        header << uleb(type_id(variable / Type));
 
-      for (auto& var : *vars_node)
-        hdr << uleb(type_id(var / Type));
+      header << uleb(function.label_idxs.size());
+      debug.output() << uleb(function.name);
 
-      // Labels.
-      hdr << uleb(func_state.label_idxs.size());
+      for (auto& name : function.register_names)
+        debug.output() << uleb(name);
 
-      // Function name.
-      di.output() << uleb(func_state.name);
+      debug.begin_function();
 
-      // Register names.
-      for (auto& name : func_state.register_names)
-        di.output() << uleb(name);
-
-      di.begin_function();
-
-      for (auto label : *(func_state.func / Labels))
+      for (auto label : *(function.func / Labels))
       {
-        // Save the pc for this label.
-        hdr << uleb(code.size());
+        header << uleb(code.size());
 
-        for (Node stmt : *(label / Body))
+        for (Node statement : *(label / Body))
         {
-          if (stmt == Source)
+          if (statement == vir::Source)
           {
-            di.record_explicit_file(stmt / String);
-            continue;
-          }
-          else if (stmt == Offset)
-          {
-            di.record_explicit_offset(
-              from_chars_sep_v<size_t>(stmt / Int));
+            debug.record_explicit_file(statement / String);
             continue;
           }
 
-          di.record_statement(stmt);
+          if (statement == Offset)
+          {
+            debug.record_explicit_offset(
+              from_chars_sep_v<size_t>(statement / Int));
+            continue;
+          }
 
-          encode_statement(*this, func_state, memo_slot_map, code, stmt);
+          debug.record_statement(statement);
+          encode_statement(*this, function, memo_slots, code, statement);
         }
 
-        Node term = label / Return;
-        di.finish_function(term);
-        encode_terminator(*this, func_state, code, term);
+        Node terminator = label / Return;
+        debug.finish_function(terminator);
+        encode_terminator(*this, function, code, terminator);
       }
     }
 
-    encode_type_table(hdr, types);
+    encode_type_table(header, types);
 
-    // Memo init list.
-    if (memo_init_node)
+    if (memo_init)
     {
-      hdr << uleb(memo_init_node->size());
-      for (auto& fid : *memo_init_node)
-        hdr << uleb(*get_func_id(fid));
+      header << uleb(memo_init->size());
+
+      for (auto& function_id : *memo_init)
+        header << uleb(*get_func_id(function_id));
     }
     else
     {
-      hdr << uleb(0);
+      header << uleb(0);
     }
 
-    // Code size.
-    hdr << uleb(code.size());
-    std::ofstream f(output, std::ios::binary | std::ios::out);
-    f.write(reinterpret_cast<const char*>(hdr.data()), hdr.size());
-    f.write(reinterpret_cast<const char*>(code.data()), code.size());
+    header << uleb(code.size());
+    std::ofstream file(output, std::ios::binary | std::ios::out);
+    file.write(
+      reinterpret_cast<const char*>(header.data()),
+      static_cast<std::streamsize>(header.size()));
+    file.write(
+      reinterpret_cast<const char*>(code.data()),
+      static_cast<std::streamsize>(code.size()));
 
     if (!strip)
-      di.write_to(f, output);
+      debug.write_to(file, output);
 
-    if (!f)
+    if (!file)
       logging::Error() << "Error writing to: " << output << std::endl;
 
     wf::pop_front();
   }
 
   void vbc_backend::emit(
-    const Compilation& bytecode,
+    const Compilation& compilation,
     const std::filesystem::path& output,
     bool strip)
   {
-    VBCEmitter(bytecode).emit(output, strip);
+    VBCEmitter(compilation).emit(output, strip);
   }
-}
 
+}
 
 void virc::vbc::emit(
   const virc::Compilation& compilation,

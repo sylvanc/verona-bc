@@ -5,7 +5,7 @@
 namespace virc::vbc_backend
 {
   void emit(
-    const Compilation& bytecode,
+    const Compilation& compilation,
     const std::filesystem::path& output,
     bool strip);
 }
