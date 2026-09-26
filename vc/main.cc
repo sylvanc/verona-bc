@@ -3,6 +3,7 @@
 #include <git2.h>
 #include <trieste/driver.h>
 #include <virc/model/bytecode.h>
+#include <virc/vbc/emitter.h>
 
 int main(int argc, char** argv)
 {
@@ -92,6 +93,6 @@ int main(int argc, char** argv)
   if (!opts.path.empty())
     state->add_path(opts.path);
 
-  state->gen(opts.bytecode_file, opts.strip);
+  virc::vbc_backend::emit(*state, opts.bytecode_file, opts.strip);
   return 0;
 }

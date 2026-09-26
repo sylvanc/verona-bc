@@ -1,5 +1,6 @@
 #include "model/bytecode.h"
 #include "lang.h"
+#include "vbc/emitter.h"
 
 #include <trieste/driver.h>
 
@@ -70,6 +71,6 @@ int main(int argc, char** argv)
   if (!opts.path.empty())
     state->add_path(opts.path);
 
-  state->gen(opts.bytecode_file, opts.strip);
+  vbc_backend::emit(*state, opts.bytecode_file, opts.strip);
   return 0;
 }

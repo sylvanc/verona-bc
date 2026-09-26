@@ -6,6 +6,7 @@ add_library(libvbcc STATIC
   passes/typecheck.cc
   passes/validate_ids.cc
   analysis/bitset.cc
+  model/bytecode.cc
   stringtable.cc
   support/diagnostics.cc
   support/literals.cc
