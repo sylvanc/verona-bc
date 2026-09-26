@@ -1,4 +1,4 @@
-#include "lang.h"
+#include "../lang.h"
 
 #include <CLI/CLI.hpp>
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "bytecode.h"
-#include "from_chars.h"
+#include "support/from_chars.h"
 #include "support/diagnostics.h"
 
 #include <vir.h>

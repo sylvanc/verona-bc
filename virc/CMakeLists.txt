@@ -7,9 +7,9 @@ add_library(libvbcc STATIC
   passes/validids.cc
   analysis/bitset.cc
   bytecode.cc
-  lang.cc
   stringtable.cc
   support/diagnostics.cc
+  support/literals.cc
 )
 
 target_include_directories(libvbcc INTERFACE
