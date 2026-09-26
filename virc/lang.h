@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model/bytecode.h"
+#include "model/compilation.h"
 #include "passes/patterns.h"
 #include "support/diagnostics.h"
 #include "support/literals.h"

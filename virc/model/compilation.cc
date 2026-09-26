@@ -1,4 +1,4 @@
-#include "bytecode.h"
+#include "compilation.h"
 
 #include "../lang.h"
 

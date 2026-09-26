@@ -1,4 +1,4 @@
-#include "model/bytecode.h"
+#include "model/compilation.h"
 #include "lang.h"
 #include "vbc/emitter.h"
 
