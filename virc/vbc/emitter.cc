@@ -1,6 +1,6 @@
-#include "bytecode.h"
+#include "../bytecode.h"
 
-#include "lang.h"
+#include "../lang.h"
 
 #include <type_traits>
 #include <zstd.h>

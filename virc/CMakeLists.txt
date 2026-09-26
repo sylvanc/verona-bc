@@ -6,10 +6,10 @@ add_library(libvbcc STATIC
   passes/typecheck.cc
   passes/validate_ids.cc
   analysis/bitset.cc
-  bytecode.cc
   stringtable.cc
   support/diagnostics.cc
   support/literals.cc
+  vbc/emitter.cc
 )
 
 target_include_directories(libvbcc INTERFACE
