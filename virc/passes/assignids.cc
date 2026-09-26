@@ -1,4 +1,4 @@
-#include "../irsubtype.h"
+#include "../analysis/irsubtype.h"
 #include "../lang.h"
 
 namespace virc
