@@ -3,7 +3,7 @@
 #include "bytecode.h"
 #include "from_chars.h"
 
-#include <vbcc.h>
+#include <vir.h>
 
 namespace vbcc
 {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "sequent.h"
-#include "vbcc.h"
+#include <vir.h>
 
 namespace vbcc
 {

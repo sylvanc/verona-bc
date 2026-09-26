@@ -2,7 +2,7 @@
 
 #define TRIESTE_EXPOSE_LOG_MACRO
 #include <trieste/trieste.h>
-#include <vbcc.h>
+#include <vir.h>
 #include <virc/lang.h>
 
 namespace vc

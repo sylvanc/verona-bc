@@ -3,7 +3,7 @@
 #include "bitset.h"
 #include "stringtable.h"
 
-#include <vbcc.h>
+#include <vir.h>
 #include <vbci.h>
 
 namespace vbcc
