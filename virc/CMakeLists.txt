@@ -5,7 +5,7 @@ add_library(libvbcc STATIC
   passes/optimize.cc
   passes/typecheck.cc
   passes/validids.cc
-  bitset.cc
+  analysis/bitset.cc
   bytecode.cc
   lang.cc
   stringtable.cc

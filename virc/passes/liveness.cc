@@ -1,4 +1,4 @@
-#include "../bitset.h"
+#include "../analysis/bitset.h"
 #include "../lang.h"
 
 #include <queue>

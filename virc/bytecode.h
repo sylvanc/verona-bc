@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bitset.h"
+#include "analysis/bitset.h"
 #include "stringtable.h"
 
 #include <vir.h>
