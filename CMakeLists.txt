@@ -85,7 +85,7 @@ install(CODE [[
   file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
   ]])
 
-add_subdirectory(vbcc)
+add_subdirectory(virc)
 add_subdirectory(vbci)
 add_subdirectory(vc)
 enable_testing()
