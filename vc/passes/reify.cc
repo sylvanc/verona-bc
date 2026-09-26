@@ -1,7 +1,7 @@
 #include "../lang.h"
 #include "../subtype.h"
 
-#include <virc/analysis/irsubtype.h>
+#include <virc/analysis/ir_subtype.h>
 
 namespace vc
 {
