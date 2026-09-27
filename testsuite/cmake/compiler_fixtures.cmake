@@ -20,7 +20,7 @@ verona_fixture_group(
 		vir/control_flow_join/control_flow_join.vir
 		vir/convert/convert.vir
 		vir/copy_move_drop/copy_move_drop.vir
-		vir/llvm_freeze/llvm_freeze.vir
+		vir/freeze_ownership/freeze_ownership.vir
 		vir/library_merge/library_merge.vir
 		vir/object_alloc/object_alloc.vir
 		vir/raise/raise.vir

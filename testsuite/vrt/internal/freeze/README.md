@@ -32,6 +32,7 @@ parent clearing, and `BadFreeze` recovery.
 
 ## Non-Goals
 
-LLVM Freeze lowering is covered by the generated `llvm_freeze` fixture. User
+LLVM Freeze ownership lowering is covered by the generated `freeze_ownership`
+fixture. User
 finalizer ordering is covered by the finalizer fixture, and concurrent lifetime
 operations on an already-published SCC are covered by the SCC fixture.
