@@ -20,6 +20,6 @@ and run from the canonical `build/` directory with `ninja install` followed by
 `ctest --output-on-failure`.
 
 An `llvm_*` VIR fixture participates in both the VBC and LLVM collections.
-`llvm_reference`, for example, checks one reference program through VBCI and
+`reference`, for example, checks one reference program through VBCI and
 through the native VRT ABI. A `vrt_*` VIR fixture is reserved for native
 runtime behavior that does not yet have an interpreted adapter.

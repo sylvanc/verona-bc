@@ -13,6 +13,6 @@ tests where VBCI-to-VRT migration is involved. See the
 [backend policy](../../../docs/architecture/vc-backends.md) and
 [test pipelines](../../../testsuite/docs/pipelines.md).
 
-**Current:** `llvm_reference` covers all six VIR reference statement tokens,
+**Current:** `reference` covers all six VIR reference statement tokens,
 reference copy/move ownership, function arguments and returns, typed raise
 transport, and static tailcall validation through both VBCI and native VRT.

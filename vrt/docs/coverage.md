@@ -11,7 +11,7 @@ equivalent native/interpreted behavior where VBC-visible semantics apply.
 The `vrt/api/reference` fixture covers reference layout, construction,
 ownership, frame epochs, escape, tailcall validation, load, and exchange. The
 internal write-barrier fixture covers managed exchange across region-parent
-boundaries. The `llvm_reference` VIR fixture supplies equivalent VBCI and
+boundaries. The `reference` VIR fixture supplies equivalent VBCI and
 LLVM-native integration coverage.
 
 **Migration:** VRT is not yet a complete VBCI replacement. Coverage expansion

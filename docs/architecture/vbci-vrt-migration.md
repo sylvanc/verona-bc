@@ -53,7 +53,7 @@ and region-aware exchange.
 **Migration:** VBCI retains its interpreter-local `Register`, `Value`, and
 write-barrier implementation. Equivalent VBCI operations remain the
 compatibility behavior until a later subsystem migration adapts bytecode
-execution to the VRT contracts. The `llvm_reference` fixture runs one VIR
+execution to the VRT contracts. The `reference` fixture runs one VIR
 program through both execution backends to detect semantic divergence in the
 interim.
 

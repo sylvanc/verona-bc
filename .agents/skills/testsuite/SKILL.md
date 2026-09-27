@@ -116,7 +116,7 @@ object, executable, and final-AST files remain transient artifacts under the
 hashed build output. The golden layout for one fixture is:
 
 ```text
-testsuite/vir/llvm_scalar_ops/llvm_scalar_ops/
+testsuite/vir/scalar_ops/scalar_ops/
 ├── compile/                 # ordinary bytecode compile
 ├── run/                     # ordinary bytecode run
 └── llvm/
@@ -218,10 +218,10 @@ that pushes the test body out of view. Keep a one- or two-line source header
 pointing to that README. Place it beside the source, for example:
 
 ```text
-testsuite/vir/llvm_object_alloc/
+testsuite/vir/object_alloc/
 ├── README.md
-├── llvm_object_alloc.vir
-└── llvm_object_alloc/
+├── object_alloc.vir
+└── object_alloc/
     └── ... goldens ...
 ```
 
@@ -282,11 +282,11 @@ ctest --output-on-failure -R '^vbc/vir/simp1/simp1/(compile|run)$'
 
 # All bytecode and native nodes for one LLVM fixture
 ctest --output-on-failure \
-  -R '^vbc/vir/llvm_scalar_ops/llvm_scalar_ops/'
+  -R '^vbc/vir/scalar_ops/scalar_ops/'
 
 # Only that fixture's native LLVM stages
 ctest --output-on-failure \
-  -R '^vbc/vir/llvm_scalar_ops/llvm_scalar_ops/llvm/'
+  -R '^vbc/vir/scalar_ops/scalar_ops/llvm/'
 
 # All VRT nodes
 ctest --output-on-failure -R '^vbc/vrt/'
