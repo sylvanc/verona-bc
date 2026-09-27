@@ -1,5 +1,5 @@
 if(VERONA_ENABLE_LLVM_BACKEND)
-  set(TESTSUITE_REGEX "^vir/(llvm|vrt)_[^/]+/(llvm|vrt)_[^/]+\\.vir$")
+  set(TESTSUITE_REGEX ".*\\.vir$")
 
   find_program(
     VERONA_LLVM_AS
@@ -32,6 +32,12 @@ function(llvm_test_define test)
     return()
   endif()
 
+  verona_fixture_metadata(
+    "${test}" vbc_stage llvm_stage llvm_validator fixture_labels)
+  if(llvm_stage STREQUAL "none")
+    return()
+  endif()
+
   set(test_root "${test_dir}/${test_name}")
   set(llvm_root "${test_root}/llvm")
   set(emit_node "${llvm_root}/emit-ir")
@@ -51,24 +57,11 @@ function(llvm_test_define test)
     llvm_final_ast
     NODE "${emit_node}"
     FILE "${test_name}_final.trieste")
-  testsuite_output_path(
-    llvm_bc NODE "${assemble_node}" FILE "${llvm_bc_name}")
-  testsuite_output_path(
-    native_object NODE "${codegen_node}" FILE "${native_object_name}")
-  testsuite_output_path(
-    native NODE "${link_node}" FILE "${native_name}")
-
   set(test_working_directory "${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}")
-  set(llvm_validator
-    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/llvm/cmake/validate_llvm_ir.cmake")
-
-  if(test_name STREQUAL "llvm_dynamic_dispatch")
-    set(llvm_validator
-      "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/llvm/cmake/validate_dynamic_dispatch_switch.cmake")
-  elseif(test_name STREQUAL "llvm_dynamic_dispatch_fallback")
-    set(llvm_validator
-      "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/llvm/cmake/validate_dynamic_dispatch_fallback.cmake")
+  if(llvm_validator STREQUAL "")
+    set(llvm_validator "llvm/cmake/validate_llvm_ir.cmake")
   endif()
+  set(llvm_validator "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/${llvm_validator}")
 
   testsuite_add_test(
     NAME "${emit_node}"
@@ -84,6 +77,12 @@ function(llvm_test_define test)
       --output-file "${llvm_ir}"
       -o "${llvm_final_ast}")
 
+  if(llvm_stage STREQUAL "emit-ir")
+    return()
+  endif()
+
+  testsuite_output_path(
+    llvm_bc NODE "${assemble_node}" FILE "${llvm_bc_name}")
   testsuite_add_test(
     NAME "${assemble_node}"
     WORKING_DIRECTORY "${test_working_directory}"
@@ -93,6 +92,12 @@ function(llvm_test_define test)
     ARTIFACTS "${llvm_bc_name}"
     COMMAND "${VERONA_LLVM_AS}" "${llvm_ir}" -o "${llvm_bc}")
 
+  if(llvm_stage STREQUAL "assemble")
+    return()
+  endif()
+
+  testsuite_output_path(
+    native_object NODE "${codegen_node}" FILE "${native_object_name}")
   testsuite_add_test(
     NAME "${codegen_node}"
     WORKING_DIRECTORY "${test_working_directory}"
@@ -107,6 +112,12 @@ function(llvm_test_define test)
       "${llvm_bc}"
       -o "${native_object}")
 
+  if(llvm_stage STREQUAL "codegen")
+    return()
+  endif()
+
+  testsuite_output_path(
+    native NODE "${link_node}" FILE "${native_name}")
   if(MSVC)
     set(link_arguments
       "${native_object}"
@@ -127,6 +138,10 @@ function(llvm_test_define test)
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ARTIFACTS "${native_name}"
     COMMAND "${CMAKE_CXX_COMPILER}" ${link_arguments})
+
+  if(llvm_stage STREQUAL "link")
+    return()
+  endif()
 
   testsuite_add_test(
     NAME "${run_node}"
