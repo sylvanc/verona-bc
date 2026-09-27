@@ -1,7 +1,7 @@
 # LLVM Emitter Coverage
 
 **Current:** LLVM tests are explicit allowlists in `vc-llvm.cmake` and
-`vir-llvm.cmake`. They compile textual LLVM IR, assemble it, lower it to a
+`virc-llvm.cmake`. They compile textual LLVM IR, assemble it, lower it to a
 native object, link it with VRT, and compare native execution with goldens.
 
 The allowlists cover only operations whose lowering and VRT support are both

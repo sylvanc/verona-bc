@@ -6,8 +6,8 @@ The testsuite registers named CTest DAGs from top-level collection files:
 | --- | --- |
 | `vc-vbc.cmake` | Verona source -> VC -> VBC -> VBCI |
 | `vc-llvm.cmake` | Allowlisted Verona source -> VC -> LLVM -> native VRT |
-| `vir-vbc.cmake` | Textual VIR -> VIRC -> VBC -> VBCI |
-| `vir-llvm.cmake` | Allowlisted textual VIR -> VIRC -> LLVM -> native VRT |
+| `virc-vbc.cmake` | Textual VIR -> VIRC -> VBC -> VBCI |
+| `virc-llvm.cmake` | Allowlisted textual VIR -> VIRC -> LLVM -> native VRT |
 | `vrt.cmake` | VRT API and internal tests |
 
 LLVM collections register no tests when `VERONA_ENABLE_LLVM_BACKEND=OFF`.

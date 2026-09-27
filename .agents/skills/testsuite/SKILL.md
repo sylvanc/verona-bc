@@ -26,11 +26,11 @@ The five collections are:
 |---|---|---|
 | `vc-vbc.cmake` | `*.v` | Verona compile -> bytecode run |
 | `vc-llvm.cmake` | allowlisted `*.v` | Verona compile -> emit IR -> assemble -> codegen -> link -> native run |
-| `vir-vbc.cmake` | `*.vir` | VIR compile -> bytecode run |
-| `vir-llvm.cmake` | `vir/{llvm,vrt}_*/{llvm,vrt}_*.vir` | emit IR -> assemble -> codegen -> link -> native run |
+| `virc-vbc.cmake` | `*.vir` | VIR compile -> bytecode run |
+| `virc-llvm.cmake` | `vir/{llvm,vrt}_*/{llvm,vrt}_*.vir` | emit IR -> assemble -> codegen -> link -> native run |
 | `vrt.cmake` | selected C/C++ sources under `vrt/` | build libvrt test targets and register run nodes |
 
-`vc-vbc.cmake` and `vir-vbc.cmake` omit the run node for sources below a
+`vc-vbc.cmake` and `virc-vbc.cmake` omit the run node for sources below a
 `compile_only/` directory. The source basename must match its parent
 directory, so a normal fixture has one clear root:
 
@@ -40,8 +40,8 @@ testsuite/vir/simp1/simp1.vir
 ```
 
 The `llvm_*` files remain ordinary VIR fixtures. Each is compiled and run as
-bytecode by `vir-vbc.cmake` and also follows the native LLVM graph registered
-by `vir-llvm.cmake`. The `vrt_*` VIR fixtures exercise native VRT-specific behavior:
+bytecode by `virc-vbc.cmake` and also follows the native LLVM graph registered
+by `virc-llvm.cmake`. The `vrt_*` VIR fixtures exercise native VRT-specific behavior:
 they are compiled to validate the shared VIR input but do not register a VBCI
 run node. There is no duplicate LLVM source tree.
 
@@ -96,7 +96,7 @@ not copied into the source tree as goldens. Pass dumps are produced only when
 
 ### LLVM native
 
-`vir-llvm.cmake` selects fixtures named `vir/llvm_*/llvm_*.vir` or
+`virc-llvm.cmake` selects fixtures named `vir/llvm_*/llvm_*.vir` or
 `vir/vrt_*/vrt_*.vir`. `vc-llvm.cmake` currently allowlists
 `v/hello/hello.v`. Each selected fixture has five nodes:
 
