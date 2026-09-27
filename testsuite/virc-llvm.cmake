@@ -37,6 +37,7 @@ function(llvm_test_define test)
   if(llvm_stage STREQUAL "none")
     return()
   endif()
+  set(pipeline_labels frontend:virc backend:llvm ${fixture_labels})
 
   set(test_root "${test_dir}/${test_name}")
   set(llvm_root "${test_root}/llvm")
@@ -70,6 +71,7 @@ function(llvm_test_define test)
     VALIDATOR "${llvm_validator}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ARTIFACTS "${llvm_ir_name}"
+    LABELS ${pipeline_labels}
     COMMAND
       "${CMAKE_INSTALL_PREFIX}/virc/$<TARGET_FILE_NAME:virc>"
       build "${test_file}"
@@ -90,6 +92,7 @@ function(llvm_test_define test)
     DEPENDS "${emit_node}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ARTIFACTS "${llvm_bc_name}"
+    LABELS ${pipeline_labels}
     COMMAND "${VERONA_LLVM_AS}" "${llvm_ir}" -o "${llvm_bc}")
 
   if(llvm_stage STREQUAL "assemble")
@@ -105,6 +108,7 @@ function(llvm_test_define test)
     DEPENDS "${assemble_node}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ARTIFACTS "${native_object_name}"
+    LABELS ${pipeline_labels}
     COMMAND
       "${VERONA_LLC}"
       -relocation-model=pic
@@ -137,6 +141,7 @@ function(llvm_test_define test)
     DEPENDS "${codegen_node}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ARTIFACTS "${native_name}"
+    LABELS ${pipeline_labels}
     COMMAND "${CMAKE_CXX_COMPILER}" ${link_arguments})
 
   if(llvm_stage STREQUAL "link")
@@ -148,5 +153,6 @@ function(llvm_test_define test)
     WORKING_DIRECTORY "${test_working_directory}"
     DEPENDS "${link_node}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
+    LABELS ${pipeline_labels}
     COMMAND "${native}")
 endfunction()

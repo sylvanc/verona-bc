@@ -21,3 +21,6 @@ testsuite(runtime COLLECTIONS vrt.cmake)
 add_test(
 	NAME compiler/virc/vbcc-compat
 	COMMAND "${CMAKE_INSTALL_PREFIX}/vbcc/$<TARGET_FILE_NAME:vbcc>" --help)
+set_tests_properties(
+	compiler/virc/vbcc-compat
+	PROPERTIES LABELS "compiler;frontend:virc")

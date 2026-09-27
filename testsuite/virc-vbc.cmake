@@ -14,6 +14,7 @@ function(vir_test_define test)
   if(vbc_stage STREQUAL "none")
     return()
   endif()
+  set(pipeline_labels frontend:virc backend:vbc ${fixture_labels})
 
   testsuite_output_path(
     bytecode NODE "${compile_node}" FILE "${test_name}.vbc")
@@ -30,6 +31,7 @@ function(vir_test_define test)
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ${artifact_metadata}
+    LABELS ${pipeline_labels}
     COMMAND
       "${CMAKE_INSTALL_PREFIX}/virc/$<TARGET_FILE_NAME:virc>"
       build "${test_file}"
@@ -43,6 +45,7 @@ function(vir_test_define test)
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}"
       DEPENDS "${compile_node}"
       GOLDENS exit_code.txt stderr.txt stdout.txt
+      LABELS ${pipeline_labels}
       COMMAND
         "${CMAKE_INSTALL_PREFIX}/vbci/$<TARGET_FILE_NAME:vbci>"
         "${bytecode}")
