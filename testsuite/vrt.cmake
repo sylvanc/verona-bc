@@ -27,6 +27,7 @@ function(vrt_add_run_node name target working_directory)
     NAME "${name}"
     WORKING_DIRECTORY "${working_directory}"
     GOLDENS exit_code.txt stderr.txt stdout.txt
+    LABELS runtime:vrt
     COMMAND "$<TARGET_FILE:${target}>")
 endfunction()
 
