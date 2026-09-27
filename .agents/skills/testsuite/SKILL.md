@@ -7,43 +7,45 @@ description: Verona compiler test infrastructure covering VBC golden tests, LLVM
 
 ## Architecture
 
-`testsuite/CMakeLists.txt` includes Trieste's named-node runner and calls one
-entry point:
+`testsuite/CMakeLists.txt` assigns top-level collections to two suites:
 
 ```cmake
 include("${trieste_SOURCE_DIR}/cmake/testsuite.cmake")
-testsuite(vbc)
+testsuite(
+  compiler
+  COLLECTIONS vc-vbc.cmake vc-llvm.cmake virc-vbc.cmake virc-llvm.cmake)
+testsuite(runtime COLLECTIONS vrt.cmake)
 ```
 
-The runner treats every `*.cmake` file directly under `testsuite/` as a test
-collection. Keep helpers in component subdirectories such as
-`testsuite/llvm/cmake/`; an adjacent helper would be mistaken for a
-collection.
+`compiler` owns end-to-end source/VIR pipelines. `runtime` owns hand-written
+C/C++ tests which call VRT directly. Collection ownership is explicit; helper
+files under `testsuite/cmake/` or `testsuite/llvm/cmake/` are never collections.
 
 The five collections are:
 
 | Collection | Selected input | Registered graph |
 |---|---|---|
 | `vc-vbc.cmake` | `*.v` | Verona compile -> bytecode run |
-| `vc-llvm.cmake` | allowlisted `*.v` | Verona compile -> emit IR -> assemble -> codegen -> link -> native run |
+| `vc-llvm.cmake` | eligible `*.v` | Verona compile -> emit IR -> assemble -> codegen -> link -> native run |
 | `virc-vbc.cmake` | `*.vir` | VIR compile -> bytecode run |
-| `virc-llvm.cmake` | `vir/{llvm,vrt}_*/{llvm,vrt}_*.vir` | emit IR -> assemble -> codegen -> link -> native run |
+| `virc-llvm.cmake` | eligible `*.vir` | emit IR -> assemble -> codegen -> link -> native run |
 | `vrt.cmake` | selected C/C++ sources under `vrt/` | build libvrt test targets and register run nodes |
 
-`vc-vbc.cmake` and `virc-vbc.cmake` omit the run node for sources below a
-`compile_only/` directory. The source basename must match its parent
-directory, so a normal fixture has one clear root:
+`testsuite/cmake/compiler_fixtures.cmake` is the authoritative feasibility
+manifest. Defaults, anchored rules, explicit source groups, and optional exact
+overrides produce effective `VBC_STAGE` and `LLVM_STAGE` values; collections
+register all nodes through those terminal stages. The source basename must
+match its parent directory for `.v` fixtures:
 
 ```text
 testsuite/v/hello/hello.v
 testsuite/vir/simp1/simp1.vir
 ```
 
-The `llvm_*` files remain ordinary VIR fixtures. Each is compiled and run as
-bytecode by `virc-vbc.cmake` and also follows the native LLVM graph registered
-by `virc-llvm.cmake`. The `vrt_*` VIR fixtures exercise native VRT-specific behavior:
-they are compiled to validate the shared VIR input but do not register a VBCI
-run node. There is no duplicate LLVM source tree.
+Fixture names describe behavior, not backend. Compiler fixtures exercising
+generated VRT behavior remain under `v/` or `vir/`; direct VRT fixtures remain
+under `vrt/`. Read `testsuite/docs/architecture.md` for stage, label, and
+runtime-boundary rules.
 
 ## Named Nodes
 
@@ -71,11 +73,11 @@ node execute its prerequisites and prevent downstream work after a failed
 node. The public CTest name is the suite name plus the node name, for example:
 
 ```text
-vbc/v/hello/hello/compile
-vbc/v/hello/hello/run
-vbc/vir/simp1/simp1/compile
-vbc/vir/simp1/simp1/run
-vbc/vrt/behavior/set-exit
+compiler/v/hello/hello/compile
+compiler/v/hello/hello/run
+compiler/vir/simp1/simp1/compile
+compiler/vir/simp1/simp1/run
+runtime/vrt/behavior/set-exit
 ```
 
 ## Pipelines
@@ -96,9 +98,8 @@ not copied into the source tree as goldens. Pass dumps are produced only when
 
 ### LLVM native
 
-`virc-llvm.cmake` selects fixtures named `vir/llvm_*/llvm_*.vir` or
-`vir/vrt_*/vrt_*.vir`. `vc-llvm.cmake` currently allowlists
-`v/hello/hello.v`. Each selected fixture has five nodes:
+The LLVM collections query `LLVM_STAGE`; a fixture reaching `run` has five
+native nodes:
 
 ```text
 emit-ir -> assemble -> codegen -> link -> run
@@ -275,29 +276,36 @@ Useful focused commands:
 
 ```bash
 # One Verona fixture: compile and run
-ctest --output-on-failure -R '^vbc/v/hello/hello/'
+ctest --output-on-failure -R '^compiler/v/hello/hello/'
 
 # One VIR fixture through bytecode
-ctest --output-on-failure -R '^vbc/vir/simp1/simp1/(compile|run)$'
+ctest --output-on-failure -R '^compiler/vir/simp1/simp1/(compile|run)$'
 
 # All bytecode and native nodes for one LLVM fixture
 ctest --output-on-failure \
-  -R '^vbc/vir/scalar_ops/scalar_ops/'
+  -R '^compiler/vir/scalar_ops/scalar_ops/'
 
 # Only that fixture's native LLVM stages
 ctest --output-on-failure \
-  -R '^vbc/vir/scalar_ops/scalar_ops/llvm/'
+  -R '^compiler/vir/scalar_ops/scalar_ops/llvm/'
 
 # All VRT nodes
-ctest --output-on-failure -R '^vbc/vrt/'
+ctest --output-on-failure -R '^runtime/vrt/'
+
+# One frontend/backend intersection
+ctest --output-on-failure \
+  -L '^frontend:virc$' -L '^backend:llvm$'
+
+# Direct and compiler-generated VRT coverage
+ctest --output-on-failure -L '^runtime:vrt$'
 
 # List registered tests
 ctest -N
 ```
 
-All collections are currently in the `vbc` suite and therefore have the
-`vbc` CTest label. Select LLVM and VRT subsets by their logical name prefixes,
-not by `-L llvm` or `-L vrt`.
+Suite labels describe ownership. Derived `frontend:*` and `backend:*` labels
+describe compiler nodes; `runtime:vrt` selects direct and intentional
+compiler-generated VRT coverage. Labels never configure eligibility.
 
 After adding a fixture or changing CMake registration, run `ninja install`
 or `cmake ..` so CMake's configured globs refresh the registry.
@@ -352,8 +360,8 @@ inside a source directory can derive a hidden output name from `.`.
 
 ## Collection Rules and Pitfalls
 
-1. Every `*.cmake` file directly under `testsuite/` must define
-   `TESTSUITE_REGEX` and a callable `TESTSUITE_DEFINE`.
+1. Every collection listed in `testsuite/CMakeLists.txt` must define
+  `TESTSUITE_REGEX` and a callable `TESTSUITE_DEFINE`.
 2. Keep validators and other helper scripts below a component subdirectory.
 3. Node names, dependency names, golden paths, and artifact paths must be
    relative and stable; do not put generator expressions in graph identity.
@@ -363,7 +371,9 @@ inside a source directory can derive a hidden output name from `.`.
 6. Declare `exit_code.txt` in every `GOLDENS` list.
 7. Do not commit `.vbc`, `.ll`, `.bc`, `.o`, executables, or final/pass AST
    files as runner goldens.
-8. Keep LLVM-capable `.vir` sources under `testsuite/vir/`. Use an `llvm_*`
-  fixture for tests that run under both VBCI and native VRT. Reserve `vrt_*`
-  for VRT-specific behavior: these fixtures compile to VBC to validate the
-  shared VIR input, but skip VBCI execution and run only as native programs.
+8. Check that defaults and structural rules give each new fixture the intended
+  stages; use a source group for shared explicit metadata and an exact fixture
+  override for one-off behavior.
+9. Keep compiler integration fixtures under `v/` or `vir/` even when they
+  exercise VRT; use `runtime:vrt` and coverage text to identify that purpose.
+10. Name fixtures by behavior. Do not encode backend eligibility in prefixes.

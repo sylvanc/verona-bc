@@ -76,11 +76,12 @@ supported `.vir` fixtures:
 .vir -> VIRC -> LLVM IR -> native link with VRT -> run
 ```
 
-Fixtures named `llvm_*` run through both paths. In particular,
-`reference` verifies register, field, and array references plus load,
+Backend eligibility and terminal stages are declared in the compiler fixture
+manifest rather than encoded in fixture names. In particular, `reference`
+verifies register, field, and array references plus load,
 store, return, raise, and tailcall integration against VBCI and native VRT.
-Fixtures named `vrt_*` remain native-only when they exercise behavior that
-does not yet have an interpreted adapter.
+Fixtures may compile without running through VBCI when they exercise behavior
+that is intentionally specific to native VRT.
 
 ## Updating This Policy
 
