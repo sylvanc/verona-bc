@@ -1,4 +1,8 @@
 include("${trieste_SOURCE_DIR}/cmake/testsuite.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/fixture_metadata.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/compiler_fixtures.cmake")
+
+verona_validate_compiler_fixtures()
 
 # Compiler collections share the Verona and textual-VIR fixture tree. Explicit
 # ownership prevents one suite from registering another suite's pipelines.
