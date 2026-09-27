@@ -1,5 +1,3 @@
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/should_run.cmake")
-
 set(TESTSUITE_REGEX ".*\\.vir$")
 set(TESTSUITE_DEFINE vir_test_define)
 
@@ -11,15 +9,18 @@ function(vir_test_define test)
   set(compile_node "${test_root}/compile")
   set(run_node "${test_root}/run")
 
+  verona_fixture_metadata("${test}" vbc_stage)
+  if(vbc_stage STREQUAL "none")
+    return()
+  endif()
+
   testsuite_output_path(
     bytecode NODE "${compile_node}" FILE "${test_name}.vbc")
   testsuite_output_path(
     final_ast NODE "${compile_node}" FILE "${test_name}_final.trieste")
 
-  verona_should_register_run(register_run "${test}")
-
   set(artifact_metadata)
-  if(register_run)
+  if(vbc_stage STREQUAL "run")
     set(artifact_metadata ARTIFACTS "${test_name}.vbc")
   endif()
 
@@ -34,7 +35,7 @@ function(vir_test_define test)
       -b "${bytecode}"
       -o "${final_ast}")
 
-  if(register_run)
+  if(vbc_stage STREQUAL "run")
     testsuite_add_test(
       NAME "${run_node}"
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}"

@@ -1,5 +1,3 @@
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/should_run.cmake")
-
 set(TESTSUITE_REGEX ".*\\.v$")
 set(TESTSUITE_DEFINE vc_test_define)
 
@@ -8,6 +6,11 @@ function(vc_test_define test)
   get_filename_component(test_name "${test}" NAME_WE)
   get_filename_component(test_dir_name "${test_dir}" NAME)
   if(NOT test_name STREQUAL test_dir_name)
+    return()
+  endif()
+
+  verona_fixture_metadata("${test}" vbc_stage)
+  if(vbc_stage STREQUAL "none")
     return()
   endif()
 
@@ -20,10 +23,8 @@ function(vc_test_define test)
   testsuite_output_path(
     final_ast NODE "${compile_node}" FILE "${test_name}_final.trieste")
 
-  verona_should_register_run(register_run "${test}")
-
   set(artifact_metadata)
-  if(register_run)
+  if(vbc_stage STREQUAL "run")
     set(artifact_metadata ARTIFACTS "${test_name}.vbc")
   endif()
 
@@ -39,7 +40,7 @@ function(vc_test_define test)
       -b "${bytecode}"
       -o "${final_ast}")
 
-  if(register_run)
+  if(vbc_stage STREQUAL "run")
     testsuite_add_test(
       NAME "${run_node}"
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}"
