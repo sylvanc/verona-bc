@@ -23,7 +23,7 @@ verona_fixture_group(
 		vir/llvm_freeze/llvm_freeze.vir
 		vir/library_merge/library_merge.vir
 		vir/object_alloc/object_alloc.vir
-		vir/llvm_raise/llvm_raise.vir
+		vir/raise/raise.vir
 		vir/reference/reference.vir
 		vir/scalar_ops/scalar_ops.vir
 		vir/singleton_init/singleton_init.vir
