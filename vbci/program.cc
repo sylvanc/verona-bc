@@ -92,30 +92,13 @@ namespace vbci
 
   Register& Program::memo_slot(size_t index)
   {
-    init_memo_slot(index);
     return memo_slots.at(index);
   }
 
   void Program::init_memo_slot(size_t index)
   {
     auto& slot = memo_slots.at(index);
-    if (!slot->is_invalid())
-      return;
-
-    auto& initializing = memo_slot_initializing.at(index);
-    assert(!initializing);
-
-    struct Reset
-    {
-      uint8_t& flag;
-
-      ~Reset()
-      {
-        flag = false;
-      }
-    } reset{initializing};
-
-    initializing = true;
+    assert(slot->is_invalid());
     slot = Thread::run_sync(&functions.at(memo_func_ids.at(index)));
 
     if (slot->is_header())
@@ -173,13 +156,11 @@ namespace vbci
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
 
-    // Pre-size memo slots before initialization so an initializer can safely
-    // load another slot lazily.
+    // Pre-size memo slots so initializers can load earlier slots by index.
     memo_slots.resize(memo_func_ids.size());
-    memo_slot_initializing.assign(memo_func_ids.size(), false);
 
-    // Run memo initializers in declaration order. This includes compiler-
-    // generated FFI startup slots before source once-function slots.
+    // Run memo initializers in declaration order. Any memo loaded by an
+    // initializer must therefore have been declared earlier.
     // This must happen after sched.init() because once functions may create
     // cowns (via `when`), which requires the scheduler's core pool to be
     // initialized for behavior queuing.
@@ -204,7 +185,6 @@ namespace vbci
     // Once values and their reachable object graphs have process lifetime.
     // Clearing the slots is safe because their values have been immortalized.
     memo_slots.clear();
-    memo_slot_initializing.clear();
 
     cleanup_strings();
 

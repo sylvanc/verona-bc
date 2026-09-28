@@ -43,7 +43,6 @@ namespace vbci
 
     std::vector<Dynlib> libs;
     std::vector<Register> memo_slots;
-    std::vector<uint8_t> memo_slot_initializing;
     std::vector<size_t> memo_func_ids;
     std::vector<Symbol> symbols;
 
