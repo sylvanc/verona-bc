@@ -57,6 +57,28 @@ execution to the VRT contracts. The `reference` fixture runs one VIR
 program through both execution backends to detect semantic divergence in the
 interim.
 
+## Logical-Frame Stack Storage
+
+**Current:** Native stack object and array allocation is owned by VRT. Each
+thread context provides stable-address chunk storage, and each logical frame
+records the allocation and finalizer marks needed for normal return, raise
+unwind, thread teardown, and tailcall reuse. Generated LLVM uses the public VRT
+stack allocation entry points; it does not model Verona stack lifetime with
+LLVM `alloca`.
+
+VRT write barriers enforce the stack ownership boundary. Stack storage may
+refer to values owned by the same frame or a surviving ancestor, but stack
+values cannot be stored into regions or into older stack storage. Object,
+array, and reference escape checks apply the same rule to return, raise, and
+tailcall arguments. Cleanup finalizes managed contents before restoring
+allocator marks. See [VRT Threads and
+Frames](../../vrt/docs/threads-and-frames.md) for the runtime lifecycle.
+
+**Migration:** VBCI retains its interpreter-local stack allocation and
+ownership implementation. Shared VIR fixtures cover successful stack access
+and rejected tailcall escape across VBCI and native VRT while the
+representations remain separate.
+
 ## Dependency Rules
 
 - VBCI may depend on public VRT interfaces for migrated subsystems.

@@ -83,6 +83,11 @@ store, return, raise, and tailcall integration against VBCI and native VRT.
 Fixtures may compile without running through VBCI when they exercise behavior
 that is intentionally specific to native VRT.
 
+**Current:** `stack_alloc` checks object, dynamic-array, and constant-array
+stack lowering through both execution backends. `stack_tailcall_escape` checks
+that a current-frame stack value cannot survive native or interpreted tailcall
+frame reuse.
+
 ## Updating This Policy
 
 Update this document when default selection, backend availability, linking, or

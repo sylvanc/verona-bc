@@ -20,7 +20,7 @@ Every object lives in one of three locations:
 
 | Location | Description | Lifetime |
 |----------|-------------|----------|
-| **Stack** | Fast, scoped allocation | Current function call |
+| **Stack** | Fast, scoped allocation | Owning logical frame |
 | **Frame-local region** | Default heap allocation | Until dragged or frame exits |
 | **Heap region** | Explicit region allocation | Until region root becomes unreachable |
 
@@ -36,7 +36,15 @@ You don't need to annotate allocation locations. The rules are simple: `new` goe
 
 ### Stack Allocation
 
-Stack objects are the fastest to allocate and free. They live on the function's stack and are destroyed when the function returns. Stack objects **cannot escape their frame** — returning a stack-allocated value is a runtime error (`bad stack escape`).
+Stack objects and arrays have logical-frame lifetime. They are destroyed when
+their owning frame returns, unwinds after a raise, or is reused for a tailcall.
+The native runtime keeps them in stable-address, runtime-managed storage; they
+do not rely on the native C++ call stack for lifetime management.
+
+A value allocated by the current frame cannot be returned, raised past that
+frame, or passed through tailcall frame reuse. A callee may use, return, or
+raise a stack value owned by a surviving ancestor frame because the owner
+remains active. Violations are reported as `bad stack escape`.
 
 ### Frame-Local Regions
 
@@ -90,7 +98,9 @@ When a frame-local object is placed into a cown (via `when`), it is dragged into
 
 ### What Cannot Be Dragged
 
-- **Stack objects** cannot be dragged into any region. Attempting to store a stack object into a heap field or return it from a function produces a runtime error.
+- **Stack objects** cannot be dragged into any region. They may cross a call or
+  raise boundary only when their owning ancestor frame survives. A
+  current-frame stack value cannot cross return, raise, or tailcall reuse.
 - **Region objects with existing parents** — a region can only have one owner. Attempting to place an already-owned region into another is an error.
 
 ---
@@ -170,8 +180,13 @@ You cannot create `ref[T]` values directly. They are produced only by `ref` meth
 
 A `ref[T]` points into the same region as the object it was obtained from. Using a `ref[T]` within that region is safe. What you **cannot** do:
 
-- **Return a `ref[T]` to a stack variable** — the stack variable is destroyed when the function returns. This is caught at runtime (`bad stack escape`).
-- **Return any stack-allocated value** from a function — runtime error (`bad stack escape`).
+- **Return a `ref[T]` into the current frame's stack storage** — the referenced
+  storage is destroyed when that frame returns. A reference into a surviving
+  ancestor frame remains valid.
+- **Return, raise, or tailcall with a current-frame stack value** — runtime
+  error (`bad stack escape`).
+- **Store a stack value into a region or into older stack storage** — the value
+  could outlive its owning frame. This is caught at runtime (`bad store`).
 - **Return a frame-local value that contains a reference to a stack value** — the contained reference becomes dangling. This is caught at runtime.
 
 The compiler generates code that stores through or loads from references immediately. You should not store a `ref[T]` in a `let` or `var` for later use — the compiler's generated code handles references transiently.
