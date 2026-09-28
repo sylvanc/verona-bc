@@ -81,7 +81,6 @@ namespace vbcc
           else if (node->in(
                      {Convert,
                       Copy,
-                      HeapArrayConst,
                       ArrayRef,
                       Load,
                       Store,
@@ -122,6 +121,11 @@ namespace vbcc
                       Unpin}))
           {
             use(node / Rhs);
+            def(node / LocalId);
+          }
+          else if (node == HeapArrayConst)
+          {
+            use(node / Lhs);
             def(node / LocalId);
           }
           else if (node == Merge)
