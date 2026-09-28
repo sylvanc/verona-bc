@@ -1,6 +1,7 @@
 #pragma once
 
 #include "location.h"
+#include "stack.h"
 #include "thread.h"
 
 #include <csetjmp>
@@ -35,6 +36,7 @@ namespace vrt
   struct ThreadContext
   {
     Thread thread{};
+    Stack stack{};
     Continuation* continuation = nullptr;
     ErrorBoundary* error_boundary = nullptr;
 

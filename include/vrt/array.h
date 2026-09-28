@@ -13,6 +13,9 @@ extern "C"
   /** Allocate a zero-initialized array in the current frame-local region. */
   VRT_EXPORT void* vrt_array_new(uintptr_t type_id, uintptr_t size);
 
+  /** Allocate a zero-initialized array in current logical-frame storage. */
+  VRT_EXPORT void* vrt_array_stack(uintptr_t type_id, uintptr_t size);
+
   /** Allocate an array in the region containing an object data address. */
   VRT_EXPORT void*
   vrt_array_heap(const void* region_locator, uintptr_t type_id, uintptr_t size);

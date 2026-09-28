@@ -17,6 +17,7 @@ add_library(libvrt STATIC
   reference.cc
   region.cc
   region_rc.cc
+  stack.cc
   thread.cc
   value.cc
   writebarrier.cc

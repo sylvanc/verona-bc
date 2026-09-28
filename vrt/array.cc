@@ -2,10 +2,12 @@
 
 #include "error.h"
 #include "failure.h"
+#include "frame.h"
 #include "freeze.h"
 #include "ownership.h"
 #include "program.h"
 #include "region.h"
+#include "thread_context.h"
 #include "value.h"
 #include "writebarrier.h"
 
@@ -257,16 +259,26 @@ namespace vrt
     if (location().is_immortal())
       return;
 
+    const bool release_allocation = !location().is_stack();
     auto* allocation = this->allocation;
     this->magic = 0;
     this->~Array();
-    delete[] allocation;
+    if (release_allocation)
+      delete[] allocation;
   }
 }
 
 extern "C" VRT_EXPORT void* vrt_array_new(uintptr_t type_id, uintptr_t size)
 {
   return vrt::current_frame_region()->array(type_id, size)->elements();
+}
+
+extern "C" VRT_EXPORT void* vrt_array_stack(uintptr_t type_id, uintptr_t size)
+{
+  auto& context = vrt::ThreadContext::get();
+  auto* frame = context.thread.frame;
+  internal_check(frame != nullptr, vrt::Failure::invalid_frame_state);
+  return context.stack.array(frame->frame_id, type_id, size)->elements();
 }
 
 extern "C" VRT_EXPORT void*

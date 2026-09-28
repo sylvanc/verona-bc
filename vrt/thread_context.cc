@@ -201,6 +201,7 @@ namespace vrt
         Failure::invalid_frame_state);
 
       auto* parent = frame->parent;
+      stack.unwind(frame->stack_mark, frame->finalizer_mark);
       destroy_frame_region(frame);
       thread.frame = parent;
       continuation = current_continuation->parent;

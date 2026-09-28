@@ -115,6 +115,10 @@ extern "C"
   VRT_EXPORT void*
   vrt_object_new(const vrt_class* cls, uintptr_t argc, const void* packed_args);
 
+  /** Allocate and initialize an object in current logical-frame storage. */
+  VRT_EXPORT void* vrt_object_stack(
+    const vrt_class* cls, uintptr_t argc, const void* packed_args);
+
   /**
    * Allocate in the region containing region_locator.
    *

@@ -1,7 +1,7 @@
 #include "frame.h"
 
-#include <cstdint>
 #include <csetjmp>
+#include <cstdint>
 #include <vrt/program.h>
 #include <vrt/thread.h>
 
@@ -60,6 +60,8 @@ int main()
 
   const auto child_id = vrt_frame_id(child);
   const auto child_target = child->frame_id.raw();
+  const auto child_stack_mark = child->stack_mark;
+  const auto child_finalizer_mark = child->finalizer_mark;
   if (
     (child_id != child_target) ||
     (vrt_frame_get_raise_target() != child_target) ||
@@ -68,15 +70,15 @@ int main()
     return 7;
 
   auto* const child_region = child->region;
-  child->stack_mark = 4;
-  child->finalizer_mark = 5;
   vrt_frame_reuse(&tail_function);
   if (
     (vrt_thread_current_frame() != child) ||
     (vrt_frame_parent(child) != root) || (vrt_frame_id(child) != child_id) ||
     (vrt_frame_func(child) != &tail_function) ||
-    (child->region != child_region) || (child->stack_mark != 4) ||
-    (child->finalizer_mark != 5) || (child->raise_target != root->frame_id))
+    (child->region != child_region) ||
+    (child->stack_mark != child_stack_mark) ||
+    (child->finalizer_mark != child_finalizer_mark) ||
+    (child->raise_target != root->frame_id))
     return 8;
 
   vrt_frame_leave();
@@ -103,8 +105,7 @@ int main()
 
   uint64_t raised = 0;
   vrt_frame_take_raised_value(scalar_type_id, &raised);
-  if (
-    (vrt_thread_current_frame() != root) || (raised != 42))
+  if ((vrt_thread_current_frame() != root) || (raised != 42))
     return 13;
 
   vrt_frame_reuse(nullptr);

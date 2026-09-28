@@ -198,6 +198,8 @@ static void (*const reference_exchange_signature)(
 static vrt_func_ptr (*const func_entry_signature)(const vrt_func*) =
   vrt_func_entry;
 static void* (*const array_new_signature)(uintptr_t, uintptr_t) = vrt_array_new;
+static void* (*const array_stack_signature)(uintptr_t, uintptr_t) =
+  vrt_array_stack;
 static void* (*const array_heap_signature)(const void*, uintptr_t, uintptr_t) =
   vrt_array_heap;
 static void* (*const array_region_signature)(
@@ -214,6 +216,8 @@ static int64_t (*const array_compare_signature)(
   void*, uintptr_t, void*, uintptr_t, uintptr_t) = vrt_array_compare;
 static void* (*const object_new_signature)(
   const vrt_class*, uintptr_t, const void*) = vrt_object_new;
+static void* (*const object_stack_signature)(
+  const vrt_class*, uintptr_t, const void*) = vrt_object_stack;
 static void* (*const object_heap_signature)(
   const void*, const vrt_class*, uintptr_t, const void*) = vrt_object_heap;
 static void* (*const object_region_signature)(
@@ -266,6 +270,7 @@ void verona_program_entry(void)
   (void)reference_exchange_signature;
   (void)func_entry_signature;
   (void)array_new_signature;
+  (void)array_stack_signature;
   (void)array_heap_signature;
   (void)array_region_signature;
   (void)array_retain_signature;
@@ -276,6 +281,7 @@ void verona_program_entry(void)
   (void)array_fill_signature;
   (void)array_compare_signature;
   (void)object_new_signature;
+  (void)object_stack_signature;
   (void)object_heap_signature;
   (void)object_region_signature;
   (void)object_class_id_signature;

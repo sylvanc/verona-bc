@@ -16,8 +16,7 @@ namespace vrt
     const Class* cls = nullptr;
 
   private:
-    Object(
-      Region* region, const Class* cls, std::byte* allocation, bool immortal);
+    Object(Location location, const Class* cls, std::byte* allocation);
 
   public:
     static constexpr size_t singleton_data_offset()
@@ -36,6 +35,8 @@ namespace vrt
       const Class* cls,
       Region* region,
       bool immortal = false);
+    static Object*
+    create(std::byte* allocation, const Class* cls, Location location);
 
     Object& init(uintptr_t argc, const void* packed_args);
     void finalize();

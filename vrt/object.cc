@@ -127,10 +127,8 @@ namespace vrt
     return method(final_method_id);
   }
 
-  Object::Object(
-    Region* region, const Class* cls, std::byte* allocation, bool immortal)
-  : Header(immortal ? Location::immortal() : Location(region), cls->id),
-    cls(cls)
+  Object::Object(Location location, const Class* cls, std::byte* allocation)
+  : Header(location, cls->id), cls(cls)
   {
     this->allocation = allocation;
   }
@@ -157,13 +155,23 @@ namespace vrt
   Object* Object::create(
     std::byte* allocation, const Class* cls, Region* region, bool immortal)
   {
+    internal_check(
+      !immortal || (region == nullptr), Failure::invalid_object_state);
+    return create(
+      allocation, cls, immortal ? Location::immortal() : Location(region));
+  }
+
+  Object*
+  Object::create(std::byte* allocation, const Class* cls, Location location)
+  {
     (void)size_of(cls);
 
     internal_check(
-      (allocation != nullptr) && (!immortal || (region == nullptr)) &&
-        (immortal ||
-         ((region != nullptr) && !region->destroying &&
-          !region->is_finalizing())),
+      (allocation != nullptr) &&
+        (location.is_stack() || location.is_immortal() ||
+         (location.is_region() && (location.to_region() != nullptr) &&
+          !location.to_region()->destroying &&
+          !location.to_region()->is_finalizing())),
       Failure::invalid_object_state);
 
     const auto alignment =
@@ -179,8 +187,7 @@ namespace vrt
     const auto data_address = (unaligned + (alignment - 1)) & ~(alignment - 1);
     auto* fields = reinterpret_cast<std::byte*>(data_address);
     auto* object_storage = fields - sizeof(Object);
-    auto* object =
-      ::new (object_storage) Object{region, cls, allocation, immortal};
+    auto* object = ::new (object_storage) Object{location, cls, allocation};
     std::memset(fields, 0, cls->data_size);
 
     return object;
@@ -188,9 +195,11 @@ namespace vrt
 
   Object& Object::init(uintptr_t argc, const void* packed_args)
   {
+    const auto object_location = location();
     auto* region = this->region();
     internal_check(
-      !location().is_immortal() && (region != nullptr) && !finalizing,
+      !object_location.is_immortal() &&
+        (object_location.is_stack() || (region != nullptr)) && !finalizing,
       Failure::invalid_object_state);
 
     validate_arguments(cls, argc, packed_args);
@@ -245,10 +254,12 @@ namespace vrt
     if (location().is_immortal())
       return;
 
+    const bool release_allocation = !location().is_stack();
     auto* allocation = this->allocation;
     magic = 0;
     this->~Object();
-    delete[] allocation;
+    if (release_allocation)
+      delete[] allocation;
   }
 }
 
@@ -277,6 +288,20 @@ vrt_object_new(const vrt::Class* cls, uintptr_t argc, const void* packed_args)
   validate_arguments(cls, argc, packed_args);
   return vrt::current_frame_region()
     ->object(cls)
+    ->init(argc, packed_args)
+    .fields();
+}
+
+extern "C" VRT_EXPORT void*
+vrt_object_stack(const vrt::Class* cls, uintptr_t argc, const void* packed_args)
+{
+  validate_arguments(cls, argc, packed_args);
+  internal_check(!is_singleton_class(cls), vrt::Failure::invalid_object_state);
+
+  auto& context = vrt::ThreadContext::get();
+  auto* frame = context.thread.frame;
+  internal_check(frame != nullptr, vrt::Failure::invalid_frame_state);
+  return context.stack.object(frame->frame_id, cls)
     ->init(argc, packed_args)
     .fields();
 }

@@ -31,8 +31,14 @@ extern "C" VRT_EXPORT vrt_frame* vrt_frame_enter(const vrt::Function* func)
     frame_id = parent_id.next_stack_level();
   }
 
-  auto* frame = new (std::nothrow)
-    vrt::Frame{thread.frame, nullptr, 0, 0, func, frame_id, frame_id};
+  auto* frame = new (std::nothrow) vrt::Frame{
+    thread.frame,
+    nullptr,
+    context.stack.mark(),
+    context.stack.finalizer_mark(),
+    func,
+    frame_id,
+    frame_id};
   if (frame == nullptr)
     vrt::fail(vrt::Failure::out_of_memory);
 
@@ -76,11 +82,12 @@ extern "C" VRT_EXPORT void vrt_frame_reuse(const vrt::Function* func)
   internal_check(
     frame->storage_epoch != std::numeric_limits<uintptr_t>::max(),
     vrt::Failure::invalid_frame_state);
+  context.stack.unwind(frame->stack_mark, frame->finalizer_mark);
   frame->storage_epoch++;
 
-  // Compiler-emitted Drop operations perform local register teardown. The
-  // logical frame and its frame-local region survive a tailcall and are
-  // reclaimed only when this frame is left or unwound.
+  // Compiler-emitted Drop operations perform local register teardown. Stack
+  // storage belongs to the outgoing activation, while the logical frame and
+  // its frame-local region survive the tailcall.
   frame->func = func;
 }
 
