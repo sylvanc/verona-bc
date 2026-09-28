@@ -27,7 +27,8 @@ namespace vrt::writebarrier
 
   /**
    * Consume one root-owned encoded value into a field and return the previous
-   * field value with root ownership.
+   * field value with root ownership. A rejected exchange leaves both the field
+   * and outgoing storage unchanged.
    */
   void exchange(
     Location store_location,

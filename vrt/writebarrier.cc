@@ -204,9 +204,7 @@ namespace
     auto* outgoing_region = outgoing->region();
     internal_check(outgoing_region != nullptr, vrt::Failure::invalid_write);
 
-    if (
-      !outgoing_region->is_frame_local() &&
-      !is_frame_storage(store_location))
+    if (!outgoing_region->is_frame_local() && !is_frame_storage(store_location))
       outgoing_region->stack_inc();
 
     if (store_location == outgoing_location)
@@ -224,6 +222,210 @@ namespace
     if (outgoing_region->has_parent())
       outgoing_region->clear_parent();
   }
+
+  enum class WriteKind
+  {
+    init,
+    copy,
+    exchange
+  };
+
+  enum class IncomingAction
+  {
+    direct,
+    drag,
+    frame_storage,
+    same_region,
+    set_parent,
+    reuse_parent
+  };
+
+  struct WritePlan
+  {
+    WriteKind kind;
+    vrt::Location store_location;
+    vrt::Header* incoming;
+    vrt::Header* outgoing;
+    vrt::Location incoming_location;
+    vrt::Region* incoming_region = nullptr;
+    vrt::Region* destination = nullptr;
+    vrt::Region* replaced_child = nullptr;
+    IncomingAction action = IncomingAction::direct;
+    void* outgoing_data = nullptr;
+    bool same_value = false;
+
+    static WritePlan prepare(
+      WriteKind kind,
+      vrt::Location store_location,
+      vrt::Header* incoming,
+      vrt::Header* outgoing)
+    {
+      WritePlan plan{
+        kind, store_location, incoming, outgoing, incoming->location()};
+
+      if (outgoing != nullptr)
+        plan.outgoing_data = outgoing->data();
+
+      if (incoming == outgoing)
+      {
+        plan.same_value = true;
+        return plan;
+      }
+
+      if (
+        plan.incoming_location.is_immortal() ||
+        plan.incoming_location.is_immutable())
+        return plan;
+
+      if (plan.incoming_location.is_stack())
+      {
+        (void)validate_stack_store(store_location, plan.incoming_location);
+        return plan;
+      }
+
+      plan.incoming_region = incoming->region();
+      internal_check(
+        (plan.incoming_region != nullptr) && !plan.incoming_region->destroying,
+        vrt::Failure::invalid_write);
+
+      if (plan.incoming_region->is_frame_local())
+      {
+        plan.destination = store_region(store_location);
+        const bool must_drag = (store_location.is_stack() &&
+                                (store_location.stack_index() <
+                                 plan.incoming_region->frame_depth)) ||
+          (store_location.is_region() &&
+           (!plan.destination->is_frame_local() ||
+            ((plan.destination != plan.incoming_region) &&
+             (plan.destination->frame_depth <
+              plan.incoming_region->frame_depth))));
+
+        if (must_drag)
+        {
+          plan.action = IncomingAction::drag;
+          plan.replaced_child = replaced_child_region(store_location, outgoing);
+        }
+
+        return plan;
+      }
+
+      if (is_frame_storage(store_location))
+      {
+        plan.action = IncomingAction::frame_storage;
+        return plan;
+      }
+
+      plan.destination = store_location.to_region();
+      if (plan.destination == plan.incoming_region)
+      {
+        plan.action = IncomingAction::same_region;
+        return plan;
+      }
+
+      const bool reuse_parent = (kind == WriteKind::exchange) &&
+        (outgoing != nullptr) && (outgoing->region() == plan.incoming_region) &&
+        plan.incoming_region->has_parent() &&
+        (plan.incoming_region->parent == plan.destination);
+
+      if (
+        (!reuse_parent && plan.incoming_region->has_parent()) ||
+        plan.incoming_region->is_ancestor_of(plan.destination))
+      {
+        vrt::raise_error(
+          kind == WriteKind::init ? vrt::Error::bad_alloc_target :
+                                    vrt::Error::bad_store);
+      }
+
+      plan.action = reuse_parent ? IncomingAction::reuse_parent :
+                                   IncomingAction::set_parent;
+      return plan;
+    }
+
+    bool apply_drag()
+    {
+      if (action != IncomingAction::drag)
+        return false;
+
+      const auto root_reference = kind == WriteKind::copy ?
+        vrt::RootReference::retained :
+        vrt::RootReference::transferred;
+      auto result = vrt::drag_allocation(
+        destination,
+        incoming,
+        vrt::DragOptions{root_reference, replaced_child});
+      if (!result)
+        vrt::raise_error(vrt::Error::bad_store);
+
+      return result->replaced_child_reused;
+    }
+
+    void commit_init(void* target)
+    {
+      if (same_value)
+        return;
+
+      (void)apply_drag();
+      if (action == IncomingAction::set_parent)
+        incoming_region->set_parent(destination, incoming);
+
+      store_header(target, incoming);
+      if (
+        (action == IncomingAction::same_region) ||
+        (action == IncomingAction::set_parent))
+      {
+        const bool incoming_region_alive = incoming_region->stack_dec();
+        internal_check(incoming_region_alive, vrt::Failure::invalid_write);
+      }
+    }
+
+    void commit_copy(void* target)
+    {
+      if (same_value)
+        return;
+
+      const bool preserve_outgoing_parent = apply_drag();
+      if (incoming_location.is_immutable() || incoming_location.is_region())
+        vrt::ownership::retain_field(value(incoming));
+
+      if (action == IncomingAction::frame_storage)
+        incoming_region->stack_inc();
+      else if (action == IncomingAction::set_parent)
+        incoming_region->set_parent(destination, incoming);
+
+      store_header(target, incoming);
+      drop_header(store_location, outgoing, preserve_outgoing_parent);
+    }
+
+    void commit_exchange(void* target, void* outgoing_storage)
+    {
+      if (!same_value)
+      {
+        const bool preserve_outgoing_parent =
+          apply_drag() || (action == IncomingAction::reuse_parent);
+
+        if (action == IncomingAction::set_parent)
+          incoming_region->set_parent(destination, incoming);
+
+        if (
+          (action == IncomingAction::same_region) ||
+          (action == IncomingAction::set_parent) ||
+          (action == IncomingAction::reuse_parent))
+        {
+          transfer_outgoing(store_location, outgoing, preserve_outgoing_parent);
+          store_header(target, incoming);
+          const bool incoming_region_alive = incoming_region->stack_dec();
+          internal_check(incoming_region_alive, vrt::Failure::invalid_write);
+        }
+        else
+        {
+          store_header(target, incoming);
+          transfer_outgoing(store_location, outgoing, preserve_outgoing_parent);
+        }
+      }
+
+      std::memcpy(outgoing_storage, &outgoing_data, sizeof(outgoing_data));
+    }
+  };
 }
 
 namespace vrt::writebarrier
@@ -248,73 +450,9 @@ namespace vrt::writebarrier
         (incoming->get_type_id() == field.type_id),
       Failure::invalid_write);
 
-    const auto incoming_location = incoming->location();
-    if (incoming_location.is_immortal() || incoming_location.is_immutable())
-    {
-      store_header(target, incoming);
-      return;
-    }
-
-    if (validate_stack_store(store_location, incoming_location))
-    {
-      store_header(target, incoming);
-      return;
-    }
-
-    auto* incoming_region = incoming->region();
-    internal_check(
-      (incoming_region != nullptr) && !incoming_region->destroying,
-      Failure::invalid_write);
-
-    if (incoming_region->is_frame_local())
-    {
-      auto* destination = store_region(store_location);
-      const bool must_drag =
-        (store_location.is_stack() &&
-         (store_location.stack_index() < incoming_region->frame_depth)) ||
-        (store_location.is_region() &&
-         (!destination->is_frame_local() ||
-          ((destination != incoming_region) &&
-           (destination->frame_depth < incoming_region->frame_depth))));
-
-      if (must_drag && !drag_allocation(destination, incoming))
-        raise_error(Error::bad_store);
-
-      store_header(target, incoming);
-      return;
-    }
-
-    // A reference stored in a frame-local region remains an external root of
-    // the incoming heap region. Moving it out of the argument register and
-    // into the field therefore leaves stack_reference_count unchanged.
-    if (is_frame_storage(store_location))
-    {
-      store_header(target, incoming);
-      return;
-    }
-
-    auto* destination = store_location.to_region();
-    if (destination == incoming_region)
-    {
-      store_header(target, incoming);
-      const bool incoming_region_alive = incoming_region->stack_dec();
-      internal_check(incoming_region_alive, Failure::invalid_write);
-
-      return;
-    }
-
-    if (
-      incoming_region->has_parent() ||
-      incoming_region->is_ancestor_of(destination))
-      raise_error(Error::bad_alloc_target);
-
-    // Establish ownership before consuming the stack reference. A child with
-    // one stack reference is allowed to transition to zero only after it has
-    // a parent.
-    incoming_region->set_parent(destination, incoming);
-    store_header(target, incoming);
-    const bool incoming_region_alive = incoming_region->stack_dec();
-    internal_check(incoming_region_alive, Failure::invalid_write);
+    auto plan =
+      WritePlan::prepare(WriteKind::init, store_location, incoming, nullptr);
+    plan.commit_init(target);
   }
 
   void copy(
@@ -333,103 +471,14 @@ namespace vrt::writebarrier
 
     auto* incoming = load_header(field.value_type, source);
     auto* outgoing = load_header(field.value_type, target);
-    internal_check(incoming != nullptr, Failure::invalid_write);
-
     internal_check(
-      !incoming->finalizing && (incoming->get_type_id() == field.type_id) &&
-        ((incoming->region() != nullptr) ||
-         incoming->location().is_stack() ||
-         incoming->location().is_immutable() ||
-         incoming->location().is_immortal()),
+      (incoming != nullptr) && !incoming->finalizing &&
+        (incoming->get_type_id() == field.type_id),
       Failure::invalid_write);
 
-    if (incoming == outgoing)
-      return;
-
-    if (incoming->location().is_immortal())
-    {
-      store_header(target, incoming);
-      drop_header(store_location, outgoing);
-      return;
-    }
-
-    if (incoming->location().is_immutable())
-    {
-      vrt::ownership::retain_field(value(incoming));
-      store_header(target, incoming);
-      drop_header(store_location, outgoing);
-      return;
-    }
-
-    if (validate_stack_store(store_location, incoming->location()))
-    {
-      store_header(target, incoming);
-      drop_header(store_location, outgoing);
-      return;
-    }
-
-    auto* incoming_region = incoming->region();
-    internal_check(!incoming_region->destroying, Failure::invalid_write);
-
-    if (incoming_region->is_frame_local())
-    {
-      auto* destination = store_region(store_location);
-      const bool must_drag =
-        (store_location.is_stack() &&
-         (store_location.stack_index() < incoming_region->frame_depth)) ||
-        (store_location.is_region() &&
-         (!destination->is_frame_local() ||
-          ((destination != incoming_region) &&
-           (destination->frame_depth < incoming_region->frame_depth))));
-
-      bool preserve_outgoing_parent = false;
-      if (must_drag)
-      {
-        auto result = drag_allocation(
-          destination,
-          incoming,
-          DragOptions{
-            RootReference::retained,
-            replaced_child_region(store_location, outgoing)});
-        if (!result)
-          raise_error(Error::bad_store);
-
-        preserve_outgoing_parent = result->replaced_child_reused;
-      }
-
-      vrt::ownership::retain_field(value(incoming));
-      store_header(target, incoming);
-      drop_header(store_location, outgoing, preserve_outgoing_parent);
-      return;
-    }
-
-    if (is_frame_storage(store_location))
-    {
-      vrt::ownership::retain_field(value(incoming));
-      incoming_region->stack_inc();
-      store_header(target, incoming);
-      drop_header(store_location, outgoing);
-      return;
-    }
-
-    auto* destination = store_location.to_region();
-    if (destination == incoming_region)
-    {
-      vrt::ownership::retain_field(value(incoming));
-      store_header(target, incoming);
-      drop_header(store_location, outgoing);
-      return;
-    }
-
-    if (
-      incoming_region->has_parent() ||
-      incoming_region->is_ancestor_of(destination))
-      raise_error(Error::bad_store);
-
-    vrt::ownership::retain_field(value(incoming));
-    incoming_region->set_parent(destination, incoming);
-    store_header(target, incoming);
-    drop_header(store_location, outgoing);
+    auto plan =
+      WritePlan::prepare(WriteKind::copy, store_location, incoming, outgoing);
+    plan.commit_copy(target);
   }
 
   void exchange(
@@ -456,98 +505,9 @@ namespace vrt::writebarrier
         (incoming->get_type_id() == field.type_id),
       Failure::invalid_write);
 
-    auto* outgoing_data = outgoing == nullptr ? nullptr : outgoing->data();
-    std::memcpy(outgoing_storage, &outgoing_data, sizeof(outgoing_data));
-
-    if (incoming == outgoing)
-      return;
-
-    const auto incoming_location = incoming->location();
-    if (incoming_location.is_immortal() || incoming_location.is_immutable())
-    {
-      store_header(target, incoming);
-      transfer_outgoing(store_location, outgoing);
-      return;
-    }
-
-    if (validate_stack_store(store_location, incoming_location))
-    {
-      store_header(target, incoming);
-      transfer_outgoing(store_location, outgoing);
-      return;
-    }
-
-    auto* incoming_region = incoming->region();
-    internal_check(
-      (incoming_region != nullptr) && !incoming_region->destroying,
-      Failure::invalid_write);
-
-    if (incoming_region->is_frame_local())
-    {
-      auto* destination = store_region(store_location);
-      const bool must_drag =
-        (store_location.is_stack() &&
-         (store_location.stack_index() < incoming_region->frame_depth)) ||
-        (store_location.is_region() &&
-         (!destination->is_frame_local() ||
-          ((destination != incoming_region) &&
-           (destination->frame_depth < incoming_region->frame_depth))));
-
-      bool preserve_outgoing_parent = false;
-      if (must_drag)
-      {
-        auto result = drag_allocation(
-          destination,
-          incoming,
-          DragOptions{
-            RootReference::transferred,
-            replaced_child_region(store_location, outgoing)});
-        if (!result)
-          raise_error(Error::bad_store);
-
-        preserve_outgoing_parent = result->replaced_child_reused;
-      }
-
-      store_header(target, incoming);
-      transfer_outgoing(
-        store_location, outgoing, preserve_outgoing_parent);
-      return;
-    }
-
-    if (is_frame_storage(store_location))
-    {
-      store_header(target, incoming);
-      transfer_outgoing(store_location, outgoing);
-      return;
-    }
-
-    auto* destination = store_location.to_region();
-    if (destination == incoming_region)
-    {
-      transfer_outgoing(store_location, outgoing);
-      store_header(target, incoming);
-      const bool incoming_region_alive = incoming_region->stack_dec();
-      internal_check(incoming_region_alive, Failure::invalid_write);
-      return;
-    }
-
-    const bool reuse_parent =
-      (outgoing != nullptr) && (outgoing->region() == incoming_region) &&
-      incoming_region->has_parent() &&
-      (incoming_region->parent == destination);
-
-    if (
-      (!reuse_parent && incoming_region->has_parent()) ||
-      incoming_region->is_ancestor_of(destination))
-      raise_error(Error::bad_store);
-
-    if (!reuse_parent)
-      incoming_region->set_parent(destination, incoming);
-
-    transfer_outgoing(store_location, outgoing, reuse_parent);
-    store_header(target, incoming);
-    const bool incoming_region_alive = incoming_region->stack_dec();
-    internal_check(incoming_region_alive, Failure::invalid_write);
+    auto plan = WritePlan::prepare(
+      WriteKind::exchange, store_location, incoming, outgoing);
+    plan.commit_exchange(target, outgoing_storage);
   }
 
   void drop(Location store_location, const Field& field, void* source)

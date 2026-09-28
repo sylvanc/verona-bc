@@ -1,7 +1,7 @@
 // Coverage: immutable copy/drop ARC accounting, immutable children during
 // graph drag, child-parent reuse during overwrite, ownership-transferring
 // exchange, rejection of writes to immutable or immortal storage, and
-// conflicting region-parent stores.
+// atomic rejection of conflicting region-parent stores and exchanges.
 // Non-goals: return/raise dragging is covered by the frame and array fixtures;
 // SCC reclamation is covered by the SCC fixture.
 
@@ -56,11 +56,30 @@ namespace
     void* source;
   };
 
+  struct RejectedExchange
+  {
+    vrt::Location location;
+    void* target = nullptr;
+    void* source;
+    void* outgoing;
+  };
+
   void rejected_store(void* raw_context)
   {
     auto* context = static_cast<RejectedStore*>(raw_context);
     vrt::writebarrier::copy(
       context->location, &context->target, node_fields[0], &context->source);
+  }
+
+  void rejected_exchange(void* raw_context)
+  {
+    auto* context = static_cast<RejectedExchange*>(raw_context);
+    vrt::writebarrier::exchange(
+      context->location,
+      &context->target,
+      node_fields[0],
+      &context->source,
+      &context->outgoing);
   }
 }
 
@@ -97,8 +116,7 @@ int main()
     return 4;
 
   // Immutable children are terminal during mutable graph relocation.
-  auto* immutable_destination_region =
-    vrt::Region::create(vrt::RegionType::rc);
+  auto* immutable_destination_region = vrt::Region::create(vrt::RegionType::rc);
   auto* immutable_destination =
     immutable_destination_region->object(&node_class);
   auto* immutable_source = frame_region->object(&node_class);
@@ -221,19 +239,28 @@ int main()
     (child_region->parent != first_parent_region))
     return 10;
 
+  child->root_ref_inc();
+  RejectedExchange conflicting_exchange{
+    second_parent->location(), nullptr, child_data, immutable_data};
+  if (vrt_try_invoke(rejected_exchange, &conflicting_exchange, &error))
+    return 24;
+  if (
+    (error.code != vrt::Error::bad_store) ||
+    (conflicting_exchange.target != nullptr) ||
+    (conflicting_exchange.outgoing != immutable_data) ||
+    (child_region->parent != first_parent_region))
+    return 25;
+  child->root_ref_dec();
+
   second_parent->root_ref_dec();
   first_parent->root_ref_dec();
 
-  auto* exchange_destination_region =
-    vrt::Region::create(vrt::RegionType::rc);
-  auto* exchange_destination =
-    exchange_destination_region->object(&node_class);
+  auto* exchange_destination_region = vrt::Region::create(vrt::RegionType::rc);
+  auto* exchange_destination = exchange_destination_region->object(&node_class);
   auto* exchange_destination_fields =
     static_cast<NodeFields*>(exchange_destination->fields());
-  auto* exchange_outgoing_region =
-    vrt::Region::create(vrt::RegionType::rc);
-  auto* exchange_outgoing =
-    exchange_outgoing_region->object(&node_class);
+  auto* exchange_outgoing_region = vrt::Region::create(vrt::RegionType::rc);
+  auto* exchange_outgoing = exchange_outgoing_region->object(&node_class);
   auto* exchange_outgoing_data = exchange_outgoing->data();
   vrt::writebarrier::init(
     exchange_destination->location(),
@@ -241,10 +268,8 @@ int main()
     node_fields[0],
     &exchange_outgoing_data);
 
-  auto* exchange_incoming_region =
-    vrt::Region::create(vrt::RegionType::rc);
-  auto* exchange_incoming =
-    exchange_incoming_region->object(&node_class);
+  auto* exchange_incoming_region = vrt::Region::create(vrt::RegionType::rc);
+  auto* exchange_incoming = exchange_incoming_region->object(&node_class);
   auto* exchange_incoming_data = exchange_incoming->data();
   void* exchanged_data = nullptr;
   vrt::writebarrier::exchange(
