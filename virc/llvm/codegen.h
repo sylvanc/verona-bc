@@ -101,10 +101,12 @@ namespace virc
       bool emit_convert(const Node& statement);
       bool emit_singleton(const Node& statement);
       bool emit_new(const Node& statement);
+      bool emit_stack(const Node& statement);
       bool emit_heap(const Node& statement);
       bool emit_region(const Node& statement);
       bool emit_new_array(const Node& statement);
       bool emit_new_array_const(const Node& statement);
+      bool emit_stack_array(const Node& statement);
       bool emit_heap_array(const Node& statement);
       bool emit_region_array(const Node& statement);
       bool emit_register_ref(const Node& statement);

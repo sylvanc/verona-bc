@@ -22,7 +22,10 @@ namespace virc
         return {};
 
       if (statement->type().in(
-            {NewArrayConst, HeapArrayConst, RegionArrayConst}))
+        {NewArrayConst,
+         StackArrayConst,
+         HeapArrayConst,
+         RegionArrayConst}))
       {
         std::string error;
         auto size =

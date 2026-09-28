@@ -1,0 +1,58 @@
+// Coverage:
+// - Lowers Stack, StackArray, and StackArrayConst with field and element access.
+//
+// Native VRT coverage:
+// - Allocates object and array storage at the active logical-frame location.
+// - Finalizes and reclaims that storage when @main leaves its logical frame.
+//
+// Non-goals:
+// - Stack escape rejection and finalizer thunks are covered by dedicated tests.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Pair
+  @first: i64
+  @second: i64
+
+func @main(): none
+  $length = const usize 4
+  $dynamic = stack [i64] $length
+  $constant = stack [i64] 4
+
+  $zero = const i64 0
+  $left = const i64 17
+  $right = const i64 29
+  $index = const usize 3
+
+  $dynamic_ref = ref $dynamic $index
+  $constant_ref = ref $constant 3
+  $dynamic_previous = store $dynamic_ref $left
+  $constant_previous = store $constant_ref $right
+  $dynamic_value = load $dynamic_ref
+  $constant_value = load $constant_ref
+
+  $pair = stack @Pair($dynamic_value, $constant_value)
+  $first_ref = ref $pair @first
+  $second_ref = ref $pair @second
+  $first = load $first_ref
+  $second = load $second_ref
+
+  $dynamic_zero = eq $dynamic_previous $zero
+  $constant_zero = eq $constant_previous $zero
+  $first_ok = eq $first $left
+  $second_ok = eq $second $right
+  $zeroed = and $dynamic_zero $constant_zero
+  $values = and $first_ok $second_ok
+  $success = and $zeroed $values
+  cond $success ^pass ^fail
+^pass
+  $code = const i32 0
+  $_exit = ffi @set_exit_code($code)
+  $_none = const none
+  ret $_none
+^fail
+  $code = const i32 1
+  $_exit = ffi @set_exit_code($code)
+  $_none = const none
+  ret $_none

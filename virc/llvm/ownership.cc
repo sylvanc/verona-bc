@@ -251,15 +251,35 @@ namespace virc
     bool LLVMCodegen::emit_validate_tailcall(
       const Node& use, const LoweredValue& value)
     {
-      if (value.type.runtime_type != vrt::ValueType::reference)
-        return true;
-
-      if (
-        (runtime.reference_validate_tailcall == nullptr) ||
-        (value.value == nullptr))
+      llvm::Function* validation_function = nullptr;
+      switch (value.type.runtime_type)
       {
-        fail(use, "reference tailcall validation runtime is unavailable");
+        case vrt::ValueType::object:
+          validation_function = runtime.object_validate_tailcall;
+          break;
+
+        case vrt::ValueType::array:
+          validation_function = runtime.array_validate_tailcall;
+          break;
+
+        case vrt::ValueType::reference:
+          validation_function = runtime.reference_validate_tailcall;
+          break;
+
+        default:
+          return true;
+      }
+
+      if ((validation_function == nullptr) || (value.value == nullptr))
+      {
+        fail(use, "tailcall validation runtime is unavailable");
         return false;
+      }
+
+      if (value.type.runtime_type != vrt::ValueType::reference)
+      {
+        builder.CreateCall(validation_function, {value.value});
+        return true;
       }
 
       auto storage = materialize_value_storage(
@@ -267,7 +287,7 @@ namespace virc
       if (!storage)
         return false;
 
-      builder.CreateCall(runtime.reference_validate_tailcall, {*storage});
+      builder.CreateCall(validation_function, {*storage});
       return true;
     }
   }

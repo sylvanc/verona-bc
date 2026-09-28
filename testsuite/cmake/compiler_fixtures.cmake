@@ -27,6 +27,8 @@ verona_fixture_group(
 		vir/reference/reference.vir
 		vir/scalar_ops/scalar_ops.vir
 		vir/singleton_init/singleton_init.vir
+		vir/stack_alloc/stack_alloc.vir
+		vir/stack_tailcall_escape/stack_tailcall_escape.vir
 		vir/tailcall_raise_frame/tailcall_raise_frame.vir
 		vir/tailcalls/tailcalls.vir
 	LLVM_STAGE run)

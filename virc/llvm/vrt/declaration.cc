@@ -64,6 +64,8 @@ namespace virc
         declare("vrt_thread_current_frame", pointer_type, {});
       runtime.array_new =
         declare("vrt_array_new", pointer_type, {word_type, word_type});
+      runtime.array_stack =
+        declare("vrt_array_stack", pointer_type, {word_type, word_type});
       runtime.array_heap = declare(
         "vrt_array_heap", pointer_type, {pointer_type, word_type, word_type});
       runtime.array_region = declare(
@@ -76,6 +78,8 @@ namespace virc
         declare("vrt_array_freeze", void_type, {pointer_type});
       runtime.array_escape =
         declare("vrt_array_escape", void_type, {pointer_type});
+      runtime.array_validate_tailcall = declare(
+        "vrt_array_validate_tailcall", void_type, {pointer_type});
       runtime.array_copy = declare(
         "vrt_array_copy",
         void_type,
@@ -90,6 +94,10 @@ namespace virc
         {pointer_type, word_type, pointer_type, word_type, word_type});
       runtime.object_new = declare(
         "vrt_object_new",
+        pointer_type,
+        {pointer_type, word_type, pointer_type});
+      runtime.object_stack = declare(
+        "vrt_object_stack",
         pointer_type,
         {pointer_type, word_type, pointer_type});
       runtime.object_heap = declare(
@@ -112,6 +120,8 @@ namespace virc
         declare("vrt_object_freeze", void_type, {pointer_type});
       runtime.object_escape =
         declare("vrt_object_escape", void_type, {pointer_type});
+      runtime.object_validate_tailcall = declare(
+        "vrt_object_validate_tailcall", void_type, {pointer_type});
       runtime.reference_from_register = declare(
         "vrt_reference_from_register",
         void_type,

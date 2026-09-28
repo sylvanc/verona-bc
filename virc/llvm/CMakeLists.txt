@@ -43,6 +43,8 @@ add_library(virc_llvm STATIC
   statements/allocation/region.cc
   statements/allocation/region_array.cc
   statements/allocation/singleton.cc
+  statements/allocation/stack.cc
+  statements/allocation/stack_array.cc
   # Callback statements.
   statements/callbacks/addexternal.cc
   statements/callbacks/removeexternal.cc
