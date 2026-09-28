@@ -1,14 +1,12 @@
 #include "reference.h"
 
 #include "array.h"
-#include "drag.h"
 #include "error.h"
 #include "failure.h"
 #include "frame.h"
 #include "object.h"
 #include "ownership.h"
 #include "program.h"
-#include "region.h"
 #include "thread_context.h"
 #include "value.h"
 #include "writebarrier.h"
@@ -146,20 +144,7 @@ namespace vrt::reference
       return;
     }
 
-    auto* header = owner_header(reference);
-    auto* source = header->region();
-    if ((source == nullptr) || !source->is_frame_local())
-      return;
-
-    auto* destination = frame_region(target);
-    if (
-      (source != destination) &&
-      (source->frame_depth > destination->frame_depth) &&
-      !drag_allocation(
-        destination,
-        header,
-        {.root_reference = RootReference::retained}))
-      raise_error(Error::bad_stack_escape);
+    ThreadContext::get().escape_to(owner_header(reference), target);
   }
 }
 
@@ -278,7 +263,10 @@ vrt_reference_validate_tailcall(const vrt::Reference* reference)
 {
   internal_check(reference != nullptr, vrt::Failure::invalid_value_state);
   if (kind(*reference) != vrt::ReferenceKind::register_slot)
+  {
+    vrt::ownership::validate_tailcall(owner_value(*reference));
     return;
+  }
 
   auto* owner = active_register_frame(*reference);
   if (owner == vrt::ThreadContext::get().thread.frame)

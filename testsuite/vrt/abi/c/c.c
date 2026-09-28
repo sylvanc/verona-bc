@@ -208,6 +208,8 @@ static void (*const array_retain_signature)(void*) = vrt_array_retain;
 static void (*const array_release_signature)(void*) = vrt_array_release;
 static void (*const array_freeze_signature)(void*) = vrt_array_freeze;
 static void (*const array_escape_signature)(void*) = vrt_array_escape;
+static void (*const array_validate_tailcall_signature)(void*) =
+  vrt_array_validate_tailcall;
 static void (*const array_copy_signature)(
   void*, uintptr_t, void*, uintptr_t, uintptr_t) = vrt_array_copy;
 static void (*const array_fill_signature)(
@@ -233,6 +235,8 @@ static void (*const object_retain_signature)(void*) = vrt_object_retain;
 static void (*const object_release_signature)(void*) = vrt_object_release;
 static void (*const object_freeze_signature)(void*) = vrt_object_freeze;
 static void (*const object_escape_signature)(void*) = vrt_object_escape;
+static void (*const object_validate_tailcall_signature)(void*) =
+  vrt_object_validate_tailcall;
 
 void verona_program_entry(void)
 {
@@ -277,6 +281,7 @@ void verona_program_entry(void)
   (void)array_release_signature;
   (void)array_freeze_signature;
   (void)array_escape_signature;
+  (void)array_validate_tailcall_signature;
   (void)array_copy_signature;
   (void)array_fill_signature;
   (void)array_compare_signature;
@@ -290,6 +295,7 @@ void verona_program_entry(void)
   (void)object_release_signature;
   (void)object_freeze_signature;
   (void)object_escape_signature;
+  (void)object_validate_tailcall_signature;
   (void)object_value_type;
   (void)bad_array_index;
 }

@@ -74,6 +74,20 @@ namespace
       (location.is_region() && location.to_region()->is_frame_local());
   }
 
+  bool validate_stack_store(
+    vrt::Location store_location, vrt::Location incoming_location)
+  {
+    if (!incoming_location.is_stack())
+      return false;
+
+    if (
+      !store_location.is_stack() ||
+      (store_location.stack_index() < incoming_location.stack_index()))
+      vrt::raise_error(vrt::Error::bad_store);
+
+    return true;
+  }
+
   vrt::Region*
   replaced_child_region(vrt::Location store_location, vrt::Header* outgoing)
   {
@@ -241,6 +255,12 @@ namespace vrt::writebarrier
       return;
     }
 
+    if (validate_stack_store(store_location, incoming_location))
+    {
+      store_header(target, incoming);
+      return;
+    }
+
     auto* incoming_region = incoming->region();
     internal_check(
       (incoming_region != nullptr) && !incoming_region->destroying,
@@ -318,6 +338,7 @@ namespace vrt::writebarrier
     internal_check(
       !incoming->finalizing && (incoming->get_type_id() == field.type_id) &&
         ((incoming->region() != nullptr) ||
+         incoming->location().is_stack() ||
          incoming->location().is_immutable() ||
          incoming->location().is_immortal()),
       Failure::invalid_write);
@@ -335,6 +356,13 @@ namespace vrt::writebarrier
     if (incoming->location().is_immutable())
     {
       vrt::ownership::retain_field(value(incoming));
+      store_header(target, incoming);
+      drop_header(store_location, outgoing);
+      return;
+    }
+
+    if (validate_stack_store(store_location, incoming->location()))
+    {
       store_header(target, incoming);
       drop_header(store_location, outgoing);
       return;
@@ -436,6 +464,13 @@ namespace vrt::writebarrier
 
     const auto incoming_location = incoming->location();
     if (incoming_location.is_immortal() || incoming_location.is_immutable())
+    {
+      store_header(target, incoming);
+      transfer_outgoing(store_location, outgoing);
+      return;
+    }
+
+    if (validate_stack_store(store_location, incoming_location))
     {
       store_header(target, incoming);
       transfer_outgoing(store_location, outgoing);

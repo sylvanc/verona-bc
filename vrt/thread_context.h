@@ -55,6 +55,9 @@ namespace vrt
     /** Relocate a current-frame allocation so it survives a normal return. */
     void escape(Header* header);
 
+    /** Relocate or validate an allocation so it survives through target. */
+    void escape_to(Header* header, Frame* target);
+
     /** Raise an encoded value through an older active stack Location. */
     [[noreturn]] void
     raise(uintptr_t type_id, const void* value_storage, Location target);

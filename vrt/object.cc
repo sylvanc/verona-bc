@@ -378,3 +378,10 @@ extern "C" VRT_EXPORT void vrt_object_escape(void* data_address)
 {
   vrt::ownership::escape(vrt::Value{vrt::ValueType::object, data_address});
 }
+
+extern "C" VRT_EXPORT void
+vrt_object_validate_tailcall(void* data_address)
+{
+  vrt::ownership::validate_tailcall(
+    vrt::Value{vrt::ValueType::object, data_address});
+}

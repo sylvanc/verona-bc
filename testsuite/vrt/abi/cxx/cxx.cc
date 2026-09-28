@@ -215,6 +215,8 @@ static_assert(std::is_same_v<decltype(&vrt_array_retain), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_release), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_freeze), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_escape), void (*)(void*)>);
+static_assert(
+  std::is_same_v<decltype(&vrt_array_validate_tailcall), void (*)(void*)>);
 static_assert(std::is_same_v<
               decltype(&vrt_array_copy),
               void (*)(void*, uintptr_t, void*, uintptr_t, uintptr_t)>);
@@ -248,6 +250,8 @@ static_assert(std::is_same_v<decltype(&vrt_object_retain), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_release), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_freeze), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_escape), void (*)(void*)>);
+static_assert(
+  std::is_same_v<decltype(&vrt_object_validate_tailcall), void (*)(void*)>);
 
 extern "C" void verona_program_entry(void)
 {

@@ -173,6 +173,9 @@ extern "C"
    */
   VRT_EXPORT void vrt_object_escape(void* data_address);
 
+  /** Reject an object that will be reclaimed by current-frame tailcall reuse. */
+  VRT_EXPORT void vrt_object_validate_tailcall(void* data_address);
+
 #if defined(__cplusplus)
 }
 #endif

@@ -37,6 +37,9 @@ extern "C"
   /** Relocate a current-frame-local array so it can be returned safely. */
   VRT_EXPORT void vrt_array_escape(void* elements);
 
+  /** Reject an array that will be reclaimed by current-frame tailcall reuse. */
+  VRT_EXPORT void vrt_array_validate_tailcall(void* elements);
+
   /** Copy a range of encoded elements between arrays. */
   VRT_EXPORT void vrt_array_copy(
     void* destination_elements,

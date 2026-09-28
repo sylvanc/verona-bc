@@ -60,26 +60,47 @@ namespace vrt
   void ThreadContext::escape(Header* header)
   {
     internal_check(header != nullptr, Failure::invalid_header_state);
+    internal_check(thread.frame != nullptr, Failure::invalid_header_state);
+
+    escape_to(header, thread.frame->parent);
+  }
+
+  void ThreadContext::escape_to(Header* header, Frame* target)
+  {
+    internal_check(header != nullptr, Failure::invalid_header_state);
 
     if (header->location().is_immortal())
       return;
 
     internal_check(thread.frame != nullptr, Failure::invalid_header_state);
 
-    auto* frame = thread.frame;
+    const auto location = header->location();
+    if (location.is_stack())
+    {
+      auto* owner = target;
+      while ((owner != nullptr) && (owner->frame_id != location))
+        owner = owner->parent;
+
+      if (owner == nullptr)
+        raise_error(Error::bad_stack_escape);
+
+      return;
+    }
+
     auto* source = header->region();
     if ((source == nullptr) || !source->is_frame_local())
       return;
 
-    if (frame->region != source)
-      return;
-
-    if (frame->parent != nullptr)
+    if (target != nullptr)
     {
-      if (!drag_allocation(
-        frame_region(frame->parent),
-        header,
-        {.root_reference = RootReference::retained}))
+      auto* destination = frame_region(target);
+      if (
+        (source != destination) &&
+        (source->frame_depth > destination->frame_depth) &&
+        !drag_allocation(
+          destination,
+          header,
+          {.root_reference = RootReference::retained}))
         raise_error(Error::bad_stack_escape);
 
       return;
@@ -136,20 +157,7 @@ namespace vrt
       void* data_address = nullptr;
       std::memcpy(&data_address, value_storage, sizeof(data_address));
       auto* header = Value{layout.value_type, data_address}.header();
-      auto* source = header->region();
-
-      if ((source != nullptr) && source->is_frame_local())
-      {
-        auto* destination = frame_region(target);
-        if (
-          (source != destination) &&
-          (source->frame_depth > destination->frame_depth) &&
-          !drag_allocation(
-            destination,
-            header,
-            {.root_reference = RootReference::retained}))
-          raise_error(Error::bad_stack_escape);
-      }
+      escape_to(header, target);
     }
     else if (layout.value_type == ValueType::reference)
     {

@@ -318,6 +318,12 @@ extern "C" VRT_EXPORT void vrt_array_escape(void* elements)
   vrt::ownership::escape(vrt::Value{vrt::ValueType::array, elements});
 }
 
+extern "C" VRT_EXPORT void vrt_array_validate_tailcall(void* elements)
+{
+  vrt::ownership::validate_tailcall(
+    vrt::Value{vrt::ValueType::array, elements});
+}
+
 extern "C" VRT_EXPORT void vrt_array_copy(
   void* destination_elements,
   uintptr_t destination_offset,
