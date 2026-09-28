@@ -98,27 +98,22 @@ namespace vrt
         (source != destination) &&
         (source->frame_depth > destination->frame_depth) &&
         !drag_allocation(
-          destination,
-          header,
-          {.root_reference = RootReference::retained}))
+          destination, header, {.root_reference = RootReference::retained}))
         raise_error(Error::bad_stack_escape);
 
       return;
     }
 
     auto* destination = Region::create(RegionType::rc);
-        if (!drag_allocation(
-          destination,
-          header,
-          {.root_reference = RootReference::retained}))
+    if (!drag_allocation(
+          destination, header, {.root_reference = RootReference::retained}))
     {
       destroy_region(destination);
       raise_error(Error::bad_stack_escape);
     }
   }
 
-  [[noreturn]] void
-  ThreadContext::raise(
+  [[noreturn]] void ThreadContext::raise(
     uintptr_t type_id, const void* value_storage, Location target_id)
   {
     auto* frame = thread.frame;
@@ -135,9 +130,8 @@ namespace vrt
       raise_error(Error::bad_raise_target);
 
     auto* target_continuation = continuation;
-    while (
-      (target_continuation != nullptr) &&
-      (target_continuation->frame != target))
+    while ((target_continuation != nullptr) &&
+           (target_continuation->frame != target))
       target_continuation = target_continuation->parent;
 
     internal_check(
@@ -170,13 +164,12 @@ namespace vrt
 
     try
     {
-      auto& raised = target_continuation->raised_value.emplace(
-        RaisedValue{type_id, {}});
+      auto& raised =
+        target_continuation->raised_value.emplace(RaisedValue{type_id, {}});
       raised.storage.resize(layout.storage_size);
       if (layout.storage_size != 0)
       {
-        std::memcpy(
-          raised.storage.data(), value_storage, layout.storage_size);
+        std::memcpy(raised.storage.data(), value_storage, layout.storage_size);
       }
     }
     catch (const std::bad_alloc&)
