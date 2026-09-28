@@ -880,6 +880,8 @@ namespace vc
       Node site;
       Node type;
       bool required;
+      Node registrant;
+      Node registration_site;
     };
 
     struct EmptyClassMemo
@@ -3239,7 +3241,7 @@ namespace vc
 
           if (it != local_types.end())
           {
-            if (register_callback_type(it->second))
+            if (register_callback_type(it->second, {}, false, r.id, teardown))
               continue;
           }
 
@@ -3288,7 +3290,7 @@ namespace vc
               if (call_enc)
               {
                 auto class_id = find_or_push(call_enc, std::move(class_subst));
-                register_callback_type(class_id);
+                register_callback_type(class_id, {}, false, r.id, teardown);
               }
 
               break;
@@ -3930,10 +3932,10 @@ namespace vc
       return {};
     }
 
-    // Register @callback on a class.
+    // Register @callback on a class and return its reified apply function.
     // If match_count_out and has_generic_out are provided, they report
     // details about the apply method search.
-    bool ensure_callback_method(
+    Node ensure_callback_method(
       const Node& class_id,
       size_t* match_count_out = nullptr,
       bool* has_generic_out = nullptr)
@@ -3961,7 +3963,7 @@ namespace vc
       }
 
       if (!target_r)
-        return false;
+        return {};
 
       // Ensure the class has been reified (it may have just been
       // added to the worklist by find_or_push and not yet processed).
@@ -4000,7 +4002,7 @@ namespace vc
         *has_generic_out = has_generic;
 
       if (match_count != 1)
-        return false;
+        return {};
 
       // Reify the apply function with the class's substitution context.
       auto funcid = find_or_push(found_func, target_r->subst);
@@ -4025,7 +4027,7 @@ namespace vc
       if (!already)
         methods << (Method << clone(mid_node) << funcid);
 
-      return true;
+      return funcid;
     }
 
     void emit_make_callback_error(
@@ -4048,7 +4050,11 @@ namespace vc
     }
 
     bool register_callback_type(
-      const Node& type, Node site = {}, bool required = false)
+      const Node& type,
+      Node site = {},
+      bool required = false,
+      Node registrant = {},
+      Node registration_site = {})
     {
       auto targets = resolve_callback_targets(type);
 
@@ -4061,7 +4067,12 @@ namespace vc
 
         if (inner && (inner == TypeId))
         {
-          pending_callbacks.push_back({site, clone(type), required});
+          pending_callbacks.push_back(
+            {site,
+             clone(type),
+             required,
+             registrant ? clone(registrant) : Node{},
+             registration_site ? clone(registration_site) : Node{}});
           return true;
         }
 
@@ -4079,13 +4090,19 @@ namespace vc
 
       for (auto& class_id : targets)
       {
-        if (ensure_callback_method(class_id, &match_count, &has_generic))
-          continue;
+        auto funcid =
+          ensure_callback_method(class_id, &match_count, &has_generic);
 
-        if (required && site)
-          emit_make_callback_error(site, match_count, has_generic);
+        if (!funcid)
+        {
+          if (required && site)
+            emit_make_callback_error(site, match_count, has_generic);
 
-        return false;
+          return false;
+        }
+
+        if (registrant)
+          record_call_edge(registrant, funcid, registration_site);
       }
 
       return true;
@@ -4110,7 +4127,12 @@ namespace vc
           else
           {
             remaining.push_back(
-              {pending.site, clone(pending.type), pending.required});
+              {pending.site,
+               clone(pending.type),
+               pending.required,
+               pending.registrant ? clone(pending.registrant) : Node{},
+               pending.registration_site ? clone(pending.registration_site) :
+                                           Node{}});
           }
 
           continue;
@@ -4122,11 +4144,18 @@ namespace vc
 
         for (auto& class_id : targets)
         {
-          if (!ensure_callback_method(class_id, &match_count, &has_generic))
+          auto funcid =
+            ensure_callback_method(class_id, &match_count, &has_generic);
+
+          if (!funcid)
           {
             ok = false;
             break;
           }
+
+          if (pending.registrant)
+            record_call_edge(
+              pending.registrant, funcid, pending.registration_site);
         }
 
         if (ok)

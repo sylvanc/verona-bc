@@ -119,7 +119,12 @@ namespace vc
         {
           auto next_allow_self_cycle = allow_self_cycle;
 
-          if (
+          if (it->second == AtTeardown)
+          {
+            assert(!pending_once.empty());
+            next_allow_self_cycle = true;
+          }
+          else if (
             (it->second == FFI) && !pending_once.empty() &&
             (it->first == pending_once.back().id))
           {
