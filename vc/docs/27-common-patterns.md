@@ -1,6 +1,6 @@
 # 27. Common Patterns
 
-[← Table of Contents](README.md) | [Previous: Gotchas](26-gotchas.md)
+[← Table of Contents](README.md) | [Previous: Gotchas](26-gotchas.md) | [Next: Initialization and Teardown →](28-initialization-and-teardown.md)
 
 This chapter collects idiomatic patterns and recipes for common programming tasks in Verona.
 
