@@ -256,6 +256,10 @@ namespace virc::vbc_backend
         {
           output << uleb(+Op::Drop) << dst(statement);
         }
+        else if (statement == AtTeardown)
+        {
+          output << uleb(+Op::AtTeardown) << dst(statement);
+        }
         else if (statement == Freeze)
         {
           output << uleb(+Op::Freeze) << dst(statement) << src(statement);

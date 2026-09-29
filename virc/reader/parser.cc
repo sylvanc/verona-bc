@@ -72,6 +72,7 @@ namespace virc
         "copy\\b" >> [](auto& m) { m.add(Copy); },
         "move\\b" >> [](auto& m) { m.add(Move); },
         "drop\\b" >> [](auto& m) { m.add(Drop); },
+        "atteardown\\b" >> [](auto& m) { m.add(AtTeardown); },
         "freeze\\b" >> [](auto& m) { m.add(Freeze); },
         "pin\\b" >> [](auto& m) { m.add(Pin); },
         "unpin\\b" >> [](auto& m) { m.add(Unpin); },

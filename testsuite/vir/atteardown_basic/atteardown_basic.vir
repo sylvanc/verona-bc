@@ -1,0 +1,29 @@
+// AtTeardown registers callable objects for reverse-registration execution.
+// Registering exit codes 42 then 7 must run 7 before 42, replacing main's 99.
+// Broken registration leaves 99; FIFO execution leaves 7. Expected exit: 42.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Callback
+  @code: i32
+  @callback @callback_apply
+
+func @callback_apply($self: @Callback): none
+  $code_ref = ref $self @code
+  $code = load $code_ref
+  $_ = ffi @set_exit_code($code)
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $first_code = const i32 42
+  $first = new @Callback($first_code)
+  atteardown $first
+  $second_code = const i32 7
+  $second = new @Callback($second_code)
+  atteardown $second
+  $running = const i32 99
+  $_ = ffi @set_exit_code($running)
+  $_none = const none
+  ret $_none

@@ -77,6 +77,7 @@ namespace vir
   inline const auto Copy = TokenDef("copy");
   inline const auto Move = TokenDef("move");
   inline const auto Drop = TokenDef("drop");
+  inline const auto AtTeardown = TokenDef("atteardown");
   inline const auto Freeze = TokenDef("freeze");
   inline const auto Pin = TokenDef("pin");
   inline const auto Unpin = TokenDef("unpin");
@@ -257,8 +258,8 @@ namespace vir
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     Singleton | New | Stack | Heap | Region | NewArray | NewArrayConst |
     StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
-    RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | Merge |
-    FFIStruct | FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef |
+    RegionArrayConst | Copy | Move | Drop | AtTeardown | Freeze | Pin | Unpin |
+    Merge | FFIStruct | FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn | TryCallDyn |
     FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop | wfNulop |
     Typetest | MakeCallback | CodePtrCallback | FreeCallback | MemoSlot |
@@ -333,6 +334,7 @@ namespace vir
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
+    | (AtTeardown <<= LocalId)
     | (Freeze <<= wfDst * wfSrc)
     | (Pin <<= wfDst * wfSrc)
     | (Unpin <<= wfDst * wfSrc)

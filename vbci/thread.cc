@@ -796,6 +796,8 @@ namespace vbc
         return os << "Move";
       case Op::Drop:
         return os << "Drop";
+      case Op::AtTeardown:
+        return os << "AtTeardown";
       case Op::Freeze:
         return os << "Freeze";
       case Op::Pin:
@@ -1326,6 +1328,40 @@ namespace vbci
       case Op::Drop:
       {
         process([](Register) INLINE {});
+        break;
+      }
+
+      case Op::AtTeardown:
+      {
+        process([](Register callback) INLINE {
+          if (callback->type() == ValueType::None)
+            return;
+
+          auto* apply = callback->method(CallbackMethodId);
+          if (!apply)
+            Value::error(Error::MethodNotFound);
+
+          auto location = callback->location();
+          if (location.is_stack())
+            Value::error(Error::BadStackEscape);
+
+          if (location.is_region() && location.to_region()->is_frame_local())
+          {
+            auto* region = Region::create(RegionType::RegionRC);
+            if (!drag_allocation<false>(region, callback->get_header()))
+            {
+              region->free_region();
+              Value::error(Error::BadStackEscape);
+            }
+          }
+
+          auto* work = verona::rt::Closure::make(
+            [callback = std::move(callback), apply](verona::rt::Work*) mutable {
+              Thread::run_cleanup(apply, callback.borrow());
+              return true;
+            });
+          verona::rt::Scheduler::schedule_at_quiescence(work);
+        });
         break;
       }
 

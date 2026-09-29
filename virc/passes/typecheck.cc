@@ -1276,9 +1276,9 @@ namespace virc
           // Typetest dst is a boolean.
           set_type(env, node / LocalId, Bool);
         }
-        else if (node == Drop)
+        else if (node->in({Drop, AtTeardown}))
         {
-          // Drop removes a register - nothing to check.
+          // These operations consume a register.
         }
         else if (node == Freeze)
         {

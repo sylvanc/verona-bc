@@ -2,7 +2,7 @@
 
 namespace virc
 {
-  const auto Statement = Def / T(Drop, Arg, Source, Offset);
+  const auto Statement = Def / T(Drop, AtTeardown, Arg, Source, Offset);
   const auto Terminator = T(Tailcall, TailcallDyn, Return, Raise, Cond, Jump);
 
   PassDef labels()

@@ -456,6 +456,9 @@ namespace virc
         (T(Drop) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Drop << _(LocalId); },
 
+        (T(AtTeardown) << End) * T(LocalId)[LocalId] >>
+          [](Match& _) { return AtTeardown << _(LocalId); },
+
         Dst * T(Freeze) * T(LocalId)[Rhs] >>
           [](Match& _) { return Freeze << _(LocalId) << _(Rhs); },
 

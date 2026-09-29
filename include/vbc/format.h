@@ -142,6 +142,10 @@ namespace vbc
     // Arg0 = dst.
     Drop,
 
+    // Schedules a callback to run at a future scheduler quiescence.
+    // Arg0 = callback.
+    AtTeardown,
+
     // Freeze the reachable subgraph from the value, making it immutable.
     // Arg0 = dst.
     // Arg1 = src.
