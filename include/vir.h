@@ -195,7 +195,6 @@ namespace vir
   inline const auto Offset = TokenDef("offset");
   inline const auto Symbol = TokenDef("symbol");
   inline const auto Symbols = TokenDef("symbols");
-  inline const auto InitFunc = TokenDef("initfunc");
   inline const auto Vararg = TokenDef("vararg");
   inline const auto Union = TokenDef("union");
   inline const auto TupleType = TokenDef("tupletype");
@@ -288,7 +287,7 @@ namespace vir
     | (Cown <<= (Type >>= wfType))
     | (Union <<= wfType++)
     | (TupleType <<= wfType++[2])
-    | (Lib <<= String * Symbols * (InitFunc >>= FunctionId | None))
+    | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
     | (Symbol <<=
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *

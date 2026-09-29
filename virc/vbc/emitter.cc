@@ -125,16 +125,7 @@ namespace virc
     header << uleb(libraries.size());
 
     for (auto& library : libraries)
-    {
       header << uleb(ST::exec().string(library / String));
-
-      auto init = library / InitFunc;
-        // Zero means no init function; otherwise the value is func_id + 1.
-      if (init->type() == FunctionId)
-        header << uleb(*get_func_id(init) + 1);
-      else
-        header << uleb(0);
-    }
 
     header << uleb(symbols.size());
 

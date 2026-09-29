@@ -896,8 +896,6 @@ namespace vc
     std::vector<Reification*> worklist;
     std::map<Location, Node> libs;
     std::map<std::string, EmptyClassMemo> empty_class_memos;
-    NodeMap<Node> init_sources;
-    std::set<Node> processed_initfini;
     Nodes errors;
     std::vector<MethodInvocation> method_invocations;
     std::map<std::string, std::vector<DynamicCallTarget>> dynamic_call_targets;
@@ -3202,22 +3200,18 @@ namespace vc
       if ((r.def / Lhs) == Once)
         once_funcs.insert(r.id->location());
 
-      // If this is an init function, ensure the return value's class has
-      // @callback registered so the runtime can call it as fini.
-      if (
-        r.def->parent(Symbols) &&
-        ((r.def / Ident)->location().view() == "init"))
+      // Ensure every AtTeardown callback has @callback registered so the
+      // runtime can invoke it.
+      for (auto& l : *labels)
       {
-        // Find the last Return terminator's local.
-        for (auto& l : *labels)
-        {
-          auto term = l / Return;
+        auto body_node = l / Body;
 
-          if (term != Return)
+        for (auto& teardown : *body_node)
+        {
+          if (teardown != AtTeardown)
             continue;
 
-          auto ret_loc = (term / LocalId)->location();
-          auto body_node = l / Body;
+          auto ret_loc = (teardown / LocalId)->location();
 
           // Trace through Copy/Move to find the original source.
           bool changed = true;
@@ -3246,12 +3240,10 @@ namespace vc
           if (it != local_types.end())
           {
             if (register_callback_type(it->second))
-            {
-              break;
-            }
+              continue;
           }
 
-          // Check if the return value comes from a Call (e.g., create).
+          // Check if the callback comes from a Call (e.g., create).
           for (auto& stmt : *body_node)
           {
             if ((stmt == Call) && ((stmt / LocalId)->location() == ret_loc))
@@ -3302,8 +3294,6 @@ namespace vc
               break;
             }
           }
-
-          break;
         }
       }
 
@@ -3940,8 +3930,7 @@ namespace vc
       return {};
     }
 
-    // Core logic for registering @callback on a class. Returns true if
-    // the callback method was successfully registered, false otherwise.
+    // Register @callback on a class.
     // If match_count_out and has_generic_out are provided, they report
     // details about the apply method search.
     bool ensure_callback_method(
@@ -4155,48 +4144,16 @@ namespace vc
       register_callback_type(type, n, true);
     }
 
-    // Reify init functions from a source Lib onto a reified Lib.
-    // Checks for duplicate init across multiple Lib definitions
-    // for the same library (by string name).
-    void
-    reify_initfini(const Node& source_lib, Node& reified_lib, Reification& r)
+    Node find_ffi_initializer(const Node& cls, const Node& lib)
     {
-      // Skip if this source Lib node has already been processed.
-      if (!processed_initfini.insert(source_lib).second)
-        return;
+      auto defs = cls->lookdown(ffi_init_id(lib));
 
-      for (auto& child : *(source_lib / Symbols))
-      {
-        if (child != Function)
-          continue;
+      if (defs.empty())
+        return {};
 
-        auto name = (child / Ident)->location().view();
-
-        if (name != "init")
-          continue;
-
-        auto existing = reified_lib / InitFunc;
-
-        if (existing != None)
-        {
-          // Already has an init — conflict error.
-          auto msg = std::format(
-            "Conflicting 'init' for library \"{}\"",
-            (source_lib / String)->location().view());
-          auto prev = init_sources.at(reified_lib);
-
-          errors.push_back(
-            err(child / Ident, msg)
-            << errmsg("Previous declaration resolved here:")
-            << errloc(prev / Ident));
-          continue;
-        }
-
-        // Reify the init function.
-        auto funcid = find_or_push(child, r.subst);
-        reified_lib->replace(existing, clone(funcid));
-        init_sources[reified_lib] = child;
-      }
+      assert(defs.size() == 1);
+      assert(defs.front() == Function);
+      return defs.front();
     }
 
     void reify_ffi(Node& n, Reification& r)
@@ -4223,6 +4180,14 @@ namespace vc
 
             if ((sym / SymbolId)->location() == sym_name)
             {
+              auto initializer = find_ffi_initializer(parent, child);
+
+              if (initializer)
+              {
+                auto initializer_id = find_or_push(initializer, r.subst);
+                record_call_edge(r.id, initializer_id, n);
+              }
+
               // Found the matching symbol in this Lib.
               // Get or create the reified Lib.
               auto lib_loc = (child / String)->location();
@@ -4231,25 +4196,12 @@ namespace vc
 
               if (find == libs.end())
               {
-                reified_lib = Lib << clone(child / String) << Symbols << None;
+                reified_lib = Lib << clone(child / String) << Symbols;
                 libs[lib_loc] = reified_lib;
               }
               else
               {
                 reified_lib = find->second;
-              }
-
-              // Reify init functions from all Lib definitions for this
-              // library in the enclosing ClassDef.
-              for (auto& lib_child : *(parent / ClassBody))
-              {
-                if (lib_child != Lib)
-                  continue;
-
-                if ((lib_child / String)->location().view() != lib_loc.view())
-                  continue;
-
-                reify_initfini(lib_child, reified_lib, r);
               }
 
               // Reify the types in the symbol.

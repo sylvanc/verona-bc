@@ -6,11 +6,12 @@ use
   init(): any
   {
     var x: i32 = 1;
-    :::printval(x);
+    :::init_printval(x);
     let y: i32 = 3;
     { :::printval(y); }
   }
 
+  init_printval = "printval"(any): none;
   printval = "printval"(any): none;
 }
 

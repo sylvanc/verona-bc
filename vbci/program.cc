@@ -173,33 +173,13 @@ namespace vbci
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
 
-    // Pre-size memo slots before library init so use-block init callbacks can
-    // safely call once-function stubs. A MemoLoad lazily initializes a missing
-    // slot on first use; after init returns, any remaining slots are filled in
-    // the compiler-emitted dependency order below.
+    // Pre-size memo slots before initialization so an initializer can safely
+    // load another slot lazily.
     memo_slots.resize(memo_func_ids.size());
     memo_slot_initializing.assign(memo_func_ids.size(), false);
 
-    // Run library init functions before the eager memo pass. If an init returns
-    // a value with an apply method (@callback), store it as a fini callback to
-    // be called at shutdown.
-    for (auto& init : init_funcs)
-    {
-      if (!init)
-        continue;
-
-      auto result = Thread::run_cleanup(&functions.at(*init));
-
-      if (result->is_invalid())
-        return -1;
-
-      auto* apply = result->method(CallbackMethodId);
-
-      if (apply)
-        fini_callbacks.emplace_back(std::move(result), apply);
-    }
-
-    // Run any remaining memo (once) function initializers in dependency order.
+    // Run memo initializers in declaration order. This includes compiler-
+    // generated FFI startup slots before source once-function slots.
     // This must happen after sched.init() because once functions may create
     // cowns (via `when`), which requires the scheduler's core pool to be
     // initialized for behavior queuing.
@@ -220,12 +200,6 @@ namespace vbci
       if (exit_code == 0)
         exit_code = -1;
     }
-
-    // Run fini callbacks in reverse order (last init = first fini).
-    for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
-      Thread::run_sync(it->second, it->first.borrow());
-
-    fini_callbacks.clear();
 
     // Once values and their reachable object graphs have process lifetime.
     // Clearing the slots is safe because their values have been immortalized.
@@ -833,15 +807,8 @@ namespace vbci
     // FFI information.
     auto num_libs = uleb(pc);
     libs.reserve(num_libs);
-    init_funcs.reserve(num_libs);
     for (size_t i = 0; i < num_libs; i++)
-    {
       libs.emplace_back(strings.at(uleb(pc)));
-
-      auto init_id = uleb(pc);
-      init_funcs.push_back(
-        init_id ? std::optional<size_t>(init_id - 1) : std::nullopt);
-    }
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)

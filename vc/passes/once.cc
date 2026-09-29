@@ -19,6 +19,7 @@ namespace vc
       Phase phase;
       Location id;
       Node site;
+      bool allow_self_cycle;
     };
 
     struct PendingOnce
@@ -33,11 +34,12 @@ namespace vc
     std::vector<Work> work;
 
     for (auto& root : once_funcs)
-      work.push_back({Phase::Pre, root, {}});
+      work.push_back({Phase::Pre, root, {}, false});
 
     while (!work.empty())
     {
-      auto [phase, id, incoming_site] = std::move(work.back());
+      auto [phase, id, incoming_site, allow_self_cycle] =
+        std::move(work.back());
       work.pop_back();
 
       if (phase == Phase::Post)
@@ -64,6 +66,11 @@ namespace vc
       auto pending_it = pending.find(id);
       if (pending_it != pending.end())
       {
+        if (
+          allow_self_cycle && !pending_once.empty() &&
+          (pending_once.back().id == id))
+          continue;
+
         if (
           pending_once.empty() ||
           pending_once.back().depth < pending_it->second)
@@ -98,15 +105,30 @@ namespace vc
       pending.emplace(id, depth);
 
       if (once_funcs.count(id))
+      {
+        allow_self_cycle = false;
         pending_once.push_back({id, depth});
+      }
 
-      work.push_back({Phase::Post, id, incoming_site});
+      work.push_back({Phase::Post, id, incoming_site, allow_self_cycle});
 
       auto calls = call_graph.find(id);
       if (calls != call_graph.end())
       {
         for (auto it = calls->second.rbegin(); it != calls->second.rend(); ++it)
-          work.push_back({Phase::Pre, it->first, it->second});
+        {
+          auto next_allow_self_cycle = allow_self_cycle;
+
+          if (
+            (it->second == FFI) && !pending_once.empty() &&
+            (it->first == pending_once.back().id))
+          {
+            next_allow_self_cycle = true;
+          }
+
+          work.push_back(
+            {Phase::Pre, it->first, it->second, next_allow_self_cycle});
+        }
       }
     }
 
