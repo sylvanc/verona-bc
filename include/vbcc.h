@@ -250,7 +250,7 @@ namespace vbcc
     Cbrt | IsInf | IsNaN | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh |
     Tanh | Asinh | Acosh | Atanh | Bits | Len | MakePtr | Read;
 
-  inline const auto wfConst =
+  inline const auto wfNulop =
     Const_E | Const_Pi | Const_Inf | Const_NaN | AddExternal | RemoveExternal;
 
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
@@ -259,7 +259,7 @@ namespace vbcc
     RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | Merge |
     FFIStruct | FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn | TryCallDyn |
-    FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop | wfConst |
+    FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop | wfNulop |
     Typetest | MakeCallback | CodePtrCallback | FreeCallback | MemoSlot |
     ArrayCopy | ArrayFill | ArrayCompare;
 
