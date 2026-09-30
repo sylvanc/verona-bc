@@ -7,7 +7,7 @@ holder[A]
     new {c = cown w}
   }
 
-  send(self: holder): none
+  send(self: holder[A]): none
   {
     let msg = "hello";
     when self.c w ->

@@ -10,18 +10,9 @@ namespace vc
     auto cls = ident->parent(ClassDef);
     auto func = ident->parent(Function);
     auto cls_path = scope_path(cls);
-    auto cls_ta = fq_typeargs(cls_path, cls / TypeParams);
     auto func_ta = fq_typeargs(scope_path(func), tps);
 
-    Node fn = FuncName;
-
-    for (auto& s : cls_path)
-    {
-      if (s == cls)
-        fn << (NameElement << clone(cls / Ident) << cls_ta);
-      else
-        fn << (NameElement << clone(s / Ident) << TypeArgs);
-    }
+    Node fn = make_fq_name(FuncName, cls_path);
 
     fn << (NameElement << clone(ident) << func_ta);
     return Call << fn << args;

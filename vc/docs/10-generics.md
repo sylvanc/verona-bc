@@ -78,6 +78,23 @@ let w = wrapper[i32](42);
 unwrap(w)                         // T inferred as i32 from w: wrapper[i32]
 ```
 
+Generic types used in declarations must always provide their arguments:
+
+```verona
+consume(value: wrapper): none {}       // Error
+consume[T](value: wrapper[T]): none {} // Explicit and valid
+```
+
+Currently, omitted arguments are inferred only directly on a called class or
+function path. Nested incomplete type arguments are rejected:
+
+```verona
+outer[wrapper]::foo() // Error: write wrapper[T] explicitly
+```
+
+Inferring the omitted argument of `wrapper` recursively from the call context
+is not currently supported.
+
 ### Inference Through Shapes
 
 When a parameter type is a shape, the compiler can infer type arguments by matching the shape's method signatures against the concrete type:
@@ -117,6 +134,51 @@ unwrap_i32(w: wrapper[i32]): i32
 // backward-refines wrap's T to i32
 unwrap_i32(wrap(42))
 ```
+
+### Nested Generic Scopes
+
+Each generic scope in a called function path has its own type arguments.
+References that explicitly name a generic scope follow the normal call-site
+omission rule, even when that scope encloses the reference: omitted arguments
+are inferred. Write the enclosing type parameter explicitly when the reference
+should share it.
+
+```verona
+outer[A]
+{
+  middle[B]
+  {
+    inner[C]
+    {
+      choose(x: B): B
+      {
+        x
+      }
+
+      call(x: B): B
+      {
+        inner[C]::choose(x) // explicitly shares this inner's C
+      }
+    }
+  }
+}
+```
+
+From outside the nested scopes, each level is instantiated explicitly:
+
+```verona
+outer[u64]::middle[i32]::inner[bool]::call(42)
+```
+
+Here `A = u64`, `B = i32`, and `C = bool`. Inside `call`, the reference to
+`choose` retains those same three bindings. Writing `inner::choose(x)` instead
+would make `inner`'s omitted argument inferable independently; it would not
+implicitly mean `inner[C]`.
+
+When the compiler adds enclosing scopes to fully qualify an otherwise
+unqualified reference, those generated path elements carry symbolic references
+to the enclosing type parameters. This preserves lexical bindings without
+changing the meaning of source-written omissions.
 
 See [Type Inference](18-type-inference.md) for full details on how inference works.
 

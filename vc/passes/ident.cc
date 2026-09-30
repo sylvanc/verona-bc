@@ -46,6 +46,8 @@ namespace vc
     Resolver::State& state;
     Node top;
     Node found;
+    Node omitted_generic;
+    Node omitted_generic_def;
 
   public:
     Processor(const Node& n_, NodeWorker<Resolver>& worker_)
@@ -111,16 +113,90 @@ namespace vc
       return Done;
     }
 
+    // Build an empty-TypeArgs definition path for a TypeParam. Unlike
+    // make_fq_name, this identifies the binder itself rather than a generic
+    // scope instantiated with symbolic arguments.
+    static Node make_fq_name_from_typeparam(
+      const Token& name_type, const Node& typeparam)
+    {
+      assert((name_type == TypeName) || (name_type == FuncName));
+      assert(typeparam == TypeParam);
+      Node result = name_type;
+      auto owner = typeparam->parent({Top, ClassDef, TypeAlias, Function});
+
+      for (auto& scope : scope_path(owner))
+        result << (NameElement << clone(scope / Ident) << TypeArgs);
+
+      result << (NameElement << clone(typeparam / Ident) << TypeArgs);
+      return result;
+    }
+
+    void
+    normalize_and_append_resolved_elem(Node& result, Node elem, const Node& def)
+    {
+      auto resolved = clone(elem);
+      auto ta = resolved / TypeArgs;
+      auto tps = def->in({ClassDef, TypeAlias, Function}) ?
+        def / TypeParams :
+        Node{};
+
+      if ((n == TypeName) && tps && !tps->empty())
+      {
+        // TODO: Allow omitted TypeArgs when this TypeName is nested inside
+        // an inference-bearing FuncName once infer can solve nested holes.
+        bool omitted = ta->empty();
+
+        for (auto& arg : *ta)
+        {
+          if ((arg == Type) && arg->front()->in({Unknown, TypeVar}))
+          {
+            omitted = true;
+            break;
+          }
+        }
+
+        if (omitted)
+        {
+          if (!omitted_generic)
+          {
+            omitted_generic = resolved / Ident;
+            omitted_generic_def = def;
+          }
+        }
+      }
+
+      // A Function name denotes an overload set until ANF makes arity and
+      // handedness explicit. Call resolution fills omitted TypeArgs after
+      // selecting the matching definition.
+      if (
+        (def != Function) && ta->empty() && tps && !tps->empty())
+      {
+        resolved->replace(ta, unknown_typeargs(tps));
+      }
+      else if (tps && !tps->empty())
+      {
+        Node normalized = TypeArgs;
+
+        for (auto& arg : *ta)
+        {
+          if ((arg == Type) && (arg->front() == TypeVar))
+            normalized << (Type << Unknown);
+          else
+            normalized << clone(arg);
+        }
+
+        resolved->replace(ta, normalized);
+      }
+
+      result << resolved;
+    }
+
     // Build a fully qualified prefix from Top down to target_scope.
-    // Each scope gets a NameElement with its Ident and empty TypeArgs.
+    // Generic scopes carry symbolic references to their own TypeParams.
     void build_fq_prefix(Node& result, const Node& target_scope)
     {
-      for (auto& s : scope_path(target_scope))
-      {
-        auto scope_ident = s / Ident;
-        result
-          << (NameElement << (Ident ^ scope_ident->location()) << TypeArgs);
-      }
+      result = make_fq_name(
+        (n == FuncName) ? FuncName : TypeName, scope_path(target_scope));
     }
 
     StepResult resolve_first()
@@ -180,7 +256,7 @@ namespace vc
           {
             found = def;
             build_fq_prefix(state.result, curr_scope);
-            state.result << -elem;
+            normalize_and_append_resolved_elem(state.result, elem, found);
             return Continue;
           }
         }
@@ -189,9 +265,10 @@ namespace vc
         {
           assert(def == Use);
 
-          // Don't follow our own Use (self-referential include).
+          // A Use can depend on earlier imports, but not on itself or later
+          // imports. Continuing past it can create circular dependencies.
           if (n->parent() == def)
-            continue;
+            break;
 
           // Wait for the use to be resolved.
           STEP(block_on_children(def));
@@ -219,8 +296,8 @@ namespace vc
           for (auto& child : *use_name)
             state.result << clone(child);
 
-          state.result << -elem;
           found = defs.front();
+          normalize_and_append_resolved_elem(state.result, elem, found);
           return Continue;
         }
 
@@ -260,14 +337,28 @@ namespace vc
 
       if (defs.empty())
       {
-        state.result = err(name, "Identifier not found")
-          << errmsg("Resolving here:") << errloc(found / Ident);
-        return Done;
+        auto scope_defs = found->look(name->location());
+
+        for (auto& def : scope_defs)
+        {
+          if (def == TypeParam)
+          {
+            defs.push_back(def);
+            break;
+          }
+        }
+
+        if (defs.empty())
+        {
+          state.result = err(name, "Identifier not found")
+            << errmsg("Resolving here:") << errloc(found / Ident);
+          return Done;
+        }
       }
 
       // If we have multiple functions, it doesn't matter which one we use.
       found = defs.front();
-      state.result << -elem;
+      normalize_and_append_resolved_elem(state.result, elem, found);
       return Continue;
     }
 
@@ -287,7 +378,19 @@ namespace vc
       }
       else if (n == TypeName)
       {
-        if (found == Function)
+        if (found == TypeParam)
+        {
+          state.result = make_fq_name_from_typeparam(TypeName, found);
+        }
+        else if (omitted_generic)
+        {
+          state.result = err(
+            omitted_generic,
+            "Generic types require explicit type arguments")
+            << errmsg("Resolving here:")
+            << errloc(omitted_generic_def / Ident);
+        }
+        else if (found == Function)
         {
           state.result = err(name, "Can't use a function as a type")
             << errmsg("Resolving here:") << errloc(found / Ident);
@@ -327,12 +430,16 @@ namespace vc
             return Done;
           }
 
-          state.result << (NameElement << (Ident ^ "create") << TypeArgs);
+          auto create =
+            NameElement << (Ident ^ "create") << TypeArgs;
+
+          normalize_and_append_resolved_elem(state.result, create, found);
         }
 
         if (found == TypeParam)
         {
           // Create sugar.
+          state.result = make_fq_name_from_typeparam(FuncName, found);
           state.result << (NameElement << (Ident ^ "create") << TypeArgs);
           return Continue;
         }
@@ -626,6 +733,59 @@ namespace vc
     }
   }
 
+  Node find_lexical_typeparam(const Node& name, const Node& resolved)
+  {
+    auto ident = resolved / Ident;
+    auto scope = name->parent({Top, ClassDef, TypeAlias, Function});
+
+    while (scope)
+    {
+      for (auto& def : scope->look(ident->location()))
+      {
+        if (def->in({ClassDef, TypeAlias, TypeParam}))
+          return def == TypeParam ? def : Node{};
+      }
+
+      scope = scope->parent({Top, ClassDef, TypeAlias, Function});
+    }
+
+    return {};
+  }
+
+  void unqualify_typeparams(Node top)
+  {
+    Nodes refs;
+
+    top->traverse([&](auto node) {
+      auto is_qualified_type = (node == TypeName) && (node->size() > 1);
+      auto is_qualified_func = (node == FuncName) && (node->size() > 2);
+
+      if (is_qualified_type || is_qualified_func)
+      {
+        auto resolved = find_typeparam_def(top, node);
+
+        if (resolved && (find_lexical_typeparam(node, resolved) == resolved))
+          refs.push_back(node);
+      }
+
+      return true;
+    });
+
+    for (auto it = refs.rbegin(); it != refs.rend(); ++it)
+    {
+      auto& ref = *it;
+      auto def = find_typeparam_def(top, ref);
+      Node replacement = (ref == TypeName) ? TypeName : FuncName;
+      replacement
+        << (NameElement << clone(def / Ident) << TypeArgs);
+
+      if (ref == FuncName)
+        replacement << clone(ref->back());
+
+      ref->parent()->replace(ref, replacement);
+    }
+  }
+
   PassDef ident()
   {
     auto nw = std::make_shared<NodeWorker<Resolver>>(Resolver{});
@@ -678,6 +838,7 @@ namespace vc
         return true;
       });
 
+      unqualify_typeparams(top);
       return 0;
     });
 
