@@ -4,6 +4,7 @@
 #include "failure.h"
 #include "frame.h"
 #include "header.h"
+#include "merge.h"
 #include "region_arena.h"
 #include "region_rc.h"
 #include "thread_context.h"
@@ -168,4 +169,14 @@ namespace vrt
     frame->region = nullptr;
     destroy_region(region);
   }
+}
+
+extern "C" VRT_EXPORT void vrt_region_merge(
+  vrt::ValueType left_type,
+  void* left_data,
+  vrt::ValueType right_type,
+  void* right_data)
+{
+  vrt::merge(
+    vrt::Value{left_type, left_data}, vrt::Value{right_type, right_data});
 }

@@ -9,6 +9,7 @@ add_library(libvrt STATIC
   frame.cc
   function.cc
   header.cc
+  merge.cc
   thread_context.cc
   native_main.cc
   object.cc

@@ -238,6 +238,8 @@ static void (*const object_release_signature)(void*) = vrt_object_release;
 static void (*const object_pin_signature)(void*) = vrt_object_pin;
 static void (*const object_unpin_signature)(void*) = vrt_object_unpin;
 static void (*const object_freeze_signature)(void*) = vrt_object_freeze;
+static void (*const region_merge_signature)(
+  vrt_value_type, void*, vrt_value_type, void*) = vrt_region_merge;
 static void (*const object_escape_signature)(void*) = vrt_object_escape;
 static void (*const object_validate_tailcall_signature)(void*) =
   vrt_object_validate_tailcall;
@@ -302,6 +304,7 @@ void verona_program_entry(void)
   (void)object_pin_signature;
   (void)object_unpin_signature;
   (void)object_freeze_signature;
+  (void)region_merge_signature;
   (void)object_escape_signature;
   (void)object_validate_tailcall_signature;
   (void)object_value_type;

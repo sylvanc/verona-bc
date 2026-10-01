@@ -253,6 +253,9 @@ static_assert(std::is_same_v<decltype(&vrt_object_release), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_pin), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_unpin), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_freeze), void (*)(void*)>);
+static_assert(std::is_same_v<
+              decltype(&vrt_region_merge),
+              void (*)(vrt_value_type, void*, vrt_value_type, void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_escape), void (*)(void*)>);
 static_assert(
   std::is_same_v<decltype(&vrt_object_validate_tailcall), void (*)(void*)>);
