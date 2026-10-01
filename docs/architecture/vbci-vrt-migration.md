@@ -79,6 +79,27 @@ ownership implementation. Shared VIR fixtures cover successful stack access
 and rejected tailcall escape across VBCI and native VRT while the
 representations remain separate.
 
+## Collection, Freeze, and Immutable SCCs
+
+**Current:** VRT independently implements native region/header collection,
+finalization, Freeze, and immutable SCC lifetime. Its collector uses explicit
+header and region work records, temporary former-owner guards for detached
+mutable headers, fixed-point finalization, and header-before-region storage
+release. Freeze performs a whole-graph read-only preflight before using
+transient `Pending` state, publishes canonical ARC representatives, accounts
+for region-crossing references, and applies ownership transitions deepest
+first. The detailed native contracts are documented in
+[Collection and Finalization](../../vrt/docs/collection-and-finalization.md)
+and [Freeze and SCCs](../../vrt/docs/freeze-and-sccs.md).
+
+**Migration:** VBCI retains its interpreter-local collector and Freeze
+implementation. VRT does not depend on VBCI headers, interpreter values, or
+program dispatch; it traces through native class metadata. The runtimes may
+therefore use different worklist representations and lifetime guards while
+preserving the same finalize-before-destroy, SCC, reference-accounting, and
+ownership semantics. Sharing or adapting this subsystem requires a later
+readiness review rather than a direct source-level port.
+
 ## Dependency Rules
 
 - VBCI may depend on public VRT interfaces for migrated subsystems.
@@ -92,9 +113,9 @@ representations remain separate.
 ## Candidate Subsystems
 
 Examples still awaiting migration include VBCI reference execution,
-type-layout lookup, object/array operations, regions, freezing, cowns,
-scheduling, and failure reporting. This list is not a migration order. Each
-subsystem needs a separate readiness review using the invariant above.
+type-layout lookup, object/array operations, regions and immutable lifetime,
+cowns, scheduling, and failure reporting. This list is not a migration order.
+Each subsystem needs a separate readiness review using the invariant above.
 
 ## Validation
 
