@@ -206,6 +206,8 @@ static void* (*const array_region_signature)(
   vrt_region_type, uintptr_t, uintptr_t) = vrt_array_region;
 static void (*const array_retain_signature)(void*) = vrt_array_retain;
 static void (*const array_release_signature)(void*) = vrt_array_release;
+static void (*const array_pin_signature)(void*) = vrt_array_pin;
+static void (*const array_unpin_signature)(void*) = vrt_array_unpin;
 static void (*const array_freeze_signature)(void*) = vrt_array_freeze;
 static void (*const array_escape_signature)(void*) = vrt_array_escape;
 static void (*const array_validate_tailcall_signature)(void*) =
@@ -233,6 +235,8 @@ static const vrt_func* (*const object_lookup_signature)(
   const void*, uintptr_t) = vrt_object_lookup;
 static void (*const object_retain_signature)(void*) = vrt_object_retain;
 static void (*const object_release_signature)(void*) = vrt_object_release;
+static void (*const object_pin_signature)(void*) = vrt_object_pin;
+static void (*const object_unpin_signature)(void*) = vrt_object_unpin;
 static void (*const object_freeze_signature)(void*) = vrt_object_freeze;
 static void (*const object_escape_signature)(void*) = vrt_object_escape;
 static void (*const object_validate_tailcall_signature)(void*) =
@@ -279,6 +283,8 @@ void verona_program_entry(void)
   (void)array_region_signature;
   (void)array_retain_signature;
   (void)array_release_signature;
+  (void)array_pin_signature;
+  (void)array_unpin_signature;
   (void)array_freeze_signature;
   (void)array_escape_signature;
   (void)array_validate_tailcall_signature;
@@ -293,6 +299,8 @@ void verona_program_entry(void)
   (void)object_lookup_signature;
   (void)object_retain_signature;
   (void)object_release_signature;
+  (void)object_pin_signature;
+  (void)object_unpin_signature;
   (void)object_freeze_signature;
   (void)object_escape_signature;
   (void)object_validate_tailcall_signature;

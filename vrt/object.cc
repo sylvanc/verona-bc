@@ -367,6 +367,16 @@ extern "C" VRT_EXPORT void vrt_object_release(void* data_address)
     vrt::Value{vrt::ValueType::object, data_address});
 }
 
+extern "C" VRT_EXPORT void vrt_object_pin(void* data_address)
+{
+  vrt::ownership::pin(vrt::Value{vrt::ValueType::object, data_address});
+}
+
+extern "C" VRT_EXPORT void vrt_object_unpin(void* data_address)
+{
+  vrt::ownership::unpin(vrt::Value{vrt::ValueType::object, data_address});
+}
+
 extern "C" VRT_EXPORT void vrt_object_freeze(void* data_address)
 {
   auto* header = vrt::Value{vrt::ValueType::object, data_address}.header();

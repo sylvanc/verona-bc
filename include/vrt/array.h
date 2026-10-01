@@ -31,6 +31,18 @@ extern "C"
    */
   VRT_EXPORT void vrt_array_release(void* elements);
 
+  /**
+   * Add one external pin reference to an array element-storage pointer.
+   *
+   * Frame-local graphs are first relocated to a fresh RC region. Stack arrays
+   * cannot be pinned. Every successful pin must be balanced by one call to
+   * vrt_array_unpin.
+   */
+  VRT_EXPORT void vrt_array_pin(void* elements);
+
+  /** Consume one external pin reference to an array element-storage pointer. */
+  VRT_EXPORT void vrt_array_unpin(void* elements);
+
   /** Make the graph reachable from an array deeply immutable. */
   VRT_EXPORT void vrt_array_freeze(void* elements);
 

@@ -213,6 +213,8 @@ static_assert(std::is_same_v<
               void* (*)(vrt::RegionType, std::uintptr_t, std::uintptr_t)>);
 static_assert(std::is_same_v<decltype(&vrt_array_retain), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_release), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_array_pin), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_array_unpin), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_freeze), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_array_escape), void (*)(void*)>);
 static_assert(
@@ -248,6 +250,8 @@ static_assert(std::is_same_v<
               const vrt_func* (*)(const void*, std::uintptr_t)>);
 static_assert(std::is_same_v<decltype(&vrt_object_retain), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_release), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_object_pin), void (*)(void*)>);
+static_assert(std::is_same_v<decltype(&vrt_object_unpin), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_freeze), void (*)(void*)>);
 static_assert(std::is_same_v<decltype(&vrt_object_escape), void (*)(void*)>);
 static_assert(

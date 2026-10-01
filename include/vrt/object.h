@@ -162,6 +162,18 @@ extern "C"
   /** Consume one owning root reference to an object data address. */
   VRT_EXPORT void vrt_object_release(void* data_address);
 
+  /**
+   * Add one external pin reference to an object data address.
+   *
+   * Frame-local graphs are first relocated to a fresh RC region. Stack
+   * objects cannot be pinned. Every successful pin must be balanced by one
+   * call to vrt_object_unpin.
+   */
+  VRT_EXPORT void vrt_object_pin(void* data_address);
+
+  /** Consume one external pin reference to an object data address. */
+  VRT_EXPORT void vrt_object_unpin(void* data_address);
+
   /** Make the graph reachable from an object deeply immutable. */
   VRT_EXPORT void vrt_object_freeze(void* data_address);
 

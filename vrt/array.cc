@@ -306,6 +306,16 @@ extern "C" VRT_EXPORT void vrt_array_release(void* elements)
   vrt::ownership::release_root(vrt::Value{vrt::ValueType::array, elements});
 }
 
+extern "C" VRT_EXPORT void vrt_array_pin(void* elements)
+{
+  vrt::ownership::pin(vrt::Value{vrt::ValueType::array, elements});
+}
+
+extern "C" VRT_EXPORT void vrt_array_unpin(void* elements)
+{
+  vrt::ownership::unpin(vrt::Value{vrt::ValueType::array, elements});
+}
+
 extern "C" VRT_EXPORT void vrt_array_freeze(void* elements)
 {
   auto* header = vrt::Value{vrt::ValueType::array, elements}.header();
