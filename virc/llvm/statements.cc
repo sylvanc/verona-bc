@@ -53,6 +53,9 @@ namespace virc
       if (statement == Freeze)
         return emit_freeze(statement);
 
+      if (statement->type().in({Pin, Unpin}))
+        return emit_pin(statement);
+
       if (statement == GetRaise)
         return emit_get_raise(statement);
 

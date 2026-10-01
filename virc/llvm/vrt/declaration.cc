@@ -74,6 +74,10 @@ namespace virc
         declare("vrt_array_retain", void_type, {pointer_type});
       runtime.array_release =
         declare("vrt_array_release", void_type, {pointer_type});
+      runtime.array_pin =
+        declare("vrt_array_pin", void_type, {pointer_type});
+      runtime.array_unpin =
+        declare("vrt_array_unpin", void_type, {pointer_type});
       runtime.array_freeze =
         declare("vrt_array_freeze", void_type, {pointer_type});
       runtime.array_escape =
@@ -116,6 +120,10 @@ namespace virc
         declare("vrt_object_retain", void_type, {pointer_type});
       runtime.object_release =
         declare("vrt_object_release", void_type, {pointer_type});
+      runtime.object_pin =
+        declare("vrt_object_pin", void_type, {pointer_type});
+      runtime.object_unpin =
+        declare("vrt_object_unpin", void_type, {pointer_type});
       runtime.object_freeze =
         declare("vrt_object_freeze", void_type, {pointer_type});
       runtime.object_escape =

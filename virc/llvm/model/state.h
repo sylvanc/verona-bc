@@ -61,6 +61,8 @@ namespace virc
       llvm::Function* array_region = nullptr;
       llvm::Function* array_retain = nullptr;
       llvm::Function* array_release = nullptr;
+      llvm::Function* array_pin = nullptr;
+      llvm::Function* array_unpin = nullptr;
       llvm::Function* array_freeze = nullptr;
       llvm::Function* array_escape = nullptr;
       llvm::Function* array_validate_tailcall = nullptr;
@@ -74,6 +76,8 @@ namespace virc
       llvm::Function* object_class_id = nullptr;
       llvm::Function* object_retain = nullptr;
       llvm::Function* object_release = nullptr;
+      llvm::Function* object_pin = nullptr;
+      llvm::Function* object_unpin = nullptr;
       llvm::Function* object_freeze = nullptr;
       llvm::Function* object_escape = nullptr;
       llvm::Function* object_validate_tailcall = nullptr;

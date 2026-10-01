@@ -118,6 +118,7 @@ namespace virc
       bool emit_copy(const Node& statement);
       bool emit_move(const Node& statement);
       bool emit_freeze(const Node& statement);
+      bool emit_pin(const Node& statement);
       bool emit_drop(const Node& statement);
       bool emit_lookup(const Node& statement);
       bool emit_call(const Node& statement);

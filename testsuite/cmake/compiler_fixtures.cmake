@@ -23,6 +23,7 @@ verona_fixture_group(
 		vir/freeze_ownership/freeze_ownership.vir
 		vir/library_merge/library_merge.vir
 		vir/object_alloc/object_alloc.vir
+		vir/pin_unpin/pin_unpin.vir
 		vir/raise/raise.vir
 		vir/reference/reference.vir
 		vir/scalar_ops/scalar_ops.vir
