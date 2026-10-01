@@ -8,97 +8,91 @@
 #include <deque>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace vrt
 {
   namespace
   {
-    enum class WorkType
-    {
-      header,
-      region
-    };
-
-    struct WorkItem
-    {
-      WorkType type;
-      void* value;
-      Region* owner;
-    };
-
-    struct HeaderRelease
+    struct HeaderWork
     {
       Header* header;
-      Region* owner;
+      Region* owner_guard;
     };
+
+    struct RegionWork
+    {
+      Region* region;
+    };
+
+    using WorkItem = std::variant<HeaderWork, RegionWork>;
 
     struct CollectorState
     {
-      std::deque<WorkItem> work;
-      std::vector<HeaderRelease> headers;
-      std::vector<Region*> regions;
+      std::deque<WorkItem> pending_work;
+
+      // Finalized work waits here until pending_work is empty, preserving the
+      // finalize-before-reclaim phase boundary.
+      std::vector<HeaderWork> pending_header_releases;
+      std::vector<RegionWork> pending_region_releases;
       bool draining = false;
     };
 
-    thread_local CollectorState state;
+    thread_local CollectorState collector_state;
 
     void drain()
     {
-      internal_check(!state.draining, Failure::invalid_header_state);
-      state.draining = true;
+      internal_check(
+        !collector_state.draining, Failure::invalid_header_state);
+      collector_state.draining = true;
 
       while (true)
       {
-        while (!state.work.empty())
+        while (!collector_state.pending_work.empty())
         {
-          const auto item = state.work.front();
-          state.work.pop_front();
+          auto item = std::move(collector_state.pending_work.front());
+          collector_state.pending_work.pop_front();
 
-          switch (item.type)
+          if (auto* header = std::get_if<HeaderWork>(&item))
           {
-            case WorkType::header:
-            {
-              auto* header = static_cast<Header*>(item.value);
-              header->finalize();
-              state.headers.push_back({header, item.owner});
-              break;
-            }
-
-            case WorkType::region:
-            {
-              auto* region = static_cast<Region*>(item.value);
-              region->finalize_contents();
-              state.regions.push_back(region);
-              break;
-            }
+            header->header->finalize();
+            collector_state.pending_header_releases.push_back(*header);
+          }
+          else
+          {
+            const auto region = std::get<RegionWork>(item);
+            region.region->finalize_contents();
+            collector_state.pending_region_releases.push_back(region);
           }
         }
 
-        auto headers = std::move(state.headers);
-        state.headers.clear();
-        for (const auto& release : headers)
+        auto header_releases =
+          std::move(collector_state.pending_header_releases);
+        collector_state.pending_header_releases.clear();
+        for (const auto& header_release : header_releases)
         {
-          release.header->destroy_storage();
-          if (release.owner != nullptr)
-            release.owner->stack_dec();
+          header_release.header->destroy_storage();
+          if (header_release.owner_guard != nullptr)
+            header_release.owner_guard->stack_dec();
         }
 
-        auto regions = std::move(state.regions);
-        state.regions.clear();
-        for (auto* region : regions)
-          region->release_dead_objects();
+        auto region_releases =
+          std::move(collector_state.pending_region_releases);
+        collector_state.pending_region_releases.clear();
+        for (const auto& region_release : region_releases)
+          region_release.region->release_dead_objects();
 
-        if (state.work.empty())
+        if (collector_state.pending_work.empty())
           break;
       }
 
-      state.draining = false;
+      collector_state.draining = false;
     }
 
     void start_drain()
     {
-      if (!state.draining)
+      if (!collector_state.draining)
         drain();
     }
   }
@@ -123,7 +117,7 @@ namespace vrt
       return;
     }
 
-    state.work.push_back({WorkType::header, header, region});
+    collector_state.pending_work.emplace_back(HeaderWork{header, region});
     start_drain();
   }
 
@@ -138,7 +132,7 @@ namespace vrt
     const bool began_finalizing = region->begin_finalizing();
     internal_check(began_finalizing, Failure::invalid_region_state);
 
-    state.work.push_back({WorkType::region, region, nullptr});
+    collector_state.pending_work.emplace_back(RegionWork{region});
     start_drain();
   }
 
@@ -173,7 +167,7 @@ namespace vrt
     }
 
     for (auto* member : members)
-      state.work.push_back({WorkType::header, member, nullptr});
+      collector_state.pending_work.emplace_back(HeaderWork{member, nullptr});
 
     start_drain();
   }
