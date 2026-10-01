@@ -50,12 +50,21 @@ VRT ABI. Reference construction and exchange therefore consume already-owned
 inputs. VRT alone implements owner lifetime, frame validation, load ownership,
 and region-aware exchange.
 
+Native object and array pinning also uses root obligations: successful pin adds
+one obligation and unpin consumes one. Frame-local pinning relocates the graph
+to an RC region first; stack allocation pinning is rejected. Native mutable
+region merge is a preflighted transaction that unifies object/array RC regions,
+reparents direct child regions, and leaves both graphs unchanged when ownership
+or ancestry makes the merge invalid. The detailed contract is documented in
+[Regions and Ownership](../../vrt/docs/regions-and-ownership.md).
+
 **Migration:** VBCI retains its interpreter-local `Register`, `Value`, and
 write-barrier implementation. Equivalent VBCI operations remain the
 compatibility behavior until a later subsystem migration adapts bytecode
-execution to the VRT contracts. The `reference` fixture runs one VIR
-program through both execution backends to detect semantic divergence in the
-interim.
+execution to the VRT contracts. Shared `reference`, `pin_unpin`, and `merge`
+fixtures run VIR programs through both execution backends to detect semantic
+divergence in the interim. VRT cown pin and merge remain unsupported until VRT
+owns a cown subsystem.
 
 ## Logical-Frame Stack Storage
 

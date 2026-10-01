@@ -5,9 +5,10 @@ entries, singleton storage, and optional finalizer metadata. Object allocation
 entry points create logical-frame stack values, create frame-local values,
 allocate into an existing region, or create a new RC or arena region.
 
-Arrays expose equivalent allocation, retain, release, freeze, and escape
-operations plus checked copy, fill, and lexicographic comparison over encoded
-elements.
+Arrays expose equivalent allocation, retain, release, pin, unpin, freeze, and
+escape operations plus checked copy, fill, and lexicographic comparison over
+encoded elements. Pinning and mutable region merge are documented in
+[Regions and Ownership](regions-and-ownership.md).
 
 Stack objects and arrays use the active frame's stack `Location`, but their
 headers and zero-initialized data live in VRT-managed chunk storage rather than
