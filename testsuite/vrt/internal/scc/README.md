@@ -12,18 +12,20 @@ can be tested without coupling failures to Tarjan traversal.
 - Non-representative members forward retain and release operations to the
   canonical representative.
 - Two-object, self-cyclic, and three-object components are reclaimed as whole
-  units when their representative ARC reaches zero.
+  units when their representative ARC reaches zero, including finalization and
+  outgoing-edge release from non-representative members.
 - Collecting one immutable component decrements an outgoing edge to another
   component without prematurely collecting the target.
-- Concurrent retainers increase one representative ARC, after which concurrent
-  releasers produce exactly one transition to zero and one collection.
+- Concurrent retainers through both representative and non-representative
+  members increase one representative ARC, after which concurrent releasers
+  produce exactly one transition to zero and one collection.
 - Outgoing mutable edges are dropped exactly once during component collection.
 
 ## Runtime Boundary
 
 The fixture covers `SccPtr` representative lookup, atomic ARC increments and
-decrements, the collection-claim guard, and two-phase reclamation of every SCC
-member.
+decrements, the collection-claim guard, member finalization, and two-phase
+reclamation of every SCC member.
 
 ## Non-Goals
 

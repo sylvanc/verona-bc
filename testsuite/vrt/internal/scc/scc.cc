@@ -21,6 +21,8 @@ namespace
   constexpr uintptr_t node_class_id = 0x101;
   constexpr uintptr_t value_class_id = 0x102;
 
+  const vrt::Function finalizer_function{2, "Node.final", nullptr};
+
   struct NodeFields
   {
     void* next;
@@ -31,6 +33,24 @@ namespace
   {
     uint64_t value;
   };
+
+  std::atomic<uintptr_t> finalizer_calls{0};
+
+  void finalizer_thunk(void* data_address)
+  {
+    vrt_frame_enter(&finalizer_function);
+    auto* fields = static_cast<NodeFields*>(data_address);
+    if (fields->next != nullptr)
+    {
+      auto* sibling =
+        vrt::Header::from_data(vrt::ValueType::object, fields->next);
+      if (sibling->magic != vrt::Header::magic_value)
+        std::abort();
+    }
+
+    finalizer_calls.fetch_add(1, std::memory_order_relaxed);
+    vrt_frame_leave();
+  }
 
   const vrt::Field node_fields[] = {
     {offsetof(NodeFields, next),
@@ -57,7 +77,8 @@ namespace
     node_fields,
     0,
     nullptr,
-    nullptr};
+    nullptr,
+    &finalizer_thunk};
 
   const vrt::Class value_class{
     value_class_id,
@@ -141,7 +162,7 @@ int main()
   auto* pair_b = new_node(pair_region);
   set_next(pair_a, pair_b);
   set_next(pair_b, pair_a);
-  set_outgoing(pair_a, first_target);
+  set_outgoing(pair_b, first_target);
   publish_scc(pair_region, pair_a, {pair_a, pair_b}, 2);
   if (
     (pair_a->location() != vrt::Location::immutable()) ||
@@ -154,7 +175,9 @@ int main()
     return 2;
 
   pair_a->root_ref_dec();
-  if (first_target->get_rc() != 1)
+  if (
+    (first_target->get_rc() != 1) ||
+    (finalizer_calls.load(std::memory_order_relaxed) != 2))
     return 3;
   first_target->root_ref_dec();
 
@@ -203,15 +226,19 @@ int main()
     return 7;
   chained_target->root_ref_dec();
 
-  // Concurrent retainers race on ARC before all references are released.
-  // Only the one-to-zero releasing thread may collect and drop the outgoing
-  // edge.
+  // Concurrent retainers race through both a representative and an SCC_PTR
+  // member. Only the one-to-zero releasing thread may collect both members and
+  // drop the non-representative member's outgoing edge.
   auto* concurrent_target = new_target(frame_region, 40);
   auto* concurrent_region = vrt::Region::create(vrt::RegionType::rc);
-  auto* concurrent = new_node(concurrent_region);
-  set_outgoing(concurrent, concurrent_target);
+  auto* concurrent_a = new_node(concurrent_region);
+  auto* concurrent_b = new_node(concurrent_region);
+  set_next(concurrent_a, concurrent_b);
+  set_next(concurrent_b, concurrent_a);
+  set_outgoing(concurrent_b, concurrent_target);
   constexpr vrt::RC concurrent_references = 8;
-  publish_scc(concurrent_region, concurrent, {concurrent}, 1);
+  publish_scc(
+    concurrent_region, concurrent_a, {concurrent_a, concurrent_b}, 1);
 
   std::vector<std::thread> threads;
   threads.reserve(concurrent_references);
@@ -219,11 +246,11 @@ int main()
   std::atomic<bool> start{false};
   for (vrt::RC index = 1; index < concurrent_references; index++)
   {
-    threads.emplace_back([&]() {
+    threads.emplace_back([&, index]() {
       ready.fetch_add(1, std::memory_order_relaxed);
       while (!start.load(std::memory_order_acquire))
         std::this_thread::yield();
-      concurrent->root_ref_inc();
+      (index % 2 == 0 ? concurrent_a : concurrent_b)->root_ref_inc();
     });
   }
 
@@ -234,19 +261,23 @@ int main()
   for (auto& thread : threads)
     thread.join();
 
-  if (concurrent->get_arc() != concurrent_references)
+  if (concurrent_a->get_arc() != concurrent_references)
     return 8;
 
+  const auto calls_before_concurrent =
+    finalizer_calls.load(std::memory_order_relaxed);
   threads.clear();
   ready.store(0, std::memory_order_relaxed);
   start.store(false, std::memory_order_relaxed);
   for (vrt::RC index = 0; index < concurrent_references; index++)
   {
-    threads.emplace_back([&]() {
+    threads.emplace_back([&, index]() {
+      vrt::init_thread();
       ready.fetch_add(1, std::memory_order_relaxed);
       while (!start.load(std::memory_order_acquire))
         std::this_thread::yield();
-      concurrent->root_ref_dec();
+      (index % 2 == 0 ? concurrent_a : concurrent_b)->root_ref_dec();
+      vrt::deinit_thread();
     });
   }
 
@@ -257,7 +288,10 @@ int main()
   for (auto& thread : threads)
     thread.join();
 
-  if (concurrent_target->get_rc() != 1)
+  if (
+    (concurrent_target->get_rc() != 1) ||
+    (finalizer_calls.load(std::memory_order_relaxed) !=
+     calls_before_concurrent + 2))
     return 9;
   concurrent_target->root_ref_dec();
 

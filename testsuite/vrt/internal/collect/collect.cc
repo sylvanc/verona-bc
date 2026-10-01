@@ -18,6 +18,8 @@ namespace
   constexpr uintptr_t value_class_id = 0x101;
   constexpr uintptr_t holder_class_id = 0x102;
 
+  const vrt::Function finalizer_function{2, "Holder.final", nullptr};
+
   struct ValueFields
   {
     uint64_t value;
@@ -28,6 +30,31 @@ namespace
     void* value;
     uint64_t tag;
   };
+
+  vrt::Region* expected_owner = nullptr;
+  vrt::Header* expected_header = nullptr;
+  vrt::Header* duplicate_header = nullptr;
+  bool owner_guard_observed = false;
+
+  void holder_finalizer_thunk(void* data_address)
+  {
+    vrt_frame_enter(&finalizer_function);
+
+    auto* header =
+      vrt::Header::from_data(vrt::ValueType::object, data_address);
+    if (expected_owner != nullptr)
+    {
+      owner_guard_observed =
+        (header == expected_header) && !expected_owner->contains(header) &&
+        !expected_owner->destroying && !expected_owner->is_finalizing() &&
+        (expected_owner->stack_reference_count == 3);
+
+      duplicate_header->root_ref_dec();
+      vrt::collect(duplicate_header);
+    }
+
+    vrt_frame_leave();
+  }
 
   const vrt::Field value_fields[] = {
     {offsetof(ValueFields, value),
@@ -65,7 +92,8 @@ namespace
     holder_fields,
     0,
     nullptr,
-    nullptr};
+    nullptr,
+    &holder_finalizer_thunk};
 
   const vrt::TypeInfo types[] = {
     {value_class_id, vrt::ValueType::object, sizeof(void*), 0},
@@ -104,16 +132,24 @@ int main()
   HolderFields parent_args{child, 12};
   auto* parent =
     vrt_object_region(vrt::RegionType::rc, &holder_class, 2, &parent_args);
-  auto* parent_region = object_from_data(parent)->region();
+  auto* parent_object = object_from_data(parent);
+  auto* parent_region = parent_object->region();
+  duplicate_header = parent_region->object(&value_class);
   if (
     (child_region->parent != parent_region) ||
     (child_region->stack_reference_count != 1) ||
-    (parent_region->stack_reference_count != 2))
+    (parent_region->stack_reference_count != 3))
     return 1;
 
+  expected_owner = parent_region;
+  expected_header = parent_object;
   vrt_object_release(parent);
+  expected_owner = nullptr;
+  expected_header = nullptr;
+  duplicate_header = nullptr;
   if (
-    child_region->has_parent() || (child_region->entry_point != nullptr) ||
+    !owner_guard_observed || child_region->has_parent() ||
+    (child_region->entry_point != nullptr) ||
     (child_region->stack_reference_count != 1) || child_region->destroying ||
     child_region->is_finalizing() || (child_region->header_count() != 1) ||
     !child_region->contains(child_object) ||
