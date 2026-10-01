@@ -114,6 +114,16 @@ namespace
       &target_data);
   }
 
+  void move_outgoing(vrt::Object* source, vrt::Object* target)
+  {
+    auto* target_data = target->data();
+    vrt::writebarrier::init(
+      source->location(),
+      &fields(source)->outgoing,
+      node_fields[1],
+      &target_data);
+  }
+
   vrt::Object* immutable_probe()
   {
     auto* region = vrt::Region::create(vrt::RegionType::rc);
@@ -193,14 +203,25 @@ int main()
   auto* cycle_b = new_node(cycle_region);
   move_next(cycle_a, cycle_b);
   copy_next(cycle_b, cycle_a);
-  copy_outgoing(cycle_b, probe);
+  auto* cycle_non_representative =
+    reinterpret_cast<uintptr_t>(cycle_a) <
+      reinterpret_cast<uintptr_t>(cycle_b) ?
+    cycle_a :
+    cycle_b;
+  copy_outgoing(cycle_non_representative, probe);
   vrt_object_freeze(cycle_a->data());
   auto* cycle_representative = cycle_a->representative();
   if (
     (cycle_b->representative() != cycle_representative) ||
+    !cycle_non_representative->location().is_scc_ptr() ||
     (cycle_representative->location() != vrt::Location::immutable()) ||
     (cycle_representative->get_arc() != 1) || (probe->get_arc() != 2))
     return 5;
+  vrt_object_freeze(cycle_non_representative->data());
+  if (
+    (cycle_non_representative->representative() != cycle_representative) ||
+    (cycle_representative->get_arc() != 1) || (probe->get_arc() != 2))
+    return 32;
   cycle_a->root_ref_dec();
   if (probe->get_arc() != 1)
     return 6;
@@ -226,20 +247,25 @@ int main()
   if (probe->get_arc() != 1)
     return 9;
 
-  // Reachability crosses an owned child region and clears its parent when its
-  // entry point is frozen.
-  auto* child_region = vrt::Region::create(vrt::RegionType::rc);
-  auto* child = new_node(child_region);
-  copy_outgoing(child, probe);
+  // Reachability crosses sibling owned regions and clears both parent links
+  // when their entry points are frozen.
+  auto* left_region = vrt::Region::create(vrt::RegionType::rc);
+  auto* left_child = new_node(left_region);
+  copy_outgoing(left_child, probe);
+  auto* right_region = vrt::Region::create(vrt::RegionType::rc);
+  auto* right_child = new_node(right_region);
+  copy_outgoing(right_child, probe);
   auto* parent_region = vrt::Region::create(vrt::RegionType::rc);
   auto* parent = new_node(parent_region);
-  move_next(parent, child);
+  move_next(parent, left_child);
+  move_outgoing(parent, right_child);
   vrt_object_freeze(parent->data());
   if (
     (parent->location() != vrt::Location::immutable()) ||
-    (child->location() != vrt::Location::immutable()) ||
-    (parent->get_arc() != 1) || (child->get_arc() != 1) ||
-    (probe->get_arc() != 2))
+    (left_child->location() != vrt::Location::immutable()) ||
+    (right_child->location() != vrt::Location::immutable()) ||
+    (parent->get_arc() != 1) || (left_child->get_arc() != 1) ||
+    (right_child->get_arc() != 1) || (probe->get_arc() != 3))
     return 10;
   parent->root_ref_dec();
   if (probe->get_arc() != 1)
@@ -259,6 +285,25 @@ int main()
   local_root->root_ref_dec();
   if (probe->get_arc() != 1)
     return 13;
+
+  // A frame-local root delegates reachable heap subregions to the regular
+  // region Freeze path after publishing its local component.
+  auto* local_heap_region = vrt::Region::create(vrt::RegionType::rc);
+  auto* local_heap_child = new_node(local_heap_region);
+  copy_outgoing(local_heap_child, probe);
+  auto* local_heap_root = new_node(frame_region);
+  move_next(local_heap_root, local_heap_child);
+  vrt_object_freeze(local_heap_root->data());
+  if (
+    (local_heap_root->location() != vrt::Location::immutable()) ||
+    (local_heap_child->location() != vrt::Location::immutable()) ||
+    (local_heap_root->get_arc() != 1) ||
+    (local_heap_child->get_arc() != 1) ||
+    (frame_region->header_count() != 0) || (probe->get_arc() != 2))
+    return 33;
+  local_heap_root->root_ref_dec();
+  if (probe->get_arc() != 1)
+    return 34;
 
   // Primitive arrays use the same public Freeze and ARC lifetime path.
   auto* array_data =
@@ -358,12 +403,22 @@ int main()
   auto* arena_child = new_node(arena_child_region);
   auto* rejecting_region = vrt::Region::create(vrt::RegionType::rc);
   auto* rejecting_root = new_node(rejecting_region);
+  auto* rejecting_sibling = new_node(rejecting_region);
   move_next(rejecting_root, arena_child);
+  move_outgoing(rejecting_root, rejecting_sibling);
+  const auto rejecting_stack_before = rejecting_region->stack_reference_count;
+  const auto arena_stack_before = arena_child_region->stack_reference_count;
   if (vrt::freeze(rejecting_root))
     return 20;
   if (
     (rejecting_root->location() != vrt::Location(rejecting_region)) ||
+    (rejecting_sibling->location() != vrt::Location(rejecting_region)) ||
     (arena_child->location() != vrt::Location(arena_child_region)) ||
+    (rejecting_root->get_rc() != 1) || (rejecting_sibling->get_rc() != 1) ||
+    (arena_child->get_rc() != 1) || (rejecting_region->header_count() != 2) ||
+    (arena_child_region->header_count() != 1) ||
+    (rejecting_region->stack_reference_count != rejecting_stack_before) ||
+    (arena_child_region->stack_reference_count != arena_stack_before) ||
     !arena_child_region->has_parent() ||
     (arena_child_region->parent != rejecting_region))
     return 21;
