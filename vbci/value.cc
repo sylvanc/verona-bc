@@ -330,12 +330,12 @@ namespace vbci
 
       // Return dyn as the type id for function pointers.
       case ValueType::Function:
-        return DynId;
+        return DynamicTypeId;
 
       // Return dyn as the type id for errors.
       case ValueType::Error:
       case ValueType::Invalid:
-        return DynId;
+        return DynamicTypeId;
 
       default:
         return +tag;

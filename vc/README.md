@@ -1,4 +1,18 @@
-# High-Level Language Experiment
+# VC
+
+VC compiles Verona source into reified VIR, then hands that tree directly to
+the shared VIRC pipeline. It links `virc_core` and `virc_vbc` and emits VBC
+without invoking the standalone VIRC executable or round-tripping through
+textual VIR. VBC is the current VC output.
+
+Frontend passes and language-specific structures live in `passes/`, `lang.h`,
+and `lang.cc`. Built-in Verona definitions live in `_builtin/`.
+
+See the [language documentation](docs/README.md),
+[compiler pipeline](docs/20-compiler-pipeline.md),
+[toolchain usage](docs/21-toolchain-usage.md).
+
+## Development Notes
 
 ## To Do
 

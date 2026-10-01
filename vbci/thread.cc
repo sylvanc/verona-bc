@@ -93,7 +93,7 @@ namespace vbci
     Program& program, uint32_t type_id, ValueType& kind, ffi_type*& rep)
   {
     if (
-      (type_id == DynId) || program.is_tuple(type_id) ||
+      (type_id == DynamicTypeId) || program.is_tuple(type_id) ||
       program.is_ref(type_id) || program.is_union(type_id))
       return false;
 
@@ -752,6 +752,10 @@ namespace vbci
 #endif
   }
 
+}
+
+namespace vbc
+{
   std::ostream& operator<<(std::ostream& os, Op op)
   {
     switch (op)
@@ -992,7 +996,10 @@ namespace vbci
         return os << "Unknown";
     }
   }
+}
 
+namespace vbci
+{
   void Thread::step()
   {
     assert(frame);
@@ -1011,111 +1018,112 @@ namespace vbci
     {
       case Op::Const:
       {
-        process([](Thread& self, Register& dst, Constant<ValueType> t) INLINE {
+        process(
+          [](Thread& self, Register& dst, Constant<PrimitiveType> t) INLINE {
           switch (t)
           {
-            case ValueType::None:
+            case PrimitiveType::None:
               dst = ValueImmortal(Value::none());
               break;
 
-            case ValueType::Bool:
+            case PrimitiveType::Bool:
             {
               auto value = self.leb<bool>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::I8:
+            case PrimitiveType::I8:
             {
               auto value = self.leb<int8_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::I16:
+            case PrimitiveType::I16:
             {
               auto value = self.leb<int16_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::I32:
+            case PrimitiveType::I32:
             {
               auto value = self.leb<int32_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::I64:
+            case PrimitiveType::I64:
             {
               auto value = self.leb<int64_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::U8:
+            case PrimitiveType::U8:
             {
               auto value = self.leb<uint8_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::U16:
+            case PrimitiveType::U16:
             {
               auto value = self.leb<uint16_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::U32:
+            case PrimitiveType::U32:
             {
               auto value = self.leb<uint32_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::U64:
+            case PrimitiveType::U64:
             {
               auto value = self.leb<uint64_t>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::ILong:
+            case PrimitiveType::ILong:
             {
               auto value = self.leb<int64_t>();
-              dst = Value::from_ffi(t, value);
+              dst = Value::from_ffi(value_type(t), value);
               break;
             }
-            case ValueType::ISize:
+            case PrimitiveType::ISize:
             {
               auto value = self.leb<int64_t>();
-              dst = Value::from_ffi(t, value);
+              dst = Value::from_ffi(value_type(t), value);
               break;
             }
 
-            case ValueType::ULong:
+            case PrimitiveType::ULong:
             {
               auto value = self.leb<uint64_t>();
-              dst = Value::from_ffi(t, value);
+              dst = Value::from_ffi(value_type(t), value);
               break;
             }
 
-            case ValueType::USize:
+            case PrimitiveType::USize:
             {
               auto value = self.leb<uint64_t>();
-              dst = Value::from_ffi(t, value);
+              dst = Value::from_ffi(value_type(t), value);
               break;
             }
 
-            case ValueType::F32:
+            case PrimitiveType::F32:
             {
               auto value = self.leb<float>();
               dst = ValueImmortal(value);
               break;
             }
 
-            case ValueType::F64:
+            case PrimitiveType::F64:
             {
               auto value = self.leb<double>();
               dst = ValueImmortal(value);
@@ -1125,7 +1133,7 @@ namespace vbci
             default:
               Value::error(Error::BadConversion);
           }
-        });
+          });
         break;
       }
 
@@ -1139,8 +1147,9 @@ namespace vbci
 
       case Op::Convert:
       {
-        process([](Register& dst, Constant<ValueType> t, const Register& src)
-                  INLINE { dst = ValueImmortal(src->convert(t)); });
+        process(
+          [](Register& dst, Constant<PrimitiveType> t, const Register& src)
+            INLINE { dst = ValueImmortal(src->convert(value_type(t))); });
         break;
       }
 
@@ -2670,7 +2679,7 @@ namespace vbci
 
         auto var_type = it->func->var_types.at(local_idx - params);
 
-        if (var_type == DynId)
+        if (var_type == DynamicTypeId)
           return;
 
         if (!thread.program->subtype(v.type_id(), var_type))

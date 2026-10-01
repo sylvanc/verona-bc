@@ -5,45 +5,45 @@
 
 namespace virc
 {
-  ValueType val(Node ptype)
+  PrimitiveKind val(Node ptype)
   {
     if (ptype == None)
-      return ValueType::None;
+      return PrimitiveKind::None;
     if (ptype == Bool)
-      return ValueType::Bool;
+      return PrimitiveKind::Bool;
     if (ptype == I8)
-      return ValueType::I8;
+      return PrimitiveKind::I8;
     if (ptype == I16)
-      return ValueType::I16;
+      return PrimitiveKind::I16;
     if (ptype == I32)
-      return ValueType::I32;
+      return PrimitiveKind::I32;
     if (ptype == I64)
-      return ValueType::I64;
+      return PrimitiveKind::I64;
     if (ptype == U8)
-      return ValueType::U8;
+      return PrimitiveKind::U8;
     if (ptype == U16)
-      return ValueType::U16;
+      return PrimitiveKind::U16;
     if (ptype == U32)
-      return ValueType::U32;
+      return PrimitiveKind::U32;
     if (ptype == U64)
-      return ValueType::U64;
+      return PrimitiveKind::U64;
     if (ptype == F32)
-      return ValueType::F32;
+      return PrimitiveKind::F32;
     if (ptype == F64)
-      return ValueType::F64;
+      return PrimitiveKind::F64;
     if (ptype == ILong)
-      return ValueType::ILong;
+      return PrimitiveKind::ILong;
     if (ptype == ULong)
-      return ValueType::ULong;
+      return PrimitiveKind::ULong;
     if (ptype == ISize)
-      return ValueType::ISize;
+      return PrimitiveKind::ISize;
     if (ptype == USize)
-      return ValueType::USize;
+      return PrimitiveKind::USize;
     if (ptype == Ptr)
-      return ValueType::Ptr;
+      return PrimitiveKind::Ptr;
 
     assert(false);
-    return ValueType::Invalid;
+    return PrimitiveKind::None;
   }
 
   Node ffi_struct_result_type()

@@ -55,7 +55,7 @@ namespace vbci
 
   Function* Class::finalizer()
   {
-    return method(FinalMethodId);
+    return method(FinalizerMethodId);
   }
 
   Function* Class::method(size_t w)

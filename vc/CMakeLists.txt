@@ -22,7 +22,8 @@ else()
 endif()
 
 target_link_libraries(vc
-  vbc::vbcc
+  virc_core
+  virc_vbc
   OpenSSL::Crypto
   OpenSSL::SSL
   CLI11::CLI11

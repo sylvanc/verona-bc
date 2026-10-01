@@ -170,7 +170,7 @@ namespace virc
             return err(func_id, "function has no labels");
           }
 
-          if (*state->get_func_id(func_id) == MainFuncId)
+          if (*state->get_func_id(func_id) == MainFunctionId)
           {
             if (func_state.params != 0)
             {
@@ -222,7 +222,7 @@ namespace virc
 
     p.post([state](auto top) {
       state->top = top;
-      if (!state->functions.at(MainFuncId).func)
+      if (!state->functions.at(MainFunctionId).func)
       {
         state->error = true;
         top << err(Func, "missing main function");
@@ -286,12 +286,12 @@ namespace virc
       // `ref dyn` (unknown RegisterRef types), [usize] (FFI struct offsets),
       // and the fixed FFIStruct result tuple. This has to happen after all
       // classes have been added, but before any complex primitives.
-      state->typ(Cown << None);
-      state->typ(Array << U8);
-      state->typ(Array << (Array << U8));
-      state->typ(Ref << Dyn);
-      state->typ(Array << USize);
-      state->typ(ffi_struct_result_type());
+      state->type_id(Cown << None);
+      state->type_id(Array << U8);
+      state->type_id(Array << (Array << U8));
+      state->type_id(Ref << Dyn);
+      state->type_id(Array << USize);
+      state->type_id(ffi_struct_result_type());
       return 0;
     });
 

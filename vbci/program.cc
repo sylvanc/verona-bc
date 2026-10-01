@@ -205,7 +205,7 @@ namespace vbci
       init_memo_slot(i);
 
     ValueTransfer ret =
-      Thread::run_async(typeid_cown_none, &functions.at(MainFuncId));
+      Thread::run_async(typeid_cown_none, &functions.at(MainFunctionId));
     sched.run();
 
     auto ret_val = ret.get_cown()->load();
@@ -238,7 +238,7 @@ namespace vbci
 
   std::pair<ValueType, ffi_type*> Program::layout_type_id(uint32_t type_id)
   {
-    if (type_id == DynId)
+    if (type_id == DynamicTypeId)
     {
       // Dynamic.
       return {ValueType::Dyn, &ffi_type_value};
@@ -246,45 +246,45 @@ namespace vbci
     else if (type_id < NumPrimitiveClasses)
     {
       // Primitive type.
-      switch (ValueType(type_id))
+      switch (PrimitiveType(type_id))
       {
-        case ValueType::None:
+        case PrimitiveType::None:
           return {ValueType::None, &ffi_type_void};
-        case ValueType::Bool:
+        case PrimitiveType::Bool:
           return {ValueType::Bool, &ffi_type_uint8};
-        case ValueType::I8:
+        case PrimitiveType::I8:
           return {ValueType::I8, &ffi_type_sint8};
-        case ValueType::I16:
+        case PrimitiveType::I16:
           return {ValueType::I16, &ffi_type_sint16};
-        case ValueType::I32:
+        case PrimitiveType::I32:
           return {ValueType::I32, &ffi_type_sint32};
-        case ValueType::I64:
+        case PrimitiveType::I64:
           return {ValueType::I64, &ffi_type_sint64};
-        case ValueType::U8:
+        case PrimitiveType::U8:
           return {ValueType::U8, &ffi_type_uint8};
-        case ValueType::U16:
+        case PrimitiveType::U16:
           return {ValueType::U16, &ffi_type_uint16};
-        case ValueType::U32:
+        case PrimitiveType::U32:
           return {ValueType::U32, &ffi_type_uint32};
-        case ValueType::U64:
+        case PrimitiveType::U64:
           return {ValueType::U64, &ffi_type_uint64};
-        case ValueType::F32:
+        case PrimitiveType::F32:
           return {ValueType::F32, &ffi_type_float};
-        case ValueType::F64:
+        case PrimitiveType::F64:
           return {ValueType::F64, &ffi_type_double};
-        case ValueType::ILong:
+        case PrimitiveType::ILong:
           return {ValueType::ILong, &ffi_type_slong};
-        case ValueType::ULong:
+        case PrimitiveType::ULong:
           return {ValueType::ULong, &ffi_type_ulong};
-        case ValueType::ISize:
+        case PrimitiveType::ISize:
           return {
             ValueType::ISize,
             sizeof(ssize_t) == 4 ? &ffi_type_sint32 : &ffi_type_sint64};
-        case ValueType::USize:
+        case PrimitiveType::USize:
           return {
             ValueType::USize,
             sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64};
-        case ValueType::Ptr:
+        case PrimitiveType::Ptr:
           return {ValueType::Ptr, &ffi_type_pointer};
         default:
           break;
@@ -392,7 +392,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag == TypeTag::Tuple)
-      return DynId;
+      return DynamicTypeId;
 
     if (t.tag != TypeTag::Array)
       Value::error(Error::BadType);
@@ -433,11 +433,11 @@ namespace vbci
   bool Program::subtype(uint32_t sub, uint32_t super)
   {
     // Everything is a subtype of dynamic.
-    if (super == DynId)
+    if (super == DynamicTypeId)
       return true;
 
     // Dynamic is a subtype of nothing.
-    if (sub == DynId)
+    if (sub == DynamicTypeId)
       return false;
 
     // If it's the same, we're done.
@@ -883,13 +883,13 @@ namespace vbci
         return false;
     }
 
-    if (functions.at(MainFuncId).param_types.size() != 0)
+    if (functions.at(MainFunctionId).param_types.size() != 0)
     {
       LOG(Error) << file << ": `main` must take zero parameters" << std::endl;
       return false;
     }
 
-    if (!subtype(functions.at(MainFuncId).return_type, +ValueType::None))
+    if (!subtype(functions.at(MainFunctionId).return_type, +ValueType::None))
     {
       LOG(Error) << file << ": `main` must return none" << std::endl;
       return false;
@@ -916,7 +916,7 @@ namespace vbci
 
     typeid_ref_dyn = min_complex_type_id + 3;
     assert(complex_type(typeid_ref_dyn).tag == TypeTag::Ref);
-    assert(complex_type(typeid_ref_dyn).children.at(0) == DynId);
+    assert(complex_type(typeid_ref_dyn).children.at(0) == DynamicTypeId);
 
     typeid_array_usize = min_complex_type_id + 4;
     assert(complex_type(typeid_array_usize).tag == TypeTag::Array);
@@ -1051,7 +1051,7 @@ namespace vbci
       auto& func = functions.at(idx);
       method.second = &func;
 
-      if (method.first == FinalMethodId)
+      if (method.first == FinalizerMethodId)
       {
         if (func.param_types.size() != 1)
         {

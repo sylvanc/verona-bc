@@ -55,7 +55,7 @@ target_link_libraries(vbci
   deps::libffi
   deps::zstd
   CLI11::CLI11
-  vbc::include
+  verona::include
 )
 
 install(TARGETS vbci RUNTIME DESTINATION vbci)
