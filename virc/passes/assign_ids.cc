@@ -1,9 +1,9 @@
-#include "../irsubtype.h"
+#include "../analysis/ir_subtype.h"
 #include "../lang.h"
 
-namespace vbcc
+namespace virc
 {
-  PassDef assignids(std::shared_ptr<Bytecode> state)
+  PassDef assign_ids(std::shared_ptr<Compilation> state)
   {
     PassDef p{
       "assignids",
@@ -235,7 +235,7 @@ namespace vbcc
       }
 
       // Build CFG pred/succ edges from terminators. This must happen in
-      // assignids (not liveness) because typecheck needs pred/succ for
+      // assign_ids (not liveness) because typecheck needs pred/succ for
       // its flow analysis, and liveness may run after typecheck/optimize.
       for (auto& func_node : *top)
       {

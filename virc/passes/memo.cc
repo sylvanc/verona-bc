@@ -1,6 +1,6 @@
 #include "../lang.h"
 
-namespace vbcc
+namespace virc
 {
   PassDef memo()
   {

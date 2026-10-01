@@ -1,10 +1,10 @@
-#include "../irsubtype.h"
+#include "../analysis/ir_subtype.h"
 #include "../lang.h"
 
 #include <map>
 #include <queue>
 
-namespace vbcc
+namespace virc
 {
   // Static type checker for the IR. Runs after liveness to catch type errors
   // at compile time that would otherwise be runtime errors in the interpreter.
@@ -22,7 +22,7 @@ namespace vbcc
   //   BadRefTarget:     FieldRef on non-object, ArrayRef on non-array
   //   BadLoadTarget:    Load on non-ref
   //   BadConversion:    Convert between incompatible types
-  //   BadArgs (arity):  already checked by validids, but types checked here
+  //   BadArgs (arity):  already checked by validate_ids, but types checked here
   //
   // What this catches (Category B - flow-sensitive):
   //   BadType:          arg type vs param type, return type, field store type
@@ -373,7 +373,7 @@ namespace vbcc
     return result;
   }
 
-  PassDef typecheck(std::shared_ptr<Bytecode> state)
+  PassDef typecheck(std::shared_ptr<Compilation> state)
   {
     PassDef p{"typecheck", wfIR, dir::topdown | dir::once, {}};
 
@@ -399,7 +399,7 @@ namespace vbcc
       };
 
       // Resolve TypeId to its definition (typically a Union) through the
-      // assignids-built Bytecode map. Recursively resolves through Union,
+      // assign_ids-built Compilation map. Recursively resolves through Union,
       // Array, Cown, and Ref.
       std::function<Node(const Node&)> resolve_type =
         [&](const Node& t) -> Node {

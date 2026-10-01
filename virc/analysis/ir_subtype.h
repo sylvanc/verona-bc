@@ -1,11 +1,12 @@
 #pragma once
 
 #include "sequent.h"
-#include "vbcc.h"
+#include <vir.h>
 
-namespace vbcc
+namespace virc
 {
   using namespace trieste;
+  using namespace vir;
 
   inline Node IRResolveAlias(const SequentCtx& ctx, const Node& t)
   {

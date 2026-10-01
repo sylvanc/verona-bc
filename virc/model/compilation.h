@@ -1,14 +1,16 @@
 #pragma once
 
-#include "bitset.h"
-#include "stringtable.h"
+#include "../analysis/bitset.h"
+#include "name_table.h"
+#include "type_table.h"
 
-#include <vbcc.h>
+#include <vir.h>
 #include <vbci.h>
 
-namespace vbcc
+namespace virc
 {
   using namespace trieste;
+  using namespace vir;
 
   struct LookupInfo
   {
@@ -16,11 +18,6 @@ namespace vbcc
     Node method_id;
   };
   using namespace vbci;
-
-  struct VecHash
-  {
-    size_t operator()(const std::vector<uint8_t>& v) const noexcept;
-  };
 
   struct LabelState
   {
@@ -65,7 +62,7 @@ namespace vbcc
     bool add_register(Node id);
   };
 
-  struct Bytecode
+  struct Compilation
   {
     std::vector<std::filesystem::path> source_paths;
     bool error = false;
@@ -100,7 +97,7 @@ namespace vbcc
     std::unordered_map<std::string, std::unordered_map<std::string, LookupInfo>>
       func_lookups;
 
-    Bytecode();
+    Compilation();
 
     void add_path(const std::filesystem::path& path);
 
@@ -128,7 +125,13 @@ namespace vbcc
     std::optional<size_t> get_library_id(Node id);
     void add_library(Node lib);
 
-    void gen(std::filesystem::path output, bool strip);
     size_t typ(Node type);
   };
+
+  using Bytecode = Compilation;
+}
+
+namespace vbcc
+{
+  using namespace virc;
 }

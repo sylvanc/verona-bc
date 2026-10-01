@@ -1,8 +1,8 @@
 #include "../lang.h"
 
-namespace vbcc
+namespace virc
 {
-  PassDef optimize(std::shared_ptr<Bytecode> state)
+  PassDef optimize(std::shared_ptr<Compilation> state)
   {
     PassDef p{
       "optimize",

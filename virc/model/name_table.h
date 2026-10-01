@@ -4,10 +4,12 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <vbcc.h>
+#include <vir.h>
 
-namespace vbcc
+namespace virc
 {
+  using namespace vir;
+
   struct ST
   {
     using Index = size_t;

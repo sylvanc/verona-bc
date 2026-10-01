@@ -2,14 +2,15 @@
 
 #define TRIESTE_EXPOSE_LOG_MACRO
 #include <trieste/trieste.h>
-#include <vbcc.h>
-#include <vbcc/lang.h>
+#include <vir.h>
+#include <virc/lang.h>
 
 namespace vc
 {
   using namespace trieste;
   using namespace trieste::wf::ops;
-  using namespace vbcc;
+  using namespace vir;
+  using namespace virc;
 
   inline const auto Paren = TokenDef("paren");
   inline const auto Bracket = TokenDef("bracket");

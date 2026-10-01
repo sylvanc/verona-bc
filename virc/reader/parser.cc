@@ -1,6 +1,6 @@
 #include "../lang.h"
 
-namespace vbcc
+namespace virc
 {
   const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Vars |
     Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |

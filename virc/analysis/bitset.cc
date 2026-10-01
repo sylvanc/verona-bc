@@ -1,6 +1,6 @@
 #include "bitset.h"
 
-namespace vbcc
+namespace virc
 {
   constexpr size_t Bitset::idx(size_t i)
   {

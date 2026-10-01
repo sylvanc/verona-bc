@@ -1,21 +1,22 @@
-#include "bytecode.h"
+#include "model/compilation.h"
 #include "lang.h"
+#include "vbc/emitter.h"
 
 #include <trieste/driver.h>
 
 int main(int argc, char** argv)
 {
   using namespace trieste;
-  using namespace vbcc;
+  using namespace virc;
 
-  auto state = std::make_shared<Bytecode>();
+  auto state = std::make_shared<Compilation>();
   Reader reader{
     "vbcc",
     {statements(),
      labels(),
      memo(),
-     assignids(state),
-     validids(state),
+     assign_ids(state),
+     validate_ids(state),
      typecheck(state),
      optimize(state),
      liveness(state)},
@@ -70,6 +71,6 @@ int main(int argc, char** argv)
   if (!opts.path.empty())
     state->add_path(opts.path);
 
-  state->gen(opts.bytecode_file, opts.strip);
+  vbc_backend::emit(*state, opts.bytecode_file, opts.strip);
   return 0;
 }

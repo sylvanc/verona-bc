@@ -1,11 +1,11 @@
-#include "../bitset.h"
+#include "../analysis/bitset.h"
 #include "../lang.h"
 
 #include <queue>
 
-namespace vbcc
+namespace virc
 {
-  PassDef liveness(std::shared_ptr<Bytecode> state)
+  PassDef liveness(std::shared_ptr<Compilation> state)
   {
     PassDef p{"liveness", wfIR, dir::topdown | dir::once, {}};
 
@@ -210,7 +210,7 @@ namespace vbcc
           }
           else if (node == Jump)
           {
-            // pred/succ edges are built by assignids.
+            // pred/succ edges are built by assign_ids.
           }
           else if (node == Cond)
           {

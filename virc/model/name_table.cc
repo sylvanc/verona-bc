@@ -1,8 +1,8 @@
-#include "stringtable.h"
+#include "name_table.h"
 
-#include "lang.h"
+#include "../lang.h"
 
-namespace vbcc
+namespace virc
 {
   ST& ST::noemit()
   {

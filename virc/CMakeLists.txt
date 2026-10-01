@@ -1,14 +1,17 @@
 add_library(libvbcc STATIC
-  passes/assignids.cc
+  passes/assign_ids.cc
   passes/liveness.cc
   passes/memo.cc
   passes/optimize.cc
   passes/typecheck.cc
-  passes/validids.cc
-  bitset.cc
-  bytecode.cc
-  lang.cc
-  stringtable.cc
+  passes/validate_ids.cc
+  analysis/bitset.cc
+  model/compilation.cc
+  model/name_table.cc
+  model/type_table.cc
+  support/diagnostics.cc
+  support/literals.cc
+  vbc/emitter.cc
 )
 
 target_include_directories(libvbcc INTERFACE
@@ -27,9 +30,9 @@ target_link_libraries(libvbcc PUBLIC
 add_library(vbc::vbcc ALIAS libvbcc)
 
 add_executable(vbcc
-  passes/labels.cc
-  passes/parser.cc
-  passes/statements.cc
+  reader/labels.cc
+  reader/parser.cc
+  reader/statements.cc
   main.cc
 )
 

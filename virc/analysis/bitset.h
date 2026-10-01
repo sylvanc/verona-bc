@@ -5,7 +5,7 @@
 #include <limits>
 #include <vector>
 
-namespace vbcc
+namespace virc
 {
   struct Bitset
   {

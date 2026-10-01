@@ -2,7 +2,7 @@
 
 #include "lang.h"
 
-#include <vbcc/sequent.h>
+#include <virc/analysis/sequent.h>
 
 namespace vc
 {
