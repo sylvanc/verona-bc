@@ -69,6 +69,7 @@ add_library(virc_llvm STATIC
   statements/get_raise.cc
   statements/load.cc
   statements/move.cc
+  statements/merge.cc
   statements/pin.cc
   statements/register_ref.cc
   statements/set_raise.cc

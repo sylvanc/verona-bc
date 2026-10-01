@@ -130,6 +130,10 @@ namespace virc
         declare("vrt_object_escape", void_type, {pointer_type});
       runtime.object_validate_tailcall = declare(
         "vrt_object_validate_tailcall", void_type, {pointer_type});
+      runtime.region_merge = declare(
+        "vrt_region_merge",
+        void_type,
+        {word_type, pointer_type, word_type, pointer_type});
       runtime.reference_from_register = declare(
         "vrt_reference_from_register",
         void_type,

@@ -82,6 +82,7 @@ namespace virc
       llvm::Function* object_escape = nullptr;
       llvm::Function* object_validate_tailcall = nullptr;
       llvm::Function* object_lookup = nullptr;
+      llvm::Function* region_merge = nullptr;
       llvm::Function* reference_from_register = nullptr;
       llvm::Function* reference_from_field = nullptr;
       llvm::Function* reference_from_array = nullptr;

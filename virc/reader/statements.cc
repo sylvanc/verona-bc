@@ -464,6 +464,9 @@ namespace virc
         Dst * T(Unpin) * T(LocalId)[Rhs] >>
           [](Match& _) { return Unpin << _(LocalId) << _(Rhs); },
 
+        Dst * T(Merge) * T(LocalId)[Lhs] * T(LocalId)[Rhs] >>
+          [](Match& _) { return Merge << _(LocalId) << _(Lhs) << _(Rhs); },
+
         Dst * T(FFIStruct) * TypePat[Type] >>
           [](Match& _) { return FFIStruct << _(LocalId) << _(Type); },
 

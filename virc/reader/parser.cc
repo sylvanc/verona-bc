@@ -74,6 +74,7 @@ namespace virc
         "freeze\\b" >> [](auto& m) { m.add(Freeze); },
         "pin\\b" >> [](auto& m) { m.add(Pin); },
         "unpin\\b" >> [](auto& m) { m.add(Unpin); },
+        "merge\\b" >> [](auto& m) { m.add(Merge); },
         "ffistruct\\b" >> [](auto& m) { m.add(FFIStruct); },
         "ffiload\\b" >> [](auto& m) { m.add(FFILoad); },
         "ffistore\\b" >> [](auto& m) { m.add(FFIStore); },

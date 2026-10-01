@@ -22,6 +22,7 @@ verona_fixture_group(
 		vir/copy_move_drop/copy_move_drop.vir
 		vir/freeze_ownership/freeze_ownership.vir
 		vir/library_merge/library_merge.vir
+		vir/merge/merge.vir
 		vir/object_alloc/object_alloc.vir
 		vir/pin_unpin/pin_unpin.vir
 		vir/raise/raise.vir

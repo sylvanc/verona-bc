@@ -56,6 +56,9 @@ namespace virc
       if (statement->type().in({Pin, Unpin}))
         return emit_pin(statement);
 
+      if (statement == Merge)
+        return emit_merge(statement);
+
       if (statement == GetRaise)
         return emit_get_raise(statement);
 
