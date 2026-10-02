@@ -39,20 +39,16 @@ namespace virc
     DebugInfo debug{code, source_paths};
 
     MemoSlots memo_slots;
-    Node memo_init;
+    std::vector<Node> memo_initializers;
 
     for (auto& child : *top)
     {
-      if (child == MemoInit)
-      {
-        memo_init = child;
-        size_t index = 0;
+      if (child != Memo)
+        continue;
 
-        for (auto& function_id : *child)
-          memo_slots[std::string(function_id->location().view())] = index++;
-
-        break;
-      }
+      auto slot = std::string((child / MemoId)->location().view());
+      memo_slots[slot] = memo_initializers.size();
+      memo_initializers.push_back(child / FunctionId);
     }
 
     header << uleb(MagicNumber);
@@ -129,16 +125,7 @@ namespace virc
     header << uleb(libraries.size());
 
     for (auto& library : libraries)
-    {
       header << uleb(ST::exec().string(library / String));
-
-      auto init = library / InitFunc;
-        // Zero means no init function; otherwise the value is func_id + 1.
-      if (init->type() == FunctionId)
-        header << uleb(*get_func_id(init) + 1);
-      else
-        header << uleb(0);
-    }
 
     header << uleb(symbols.size());
 
@@ -214,17 +201,9 @@ namespace virc
 
     encode_type_table(header, types);
 
-    if (memo_init)
-    {
-      header << uleb(memo_init->size());
-
-      for (auto& function_id : *memo_init)
-        header << uleb(*get_func_id(function_id));
-    }
-    else
-    {
-      header << uleb(0);
-    }
+    header << uleb(memo_initializers.size());
+    for (auto& function_id : memo_initializers)
+      header << uleb(*get_func_id(function_id));
 
     header << uleb(code.size());
     std::ofstream file(output, std::ios::binary | std::ios::out);

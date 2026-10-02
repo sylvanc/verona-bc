@@ -29,7 +29,7 @@ namespace virc
   const auto wfPassStatements =
       wfIR
     | (Top <<= (
-        Lib | Primitive | Class | Type | Func | LabelId | wfStatement
+        Lib | Primitive | Class | Type | Func | Memo | LabelId | wfStatement
       | wfTerminator)++)
     ;
   // clang-format on
@@ -251,13 +251,19 @@ namespace virc
         // Libraries.
         (T(Lib) << End) * ~T(String)[String] >>
           [](Match& _) {
-            return Lib << (_(String) || (String ^ "")) << Symbols << None;
+            return Lib << (_(String) || (String ^ "")) << Symbols;
           },
 
         T(Lib)[Lib] * T(Symbol)[Symbol] >>
           [](Match& _) {
             (_(Lib) / Symbols) << _(Symbol);
             return _(Lib);
+          },
+
+        // Memo slots.
+        (T(Memo) << End) * T(GlobalId)[MemoId] * T(GlobalId)[FunctionId] >>
+          [](Match& _) {
+            return Memo << (MemoId ^ _(MemoId)) << (FunctionId ^ _(FunctionId));
           },
 
         // FFI symbols.
@@ -358,11 +364,6 @@ namespace virc
           [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },
 
         // Object allocation.
-        Dst * T(Singleton) * T(GlobalId)[GlobalId] >>
-          [](Match& _) {
-            return Singleton << _(LocalId) << (ClassId ^ _(GlobalId));
-          },
-
         Dst * T(New) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
             return New << _(LocalId) << (ClassId ^ _(GlobalId))
@@ -455,6 +456,9 @@ namespace virc
         (T(Drop) << End) * T(LocalId)[LocalId] >>
           [](Match& _) { return Drop << _(LocalId); },
 
+        (T(AtTeardown) << End) * T(LocalId)[LocalId] >>
+          [](Match& _) { return AtTeardown << _(LocalId); },
+
         Dst * T(Freeze) * T(LocalId)[Rhs] >>
           [](Match& _) { return Freeze << _(LocalId) << _(Rhs); },
 
@@ -528,6 +532,12 @@ namespace virc
           [](Match& _) {
             return Call << _(LocalId) << (FunctionId ^ _(GlobalId))
                         << callargs(_[Args]);
+          },
+
+        // Memo load.
+        Dst * T(MemoSlot) * T(GlobalId)[MemoId] >>
+          [](Match& _) {
+            return MemoSlot << _(LocalId) << (MemoId ^ _(MemoId));
           },
 
         // Dynamic call.

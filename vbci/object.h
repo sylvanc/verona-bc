@@ -178,6 +178,7 @@ namespace vbci
         {
           case ValueType::Object:
           case ValueType::Array:
+          case ValueType::Cown:
           case ValueType::Dyn:
             load(i).immortalize();
             break;

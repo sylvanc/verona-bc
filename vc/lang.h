@@ -459,6 +459,16 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto wfBodyFFIInit = wfBodyInfer | AtTeardown;
+
+  // clang-format off
+  inline const auto wfPassFFIInit =
+      wfPassInfer
+    | (Body <<= wfBodyFFIInit++)
+    | (AtTeardown <<= LocalId)
+    ;
+  // clang-format on
+
   inline const auto l_local = Location("local");
 
   Node make_type(NodeRange r = {});
@@ -521,6 +531,8 @@ namespace vc
     Node apply_body,
     bool is_block = false);
 
+  Location ffi_init_id(const Node& lib);
+
   Parse parser();
   PassDef structure(const Parse& parse);
   PassDef ident();
@@ -530,5 +542,13 @@ namespace vc
   PassDef application();
   PassDef anf();
   PassDef infer();
+  PassDef ffiinit();
   PassDef reify();
+
+  // caller FunctionId -> callee FunctionId -> source call site.
+  using CallGraph = std::map<Location, std::map<Location, Node>>;
+  using OnceFunctions = std::set<Location>;
+
+  int lower_once(
+    Node top, const OnceFunctions& once_funcs, const CallGraph& call_graph);
 }

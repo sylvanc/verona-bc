@@ -1,0 +1,12 @@
+// Memo initializers must take no parameters because startup invokes them
+// eagerly without arguments. @initializer deliberately requires $value.
+// The compiler must reject it; accepting it would create an invalid startup call.
+
+memo @slot @initializer
+
+func @initializer($value: i32): i32
+  ret $value
+
+func @main(): none
+  $_none = const none
+  ret $_none

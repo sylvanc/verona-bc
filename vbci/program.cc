@@ -92,34 +92,19 @@ namespace vbci
 
   Register& Program::memo_slot(size_t index)
   {
-    init_memo_slot(index);
     return memo_slots.at(index);
   }
 
   void Program::init_memo_slot(size_t index)
   {
     auto& slot = memo_slots.at(index);
-    if (!slot->is_invalid())
-      return;
-
-    auto& initializing = memo_slot_initializing.at(index);
-    assert(!initializing);
-
-    struct Reset
-    {
-      uint8_t& flag;
-
-      ~Reset()
-      {
-        flag = false;
-      }
-    } reset{initializing};
-
-    initializing = true;
+    assert(slot->is_invalid());
     slot = Thread::run_sync(&functions.at(memo_func_ids.at(index)));
 
     if (slot->is_header())
       freeze(slot->get_header());
+
+    slot.borrow().immortalize();
   }
 
   uint32_t Program::get_typeid_arg()
@@ -171,33 +156,11 @@ namespace vbci
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
 
-    // Pre-size memo slots before library init so use-block init callbacks can
-    // safely call once-function stubs. A MemoLoad lazily initializes a missing
-    // slot on first use; after init returns, any remaining slots are filled in
-    // the compiler-emitted dependency order below.
+    // Pre-size memo slots so initializers can load earlier slots by index.
     memo_slots.resize(memo_func_ids.size());
-    memo_slot_initializing.assign(memo_func_ids.size(), false);
 
-    // Run library init functions before the eager memo pass. If an init returns
-    // a value with an apply method (@callback), store it as a fini callback to
-    // be called at shutdown.
-    for (auto& init : init_funcs)
-    {
-      if (!init)
-        continue;
-
-      auto result = Thread::run_cleanup(&functions.at(*init));
-
-      if (result->is_invalid())
-        return -1;
-
-      auto* apply = result->method(CallbackMethodId);
-
-      if (apply)
-        fini_callbacks.emplace_back(std::move(result), apply);
-    }
-
-    // Run any remaining memo (once) function initializers in dependency order.
+    // Run memo initializers in declaration order. Any memo loaded by an
+    // initializer must therefore have been declared earlier.
     // This must happen after sched.init() because once functions may create
     // cowns (via `when`), which requires the scheduler's core pool to be
     // initialized for behavior queuing.
@@ -219,17 +182,9 @@ namespace vbci
         exit_code = -1;
     }
 
-    // Run fini callbacks in reverse order (last init = first fini).
-    for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
-      Thread::run_sync(it->second, it->first.borrow());
-
-    fini_callbacks.clear();
-
-    // Drop memo slot values, releasing their reference counts.
-    for (auto& slot : memo_slots)
-      slot = ValueTransfer(Value());
+    // Once values and their reachable object graphs have process lifetime.
+    // Clearing the slots is safe because their values have been immortalized.
     memo_slots.clear();
-    memo_slot_initializing.clear();
 
     cleanup_strings();
 
@@ -832,15 +787,8 @@ namespace vbci
     // FFI information.
     auto num_libs = uleb(pc);
     libs.reserve(num_libs);
-    init_funcs.reserve(num_libs);
     for (size_t i = 0; i < num_libs; i++)
-    {
       libs.emplace_back(strings.at(uleb(pc)));
-
-      auto init_id = uleb(pc);
-      init_funcs.push_back(
-        init_id ? std::optional<size_t>(init_id - 1) : std::nullopt);
-    }
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)

@@ -2,7 +2,6 @@ add_library(virc_core STATIC
   compile.cc
   passes/assign_ids.cc
   passes/liveness.cc
-  passes/memo.cc
   passes/optimize.cc
   passes/typecheck.cc
   passes/validate_ids.cc

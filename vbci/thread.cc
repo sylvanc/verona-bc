@@ -766,8 +766,6 @@ namespace vbc
         return os << "String";
       case Op::Convert:
         return os << "Convert";
-      case Op::Singleton:
-        return os << "Singleton";
       case Op::New:
         return os << "New";
       case Op::Stack:
@@ -798,6 +796,8 @@ namespace vbc
         return os << "Move";
       case Op::Drop:
         return os << "Drop";
+      case Op::AtTeardown:
+        return os << "AtTeardown";
       case Op::Freeze:
         return os << "Freeze";
       case Op::Pin:
@@ -1153,20 +1153,10 @@ namespace vbci
         break;
       }
 
-      case Op::Singleton:
-      {
-        process([](Register& dst, Class& cls) INLINE {
-          assert(cls.singleton && "Op::Singleton requires an empty class");
-          dst = ValueImmortal(cls.singleton);
-        });
-        break;
-      }
-
       case Op::New:
       {
         process(
           [](Register& dst, Class& cls, Thread& self, Frame& frame) INLINE {
-            assert(!cls.singleton && "Op::New must not be used for singletons");
             self.check_args(cls.fields);
             dst = ValueTransfer(&frame.region->object(cls)->init(frame, cls));
           });
@@ -1179,8 +1169,6 @@ namespace vbci
           [](
             Register& dst, Class& cls, Thread& self, Frame& frame, Stack& stack)
             INLINE {
-              assert(
-                !cls.singleton && "Op::Stack must not be used for singletons");
               self.check_args(cls.fields);
               auto mem = stack.alloc(cls.size);
               auto obj =
@@ -1199,7 +1187,6 @@ namespace vbci
                   Class& cls,
                   Thread& self,
                   Frame& frame) INLINE {
-          assert(!cls.singleton && "Op::Heap must not be used for singletons");
           auto region = region_loc->region();
           self.check_args(cls.fields);
           dst = ValueTransfer(&region->object(cls)->init(frame, cls));
@@ -1215,8 +1202,6 @@ namespace vbci
                   Class& cls,
                   Thread& self,
                   Frame& frame) INLINE {
-          assert(
-            !cls.singleton && "Op::Region must not be used for singletons");
           self.check_args(cls.fields);
           auto region = Region::create(region_type);
           dst = ValueTransfer(&region->object(cls)->init(frame, cls));
@@ -1343,6 +1328,40 @@ namespace vbci
       case Op::Drop:
       {
         process([](Register) INLINE {});
+        break;
+      }
+
+      case Op::AtTeardown:
+      {
+        process([](Register callback) INLINE {
+          if (callback->type() == ValueType::None)
+            return;
+
+          auto* apply = callback->method(CallbackMethodId);
+          if (!apply)
+            Value::error(Error::MethodNotFound);
+
+          auto location = callback->location();
+          if (location.is_stack())
+            Value::error(Error::BadStackEscape);
+
+          if (location.is_region() && location.to_region()->is_frame_local())
+          {
+            auto* region = Region::create(RegionType::RegionRC);
+            if (!drag_allocation<false>(region, callback->get_header()))
+            {
+              region->free_region();
+              Value::error(Error::BadStackEscape);
+            }
+          }
+
+          auto* work = verona::rt::Closure::make(
+            [callback = std::move(callback), apply](verona::rt::Work*) mutable {
+              Thread::run_cleanup(apply, callback.borrow());
+              return true;
+            });
+          verona::rt::Scheduler::schedule_at_quiescence(work);
+        });
         break;
       }
 

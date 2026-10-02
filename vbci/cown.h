@@ -21,12 +21,15 @@ namespace vbci
   private:
     friend VbciObjectModel;
 
+    static constexpr size_t immortal_bit = 1;
+    static constexpr size_t reference_increment = 2;
+
     union LifetimeState
     {
       std::atomic<size_t> references;
       Cown* next_to_delete;
 
-      LifetimeState() : references(1) {}
+      LifetimeState() : references(reference_increment) {}
       ~LifetimeState() {}
     };
 
@@ -107,22 +110,32 @@ namespace vbci
       return Program::get().uncown(type_id);
     }
 
-    void inc()
+    void inc() noexcept
     {
       LOG(Trace) << "Incrementing cown @" << this;
-      assert(lifetime.references.load(std::memory_order_relaxed) > 0);
-      lifetime.references.fetch_add(1, std::memory_order_relaxed);
+      assert(
+        (lifetime.references.load(std::memory_order_relaxed) & ~immortal_bit) >
+        0);
+      lifetime.references.fetch_add(
+        reference_increment, std::memory_order_relaxed);
     }
 
     void dec() noexcept
     {
       LOG(Trace) << "Decrementing cown @" << this;
-      assert(lifetime.references.load(std::memory_order_relaxed) > 0);
-      if (lifetime.references.fetch_sub(1, std::memory_order_release) != 1)
+      auto references = lifetime.references.fetch_sub(
+        reference_increment, std::memory_order_release);
+      assert((references & ~immortal_bit) > 0);
+      if (references != reference_increment)
         return;
 
       std::atomic_thread_fence(std::memory_order_acquire);
       destroy(this);
+    }
+
+    void immortalize() noexcept
+    {
+      lifetime.references.fetch_or(immortal_bit, std::memory_order_relaxed);
     }
 
     ValueBorrow load()

@@ -1,0 +1,79 @@
+// A memo initializer can create an immortal cown. Replacing its contents still
+// finalizes the outgoing value, but retained contents survive shutdown. Main
+// sets 7, the outgoing finalizer sets 99, and incorrect retained finalization
+// sets 66. Expected exit code: 99.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Outgoing
+  @keep: bool
+  @final @Outgoing_final
+
+class @Retained
+  @keep: bool
+  @final @Retained_final
+
+class @Marker
+  @f: bool
+
+type @Payload = @Outgoing | @Retained
+
+memo @owner_slot @owner_init
+
+func @outgoing_finalized(): @Marker
+  $ran = const i32 99
+  $_ = ffi @set_exit_code($ran)
+  $true = const bool true
+  $marker = new @Marker($true)
+  ret $marker
+
+func @retained_finalized(): @Marker
+  $ran = const i32 66
+  $_ = ffi @set_exit_code($ran)
+  $true = const bool true
+  $marker = new @Marker($true)
+  ret $marker
+
+func @Outgoing_final($self: @Outgoing): none
+  $work = when @outgoing_finalized(): @Marker
+  drop $work
+  $_none = const none
+  ret $_none
+
+func @Retained_final($self: @Retained): none
+  $work = when @retained_finalized(): @Marker
+  drop $work
+  $_none = const none
+  ret $_none
+
+func @make_payload(): @Payload
+  $true = const bool true
+  $payload = new @Outgoing($true)
+  ret $payload
+
+func @owner_init(): cown @Payload
+  $owner = when @make_payload(): @Payload
+  ret $owner
+
+func @owner(): cown @Payload
+  $owner = memoslot @owner_slot
+  ret $owner
+
+func @replace_payload($owner: ref @Payload): @Marker
+  $true = const bool true
+  $retained = new @Retained($true)
+  $old = store $owner $retained
+  drop $retained
+  $marker = new @Marker($true)
+  ret $marker
+
+func @main(): none
+  $owner = call @owner()
+  $replacement = when @replace_payload($owner): @Marker
+  drop $owner
+  drop $replacement
+  $running = const i32 7
+  $_ = ffi @set_exit_code($running)
+  $_none = const none
+  ret $_none

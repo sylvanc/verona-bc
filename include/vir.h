@@ -13,14 +13,14 @@ namespace vir
   inline const auto Primitive = TokenDef("primitive");
   inline const auto Class = TokenDef("class");
   inline const auto Func = TokenDef("func");
-  inline const auto FuncOnce = TokenDef("funconce");
   inline const auto Vars = TokenDef("vars");
   inline const auto VarDef = TokenDef("vardef");
-  inline const auto MemoInit = TokenDef("memoinit");
+  inline const auto Memo = TokenDef("memo");
   inline const auto MemoSlot = TokenDef("memoslot");
 
   // Identifiers.
   inline const auto SymbolId = TokenDef("symbolid", flag::print);
+  inline const auto MemoId = TokenDef("memoid", flag::print);
   inline const auto TypeId = TokenDef("typeid", flag::print);
   inline const auto GlobalId = TokenDef("globalid", flag::print);
   inline const auto ClassId = TokenDef("classid", flag::print);
@@ -76,6 +76,7 @@ namespace vir
   inline const auto Copy = TokenDef("copy");
   inline const auto Move = TokenDef("move");
   inline const auto Drop = TokenDef("drop");
+  inline const auto AtTeardown = TokenDef("atteardown");
   inline const auto Freeze = TokenDef("freeze");
   inline const auto Pin = TokenDef("pin");
   inline const auto Unpin = TokenDef("unpin");
@@ -194,7 +195,6 @@ namespace vir
   inline const auto Offset = TokenDef("offset");
   inline const auto Symbol = TokenDef("symbol");
   inline const auto Symbols = TokenDef("symbols");
-  inline const auto InitFunc = TokenDef("initfunc");
   inline const auto Vararg = TokenDef("vararg");
   inline const auto Union = TokenDef("union");
   inline const auto TupleType = TokenDef("tupletype");
@@ -256,8 +256,8 @@ namespace vir
   inline const auto wfStatement = Source | Offset | Const | ConstStr | Convert |
     Singleton | New | Stack | Heap | Region | NewArray | NewArrayConst |
     StackArray | StackArrayConst | HeapArray | HeapArrayConst | RegionArray |
-    RegionArrayConst | Copy | Move | Drop | Freeze | Pin | Unpin | Merge |
-    FFIStruct | FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef |
+    RegionArrayConst | Copy | Move | Drop | AtTeardown | Freeze | Pin | Unpin |
+    Merge | FFIStruct | FFILoad | FFIStore | RegisterRef | FieldRef | ArrayRef |
     ArrayRefConst | Load | Store | Lookup | Arg | Call | CallDyn | TryCallDyn |
     FFI | When | WhenDyn | GetRaise | SetRaise | wfBinop | wfUnop | wfNulop |
     Typetest | MakeCallback | CodePtrCallback | FreeCallback | MemoSlot |
@@ -281,13 +281,13 @@ namespace vir
 
   // clang-format off
   inline const auto wfIR =
-      (Top <<= (Primitive | Class | Type | Func | FuncOnce | Lib | MemoInit)++)
+      (Top <<= (Primitive | Class | Type | Func | Lib | Memo)++)
     | (Array <<= (Type >>= wfType))
     | (Ref <<= (Type >>= wfType))
     | (Cown <<= (Type >>= wfType))
     | (Union <<= wfType++)
     | (TupleType <<= wfType++[2])
-    | (Lib <<= String * Symbols * (InitFunc >>= FunctionId | None))
+    | (Lib <<= String * Symbols)
     | (Symbols <<= Symbol++)
     | (Symbol <<=
         SymbolId * (Lhs >>= String) * (Rhs >>= String) *
@@ -301,9 +301,8 @@ namespace vir
     | (Methods <<= Method++)
     | (Method <<= MethodId * FunctionId)
     | (Func <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
-    | (FuncOnce <<= FunctionId * Params * (Type >>= wfType) * Vars * Labels)[FunctionId]
-    | (MemoInit <<= FunctionId++)
-    | (MemoSlot <<= wfDst * FunctionId)
+    | (Memo <<= MemoId * FunctionId)
+    | (MemoSlot <<= wfDst * MemoId)
     | (Params <<= Param++)
     | (Param <<= LocalId * (Type >>= wfType))
     | (Vars <<= VarDef++)
@@ -332,6 +331,7 @@ namespace vir
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
     | (Drop <<= LocalId)
+    | (AtTeardown <<= LocalId)
     | (Freeze <<= wfDst * wfSrc)
     | (Pin <<= wfDst * wfSrc)
     | (Unpin <<= wfDst * wfSrc)

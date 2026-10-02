@@ -10,9 +10,10 @@ use
 {
   init(): any
   {
-    :::printval(init_calls_once::answer());
+    :::init_printval(init_calls_once::answer());
   }
 
+  init_printval = "printval"(any): none;
   printval = "printval"(any): none;
 }
 
