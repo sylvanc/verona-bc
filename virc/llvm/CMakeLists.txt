@@ -23,6 +23,7 @@ add_library(virc_llvm STATIC
   literals/literal.cc
   model/blocks.cc
   model/locals.cc
+  model/storage.cc
   module.cc
   ownership.cc
   program.cc

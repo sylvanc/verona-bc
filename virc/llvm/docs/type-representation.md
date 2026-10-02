@@ -4,6 +4,11 @@
 storage type, and a public `vrt::ValueType` runtime category. `LoweredValue`
 adds the emitted LLVM value and an optional callable signature.
 
+Value-storage helpers allocate addressable slots in the function entry block,
+materialize SSA values into those slots, and load values back into SSA form.
+They are shared lowering machinery used by mutable locals and VRT ABI calls,
+not part of raise handling itself.
+
 Primitive lowerers live under `types/`. Nominal classes use generated structure
 layouts for their fields while object values use runtime-managed pointers.
 Arrays carry an element runtime type ID. Dynamic and aggregate forms have local

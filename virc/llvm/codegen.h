@@ -183,11 +183,7 @@ namespace virc
       emit_reuse_frame(const Node& statement, llvm::Value* function_descriptor);
       bool emit_leave_frame(const Node& statement);
 
-      // Raise handling.
-      bool emit_raise_continuation(
-        const Node& function,
-        llvm::BasicBlock* normal_entry,
-        const LoweredType& return_type);
+      // Value storage.
       llvm::Value* allocate_value_storage(
         const LoweredType& type, const std::string& name);
       std::optional<llvm::Value*> materialize_value_storage(
@@ -198,6 +194,12 @@ namespace virc
         const LoweredType& type,
         llvm::Value* storage,
         const std::string& name);
+
+      // Raise handling.
+      bool emit_raise_continuation(
+        const Node& function,
+        llvm::BasicBlock* normal_entry,
+        const LoweredType& return_type);
     };
   }
 }
