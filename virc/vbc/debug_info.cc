@@ -8,7 +8,7 @@
 namespace virc::vbc_backend
 {
   using namespace trieste;
-  using namespace vbc;
+  using namespace ::vbc;
 
   size_t DebugInfo::size() const
   {

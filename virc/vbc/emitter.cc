@@ -12,6 +12,8 @@ namespace virc
 {
   using namespace ::vbc;
   using namespace vbc_backend;
+  using ::vbc::CurrentVersion;
+  using ::vbc::MagicNumber;
 
   namespace
   {
@@ -131,7 +133,7 @@ namespace virc
       header << uleb(ST::exec().string(library / String));
 
       auto init = library / InitFunc;
-  // Zero means no init function; otherwise the value is func_id + 1.
+      // Zero means no init function; otherwise the value is func_id + 1.
       if (init->type() == FunctionId)
         header << uleb(*get_func_id(init) + 1);
       else
@@ -250,11 +252,12 @@ namespace virc
     VBCEmitter(compilation).emit(output, strip);
   }
 
-  void vbc::emit(
-    const Compilation& compilation,
-    const std::filesystem::path& output,
-    bool strip)
-  {
-    vbc_backend::emit(compilation, output, strip);
-  }
+}
+
+void virc::vbc::emit(
+  const virc::Compilation& compilation,
+  const std::filesystem::path& output,
+  bool strip)
+{
+  virc::vbc_backend::emit(compilation, output, strip);
 }

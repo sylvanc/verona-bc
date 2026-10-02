@@ -29,9 +29,9 @@ namespace virc::vbc_backend
   template<typename T>
   struct d
   {
-    vbc::DIOp op;
+    ::vbc::DIOp op;
     T value;
-    d(vbc::DIOp op, T value) : op(op), value(value) {}
+    d(::vbc::DIOp op, T value) : op(op), value(value) {}
   };
 
   template<typename T>

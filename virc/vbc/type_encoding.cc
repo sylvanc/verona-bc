@@ -8,16 +8,16 @@
 namespace virc::vbc_backend
 {
   using namespace trieste;
-  using namespace vbc;
+  using namespace ::vbc;
   using namespace vir;
 
   // VIRC owns backend-neutral semantic IDs. The VBC format owns wire IDs
   // serialized into .vbc files and interpreted by VBCI. VBC emission requires
   // their numeric representations to agree without coupling either contract.
-  static_assert(virc::MainFunctionId == vbc::MainFunctionId);
-  static_assert(virc::FinalizerMethodId == vbc::FinalizerMethodId);
-  static_assert(virc::CallbackMethodId == vbc::CallbackMethodId);
-  static_assert(virc::DynamicTypeId == vbc::DynamicTypeId);
+  static_assert(virc::MainFunctionId == ::vbc::MainFunctionId);
+  static_assert(virc::FinalizerMethodId == ::vbc::FinalizerMethodId);
+  static_assert(virc::CallbackMethodId == ::vbc::CallbackMethodId);
+  static_assert(virc::DynamicTypeId == ::vbc::DynamicTypeId);
   static_assert(PrimitiveTypeCount == NumPrimitiveClasses);
   static_assert(+PrimitiveKind::None == +PrimitiveType::None);
   static_assert(+PrimitiveKind::Bool == +PrimitiveType::Bool);

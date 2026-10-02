@@ -9,7 +9,7 @@ namespace virc::vbc_backend
 {
   using namespace trieste;
   using namespace vir;
-  using namespace vbc;
+  using namespace ::vbc;
 
   namespace
   {
