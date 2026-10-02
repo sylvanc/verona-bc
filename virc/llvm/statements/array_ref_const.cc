@@ -19,26 +19,24 @@ namespace virc
 
       if (
         (owner->type.runtime_type != vrt::ValueType::array) ||
-        (owner->value == nullptr) ||
-        (runtime.reference_from_array == nullptr))
+        (owner->value == nullptr) || (runtime.reference_from_array == nullptr))
       {
         fail(statement, "constant array reference runtime is unavailable");
         return false;
       }
 
-      auto* storage =
+      auto storage =
         allocate_value_storage(*lowered_reference, "arrayref.const.storage");
       auto* index = llvm::ConstantInt::get(
         module.getDataLayout().getIntPtrType(context),
         from_chars_sep_v<uint64_t>(statement / Rhs));
       builder.CreateCall(
-        runtime.reference_from_array, {storage, owner->value, index});
-      auto* result =
-        load_value_storage(*lowered_reference, storage, "arrayref.const");
+        runtime.reference_from_array,
+        {value_storage_pointer(storage), owner->value, index});
       return locals.bind_value(
         statement,
         statement / LocalId,
-        LoweredValue{*lowered_reference, result});
+        load_value_storage(storage, "arrayref.const"));
     }
   }
 }

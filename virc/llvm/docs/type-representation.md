@@ -1,13 +1,16 @@
 # LLVM Type Representation
 
 `LoweredType` records three related choices: an LLVM SSA type, an addressable
-storage type, and a public `vrt::ValueType` runtime category. `LoweredValue`
-adds the emitted LLVM value and an optional callable signature.
+storage type, and a public `vrt::ValueType` runtime category. `LoweredStorage`
+pairs that representation with an optional address, while `LoweredValue` adds
+the emitted LLVM value and an optional callable signature.
 
 Value-storage helpers allocate addressable slots in the function entry block,
 materialize SSA values into those slots, and load values back into SSA form.
 They are shared lowering machinery used by mutable locals and VRT ABI calls,
-not part of raise handling itself.
+not part of raise handling itself. Slotless values have no local storage
+address; the VRT-call boundary converts that absence to an LLVM null pointer
+when the ABI requires one.
 
 Primitive lowerers live under `types/`. Nominal classes use generated structure
 layouts for their fields while object values use runtime-managed pointers.

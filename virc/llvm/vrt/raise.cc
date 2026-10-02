@@ -39,16 +39,16 @@ namespace virc
       if (!type_id)
         return false;
 
-      auto* storage =
+      auto storage =
         allocate_value_storage(return_type, "raised.value.storage");
       auto* type_id_value = llvm::ConstantInt::get(
         module.getDataLayout().getIntPtrType(context), *type_id);
       builder.CreateCall(
-        runtime.frame_take_raised_value, {type_id_value, storage});
-      auto* result =
-        load_value_storage(return_type, storage, "raised.result");
+        runtime.frame_take_raised_value,
+        {type_id_value, value_storage_pointer(storage)});
+      auto result = load_value_storage(storage, "raised.result");
 
-      if (!emit_escape(function, LoweredValue{return_type, result}))
+      if (!emit_escape(function, result))
         return false;
 
       if (!emit_leave_frame(function))
@@ -57,7 +57,7 @@ namespace virc
       if (return_type.ir_type == IRValueType::None)
         builder.CreateRetVoid();
       else
-        builder.CreateRet(result);
+        builder.CreateRet(result.value);
 
       return true;
     }

@@ -87,7 +87,8 @@ namespace virc
           if (!storage)
             return false;
 
-          builder.CreateCall(runtime.reference_retain, {*storage});
+          builder.CreateCall(
+            runtime.reference_retain, {value_storage_pointer(*storage)});
           return true;
         }
 
@@ -160,7 +161,8 @@ namespace virc
           if (!storage)
             return false;
 
-          builder.CreateCall(runtime.reference_release, {*storage});
+          builder.CreateCall(
+            runtime.reference_release, {value_storage_pointer(*storage)});
           return true;
         }
 
@@ -190,8 +192,7 @@ namespace virc
       return false;
     }
 
-    bool LLVMCodegen::emit_escape(
-      const Node& use, const LoweredValue& value)
+    bool LLVMCodegen::emit_escape(const Node& use, const LoweredValue& value)
     {
       switch (value.type.runtime_type)
       {
@@ -233,7 +234,8 @@ namespace virc
           if (!storage)
             return false;
 
-          builder.CreateCall(runtime.reference_escape, {*storage});
+          builder.CreateCall(
+            runtime.reference_escape, {value_storage_pointer(*storage)});
           return true;
         }
 
@@ -282,12 +284,13 @@ namespace virc
         return true;
       }
 
-      auto storage = materialize_value_storage(
-        use, value, "reference.tailcall.storage");
+      auto storage =
+        materialize_value_storage(use, value, "reference.tailcall.storage");
       if (!storage)
         return false;
 
-      builder.CreateCall(validation_function, {*storage});
+      builder.CreateCall(
+        validation_function, {value_storage_pointer(*storage)});
       return true;
     }
   }

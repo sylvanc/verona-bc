@@ -9,45 +9,63 @@ namespace virc
 {
   namespace llvm_backend
   {
-    llvm::Value* LLVMCodegen::allocate_value_storage(
+    LoweredStorage LLVMCodegen::allocate_value_storage(
       const LoweredType& type, const std::string& name)
     {
       if (type.storage_type == nullptr)
-        return llvm::ConstantPointerNull::get(
-          llvm::PointerType::getUnqual(context));
+        return LoweredStorage{type};
 
       auto* block = builder.GetInsertBlock();
       assert(block != nullptr);
       auto& entry = block->getParent()->getEntryBlock();
       llvm::IRBuilder<> entry_builder(context);
       entry_builder.SetInsertPoint(&entry, entry.begin());
-      return entry_builder.CreateAlloca(type.storage_type, nullptr, name);
+      return LoweredStorage{
+        type, entry_builder.CreateAlloca(type.storage_type, nullptr, name)};
     }
 
-    std::optional<llvm::Value*> LLVMCodegen::materialize_value_storage(
+    std::optional<LoweredStorage> LLVMCodegen::materialize_value_storage(
       const Node& statement, const LoweredValue& value, const std::string& name)
     {
-      if (value.type.ir_type == IRValueType::None)
+      if (value.type.storage_type == nullptr)
         return allocate_value_storage(value.type, name);
 
-      if ((value.value == nullptr) || (value.type.storage_type == nullptr))
+      if (value.value == nullptr)
       {
         fail(statement, "value has no storage representation");
         return {};
       }
 
-      auto* storage = allocate_value_storage(value.type, name);
-      builder.CreateStore(value.value, storage);
+      auto storage = allocate_value_storage(value.type, name);
+      assert(storage.address != nullptr);
+      builder.CreateStore(value.value, storage.address);
       return storage;
     }
 
-    llvm::Value* LLVMCodegen::load_value_storage(
-      const LoweredType& type, llvm::Value* storage, const std::string& name)
+    LoweredValue LLVMCodegen::load_value_storage(
+      const LoweredStorage& storage, const std::string& name)
     {
-      if (type.storage_type == nullptr)
-        return nullptr;
+      if (storage.type.storage_type == nullptr)
+      {
+        assert(storage.address == nullptr);
+        return LoweredValue{storage.type, nullptr};
+      }
 
-      return builder.CreateLoad(type.storage_type, storage, name);
+      assert(storage.address != nullptr);
+      return LoweredValue{
+        storage.type,
+        builder.CreateLoad(storage.type.storage_type, storage.address, name)};
+    }
+
+    llvm::Value*
+    LLVMCodegen::value_storage_pointer(const LoweredStorage& storage)
+    {
+      if (storage.address != nullptr)
+        return storage.address;
+
+      assert(storage.type.storage_type == nullptr);
+      return llvm::ConstantPointerNull::get(
+        llvm::PointerType::getUnqual(context));
     }
   }
 }

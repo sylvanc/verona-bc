@@ -21,24 +21,21 @@ namespace virc
       if (
         (owner->type.runtime_type != vrt::ValueType::array) ||
         (owner->value == nullptr) || (index->type != *usize_type) ||
-        (index->value == nullptr) ||
-        (runtime.reference_from_array == nullptr))
+        (index->value == nullptr) || (runtime.reference_from_array == nullptr))
       {
         fail(statement, "array reference runtime is unavailable");
         return false;
       }
 
-      auto* storage =
+      auto storage =
         allocate_value_storage(*lowered_reference, "arrayref.storage");
       builder.CreateCall(
         runtime.reference_from_array,
-        {storage, owner->value, index->value});
-      auto* result =
-        load_value_storage(*lowered_reference, storage, "arrayref");
+        {value_storage_pointer(storage), owner->value, index->value});
       return locals.bind_value(
         statement,
         statement / LocalId,
-        LoweredValue{*lowered_reference, result});
+        load_value_storage(storage, "arrayref"));
     }
   }
 }

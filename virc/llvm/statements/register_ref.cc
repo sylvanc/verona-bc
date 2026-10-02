@@ -35,7 +35,7 @@ namespace virc
         return false;
       }
 
-      auto* storage =
+      auto storage =
         allocate_value_storage(*lowered_reference, "registerref.storage");
       auto* frame =
         builder.CreateCall(runtime.thread_current_frame, {}, "current.frame");
@@ -43,13 +43,11 @@ namespace virc
         module.getDataLayout().getIntPtrType(context), *content_type_id);
       builder.CreateCall(
         runtime.reference_from_register,
-        {storage, frame, variable->storage, type_id});
-      auto* result =
-        load_value_storage(*lowered_reference, storage, "registerref");
+        {value_storage_pointer(storage), frame, variable->storage, type_id});
       return locals.bind_value(
         statement,
         statement / LocalId,
-        LoweredValue{*lowered_reference, result});
+        load_value_storage(storage, "registerref"));
     }
   }
 }

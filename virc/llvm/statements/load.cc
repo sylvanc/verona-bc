@@ -28,16 +28,16 @@ namespace virc
       if (!reference_storage)
         return false;
 
-      auto* result_storage =
+      auto result_storage =
         allocate_value_storage(*lowered_result, "load.result.storage");
       builder.CreateCall(
-        runtime.reference_load, {*reference_storage, result_storage});
-      auto* result =
-        load_value_storage(*lowered_result, result_storage, "load.result");
+        runtime.reference_load,
+        {value_storage_pointer(*reference_storage),
+         value_storage_pointer(result_storage)});
       return locals.bind_value(
         statement,
         statement / LocalId,
-        LoweredValue{*lowered_result, result});
+        load_value_storage(result_storage, "load.result"));
     }
   }
 }

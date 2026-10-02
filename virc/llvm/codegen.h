@@ -164,8 +164,7 @@ namespace virc
       bool emit_retain(const Node& use, const LoweredValue& value);
       bool emit_release(const Node& use, const LoweredValue& value);
       bool emit_escape(const Node& use, const LoweredValue& value);
-      bool
-      emit_validate_tailcall(const Node& use, const LoweredValue& value);
+      bool emit_validate_tailcall(const Node& use, const LoweredValue& value);
 
       // Argument helpers.
       bool emit_release_args(
@@ -184,16 +183,15 @@ namespace virc
       bool emit_leave_frame(const Node& statement);
 
       // Value storage.
-      llvm::Value* allocate_value_storage(
-        const LoweredType& type, const std::string& name);
-      std::optional<llvm::Value*> materialize_value_storage(
+      LoweredStorage
+      allocate_value_storage(const LoweredType& type, const std::string& name);
+      std::optional<LoweredStorage> materialize_value_storage(
         const Node& statement,
         const LoweredValue& value,
         const std::string& name);
-      llvm::Value* load_value_storage(
-        const LoweredType& type,
-        llvm::Value* storage,
-        const std::string& name);
+      LoweredValue load_value_storage(
+        const LoweredStorage& storage, const std::string& name);
+      llvm::Value* value_storage_pointer(const LoweredStorage& storage);
 
       // Raise handling.
       bool emit_raise_continuation(

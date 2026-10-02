@@ -53,6 +53,12 @@ namespace virc
       bool operator==(const LoweredSignature&) const = default;
     };
 
+    struct LoweredStorage
+    {
+      LoweredType type;
+      llvm::Value* address = nullptr;
+    };
+
     struct LoweredValue
     {
       LoweredType type;

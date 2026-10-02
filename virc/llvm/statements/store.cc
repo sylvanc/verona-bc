@@ -32,17 +32,17 @@ namespace virc
       if (!reference_storage || !incoming_storage)
         return false;
 
-      auto* outgoing_storage =
+      auto outgoing_storage =
         allocate_value_storage(*lowered_result, "store.outgoing.storage");
       builder.CreateCall(
         runtime.reference_exchange,
-        {*reference_storage, *incoming_storage, outgoing_storage});
-      auto* result = load_value_storage(
-        *lowered_result, outgoing_storage, "store.result");
+        {value_storage_pointer(*reference_storage),
+         value_storage_pointer(*incoming_storage),
+         value_storage_pointer(outgoing_storage)});
       return locals.bind_value(
         statement,
         statement / LocalId,
-        LoweredValue{*lowered_result, result});
+        load_value_storage(outgoing_storage, "store.result"));
     }
   }
 }

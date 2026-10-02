@@ -40,9 +40,9 @@ namespace virc
         return false;
 
       auto* type_id_value = llvm::ConstantInt::get(
-        module.getDataLayout().getIntPtrType(context),
-        *type_id);
-      builder.CreateCall(runtime.frame_raise, {type_id_value, *storage});
+        module.getDataLayout().getIntPtrType(context), *type_id);
+      builder.CreateCall(
+        runtime.frame_raise, {type_id_value, value_storage_pointer(*storage)});
       builder.CreateUnreachable();
       return true;
     }
