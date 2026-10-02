@@ -3,7 +3,11 @@
 The optional LLVM emitter lowers a read-only `virc::Compilation` to textual
 LLVM IR. Its build target is `virc_llvm`, enabled by
 `VERONA_ENABLE_LLVM_BACKEND`; its public entry point is
-`virc::llvm_backend::emit()`.
+`virc::llvm::emit()`.
+
+The `virc::llvm` namespace is the repository-facing emitter facade.
+Implementation types live in `virc::llvm_backend`, which keeps them out of the
+facade and distinguishes them from LLVM's global `::llvm` namespace.
 
 This component depends on LLVM and targets the public VRT C ABI. It does not
 implement runtime behavior. `virc_core` and `virc_vbc` remain independent of

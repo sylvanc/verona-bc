@@ -199,8 +199,5 @@ namespace virc
         llvm::Value* storage,
         const std::string& name);
     };
-
-    bool emit(
-      const Compilation& compilation, const std::filesystem::path& output);
   }
 }

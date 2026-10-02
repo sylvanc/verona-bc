@@ -244,20 +244,11 @@ namespace virc
     wf::pop_front();
   }
 
-  void vbc_backend::emit(
+  void vbc::emit(
     const Compilation& compilation,
     const std::filesystem::path& output,
     bool strip)
   {
     VBCEmitter(compilation).emit(output, strip);
   }
-
-}
-
-void virc::vbc::emit(
-  const virc::Compilation& compilation,
-  const std::filesystem::path& output,
-  bool strip)
-{
-  virc::vbc_backend::emit(compilation, output, strip);
 }
