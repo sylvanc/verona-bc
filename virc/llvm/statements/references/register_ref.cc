@@ -35,19 +35,16 @@ namespace virc
         return false;
       }
 
-      auto storage =
-        allocate_value_storage(*lowered_reference, "registerref.storage");
       auto* frame =
         builder.CreateCall(runtime.thread_current_frame, {}, "current.frame");
       auto* type_id = llvm::ConstantInt::get(
         module.getDataLayout().getIntPtrType(context), *content_type_id);
-      builder.CreateCall(
-        runtime.reference_from_register,
-        {value_storage_pointer(storage), frame, variable->address, type_id});
-      return locals.bind_value(
+      return emit_reference_construction(
         statement,
-        statement / LocalId,
-        load_value_storage(storage, "registerref"));
+        *lowered_reference,
+        runtime.reference_from_register,
+        {frame, variable->address, type_id},
+        "registerref");
     }
   }
 }

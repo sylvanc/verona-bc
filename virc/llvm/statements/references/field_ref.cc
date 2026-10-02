@@ -27,23 +27,22 @@ namespace virc
 
       if (
         (owner->type.runtime_type != vrt::ValueType::object) ||
-        (owner->value == nullptr) || (runtime.reference_from_field == nullptr))
+        (owner->value == nullptr) ||
+        (lowered_reference->runtime_type != vrt::ValueType::reference) ||
+        (runtime.reference_from_field == nullptr))
       {
         fail(statement, "field reference runtime is unavailable");
         return false;
       }
 
-      auto storage =
-        allocate_value_storage(*lowered_reference, "fieldref.storage");
       auto* id = llvm::ConstantInt::get(
         module.getDataLayout().getIntPtrType(context), *field_id);
-      builder.CreateCall(
-        runtime.reference_from_field,
-        {value_storage_pointer(storage), owner->value, id});
-      return locals.bind_value(
+      return emit_reference_construction(
         statement,
-        statement / LocalId,
-        load_value_storage(storage, "fieldref"));
+        *lowered_reference,
+        runtime.reference_from_field,
+        {owner->value, id},
+        "fieldref");
     }
   }
 }

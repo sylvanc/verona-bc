@@ -13,7 +13,8 @@ Reference statements are grouped under `statements/references/` while
 preserving the VIR token boundary: `register_ref.cc`, `field_ref.cc`,
 `array_ref.cc`, `array_ref_const.cc`, `load.cc`, and `store.cc` each own one
 top-level emitter. Field, array, and store lowerers share argument-transfer
-handling through `LocalState` and then call one consuming VRT operation. They
+handling through `LocalState`. The four reference constructors also share
+their VRT out-parameter call, result reload, and local binding sequence. They
 do not reproduce region or write-barrier policy in LLVM IR.
 
 The backend is optional and exists only when `VERONA_ENABLE_LLVM_BACKEND=ON`.

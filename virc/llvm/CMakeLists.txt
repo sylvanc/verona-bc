@@ -61,6 +61,7 @@ add_library(virc_llvm STATIC
   statements/references/array_ref_const.cc
   statements/references/field_ref.cc
   statements/references/load.cc
+  statements/references/reference.cc
   statements/references/register_ref.cc
   statements/references/store.cc
   statements/arraycompare.cc

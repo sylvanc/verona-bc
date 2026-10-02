@@ -168,6 +168,12 @@ namespace virc
 
       // Reference helpers.
       std::optional<LoweredValue> transfer_reference_arg(const Node& arg);
+      bool emit_reference_construction(
+        const Node& statement,
+        const LoweredType& reference_type,
+        llvm::Function* constructor,
+        std::vector<llvm::Value*> arguments,
+        const std::string& name);
 
       // Argument helpers.
       bool emit_release_args(
