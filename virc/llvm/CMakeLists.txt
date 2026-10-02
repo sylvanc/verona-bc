@@ -55,26 +55,28 @@ add_library(virc_llvm STATIC
   statements/constants/inf.cc
   statements/constants/nan.cc
   statements/constants/pi.cc
+  # Reference statements.
+  statements/references/args.cc
+  statements/references/array_ref.cc
+  statements/references/array_ref_const.cc
+  statements/references/field_ref.cc
+  statements/references/load.cc
+  statements/references/register_ref.cc
+  statements/references/store.cc
   statements/arraycompare.cc
   statements/arraycopy.cc
   statements/arrayfill.cc
-  statements/array_ref.cc
-  statements/array_ref_const.cc
   statements/binop.cc
   statements/convert.cc
   statements/copy.cc
   statements/drop.cc
   statements/ffi.cc
   statements/freeze.cc
-  statements/field_ref.cc
   statements/get_raise.cc
-  statements/load.cc
   statements/move.cc
   statements/merge.cc
   statements/pin.cc
-  statements/register_ref.cc
   statements/set_raise.cc
-  statements/store.cc
   statements/unop.cc
   terminators.cc
   terminators/cond.cc

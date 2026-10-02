@@ -1,4 +1,4 @@
-#include "../codegen.h"
+#include "../../codegen.h"
 
 #include <llvm/IR/Constants.h>
 
@@ -8,7 +8,7 @@ namespace virc
   {
     bool LLVMCodegen::emit_field_ref(const Node& statement)
     {
-      auto owner = transfer_arg(statement / Arg);
+      auto owner = transfer_reference_arg(statement / Arg);
       if (!owner)
         return false;
 

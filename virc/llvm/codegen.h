@@ -166,10 +166,12 @@ namespace virc
       bool emit_escape(const Node& use, const LoweredValue& value);
       bool emit_validate_tailcall(const Node& use, const LoweredValue& value);
 
+      // Reference helpers.
+      std::optional<LoweredValue> transfer_reference_arg(const Node& arg);
+
       // Argument helpers.
       bool emit_release_args(
         const Node& args, const std::vector<LoweredValue>& values);
-      std::optional<LoweredValue> transfer_arg(const Node& arg);
 
       // Callable helpers.
       std::optional<llvm::Value*>

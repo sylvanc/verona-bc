@@ -1,4 +1,4 @@
-#include "../codegen.h"
+#include "../../codegen.h"
 
 namespace virc
 {
@@ -7,7 +7,7 @@ namespace virc
     bool LLVMCodegen::emit_store(const Node& statement)
     {
       auto reference = locals.find_value(statement / Rhs);
-      auto incoming = transfer_arg(statement / Arg);
+      auto incoming = transfer_reference_arg(statement / Arg);
       auto result_type = resolve_local_type(statement / LocalId);
       if (!reference || !incoming || !result_type)
         return false;
