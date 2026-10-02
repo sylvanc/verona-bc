@@ -50,7 +50,13 @@ expected compile error, use
 - Declare FFI symbols in a `use` block with a `Lib` string
 - Call FFI wrappers as `ffi::func_name(args)` for functions in `_builtin/ffi/`
 
-### 2. Generate golden files
+### 2. Register fixture feasibility
+
+Check `testsuite/cmake/compiler_fixtures.cmake`: normal fixtures inherit
+`VBC_STAGE run`, while `compile_only/` fixtures inherit `VBC_STAGE compile`.
+Add an exact override only when the new fixture differs from those conventions.
+
+### 3. Generate golden files
 
 Run from the `build` directory:
 
@@ -66,7 +72,7 @@ This auto-generates the golden file directory structure:
   `*_final.trieste`, and `.vbc` file (success tests only)
 - `testsuite/v/$0/$0/run/` — contains `exit_code.txt`, `stdout.txt`, `stderr.txt` (only for success tests that produce a `.vbc`)
 
-### 3. Verify golden file completeness
+### 4. Verify golden file completeness
 
 Check that the golden `compile/` directory has the expected files:
 - All 14 pass dumps: `00_parse.trieste` through `13_typecheck.trieste`
@@ -79,16 +85,16 @@ If pass dumps are missing (e.g., only 0–5 present), it usually means a WF viol
 
 For error tests: no `run/` directory, no `.vbc` file, `exit_code.txt` = `1`.
 
-### 4. Verify the test passes
+### 5. Verify the test passes
 
 ```bash
-cd build && ctest --output-on-failure -R "^vbc/v/$0/$0" -j$(nproc)
+cd build && ctest --output-on-failure -R "^compiler/v/$0/$0" -j$(nproc)
 ```
 
 This should show the test passing. If it fails, check the source code and re-run `ninja update-dump`.
 For an expected compile error, use
-`"^vbc/v/compile_only/$0/$0"` instead.
+`"^compiler/v/compile_only/$0/$0"` instead.
 
-### 5. Report
+### 6. Report
 
 State the test name, whether it's a success/error/ffi test, what it tests, and the expected exit code.
