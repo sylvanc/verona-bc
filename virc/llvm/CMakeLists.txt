@@ -25,10 +25,10 @@ add_library(virc_llvm STATIC
   model/locals.cc
   model/storage.cc
   module.cc
-  ownership.cc
   program.cc
   vrt/declaration.cc
   vrt/frame.cc
+  vrt/ownership.cc
   vrt/raise.cc
   vrt/tailcall.cc
   statements.cc
