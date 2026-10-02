@@ -9,8 +9,8 @@ namespace virc
     bool LLVMCodegen::emit_register_ref(const Node& statement)
     {
       auto src = statement / Rhs;
-      auto variable = locals.find_variable_address(src);
-      if (!variable || (variable->storage == nullptr))
+      auto* variable = locals.find_variable_storage(src);
+      if ((variable == nullptr) || (variable->address == nullptr))
       {
         fail(statement, "registerref requires addressable Var storage");
         return false;
@@ -43,7 +43,7 @@ namespace virc
         module.getDataLayout().getIntPtrType(context), *content_type_id);
       builder.CreateCall(
         runtime.reference_from_register,
-        {value_storage_pointer(storage), frame, variable->storage, type_id});
+        {value_storage_pointer(storage), frame, variable->address, type_id});
       return locals.bind_value(
         statement,
         statement / LocalId,

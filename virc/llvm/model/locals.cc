@@ -19,15 +19,9 @@ namespace virc
     void LocalState::declare_var(const Node& local_id, const LoweredType& type)
     {
       auto name = LLVMCodegen::node_text(local_id);
-      llvm::Value* storage = nullptr;
-
-      if (type.storage_type != nullptr)
-      {
-        storage = codegen.builder.CreateAlloca(
-          type.storage_type, nullptr, LLVMCodegen::strip_sigil(name) + ".slot");
-      }
-
-      variables.insert_or_assign(name, VariableState{type, storage});
+      auto storage = codegen.allocate_value_storage(
+        type, LLVMCodegen::strip_sigil(name) + ".slot");
+      variables.insert_or_assign(name, storage);
     }
 
     bool LocalState::bind_value(
@@ -49,7 +43,7 @@ namespace virc
       {
         auto& state = variable->second;
 
-        if (state.storage == nullptr)
+        if (state.address == nullptr)
           return true;
 
         if (
@@ -62,7 +56,7 @@ namespace virc
           return false;
         }
 
-        codegen.builder.CreateStore(value.value, state.storage);
+        codegen.builder.CreateStore(value.value, state.address);
         return true;
       }
 
@@ -79,14 +73,8 @@ namespace virc
       {
         auto& state = variable->second;
 
-        if (state.storage == nullptr)
-          return LoweredValue{state.type, nullptr};
-
-        auto* value = codegen.builder.CreateLoad(
-          state.type.storage_type,
-          state.storage,
-          LLVMCodegen::strip_sigil(name) + ".load");
-        return LoweredValue{state.type, value};
+        return codegen.load_value_storage(
+          state, LLVMCodegen::strip_sigil(name) + ".load");
       }
 
       auto value = local_values.find(name);
@@ -97,14 +85,14 @@ namespace virc
       return value->second;
     }
 
-    std::optional<LocalState::VariableAddress>
-    LocalState::find_variable_address(const Node& local_id)
+    const LoweredStorage*
+    LocalState::find_variable_storage(const Node& local_id) const
     {
       auto variable = variables.find(LLVMCodegen::node_text(local_id));
       if (variable == variables.end())
-        return {};
+        return nullptr;
 
-      return VariableAddress{variable->second.type, variable->second.storage};
+      return &variable->second;
     }
 
     std::optional<LoweredValue> LocalState::extract_value(const Node& local_id)
