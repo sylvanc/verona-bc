@@ -1,126 +1,27 @@
-#include "emitter.h"
-
 #include "../lang.h"
+#include "debug_info.h"
+#include "encoder.h"
+#include "emitter.h"
+#include "instruction_encoder.h"
+#include "string_table.h"
+#include "type_encoding.h"
 
-#include <type_traits>
 #include <vbc/format.h>
-#include <zstd.h>
 
 namespace virc
 {
   using namespace ::vbc;
-
-  static_assert(virc::MainFunctionId == ::vbc::MainFunctionId);
-  static_assert(virc::FinalizerMethodId == ::vbc::FinalizerMethodId);
-  static_assert(virc::CallbackMethodId == ::vbc::CallbackMethodId);
-  static_assert(virc::DynamicTypeId == ::vbc::DynamicTypeId);
-  static_assert(PrimitiveTypeCount == NumPrimitiveClasses);
-
-  template<typename T>
-  struct sleb
-  {
-    T value;
-    sleb(T value) : value(value) {}
-  };
-
-  template<typename T>
-  struct uleb
-  {
-    T value;
-    uleb(T value) : value(value) {}
-  };
-
-  template<typename T>
-  struct d
-  {
-    DIOp op;
-    T value;
-    d(DIOp op, T value) : op(op), value(value) {}
-  };
-
-  template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<T>&& s)
-  {
-    // This uses zigzag encoding.
-    static_assert(std::is_signed_v<T>);
-
-    using U = std::make_unsigned_t<T>;
-    auto bits = static_cast<U>(s.value);
-    auto sign_mask = U{} - static_cast<U>(s.value < 0);
-    auto value = (bits << 1) ^ sign_mask;
-    return b << uleb(value);
-  }
-
-  template<>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<float>&& s)
-  {
-    auto value = std::bit_cast<int32_t>(s.value);
-    return b << sleb(value);
-  }
-
-  template<>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, sleb<double>&& s)
-  {
-    auto value = std::bit_cast<int64_t>(s.value);
-    return b << sleb(value);
-  }
-
-  template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, uleb<T>&& u)
-  {
-    auto value = u.value;
-
-    while (value > 0x7F)
-    {
-      b.push_back((value & 0x7F) | 0x80);
-      value >>= 7;
-    }
-
-    b.push_back(value);
-    return b;
-  }
-
-  template<typename T>
-  std::vector<uint8_t>& operator<<(std::vector<uint8_t>& b, d<T>&& d)
-  {
-    auto value = (d.value << 2) | +d.op;
-    return b << uleb(value);
-  }
-
-  std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, const std::string& str)
-  {
-    b << uleb(str.size());
-    b.insert(b.end(), str.begin(), str.end());
-    return b;
-  }
-
-  std::vector<uint8_t>&
-  operator<<(std::vector<uint8_t>& b, const std::string_view& str)
-  {
-    b << uleb(str.size());
-    b.insert(b.end(), str.begin(), str.end());
-    return b;
-  }
-
-  uleb<size_t> rgn(Node node)
-  {
-    auto region = node / Region;
-
-    if (region == RegionRC)
-      return +RegionType::RegionRC;
-    else if (region == RegionArena)
-      return +RegionType::RegionArena;
-
-    assert(false);
-    return size_t(-1);
-  }
+  using namespace vbc_backend;
+  using ::vbc::CurrentVersion;
+  using ::vbc::MagicNumber;
 
   namespace
   {
     struct VBCEmitter : Compilation
     {
-      explicit VBCEmitter(const Compilation& bytecode) : Compilation(bytecode) {}
+      explicit VBCEmitter(const Compilation& compilation)
+      : Compilation(compilation)
+      {}
 
       void emit(std::filesystem::path output, bool strip);
     };
@@ -133,1008 +34,225 @@ namespace virc
     if (output.empty())
       output = "out.vbc";
 
-    std::vector<uint8_t> hdr;
-    std::vector<uint8_t> di;
-    std::vector<uint8_t> code;
-    std::map<ST::Index, trieste::Source> di_source;
+    ByteBuffer header;
+    ByteBuffer code;
+    DebugInfo debug{code, source_paths};
 
-    // Build memo slot mapping: init FunctionId string → 0-based index.
-    std::unordered_map<std::string, size_t> memo_slot_map;
-    Node memo_init_node;
+    MemoSlots memo_slots;
+    Node memo_init;
+
     for (auto& child : *top)
     {
       if (child == MemoInit)
       {
-        memo_init_node = child;
-        size_t idx = 0;
-        for (auto& fid : *child)
-        {
-          memo_slot_map[std::string(fid->location().view())] = idx++;
-        }
+        memo_init = child;
+        size_t index = 0;
+
+        for (auto& function_id : *child)
+          memo_slots[std::string(function_id->location().view())] = index++;
+
         break;
       }
     }
 
-    hdr << uleb(MagicNumber);
-    hdr << uleb(CurrentVersion);
+    header << uleb(MagicNumber);
+    header << uleb(CurrentVersion);
+    encode_string_table(header, ST::exec());
 
-    // Exec string table.
-    hdr << uleb(ST::exec().size());
+    header << uleb(classes.size());
+    header << uleb(complex_primitives.size());
 
-    for (size_t i = 0; i < ST::exec().size(); i++)
-      hdr << ST::exec().at(i);
-
-    // Class and complex primitive count.
-    hdr << uleb(classes.size());
-    hdr << uleb(complex_primitives.size());
-
-    // Primitive classes.
-    for (auto& p : primitives)
+    for (auto& primitive : primitives)
     {
-      if (p)
+      if (primitive)
       {
-        auto methods = p / Methods;
-        hdr << uleb(methods->size());
+        auto methods = primitive / Methods;
+        header << uleb(methods->size());
 
         for (auto& method : *methods)
         {
-          hdr << uleb(*get_method_id(method / MethodId))
-              << uleb(*get_func_id(method / FunctionId));
+          header << uleb(*get_method_id(method / MethodId))
+                 << uleb(*get_func_id(method / FunctionId));
         }
       }
       else
       {
-        hdr << uleb(0);
+        header << uleb(0);
       }
     }
 
-    // Classes.
-    for (auto& c : classes)
+    for (auto& class_node : classes)
     {
-      hdr << uleb(di.size());
-      di << uleb(ST::di().string(c / ClassId));
+      header << uleb(debug.size());
+      debug.output() << uleb(ST::di().string(class_node / ClassId));
 
-      auto fields = c / Fields;
-      hdr << uleb(fields->size());
+      auto fields = class_node / Fields;
+      header << uleb(fields->size());
 
       for (auto& field : *fields)
       {
-        hdr << uleb(*get_field_id(field / FieldId));
-        hdr << uleb(type_id(field / Type));
-        di << uleb(ST::di().string(field / FieldId));
+        header << uleb(*get_field_id(field / FieldId));
+        header << uleb(type_id(field / Type));
+        debug.output() << uleb(ST::di().string(field / FieldId));
       }
 
-      auto methods = c / Methods;
-      hdr << uleb(methods->size());
+      auto methods = class_node / Methods;
+      header << uleb(methods->size());
 
       for (auto& method : *methods)
       {
-        hdr << uleb(*get_method_id(method / MethodId))
-            << uleb(*get_func_id(method / FunctionId));
-        di << uleb(ST::di().string(method / MethodId));
+        header << uleb(*get_method_id(method / MethodId))
+               << uleb(*get_func_id(method / FunctionId));
+        debug.output() << uleb(ST::di().string(method / MethodId));
       }
     }
 
-    // Complex primitive classes.
-    for (auto& p : complex_primitives)
+    for (auto& primitive : complex_primitives)
     {
-      if (p)
+      if (primitive)
       {
-        auto methods = p / Methods;
-        hdr << uleb(methods->size());
+        auto methods = primitive / Methods;
+        header << uleb(methods->size());
 
         for (auto& method : *methods)
         {
-          hdr << uleb(*get_method_id(method / MethodId))
-              << uleb(*get_func_id(method / FunctionId));
+          header << uleb(*get_method_id(method / MethodId))
+                 << uleb(*get_func_id(method / FunctionId));
         }
       }
       else
       {
-        hdr << uleb(0);
+        header << uleb(0);
       }
     }
 
-    // FFI libraries.
-    hdr << uleb(libraries.size());
+    header << uleb(libraries.size());
 
-    for (auto& lib : libraries)
+    for (auto& library : libraries)
     {
-      hdr << uleb(ST::exec().string(lib / String));
+      header << uleb(ST::exec().string(library / String));
 
-      // Encode init function ID. 0 means no function, otherwise
-      // func_id + 1.
-      auto init = lib / InitFunc;
+      auto init = library / InitFunc;
+        // Zero means no init function; otherwise the value is func_id + 1.
       if (init->type() == FunctionId)
-        hdr << uleb(*get_func_id(init) + 1);
+        header << uleb(*get_func_id(init) + 1);
       else
-        hdr << uleb(0);
+        header << uleb(0);
     }
 
-    hdr << uleb(symbols.size());
+    header << uleb(symbols.size());
 
     for (auto& symbol : symbols)
     {
-      hdr << uleb(*get_library_id(symbol->parent(Lib)))
-          << uleb(ST::exec().string(symbol / Lhs))
-          << uleb(ST::exec().string(symbol / Rhs))
-          << uleb(((symbol / Vararg) == Vararg) ? 1 : 0)
-          << uleb((symbol / FFIParams)->size());
+      header << uleb(*get_library_id(symbol->parent(Lib)))
+             << uleb(ST::exec().string(symbol / Lhs))
+             << uleb(ST::exec().string(symbol / Rhs))
+             << uleb(((symbol / Vararg) == Vararg) ? 1 : 0)
+             << uleb((symbol / FFIParams)->size());
 
-      for (auto& param : *(symbol / FFIParams))
-        hdr << uleb(type_id(param));
+      for (auto& parameter : *(symbol / FFIParams))
+        header << uleb(type_id(parameter));
 
-      hdr << uleb(type_id(symbol / Return));
+      header << uleb(type_id(symbol / Return));
     }
 
-    // Functions.
-    hdr << uleb(functions.size());
+    header << uleb(functions.size());
 
-    for (auto& func_state : functions)
+    for (auto& function : functions)
     {
-      hdr << uleb(func_state.register_idxs.size());
-      hdr << uleb(di.size());
+      header << uleb(function.register_idxs.size());
+      header << uleb(debug.size());
+      header << uleb(function.params);
 
-      // Parameter and return types.
-      hdr << uleb(func_state.params);
+      for (auto& parameter : *(function.func / Params))
+        header << uleb(type_id(parameter / Type));
 
-      for (auto& param : *(func_state.func / Params))
-        hdr << uleb(type_id(param / Type));
+      header << uleb(type_id(function.func / Type));
 
-      hdr << uleb(type_id(func_state.func / Type));
+      auto variables = function.func / Vars;
+      header << uleb(variables->size());
 
-      // Variable types.
-      auto vars_node = func_state.func / Vars;
-      hdr << uleb(vars_node->size());
+      for (auto& variable : *variables)
+        header << uleb(type_id(variable / Type));
 
-      for (auto& var : *vars_node)
-        hdr << uleb(type_id(var / Type));
+      header << uleb(function.label_idxs.size());
+      debug.output() << uleb(function.name);
 
-      // Labels.
-      hdr << uleb(func_state.label_idxs.size());
+      for (auto& name : function.register_names)
+        debug.output() << uleb(name);
 
-      // Function name.
-      di << uleb(func_state.name);
+      debug.begin_function();
 
-      // Register names.
-      for (auto& name : func_state.register_names)
-        di << uleb(name);
-
-      auto dst = [&](Node stmt) {
-        return uleb(*func_state.get_register_id(stmt / LocalId));
-      };
-
-      auto lhs = [&](Node stmt) {
-        return uleb(*func_state.get_register_id(stmt / Lhs));
-      };
-
-      auto rhs = [&](Node stmt) {
-        return uleb(*func_state.get_register_id(stmt / Rhs));
-      };
-
-      auto src = rhs;
-
-      auto cls = [&](Node stmt) { return uleb(type_id(stmt / ClassId)); };
-
-      auto fld = [&](Node stmt) { return uleb(*get_field_id(stmt / FieldId)); };
-
-      auto mth = [&](Node stmt) {
-        return uleb(*get_method_id(stmt / MethodId));
-      };
-
-      auto fn = [&](Node stmt) {
-        return uleb(*get_func_id(stmt / FunctionId));
-      };
-
-      auto onearg = [&](Node arg) {
-        if ((arg / Type) == ArgMove)
-          code << uleb(+Op::ArgMove) << uleb(src(arg));
-        else
-          code << uleb(+Op::ArgCopy) << uleb(src(arg));
-      };
-
-      auto args = [&](Node args) {
-        for (auto arg : *args)
-          onearg(arg);
-      };
-
-      constexpr size_t no_value = size_t(-1);
-      size_t di_file = no_value;
-      size_t di_offset = 0;
-      size_t di_last_pc = code.size();
-      bool explicit_di = false;
-
-      // Keep track of all included source files.
-      auto di_source_curr = di_source.end();
-
-      auto adv_di = [&]() {
-        auto di_cur_pc = code.size();
-
-        if (di_cur_pc > di_last_pc)
-        {
-          di << d(DIOp::Skip, di_cur_pc - di_last_pc);
-          di_last_pc = di_cur_pc;
-        }
-      };
-
-      auto stmt_di = [&](Node& stmt) {
-        // Record nothing for empty or synthetic source locations.
-        if (
-          !stmt->location().source || stmt->location().source->origin().empty())
-          return;
-
-        // Use the source and offset in the AST.
-        if (
-          (di_source_curr == di_source.end()) ||
-          (di_source_curr->second != stmt->location().source))
-        {
-          // Pick a non-relative path.
-          std::filesystem::path rel_path;
-
-          for (auto& path : source_paths)
-          {
-            rel_path = std::filesystem::relative(
-              stmt->location().source->origin(), path);
-
-            if (!rel_path.empty() && (rel_path.c_str()[0] != '.'))
-              break;
-          }
-
-          if (rel_path.empty() || (rel_path.c_str()[0] == '.'))
-            rel_path = stmt->location().source->origin();
-
-          di_source_curr =
-            di_source
-              .emplace(
-                ST::di().string(rel_path.string()), stmt->location().source)
-              .first;
-
-          adv_di();
-          di << d(DIOp::File, di_source_curr->first);
-          di_file = di_source_curr->first;
-          di_offset = 0;
-        }
-
-        auto pos = stmt->location().pos;
-
-        if (pos != di_offset)
-        {
-          // Offset will also advance the PC by one, so reduce any Skip by one.
-          di_last_pc++;
-          adv_di();
-          di << d(DIOp::Offset, pos - di_offset);
-          di_offset = pos;
-        }
-      };
-
-      for (auto label : *(func_state.func / Labels))
+      for (auto label : *(function.func / Labels))
       {
-        // Save the pc for this label.
-        hdr << uleb(code.size());
+        header << uleb(code.size());
 
-        for (Node stmt : *(label / Body))
+        for (Node statement : *(label / Body))
         {
-          if (stmt == Source)
+          if (statement == vir::Source)
           {
-            adv_di();
-            di_file = ST::di().string(stmt / String);
-            di_offset = 0;
-            explicit_di = true;
-            di << d(DIOp::File, di_file);
+            debug.record_explicit_file(statement / String);
             continue;
           }
-          else if (stmt == Offset)
+
+          if (statement == Offset)
           {
-            adv_di();
-            di_offset = from_chars_sep_v<size_t>(stmt / Int);
-            explicit_di = true;
-            di << d(DIOp::Offset, di_offset);
+            debug.record_explicit_offset(
+              from_chars_sep_v<size_t>(statement / Int));
             continue;
           }
-          else if (!explicit_di)
-          {
-            stmt_di(stmt);
-          }
 
-          if (stmt == Const)
-          {
-            auto t = stmt / Type;
-            auto v = stmt / Rhs;
-
-            if (t == None)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t));
-            }
-            else if (t == Bool)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t));
-
-              if ((stmt / Rhs) == True)
-                code << uleb(1);
-              else
-                code << uleb(0);
-            }
-            else if (t == I8)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(from_chars_sep_v<int8_t>(v));
-            }
-            else if (t == U8)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(from_chars_sep_v<uint8_t>(v));
-            }
-            else if (t == I16)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(from_chars_sep_v<int16_t>(v));
-            }
-            else if (t == U16)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(from_chars_sep_v<uint16_t>(v));
-            }
-            else if (t == I32)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(from_chars_sep_v<int32_t>(v));
-            }
-            else if (t == U32)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(from_chars_sep_v<uint32_t>(v));
-            }
-            else if (t->in({I64, ILong, ISize}))
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(from_chars_sep_v<int64_t>(v));
-            }
-            else if (t->in({U64, ULong, USize, Ptr}))
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << uleb(from_chars_sep_v<uint64_t>(v));
-            }
-            else if (t == F32)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(from_chars_sep_v<float>(v));
-            }
-            else if (t == F64)
-            {
-              code << uleb(+Op::Const) << dst(stmt) << uleb(+val(t))
-                   << sleb(from_chars_sep_v<double>(v));
-            }
-          }
-          else if (stmt == ConstStr)
-          {
-            code << uleb(+Op::String) << dst(stmt)
-                 << uleb(ST::exec().string(stmt / String));
-          }
-          else if (stmt == Convert)
-          {
-            code << uleb(+Op::Convert) << dst(stmt) << uleb(+val(stmt / Type))
-                 << rhs(stmt);
-          }
-          else if (stmt == Singleton)
-          {
-            code << uleb(+Op::Singleton) << dst(stmt) << cls(stmt);
-          }
-          else if (stmt == New)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::New) << dst(stmt) << cls(stmt);
-          }
-          else if (stmt == Stack)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::Stack) << dst(stmt) << cls(stmt);
-          }
-          else if (stmt == Heap)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::Heap) << dst(stmt) << rhs(stmt) << cls(stmt);
-          }
-          else if (stmt == Region)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::Region) << dst(stmt) << rgn(stmt) << cls(stmt);
-          }
-          else if (stmt == NewArray)
-          {
-            code << uleb(+Op::NewArray) << dst(stmt) << rhs(stmt)
-                 << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == NewArrayConst)
-          {
-            code << uleb(+Op::NewArrayConst) << dst(stmt)
-                 << uleb(type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
-          }
-          else if (stmt == StackArray)
-          {
-            code << uleb(+Op::StackArray) << dst(stmt) << rhs(stmt)
-                 << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == StackArrayConst)
-          {
-            code << uleb(+Op::StackArrayConst) << dst(stmt)
-                 << uleb(type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
-          }
-          else if (stmt == HeapArray)
-          {
-            code << uleb(+Op::HeapArray) << dst(stmt) << lhs(stmt) << rhs(stmt)
-                 << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == HeapArrayConst)
-          {
-            code << uleb(+Op::HeapArrayConst) << dst(stmt) << lhs(stmt)
-                 << uleb(type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
-          }
-          else if (stmt == RegionArray)
-          {
-            code << uleb(+Op::RegionArray) << dst(stmt) << rgn(stmt)
-                 << rhs(stmt) << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == RegionArrayConst)
-          {
-            code << uleb(+Op::RegionArrayConst) << dst(stmt) << rgn(stmt)
-                 << uleb(type_id(stmt / Type))
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
-          }
-          else if (stmt == Copy)
-          {
-            code << uleb(+Op::Copy) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Move)
-          {
-            code << uleb(+Op::Move) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Drop)
-          {
-            code << uleb(+Op::Drop) << dst(stmt);
-          }
-          else if (stmt == Freeze)
-          {
-            code << uleb(+Op::Freeze) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == RegisterRef)
-          {
-            code << uleb(+Op::RegisterRef) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == FieldRef)
-          {
-            auto arg = stmt / Arg;
-
-            if ((arg / Type) == ArgMove)
-              code << uleb(+Op::FieldRefMove);
-            else
-              code << uleb(+Op::FieldRefCopy);
-
-            code << dst(stmt) << src(arg) << fld(stmt);
-          }
-          else if (stmt == ArrayRef)
-          {
-            auto arg = stmt / Arg;
-
-            if ((arg / Type) == ArgMove)
-              code << uleb(+Op::ArrayRefMove);
-            else
-              code << uleb(+Op::ArrayRefCopy);
-
-            code << dst(stmt) << src(arg) << rhs(stmt);
-          }
-          else if (stmt == ArrayRefConst)
-          {
-            auto arg = stmt / Arg;
-
-            if ((arg / Type) == ArgMove)
-              code << uleb(+Op::ArrayRefMoveConst);
-            else
-              code << uleb(+Op::ArrayRefCopyConst);
-
-            code << dst(stmt) << src(arg)
-                 << uleb(from_chars_sep_v<uint64_t>(stmt / Rhs));
-          }
-          else if (stmt == Load)
-          {
-            code << uleb(+Op::Load) << dst(stmt) << rhs(stmt);
-          }
-          else if (stmt == Store)
-          {
-            auto arg = stmt / Arg;
-
-            if ((arg / Type) == ArgMove)
-              code << uleb(+Op::StoreMove);
-            else
-              code << uleb(+Op::StoreCopy);
-
-            code << dst(stmt) << src(stmt) << src(arg);
-          }
-          else if (stmt == Lookup)
-          {
-            code << uleb(+Op::LookupDynamic) << dst(stmt) << src(stmt)
-                 << mth(stmt);
-          }
-          else if (stmt == Call)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::CallStatic) << dst(stmt) << fn(stmt);
-          }
-          else if (stmt == MemoSlot)
-          {
-            auto fid_str = std::string((stmt / FunctionId)->location().view());
-            auto slot_it = memo_slot_map.find(fid_str);
-            assert(slot_it != memo_slot_map.end());
-            code << uleb(+Op::MemoLoad) << dst(stmt) << uleb(slot_it->second);
-          }
-          else if (stmt == CallDyn)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::CallDynamic) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == TryCallDyn)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::TryCallDynamic) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == FFI)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::FFI) << dst(stmt)
-                 << uleb(*get_symbol_id(stmt / SymbolId));
-          }
-          else if (stmt == FFIStruct)
-          {
-            code << uleb(+Op::FFIStruct) << dst(stmt) << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == FFILoad)
-          {
-            code << uleb(+Op::FFILoad) << dst(stmt) << lhs(stmt) << rhs(stmt)
-                 << uleb(*func_state.get_register_id(stmt / Kind))
-                 << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == FFIStore)
-          {
-            code << uleb(+Op::FFIStore) << dst(stmt) << lhs(stmt) << rhs(stmt)
-                 << uleb(*func_state.get_register_id(stmt / Kind))
-                 << uleb(*func_state.get_register_id(stmt / ValueSrc))
-                 << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == ArrayCopy)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::ArrayCopy) << dst(stmt);
-          }
-          else if (stmt == ArrayFill)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::ArrayFill) << dst(stmt);
-          }
-          else if (stmt == ArrayCompare)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::ArrayCompare) << dst(stmt);
-          }
-          else if (stmt == When)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::WhenStatic) << dst(stmt) << uleb(type_id(stmt / Cown))
-                 << fn(stmt);
-          }
-          else if (stmt == WhenDyn)
-          {
-            args(stmt / Args);
-            code << uleb(+Op::WhenDynamic) << dst(stmt)
-                 << uleb(type_id(stmt / Cown)) << src(stmt);
-          }
-          else if (stmt == Add)
-          {
-            code << uleb(+Op::Add) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Sub)
-          {
-            code << uleb(+Op::Sub) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Mul)
-          {
-            code << uleb(+Op::Mul) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Div)
-          {
-            code << uleb(+Op::Div) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Mod)
-          {
-            code << uleb(+Op::Mod) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Pow)
-          {
-            code << uleb(+Op::Pow) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == And)
-          {
-            code << uleb(+Op::And) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Or)
-          {
-            code << uleb(+Op::Or) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Xor)
-          {
-            code << uleb(+Op::Xor) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Shl)
-          {
-            code << uleb(+Op::Shl) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Shr)
-          {
-            code << uleb(+Op::Shr) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Eq)
-          {
-            code << uleb(+Op::Eq) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Ne)
-          {
-            code << uleb(+Op::Ne) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Lt)
-          {
-            code << uleb(+Op::Lt) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Le)
-          {
-            code << uleb(+Op::Le) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Gt)
-          {
-            code << uleb(+Op::Gt) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Ge)
-          {
-            code << uleb(+Op::Ge) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Min)
-          {
-            code << uleb(+Op::Min) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Max)
-          {
-            code << uleb(+Op::Max) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == LogBase)
-          {
-            code << uleb(+Op::LogBase) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Atan2)
-          {
-            code << uleb(+Op::Atan2) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == Neg)
-          {
-            code << uleb(+Op::Neg) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Not)
-          {
-            code << uleb(+Op::Not) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Abs)
-          {
-            code << uleb(+Op::Abs) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Ceil)
-          {
-            code << uleb(+Op::Ceil) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Floor)
-          {
-            code << uleb(+Op::Floor) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Exp)
-          {
-            code << uleb(+Op::Exp) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Log)
-          {
-            code << uleb(+Op::Log) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Sqrt)
-          {
-            code << uleb(+Op::Sqrt) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Cbrt)
-          {
-            code << uleb(+Op::Cbrt) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == IsInf)
-          {
-            code << uleb(+Op::IsInf) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == IsNaN)
-          {
-            code << uleb(+Op::IsNaN) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Sin)
-          {
-            code << uleb(+Op::Sin) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Cos)
-          {
-            code << uleb(+Op::Cos) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Tan)
-          {
-            code << uleb(+Op::Tan) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Asin)
-          {
-            code << uleb(+Op::Asin) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Acos)
-          {
-            code << uleb(+Op::Acos) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Atan)
-          {
-            code << uleb(+Op::Atan) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Sinh)
-          {
-            code << uleb(+Op::Sinh) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Cosh)
-          {
-            code << uleb(+Op::Cosh) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Tanh)
-          {
-            code << uleb(+Op::Tanh) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Asinh)
-          {
-            code << uleb(+Op::Asinh) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Acosh)
-          {
-            code << uleb(+Op::Acosh) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Atanh)
-          {
-            code << uleb(+Op::Atanh) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Bits)
-          {
-            code << uleb(+Op::Bits) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Len)
-          {
-            code << uleb(+Op::Len) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == MakePtr)
-          {
-            code << uleb(+Op::Ptr) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Read)
-          {
-            code << uleb(+Op::Read) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Const_E)
-          {
-            code << uleb(+Op::Const_E) << dst(stmt);
-          }
-          else if (stmt == Const_Pi)
-          {
-            code << uleb(+Op::Const_Pi) << dst(stmt);
-          }
-          else if (stmt == Const_Inf)
-          {
-            code << uleb(+Op::Const_Inf) << dst(stmt);
-          }
-          else if (stmt == Const_NaN)
-          {
-            code << uleb(+Op::Const_NaN) << dst(stmt);
-          }
-          else if (stmt == MakeCallback)
-          {
-            code << uleb(+Op::MakeCallback) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == CodePtrCallback)
-          {
-            code << uleb(+Op::CodePtrCallback) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == FreeCallback)
-          {
-            code << uleb(+Op::FreeCallback) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Pin)
-          {
-            code << uleb(+Op::Pin) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Unpin)
-          {
-            code << uleb(+Op::Unpin) << dst(stmt) << src(stmt);
-          }
-          else if (stmt == Merge)
-          {
-            code << uleb(+Op::Merge) << dst(stmt) << lhs(stmt) << rhs(stmt);
-          }
-          else if (stmt == AddExternal)
-          {
-            code << uleb(+Op::AddExternal) << dst(stmt);
-          }
-          else if (stmt == RemoveExternal)
-          {
-            code << uleb(+Op::RemoveExternal) << dst(stmt);
-          }
-          else if (stmt == Typetest)
-          {
-            code << uleb(+Op::Typetest) << dst(stmt) << src(stmt)
-                 << uleb(type_id(stmt / Type));
-          }
-          else if (stmt == GetRaise)
-          {
-            code << uleb(+Op::GetRaise) << dst(stmt);
-          }
-          else if (stmt == SetRaise)
-          {
-            code << uleb(+Op::SetRaise) << dst(stmt) << src(stmt);
-          }
+          debug.record_statement(statement);
+          encode_statement(*this, function, memo_slots, code, statement);
         }
 
-        Node term = label / Return;
-
-        if (explicit_di)
-          adv_di();
-        else
-          stmt_di(term);
-
-        if (term == Tailcall)
-        {
-          args(term / MoveArgs);
-          code << uleb(+Op::TailcallStatic) << fn(term);
-        }
-        else if (term == TailcallDyn)
-        {
-          args(term / MoveArgs);
-          code << uleb(+Op::TailcallDynamic) << dst(term);
-        }
-        else if (term == Return)
-        {
-          code << uleb(+Op::Return) << dst(term);
-        }
-        else if (term == Raise)
-        {
-          code << uleb(+Op::Raise) << dst(term);
-        }
-        else if (term == Cond)
-        {
-          auto t = *func_state.get_label_id(term / Lhs);
-          auto f = *func_state.get_label_id(term / Rhs);
-          code << uleb(+Op::Cond) << dst(term) << uleb(t) << uleb(f);
-        }
-        else if (term == Jump)
-        {
-          code << uleb(+Op::Jump)
-               << uleb(*func_state.get_label_id(term / LabelId));
-        }
+        Node terminator = label / Return;
+        debug.finish_function(terminator);
+        encode_terminator(*this, function, code, terminator);
       }
     }
 
-    // Types.
-    hdr << uleb(types.size());
+    encode_type_table(header, types);
 
-    for (auto& type : types)
+    if (memo_init)
     {
-      switch (type.kind)
-      {
-        case TypeKind::Array:
-          hdr << uleb(+TypeTag::Array);
-          break;
-        case TypeKind::Cown:
-          hdr << uleb(+TypeTag::Cown);
-          break;
-        case TypeKind::Ref:
-          hdr << uleb(+TypeTag::Ref);
-          break;
-        case TypeKind::Union:
-          hdr << uleb(+TypeTag::Union);
-          break;
-        case TypeKind::Tuple:
-          hdr << uleb(+TypeTag::Tuple);
-          break;
-      }
+      header << uleb(memo_init->size());
 
-      if (
-        type.kind == TypeKind::Array || type.kind == TypeKind::Cown ||
-        type.kind == TypeKind::Ref)
-      {
-        assert(type.elements.size() == 1);
-        hdr << uleb(type.elements.front());
-      }
-      else
-      {
-        hdr << uleb(type.elements.size());
-
-        for (auto element : type.elements)
-          hdr << uleb(element);
-      }
-    }
-
-    // Memo init list.
-    if (memo_init_node)
-    {
-      hdr << uleb(memo_init_node->size());
-      for (auto& fid : *memo_init_node)
-        hdr << uleb(*get_func_id(fid));
+      for (auto& function_id : *memo_init)
+        header << uleb(*get_func_id(function_id));
     }
     else
     {
-      hdr << uleb(0);
+      header << uleb(0);
     }
 
-    // Code size.
-    hdr << uleb(code.size());
-    std::ofstream f(output, std::ios::binary | std::ios::out);
-    f.write(reinterpret_cast<const char*>(hdr.data()), hdr.size());
-    f.write(reinterpret_cast<const char*>(code.data()), code.size());
+    header << uleb(code.size());
+    std::ofstream file(output, std::ios::binary | std::ios::out);
+    file.write(
+      reinterpret_cast<const char*>(header.data()),
+      static_cast<std::streamsize>(header.size()));
+    file.write(
+      reinterpret_cast<const char*>(code.data()),
+      static_cast<std::streamsize>(code.size()));
 
     if (!strip)
-    {
-      std::vector<uint8_t> di_strs;
+      debug.write_to(file, output);
 
-      // Debug info string table.
-      di_strs << uleb(ST::di().size());
-
-      for (size_t i = 0; i < ST::di().size(); i++)
-        di_strs << ST::di().at(i);
-
-      // Debug info source files.
-      di_strs << uleb(di_source.size());
-
-      for (auto& [id, source] : di_source)
-      {
-        di_strs << uleb(id);
-        di_strs << source->view();
-      }
-
-      // Debug info ops.
-      di_strs.insert(di_strs.end(), di.begin(), di.end());
-
-      // Compress debug info.
-      auto cap = ZSTD_compressBound(di_strs.size());
-      di.resize(cap);
-      auto compressed_size =
-        ZSTD_compress(di.data(), cap, di_strs.data(), di_strs.size(), 12);
-
-      if (!ZSTD_isError(compressed_size))
-      {
-        f.write(reinterpret_cast<const char*>(di.data()), compressed_size);
-      }
-      else
-      {
-        logging::Error() << "Error compressing debug info for: " << output
-                         << std::endl;
-      }
-    }
-
-    if (!f)
+    if (!file)
       logging::Error() << "Error writing to: " << output << std::endl;
 
     wf::pop_front();
   }
 
   void vbc_backend::emit(
-    const Compilation& bytecode,
+    const Compilation& compilation,
     const std::filesystem::path& output,
     bool strip)
   {
-    VBCEmitter(bytecode).emit(output, strip);
+    VBCEmitter(compilation).emit(output, strip);
   }
-}
 
+}
 
 void virc::vbc::emit(
   const virc::Compilation& compilation,
