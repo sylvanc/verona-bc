@@ -20,6 +20,8 @@ Compiles all `.v` files in `<source_dir>` and produces `<dir_name>.vbc` in the c
 
 | Flag | Description |
 |------|-------------|
+| `--emit <vbc\|llvm-ir>` | Select VBC or textual LLVM IR output; defaults to `vbc` |
+| `--output-file <file>` | Set the selected output path |
 | `-b <file>`, `--bytecode <file>` | Set the output bytecode filename |
 | `-s`, `--strip` | Strip debug information from the bytecode |
 | `-p <pass>`, `--pass <pass>` | Stop compilation after a specific pass |
@@ -34,6 +36,9 @@ vc build my_project/                  # produces my_project.vbc
 
 # Custom output
 vc build my_project/ -b output.vbc
+
+# Emit LLVM IR when LLVM support is enabled
+vc build my_project/ --emit llvm-ir --output-file output.ll
 
 # Strip debug info
 vc build my_project/ -s
@@ -51,24 +56,13 @@ The output filename is derived from the source directory name:
 - `vc build hello/` → `hello.vbc`
 - `vc build my_project/` → `my_project.vbc`
 
-Use `-b` to override.
+Use `--output-file` to override either output. `-b` is the VBC-only
+compatibility spelling and cannot be combined with `--output-file` or
+`--emit llvm-ir`.
 
 ### Important: Use the Installed Binary
 
 Always use `build/dist/vc/vc`, not `build/vc/vc`. The installed binary has the `_builtin` standard library directory next to it, which the compiler requires for name resolution.
-
-### Compiling Textual VIR
-
-Use the installed VIRC command to compile a textual `.vir` file to VBC:
-
-```bash
-cd build
-dist/virc/virc build ../testsuite/vir/simp1/simp1.vir
-```
-
-VIRC accepts the same `-b`, `-s`, `-p`, `--dump_passes`, and `-o` output
-options for its VBC pipeline. The installed `dist/vbcc/vbcc` command remains
-as a migration alias.
 
 ---
 
@@ -112,6 +106,35 @@ vbci my_project.vbc -l Debug
 ---
 
 ## 21.3 Development Workflow
+
+### Native Program Initialization
+
+The native runtime separates state by lifetime:
+
+```text
+native main
+  ├── vrt_runtime_init()              once per process
+  ├── vrt_program_init(&verona_program)
+  │     ├── register compiler-emitted type metadata
+  │     ├── initialize immortal singleton headers
+  │     ├── initialize memo slots     (reserved)
+  │     └── run FFI initializers      (reserved)
+  ├── vrt_thread_init()               current native thread
+  ├── vrt_invocation_begin()          reset per-invocation state
+  └── verona_program_entry()          execute generated main
+```
+
+Every empty nominal class has aligned singleton storage emitted as a mutable
+LLVM global. Its class descriptor points at the exposed payload, while the
+generated `verona_program` singleton table pairs the allocation base with the
+class descriptor. `vrt_program_init()` first registers the program type table
+and then constructs the private immortal object header in that storage.
+
+Singleton initialization is once per generated program, not once per
+invocation. `vrt_invocation_begin()` resets invocation-local state such as the
+exit code without reconstructing singleton headers or clearing their payloads.
+Memo-slot and FFI initialization are explicit reserved phases so their future
+ordering remains visible without doing work prematurely.
 
 ### Build, Install, Test
 
@@ -268,3 +291,260 @@ An arithmetic or comparison operation received an invalid value — most often a
 ## 21.7 Internal Subcommands
 
 The `vc` compiler also provides `vc check` and `vc test` subcommands. These are internal debugging tools used during compiler development and are not intended for general use. They may change or be removed without notice.
+
+---
+
+## 21.8 Experimental LLVM Backend
+
+The experimental LLVM backend lowers backend Trieste IR (`.vir`) directly to
+textual LLVM IR (`.ll`). It is enabled by default, so the default configuration
+requires an LLVM installation discoverable by CMake:
+
+Each physical value type is described by a `LoweredType`. Its `IRValueType`
+selects LLVM instruction semantics, while the canonical `vrt::ValueType`
+selects runtime representation and lifetime operations.
+
+```bash
+cmake -S . -B build -G Ninja \
+  -DLLVM_DIR=/path/to/llvm/lib/cmake/llvm
+cd build
+ninja install
+```
+
+To configure the project without LLVM, explicitly disable the backend:
+
+```bash
+cmake -S . -B build -G Ninja \
+  -DVERONA_ENABLE_LLVM_BACKEND=OFF
+```
+
+Both `vc` and the standalone `virc` select their compiled output format
+explicitly:
+
+| Flag | Description |
+|------|-------------|
+| `--emit <vbc\|llvm-ir>` | Select VBC or textual LLVM IR output; defaults to `vbc` |
+| `--output-file <file>` | Set the compiled output path |
+
+When `--output-file` is omitted, `virc` derives the filename from the input and
+uses `.vbc` or `.ll` according to `--emit`. An explicit filename must use the
+matching extension. The existing `-o`/`--output` option remains reserved for
+the final Trieste AST rather than the compiled artifact.
+
+Use the installed `virc` and select LLVM IR output:
+
+```bash
+dist/virc/virc build \
+  ../testsuite/vir/simp1/simp1.vir \
+  --emit llvm-ir \
+  --output-file simp1.ll
+
+llc -filetype=obj simp1.ll -o simp1.o
+c++ simp1.o dist/lib/libvrt.a -o simp1
+./simp1
+echo $? # 0
+```
+
+The installed `dist/vbcc/vbcc` command remains as a migration alias for
+`virc`.
+
+`libvrt.a` supplies the native entry point and the process-local
+`set_exit_code(i32)` FFI function used by this first backend slice.
+The compiler/runtime boundary is declared by the installed, C-compatible VRT
+headers. `<vrt/program.h>` defines the generated program descriptor and its
+runtime type table. It declares the process-, program-, and
+invocation-lifetime runtime boundaries, plus `verona_program_entry(void)` as
+the generated entry point.
+`<vrt/thread.h>` exposes logical-thread access, while `<vrt/frame.h>` exposes
+logical-frame operations and generated function descriptors. Frame and thread
+implementation types remain opaque at the C ABI boundary. Logical frames form
+a parent chain, carry a stable runtime-assigned identity and generated function
+descriptor, and can be rebound without changing identity in preparation for a
+tailcall. Their concrete C++ layouts remain private to `libvrt`.
+
+The native entry point invokes generated code through `vrt_try_invoke`.
+When a runtime-dependent language error occurs, `vrt_error_raise` records its
+`vrt_error_info`, including the stable error code and active generated function
+descriptor, destroys all logical frames created by that invocation, and
+returns control to the caller of `vrt_try_invoke`. Its `site` field is reserved
+for a stable source or instruction-site identifier and is zero until the LLVM
+backend supplies one. The failed invocation is abandoned rather than resumed.
+Embedders may use the same API between Verona invocations, after initializing
+the calling thread and while no logical frame is active. This is separate from
+private `vrt::Failure` checks: a malformed descriptor, impossible reference
+count, or other corrupt runtime state still terminates because continuing
+would be unsafe. Runtime errors are observable to the native caller, but are
+not catchable from Verona source.
+
+Native startup separates state by lifetime:
+
+```text
+vrt_runtime_init()              process-wide runtime services
+vrt_program_init(&verona_program)
+  register primitive and nominal types
+vrt_thread_init()               current native thread
+vrt_invocation_begin()          reset per-invocation state
+verona_program_entry()          execute generated main
+```
+
+| Lifetime | Boundary | State initialized | Repetition |
+|----------|----------|-------------------|------------|
+| Process | `vrt_runtime_init` | Scheduler and other process-wide runtime services | Once per process |
+| Generated program | `vrt_program_init` | Compiler-emitted primitive and nominal type metadata; later singleton, memo, and FFI phases also live here | Once per `vrt_program` descriptor |
+| Native thread | `vrt_thread_init` / `vrt_thread_deinit` | Thread-local native context and logical Verona thread | Once for each participating native thread at a time |
+| Invocation | `vrt_invocation_begin` | Per-run state such as the requested process exit code | Before every call to `verona_program_entry` |
+
+The ordering proceeds from the longest-lived state to the shortest-lived
+state. Starting another invocation therefore resets only invocation state; it
+does not repeat process or program initialization, and it does not replace the
+calling thread's logical runtime context. Runtime and program initialization
+reject invalid ordering or duplicate initialization.
+
+The generated program descriptor references a sorted table mapping primitive
+and nominal-class type IDs to their runtime value type and native storage size.
+Program initialization registers that table once, and private runtime services
+can subsequently resolve a type ID with `layout_type_id()`. The element type ID
+is reserved for the later array representation and must be zero in this runtime
+slice.
+
+Nominal class values lower to native pointers. The backend first declares
+opaque payload structures for every class so recursive class fields can be
+resolved, then defines their native field layouts. Immutable class metadata
+records the class ID and name, payload size and alignment, ordered fields, and
+method table. Method entries are sorted by method ID and refer to the existing
+generated function metadata. A class with `final(self: T)` also stores a
+dedicated C-callable finalizer thunk while retaining `@final` in the ordinary
+method table. The thunk enters the finalizer's logical frame and calls its
+generated implementation with Verona's `tailcc` convention. Empty-class
+descriptors point at compiler-emitted singleton storage whose private immortal
+object header is constructed once by `vrt_program_init`.
+
+The thunk passes `self` as a borrowed pointer and does not retain or release
+it. The native backend does not yet encode Verona's transitive read-only
+capability in that pointer. Finalizers that depend on native enforcement of
+read-only values remain unsupported until readonly references are added.
+
+`libvrt` binds one logical `vrt_thread` to each participating native thread
+using thread-local storage. `vrt_thread_init` and `vrt_thread_deinit` perform
+that binding; generated code does not create or destroy threads. Code that
+needs the runtime thread can probe it with `vrt_thread_current()` instead of
+carrying a hidden thread argument through every Verona call.
+
+Internal Verona functions receive only their declared user parameters; runtime
+context is not carried in hidden LLVM arguments. Ordinary call sites call
+`vrt_frame_enter` immediately before entering the callee. Tailcall sites call
+`vrt_frame_reuse`, which synchronously rebinds the current logical frame before
+the LLVM `musttail` call. Generated returns call `vrt_frame_leave`, while a
+tailcall transfers the frame without leaving it. The C-compatible
+`verona_program_entry` wrapper enters the `@main` frame and calls the internal
+function without performing runtime, program, thread, or invocation setup.
+
+A static VIR `call` resolves its `FunctionId` through the module's predeclared
+function table, applies each argument's `ArgMove` or `ArgCopy` ownership
+operation, and emits a direct LLVM call with the callee's Verona calling
+convention. The call site pushes the callee's logical frame after transferring
+the arguments; the callee's return epilogue pops it.
+
+A VIR `lookup` asks `vrt_object_lookup` for the callable descriptor associated
+with the receiver's class and `MethodId`. Each generated class has an immutable
+method table sorted by `MethodId`; the runtime uses binary search. The
+resulting non-owning callable is represented as an LLVM pointer, but the
+compiler tracks it as `IRValueType::Function` and attaches its exact lowered
+parameter and result signature.
+
+`calldyn` validates that signature, obtains the type-erased code pointer with
+`vrt_func_entry`, enters a frame using the selected callable descriptor, and
+emits an indirect `tailcc` call. `tailcalldyn` uses the same lookup and
+validation path, but reuses the current logical frame and emits an indirect
+LLVM `musttail` call. A homogeneous VIR union or type alias can be a dynamic
+receiver when every member lowers to exactly the same LLVM representation;
+object-class unions therefore retain their dynamic lookup in the native
+backend.
+
+Each generated function also saves a native `setjmp` continuation in its
+logical frame. A VIR `raise` consumes its source value and passes its runtime
+type ID plus a pointer to encoded native storage to `vrt_frame_raise`. The
+runtime copies that storage into the target continuation, relocates a
+frame-local object, array, or reference owner when required, and removes the
+intermediate logical frames before resuming the target continuation. That
+target consumes the payload, reconstructs its native return representation,
+leaves its frame, and returns to its caller. Tailcalled functions overwrite
+the continuation in the reused logical frame, so the stable frame identity
+still names the current native activation.
+
+VIR `getraise` and `setraise` are ordinary side-effecting statements around
+that control transfer. `getraise` reads the current logical frame's target,
+while `setraise` borrows a `u64` target, installs it, and returns the previous
+target. Setting a target does not validate it; `raise` validates that the saved
+identity still names an active ancestor when it performs the non-local return.
+
+Frame entry, reuse, and exit remain runtime calls in this implementation. They
+define the semantic slow path that generated call sites and epilogues can later
+replace with inline fast paths while retaining runtime fallbacks.
+
+Before the LLVM `musttail` call, the backend transfers each `MoveArg` and calls
+`vrt_frame_reuse`. Static targets use their generated function descriptor;
+dynamic targets use the callable descriptor selected by `lookup`, preserving
+the same frame metadata for both forms.
+The liveness pass expresses non-transferred register cleanup as explicit `Drop`
+statements before the terminator.
+
+VIR `RegisterRef`, `FieldRef`, `ArrayRef`, `ArrayRefConst`, `Load`, and `Store`
+lower through the public VRT reference ABI. Native references carry a target
+address and either an owning object/array root or a borrowed frame plus storage
+epoch. Copies retain the reference owner; moves transfer it. Loads create root
+ownership for managed results, while stores consume the incoming root and
+return the outgoing value as a root. Returning or raising a field/array
+reference relocates its owner as needed. A register reference is rejected when
+its defining native activation would be destroyed by a return, raise, or
+tailcall.
+
+The native runtime creates an RC frame-local region for every entered logical
+frame. `vrt_object_new` allocates there, `vrt_object_heap` allocates in the
+region identified by a borrowed object payload, and `vrt_object_region`
+creates an RC or arena region whose first object is its entry point. The
+private hierarchy follows the interpreter's `Region` -> `RegionRC` ->
+`RegionArena` structure: `Region` defines allocation and lifetime operations,
+`RegionRC` tracks contained object headers, and `RegionArena` reuses that
+tracking for bulk reclamation.
+
+Object initializer arguments use the generated class payload layout and are
+consumed by the runtime write barrier. Managed fields can therefore drag
+frame-local object graphs into an older frame or heap region, or establish
+ownership between heap regions. The exported retain, release, return-escape,
+and raise-escape operations maintain root ownership and relocate values
+before their source frames are destroyed. A tailcall preserves the current
+frame-local region; leaving the reused frame finalizes its remaining objects
+and managed fields.
+
+Empty classes use the immortal singleton storage initialized by
+`vrt_program_init`. Object allocation services return that existing payload
+without allocating. An empty class cannot be the entry point of a fresh
+region.
+
+A VIR `freeze` of an object or array calls `vrt_object_freeze` or
+`vrt_array_freeze` and then copies the source ownership into the destination.
+Primitive and raw-pointer values use the copy path directly. The runtime
+publishes immutable SCC representatives with atomic counts; repeated freezing
+is a no-op, while unsupported stack and arena roots raise `BadFreeze`.
+
+> **Status:** The LLVM backend currently supports scalar primitive types,
+> nominal class layouts and metadata,
+> multi-block conditional control flow, scalar operations, copy/move/drop,
+> static calls, process-local non-variadic FFI calls, returns,
+> register/field/array references, reference load/store,
+> scalar/raw-pointer/reference `raise` payloads, static tailcalls,
+> object/array Freeze, and generated object finalizers.
+> Object method lookup, dynamic calls, and dynamic tailcalls are supported
+> when lookup can determine one compatible callable signature; homogeneous
+> type aliases and unions are supported as receivers.
+> Verona functions use LLVM `tailcc`; the exported C-compatible
+> `verona_program_entry` wrapper enters the internal Verona calling convention.
+> Cowns, unrestricted `dyn` values, readonly references, non-reference
+> aggregates, fallible dynamic
+> calls, and `when` dynamic calls are not yet lowered, so source-level
+> block-lambda raise is not yet available end to end through the native backend.
+> Unsupported operations,
+> library forms, symbol versions, and variadic calls produce an LLVM-backend
+> diagnostic. A build configured without `VERONA_ENABLE_LLVM_BACKEND` similarly
+> rejects `--emit llvm-ir`.

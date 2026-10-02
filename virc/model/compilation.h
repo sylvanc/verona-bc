@@ -17,6 +17,7 @@ namespace virc
     Node src_type;
     Node method_id;
   };
+
   struct LabelState
   {
     std::vector<size_t> pred;
@@ -106,7 +107,7 @@ namespace virc
     std::optional<size_t> get_class_id(Node id);
     bool add_class(Node cls);
 
-    std::optional<size_t> get_field_id(Node id);
+    std::optional<size_t> get_field_id(Node id) const;
     void add_field(Node field);
 
     std::optional<size_t> get_method_id(Node id);
@@ -125,11 +126,4 @@ namespace virc
 
     size_t type_id(Node type);
   };
-
-  using Bytecode = Compilation;
-}
-
-namespace vbcc
-{
-  using namespace virc;
 }

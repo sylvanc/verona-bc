@@ -1,0 +1,34 @@
+// Coverage: object/array Merge lowering, None results, and balanced ownership
+// after merging two independently rooted RC regions.
+// Native VRT coverage: generated code passes both runtime value tags and data
+// addresses to vrt_region_merge; the final object drop runs its finalizer.
+// Non-goals: frame relocation, child reparenting, and atomic rejection paths
+// are covered by the direct VRT merge fixture. Cown merge remains unsupported.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Box
+  @value: i32
+  @final @Box_final
+
+func @Box_final($self: @Box): none
+  $success = const i32 0
+  $_exit = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $failure = const i32 1
+  $_initial = ffi @set_exit_code($failure)
+
+  $value = const i32 42
+  $box = region rc @Box($value)
+  $size = const usize 2
+  $array = region rc [i32] $size
+  $_merged = merge $box $array
+
+  drop $array
+  drop $box
+  $_none = const none
+  ret $_none

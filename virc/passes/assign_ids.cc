@@ -235,7 +235,7 @@ namespace virc
       }
 
       // Build CFG pred/succ edges from terminators. This must happen in
-      // assign_ids (not liveness) because typecheck needs pred/succ for
+      // assignids (not liveness) because typecheck needs pred/succ for
       // its flow analysis, and liveness may run after typecheck/optimize.
       for (auto& func_node : *top)
       {

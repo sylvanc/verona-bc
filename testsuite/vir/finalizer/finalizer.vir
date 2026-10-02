@@ -1,0 +1,30 @@
+// Coverage: @final class metadata and generated C-to-tailcc finalizer thunk.
+// Native VRT coverage: dropping the RC-region root runs the generated
+// finalizer, contains its runtime error, reports it, and resumes the caller.
+// Non-goals: field visibility and frozen SCC ordering are covered by the direct
+// VRT finalizer fixture.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+  @raise_error = "vrt_error_raise"(u32): none
+
+class @Finalizable
+  @value: i32
+  @final @Finalizable_final
+
+func @Finalizable_final($self: @Finalizable): none
+  $bad_store = const u32 5
+  $_raised = ffi @raise_error($bad_store)
+  $_unreachable = const none
+  ret $_unreachable
+
+func @main(): none
+  $failure = const i32 1
+  $_initial = ffi @set_exit_code($failure)
+  $value = const i32 42
+  $object = region rc @Finalizable($value)
+  drop $object
+  $success = const i32 0
+  $_exit = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none

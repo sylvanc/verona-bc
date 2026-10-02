@@ -1,0 +1,84 @@
+// See README.md for array-allocation coverage and native-runtime boundaries.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Locator
+  @value: bool
+
+func @make_dynamic($size: usize): [i32]
+  $array = new [i32] $size
+  jump ^return
+^return
+  ret $array
+
+func @make_constant(): [i32]
+  $array = new [i32] 3
+  jump ^return
+^return
+  ret $array
+
+func @raise_array($target: u64): [i32]
+  $_previous = setraise $target
+  $array = new [i32] 2
+  raise $array [i32]
+
+func @middle_raise_array($target: u64): [i32]
+  $array = call @raise_array($target)
+  jump ^return
+^return
+  ret $array
+
+func @make_raised(): [i32]
+  $target = getraise
+  $array = call @middle_raise_array($target)
+  ret $array
+
+func @consume($array: [i32]): none
+  jump ^drop
+^drop
+  drop $array
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $dynamic_size = const usize 4
+  $dynamic = call @make_dynamic($dynamic_size)
+  $_dynamic = call @consume($dynamic)
+
+  $constant = call @make_constant()
+  $_constant = call @consume($constant)
+
+  $raised = call @make_raised()
+  $_raised = call @consume($raised)
+
+  $locator_value = const bool true
+  $locator = region rc @Locator($locator_value)
+
+  $heap_size = const usize 5
+  $heap_dynamic = heap $locator [i32] $heap_size
+  $_heap_dynamic = call @consume($heap_dynamic)
+
+  $heap_constant = heap $locator [i32] 6
+  $_heap_constant = call @consume($heap_constant)
+
+  $region_size = const usize 7
+  $region_dynamic = region rc [i32] $region_size
+  $_region_dynamic = call @consume($region_dynamic)
+
+  $region_constant = region arena [i32] 8
+  $_region_constant = call @consume($region_constant)
+
+  drop $dynamic
+  drop $constant
+  drop $raised
+  drop $heap_dynamic
+  drop $heap_constant
+  drop $locator
+  drop $region_dynamic
+  drop $region_constant
+
+  $success = const i32 0
+  $_exit = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none

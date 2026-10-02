@@ -73,8 +73,3 @@ VBCI_FFI size_t platform_thread_size()
   return sizeof(pthread_t);
 #endif
 }
-
-VBCI_FFI void set_exit_code(int32_t code)
-{
-  Program::get().set_exit_code(code);
-}

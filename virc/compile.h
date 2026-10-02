@@ -27,4 +27,18 @@ namespace virc
 
   std::vector<trieste::Pass> pipeline(std::shared_ptr<Compilation> state);
   CompileResult compile(trieste::Node reified_vir);
+
+  namespace vbc
+  {
+    void emit(
+      const Compilation& compilation,
+      const std::filesystem::path& output,
+      bool strip = false);
+  }
+
+  namespace llvm
+  {
+    bool emit(
+      const Compilation& compilation, const std::filesystem::path& output);
+  }
 }

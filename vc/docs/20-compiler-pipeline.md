@@ -16,8 +16,8 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 The compiler runs passes in two stages. The first 10 passes are the `vc`
 frontend, which transforms source code into monomorphized VIR. The remaining
-passes are provided by `virc_core`, which validates and analyzes VIR into an
-output-neutral `Compilation`. The VBC emitter then serializes that state.
+passes are provided by VIRC, which creates output-neutral `Compilation` state
+for either the VBC or LLVM emitter.
 
 ### Frontend Passes (vc)
 
@@ -34,19 +34,20 @@ output-neutral `Compilation`. The VBC emitter then serializes that state.
 | 8 | `infer` | once | Type inference and literal refinement |
 | 9 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
 
-### Shared VIRC Passes
+### VIRC Passes
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
 | 10 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
-| 11 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
+| 11 | `assignids` | once | Assign stable identifiers to classes, functions, methods |
 | 12 | `validids` | once | Validate identifier assignments for consistency |
-| 13 | `liveness` | once | Liveness analysis for register allocation |
-| 14 | `typecheck` | once | Final type checking |
+| 13 | `typecheck` | once | Final type checking and output-neutral type state |
+| 14 | `optimize` | once | Shared VIR optimization |
+| 15 | `liveness` | once | Liveness analysis and explicit drops |
 
-After all passes complete, `virc_vbc` produces a `.vbc` file. In practice,
-`vc build` invokes both stages and the emitter; the user does not need to run
-them separately.
+After all passes complete, the selected peer emitter produces VBC or LLVM IR.
+In practice, `vc build` invokes both stages; the user does not run VIRC
+separately.
 
 ---
 
@@ -125,6 +126,15 @@ Type inference pass (`dir::once`). Builds a type environment mapping variables t
 ### Reify (`reify`)
 Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are not monomorphized — they use dynamic dispatch directly. Outputs IR suitable for bytecode generation.
 
+### Typecheck (`typecheck`)
+The final backend type checker rejects errors that are determined by the
+reified program rather than by runtime state. These include incompatible
+primitive conversions, operand and argument mismatches, statically missing
+methods, and using an empty (singleton) class as a new region's entry point.
+The bytecode interpreter retains checks for these cases, but LLVM output does
+not rely on runtime validation for an operation the compiler can prove
+invalid.
+
 ---
 
 ## 20.7 Debugging Passes
@@ -143,17 +153,17 @@ This creates one `.trieste` file per pass in the dump directory, letting you ins
 
 ---
 
-## 20.8 Standalone VIR Compiler (VIRC)
+## 20.8 Standalone VIR Compiler (virc)
 
-The `virc` tool can also run standalone on textual VIR files. When used
-standalone, it prepends two reader passes before the shared VIRC pipeline:
+The `virc` tool can also be run standalone on textual VIR files (produced by
+`vc` with `-p reify`). It prepends two reader passes before the shared VIRC
+pipeline:
 
 | # | Pass | Purpose |
 |---|------|---------|
 | 0 | `statements` | Parse Trieste IR text into statement sequences |
 | 1 | `labels` | Resolve jump targets and label offsets |
-| 2–5 | (shared) | `assignids` → `validids` → `liveness` → `typecheck` |
+| 2–7 | (shared) | `memo` → `assignids` → `validids` → `typecheck` → `optimize` → `liveness` |
 
 When `vc build` is used, these reader passes are not needed because VC passes
-the reified tree directly to `virc_core`. The `vbcc` command remains available
-as a migration alias for the standalone VIRC tool.
+VIR directly to `virc_core`. The `vbcc` command remains as a migration alias.

@@ -15,5 +15,5 @@ namespace virc::vbc
   void emit(
     const Compilation& compilation,
     const std::filesystem::path& output,
-    bool strip = false);
+    bool strip);
 }

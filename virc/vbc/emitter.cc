@@ -133,7 +133,7 @@ namespace virc
       header << uleb(ST::exec().string(library / String));
 
       auto init = library / InitFunc;
-        // Zero means no init function; otherwise the value is func_id + 1.
+      // Zero means no init function; otherwise the value is func_id + 1.
       if (init->type() == FunctionId)
         header << uleb(*get_func_id(init) + 1);
       else

@@ -91,7 +91,7 @@ Before writing documentation, read the actual implementation to ensure accuracy:
 - **FFI builtins**: `vc/_builtin/ffi/` — FFI wrapper functions
 - **Builtin categories table**: `vc/passes/dot.cc` — The `builtins` map defines all `:::` builtins
 - **Grammar**: `vc/passes/parse.cc` for tokenization, `vc/passes/structure.cc` for AST structure
-- **WF definitions**: `vc/lang.h` for frontend WF, `include/vbcc.h` for backend WF
+- **WF definitions**: `vc/lang.h` for frontend WF, `include/vir.h` for VIR WF
 - **Interpreter behavior**: `vbci/thread.cc` for runtime semantics
 
 ### 3. Write the documentation

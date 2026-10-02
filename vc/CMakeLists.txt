@@ -15,9 +15,9 @@ add_executable(vc
 )
 
 if(MSVC)
-  target_compile_options(vbcc PRIVATE /W4 /WX /wd5030 /bigobj)
+  target_compile_options(vc PRIVATE /W4 /WX /wd5030 /bigobj)
 else()
-  target_compile_options(vbcc PRIVATE
+  target_compile_options(vc PRIVATE
     -Wall -Wextra -Werror -Wno-zero-length-array)
 endif()
 
@@ -29,6 +29,11 @@ target_link_libraries(vc
   CLI11::CLI11
   deps::libgit2
 )
+
+if(VERONA_ENABLE_LLVM_BACKEND)
+  target_compile_definitions(vc PRIVATE VERONA_ENABLE_LLVM_BACKEND=1)
+  target_link_libraries(vc virc_llvm)
+endif()
 
 # Copy the stdlib to the install directory
 install(DIRECTORY _builtin DESTINATION vc)

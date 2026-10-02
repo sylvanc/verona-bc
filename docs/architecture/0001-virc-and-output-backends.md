@@ -1,18 +1,24 @@
-# ADR 0001: VIRC and Output Boundaries
+# ADR 0001: VIRC and Output Backends
 
 - Status: Accepted
-- Date: 2026-09-26
+- Date: 2026-09-23
 
 ## Context
 
-The component named VBCC combined four responsibilities: shared VIR analysis,
-textual VIR input, compilation state, and VBC serialization. Its `Bytecode`
-state type and `vbc::vbcc` target name made the VBC format appear to own passes
-and state that are independent of any output representation.
+The component named VBCC began as a VBC compiler, but now performs two distinct
+jobs:
 
-The VBC wire contract was also declared in an interpreter-owned header. This
-forced producers to depend on interpreter names and mixed serialized primitive
-IDs with live interpreter value tags.
+1. It validates, analyzes, optimizes, and indexes reified Verona IR.
+2. It emits either VBC or LLVM IR.
+
+The `Bytecode` class similarly combines output-neutral compilation state with
+VBC encoding, while `include/vbcc.h` defines the VIR interchange schema rather
+than a VBCC API. These names make VBC appear to own shared compiler state and
+make LLVM look like a secondary mode of a bytecode implementation.
+
+The VBC wire contract is also mixed with VBCI platform and live-value details
+in `include/vbci.h`. This prevents producers and consumers from depending on a
+neutral format definition.
 
 ## Decision
 
@@ -21,71 +27,72 @@ Representation Compiler.
 
 VIRC owns:
 
-- shared VIR validation, analysis, and optimization passes;
-- output-neutral `virc::Compilation` state;
-- repository-internal compilation orchestration;
-- the textual VIR reader used by the standalone command.
+- shared VIR validation and transformation passes;
+- output-neutral analysis and indexed compilation state;
+- the textual VIR reader used by the standalone tool;
+- orchestration that produces a read-only `virc::Compilation`.
 
-Output production is a dependency of VIRC consumers, not an ownership concern
-of `virc_core`. The current VBC emitter consumes `const Compilation&` through
-`virc::vbc::emit`.
+VIRC does not own an output format. VBC and LLVM are peer emitters that consume
+the same read-only compilation:
 
-The build is divided into:
-
-- `virc_core`: shared passes, analysis, and compilation state;
-- `virc_reader`: textual VIR parsing and reader-only normalization;
-- `virc_vbc`: VBC serialization and compression;
-- `virc`: the standalone textual VIR compiler.
-
-Dependencies point toward the core:
-
-```text
-virc_reader -> virc_core
-virc_vbc    -> virc_core
-vc          -> virc_core + virc_vbc
+```cpp
+auto result = virc::compile(reified_vir);
+virc::vbc::emit(result.compilation(), output);
+virc::llvm::emit(result.compilation(), output);
 ```
 
-Neutral contracts have independent owners:
+The initial VIRC API remains repository-internal in `virc/compile.h`. It can be
+promoted to a public installed API only after its ownership and stability needs
+are understood.
 
-- `include/vir.h` defines the VIR schema;
-- `include/vbc/format.h` defines serialized VBC values and operations;
-- `vbci/value_type.h` defines interpreter-only live value tags.
+Neutral contracts are owned by their formats:
+
+- `include/vir.h` defines VIR tokens and well-formedness.
+- `include/vbc/format.h` defines the VBC wire format and encoded values.
+- VBCI platform and live interpreter state remain private to VBCI.
+
+The migration creates these target components:
+
+- **Target `virc_core`:** shared passes, analysis, and output-neutral
+  compilation model;
+- **Target `virc_reader`:** textual VIR input used by the standalone CLI;
+- **Target `virc_vbc`:** VBC encoding and emission;
+- **Target `virc_llvm`:** LLVM IR emission, built only when enabled;
+- **Target `virc`:** the standalone CLI.
 
 ## Compatibility
 
-During migration:
+**Migration:** retain a `vbcc` executable and CMake aliases for one transition
+period. Compatibility names delegate to VIRC and do not define a second
+implementation. New code and documentation use VIRC names.
 
-- `include/vbcc.h` forwards VIR names through namespace `vbcc`;
-- `include/vbci.h` forwards VBC wire names through namespace `vbci`;
-- `libvbcc` and `vbc::vbcc` alias `virc_core` in the build tree;
-- the `vbcc` executable remains installed beside the primary `virc` command;
-- `vbc::include` aliases the neutral `verona::include` target.
-
-Compatibility names delegate to the new owners and do not create duplicate
-implementations.
+VBC remains VC's default output regardless of whether LLVM support is compiled
+in. Backend availability and default selection are separate decisions.
 
 ## Consequences
 
-- VC can append the shared VIRC pipeline directly after reification.
-- Textual VIR parsing is not linked into VC.
-- VBC-specific dependencies and serialization stay outside `virc_core`.
-- New output consumers can depend on `Compilation` without changing VIRC
-  ownership.
-- VBCI can consume the wire contract without exposing live runtime tags as
-  serialized values.
+- VC can call VIRC directly without serializing and reparsing textual VIR.
+- VBC and LLVM code no longer mutate or privately reinterpret shared compiler
+  state.
+- Format versioning can be documented independently of either implementation.
+- VBCI can consume the VBC contract without exposing interpreter internals.
+- The migration changes paths and target names, so temporary aliases and
+  explicit compatibility tests are required.
 
 ## Alternatives Considered
 
-### Keep the VBCC component name
+### Keep the VBCC name
 
-Rejected because it assigns shared compiler ownership to one output format.
+Rejected because it continues to imply that shared compilation belongs to the
+VBC backend.
 
-### Keep one aggregate compiler library
+### Put LLVM emission in VC
 
-Rejected because consumers could not select shared analysis independently from
-textual input and VBC emission.
+Rejected because both the standalone VIR tool and VC need the same analyzed
+compilation and emitter. Duplicating orchestration would create two backend
+pipelines.
 
-### Stabilize a public embedding API immediately
+### Publish a stable VIRC API immediately
 
-Rejected. The API remains repository-internal until its compatibility and
-installation requirements are understood.
+Rejected for the initial migration. The API should first prove that it is
+output-neutral and useful to both VC and the standalone CLI.

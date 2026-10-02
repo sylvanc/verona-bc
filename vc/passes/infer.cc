@@ -1516,13 +1516,12 @@ namespace vc
               continue;
 
             auto dst_loc = (stmt / LocalId)->location();
-            if (
-              merge_env(
-                env,
-                dst_loc,
-                src_it->second.type,
-                top,
-                src_it->second.call_node))
+            if (merge_env(
+                  env,
+                  dst_loc,
+                  src_it->second.type,
+                  top,
+                  src_it->second.call_node))
               enqueue_if_concrete(env, dst_loc, work, in_queue);
           }
           else if (stmt == Lookup)
@@ -1559,20 +1558,18 @@ namespace vc
               auto inner = src_it->second.type->front();
               if (inner == TupleType && index < inner->size())
               {
-                if (
-                  merge_env(
-                    env,
-                    dst_loc,
-                    ref_type(Type << clone(inner->at(index))),
-                    top))
+                if (merge_env(
+                      env,
+                      dst_loc,
+                      ref_type(Type << clone(inner->at(index))),
+                      top))
                   enqueue_if_concrete(env, dst_loc, work, in_queue);
                 continue;
               }
             }
 
-            if (
-              merge_env(
-                env, dst_loc, ref_type(clone(src_it->second.type)), top))
+            if (merge_env(
+                  env, dst_loc, ref_type(clone(src_it->second.type)), top))
               enqueue_if_concrete(env, dst_loc, work, in_queue);
           }
           else if (stmt == ArrayRefFromEnd)
@@ -1588,14 +1585,15 @@ namespace vc
             if (inner == TupleType && offset > 0 && offset <= inner->size())
             {
               auto index = inner->size() - offset;
-              if (
-                merge_env(
-                  env, dst_loc, ref_type(Type << clone(inner->at(index))), top))
+              if (merge_env(
+                    env,
+                    dst_loc,
+                    ref_type(Type << clone(inner->at(index))),
+                    top))
                 enqueue_if_concrete(env, dst_loc, work, in_queue);
             }
-            else if (
-              merge_env(
-                env, dst_loc, ref_type(clone(src_it->second.type)), top))
+            else if (merge_env(
+                       env, dst_loc, ref_type(clone(src_it->second.type)), top))
             {
               enqueue_if_concrete(env, dst_loc, work, in_queue);
             }
@@ -3328,9 +3326,8 @@ namespace vc
             call_expected = bwd_it->second.type;
           }
 
-          if (
-            (dst_it->second.is_fixed ||
-             (bwd_it != bwd.end() && bwd_it->second.is_fixed)))
+          if ((dst_it->second.is_fixed ||
+               (bwd_it != bwd.end() && bwd_it->second.is_fixed)))
             refine_local_const(src_loc, expected);
           if (call_expected)
             propagate_call_constraint(
@@ -3776,16 +3773,14 @@ namespace vc
         }
       }
       // ----- Fixed result types -----
-      else if (
-        auto frt = fixed_result_type.find(stmt->type());
-        frt != fixed_result_type.end())
+      else if (auto frt = fixed_result_type.find(stmt->type());
+               frt != fixed_result_type.end())
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), primitive_type(frt->second));
       }
-      else if (
-        auto ffrt = fixed_ffi_result_type.find(stmt->type());
-        ffrt != fixed_ffi_result_type.end())
+      else if (auto ffrt = fixed_ffi_result_type.find(stmt->type());
+               ffrt != fixed_ffi_result_type.end())
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), ffi_primitive_type(ffrt->second));

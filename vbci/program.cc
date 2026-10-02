@@ -4,11 +4,12 @@
 #include "cown.h"
 #include "freeze.h"
 #include "thread.h"
+#include "vrt.h"
 
 #include <cstdint>
 #include <dlfcn.h>
 #include <format>
-#include <sched/schedulerthread.h>
+#include <verona.h>
 #include <zstd.h>
 
 namespace vbci
@@ -160,6 +161,7 @@ namespace vbci
     size_t num_threads,
     std::vector<std::string> args)
   {
+    vrt::reset_exit_code();
     file = path;
 
     if (!load())
@@ -215,8 +217,8 @@ namespace vbci
     {
       LOG(Error) << ret_val.to_string();
 
-      if (exit_code == 0)
-        exit_code = -1;
+      if (vrt::get_exit_code() == 0)
+        vrt::set_exit_code(-1);
     }
 
     // Run fini callbacks in reverse order (last init = first fini).
@@ -233,7 +235,7 @@ namespace vbci
 
     cleanup_strings();
 
-    return exit_code;
+    return vrt::get_exit_code();
   }
 
   std::pair<ValueType, ffi_type*> Program::layout_type_id(uint32_t type_id)
@@ -1073,8 +1075,9 @@ namespace vbci
     }
     catch (const Value& err)
     {
-      LOG(Error) << file << ": couldn't calculate class size: "
-                 << err.to_string() << std::endl;
+      LOG(Error) << file
+                 << ": couldn't calculate class size: " << err.to_string()
+                 << std::endl;
       return false;
     }
 

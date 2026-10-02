@@ -1,0 +1,79 @@
+// See README.md for dynamic-dispatch coverage and native-runtime boundaries.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @Callable = @Increment | @Double
+
+class @Increment
+  @invoke @Increment_invoke
+
+class @Double
+  @invoke @Double_invoke
+
+// This class deliberately has an incompatible method signature. It is not a
+// member of @Callable and must not affect lookup signature selection after
+// @dynamic_call is inlined and its lookup result is alpha-renamed.
+class @Unrelated
+  @invoke @Unrelated_invoke
+
+func @Increment_invoke($self: @Increment, $value: i32): i32
+  $one = const i32 1
+  $result = add $value $one
+  ret $result
+
+func @Double_invoke($self: @Double, $value: i32): i32
+  $two = const i32 2
+  $result = mul $value $two
+  ret $result
+
+func @Unrelated_invoke($self: @Unrelated, $value: i64): i64
+  $one = const i64 1
+  $result = add $value $one
+  ret $result
+
+// A union receiver keeps lookup and invocation genuinely dynamic after the
+// optimizer while both implementations share one exact native signature.
+func @dynamic_call($receiver: @Callable, $value: i32): i32
+  $callable = lookup $receiver @invoke
+  $result = call $callable($receiver, $value)
+  ret $result
+
+func @dynamic_tailcall($receiver: @Callable, $value: i32): i32
+  $callable = lookup $receiver @invoke
+  tailcall $callable($receiver, $value)
+
+func @main(): none
+  $increment = singleton @Increment
+  $double = singleton @Double
+
+  $ten = const i32 10
+  $increment_call = call @dynamic_call($increment, $ten)
+  $double_call = call @dynamic_call($double, $ten)
+  $eleven = const i32 11
+  $twenty = const i32 20
+  $increment_call_ok = eq $increment_call $eleven
+  $double_call_ok = eq $double_call $twenty
+
+  $three = const i32 3
+  $increment_tail = call @dynamic_tailcall($increment, $three)
+  $double_tail = call @dynamic_tailcall($double, $three)
+  $four = const i32 4
+  $six = const i32 6
+  $increment_tail_ok = eq $increment_tail $four
+  $double_tail_ok = eq $double_tail $six
+
+  $calls_ok = and $increment_call_ok $double_call_ok
+  $tails_ok = and $increment_tail_ok $double_tail_ok
+  $all_ok = and $calls_ok $tails_ok
+  cond $all_ok ^success ^failure
+^success
+  $success_code = const i32 0
+  $_success = ffi @set_exit_code($success_code)
+  $_none_success = const none
+  ret $_none_success
+^failure
+  $failure_code = const i32 1
+  $_failure = ffi @set_exit_code($failure_code)
+  $_none_failure = const none
+  ret $_none_failure

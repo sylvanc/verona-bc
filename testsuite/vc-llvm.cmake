@@ -1,0 +1,155 @@
+if(VERONA_ENABLE_LLVM_BACKEND)
+  set(TESTSUITE_REGEX ".*\\.v$")
+
+  find_program(
+    VERONA_SOURCE_LLVM_AS
+    NAMES llvm-as
+    HINTS "${LLVM_TOOLS_BINARY_DIR}"
+    NO_DEFAULT_PATH)
+  find_program(
+    VERONA_SOURCE_LLC
+    NAMES llc
+    HINTS "${LLVM_TOOLS_BINARY_DIR}"
+    NO_DEFAULT_PATH)
+
+  if(NOT VERONA_SOURCE_LLVM_AS OR NOT VERONA_SOURCE_LLC)
+    message(FATAL_ERROR "VC LLVM tests require llvm-as and llc")
+  endif()
+else()
+  set(TESTSUITE_REGEX "^$")
+endif()
+
+set(TESTSUITE_DEFINE vc_llvm_test_define)
+
+function(vc_llvm_test_define test)
+  get_filename_component(test_dir "${test}" DIRECTORY)
+  get_filename_component(test_name "${test}" NAME_WE)
+  get_filename_component(test_dir_name "${test_dir}" NAME)
+  if(NOT test_name STREQUAL test_dir_name)
+    return()
+  endif()
+
+  verona_fixture_metadata(
+    "${test}" vbc_stage llvm_stage llvm_validator fixture_labels)
+  if(llvm_stage STREQUAL "none")
+    return()
+  endif()
+  set(pipeline_labels frontend:vc backend:llvm ${fixture_labels})
+
+  set(test_root "${test_dir}/${test_name}")
+  set(llvm_root "${test_root}/llvm")
+  set(emit_node "${llvm_root}/emit-ir")
+  set(assemble_node "${llvm_root}/assemble")
+  set(codegen_node "${llvm_root}/codegen")
+  set(link_node "${llvm_root}/link")
+  set(run_node "${llvm_root}/run")
+
+  set(llvm_ir_name "${test_name}.ll")
+  set(llvm_bc_name "${test_name}.bc")
+  set(native_object_name "${test_name}${CMAKE_CXX_OUTPUT_EXTENSION}")
+  set(native_name "${test_name}${CMAKE_EXECUTABLE_SUFFIX}")
+
+  testsuite_output_path(
+    llvm_ir NODE "${emit_node}" FILE "${llvm_ir_name}")
+  testsuite_output_path(
+    llvm_final_ast
+    NODE "${emit_node}"
+    FILE "${test_name}_final.trieste")
+  set(test_working_directory "${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}")
+  if(llvm_validator STREQUAL "")
+    set(llvm_validator "llvm/cmake/validate_llvm_ir.cmake")
+  endif()
+  set(llvm_validator "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/${llvm_validator}")
+
+  testsuite_add_test(
+    NAME "${emit_node}"
+    WORKING_DIRECTORY "${test_working_directory}"
+    TIMEOUT 60
+    VALIDATOR "${llvm_validator}"
+    GOLDENS exit_code.txt stderr.txt stdout.txt
+    ARTIFACTS "${llvm_ir_name}"
+    LABELS ${pipeline_labels}
+    COMMAND
+      "${CMAKE_INSTALL_PREFIX}/vc/$<TARGET_FILE_NAME:vc>"
+      build .
+      --emit llvm-ir
+      --output-file "${llvm_ir}"
+      -o "${llvm_final_ast}")
+
+  if(llvm_stage STREQUAL "emit-ir")
+    return()
+  endif()
+
+  testsuite_output_path(
+    llvm_bc NODE "${assemble_node}" FILE "${llvm_bc_name}")
+  testsuite_add_test(
+    NAME "${assemble_node}"
+    WORKING_DIRECTORY "${test_working_directory}"
+    TIMEOUT 60
+    DEPENDS "${emit_node}"
+    GOLDENS exit_code.txt stderr.txt stdout.txt
+    ARTIFACTS "${llvm_bc_name}"
+    LABELS ${pipeline_labels}
+    COMMAND "${VERONA_SOURCE_LLVM_AS}" "${llvm_ir}" -o "${llvm_bc}")
+
+  if(llvm_stage STREQUAL "assemble")
+    return()
+  endif()
+
+  testsuite_output_path(
+    native_object NODE "${codegen_node}" FILE "${native_object_name}")
+  testsuite_add_test(
+    NAME "${codegen_node}"
+    WORKING_DIRECTORY "${test_working_directory}"
+    TIMEOUT 60
+    DEPENDS "${assemble_node}"
+    GOLDENS exit_code.txt stderr.txt stdout.txt
+    ARTIFACTS "${native_object_name}"
+    LABELS ${pipeline_labels}
+    COMMAND
+      "${VERONA_SOURCE_LLC}"
+      -relocation-model=pic
+      -filetype=obj
+      "${llvm_bc}"
+      -o "${native_object}")
+
+  if(llvm_stage STREQUAL "codegen")
+    return()
+  endif()
+
+  testsuite_output_path(
+    native NODE "${link_node}" FILE "${native_name}")
+  if(MSVC)
+    set(link_arguments
+      "${native_object}"
+      "${CMAKE_INSTALL_PREFIX}/lib/$<TARGET_FILE_NAME:libvrt>"
+      "/Fe:${native}")
+  else()
+    set(link_arguments
+      "${native_object}"
+      "${CMAKE_INSTALL_PREFIX}/lib/$<TARGET_FILE_NAME:libvrt>"
+      -o "${native}")
+  endif()
+
+  testsuite_add_test(
+    NAME "${link_node}"
+    WORKING_DIRECTORY "${test_working_directory}"
+    TIMEOUT 60
+    DEPENDS "${codegen_node}"
+    GOLDENS exit_code.txt stderr.txt stdout.txt
+    ARTIFACTS "${native_name}"
+    LABELS ${pipeline_labels}
+    COMMAND "${CMAKE_CXX_COMPILER}" ${link_arguments})
+
+  if(llvm_stage STREQUAL "link")
+    return()
+  endif()
+
+  testsuite_add_test(
+    NAME "${run_node}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}"
+    DEPENDS "${link_node}"
+    GOLDENS exit_code.txt stderr.txt stdout.txt
+    LABELS ${pipeline_labels}
+    COMMAND "${native}")
+endfunction()

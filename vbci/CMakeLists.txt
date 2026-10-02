@@ -24,6 +24,10 @@ target_include_directories(vbci SYSTEM PRIVATE
   ${snmalloc_SOURCE_DIR}
 )
 
+target_include_directories(vbci PRIVATE
+  ${PROJECT_SOURCE_DIR}/vrt
+)
+
 include(CheckCCompilerFlag)
 
 # check if -Wno-class-memaccess is available
@@ -52,10 +56,11 @@ target_link_libraries(vbci
   Threads::Threads
   snmallocshim-static
   verona_rt
+  vbc::vrt
   deps::libffi
   deps::zstd
   CLI11::CLI11
-  verona::include
+  vbc::include
 )
 
 install(TARGETS vbci RUNTIME DESTINATION vbci)

@@ -10,9 +10,8 @@ VC produces VIR directly after reification. The standalone VIRC reader also
 constructs the same tree from textual `.vir` fixtures. Shared VIRC passes
 validate, analyze, optimize, and index the tree before an output backend runs.
 
-The VBC emitter consumes the validated form. VBCI consumes serialized VBC, not
-VIR directly. Future emitters can consume the same validated form without
-changing the VIR contract.
+VBC and LLVM emitters consume the validated form. VBCI and VRT do not consume
+VIR directly.
 
 ## Root Shape
 

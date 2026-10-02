@@ -1,0 +1,11 @@
+// Compile-only coverage: arrayfill rejects an i32 value for an i64 array.
+
+func @main(): none
+  $array = new [i64] 2
+  $offset = const usize 0
+  $length = const usize 2
+  $value = const i32 1
+  $_fill = arrayfill($array, $offset, $length, $value)
+  drop $array
+  $_none = const none
+  ret $_none
