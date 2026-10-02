@@ -64,9 +64,11 @@ add_library(virc_llvm STATIC
   statements/references/reference.cc
   statements/references/register_ref.cc
   statements/references/store.cc
-  statements/arraycompare.cc
-  statements/arraycopy.cc
-  statements/arrayfill.cc
+  # Array bulk statements.
+  statements/array_bulk/args.cc
+  statements/array_bulk/arraycompare.cc
+  statements/array_bulk/arraycopy.cc
+  statements/array_bulk/arrayfill.cc
   statements/binop.cc
   statements/convert.cc
   statements/copy.cc

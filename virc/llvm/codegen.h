@@ -175,8 +175,8 @@ namespace virc
         std::vector<llvm::Value*> arguments,
         const std::string& name);
 
-      // Argument helpers.
-      bool emit_release_args(
+      // Array bulk helpers.
+      bool emit_release_array_bulk_args(
         const Node& args, const std::vector<LoweredValue>& values);
 
       // Callable helpers.

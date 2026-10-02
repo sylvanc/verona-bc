@@ -1,4 +1,4 @@
-#include "../codegen.h"
+#include "../../codegen.h"
 
 #include <cassert>
 #include <functional>
@@ -102,7 +102,7 @@ namespace virc
          values->at(2).value,
          fill_storage});
 
-      if (!emit_release_args(args, *values))
+      if (!emit_release_array_bulk_args(args, *values))
         return false;
 
       Node none_node = None;

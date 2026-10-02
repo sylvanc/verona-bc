@@ -1,4 +1,4 @@
-#include "../codegen.h"
+#include "../../codegen.h"
 
 #include <functional>
 #include <optional>
@@ -74,7 +74,7 @@ namespace virc
          values->at(4).value},
         strip_sigil(node_text(statement / LocalId)));
 
-      if (!emit_release_args(args, *values))
+      if (!emit_release_array_bulk_args(args, *values))
         return false;
 
       Node i64_node = I64;

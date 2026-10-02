@@ -17,5 +17,9 @@ handling through `LocalState`. The four reference constructors also share
 their VRT out-parameter call, result reload, and local binding sequence. They
 do not reproduce region or write-barrier policy in LLVM IR.
 
+Array copy, fill, and compare lowerers are grouped under
+`statements/array_bulk/`. They share post-call release handling because each
+VRT bulk operation borrows the lowered arguments during the call.
+
 The backend is optional and exists only when `VERONA_ENABLE_LLVM_BACKEND=ON`.
 Shared semantics and IDs remain owned by VIRC.
