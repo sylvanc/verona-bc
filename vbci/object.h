@@ -130,7 +130,7 @@ namespace vbci
         {
           case ValueType::Object:
           case ValueType::Array:
-          case ValueType::Invalid:
+          case ValueType::Dyn:
           {
             auto prev = load(i);
             writebarrier::drop(location(), prev);
@@ -160,7 +160,7 @@ namespace vbci
         {
           case ValueType::Object:
           case ValueType::Array:
-          case ValueType::Invalid:
+          case ValueType::Dyn:
           {
             auto v = load(i);
 
@@ -190,7 +190,8 @@ namespace vbci
         {
           case ValueType::Object:
           case ValueType::Array:
-          case ValueType::Invalid:
+          case ValueType::Cown:
+          case ValueType::Dyn:
             load(i).immortalize();
             break;
 

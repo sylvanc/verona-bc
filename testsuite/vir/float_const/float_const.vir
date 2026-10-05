@@ -1,0 +1,75 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
+  $one = const i32 1
+  $two = const i32 2
+  $three = const i32 3
+  $nine = const i32 9
+  $four = const i32 4
+  $forty_two = const i32 42
+
+  $one_f32 = convert f32 $one
+  $two_f32 = convert f32 $two
+  $three_f32 = convert f32 $three
+  $nine_f32 = convert f32 $nine
+  $four_f32 = convert f32 $four
+  $expected_positive_f32 = div $three_f32 $two_f32
+  $positive_fraction_f32 = div $nine_f32 $four_f32
+  $expected_negative_f32 = neg $positive_fraction_f32
+  $expected_large_f32 = convert f32 $forty_two
+
+  $positive_f32 = const f32 1.5
+  $negative_f32 = const f32 -2.25
+  $boundary_f32 = const f32 2.0
+  $large_f32 = const f32 42.0
+  $positive_f32_ok = eq $positive_f32 $expected_positive_f32
+  $negative_f32_ok = eq $negative_f32 $expected_negative_f32
+  $boundary_f32_ok = eq $boundary_f32 $two_f32
+  $large_f32_ok = eq $large_f32 $expected_large_f32
+  $positive_f32_ok_i32 = convert i32 $positive_f32_ok
+  $negative_f32_ok_i32 = convert i32 $negative_f32_ok
+  $boundary_f32_ok_i32 = convert i32 $boundary_f32_ok
+  $large_f32_ok_i32 = convert i32 $large_f32_ok
+  $positive_f32_error = sub $one $positive_f32_ok_i32
+  $negative_f32_error = sub $one $negative_f32_ok_i32
+  $boundary_f32_error = sub $one $boundary_f32_ok_i32
+  $large_f32_error = sub $one $large_f32_ok_i32
+
+  $one_f64 = convert f64 $one
+  $two_f64 = convert f64 $two
+  $three_f64 = convert f64 $three
+  $nine_f64 = convert f64 $nine
+  $four_f64 = convert f64 $four
+  $expected_positive_f64 = div $three_f64 $two_f64
+  $positive_fraction_f64 = div $nine_f64 $four_f64
+  $expected_negative_f64 = neg $positive_fraction_f64
+  $expected_large_f64 = convert f64 $forty_two
+
+  $positive_f64 = const f64 1.5
+  $negative_f64 = const f64 -2.25
+  $boundary_f64 = const f64 2.0
+  $large_f64 = const f64 42.0
+  $positive_f64_ok = eq $positive_f64 $expected_positive_f64
+  $negative_f64_ok = eq $negative_f64 $expected_negative_f64
+  $boundary_f64_ok = eq $boundary_f64 $two_f64
+  $large_f64_ok = eq $large_f64 $expected_large_f64
+  $positive_f64_ok_i32 = convert i32 $positive_f64_ok
+  $negative_f64_ok_i32 = convert i32 $negative_f64_ok
+  $boundary_f64_ok_i32 = convert i32 $boundary_f64_ok
+  $large_f64_ok_i32 = convert i32 $large_f64_ok
+  $positive_f64_error = sub $one $positive_f64_ok_i32
+  $negative_f64_error = sub $one $negative_f64_ok_i32
+  $boundary_f64_error = sub $one $boundary_f64_ok_i32
+  $large_f64_error = sub $one $large_f64_ok_i32
+
+  $f32_error0 = or $positive_f32_error $negative_f32_error
+  $f32_error1 = or $boundary_f32_error $large_f32_error
+  $f32_error = or $f32_error0 $f32_error1
+  $f64_error0 = or $positive_f64_error $negative_f64_error
+  $f64_error1 = or $boundary_f64_error $large_f64_error
+  $f64_error = or $f64_error0 $f64_error1
+  $error = or $f32_error $f64_error
+  $_exit = ffi @set_exit_code($error)
+  $_none = const none
+  ret $_none

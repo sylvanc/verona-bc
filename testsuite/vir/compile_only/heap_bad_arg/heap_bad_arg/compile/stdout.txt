@@ -1,0 +1,14 @@
+Errors:
+constructor: argument type 'bool' is not a subtype of field type 'i32'
+-- heap_bad_arg.vir:6:5
+    $a1 = region rc @Foo($bad)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+----------------
+constructor: argument type 'bool' is not a subtype of field type 'i32'
+-- heap_bad_arg.vir:7:5
+    $a2 = heap $a1 @Foo($bad)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pass typecheck failed with 2 errors!
+

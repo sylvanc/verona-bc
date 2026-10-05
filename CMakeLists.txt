@@ -52,7 +52,7 @@ FetchContent_MakeAvailable(cmake_utils)
 FetchContent_Declare(
   verona-rt
   GIT_REPOSITORY https://github.com/microsoft/verona-rt
-  GIT_TAG 0d17e91708bbec8895e0ce1d4d9cfac2a306c9d8
+  GIT_TAG 5d323a5b31ef77b18f7cd7a0b9c1d12cdc6e7c3c
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(verona-rt)
@@ -63,7 +63,7 @@ set(TRIESTE_BUILD_PARSERS Off)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG 7d0b29403b253e924bf66eb287e76c3954bd14f8
+  GIT_TAG f4423612e7a33dd8147fa7945d3b3b7a2dd8861c
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
@@ -73,9 +73,10 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 # Installation instructions
 set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/dist)
 
-add_library(CommonIncludes INTERFACE)
-add_library(vbc::include ALIAS CommonIncludes)
-target_include_directories(CommonIncludes INTERFACE
+add_library(verona_headers INTERFACE)
+add_library(verona::include ALIAS verona_headers)
+add_library(vbc::include ALIAS verona_headers)
+target_include_directories(verona_headers INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
@@ -85,7 +86,7 @@ install(CODE [[
   file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
   ]])
 
-add_subdirectory(vbcc)
+add_subdirectory(virc)
 add_subdirectory(vbci)
 add_subdirectory(vc)
 enable_testing()

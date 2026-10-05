@@ -14,7 +14,10 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 ## 20.2 Pass Pipeline
 
-The compiler runs passes in two stages. The first 10 passes are the `vc` frontend, which transforms source code into monomorphized IR. The remaining passes are provided by the `vbcc` bytecode compiler library, which transforms IR into `.vbc` bytecode.
+The compiler runs passes in two stages. The first 11 passes are the `vc`
+frontend, which transforms source code into monomorphized VIR. The remaining
+passes are provided by `virc_core`, which validates and analyzes VIR into an
+output-neutral `Compilation`. The VBC emitter then serializes that state.
 
 ### Frontend Passes (vc)
 
@@ -29,19 +32,22 @@ The compiler runs passes in two stages. The first 10 passes are the `vc` fronten
 | 6 | `application` | top-down | Infix/prefix function/method calls, ref, hash, partial application |
 | 7 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
 | 8 | `infer` | once | Type inference and literal refinement |
-| 9 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
+| 9 | `ffiinit` | bottom-up | Lower FFI initializers to hidden `once` functions and reject conflicting duplicate declarations |
+| 10 | `reify` | bottom-up | Monomorphization, function dependency graph construction, and `once` dependency ordering |
 
-### Backend Passes (vbcc library)
+### Shared VIRC Passes
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
-| 10 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
-| 11 | `assignids` | once | Assign bytecode identifiers to classes, functions, methods |
-| 12 | `validids` | once | Validate identifier assignments for consistency |
-| 13 | `liveness` | once | Liveness analysis for register allocation |
-| 14 | `typecheck` | once | Final type checking |
+| 11 | `assignids` | top-down / once | Assign bytecode identifiers and resolve referenced IDs |
+| 12 | `validids` | bottom-up / once | Validate referenced functions, methods, labels, registers, arities, and allocation arguments |
+| 13 | `typecheck` | top-down / once | Final type checking |
+| 14 | `optimize` | once | Optimize validated VIR |
+| 15 | `liveness` | top-down / once | Validate uses and definitions, identify last uses, and insert drops |
 
-After all passes complete, bytecode generation produces a `.vbc` file. In practice, `vc build` invokes both stages — the user does not need to run them separately.
+After all passes complete, `virc_vbc` produces a `.vbc` file. In practice,
+`vc build` invokes both stages and the emitter; the user does not need to run
+them separately.
 
 ---
 
@@ -117,8 +123,25 @@ Converts the AST to A-Normal Form: all intermediate values are named, expression
 ### Infer (`infer`)
 Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation.
 
+### FFI Init (`ffiinit`)
+Lowers each FFI `init` function to a hidden source-level `once` function.
+It rejects duplicate initializers for one library in an enclosing class.
+The pass does not modify FFI operations. During reification, each FFI operation
+adds a dependency edge to its library initializer. Once traversal ignores an
+FFI edge that refers back to the currently active initializer, allowing an
+initializer to call its own library directly or through ordinary helpers.
+
 ### Reify (`reify`)
-Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are not monomorphized — they use dynamic dispatch directly. Outputs IR suitable for bytecode generation.
+Monomorphization pass (`dir::bottomup`, with its work performed from the
+pre-hook). Starting from `main()`, transitively instantiates all reachable
+generic classes and functions. Each unique type argument combination produces a
+separate specialization. Shapes are not monomorphized — they use dynamic
+dispatch directly. It constructs the reified function dependency graph,
+resolves teardown callbacks, and records `AtTeardown` edges in the same graph
+as call and FFI dependencies. The completed graph orders source and FFI `once`
+initializers and rejects initialization or teardown-lifetime cycles before
+producing IR suitable for bytecode generation. See
+[Initialization and Teardown](28-initialization-and-teardown.md).
 
 ---
 
@@ -138,14 +161,17 @@ This creates one `.trieste` file per pass in the dump directory, letting you ins
 
 ---
 
-## 20.8 Standalone Bytecode Compiler (vbcc)
+## 20.8 Standalone VIR Compiler (VIRC)
 
-The `vbcc` tool can also be run standalone on Trieste IR files (produced by `vc` with `-p reify`). When used standalone, `vbcc` prepends two additional passes before the shared backend passes:
+The `virc` tool can also run standalone on textual VIR files. When used
+standalone, it prepends two reader passes before the shared VIRC pipeline:
 
 | # | Pass | Purpose |
 |---|------|---------|
-| 0 | `statements` | Parse Trieste IR text into statement sequences |
-| 1 | `labels` | Resolve jump targets and label offsets |
-| 2–5 | (shared) | `assignids` → `validids` → `liveness` → `typecheck` |
+| 0 | `statements` | Structure parsed tokens into VIR statements |
+| 1 | `VIR` (`labels`) | Group statements and terminators into functions and label nodes |
+| 2–6 | (shared) | `assignids` → `validids` → `typecheck` → `optimize` → `liveness` |
 
-When `vc build` is used (the normal workflow), these two additional passes are not needed — `vc` passes the AST directly to the `vbcc` library's backend passes.
+When `vc build` is used, these reader passes are not needed because VC passes
+the reified tree directly to `virc_core`. The `vbcc` command remains available
+as a migration alias for the standalone VIRC tool.

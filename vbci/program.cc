@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <dlfcn.h>
 #include <format>
-#include <verona.h>
+#include <sched/schedulerthread.h>
 #include <zstd.h>
 
 namespace vbci
@@ -92,34 +92,19 @@ namespace vbci
 
   Register& Program::memo_slot(size_t index)
   {
-    init_memo_slot(index);
     return memo_slots.at(index);
   }
 
   void Program::init_memo_slot(size_t index)
   {
     auto& slot = memo_slots.at(index);
-    if (!slot->is_invalid())
-      return;
-
-    auto& initializing = memo_slot_initializing.at(index);
-    assert(!initializing);
-
-    struct Reset
-    {
-      uint8_t& flag;
-
-      ~Reset()
-      {
-        flag = false;
-      }
-    } reset{initializing};
-
-    initializing = true;
+    assert(slot->is_invalid());
     slot = Thread::run_sync(&functions.at(memo_func_ids.at(index)));
 
     if (slot->is_header())
       freeze(slot->get_header());
+
+    slot.borrow().immortalize();
   }
 
   uint32_t Program::get_typeid_arg()
@@ -171,33 +156,11 @@ namespace vbci
     auto& sched = verona::rt::Scheduler::get();
     sched.init(num_threads);
 
-    // Pre-size memo slots before library init so use-block init callbacks can
-    // safely call once-function stubs. A MemoLoad lazily initializes a missing
-    // slot on first use; after init returns, any remaining slots are filled in
-    // the compiler-emitted dependency order below.
+    // Pre-size memo slots so initializers can load earlier slots by index.
     memo_slots.resize(memo_func_ids.size());
-    memo_slot_initializing.assign(memo_func_ids.size(), false);
 
-    // Run library init functions before the eager memo pass. If an init returns
-    // a value with an apply method (@callback), store it as a fini callback to
-    // be called at shutdown.
-    for (auto& init : init_funcs)
-    {
-      if (!init)
-        continue;
-
-      auto result = Thread::run_cleanup(&functions.at(*init));
-
-      if (result->is_invalid())
-        return -1;
-
-      auto* apply = result->method(CallbackMethodId);
-
-      if (apply)
-        fini_callbacks.emplace_back(std::move(result), apply);
-    }
-
-    // Run any remaining memo (once) function initializers in dependency order.
+    // Run memo initializers in declaration order. Any memo loaded by an
+    // initializer must therefore have been declared earlier.
     // This must happen after sched.init() because once functions may create
     // cowns (via `when`), which requires the scheduler's core pool to be
     // initialized for behavior queuing.
@@ -205,7 +168,7 @@ namespace vbci
       init_memo_slot(i);
 
     ValueTransfer ret =
-      Thread::run_async(typeid_cown_none, &functions.at(MainFuncId));
+      Thread::run_async(typeid_cown_none, &functions.at(MainFunctionId));
     sched.run();
 
     auto ret_val = ret.get_cown()->load();
@@ -219,17 +182,9 @@ namespace vbci
         exit_code = -1;
     }
 
-    // Run fini callbacks in reverse order (last init = first fini).
-    for (auto it = fini_callbacks.rbegin(); it != fini_callbacks.rend(); ++it)
-      Thread::run_sync(it->second, it->first.borrow());
-
-    fini_callbacks.clear();
-
-    // Drop memo slot values, releasing their reference counts.
-    for (auto& slot : memo_slots)
-      slot = ValueTransfer(Value());
+    // Once values and their reachable object graphs have process lifetime.
+    // Clearing the slots is safe because their values have been immortalized.
     memo_slots.clear();
-    memo_slot_initializing.clear();
 
     cleanup_strings();
 
@@ -238,53 +193,53 @@ namespace vbci
 
   std::pair<ValueType, ffi_type*> Program::layout_type_id(uint32_t type_id)
   {
-    if (type_id == DynId)
+    if (type_id == DynamicTypeId)
     {
       // Dynamic.
-      return {ValueType::Invalid, &ffi_type_value};
+      return {ValueType::Dyn, &ffi_type_value};
     }
     else if (type_id < NumPrimitiveClasses)
     {
       // Primitive type.
-      switch (ValueType(type_id))
+      switch (PrimitiveType(type_id))
       {
-        case ValueType::None:
+        case PrimitiveType::None:
           return {ValueType::None, &ffi_type_void};
-        case ValueType::Bool:
+        case PrimitiveType::Bool:
           return {ValueType::Bool, &ffi_type_uint8};
-        case ValueType::I8:
+        case PrimitiveType::I8:
           return {ValueType::I8, &ffi_type_sint8};
-        case ValueType::I16:
+        case PrimitiveType::I16:
           return {ValueType::I16, &ffi_type_sint16};
-        case ValueType::I32:
+        case PrimitiveType::I32:
           return {ValueType::I32, &ffi_type_sint32};
-        case ValueType::I64:
+        case PrimitiveType::I64:
           return {ValueType::I64, &ffi_type_sint64};
-        case ValueType::U8:
+        case PrimitiveType::U8:
           return {ValueType::U8, &ffi_type_uint8};
-        case ValueType::U16:
+        case PrimitiveType::U16:
           return {ValueType::U16, &ffi_type_uint16};
-        case ValueType::U32:
+        case PrimitiveType::U32:
           return {ValueType::U32, &ffi_type_uint32};
-        case ValueType::U64:
+        case PrimitiveType::U64:
           return {ValueType::U64, &ffi_type_uint64};
-        case ValueType::F32:
+        case PrimitiveType::F32:
           return {ValueType::F32, &ffi_type_float};
-        case ValueType::F64:
+        case PrimitiveType::F64:
           return {ValueType::F64, &ffi_type_double};
-        case ValueType::ILong:
+        case PrimitiveType::ILong:
           return {ValueType::ILong, &ffi_type_slong};
-        case ValueType::ULong:
+        case PrimitiveType::ULong:
           return {ValueType::ULong, &ffi_type_ulong};
-        case ValueType::ISize:
+        case PrimitiveType::ISize:
           return {
             ValueType::ISize,
             sizeof(ssize_t) == 4 ? &ffi_type_sint32 : &ffi_type_sint64};
-        case ValueType::USize:
+        case PrimitiveType::USize:
           return {
             ValueType::USize,
             sizeof(size_t) == 4 ? &ffi_type_uint32 : &ffi_type_uint64};
-        case ValueType::Ptr:
+        case PrimitiveType::Ptr:
           return {ValueType::Ptr, &ffi_type_pointer};
         default:
           break;
@@ -307,7 +262,7 @@ namespace vbci
         case TypeTag::Cown:
           return {ValueType::Cown, &ffi_type_pointer};
         case TypeTag::Ref:
-          return {ValueType::Invalid, &ffi_type_value};
+          return {ValueType::Dyn, &ffi_type_value};
         case TypeTag::Union:
           return layout_union_type(c);
         case TypeTag::Tuple:
@@ -351,7 +306,7 @@ namespace vbci
       return rep;
 
     // Otherwise, use the generic Value representation.
-    return {ValueType::Invalid, &ffi_type_value};
+    return {ValueType::Dyn, &ffi_type_value};
   }
 
   bool Program::is_complex(uint32_t type_id)
@@ -392,7 +347,7 @@ namespace vbci
     auto& t = complex_type(type_id);
 
     if (t.tag == TypeTag::Tuple)
-      return DynId;
+      return DynamicTypeId;
 
     if (t.tag != TypeTag::Array)
       Value::error(Error::BadType);
@@ -433,11 +388,11 @@ namespace vbci
   bool Program::subtype(uint32_t sub, uint32_t super)
   {
     // Everything is a subtype of dynamic.
-    if (super == DynId)
+    if (super == DynamicTypeId)
       return true;
 
     // Dynamic is a subtype of nothing.
-    if (sub == DynId)
+    if (sub == DynamicTypeId)
       return false;
 
     // If it's the same, we're done.
@@ -832,15 +787,8 @@ namespace vbci
     // FFI information.
     auto num_libs = uleb(pc);
     libs.reserve(num_libs);
-    init_funcs.reserve(num_libs);
     for (size_t i = 0; i < num_libs; i++)
-    {
       libs.emplace_back(strings.at(uleb(pc)));
-
-      auto init_id = uleb(pc);
-      init_funcs.push_back(
-        init_id ? std::optional<size_t>(init_id - 1) : std::nullopt);
-    }
 
     auto num_symbols = uleb(pc);
     for (size_t i = 0; i < num_symbols; i++)
@@ -883,13 +831,13 @@ namespace vbci
         return false;
     }
 
-    if (functions.at(MainFuncId).param_types.size() != 0)
+    if (functions.at(MainFunctionId).param_types.size() != 0)
     {
       LOG(Error) << file << ": `main` must take zero parameters" << std::endl;
       return false;
     }
 
-    if (!subtype(functions.at(MainFuncId).return_type, +ValueType::None))
+    if (!subtype(functions.at(MainFunctionId).return_type, +ValueType::None))
     {
       LOG(Error) << file << ": `main` must return none" << std::endl;
       return false;
@@ -916,7 +864,7 @@ namespace vbci
 
     typeid_ref_dyn = min_complex_type_id + 3;
     assert(complex_type(typeid_ref_dyn).tag == TypeTag::Ref);
-    assert(complex_type(typeid_ref_dyn).children.at(0) == DynId);
+    assert(complex_type(typeid_ref_dyn).children.at(0) == DynamicTypeId);
 
     typeid_array_usize = min_complex_type_id + 4;
     assert(complex_type(typeid_array_usize).tag == TypeTag::Array);
@@ -1051,7 +999,7 @@ namespace vbci
       auto& func = functions.at(idx);
       method.second = &func;
 
-      if (method.first == FinalMethodId)
+      if (method.first == FinalizerMethodId)
       {
         if (func.param_types.size() != 1)
         {

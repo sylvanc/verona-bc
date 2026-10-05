@@ -32,3 +32,4 @@
 25. [Compile-Time Execution](25-compile-time-execution.md) *(placeholder — not yet implemented)*
 26. [Gotchas and Pitfalls](26-gotchas.md)
 27. [Common Patterns](27-common-patterns.md)
+28. [Initialization and Teardown](28-initialization-and-teardown.md)

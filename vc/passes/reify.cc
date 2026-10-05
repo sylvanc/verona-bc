@@ -1,7 +1,7 @@
 #include "../lang.h"
 #include "../subtype.h"
 
-#include <vbcc/irsubtype.h>
+#include <virc/analysis/ir_subtype.h>
 
 namespace vc
 {
@@ -398,6 +398,12 @@ namespace vc
                 local_types[(stmt / LocalId)->location()] =
                   clone(stmt / ClassId);
               }
+              else if (stmt == MemoSlot)
+              {
+                auto type = empty_class_type(stmt / MemoId);
+                if (type)
+                  local_types[(stmt / LocalId)->location()] = type;
+              }
               else if (stmt == FieldRef)
               {
                 auto obj_loc = (stmt / Arg / Rhs)->location();
@@ -691,6 +697,7 @@ namespace vc
       }
 
       resolve_shapes();
+      record_dynamic_call_edges();
 
       // Remove existing contents.
       top->erase(top->begin(), top->end());
@@ -708,7 +715,39 @@ namespace vc
       for (auto& key : map_order)
         for (auto& r : map[key])
           if (r.reification && r.reification != Primitive)
-            top << r.reification;
+          {
+            if (r.def == Function && (r.def / Lhs) == Once)
+            {
+              auto orig_id = r.reification / FunctionId;
+              auto orig_id_str = std::string(orig_id->location().view());
+              auto init_id_str = orig_id_str + "$once";
+              auto slot_id_str = orig_id_str + "$slot";
+              auto r_type = r.reification / Type;
+              auto params = r.reification / Params;
+              auto vars = r.reification / Vars;
+              auto labels = r.reification / Labels;
+
+              top << (Func << (FunctionId ^ orig_id_str) << Params
+                           << clone(r_type)
+                           << (Vars << (VarDef << (LocalId ^ "$memo") << Dyn))
+                           << (Labels
+                               << (Label
+                                   << (LabelId ^ "entry")
+                                   << (Body
+                                       << (MemoSlot << (LocalId ^ "$memo")
+                                                    << (MemoId ^ slot_id_str)))
+                                   << (Return << (LocalId ^ "$memo")))))
+                  << (Func << (FunctionId ^ init_id_str) << params
+                           << clone(r_type) << vars << labels);
+            }
+            else
+            {
+              top << r.reification;
+            }
+          }
+
+      for (auto& [_, instance] : empty_class_memos)
+        top << instance.memo << instance.initializer;
 
       // Emit Primitives, deduplicating wrappers whose inner types are
       // invariantly equivalent after alias/shape resolution. Rebuild the
@@ -737,7 +776,7 @@ namespace vc
 
               for (auto& [ew, ei] : emitted)
               {
-                if (ew == wrapper && vbcc::IRSubtype.invariant(top, inner, ei))
+                if (ew == wrapper && virc::IRSubtype.invariant(top, inner, ei))
                 {
                   dup = true;
                   break;
@@ -764,6 +803,16 @@ namespace vc
         top << e;
     }
 
+    const CallGraph& calls() const
+    {
+      return call_graph;
+    }
+
+    const OnceFunctions& once_functions() const
+    {
+      return once_funcs;
+    }
+
   private:
     // Each ClassDef (including primitives), TypeAlias, or Function that we
     // reify gets a Reification struct.
@@ -776,20 +825,54 @@ namespace vc
       Node resolved_name; // Resolved TypeName for shape checking
     };
 
+    static bool same_reification_id(const Node& left, const Node& right)
+    {
+      if (!left || !right || (left->type() != right->type()))
+        return false;
+
+      if (left->in({ClassId, FunctionId, TypeId}))
+        return left->location().view() == right->location().view();
+
+      Node left_id = left;
+      Node right_id = right;
+      return left_id->equals(right_id);
+    }
+
+    struct ReceiverSet
+    {
+      bool all;
+      Nodes types;
+
+      bool contains(const Node& receiver) const
+      {
+        return all ||
+          std::any_of(types.begin(), types.end(), [&](auto& candidate) {
+                 return same_reification_id(candidate, receiver);
+               });
+      }
+    };
+
     // A MethodInvocation captures a Lookup site so we can register the
     // appropriate Method entries on every class/primitive that could receive
     // a CallDyn on this MethodId.
     struct MethodInvocation
     {
+      Location caller_id;
+      Node site;
+      Node receiver_type;
       std::string method_id; // the compiled MethodId string
       std::string name; // function name
       size_t arity; // parameter count
       Token hand; // Lhs (ref) or Rhs
       Node typeargs; // cloned TypeArgs from the Lookup
       NodeMap<Node> call_subst; // substitution context at the call site
-      bool all_receivers; // true = all classes/primitives may receive the call
-      Nodes
-        receivers; // concrete possible receivers when all_receivers is false
+      ReceiverSet receivers;
+    };
+
+    struct DynamicCallTarget
+    {
+      Node receiver;
+      Node callee;
     };
 
     struct PendingCallback
@@ -797,6 +880,15 @@ namespace vc
       Node site;
       Node type;
       bool required;
+      Node registrant;
+      Node registration_site;
+    };
+
+    struct EmptyClassMemo
+    {
+      Node type;
+      Node memo;
+      Node initializer;
     };
 
     Node top;
@@ -805,12 +897,14 @@ namespace vc
     std::vector<Node> map_order;
     std::vector<Reification*> worklist;
     std::map<Location, Node> libs;
-    NodeMap<Node> init_sources;
-    std::set<Node> processed_initfini;
+    std::map<std::string, EmptyClassMemo> empty_class_memos;
     Nodes errors;
     std::vector<MethodInvocation> method_invocations;
+    std::map<std::string, std::vector<DynamicCallTarget>> dynamic_call_targets;
     std::vector<PendingCallback> pending_callbacks;
     std::map<std::string, std::vector<std::vector<Node>>> method_index;
+    CallGraph call_graph;
+    OnceFunctions once_funcs;
     std::map<std::pair<const NodeDef*, const NodeDef*>, bool>
       shape_subtype_cache;
 
@@ -827,6 +921,81 @@ namespace vc
       Location recv_loc;
     };
     std::map<Location, LookupInfo> lookup_info;
+
+    void
+    record_call_edge(const Node& caller, const Node& callee, const Node& site)
+    {
+      assert(caller == FunctionId);
+      assert(callee == FunctionId);
+
+      auto caller_id = caller->location();
+      auto callee_id = callee->location();
+      call_graph[caller_id].try_emplace(callee_id, site);
+    }
+
+    void record_dynamic_call_edges()
+    {
+      // Shape TypeIds are resolved only after the reification worklist has
+      // converged. Filter the targets indexed by register_method using the
+      // final receiver sets.
+      for (auto& mi : method_invocations)
+      {
+        auto targets = dynamic_call_targets.find(mi.method_id);
+
+        if (targets == dynamic_call_targets.end())
+          continue;
+
+        auto receivers = extract_receivers(mi.receiver_type);
+        Node caller = FunctionId ^ mi.caller_id;
+
+        for (auto& target : targets->second)
+        {
+          if (!receivers.contains(target.receiver))
+            continue;
+
+          record_call_edge(caller, target.callee, mi.site);
+        }
+      }
+    }
+
+    Node empty_class_type(const Node& memo_id)
+    {
+      auto find =
+        empty_class_memos.find(std::string(memo_id->location().view()));
+      if (find == empty_class_memos.end())
+        return {};
+
+      return clone(find->second.type);
+    }
+
+    Node ensure_empty_class_memo(const Node& class_id)
+    {
+      auto class_name = std::string(class_id->location().view());
+      auto memo_id = class_name + "$instance";
+      auto find = empty_class_memos.find(memo_id);
+      if (find != empty_class_memos.end())
+        return clone(find->second.memo / MemoId);
+
+      auto initializer_id = class_name + "$instance_init";
+      Node instance = LocalId ^ "$instance";
+
+      Node initializer = Func
+        << (FunctionId ^ initializer_id) << Params << clone(class_id)
+        << (Vars << (VarDef << clone(instance) << clone(class_id)))
+        << (Labels
+            << (Label
+                << (LabelId ^ "entry")
+                << (Body << (New << clone(instance) << clone(class_id) << Args))
+                << (Return << clone(instance))));
+
+      Node memo = Memo << (MemoId ^ memo_id) << (FunctionId ^ initializer_id);
+
+      empty_class_memos.emplace(
+        memo_id,
+        EmptyClassMemo{
+          clone(class_id), std::move(memo), std::move(initializer)});
+      return MemoId ^ memo_id;
+    }
 
     void drain_worklist(std::vector<Reification*>& deferred_typevar)
     {
@@ -1003,12 +1172,6 @@ namespace vc
       }
     }
 
-    struct ReceiverSet
-    {
-      bool all;
-      Nodes types;
-    };
-
     Node resolve_receiver_typeid(const Node& type_id)
     {
       if (!type_id || (type_id != TypeId))
@@ -1072,18 +1235,6 @@ namespace vc
     // across the resolved inner receiver set.
     ReceiverSet extract_receivers(const Node& reified_type)
     {
-      auto same_receiver = [](const Node& left, const Node& right) {
-        if (!left || !right || (left->type() != right->type()))
-          return false;
-
-        if (left->in({ClassId, FunctionId, TypeId}))
-          return left->location().view() == right->location().view();
-
-        Node left_id = left;
-        Node right_id = right;
-        return left_id->equals(right_id);
-      };
-
       std::function<ReceiverSet(const Node&)> collect = [&](const Node& type) {
         if (!type || (type == Dyn))
           return ReceiverSet{true, {}};
@@ -1104,18 +1255,7 @@ namespace vc
           bool saw_expanded = false;
 
           auto add_unique = [&](ReceiverSet& result, Node recv) {
-            bool dup = false;
-
-            for (auto& existing : result.types)
-            {
-              if (same_receiver(existing, recv))
-              {
-                dup = true;
-                break;
-              }
-            }
-
-            if (!dup)
+            if (!result.contains(recv))
               result.types.push_back(clone(recv));
           };
 
@@ -1136,29 +1276,10 @@ namespace vc
 
           if (saw_expanded && !explicit_result.types.empty())
           {
-            bool explicit_subset = true;
-
-            for (auto& recv : explicit_result.types)
-            {
-              bool found = false;
-
-              for (auto& expanded : expanded_result.types)
-              {
-                if (same_receiver(expanded, recv))
-                {
-                  found = true;
-                  break;
-                }
-              }
-
-              if (!found)
-              {
-                explicit_subset = false;
-                break;
-              }
-            }
-
-            if (explicit_subset)
+            if (std::all_of(
+                  explicit_result.types.begin(),
+                  explicit_result.types.end(),
+                  [&](auto& recv) { return expanded_result.contains(recv); }))
               return explicit_result;
           }
 
@@ -1192,32 +1313,10 @@ namespace vc
       return collect(reified_type);
     }
 
-    bool same_reification_id(const Node& left, const Node& right)
-    {
-      if (!left || !right || (left->type() != right->type()))
-        return false;
-
-      if (left->in({ClassId, FunctionId, TypeId}))
-        return left->location().view() == right->location().view();
-
-      Node left_id = left;
-      Node right_id = right;
-      return left_id->equals(right_id);
-    }
-
     // Check if a MethodInvocation targets a specific class reification.
     bool mi_targets(const MethodInvocation& mi, Node class_id)
     {
-      if (mi.all_receivers)
-        return true; // all classes
-
-      for (auto r : mi.receivers)
-      {
-        if (same_reification_id(class_id, r))
-          return true;
-      }
-
-      return false;
+      return mi.receivers.contains(class_id);
     }
 
     // Resolve a TypeArg through the current substitution map. If the TypeArg
@@ -1767,18 +1866,7 @@ namespace vc
           if ((r.def / Shape) == Shape)
             continue;
 
-          bool matches = recv_set.all;
-
-          for (auto& recv : recv_set.types)
-          {
-            if (same_reification_id(r.id, recv))
-            {
-              matches = true;
-              break;
-            }
-          }
-
-          if (!matches)
+          if (!recv_set.contains(r.id))
             continue;
 
           auto methods = r.reification / Methods;
@@ -1956,7 +2044,7 @@ namespace vc
           contains_dyn(resolved_param) || contains_typeid(resolved_param))
           continue;
 
-        if (!vbcc::IRSubtype(top, resolved_actual, resolved_param))
+        if (!virc::IRSubtype(top, resolved_actual, resolved_param))
           return false;
       }
 
@@ -2133,7 +2221,7 @@ namespace vc
            has_unresolved_type(field_def / Type, target.subst));
         bool constructor_seed = is_create && generic_create_field &&
           contains_typeid(current) && !contains_typeid(actual) &&
-          vbcc::IRSubtype(top, actual, current);
+          virc::IRSubtype(top, actual, current);
         bool replacing_seed = unresolved_seed &&
           current->equals(unresolved_seed) && current->in({TypeId, Union, Dyn});
 
@@ -2254,18 +2342,7 @@ namespace vc
           if ((r.def / Shape) == Shape)
             continue;
 
-          bool matches = recv_set.all;
-
-          for (auto& recv : recv_set.types)
-          {
-            if (same_reification_id(r.id, recv))
-            {
-              matches = true;
-              break;
-            }
-          }
-
-          if (!matches)
+          if (!recv_set.contains(r.id))
             continue;
 
           auto methods = r.reification / Methods;
@@ -2452,6 +2529,12 @@ namespace vc
                   ((stmt / LocalId)->location() == trace_loc))
                 {
                   callback_type = clone(stmt / ClassId);
+                }
+                else if (
+                  (stmt == MemoSlot) &&
+                  ((stmt / LocalId)->location() == trace_loc))
+                {
+                  callback_type = empty_class_type(stmt / MemoId);
                 }
                 else if (
                   (stmt == Call) && ((stmt / LocalId)->location() == trace_loc))
@@ -2716,13 +2799,23 @@ namespace vc
               n / Type, r.subst, n / Type, "constructed type");
             reify_new(n, r.subst);
             // After reify_new, dst is first child.
-            local_types[(n / LocalId)->location()] = new_type;
+            auto dst_loc = (n / LocalId)->location();
+            local_types[dst_loc] = new_type;
+
+            // Empty class: load its memoized instance.
+            if ((n / Args)->empty())
+            {
+              auto s = MemoSlot << clone(n / LocalId)
+                                << ensure_empty_class_memo(n / ClassId);
+              n->parent()->replace(n, s);
+              n = s;
+            }
           }
           else if (n == Lookup)
           {
             // Save receiver location before reify_lookup transforms the node.
             auto recv_loc = (n / Rhs)->location();
-            reify_lookup(n, r.subst);
+            reify_lookup(n, r.subst, r.id);
             // After reify_lookup: Lookup << dst << src << MethodId.
             auto mid = (n / MethodId)->location().view();
             lookup_info[(n / LocalId)->location()] = {
@@ -2731,6 +2824,9 @@ namespace vc
           else if (n == Call)
           {
             reify_call(n, r.subst);
+            if (n == Call)
+              record_call_edge(r.id, n / FunctionId, n);
+
             // Track Call return type from the function reification.
             auto ret = find_func_return_type(n / FunctionId);
             if (ret)
@@ -3101,31 +3197,23 @@ namespace vc
         vars << (VarDef << (LocalId ^ loc) << var_type);
       }
 
+      r.reification = Func << r.id << params << r_type << vars << labels;
+
       if ((r.def / Lhs) == Once)
-      {
-        r.reification = FuncOnce << r.id << params << r_type << vars << labels;
-      }
-      else
-      {
-        r.reification = Func << r.id << params << r_type << vars << labels;
-      }
+        once_funcs.insert(r.id->location());
 
-      // If this is an init function, ensure the return value's class has
-      // @callback registered so the runtime can call it as fini.
-      if (
-        r.def->parent(Symbols) &&
-        ((r.def / Ident)->location().view() == "init"))
+      // Ensure every AtTeardown callback has @callback registered so the
+      // runtime can invoke it.
+      for (auto& l : *labels)
       {
-        // Find the last Return terminator's local.
-        for (auto& l : *labels)
+        auto body_node = l / Body;
+
+        for (auto& teardown : *body_node)
         {
-          auto term = l / Return;
-
-          if (term != Return)
+          if (teardown != AtTeardown)
             continue;
 
-          auto ret_loc = (term / LocalId)->location();
-          auto body_node = l / Body;
+          auto ret_loc = (teardown / LocalId)->location();
 
           // Trace through Copy/Move to find the original source.
           bool changed = true;
@@ -3153,13 +3241,11 @@ namespace vc
 
           if (it != local_types.end())
           {
-            if (register_callback_type(it->second))
-            {
-              break;
-            }
+            if (register_callback_type(it->second, {}, false, r.id, teardown))
+              continue;
           }
 
-          // Check if the return value comes from a Call (e.g., create).
+          // Check if the callback comes from a Call (e.g., create).
           for (auto& stmt : *body_node)
           {
             if ((stmt == Call) && ((stmt / LocalId)->location() == ret_loc))
@@ -3204,14 +3290,12 @@ namespace vc
               if (call_enc)
               {
                 auto class_id = find_or_push(call_enc, std::move(class_subst));
-                register_callback_type(class_id);
+                register_callback_type(class_id, {}, false, r.id, teardown);
               }
 
               break;
             }
           }
-
-          break;
         }
       }
 
@@ -3652,7 +3736,8 @@ namespace vc
       n << dst << classid << args;
     }
 
-    void reify_lookup(Node& n, const NodeMap<Node>& call_subst)
+    void reify_lookup(
+      Node& n, const NodeMap<Node>& call_subst, const Node& caller_id)
     {
       auto dst = n / LocalId;
       auto src = n / Rhs;
@@ -3674,20 +3759,26 @@ namespace vc
       // Determine receiver types from the source local's tracked type.
       ReceiverSet receivers{true, {}};
       auto src_it = local_types.find(src->location());
+      Node receiver_type = Dyn;
 
       if (src_it != local_types.end())
+      {
+        receiver_type = clone(src_it->second);
         receivers = extract_receivers(src_it->second);
+      }
 
       // Record this method invocation for method registration.
       method_invocations.push_back(
-        {method_id_str,
+        {caller_id->location(),
+         n,
+         std::move(receiver_type),
+         method_id_str,
          name,
          arity,
          hand->type(),
          clone(typeargs),
          call_subst,
-         receivers.all,
-         std::move(receivers.types)});
+         std::move(receivers)});
 
       // Register this new MI on existing class reifications that match.
       // Iterate via map_order (insertion order) rather than map (pointer order)
@@ -3776,22 +3867,19 @@ namespace vc
 
         // Check if this Method entry already exists.
         auto methods = r.reification / Methods;
-        bool already = false;
-
-        for (auto& existing : *methods)
-        {
-          if (
-            ((existing / MethodId)->location().view() == mi.method_id) &&
-            ((existing / FunctionId)->location().view() ==
-             funcid->location().view()))
-          {
-            already = true;
-            break;
-          }
-        }
+        bool already =
+          std::any_of(methods->begin(), methods->end(), [&](auto& existing) {
+            return ((existing / MethodId)->location().view() == mi.method_id) &&
+              ((existing / FunctionId)->location().view() ==
+               funcid->location().view());
+          });
 
         if (!already)
+        {
+          dynamic_call_targets[mi.method_id].push_back(
+            {clone(r.id), clone(funcid)});
           methods << (Method << clone(mid_node) << funcid);
+        }
       }
     }
 
@@ -3844,11 +3932,10 @@ namespace vc
       return {};
     }
 
-    // Core logic for registering @callback on a class. Returns true if
-    // the callback method was successfully registered, false otherwise.
+    // Register @callback on a class and return its reified apply function.
     // If match_count_out and has_generic_out are provided, they report
     // details about the apply method search.
-    bool ensure_callback_method(
+    Node ensure_callback_method(
       const Node& class_id,
       size_t* match_count_out = nullptr,
       bool* has_generic_out = nullptr)
@@ -3876,7 +3963,7 @@ namespace vc
       }
 
       if (!target_r)
-        return false;
+        return {};
 
       // Ensure the class has been reified (it may have just been
       // added to the worklist by find_or_push and not yet processed).
@@ -3915,7 +4002,7 @@ namespace vc
         *has_generic_out = has_generic;
 
       if (match_count != 1)
-        return false;
+        return {};
 
       // Reify the apply function with the class's substitution context.
       auto funcid = find_or_push(found_func, target_r->subst);
@@ -3940,7 +4027,7 @@ namespace vc
       if (!already)
         methods << (Method << clone(mid_node) << funcid);
 
-      return true;
+      return funcid;
     }
 
     void emit_make_callback_error(
@@ -3963,7 +4050,11 @@ namespace vc
     }
 
     bool register_callback_type(
-      const Node& type, Node site = {}, bool required = false)
+      const Node& type,
+      Node site = {},
+      bool required = false,
+      Node registrant = {},
+      Node registration_site = {})
     {
       auto targets = resolve_callback_targets(type);
 
@@ -3976,7 +4067,12 @@ namespace vc
 
         if (inner && (inner == TypeId))
         {
-          pending_callbacks.push_back({site, clone(type), required});
+          pending_callbacks.push_back(
+            {site,
+             clone(type),
+             required,
+             registrant ? clone(registrant) : Node{},
+             registration_site ? clone(registration_site) : Node{}});
           return true;
         }
 
@@ -3994,13 +4090,19 @@ namespace vc
 
       for (auto& class_id : targets)
       {
-        if (ensure_callback_method(class_id, &match_count, &has_generic))
-          continue;
+        auto funcid =
+          ensure_callback_method(class_id, &match_count, &has_generic);
 
-        if (required && site)
-          emit_make_callback_error(site, match_count, has_generic);
+        if (!funcid)
+        {
+          if (required && site)
+            emit_make_callback_error(site, match_count, has_generic);
 
-        return false;
+          return false;
+        }
+
+        if (registrant)
+          record_call_edge(registrant, funcid, registration_site);
       }
 
       return true;
@@ -4025,7 +4127,12 @@ namespace vc
           else
           {
             remaining.push_back(
-              {pending.site, clone(pending.type), pending.required});
+              {pending.site,
+               clone(pending.type),
+               pending.required,
+               pending.registrant ? clone(pending.registrant) : Node{},
+               pending.registration_site ? clone(pending.registration_site) :
+                                           Node{}});
           }
 
           continue;
@@ -4037,11 +4144,18 @@ namespace vc
 
         for (auto& class_id : targets)
         {
-          if (!ensure_callback_method(class_id, &match_count, &has_generic))
+          auto funcid =
+            ensure_callback_method(class_id, &match_count, &has_generic);
+
+          if (!funcid)
           {
             ok = false;
             break;
           }
+
+          if (pending.registrant)
+            record_call_edge(
+              pending.registrant, funcid, pending.registration_site);
         }
 
         if (ok)
@@ -4059,48 +4173,16 @@ namespace vc
       register_callback_type(type, n, true);
     }
 
-    // Reify init functions from a source Lib onto a reified Lib.
-    // Checks for duplicate init across multiple Lib definitions
-    // for the same library (by string name).
-    void
-    reify_initfini(const Node& source_lib, Node& reified_lib, Reification& r)
+    Node find_ffi_initializer(const Node& cls, const Node& lib)
     {
-      // Skip if this source Lib node has already been processed.
-      if (!processed_initfini.insert(source_lib).second)
-        return;
+      auto defs = cls->lookdown(ffi_init_id(lib));
 
-      for (auto& child : *(source_lib / Symbols))
-      {
-        if (child != Function)
-          continue;
+      if (defs.empty())
+        return {};
 
-        auto name = (child / Ident)->location().view();
-
-        if (name != "init")
-          continue;
-
-        auto existing = reified_lib / InitFunc;
-
-        if (existing != None)
-        {
-          // Already has an init — conflict error.
-          auto msg = std::format(
-            "Conflicting 'init' for library \"{}\"",
-            (source_lib / String)->location().view());
-          auto prev = init_sources.at(reified_lib);
-
-          errors.push_back(
-            err(child / Ident, msg)
-            << errmsg("Previous declaration resolved here:")
-            << errloc(prev / Ident));
-          continue;
-        }
-
-        // Reify the init function.
-        auto funcid = find_or_push(child, r.subst);
-        reified_lib->replace(existing, clone(funcid));
-        init_sources[reified_lib] = child;
-      }
+      assert(defs.size() == 1);
+      assert(defs.front() == Function);
+      return defs.front();
     }
 
     void reify_ffi(Node& n, Reification& r)
@@ -4127,6 +4209,14 @@ namespace vc
 
             if ((sym / SymbolId)->location() == sym_name)
             {
+              auto initializer = find_ffi_initializer(parent, child);
+
+              if (initializer)
+              {
+                auto initializer_id = find_or_push(initializer, r.subst);
+                record_call_edge(r.id, initializer_id, n);
+              }
+
               // Found the matching symbol in this Lib.
               // Get or create the reified Lib.
               auto lib_loc = (child / String)->location();
@@ -4135,25 +4225,12 @@ namespace vc
 
               if (find == libs.end())
               {
-                reified_lib = Lib << clone(child / String) << Symbols << None;
+                reified_lib = Lib << clone(child / String) << Symbols;
                 libs[lib_loc] = reified_lib;
               }
               else
               {
                 reified_lib = find->second;
-              }
-
-              // Reify init functions from all Lib definitions for this
-              // library in the enclosing ClassDef.
-              for (auto& lib_child : *(parent / ClassBody))
-              {
-                if (lib_child != Lib)
-                  continue;
-
-                if ((lib_child / String)->location().view() != lib_loc.view())
-                  continue;
-
-                reify_initfini(lib_child, reified_lib, r);
               }
 
               // Reify the types in the symbol.
@@ -4167,7 +4244,7 @@ namespace vc
                 sym / Type, r.subst, sym / SymbolId, "FFI return type");
 
               // Add the reified symbol. Duplicate detection and type
-              // compatibility checking is done in the vbcc assignids pass.
+              // compatibility checking is done in the VIRC assign_ids pass.
               auto reified_symbols = reified_lib / Symbols;
               reified_symbols
                 << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)
@@ -4576,8 +4653,9 @@ namespace vc
     PassDef p{"reify", wfIR, dir::bottomup, {}};
 
     p.pre([=](auto top) {
-      Reifier().run(top);
-      return 0;
+      Reifier reifier;
+      reifier.run(top);
+      return lower_once(top, reifier.once_functions(), reifier.calls());
     });
 
     return p;

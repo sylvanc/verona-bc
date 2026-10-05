@@ -7,13 +7,16 @@ description: Verona compiler test suite infrastructure — running tests, updati
 
 ## Test Infrastructure Overview
 
-The test suite uses trieste's `testsuite.cmake` framework. Tests are defined in `testsuite/CMakeLists.txt` which calls `testsuite(vbc)`. Three cmake files define three test layers:
+The test suite uses Trieste's `testsuite.cmake` framework. Tests are defined in `testsuite/CMakeLists.txt`, which calls `testsuite(vbc)`. Two collection files define complete compile/run pipelines:
 
-| Layer | File | Tests | Input | Output dir |
-|-------|------|-------|-------|------------|
-| **vc** (compile) | `testsuite/vc.cmake` | Verona → bytecode | `*.v` files | `compile/` |
-| **vbcc** (backend) | `testsuite/vbcc.cmake` | IR → bytecode | `*.vir` files | `compile/` |
-| **vbci** (runtime) | `testsuite/vbci.cmake` | Execute bytecode | `*.vbc` files | `run/` |
+| Collection | File | Pipeline | Input |
+|------------|------|----------|-------|
+| **vc** | `testsuite/vc.cmake` | Verona → bytecode → execute | `*.v` files |
+| **vir** | `testsuite/vir.cmake` | IR → bytecode → execute | `*.vir` files |
+
+Each collection owns its compiler invocation and registers a dependent
+interpreter node. Sources under a `compile_only/` directory register only the
+compile node.
 
 Each test produces `exit_code.txt`, `stdout.txt`, and `stderr.txt` in its output directory. The vc layer also produces per-pass `.trieste` dump files, a `*_final.trieste`, and a `.vbc` file (on success).
 
@@ -96,22 +99,18 @@ When source code changes, the golden files must be regenerated:
 
 ```bash
 cd build
-ninja install && ninja update-dump-clean && ninja update-dump && cmake ..
+ninja install && ninja update-dump
 ```
 
 - `ninja install` — rebuild the compiler (needed so installed binary has `_builtin`)
-- `ninja update-dump-clean` — removes ALL existing golden directories, then runs update-dump
 - `ninja update-dump` — regenerates golden output by running each test and copying results
-- `cmake ..` — re-scans for new golden files so ctest knows about them
-
-**IMPORTANT**: `update-dump-clean` removes golden dirs first, which is necessary when passes change (otherwise stale files remain). Use `update-dump` alone (without clean) only when you're sure no files were removed.
 
 ### When ALL golden files change
 
 Adding or modifying a `.v` file under `vc/_builtin/` changes compilation output for EVERY test, because `_builtin` is always parsed. In this case, you MUST regenerate ALL golden files:
 
 ```bash
-cd build && ninja install && ninja update-dump-clean && ninja update-dump && cmake ..
+cd build && ninja install && ninja update-dump
 ```
 
 This can take a while. All golden file changes must be committed.
@@ -156,33 +155,34 @@ For runtime tests with expected non-zero exit codes:
 
 ### Test execution flow
 
-1. `ctest` runs `runcommand.cmake` for each test
-2. `runcommand.cmake` includes the appropriate `.cmake` file (e.g., `vc.cmake`)
-3. The `toolinvoke` macro sets up command-line arguments
-4. The test executable runs with those arguments
-5. stdout → `stdout.txt`, stderr → `stderr.txt`, exit code → `exit_code.txt`
-6. Timeout: 20 seconds per test
+1. Trieste discovers each collection file (for example, `vc.cmake`)
+2. Its `TESTSUITE_DEFINE` callback registers a named node for each selected input
+3. CTest runs Trieste's node executor with the registered command
+4. stdout → `stdout.txt`, stderr → `stderr.txt`, exit code → `exit_code.txt`
+5. Declared artifacts are checked and declared goldens are compared
+6. Dependent run nodes execute only after their compile nodes pass
 
 ### Golden file comparison
 
-1. Each file in the golden directory is compared against the corresponding output file
-2. Comparison uses `cmake -E compare_files --ignore-eol` (ignores line ending differences)
-3. If files differ, the test fails and shows a diff
-4. `exit_code.txt` is always checked (even if no other golden files exist)
+1. Each file declared in `GOLDENS` is compared with the corresponding output
+2. Comparison ignores line-ending differences
+3. If a file differs, the node fails and shows a diff
+4. `exit_code.txt`, `stdout.txt`, and `stderr.txt` are declared for every node
 
 ### Test naming convention
 
-Tests are named hierarchically: `vbc/<name>/<name>/compile` and `vbc/<name>/<name>/run`. Individual file comparisons are: `vbc/<name>/<name>/compile-<filename>`.
+Tests are named hierarchically: `vbc/<name>/<name>/compile` and `vbc/<name>/<name>/run`.
 
-The test that generates output must pass before comparison tests run (set via `DEPENDS` property).
+Each node is one CTest test. Run nodes declare their compile node in `DEPENDS`, so
+CTest runs and verifies compilation first.
 
 ## Common Pitfalls
 
 1. **Forgot `ninja install`**: The build binary at `build/vc/vc` does NOT have `_builtin` next to it. Only `build/dist/vc/vc` does. Always `ninja install` before `update-dump`.
 
-2. **Forgot `cmake ..`**: After creating a new test directory, `cmake ..` must be run so ctest discovers the new golden files. Otherwise ctest won't know about the new comparison tests.
+2. **Build was not regenerated**: Re-run `ninja` after adding a test so CMake's configured file globs discover it.
 
-3. **Stale golden files**: If a pass was removed or renamed, `update-dump` won't delete old golden files. Use `update-dump-clean` to start fresh.
+3. **Stale golden files**: Remove files explicitly when they are no longer declared as golden outputs.
 
 4. **Hidden `.vbc` file**: Running `vc build .` from inside a test directory produces `.vbc` (hidden file) because the project name is ".". Always run from `build/`: `dist/vc/vc build ../testsuite/v/<name>`.
 

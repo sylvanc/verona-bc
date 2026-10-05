@@ -1,0 +1,46 @@
+// Memo initializers run in declaration order. A later initializer may load an
+// earlier slot without triggering lazy initialization. The dependent combines
+// cached 40 with 2 and main checks for 42. Wrong ordering loads an uninitialized
+// slot and aborts or returns 1. Expected exit code: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+memo @dependency_slot @dependency_init
+memo @dependent_slot @dependent_init
+
+func @dependency_init(): i32
+  $value = const i32 40
+  ret $value
+
+func @dependency(): i32
+  $value = memoslot @dependency_slot
+  ret $value
+
+func @dependent_init(): i32
+  $dependency = call @dependency()
+  $increment = const i32 2
+  $value = add $dependency $increment
+  ret $value
+
+func @dependent(): i32
+  $value = memoslot @dependent_slot
+  ret $value
+
+func @main(): none
+  $value = call @dependent()
+  $expected = const i32 42
+  $ok = eq $value $expected
+  cond $ok ^success ^fail
+
+^success
+  $exit_code = const i32 0
+  $_ = ffi @set_exit_code($exit_code)
+  $_none = const none
+  ret $_none
+
+^fail
+  $exit_code = const i32 1
+  $_ = ffi @set_exit_code($exit_code)
+  $_none = const none
+  ret $_none

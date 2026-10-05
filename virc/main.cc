@@ -1,0 +1,69 @@
+#include "compile.h"
+#include "lang.h"
+#include "vbc/emitter.h"
+
+#include <trieste/driver.h>
+
+int main(int argc, char** argv)
+{
+  using namespace trieste;
+  using namespace virc;
+
+  auto state = std::make_shared<Compilation>();
+  auto passes = pipeline(state);
+  passes.insert(passes.begin(), labels());
+  passes.insert(passes.begin(), statements());
+  Reader reader{"virc", passes, parser()};
+
+  struct Options : public trieste::Options
+  {
+    std::filesystem::path path;
+    std::filesystem::path bytecode_file;
+    bool strip = false;
+    bool build = false;
+
+    void configure(CLI::App& cli) override
+    {
+      cli.add_option(
+        "-b,--bytecode", bytecode_file, "Output bytecode to this file.");
+      cli.add_flag(
+        "-s,--strip", strip, "Strip debug information from the bytecode.");
+
+      cli.callback([this, &cli]() {
+        build = cli.parsed();
+        path = cli.get_option("path")->as<std::filesystem::path>();
+
+        if (!path.has_filename())
+          path = path.parent_path();
+
+        if (!path.empty() && bytecode_file.empty())
+          bytecode_file = path.stem().replace_extension(".vbc");
+
+        auto pass = cli.get_option_no_throw("--pass");
+
+        if (
+          !pass || pass->count() == 0 || pass->as<std::string>() == "optimize")
+          build = true;
+      });
+    }
+  };
+
+  Options opts;
+  Driver d(reader, &opts);
+  auto r = d.run(argc, argv);
+
+  if (r != 0)
+    return r;
+
+  if (!opts.build)
+    return 0;
+
+  if (state->error)
+    return -1;
+
+  if (!opts.path.empty())
+    state->add_path(opts.path);
+
+  vbc::emit(*state, opts.bytecode_file, opts.strip);
+  return 0;
+}

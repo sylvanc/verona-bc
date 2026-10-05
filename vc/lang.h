@@ -2,14 +2,15 @@
 
 #define TRIESTE_EXPOSE_LOG_MACRO
 #include <trieste/trieste.h>
-#include <vbcc.h>
-#include <vbcc/lang.h>
+#include <vir.h>
+#include <virc/lang.h>
 
 namespace vc
 {
   using namespace trieste;
   using namespace trieste::wf::ops;
-  using namespace vbcc;
+  using namespace vir;
+  using namespace virc;
 
   inline const auto Paren = TokenDef("paren");
   inline const auto Bracket = TokenDef("bracket");
@@ -458,6 +459,16 @@ namespace vc
     ;
   // clang-format on
 
+  inline const auto wfBodyFFIInit = wfBodyInfer | AtTeardown;
+
+  // clang-format off
+  inline const auto wfPassFFIInit =
+      wfPassInfer
+    | (Body <<= wfBodyFFIInit++)
+    | (AtTeardown <<= LocalId)
+    ;
+  // clang-format on
+
   inline const auto l_local = Location("local");
 
   Node make_type(NodeRange r = {});
@@ -520,6 +531,8 @@ namespace vc
     Node apply_body,
     bool is_block = false);
 
+  Location ffi_init_id(const Node& lib);
+
   Parse parser();
   PassDef structure(const Parse& parse);
   PassDef ident();
@@ -529,5 +542,13 @@ namespace vc
   PassDef application();
   PassDef anf();
   PassDef infer();
+  PassDef ffiinit();
   PassDef reify();
+
+  // caller FunctionId -> callee FunctionId -> source call site.
+  using CallGraph = std::map<Location, std::map<Location, Node>>;
+  using OnceFunctions = std::set<Location>;
+
+  int lower_once(
+    Node top, const OnceFunctions& once_funcs, const CallGraph& call_graph);
 }

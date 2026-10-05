@@ -35,6 +35,21 @@ namespace vc
     return ta;
   }
 
+  Location ffi_init_id(const Node& lib)
+  {
+    static constexpr char hex[] = "0123456789abcdef";
+    std::string id = "$ffi_init$";
+
+    for (auto c : (lib / String)->location().view())
+    {
+      auto byte = static_cast<unsigned char>(c);
+      id += hex[byte >> 4];
+      id += hex[byte & 0xf];
+    }
+
+    return Location(id);
+  }
+
   Nodes scope_path(Node node)
   {
     Nodes path;

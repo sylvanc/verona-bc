@@ -1,79 +1,47 @@
-# Verona BC
+# Verona BC Toolchain
 
-This is an experimental byte code interpreter for the Verona operational semantics.
+This repository contains an experimental Verona compiler and runtime
+toolchain. VC lowers Verona source to Verona Intermediate Representation
+(VIR), and VIRC validates and analyzes VIR before the VBC emitter produces
+Verona Bytecode (VBC).
 
-## Non-Local Returns
+**Current:** VBC is the supported output and runs on VBCI. VIRC's compilation
+model is output-neutral so additional emitters can be added separately.
 
-Functions return via `return` or `raise`.
+## Quick Start
 
-If the function does a `return`, your destination register will have the returned value.
+Configure and build in the `build` directory, then run the test suite:
 
-A `raise` pops frames until it reaches a target frame (identified by a raise target), then converts to a `return` from that frame. Each frame has a raise target that defaults to its own frame ID. Use `getraise` to read the current frame's raise target, and `setraise` to set it (returning the previous value). This allows blocks (non-escaping closures) to implement non-local returns: the block captures the enclosing function's raise target at creation time, sets it when invoked, and uses `raise` to return from the enclosing function.
+```sh
+cmake -S . -B build -G Ninja
+ninja -C build install
+ctest --test-dir build --output-on-failure
+```
 
-Runtime errors (type mismatches, stack escapes, etc.) are fatal to the behavior.
+Build and run the hello fixture through the default VBC path:
 
-## Debug Info
+```sh
+cd build
+dist/vc/vc build ../testsuite/v/hello
+dist/vbci/vbci hello.vbc
+```
 
-The first entry is a string table. This is:
-* A ULEB128 count of the number of strings.
-* Strings, each of which is a ULEB128 length followed by the string.
+See [Toolchain Usage](vc/docs/21-toolchain-usage.md) for standalone VIRC
+commands.
 
-This is followed by a ULEB128 string table index for the compilation path.
+## Components
 
-This is followed by debug info for each user-defined classes. This is:
-* A ULEB128 string table index for the class name.
-* A ULEB128 string table index for each field name.
-* A ULEB128 string table index for each method name.
+| Component | Responsibility |
+| --- | --- |
+| [VC](vc/README.md) | Verona frontend and source-to-VIR lowering |
+| [VIRC](virc/README.md) | Shared VIR validation, analysis, and output-neutral compilation state |
+| [VBCI](vbci/README.md) | VBC loader and interpreter runtime |
+| [Interchange formats](docs/formats/README.md) | VIR and VBC contracts and compatibility |
+| [Testsuite](testsuite/README.md) | Source, VIR, VBC, and VBCI test pipelines |
 
-This is followed by debug info for each function. This is:
-* A ULEB128 string table index for the function name.
-* A ULEB128 string table index for each register name.
-* A debug info program.
-
-A debug info program is a sequence of instructions encoded as ULEB128s. The low 2 bits are the instruction, and the high bits are the argument. The instructions are:
-* `vbci::File` (0): the argument is the source file's name in the string table, reset the offset to 0.
-* `vbci::Offset` (1): advance the offset by the argument, advance the PC by 1.
-* `vbci::Skip` (2): advance the PC by the argument.
-
-## To-Do List
-
-* Tail-call optimization.
-* Do delayed-send when the closure still has stack references?
-  * Allow creating a behavior with `exec_count_down` 1 higher.
-  * Expose a decrement function for that.
-  * Set the region parent to be the behavior.
-  * When stack RC goes to 0, decrement the behavior's `exec_count_down`.
-* Do programs ever need to create null pointers?
-* Is it ok to immortalize a stack allocated object? Seems like no?
-* Merge, freeze, extract.
-  * Delayed freeze?
-  * Modes that allow/disallow parent pointers and stack RC?
-  * When freezing a region with a stack RC, how do we know which SCC have those additional incoming edges?
-    * In an RC region, can we reuse the existing object RC?
-    * No way to do it in a non-RC region.
-* Embedded fields (objects and arrays).
-  * Embed with no header, use `snmalloc::external_pointer`.
-  * Need a different `ValueType` to avoid doing this for all objects/arrays.
-  * Compatible with FFI.
-  * Can't store? Or is a store a copy? How do we initialize the field?
-* Make a `[bool]` have 1-bit instead of 8-bit elements.
-* FFI with `libffi`.
-  * Can we wrap returned `struct` as objects?
-  * Platform-specific FFI. Only load for the runtime platform.
-  * Use `libffi` closures to create function pointers with captures.
-* Introspection.
-  * Get a value's dynamic type.
-  * Functions: get the argument count and types, and the return type.
-  * Classes:
-    * Get the field count, types, and names.
-    * Get the method count and names.
-* Mark classes to auto-generate a C API.
-  * Output a C header file.
-  * Allow calling back into the interpreter.
-* Generate FFI stubs automatically from C/C++ headers.
-* Interactive debugger.
-* Build a DAP/LSP to allow debugging.
-* AST to IR output.
-* Compile to LLVM IR and/or Cranelift.
-* Hot patching running code.
-* Serialize a behavior to execute on another process or machine.
+The current architecture and accepted decisions are indexed in
+[Architecture](docs/architecture/README.md). Verona language documentation is
+under [VC Language Documentation](vc/docs/README.md), and documentation
+ownership is defined by the [Documentation Policy](docs/documentation-policy.md).
+The complete contributor and user documentation map is in
+[Documentation](docs/README.md).

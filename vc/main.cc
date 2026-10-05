@@ -2,36 +2,33 @@
 
 #include <git2.h>
 #include <trieste/driver.h>
-#include <vbcc/bytecode.h>
+#include <virc/compile.h>
+#include <virc/vbc/emitter.h>
 
 int main(int argc, char** argv)
 {
   using namespace vc;
 
-  auto state = std::make_shared<Bytecode>();
+  auto state = std::make_shared<Compilation>();
   auto parse = vc::parser();
   auto struc = vc::structure(parse);
 
-  Reader reader{
-    "vc",
-    {
-      struc,
-      ident(),
-      sugar(),
-      functype(),
-      dot(),
-      application(),
-      anf(),
-      infer(),
-      reify(),
-      vbcc::memo(),
-      vbcc::assignids(state),
-      vbcc::validids(state),
-      vbcc::typecheck(state),
-      vbcc::optimize(state),
-      vbcc::liveness(state),
-    },
-    parse};
+  std::vector<Pass> passes{
+    struc,
+    ident(),
+    sugar(),
+    functype(),
+    dot(),
+    application(),
+    anf(),
+    infer(),
+    ffiinit(),
+    reify(),
+  };
+  auto virc_passes = virc::pipeline(state);
+  passes.insert(passes.end(), virc_passes.begin(), virc_passes.end());
+
+  Reader reader{"vc", passes, parse};
 
   struct Options : public trieste::Options
   {
@@ -92,6 +89,6 @@ int main(int argc, char** argv)
   if (!opts.path.empty())
     state->add_path(opts.path);
 
-  state->gen(opts.bytecode_file, opts.strip);
+  virc::vbc::emit(*state, opts.bytecode_file, opts.strip);
   return 0;
 }

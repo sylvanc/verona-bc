@@ -8,11 +8,12 @@
 #include "register.h"
 #include "stack.h"
 
+#include <bit>
 #include <functional>
+#include <sched/work.h>
 #include <source_location>
 #include <type_traits>
 #include <unordered_set>
-#include <verona.h>
 
 namespace vbci
 {
@@ -83,7 +84,7 @@ namespace vbci
   private:
     Thread();
     static Thread& get();
-    static void run_behavior(verona::rt::Work* work);
+    static void run_behavior(verona::rt::Work* work) noexcept;
 
     template<typename... Ts>
     Register thread_run_sync(Function* func, Ts&&... argv)
@@ -109,7 +110,7 @@ namespace vbci
       }
     }
 
-    void thread_run_behavior(verona::rt::Work* work);
+    void thread_run_behavior(verona::rt::Work* work) noexcept;
     void thread_handle_callback(CallbackClosure* cc, void* ret, void** args);
     Register thread_run(Function* func);
     void step();
@@ -148,9 +149,16 @@ namespace vbci
     template<typename T = size_t>
     SNMALLOC_FAST_PATH T leb()
     {
-      if constexpr (
-        (std::is_integral_v<T> && std::is_signed_v<T>) ||
-        std::is_floating_point_v<T>)
+      if constexpr (std::is_same_v<T, float>)
+      {
+        auto bits = static_cast<int32_t>(program->sleb(frame->pc));
+        return std::bit_cast<float>(bits);
+      }
+      else if constexpr (std::is_same_v<T, double>)
+      {
+        return std::bit_cast<double>(program->sleb(frame->pc));
+      }
+      else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>)
         return static_cast<T>(program->sleb(frame->pc));
       else
         return static_cast<T>(program->uleb(frame->pc));

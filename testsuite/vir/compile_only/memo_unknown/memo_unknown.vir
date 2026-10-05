@@ -1,0 +1,9 @@
+// Every memoslot load must resolve to a declared memo. Main deliberately loads
+// undeclared @missing. The compiler must reject it; accepting it would leave
+// runtime memo lookup without storage.
+
+func @main(): none
+  $value = memoslot @missing
+  drop $value
+  $_none = const none
+  ret $_none

@@ -42,10 +42,7 @@ namespace vbci
     std::unordered_map<uint32_t, uint32_t> ref_map;
 
     std::vector<Dynlib> libs;
-    std::vector<std::optional<size_t>> init_funcs;
-    std::vector<std::pair<Register, Function*>> fini_callbacks;
     std::vector<Register> memo_slots;
-    std::vector<uint8_t> memo_slot_initializing;
     std::vector<size_t> memo_func_ids;
     std::vector<Symbol> symbols;
 

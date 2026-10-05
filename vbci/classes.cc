@@ -8,14 +8,10 @@ namespace vbci
   {
     if (fields.empty())
     {
-      // Create an immortal singleton object for empty classes.
       size = sizeof(Object);
-      auto mem = new uint8_t[size];
-      singleton = Object::create(mem, *this, Location::immortal());
       return true;
     }
 
-    singleton = nullptr;
     auto& program = Program::get();
     std::vector<ffi_type*> ffi_types;
 
@@ -55,7 +51,7 @@ namespace vbci
 
   Function* Class::finalizer()
   {
-    return method(FinalMethodId);
+    return method(FinalizerMethodId);
   }
 
   Function* Class::method(size_t w)
@@ -65,15 +61,5 @@ namespace vbci
       return nullptr;
 
     return find->second;
-  }
-
-  Class::~Class()
-  {
-    if (singleton)
-    {
-      // Don't finalize the singleton objects, but do collect the
-      // memory to appease LSAN.
-      delete[] reinterpret_cast<uint8_t*>(singleton);
-    }
   }
 }

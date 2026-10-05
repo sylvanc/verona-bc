@@ -3,6 +3,7 @@
 #include "ident.h"
 #include "logging.h"
 #include "platform.h"
+#include "value_type.h"
 
 #include <cmath>
 #include <cstring>
@@ -231,7 +232,7 @@ namespace vbci
 
     Value op_xor(const Value& v) const
     {
-      return binop<std::bit_xor<>, std::bit_xor<>, std::bit_xor<>, nobinop>(v);
+      return binop<std::not_equal_to<>, std::bit_xor<>, std::bit_xor<>, nobinop>(v);
     }
 
     make_binop(bit_left_shift, lhs << rhs);
