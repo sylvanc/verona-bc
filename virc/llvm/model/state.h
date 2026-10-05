@@ -99,14 +99,11 @@ namespace virc
     struct LibraryState
     {
       std::string path;
-      std::optional<std::string> init_function_id;
       std::vector<std::string> symbol_ids;
 
       // Generated module state used once named libraries are loaded through
       // the runtime rather than resolved directly by the native linker.
       llvm::GlobalVariable* handle_slot = nullptr;
-      llvm::Function* initializer = nullptr;
-      llvm::GlobalVariable* finalizer_slot = nullptr;
     };
 
     struct SymbolState

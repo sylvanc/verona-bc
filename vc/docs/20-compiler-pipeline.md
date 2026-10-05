@@ -14,7 +14,7 @@ The `vc` compiler is a multi-pass term rewriting compiler built on the [Trieste]
 
 ## 20.2 Pass Pipeline
 
-The compiler runs passes in two stages. The first 10 passes are the `vc`
+The compiler runs passes in two stages. The first 11 passes are the `vc`
 frontend, which transforms source code into monomorphized VIR. The remaining
 passes are provided by VIRC, which creates output-neutral `Compilation` state
 for either the VBC or LLVM emitter.
@@ -32,18 +32,18 @@ for either the VBC or LLVM emitter.
 | 6 | `application` | top-down | Infix/prefix function/method calls, ref, hash, partial application |
 | 7 | `anf` | top-down | A-Normal Form: flatten expressions to SSA-like three-address statements |
 | 8 | `infer` | once | Type inference and literal refinement |
-| 9 | `reify` | bottom-up | Monomorphization — generic instantiation starting from `main` |
+| 9 | `ffiinit` | bottom-up | Lower FFI initializers to hidden `once` functions and reject conflicting duplicate declarations |
+| 10 | `reify` | bottom-up | Monomorphization, function dependency graph construction, and `once` dependency ordering |
 
 ### VIRC Passes
 
 | # | Pass | Direction | Purpose |
 |---|------|-----------|---------|
-| 10 | `memo` | once | Split `once` functions into stub + init, topological sort, cycle detection |
-| 11 | `assignids` | once | Assign stable identifiers to classes, functions, methods |
-| 12 | `validids` | once | Validate identifier assignments for consistency |
-| 13 | `typecheck` | once | Final type checking and output-neutral type state |
-| 14 | `optimize` | once | Shared VIR optimization |
-| 15 | `liveness` | once | Liveness analysis and explicit drops |
+| 11 | `assignids` | top-down / once | Assign stable identifiers and construct output-neutral compilation state |
+| 12 | `validids` | bottom-up / once | Validate referenced functions, methods, labels, registers, arities, and allocation arguments |
+| 13 | `typecheck` | top-down / once | Final type checking and output-neutral type state |
+| 14 | `optimize` | once | Optimize validated VIR |
+| 15 | `liveness` | top-down / once | Validate uses and definitions, identify last uses, and insert drops |
 
 After all passes complete, the selected peer emitter produces VBC or LLVM IR.
 In practice, `vc build` invokes both stages; the user does not run VIRC
@@ -123,8 +123,25 @@ Converts the AST to A-Normal Form: all intermediate values are named, expression
 ### Infer (`infer`)
 Type inference pass (`dir::once`). Builds a type environment mapping variables to types, then refines default-typed literals (u64/f64) based on context. Handles call argument types, variable annotations, field types, return types, FFI types, shape matching, backward refinement, and cascade propagation.
 
+### FFI Init (`ffiinit`)
+Lowers each FFI `init` function to a hidden source-level `once` function.
+It rejects duplicate initializers for one library in an enclosing class.
+The pass does not modify FFI operations. During reification, each FFI operation
+adds a dependency edge to its library initializer. Once traversal ignores an
+FFI edge that refers back to the currently active initializer, allowing an
+initializer to call its own library directly or through ordinary helpers.
+
 ### Reify (`reify`)
-Monomorphization pass (`dir::once`). Starting from `main()`, transitively instantiates all reachable generic classes and functions. Each unique type argument combination produces a separate specialization. Shapes are not monomorphized — they use dynamic dispatch directly. Outputs IR suitable for bytecode generation.
+Monomorphization pass (`dir::bottomup`, with its work performed from the
+pre-hook). Starting from `main()`, transitively instantiates all reachable
+generic classes and functions. Each unique type argument combination produces a
+separate specialization. Shapes are not monomorphized — they use dynamic
+dispatch directly. It constructs the reified function dependency graph,
+resolves teardown callbacks, and records `AtTeardown` edges in the same graph
+as call and FFI dependencies. The completed graph orders source and FFI `once`
+initializers and rejects initialization or teardown-lifetime cycles before
+producing IR suitable for bytecode generation. See
+[Initialization and Teardown](28-initialization-and-teardown.md).
 
 ### Typecheck (`typecheck`)
 The final backend type checker rejects errors that are determined by the
@@ -161,9 +178,9 @@ pipeline:
 
 | # | Pass | Purpose |
 |---|------|---------|
-| 0 | `statements` | Parse Trieste IR text into statement sequences |
-| 1 | `labels` | Resolve jump targets and label offsets |
-| 2–7 | (shared) | `memo` → `assignids` → `validids` → `typecheck` → `optimize` → `liveness` |
+| 0 | `statements` | Structure parsed tokens into VIR statements |
+| 1 | `VIR` (`labels`) | Group statements and terminators into functions and label nodes |
+| 2–6 | (shared) | `assignids` → `validids` → `typecheck` → `optimize` → `liveness` |
 
 When `vc build` is used, these reader passes are not needed because VC passes
 VIR directly to `virc_core`. The `vbcc` command remains as a migration alias.

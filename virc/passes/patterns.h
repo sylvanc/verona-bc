@@ -88,6 +88,7 @@ namespace virc
       RegionArrayConst,
       Copy,
       Move,
+      AtTeardown,
       RegisterRef,
       FieldRef,
       ArrayRef,

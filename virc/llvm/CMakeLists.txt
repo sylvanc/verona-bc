@@ -17,7 +17,6 @@ add_library(virc_llvm STATIC
   functions/emission.cc
   functions/params.cc
   libs/declaration.cc
-  libs/initializer.cc
   literals.cc
   literals/integer.cc
   literals/literal.cc

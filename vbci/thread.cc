@@ -13,6 +13,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sched/schedulerthread.h>
 #include <source_location>
 
 #ifndef NDEBUG
@@ -376,12 +377,18 @@ namespace vbci
     if (!Program::get().subtype(func->return_type, result->content_type_id()))
       Value::error(Error::BadType);
 
-    auto b =
-      verona::rt::BehaviourCore::make(1, run_behavior, sizeof(Value) * 2);
-    new (&b->get_slots()[0]) verona::rt::Slot(result);
-    new (&b->get_body<Value>()[0]) Value(func);
-    new (&b->get_body<Value>()[1]) Value();
-    verona::rt::BehaviourCore::schedule_many(&b, 1);
+    auto construction =
+      BehaviourCore::make(1, sizeof(Value) * 2, alignof(Value), run_behavior);
+    BehaviourCore::initialise_request(
+      construction,
+      0,
+      result,
+      verona::rt::AccessMode::Write,
+      verona::rt::Ownership::Borrowed);
+    auto values = static_cast<Value*>(construction.body);
+    new (&values[0]) Value(func);
+    new (&values[1]) Value();
+    BehaviourCore::schedule(BehaviourCore::finish_construction(construction));
 
     // Safe to convert to use Register this only contains a cown pointer, so
     // there is no requirement for a stack_rc.
@@ -419,7 +426,7 @@ namespace vbci
     return thread;
   }
 
-  void Thread::run_behavior(verona::rt::Work* work)
+  void Thread::run_behavior(verona::rt::Work* work) noexcept
   {
     get().thread_run_behavior(work);
   }
@@ -429,11 +436,11 @@ namespace vbci
     get().thread_handle_callback(cc, ret, args);
   }
 
-  void Thread::thread_run_behavior(verona::rt::Work* work)
+  void Thread::thread_run_behavior(verona::rt::Work* work) noexcept
   {
     assert(!frame);
     assert(!args);
-    auto b = verona::rt::BehaviourCore::from_work(work);
+    auto b = BehaviourCore::from_work(work);
     auto values = b->get_body<Value>();
     behavior = values[0].function();
     auto& closure = values[1];
@@ -458,14 +465,13 @@ namespace vbci
     }
 
     // Populate cown arguments.
-    auto slots = b->get_slots();
     auto num_cowns = b->get_count();
-    auto result = static_cast<Cown*>(slots[0].cown());
+    auto result = b->acquired_cown(0);
 
     for (size_t i = 1; i < num_cowns; i++)
     {
-      auto cown = static_cast<Cown*>(slots[i].cown());
-      auto is_readonly = slots[i].is_read_only();
+      auto cown = b->acquired_cown(i);
+      auto is_readonly = b->acquired_mode(i) == verona::rt::AccessMode::Read;
 
       // Writable cowns need an extra RC for the local register since
       // set_move will release the slot's RC separately.
@@ -504,7 +510,7 @@ namespace vbci
     }
 #endif
 
-    verona::rt::BehaviourCore::finished(work);
+    BehaviourCore::finished(work);
   }
 
   Register Thread::thread_run(Function* func)
@@ -792,6 +798,8 @@ namespace vbc
         return os << "Move";
       case Op::Drop:
         return os << "Drop";
+      case Op::AtTeardown:
+        return os << "AtTeardown";
       case Op::Freeze:
         return os << "Freeze";
       case Op::Pin:
@@ -1160,7 +1168,6 @@ namespace vbci
       {
         process(
           [](Register& dst, Class& cls, Thread& self, Frame& frame) INLINE {
-            assert(!cls.singleton && "Op::New must not be used for singletons");
             self.check_args(cls.fields);
             dst = ValueTransfer(&frame.region->object(cls)->init(frame, cls));
           });
@@ -1173,8 +1180,6 @@ namespace vbci
           [](
             Register& dst, Class& cls, Thread& self, Frame& frame, Stack& stack)
             INLINE {
-              assert(
-                !cls.singleton && "Op::Stack must not be used for singletons");
               self.check_args(cls.fields);
               auto mem = stack.alloc(cls.size);
               auto obj =
@@ -1193,7 +1198,6 @@ namespace vbci
                   Class& cls,
                   Thread& self,
                   Frame& frame) INLINE {
-          assert(!cls.singleton && "Op::Heap must not be used for singletons");
           auto region = region_loc->region();
           self.check_args(cls.fields);
           dst = ValueTransfer(&region->object(cls)->init(frame, cls));
@@ -1209,8 +1213,6 @@ namespace vbci
                   Class& cls,
                   Thread& self,
                   Frame& frame) INLINE {
-          assert(
-            !cls.singleton && "Op::Region must not be used for singletons");
           self.check_args(cls.fields);
           auto region = Region::create(region_type);
           dst = ValueTransfer(&region->object(cls)->init(frame, cls));
@@ -1337,6 +1339,40 @@ namespace vbci
       case Op::Drop:
       {
         process([](Register) INLINE {});
+        break;
+      }
+
+      case Op::AtTeardown:
+      {
+        process([](Register callback) INLINE {
+          if (callback->type() == ValueType::None)
+            return;
+
+          auto* apply = callback->method(CallbackMethodId);
+          if (!apply)
+            Value::error(Error::MethodNotFound);
+
+          auto location = callback->location();
+          if (location.is_stack())
+            Value::error(Error::BadStackEscape);
+
+          if (location.is_region() && location.to_region()->is_frame_local())
+          {
+            auto* region = Region::create(RegionType::RegionRC);
+            if (!drag_allocation<false>(region, callback->get_header()))
+            {
+              region->free_region();
+              Value::error(Error::BadStackEscape);
+            }
+          }
+
+          auto* work = verona::rt::Closure::make(
+            [callback = std::move(callback), apply](verona::rt::Work*) mutable {
+              Thread::run_cleanup(apply, callback.borrow());
+              return true;
+            });
+          verona::rt::Scheduler::schedule_at_quiescence(work);
+        });
         break;
       }
 
@@ -2565,11 +2601,15 @@ namespace vbci
     // incref.
     result = ValueTransfer(result_cown);
 
-    // Slot 0 is the result cown.
-    auto b = verona::rt::BehaviourCore::make(
-      num_cowns + 1, run_behavior, sizeof(Value) * 2);
-    auto slots = b->get_slots();
-    new (&slots[0]) verona::rt::Slot(result_cown);
+    // Request 0 is the result cown.
+    auto construction = BehaviourCore::make(
+      num_cowns + 1, sizeof(Value) * 2, alignof(Value), run_behavior);
+    BehaviourCore::initialise_request(
+      construction,
+      0,
+      result_cown,
+      verona::rt::AccessMode::Write,
+      verona::rt::Ownership::Borrowed);
 
     for (size_t i = 0; i < num_cowns; i++)
     {
@@ -2579,18 +2619,18 @@ namespace vbci
       auto cown = v.get_cown();
       auto readonly = v.is_readonly();
 
-      // Offset the slot by 1 to account for the result cown.
-      auto& slot = slots[i + 1];
-      new (&slot) verona::rt::Slot(cown);
-
-      slot.set_move();
-
-      if (readonly)
-        slot.set_read_only();
+      // Offset the request by 1 to account for the result cown.
+      BehaviourCore::initialise_request(
+        construction,
+        i + 1,
+        cown,
+        readonly ? verona::rt::AccessMode::Read : verona::rt::AccessMode::Write,
+        verona::rt::Ownership::Transferred);
     }
 
-    new (&b->get_body<Value>()[0]) Value(func);
-    new (&b->get_body<Value>()[1]) Value();
+    auto values = static_cast<Value*>(construction.body);
+    new (&values[0]) Value(func);
+    new (&values[1]) Value();
 
     if (is_closure)
     {
@@ -2628,7 +2668,7 @@ namespace vbci
           closure_region = h->region();
       }
 
-      b->get_body<Value>()[1] = closure.extract();
+      values[1] = closure.extract();
 
       // The extract moved the value to the behaviour body (raw memory)
       // without reg_dec. Remove the orphaned stack ref — the behaviour
@@ -2641,7 +2681,7 @@ namespace vbci
       }
     }
 
-    verona::rt::BehaviourCore::schedule_many(&b, 1);
+    BehaviourCore::schedule(BehaviourCore::finish_construction(construction));
   }
 
   Register& Thread::get_register(uint64_t idx)

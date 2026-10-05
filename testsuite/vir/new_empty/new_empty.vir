@@ -1,0 +1,30 @@
+// Each new of an empty class must allocate a distinct object. Main creates two
+// instances and compares their identities. Singleton lowering makes them equal
+// and returns 1 instead of the expected exit code 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Empty
+
+func @objects_same($first: dyn, $second: dyn): bool
+  $same = eq $first $second
+  ret $same
+
+func @main(): none
+  $first = new @Empty()
+  $second = new @Empty()
+  $same = call @objects_same($first, $second)
+  cond $same ^fail ^success
+
+^success
+  $zero = const i32 0
+  $_ = ffi @set_exit_code($zero)
+  $_none = const none
+  ret $_none
+
+^fail
+  $one = const i32 1
+  $_ = ffi @set_exit_code($one)
+  $_none = const none
+  ret $_none

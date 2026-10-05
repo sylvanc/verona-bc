@@ -2,8 +2,9 @@
 
 namespace virc
 {
-  const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Vars |
-    vir::Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |
+  const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Memo |
+    Vars | vir::Source | GlobalId | LocalId | LabelId | Equals | LParen |
+    RParen |
     LBracket | RBracket | Comma | Colon | Union | TupleType | Vararg |
     wfRegionType | wfPrimitiveType | Dyn | Ref | Cown | wfStatement |
     wfTerminator | wfLiteral | String | RawString;
@@ -33,6 +34,7 @@ namespace virc
         "primitive\\b" >> [](auto& m) { m.add(Primitive); },
         "class\\b" >> [](auto& m) { m.add(Class); },
         "func\\b" >> [](auto& m) { m.add(Func); },
+        "memo\\b" >> [](auto& m) { m.add(Memo); },
         "var\\b" >> [](auto& m) { m.add(Vars); },
 
         // Region types.
@@ -58,6 +60,7 @@ namespace virc
         "usize\\b" >> [](auto& m) { m.add(USize); },
         "ptr\\b" >> [](auto& m) { m.add(Ptr); },
         "dyn\\b" >> [](auto& m) { m.add(Dyn); },
+        "cown\\b" >> [](auto& m) { m.add(Cown); },
         "tuple\\b" >> [](auto& m) { m.add(TupleType); },
 
         // Op codes.
@@ -71,6 +74,7 @@ namespace virc
         "copy\\b" >> [](auto& m) { m.add(Copy); },
         "move\\b" >> [](auto& m) { m.add(Move); },
         "drop\\b" >> [](auto& m) { m.add(Drop); },
+        "atteardown\\b" >> [](auto& m) { m.add(AtTeardown); },
         "freeze\\b" >> [](auto& m) { m.add(Freeze); },
         "pin\\b" >> [](auto& m) { m.add(Pin); },
         "unpin\\b" >> [](auto& m) { m.add(Unpin); },
@@ -86,6 +90,7 @@ namespace virc
         "arraycopy\\b" >> [](auto& m) { m.add(ArrayCopy); },
         "arrayfill\\b" >> [](auto& m) { m.add(ArrayFill); },
         "arraycmp\\b" >> [](auto& m) { m.add(ArrayCompare); },
+        "memoslot\\b" >> [](auto& m) { m.add(MemoSlot); },
 
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
         "when\\b" >> [](auto& m) { m.add(When); },

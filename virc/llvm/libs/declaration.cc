@@ -89,19 +89,12 @@ namespace virc
       for (const auto& library : state.libraries)
       {
         auto path = node_text(library / String);
-        auto init_func = library / InitFunc;
         auto library_index = libraries.size();
         auto insertion = library_indices.emplace(path, library_index);
         assert(insertion.second);
         (void)insertion;
 
-        libraries.push_back(
-          LibraryState{
-            path,
-            init_func->type() == FunctionId ?
-              std::make_optional(node_text(init_func)) :
-              std::nullopt,
-            {}});
+        libraries.push_back(LibraryState{path, {}});
 
         if (!path.empty())
           fail(library, "only process-local FFI libraries are supported");

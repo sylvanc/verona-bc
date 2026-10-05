@@ -5,7 +5,6 @@ add_library(virc_core STATIC
   model/type_table.cc
   passes/assign_ids.cc
   passes/liveness.cc
-  passes/memo.cc
   passes/optimize.cc
   passes/typecheck.cc
   passes/validate_ids.cc

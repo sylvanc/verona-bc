@@ -1,0 +1,18 @@
+// Memo slot identifiers must be unique. Two declarations deliberately use
+// @slot with different initializers. The compiler must reject the duplicate;
+// accepting it would make memoslot resolution ambiguous.
+
+memo @slot @first
+memo @slot @second
+
+func @first(): none
+  $_none = const none
+  ret $_none
+
+func @second(): none
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $_none = const none
+  ret $_none

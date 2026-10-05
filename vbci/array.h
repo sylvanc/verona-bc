@@ -206,6 +206,7 @@ namespace vbci
       {
         case ValueType::Object:
         case ValueType::Array:
+        case ValueType::Cown:
         case ValueType::Dyn:
         {
           for (size_t i = 0; i < size; i++)

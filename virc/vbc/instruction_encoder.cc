@@ -260,6 +260,10 @@ namespace virc::vbc_backend
         {
           output << uleb(+Op::Drop) << dst(statement);
         }
+        else if (statement == AtTeardown)
+        {
+          output << uleb(+Op::AtTeardown) << dst(statement);
+        }
         else if (statement == Freeze)
         {
           output << uleb(+Op::Freeze) << dst(statement) << src(statement);
@@ -317,9 +321,8 @@ namespace virc::vbc_backend
         }
         else if (statement == MemoSlot)
         {
-          auto function_id =
-            std::string((statement / FunctionId)->location().view());
-          auto slot = memo_slots.find(function_id);
+          auto memo_id = std::string((statement / MemoId)->location().view());
+          auto slot = memo_slots.find(memo_id);
           assert(slot != memo_slots.end());
           output << uleb(+Op::MemoLoad) << dst(statement) << uleb(slot->second);
         }

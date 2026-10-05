@@ -146,9 +146,6 @@ namespace virc
       bool resolved = false;
       auto function = statement->parent(Func);
 
-      if (!function)
-        function = statement->parent(FuncOnce);
-
       if (function)
       {
         auto lookups =

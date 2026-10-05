@@ -6,6 +6,8 @@ point
   y: i32;
 }
 
+empty {}
+
 main(): none
 {
   var result = 0;
@@ -26,6 +28,12 @@ main(): none
 
   // bits on object is non-zero (it's a pointer)
   if bits(a) == 0 { result = result + 64 }
+
+  // Source-level construction of an empty class returns its memoized instance.
+  let c = empty;
+  let d = empty;
+  if !is(c, d) { result = result + 128 }
+  if bits(c) != bits(d) { result = result + 256 }
 
   ffi::exit_code result
 }

@@ -8,7 +8,8 @@ namespace vbci
   {
     if (fields.empty())
     {
-      // Create an immortal singleton object for empty classes.
+      // Preserve explicit textual-VIR singleton support. VC-generated
+      // singletons use memo slots instead.
       size = sizeof(Object);
       auto mem = new uint8_t[size];
       singleton = Object::create(mem, *this, Location::immortal());
@@ -71,8 +72,8 @@ namespace vbci
   {
     if (singleton)
     {
-      // Don't finalize the singleton objects, but do collect the
-      // memory to appease LSAN.
+      // Don't finalize singleton objects, but collect their backing storage
+      // to keep leak checking focused on unintended retention.
       delete[] reinterpret_cast<uint8_t*>(singleton);
     }
   }

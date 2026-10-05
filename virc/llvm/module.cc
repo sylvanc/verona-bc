@@ -125,10 +125,6 @@ namespace virc
     {
       // Emit the function and class metadata required while lowering function
       // bodies. Program-wide metadata is emitted after function lowering.
-      //
-      // Memo globals also belong here so MemoSlot can refer to them while
-      // define_functions() emits function bodies. emit_initializers() will
-      // later generate the code that fills those globals.
       return define_function_metadata() && define_class_metadata();
     }
 
@@ -145,20 +141,16 @@ namespace virc
 
     bool LLVMCodegen::emit_initializers()
     {
-      // This phase will eventually call the initialization functions in
-      // MemoInit order and store their results in the globals declared by
-      // define_metadata().
       for (const auto& child : *state.top)
       {
-        if ((child->type() == MemoInit) && (child->size() != 0))
+        if (child == Memo)
         {
-          fail(child, "MemoInit lowering is not supported");
+          fail(child, "memo lowering is not supported by the LLVM backend");
           return false;
         }
       }
-      // emit_memo_initializers() will eventually emit the MemoInit functions in
-      // order, but for now we just emit the FFI library initializers.
-      return emit_library_initializers();
+
+      return true;
     }
 
     bool LLVMCodegen::verify_and_write(const std::filesystem::path& output)

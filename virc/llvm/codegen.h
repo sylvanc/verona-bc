@@ -78,7 +78,6 @@ namespace virc
       bool define_program_metadata();
 
       bool emit_initializers();
-      bool emit_library_initializers();
 
       bool verify_and_write(const std::filesystem::path& output);
 

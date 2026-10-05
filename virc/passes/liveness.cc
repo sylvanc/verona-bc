@@ -61,7 +61,7 @@ namespace virc
             kill(node / Rhs);
             def(node / LocalId);
           }
-          else if (node == Drop)
+          else if (node->in({Drop, AtTeardown}))
           {
             kill(node / LocalId);
           }

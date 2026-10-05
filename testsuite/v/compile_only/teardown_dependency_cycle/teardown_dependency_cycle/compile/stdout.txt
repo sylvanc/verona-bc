@@ -1,0 +1,34 @@
+Errors:
+once functions form a cycle
+-- teardown_dependency_cycle.v:14:5
+    ~~~~~~~~~~~
+    init(): any
+    {
+      { library_a::touch(); }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- teardown_dependency_cycle.v:16:9
+      { library_a::touch(); }
+        ~~~~~~~~~~~~~~~~~
+
+-- teardown_dependency_cycle.v:27:5
+    :::touch_a(0);
+    ~~~~~~~~~~~~
+
+-- teardown_dependency_cycle.v:32:5
+    ~~~~~~~~~~~
+    init(): any
+    {
+      { library_b::touch(); }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- teardown_dependency_cycle.v:34:9
+      { library_b::touch(); }
+        ~~~~~~~~~~~~~~~~~
+
+-- teardown_dependency_cycle.v:9:5
+    :::touch_b(0);
+    ~~~~~~~~~~~~
+
+Pass reify failed with 1 error!
+

@@ -239,7 +239,7 @@ namespace virc
       // its flow analysis, and liveness may run after typecheck/optimize.
       for (auto& func_node : *top)
       {
-        if (!func_node->type().in({Func, FuncOnce}))
+        if (func_node != Func)
           continue;
 
         auto& func_state = state->get_func(func_node / FunctionId);

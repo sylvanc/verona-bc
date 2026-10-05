@@ -9,7 +9,7 @@ namespace virc
 {
   namespace llvm_backend
   {
-    // Func and FuncOnce emitter.
+    // Function emitter.
     bool LLVMCodegen::emit_func(const Node& func)
     {
       auto function_id = func / FunctionId;

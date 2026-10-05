@@ -31,6 +31,7 @@ int main(int argc, char** argv)
     application(),
     anf(),
     infer(),
+    ffiinit(),
     reify(),
   };
   auto virc_passes = virc::pipeline(state);

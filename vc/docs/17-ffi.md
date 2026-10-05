@@ -29,6 +29,36 @@ use "libmath"
 }
 ```
 
+### Initialization Requirements
+
+Every reachable FFI operation whose library defines an `init` function adds a
+compiler dependency on that initializer:
+
+```verona
+use "libmath"
+{
+  init(): any
+  {
+    :::configure();
+  }
+
+  configure = "configure"(): none;
+  calculate = "calculate"(f64): f64;
+}
+```
+
+A reachable `:::calculate(...)` operation adds a dependency on the `"libmath"`
+so startup runs the initializer before `main`. The initializer's own call to
+`:::configure()` produces a reflexive dependency on the same initializer,
+which the compiler ignores. This also works when the initializer reaches the
+operation through ordinary Verona helpers.
+
+A call from one library's initializer to another library creates an ordinary
+dependency, so the other library initializes first. A non-reflexive cycle
+between initializers is a compile error. Emitted FFI operations remain direct
+native calls. If the library has no `init` function, no initialization
+dependency is added.
+
 ### Variadic Functions
 
 Use `...` at the end of the parameter list:
@@ -64,9 +94,13 @@ The `:::` prefix is also used for built-in operations defined by the runtime. Th
 ==(self: i32, other: i32): bool { :::eq(self, other) }
 ```
 
-Built-in operations can only appear in the `_builtin` package.
+Most built-in operations can only appear in the `_builtin` package.
+`add_external` and `remove_external` are global built-ins available to user
+code.
 
 ### Built-in Categories
+
+This table summarizes the common user-visible categories; it is not exhaustive.
 
 | Category | Operations |
 |----------|------------|
@@ -90,15 +124,22 @@ Built-in operations can only appear in the `_builtin` package.
 
 When the compiler encounters `:::name(args)`:
 
-1. If `name` matches a known built-in (from the table above) **and** the call is inside the `_builtin` package, it becomes a built-in operation node.
-2. If `name` matches a known built-in **but** the call is outside `_builtin`, the compiler produces an error: "Builtin operators can only appear in `_builtin`".
-3. Otherwise, it becomes an FFI call to the declared external symbol.
+1. If `name` matches a global built-in (`add_external` or `remove_external`),
+   it becomes a built-in operation node.
+2. If `name` matches another known built-in and the call is inside the
+   `_builtin` package, it becomes a built-in operation node.
+3. If `name` matches another known built-in outside `_builtin`, the compiler
+   produces an error: "Builtin operators can only appear in `_builtin`".
+4. Otherwise, it becomes an FFI call to the declared external symbol.
 
 FFI calls go through `libffi` at runtime.
 
 ### Name Collisions
 
-You **cannot** define an FFI function with the same name as a built-in operation (like `add`, `sub`, `eq`). The compiler checks built-in names first. If the name matches, it requires the call to be inside `_builtin` — preventing user code from shadowing builtins. If you need an FFI function whose C symbol name conflicts with a builtin, use a different Verona name:
+You cannot call an FFI declaration through the same Verona name as a built-in
+operation such as `add`, `sub`, or `eq`. Dispatch checks built-in names first,
+so an FFI declaration with that Verona name is shadowed. If the native C symbol
+has a built-in name, expose it under a different Verona name:
 
 ```verona
 use "mylib"
@@ -120,7 +161,9 @@ For FFI parameters declared as `ptr`, Verona also passes pointer-like runtime va
 - `none` becomes `NULL`
 - arrays are passed as a pointer to their element storage
 - objects are passed as a pointer to their fields (like a C `struct`)
-- `callback` values are passed as their C function pointer
+- callback objects are passed as pointers to their fields; use the specific
+  callback instance's `raw` method, such as `handler.raw`
+  to pass the C function pointer
 
 To explicitly create a raw pointer value in Verona source, use the `_builtin/ffi`
 wrapper:
@@ -142,7 +185,13 @@ Memory allocated by Verona (objects, arrays, strings) is managed by Verona's reg
 
 ### Thread Safety
 
-FFI calls run on scheduler threads. If two `when` blocks both call the same FFI function, they run on different threads. Verona does not add synchronization around FFI calls — the external library must be thread-safe, or accesses must be serialized through a shared cown.
+Ordinary FFI calls made by scheduled Verona work run on scheduler threads.
+Calls made by an FFI initializer run synchronously during startup. Native code
+that invokes a Verona callback runs that callback synchronously on the calling
+thread. Independent `when` blocks may call the same FFI function concurrently,
+potentially on different threads. Verona does not add synchronization around
+FFI calls — the external library must be thread-safe, or accesses must be
+serialized through a shared cown.
 
 ---
 
@@ -155,25 +204,56 @@ use
 {
   init(): any
   {
-    // initialization code — runs before main()
-    setup_lib();
+    library_setup::run();
     // return a lambda to run at shutdown
-    { cleanup_lib(); }
+    { :::cleanup_lib(); }
   }
 
   setup_lib = "setup_lib"(): none;
   cleanup_lib = "cleanup_lib"(): none;
 }
+
+library_setup
+{
+  run(): none
+  {
+    :::setup_lib();
+  }
+}
 ```
 
 ### Behavior
 
-- **`init`** runs once, after memoized `once` initialization and before `main()`, on a scheduler thread.
+- **`init`** is lowered to a hidden `once` function.
+- `init` must be a non-`ref` function with no parameters. Startup invokes its
+  hidden memo initializer without arguments.
+- A reachable FFI operation adds a compiler dependency on that hidden
+  initializer. The operation remains a direct FFI call, and startup ordering
+  ensures the initializer has already run.
+- Initializers and source `once` functions share the same dependency ordering.
+  Calls from an initializer to its own library are reflexive dependencies and
+  are allowed. Non-reflexive cyclic initialization dependencies are compile
+  errors.
 - The `init` function has an inline body — it is **not** an FFI symbol binding like other `use` block entries.
-- `init` returns `any`. If the return value is a callable (a lambda or an object with `apply`), the runtime calls it as a **finalizer** after `main()` and all pending `when` behaviors complete, just before process exit.
-- If `init` returns `none` or a non-callable value, no finalizer runs.
-- `init` is optional — a `use` block can have zero or one `init` function. Multiple `init` functions for the same library are a compile error.
-- **Reification requirement:** Init functions are only included in the compiled output when at least one FFI symbol from the same `use` block is called from reachable code. If no FFI call reaches the library, the init function will not run. This means a test exercising init behavior must include at least one reachable FFI call from the same `use` block.
+- Examples use the return type `any` because an initializer may produce either
+  `none` or a callable. A callable result must have exactly one eligible
+  non-generic, non-`ref` `apply` method, accepting only `self`. The compiler
+  registers that method as `@callback`; the emitted `AtTeardown` operation
+  looks it up and schedules it as a **teardown callback**. Teardown callbacks
+  run as last-in, first-out scheduler work across quiescent phases after
+  ordinary work drains.
+- If `init` returns `none`, no teardown callback runs. Any other returned value
+  must satisfy the callback contract above. Invalid values and wrong-arity
+  `apply` methods are not currently rejected statically and fail at runtime.
+- If a teardown callback uses another initialized library or source `once`
+  value, the compiler orders that dependency before this initializer so
+  last-in, first-out teardown keeps the dependency live. See
+  [Initialization and Teardown §28.5](28-initialization-and-teardown.md).
+- `init` is optional. Across `use` blocks in the same enclosing class, a given
+  library may have at most one `init`; declarations in different classes are
+  independent.
+- **Reification requirement:** Init functions are only included in the compiled
+  output when a reachable FFI call requires them.
 
 ### Example: Library Lifecycle
 
@@ -183,11 +263,12 @@ use
   init(): any
   {
     var x: i32 = 1;
-    :::printval(x);                   // runs before main
+    :::init_printval(x);              // self-call during initialization
     let y: i32 = 3;
     { :::printval(y); }               // returned lambda runs after main
   }
 
+  init_printval = "printval"(any): none;
   printval = "printval"(any): none;
 }
 
@@ -200,9 +281,12 @@ main(): i32
 // Output: 1, 2, 3
 ```
 
-### Init Returning a Finalizer
+### Init Returning a Teardown Callback
 
-The last expression in the `init` body is returned. If it's a lambda (or any callable), the runtime registers it as the finalizer for that library. This is the only way to get shutdown behavior — there is no separate `fini` keyword.
+The last expression in the `init` body is returned. If it is a lambda or any
+other valid callable, the compiler registers its method and `AtTeardown`
+schedules it as the teardown callback for that library. This is the only way
+to get shutdown behavior; there is no separate `fini` keyword.
 
 ---
 
@@ -210,13 +294,14 @@ The last expression in the `init` body is returned. If it's a lambda (or any cal
 
 Verona supports creating C-compatible function pointer callbacks from Verona lambdas. This allows Verona code to pass callable function pointers to external C libraries.
 
-### The `callback` Type
+### The `ffi::callback` Type
 
-The `callback` class (defined in `_builtin/ffi/callback.v`) wraps a Verona callable in a C-compatible closure:
+The `ffi::callback` class (defined in `_builtin/ffi/callback.v`) wraps a Verona
+callable in a C-compatible closure:
 
 ```verona
 // Create a callback from a lambda
-let cb = callback(my_lambda);
+let cb = ffi::callback(my_lambda);
 
 // Get the C function pointer (as ptr)
 let fptr = cb.raw;
@@ -226,28 +311,43 @@ let fptr = cb.raw;
 
 | Operation | Description |
 |-----------|-------------|
-| `callback(callable)` | Create a callback wrapping `callable` (constructor sugar for `callback::create`) |
+| `ffi::callback(callable)` | Create a callback wrapping `callable` (constructor sugar for `ffi::callback[T]::create`) |
 | `cb.raw` | Get the C function pointer as `ptr` |
 
 ### Under the Hood
 
-`callback::create[T]` calls `:::make_callback(callable)`, which uses `libffi` to create a closure. The closure captures the Verona callable and presents a C-compatible function pointer that, when called from C, invokes the Verona lambda on the scheduler thread.
+`ffi::callback[T]::create` calls `:::make_callback(callable)`, which uses
+`libffi` to create a closure. The closure captures the Verona callable and
+presents a C-compatible function pointer. Calling that function pointer from C
+invokes the Verona lambda synchronously on the calling thread.
 
 ### Example: Passing a Callback to C
 
 ```verona
 use "eventlib"
 {
+  // This example assumes register_handler invokes the callback before
+  // returning and does not retain the pointer.
   register_handler = "register_handler"(ptr): none;
 }
 
 main(): i32
 {
-  let handler = callback((): none -> { /* handle event */ });
+  let handler = ffi::callback((): none -> { /* handle event */ });
   :::register_handler(handler.raw);
   0
 }
 ```
+
+Passing `handler.raw` does not retain `handler`. If native code stores the
+function pointer for later use, the Verona program must keep the callback object
+alive until the handler is deregistered. Pin the callback or retain it in a
+process-lifetime value, then release it only after the native library can no
+longer call the pointer and all in-progress calls have returned. Native code may
+invoke the same callback concurrently on multiple calling threads; Verona does
+not serialize those invocations, so captured state must be safe for that access
+pattern. Asynchronous native resources should also use the external-resource
+tracking wrappers described below.
 
 ---
 
@@ -261,8 +361,8 @@ The `_builtin/ffi/` directory contains Verona wrapper functions for common FFI o
 |----------|-----------|-------------|
 | `ffi::external.add` | `(self: external): none` | Add an external resource (increments the external event count) |
 | `ffi::external.remove` | `(self: external): none` | Remove an external resource (decrements the external event count) |
-| `ffi::pin(x)` | `(x: A): none` | Pin a refcounted Verona value (object, array, or cown) for external use. Pinning a readonly object or array is a runtime error. |
-| `ffi::unpin(x)` | `(x: A): none` | Release a prior external pin |
+| `ffi::pin(x)` | `(x: any): none` | Pin a refcounted Verona value (object, array, or cown) for external use. Pinning a readonly object or array is a runtime error. |
+| `ffi::unpin(x)` | `(x: any): none` | Release a prior external pin |
 | `ffi::struct[A]` | layout helper object | Compute and cache C ABI layout metadata for a single FFI-compatible field type `A` or a flat tuple `(A1, A2, ...)` |
 
 ### External Resource Management
@@ -308,7 +408,7 @@ The `external` class is a singleton (using `once create()`) that serializes add/
 Each `.v` file in `_builtin/ffi/` defines either a class (like `callback`, `external`) or free functions. Because `_builtin` is always implicitly imported, and `_builtin/ffi/` is a nested scope, these are accessible via `ffi::function_name(args)` or `ffi::class_name.method`.
 
 The wrappers internally use `:::` builtins:
-- `callback::create[T]` uses `:::make_callback`
+- `ffi::callback[T]::create` uses `:::make_callback`
 - `external` uses `once create()` for singleton initialization and serializes `:::add_external`/`:::remove_external` through an internal cown
 - `add_external` and `remove_external` call their corresponding `:::` builtins
 - `struct[A]` uses `:::ffistruct[A]`, `:::ffiload[B]`, and `:::ffistore[B]`

@@ -84,7 +84,7 @@ namespace vbci
   private:
     Thread();
     static Thread& get();
-    static void run_behavior(verona::rt::Work* work);
+    static void run_behavior(verona::rt::Work* work) noexcept;
 
     template<typename... Ts>
     Register thread_run_sync(Function* func, Ts&&... argv)
@@ -110,7 +110,7 @@ namespace vbci
       }
     }
 
-    void thread_run_behavior(verona::rt::Work* work);
+    void thread_run_behavior(verona::rt::Work* work) noexcept;
     void thread_handle_callback(CallbackClosure* cc, void* ret, void** args);
     Register thread_run(Function* func);
     void step();
