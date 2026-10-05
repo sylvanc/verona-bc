@@ -4,6 +4,7 @@
 #include "header.h"
 #include "program.h"
 #include "region.h"
+#include "sanitizer.h"
 #include "value.h"
 
 #include <atomic>
@@ -135,6 +136,7 @@ namespace vbci
 
     void immortalize() noexcept
     {
+      ignore_process_lifetime_allocation(this);
       lifetime.references.fetch_or(immortal_bit, std::memory_order_relaxed);
     }
 

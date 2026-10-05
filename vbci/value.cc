@@ -8,32 +8,6 @@
 #include "program.h"
 #include "thread.h"
 
-#if defined(__has_feature)
-#  if __has_feature(address_sanitizer)
-#    define VBCI_ADDRESS_SANITIZER
-#  endif
-#endif
-
-#if defined(__SANITIZE_ADDRESS__) && !defined(VBCI_ADDRESS_SANITIZER)
-#  define VBCI_ADDRESS_SANITIZER
-#endif
-
-#if defined(VBCI_ADDRESS_SANITIZER)
-#  include <sanitizer/lsan_interface.h>
-#endif
-
-namespace
-{
-  void ignore_process_lifetime_allocation(const void* allocation)
-  {
-#if defined(VBCI_ADDRESS_SANITIZER)
-    __lsan_ignore_object(allocation);
-#else
-    (void)allocation;
-#endif
-  }
-}
-
 namespace vbci
 {
   Value::Value() : tag(ValueType::Invalid) {}
@@ -958,18 +932,15 @@ namespace vbci
     {
       case ValueType::Object:
       case ValueType::FieldRef:
-        ignore_process_lifetime_allocation(obj);
         obj->immortalize();
         break;
 
       case ValueType::Array:
       case ValueType::ArrayRef:
-        ignore_process_lifetime_allocation(arr);
         arr->immortalize();
         break;
 
       case ValueType::Cown:
-        ignore_process_lifetime_allocation(cown);
         cown->immortalize();
         break;
 

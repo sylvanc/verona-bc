@@ -13,6 +13,7 @@ add_executable(vbci
   program.cc
   region.cc
   region_rc.cc
+  sanitizer.cc
   stack.cc
   thread.cc
   value.cc
