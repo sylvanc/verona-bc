@@ -517,10 +517,11 @@ before their source frames are destroyed. A tailcall preserves the current
 frame-local region; leaving the reused frame finalizes its remaining objects
 and managed fields.
 
-Empty classes use the immortal singleton storage initialized by
-`vrt_program_init`. Object allocation services return that existing payload
-without allocating. An empty class cannot be the entry point of a fresh
-region.
+Empty classes use the same allocation modes as classes with fields. Each
+`new`, `stack`, `heap`, or `region` operation creates a distinct object header,
+and an empty object may be the entry point of a fresh region. Explicit textual
+VIR `Singleton` values use separate immortal storage initialized by
+`vrt_program_init`; ordinary allocation does not consult that storage.
 
 A VIR `freeze` of an object or array calls `vrt_object_freeze` or
 `vrt_array_freeze` and then copies the source ownership into the destination.

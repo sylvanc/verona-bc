@@ -58,6 +58,11 @@ reparents direct child regions, and leaves both graphs unchanged when ownership
 or ancestry makes the merge invalid. The detailed contract is documented in
 [Regions and Ownership](../../vrt/docs/regions-and-ownership.md).
 
+Native object allocation follows the same empty-class semantics as VBCI.
+Zero-field classes still allocate distinct headers through `new`, `stack`,
+`heap`, and `region`; explicit immortal singleton storage is a separate
+compatibility operation and is never substituted for ordinary allocation.
+
 **Migration:** VBCI retains its interpreter-local `Register`, `Value`, and
 write-barrier implementation. Equivalent VBCI operations remain the
 compatibility behavior until a later subsystem migration adapts bytecode

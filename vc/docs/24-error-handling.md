@@ -334,13 +334,13 @@ code that raises a VRT error:
 | `MismatchedTypes` | IR type checking rejects incompatible binary operands. |
 | `BadArgs` | ID validation, type checking, and call lowering validate argument arity and types. |
 | `BadType` | IR type checking validates arguments, return values, and stored value types. Runtime checks for unrestricted `dyn` values are deferred until that representation is implemented. |
-| `BadRegionEntryPoint` | Implemented as a compile-time error: IR type checking rejects region allocation whose entry-point class is an immortal singleton. VRT retains the error code and runtime check only as a defensive fallback for invalid IR or direct ABI callers that bypass compiler validation. |
-
-`BadRegionEntryPoint` is therefore a compiler error for normal generated
-programs, not a runtime error expected during compiled execution.
-
 The statically resolvable form of `MethodNotFound` is also rejected by type
 checking. Its genuinely dynamic form remains a runtime TODO below.
+
+`BadRegionEntryPoint` remains in the public VRT error enum for ABI
+compatibility, but current allocation operations do not produce it. Empty
+classes allocate ordinary objects and may be used as region entry points;
+explicit immortal singleton values remain invalid region locators.
 
 #### Interpreter-Specific Errors
 

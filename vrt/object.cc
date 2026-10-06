@@ -66,7 +66,7 @@ namespace
     }
 
     internal_check(
-      (cls->field_count == 0) == (cls->singleton != nullptr),
+      (cls->singleton == nullptr) || (cls->field_count == 0),
       vrt::Failure::invalid_object_state);
   }
 
@@ -280,11 +280,6 @@ void vrt::init_singleton(void* storage, const Class* cls)
 extern "C" VRT_EXPORT void*
 vrt_object_new(const vrt::Class* cls, uintptr_t argc, const void* packed_args)
 {
-  validate_class(cls);
-
-  if (is_singleton_class(cls))
-    return cls->singleton;
-
   validate_arguments(cls, argc, packed_args);
   return vrt::current_frame_region()
     ->object(cls)
@@ -296,7 +291,6 @@ extern "C" VRT_EXPORT void*
 vrt_object_stack(const vrt::Class* cls, uintptr_t argc, const void* packed_args)
 {
   validate_arguments(cls, argc, packed_args);
-  internal_check(!is_singleton_class(cls), vrt::Failure::invalid_object_state);
 
   auto& context = vrt::ThreadContext::get();
   auto* frame = context.thread.frame;
@@ -316,11 +310,6 @@ extern "C" VRT_EXPORT void* vrt_object_heap(
 
   internal_check(!region->destroying, vrt::Failure::invalid_region_state);
 
-  validate_class(cls);
-
-  if (is_singleton_class(cls))
-    return cls->singleton;
-
   validate_arguments(cls, argc, packed_args);
   return region->object(cls)->init(argc, packed_args).fields();
 }
@@ -331,10 +320,6 @@ extern "C" VRT_EXPORT void* vrt_object_region(
   uintptr_t argc,
   const void* packed_args)
 {
-  validate_class(cls);
-  if (is_singleton_class(cls))
-    vrt::raise_error(vrt::Error::bad_region_entry_point);
-
   validate_arguments(cls, argc, packed_args);
   auto* region = vrt::Region::create(region_type);
   return region->object(cls)->init(argc, packed_args).fields();

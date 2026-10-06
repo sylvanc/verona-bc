@@ -124,11 +124,6 @@ namespace
     vrt_frame_raise(0, nullptr);
   }
 
-  void allocate_region_singleton(void*)
-  {
-    (void)vrt_object_region(vrt::RegionType::rc, &singleton_class, 0, nullptr);
-  }
-
   void allocate_heap_from_singleton(void*)
   {
     (void)vrt_object_heap(
@@ -186,11 +181,6 @@ int main()
     (error.func != &child_function) || (error.site != 0) ||
     (vrt_thread_current_frame() != nullptr))
     return 8;
-
-  if (vrt_try_invoke(allocate_region_singleton, nullptr, &error))
-    return 9;
-  if (error.code != VRT_ERROR_BAD_REGION_ENTRY_POINT)
-    return 10;
 
   if (vrt_try_invoke(allocate_heap_from_singleton, nullptr, &error))
     return 11;

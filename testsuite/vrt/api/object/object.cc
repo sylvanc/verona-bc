@@ -19,6 +19,7 @@ static_assert(std::is_base_of_v<vrt::Header, vrt::Object>);
 namespace
 {
   constexpr uintptr_t value_class_id = 0x101;
+  constexpr uintptr_t empty_class_id = 0x102;
   constexpr uintptr_t singleton_class_id = 0x103;
 
   struct alignas(16) ValueFields
@@ -61,6 +62,9 @@ namespace
     nullptr,
     nullptr};
 
+  const vrt::Class empty_class{
+    empty_class_id, "Empty", 0, 1, 0, nullptr, 0, nullptr, nullptr};
+
   alignas(vrt::Object) std::byte
     singleton_storage[vrt::Object::singleton_storage_size()]{};
 
@@ -77,9 +81,10 @@ namespace
 
   const vrt::TypeInfo types[] = {
     {value_class_id, vrt::ValueType::object, sizeof(void*), 0},
+    {empty_class_id, vrt::ValueType::object, sizeof(void*), 0},
     {singleton_class_id, vrt::ValueType::object, sizeof(void*), 0}};
   const vrt::Singleton singletons[] = {{singleton_storage, &singleton_class}};
-  const vrt::Program program{2, types, 1, singletons};
+  const vrt::Program program{3, types, 1, singletons};
 
   vrt::Object* object_from_data(void* data_address)
   {
@@ -198,46 +203,111 @@ int main()
   if (region_object->region()->header_count() != 1)
     return 22;
 
-  // Empty descriptors name one compiler-managed immortal object before any
-  // allocation operation. Heap creation returns that same object after
-  // validating the borrowed region locator.
-  auto* singleton_new_object_data =
+  // Empty classes still allocate real objects. Singleton metadata provides a
+  // separate immortal value only for explicit singleton operations.
+  auto* empty_new_first_data =
     vrt_object_new(&singleton_class, 0, nullptr);
-  auto* singleton_again_object_data =
+  auto* empty_new_second_data =
     vrt_object_new(&singleton_class, 0, nullptr);
-  auto* singleton_heap_object_data =
-    vrt_object_heap(region_object_data, &singleton_class, 0, nullptr);
-  auto* singleton_object = object_from_data(singleton_new_object_data);
+  auto* empty_new_first = object_from_data(empty_new_first_data);
+  auto* empty_new_second = object_from_data(empty_new_second_data);
   if (
-    (singleton_new_object_data != singleton_again_object_data) ||
-    (singleton_new_object_data != singleton_heap_object_data) ||
-    (singleton_class.singleton != singleton_new_object_data) ||
+    (empty_new_first_data == empty_new_second_data) ||
+    (empty_new_first_data == singleton_class.singleton) ||
+    (empty_new_second_data == singleton_class.singleton) ||
+    (empty_new_first->region() != frame_region) ||
+    (empty_new_second->region() != frame_region) ||
+    (frame_region->header_count() != 2))
+    return 23;
+
+  auto* plain_empty_data = vrt_object_new(&empty_class, 0, nullptr);
+  auto* plain_empty = object_from_data(plain_empty_data);
+  if (
+    (plain_empty->cls != &empty_class) ||
+    (plain_empty->region() != frame_region) ||
+    (frame_region->header_count() != 3))
+    return 24;
+
+  auto* empty_stack_data =
+    vrt_object_stack(&singleton_class, 0, nullptr);
+  auto* empty_stack = object_from_data(empty_stack_data);
+  if (
+    (empty_stack_data == singleton_class.singleton) ||
+    !empty_stack->location().is_stack() ||
+    (empty_stack->cls != &singleton_class) ||
+    (frame_region->header_count() != 3))
+    return 25;
+
+  auto* empty_heap_data =
+    vrt_object_heap(region_object_data, &singleton_class, 0, nullptr);
+  auto* empty_heap = object_from_data(empty_heap_data);
+  if (
+    (empty_heap_data == singleton_class.singleton) ||
+    (empty_heap->region() != region_object->region()) ||
+    (empty_heap->cls != &singleton_class) ||
+    (region_object->region()->header_count() != 2))
+    return 26;
+
+  auto* empty_region_data =
+    vrt_object_region(vrt::RegionType::rc, &empty_class, 0, nullptr);
+  auto* empty_region = object_from_data(empty_region_data);
+  if (
+    (empty_region->region() == nullptr) ||
+    empty_region->region()->is_frame_local() ||
+    empty_region->region()->is_arena() ||
+    (empty_region->region() == region_object->region()) ||
+    (empty_region->region()->header_count() != 1))
+    return 27;
+
+  auto* empty_arena_data =
+    vrt_object_region(vrt::RegionType::arena, &empty_class, 0, nullptr);
+  auto* empty_arena = object_from_data(empty_arena_data);
+  if (
+    (empty_arena->region() == nullptr) ||
+    !empty_arena->region()->is_arena() ||
+    (empty_arena->region() == empty_region->region()) ||
+    (empty_arena->region()->header_count() != 1))
+    return 28;
+
+  vrt_object_release(empty_region_data);
+  vrt_object_release(empty_arena_data);
+  vrt_object_release(empty_heap_data);
+  vrt_object_release(empty_new_first_data);
+  vrt_object_release(empty_new_second_data);
+  vrt_object_release(plain_empty_data);
+  if (
+    (region_object->region()->header_count() != 1) ||
+    (frame_region->header_count() != 0))
+    return 29;
+
+  auto* singleton_object_data = singleton_class.singleton;
+  auto* singleton_object = object_from_data(singleton_object_data);
+  if (
     (singleton_object->location() != vrt::Location::immortal()) ||
     (singleton_object->region() != nullptr) ||
     (singleton_object->cls != &singleton_class) ||
-    (vrt_object_class_id(singleton_new_object_data) != singleton_class_id) ||
+    (vrt_object_class_id(singleton_object_data) != singleton_class_id) ||
     (singleton_object->reference_count != 1))
     return 7;
 
   auto* finalizer =
-    vrt_object_lookup(singleton_new_object_data, vrt::Class::final_method_id);
-  auto* first_callable = vrt_object_lookup(singleton_new_object_data, 0x101);
-  auto* callable = vrt_object_lookup(singleton_new_object_data, 0x201);
-  auto* last_callable = vrt_object_lookup(singleton_new_object_data, 0x301);
+    vrt_object_lookup(singleton_object_data, vrt::Class::final_method_id);
+  auto* first_callable = vrt_object_lookup(singleton_object_data, 0x101);
+  auto* callable = vrt_object_lookup(singleton_object_data, 0x201);
+  auto* last_callable = vrt_object_lookup(singleton_object_data, 0x301);
   if (
     (finalizer != &singleton_finalizer_function) ||
     (first_callable != &singleton_first_function) ||
     (callable != &singleton_function) ||
     (last_callable != &singleton_last_function) ||
-    (vrt_object_lookup(singleton_new_object_data, 0x202) != nullptr))
+    (vrt_object_lookup(singleton_object_data, 0x202) != nullptr))
     return 8;
 
-  vrt_object_retain(singleton_new_object_data);
-  vrt_object_escape(singleton_new_object_data);
-  vrt_object_release(singleton_again_object_data);
-  vrt_object_release(singleton_heap_object_data);
+  vrt_object_retain(singleton_object_data);
+  vrt_object_escape(singleton_object_data);
+  vrt_object_release(singleton_object_data);
   if (
-    (singleton_class.singleton != singleton_new_object_data) ||
+    (singleton_class.singleton != singleton_object_data) ||
     (singleton_object->reference_count != 1))
     return 9;
 

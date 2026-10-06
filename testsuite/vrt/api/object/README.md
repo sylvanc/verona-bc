@@ -6,11 +6,14 @@ effects.
 
 ## Coverage
 
-- Frame-local `new`, existing-region `heap`, and fresh-region allocation for
-  nominal objects, including initialized fields and region placement.
+- Frame-local `new`, logical-frame `stack`, existing-region `heap`, and
+  fresh-region allocation for nominal objects, including initialized fields
+  and region placement.
+- Distinct empty-object allocation in frame-local, stack, RC-region, and arena
+  storage, both with and without separately provisioned singleton metadata.
 - Compiler-emitted class, field, method, singleton, and type metadata.
 - Data/header conversion, class IDs, retain/release, and collection.
-- Singleton allocation behavior and method-table lookup.
+- Explicit immortal singleton identity and method-table lookup.
 - Graph relocation when an object is returned or raised across frame teardown.
 
 ## Non-goals
