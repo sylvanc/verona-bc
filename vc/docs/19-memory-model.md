@@ -295,7 +295,7 @@ Currently, regions are created implicitly (frame-local regions per function call
 ### Compile-Time Region Safety
 
 Most region violations (stack escape, invalid stores, lifetime errors) are
-caught at **runtime**. The compiler already rejects cases determined entirely
-by static class layout, such as creating a region whose entry-point class is
-an empty singleton. Planned analysis will move more checks to compile time,
-giving programmers earlier feedback.
+caught at **runtime**. Empty classes still allocate objects with distinct
+headers and may be used as region entry points. Planned analysis will move
+ownership and lifetime checks that can be determined statically to compile
+time, giving programmers earlier feedback.

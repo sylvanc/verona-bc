@@ -21,8 +21,9 @@ class @ArenaRoot
 class @NoneBox
   @value: none
 
-// Empty classes use one immortal singleton even when they have methods. The
-// method body deliberately uses only already-supported lowering.
+// Explicit singleton operations use one immortal instance even when the empty
+// class has methods. The method body deliberately uses only already-supported
+// lowering.
 class @Unit
   @touch @Unit_touch
 

@@ -147,10 +147,10 @@ producing IR suitable for bytecode generation. See
 The final backend type checker rejects errors that are determined by the
 reified program rather than by runtime state. These include incompatible
 primitive conversions, operand and argument mismatches, statically missing
-methods, and using an empty (singleton) class as a new region's entry point.
-The bytecode interpreter retains checks for these cases, but LLVM output does
-not rely on runtime validation for an operation the compiler can prove
-invalid.
+methods, and invalid field or reference operations. Empty classes are ordinary
+allocation targets and may be used as a new region's entry point. The bytecode
+interpreter retains checks for invalid operations, but LLVM output does not
+rely on runtime validation for an operation the compiler can prove invalid.
 
 ---
 

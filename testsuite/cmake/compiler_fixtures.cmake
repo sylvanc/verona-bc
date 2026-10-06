@@ -35,6 +35,12 @@ verona_fixture_group(
 		vir/tailcalls/tailcalls.vir
 	LLVM_STAGE run)
 
+verona_fixture_group(
+	SOURCES
+		vir/region_empty/region_empty.vir
+	LLVM_STAGE run
+	LABELS runtime:vrt)
+
 verona_fixture(
 	SOURCE vir/dynamic_dispatch/dynamic_dispatch.vir
 	LLVM_STAGE run

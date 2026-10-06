@@ -695,14 +695,6 @@ namespace virc
           {
             auto fields = cls / Fields;
 
-            if ((node == Region) && fields->empty())
-            {
-              type_err(
-                node,
-                "region: entry point cannot be a singleton (empty) class");
-              return true;
-            }
-
             auto f_it = fields->begin();
             auto a_it = args->begin();
 
