@@ -37,6 +37,7 @@ verona_fixture_group(
 
 verona_fixture_group(
 	SOURCES
+		vir/empty_new_finalizer/empty_new_finalizer.vir
 		vir/region_empty/region_empty.vir
 	LLVM_STAGE run
 	LABELS runtime:vrt)
