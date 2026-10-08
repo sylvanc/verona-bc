@@ -493,6 +493,7 @@ namespace vbc
     File,
     Offset,
     Skip,
+    End,
   };
 
   inline constexpr size_t operator+(Op op)

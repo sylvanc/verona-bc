@@ -108,6 +108,8 @@ namespace virc::vbc_backend
       advance();
     else
       record_statement(terminator);
+
+    data << d(DIOp::End, 0);
   }
 
   void DebugInfo::write_to(

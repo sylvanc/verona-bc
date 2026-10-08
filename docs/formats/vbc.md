@@ -65,6 +65,9 @@ Debug operations use `vbc::DIOp`. The low two bits identify the operation and
 the remaining bits encode its value. The compressed stream also contains a
 debug string table and embedded source contents.
 
+Each function's debug operations end with `DIOp::End`. Readers must stop there
+rather than interpreting the next function's metadata as debug operations.
+
 Stripped VBC files end after the instruction stream and omit this section.
 
 ## Compatibility

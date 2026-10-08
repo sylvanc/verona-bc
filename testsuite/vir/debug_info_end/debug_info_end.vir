@@ -1,0 +1,30 @@
+// Ensure runtime diagnostics stop decoding at the end of a function's debug
+// records. Without the end marker, metadata for @following changes @main's
+// reported source location from expected.vir:0 to @final:1.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Padding
+  @field: i32
+
+func @inner($val: i32, $target: u64): i32
+  $prev = setraise $target
+  raise $val i32
+
+func @outer($target: u64): i32
+  $val = const i32 42
+  $result = call @inner($val, $target)
+  $bad = const i32 99
+  ret $bad
+
+func @main(): none
+  # "expected.vir" 0
+  $target = getraise
+  $result = call @outer($target)
+  $_ = ffi @set_exit_code($result)
+  $_none = const none
+  ret $_none
+
+func @following($x: i32): i32
+  ret $x
