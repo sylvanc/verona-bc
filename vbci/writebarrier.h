@@ -387,6 +387,11 @@ namespace vbci::writebarrier
       return;
     }
 
+    // Edges within a frozen SCC have already been removed from its ARC.
+    // collect_scc marks all members pending before finalizing their fields.
+    if (loc.is_pending())
+      return;
+
     assert(loc.is_region());
     auto r = loc.to_region();
 

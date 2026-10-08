@@ -1,0 +1,29 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @Next = @End | @Node
+
+class @End
+  @value: bool
+
+class @Node
+  @next: @Next
+
+func @main(): none
+  $true = const bool true
+  $end = new @End($true)
+  $node = new @Node($end)
+  $next = ref $node @next
+  $previous = store $next $node
+  $frozen = freeze $node
+
+  drop $next
+  drop $previous
+  drop $end
+  drop $frozen
+  drop $node
+
+  $success = const i32 0
+  $_ = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none
