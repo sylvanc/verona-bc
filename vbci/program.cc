@@ -999,12 +999,16 @@ namespace vbci
       auto& func = functions.at(idx);
       method.second = &func;
 
-      if (method.first == FinalizerMethodId)
+      if (
+        (method.first == FinalizerMethodId) ||
+        (method.first == PostCopyMethodId))
       {
         if (func.param_types.size() != 1)
         {
-          LOG(Error) << file << ": finalizer must have one parameter"
-                     << std::endl;
+          LOG(Error) << file << ": "
+                     << (method.first == FinalizerMethodId ? "finalizer" :
+                                                                 "post-copy hook")
+                     << " must have one parameter" << std::endl;
           return false;
         }
       }

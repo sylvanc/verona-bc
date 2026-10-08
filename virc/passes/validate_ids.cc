@@ -127,14 +127,17 @@ namespace virc
           auto method = _(Method);
           auto id = state->get_method_id(method / MethodId);
 
-          if (*id == FinalizerMethodId)
+          if ((*id == FinalizerMethodId) || (*id == PostCopyMethodId))
           {
             auto func_id = state->get_func_id(method / FunctionId);
             if (state->functions.at(*func_id).params != 1)
             {
               state->error = true;
               return err(
-                method / FunctionId, "finalizer must have one parameter");
+                method / FunctionId,
+                *id == FinalizerMethodId ?
+                  "finalizer must have one parameter" :
+                  "post-copy hook must have one parameter");
             }
           }
 

@@ -54,6 +54,11 @@ namespace vbci
     return method(FinalizerMethodId);
   }
 
+  Function* Class::post_copy()
+  {
+    return method(PostCopyMethodId);
+  }
+
   Function* Class::method(size_t w)
   {
     auto find = methods.find(w);

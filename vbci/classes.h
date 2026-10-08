@@ -49,6 +49,7 @@ namespace vbci
 
     bool calc_size();
     Function* finalizer();
+    Function* post_copy();
     Function* method(size_t w);
   };
 }

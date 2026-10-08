@@ -1,0 +1,68 @@
+// A wrapper caches its state's address. After freeze, the post-copy hook repairs
+// the copied wrapper's cache. Both resulting graphs must cache their own state
+// address, and the two state objects must be disjoint. This does not assume
+// whether freeze copies the returned graph or the continuation's graph.
+// Expected exit code: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @State
+
+class @Wrapper
+  @state: @State
+  @state_address: usize
+  @post_copy @wrapper_post_copy
+
+func @wrapper_post_copy($self: @Wrapper): none
+  $state_ref = ref $self @state
+  $state = load $state_ref
+  $state_ptr = makeptr $state
+  $state_address = convert usize $state_ptr
+  $address_ref = ref $self @state_address
+  $_old = store $address_ref $state_address
+  $_none = const none
+  ret $_none
+
+func @wrapper_address_is_current($self: @Wrapper): bool
+  $state_ref = ref $self @state
+  $state = load $state_ref
+  $state_ptr = makeptr $state
+  $actual_address = convert usize $state_ptr
+  $address_ref = ref $self @state_address
+  $cached_address = load $address_ref
+  $current = eq $cached_address $actual_address
+  ret $current
+
+func @main(): none
+  $state = new @State()
+  $state_ptr = makeptr $state
+  $state_address = convert usize $state_ptr
+  $continuation = new @Wrapper($state, $state_address)
+  $frozen = freeze $continuation
+
+  $continuation_ok = call @wrapper_address_is_current($continuation)
+  $frozen_ok = call @wrapper_address_is_current($frozen)
+
+  $continuation_address_ref = ref $continuation @state_address
+  $continuation_address = load $continuation_address_ref
+  $frozen_address_ref = ref $frozen @state_address
+  $frozen_address = load $frozen_address_ref
+
+  $same_address = eq $continuation_address $frozen_address
+  $disjoint = not $same_address
+  $both_current = and $continuation_ok $frozen_ok
+  $ok = and $both_current $disjoint
+  cond $ok ^success ^failure
+
+^success
+  $zero = const i32 0
+  $_success = ffi @set_exit_code($zero)
+  $_none_success = const none
+  ret $_none_success
+
+^failure
+  $one = const i32 1
+  $_failure = ffi @set_exit_code($one)
+  $_none_failure = const none
+  ret $_none_failure

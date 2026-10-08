@@ -4,6 +4,7 @@
 #include "frame.h"
 #include "object.h"
 #include "program.h"
+#include "thread.h"
 #include "traverse.h"
 
 #include <unordered_map>
@@ -78,6 +79,9 @@ namespace vbci
 
           for (size_t i = 0; i < source_object->cls().fields.size(); i++)
             copy_object->initialize(i, map_value(source_object->load(i)));
+
+          if (auto post_copy = copy_object->cls().post_copy())
+            Thread::run_sync(post_copy, ValueBorrow(copy_object));
         }
       }
 

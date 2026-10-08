@@ -12,6 +12,7 @@ namespace vbc
   inline const auto MainFunctionId = size_t(0);
   inline const auto FinalizerMethodId = size_t(0);
   inline const auto CallbackMethodId = size_t(1);
+  inline const auto PostCopyMethodId = size_t(2);
   inline const auto DynamicTypeId = uint32_t(-1);
 
   // Op codes are ULEB128 encoded. Arguments are ULEB128 encoded unless they're

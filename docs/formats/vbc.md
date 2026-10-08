@@ -50,6 +50,14 @@ VBCI's `ValueType` is not a wire enum. It deliberately mirrors primitive IDs at
 its beginning, then adds interpreter layout categories and live tags such as
 register references, functions, errors, and invalid values.
 
+## Reserved Method IDs
+
+The class method table reserves IDs for finalizers, native callbacks, and
+post-copy hooks. Their values are defined by `FinalizerMethodId`,
+`CallbackMethodId`, and `PostCopyMethodId` in `include/vbc/format.h`.
+Finalizers and post-copy hooks must refer to functions with exactly one
+parameter.
+
 ## Instructions and Regions
 
 Every instruction begins with a ULEB128 `vbc::Op`; operand order is documented

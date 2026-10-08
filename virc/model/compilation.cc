@@ -182,6 +182,9 @@ namespace virc
 
     // Reserve a method ID for `@callback`.
     method_ids.insert({ST::di().string("@callback"), CallbackMethodId});
+
+    // Reserve a method ID for `@post_copy`.
+    method_ids.insert({ST::di().string("@post_copy"), PostCopyMethodId});
   }
 
   void Compilation::add_path(const std::filesystem::path& path)

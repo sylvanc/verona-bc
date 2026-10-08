@@ -40,6 +40,13 @@ The textual reader accepts the callback statements defined by `vir::wfIR`:
 - `codeptrcallback` extracts its callable native code pointer;
 - `freecallback` releases the native callback handle.
 
+## Reserved Methods
+
+VIRC assigns stable method IDs to `@final`, `@callback`, and `@post_copy`.
+`@post_copy` must name a function with exactly one parameter. VBCI invokes it
+on a copied destination object after that object's fields have been
+initialized.
+
 ## Compatibility
 
 VIR currently has no serialized version field or external stability guarantee.
