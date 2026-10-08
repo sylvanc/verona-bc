@@ -8,6 +8,7 @@
 #include "traverse.h"
 
 #include <unordered_map>
+#include <vector>
 
 namespace vbci
 {
@@ -17,6 +18,7 @@ namespace vbci
     {
       Frame& frame;
       std::unordered_map<Header*, Header*> copies;
+      std::vector<std::pair<Function*, Object*>> post_copies;
 
       GraphCopy(Frame& frame) : frame(frame) {}
 
@@ -81,7 +83,7 @@ namespace vbci
             copy_object->initialize(i, map_value(source_object->load(i)));
 
           if (auto post_copy = copy_object->cls().post_copy())
-            Thread::run_sync(post_copy, ValueBorrow(copy_object));
+            post_copies.emplace_back(post_copy, copy_object);
         }
       }
 
@@ -108,6 +110,10 @@ namespace vbci
             return true;
           },
           [&](Header* source) { fill(source); });
+
+        // A hook can follow a back edge to a copy that has not yet been filled.
+        for (auto [post_copy, copy] : post_copies)
+          Thread::run_sync(post_copy, ValueBorrow(copy));
 
         return map_value(root);
       }

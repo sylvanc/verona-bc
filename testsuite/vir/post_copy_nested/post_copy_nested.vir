@@ -1,0 +1,68 @@
+// In a cycle, post-order filling invokes a descendant hook before its copied
+// ancestor has been filled. Each hook writes through the cycle to the other
+// node. Running hooks immediately loses the first write when the ancestor is
+// later filled; deferring hooks preserves both writes. Expected exit code: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @Next = @Node | none
+
+class @Node
+  @next: @Next
+  @marker: i32
+  @post_copy @node_post_copy
+
+func @node_post_copy($self: @Node): none
+  $next_ref = ref $self @next
+  $next = load $next_ref
+  $is_node = typetest $next @Node
+  cond $is_node ^update ^done
+
+^update
+  $marker_ref = ref $next @marker
+  $forty_two = const i32 42
+  $_old = store $marker_ref $forty_two
+  $_none_update = const none
+  ret $_none_update
+
+^done
+  $_none_done = const none
+  ret $_none_done
+
+func @main(): none
+  $none = const none
+  $zero = const i32 0
+  $first = new @Node($none, $zero)
+  $second = new @Node($first, $zero)
+  $first_next_ref = ref $first @next
+  $_old_next = store $first_next_ref $second
+  $copy = freeze $first
+
+  $first_marker_ref = ref $copy @marker
+  $first_marker = load $first_marker_ref
+  $forty_two = const i32 42
+  $first_ok = eq $first_marker $forty_two
+
+  $second_ref = ref $copy @next
+  $second_copy = load $second_ref
+  $is_node = typetest $second_copy @Node
+  cond $is_node ^check_second ^failure
+
+^check_second
+  $second_marker_ref = ref $second_copy @marker
+  $second_marker = load $second_marker_ref
+  $second_ok = eq $second_marker $forty_two
+  $ok = and $first_ok $second_ok
+  cond $ok ^success ^failure
+
+^success
+  $_success = ffi @set_exit_code($zero)
+  $_none_success = const none
+  ret $_none_success
+
+^failure
+  $one = const i32 1
+  $_failure = ffi @set_exit_code($one)
+  $_none_failure = const none
+  ret $_none_failure
