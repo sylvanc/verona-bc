@@ -33,6 +33,13 @@ Textual `.vir` is a test and tool input syntax parsed by the standalone reader.
 It is not an additional semantic IR. The parser must produce a tree accepted by
 `vir::wfIR`, and VC may bypass it by handing reified nodes directly to VIRC.
 
+The textual reader accepts the callback statements defined by `vir::wfIR`:
+
+- `makecallback` creates a native callback handle from an object whose class
+  provides `@callback`;
+- `codeptrcallback` extracts its callable native code pointer;
+- `freecallback` releases the native callback handle.
+
 ## Compatibility
 
 VIR currently has no serialized version field or external stability guarantee.

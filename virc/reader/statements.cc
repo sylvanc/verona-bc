@@ -580,6 +580,16 @@ namespace virc
         Dst * T(SetRaise) * T(LocalId)[Rhs] >>
           [](Match& _) { return SetRaise << _(LocalId) << _(Rhs); },
 
+        // Callback operations.
+        Dst * T(MakeCallback) * T(LocalId)[Rhs] >>
+          [](Match& _) { return MakeCallback << _(LocalId) << _(Rhs); },
+
+        Dst * T(CodePtrCallback) * T(LocalId)[Rhs] >>
+          [](Match& _) { return CodePtrCallback << _(LocalId) << _(Rhs); },
+
+        Dst * T(FreeCallback) * T(LocalId)[Rhs] >>
+          [](Match& _) { return FreeCallback << _(LocalId) << _(Rhs); },
+
         // Terminators.
         (T(Tailcall) << End) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
