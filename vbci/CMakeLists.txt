@@ -4,6 +4,7 @@ add_executable(vbci
   callback.cc
   classes.cc
   collect.cc
+  copy_graph.cc
   drag.cc
   dynlib.cc
   frame.cc

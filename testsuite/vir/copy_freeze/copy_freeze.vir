@@ -1,0 +1,90 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Leaf
+  @value: i32
+
+class @Pair
+  @left: @Leaf
+  @right: @Leaf
+
+type @Next = @End | @Node
+
+class @End
+  @value: bool
+
+class @Node
+  @next: @Next
+
+func @main(): none var $depth: usize, $head: @Next
+  $one = const i32 1
+  $leaf = new @Leaf($one)
+  $pair = new @Pair($leaf, $leaf)
+  $frozen = freeze $pair
+
+  $source_value = ref $leaf @value
+  $two = const i32 2
+  $_old = store $source_value $two
+
+  $left_ref = ref $frozen @left
+  $left = load $left_ref
+  $right_ref = ref $frozen @right
+  $right = load $right_ref
+  $left_value_ref = ref $left @value
+  $left_value = load $left_value_ref
+  $right_value_ref = ref $right @value
+  $right_value = load $right_value_ref
+
+  $left_ok = eq $left_value $one
+  $right_ok = eq $right_value $one
+  $pair_ok = and $left_ok $right_ok
+
+  $array_size = const usize 1
+  $array_index = const usize 0
+  $array = new [i32] $array_size
+  $source_element = ref $array $array_index
+  $_old_zero = store $source_element $one
+  $frozen_array = freeze $array
+  $_old_one = store $source_element $two
+  $frozen_element = ref $frozen_array $array_index
+  $frozen_value = load $frozen_element
+  $array_ok = eq $frozen_value $one
+  $ok = and $pair_ok $array_ok
+
+  $true = const bool true
+  $end = new @End($true)
+  $node = new @Node($end)
+  $next_ref = ref $node @next
+  $_previous_next = store $next_ref $node
+  $_frozen_cycle = freeze $node
+
+  $head = new @End($true)
+  $depth = const usize 0
+  $depth_limit = const usize 5000
+  $increment = const usize 1
+  jump ^deep_condition
+
+^deep_condition
+  $more = lt $depth $depth_limit
+  cond $more ^deep_body ^deep_done
+
+^deep_body
+  $head = new @Node($head)
+  $depth = add $depth $increment
+  jump ^deep_condition
+
+^deep_done
+  $_frozen_deep = freeze $head
+  cond $ok ^success ^failure
+
+^success
+  $zero = const i32 0
+  $_success = ffi @set_exit_code($zero)
+  $_none_success = const none
+  ret $_none_success
+
+^failure
+  $failure = const i32 1
+  $_failure = ffi @set_exit_code($failure)
+  $_none_failure = const none
+  ret $_none_failure

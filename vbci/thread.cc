@@ -3,6 +3,7 @@
 #include "array.h"
 #include "callback.h"
 #include "cown.h"
+#include "copy_graph.h"
 #include "drag.h"
 #include "freeze.h"
 #include "function_signature.h"
@@ -1367,14 +1368,20 @@ namespace vbci
 
       case Op::Freeze:
       {
-        process([](Register& dst, Register& src) INLINE {
+        process([](Register& dst, Register& src, Frame& frame) INLINE {
           if (src->is_readonly())
             Value::error(Error::BadFreeze);
 
           if (src->is_header())
           {
-            if (!freeze(src->get_header()))
+            auto copy = copy_graph(frame, src.borrow());
+
+            if (!freeze(copy->get_header()))
               Value::error(Error::BadFreeze);
+
+            src.clear();
+            dst = std::move(copy);
+            return;
           }
 
           Register value = std::move(src);

@@ -82,6 +82,17 @@ namespace vbci
       return Value::from_addr(f.value_type, addr);
     }
 
+    void initialize(size_t idx, Register v)
+    {
+      auto& f = cls().fields.at(idx);
+
+      if (!Program::get().subtype(v->type_id(), f.type_id))
+        Value::error(Error::BadType);
+
+      void* addr = reinterpret_cast<uint8_t*>(this + 1) + f.offset;
+      writebarrier::init(location(), addr, f.value_type, std::move(v));
+    }
+
     template<bool is_move>
     ValueTransfer exchange(size_t idx, Reg<is_move> v)
     {
