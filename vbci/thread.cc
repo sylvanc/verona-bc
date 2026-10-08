@@ -2544,6 +2544,9 @@ namespace vbci
     bool is_closure = false;
     size_t num_cowns = args;
     size_t first_cown = 0;
+    Register closure_source;
+    Register closure_copy;
+    std::vector<Register> cown_args;
 
     if (args > 0)
     {
@@ -2556,19 +2559,6 @@ namespace vbci
 
         if (!program->subtype(closure->type_id(), params.at(0)))
           Value::error(Error::BadArgs);
-
-        if (!closure->is_sendable())
-        {
-          auto h = closure->get_header();
-          auto r = h->region();
-          LOG(Error) << "Closure argument is not sendable: " << closure.borrow()
-                     << " in region " << r
-                     << " stack_rc=" << r->get_stack_rc()
-                     << " has_parent=" << r->has_parent()
-                     << " has_cown=" << r->has_cown_owner()
-                     << " frame_local=" << r->is_frame_local();
-          Value::error(Error::BadStackEscape);
-        }
 
         num_cowns--;
         first_cown++;
@@ -2585,7 +2575,33 @@ namespace vbci
         Value::error(Error::BadArgs);
     }
 
+    // Synchronous post-copy hooks reuse this frame's argument slots.
+    if (is_closure)
+      closure_source = std::move(frame->arg(0));
+
+    cown_args.reserve(num_cowns);
+    for (size_t i = 0; i < num_cowns; i++)
+      cown_args.emplace_back(std::move(frame->arg(first_cown + i)));
+
     args = 0;
+
+    if (is_closure)
+    {
+      closure_copy = copy_graph(*frame, closure_source.borrow());
+
+      if (!closure_copy->is_sendable())
+      {
+        auto h = closure_copy->get_header();
+        auto r = h->region();
+        LOG(Error) << "Closure argument is not sendable: "
+                   << closure_copy.borrow()
+                   << " in region " << r << " stack_rc=" << r->get_stack_rc()
+                   << " has_parent=" << r->has_parent()
+                   << " has_cown=" << r->has_cown_owner()
+                   << " frame_local=" << r->is_frame_local();
+        Value::error(Error::BadStackEscape);
+      }
+    }
 
     if (!program->subtype(func->return_type, program->uncown(type_id)))
       Value::error(Error::BadType);
@@ -2611,9 +2627,7 @@ namespace vbci
 
     for (size_t i = 0; i < num_cowns; i++)
     {
-      // The first cown argument position depends on whether this is a
-      // closure or not.
-      Value v = frame->arg(first_cown + i).extract();
+      Value v = cown_args.at(i).extract();
       auto cown = v.get_cown();
       auto readonly = v.is_readonly();
 
@@ -2632,7 +2646,7 @@ namespace vbci
 
     if (is_closure)
     {
-      auto& closure = frame->arg(0);
+      auto& closure = closure_copy;
 
       if (closure->is_header())
       {

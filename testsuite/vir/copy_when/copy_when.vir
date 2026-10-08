@@ -1,0 +1,150 @@
+// Scheduling copies the captured graph. The runtime may copy either side of
+// the split, so both the continuation and behavior validate their own repaired
+// address cache. Their state addresses must be disjoint. Expected exit: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @Next = @End | @Node
+
+class @End
+
+class @Node
+  @next: @Next
+
+class @State
+  @value: i32
+
+class @Capture
+  @left: @State
+  @right: @State
+  @cycle: @Node
+  @state_address: usize
+  @post_copy @capture_post_copy
+
+class @Checker
+  @continuation_address: usize
+  @continuation_ok: bool
+
+func @capture_post_copy($self: @Capture): none
+  $left_ref = ref $self @left
+  $left = load $left_ref
+  $left_ptr = makeptr $left
+  $left_address = convert usize $left_ptr
+  $address_ref = ref $self @state_address
+  $_old = store $address_ref $left_address
+  $_none = const none
+  ret $_none
+
+func @capture_is_valid($self: @Capture): bool
+  $left_ref = ref $self @left
+  $left = load $left_ref
+  $left_ptr = makeptr $left
+  $left_address = convert usize $left_ptr
+
+  $right_ref = ref $self @right
+  $right = load $right_ref
+  $right_ptr = makeptr $right
+  $right_address = convert usize $right_ptr
+  $alias_ok = eq $left_address $right_address
+
+  $cycle_ref = ref $self @cycle
+  $cycle = load $cycle_ref
+  $next_ref = ref $cycle @next
+  $next = load $next_ref
+  $cycle_ptr = makeptr $cycle
+  $cycle_address = convert usize $cycle_ptr
+  $next_ptr = makeptr $next
+  $next_address = convert usize $next_ptr
+  $cycle_ok = eq $cycle_address $next_address
+
+  $address_ref = ref $self @state_address
+  $cached_address = load $address_ref
+  $address_ok = eq $cached_address $left_address
+
+  $graph_ok = and $alias_ok $cycle_ok
+  $ok = and $graph_ok $address_ok
+  ret $ok
+
+func @inspect_capture($self: @Capture): usize
+  $structure_ok = call @capture_is_valid($self)
+  $left_ref = ref $self @left
+  $left = load $left_ref
+  $value_ref = ref $left @value
+  $value = load $value_ref
+  $one = const i32 1
+  $value_ok = eq $value $one
+  $ok = and $structure_ok $value_ok
+  cond $ok ^success ^failure
+
+^success
+  $left_ptr = makeptr $left
+  $left_address = convert usize $left_ptr
+  ret $left_address
+
+^failure
+  $zero = const usize 0
+  ret $zero
+
+func @check_split($self: @Checker, $scheduled_address_ref: ref usize): none
+  $scheduled_address = load $scheduled_address_ref
+  $continuation_address_ref = ref $self @continuation_address
+  $continuation_address = load $continuation_address_ref
+  $continuation_ok_ref = ref $self @continuation_ok
+  $continuation_ok = load $continuation_ok_ref
+
+  $zero_address = const usize 0
+  $scheduled_failed = eq $scheduled_address $zero_address
+  $scheduled_ok = not $scheduled_failed
+  $same_address = eq $scheduled_address $continuation_address
+  $disjoint = not $same_address
+  $addresses_ok = and $scheduled_ok $disjoint
+  $ok = and $continuation_ok $addresses_ok
+  cond $ok ^success ^failure
+
+^success
+  $zero = const i32 0
+  $_success = ffi @set_exit_code($zero)
+  $_none_success = const none
+  ret $_none_success
+
+^failure
+  $one = const i32 1
+  $_failure = ffi @set_exit_code($one)
+  $_none_failure = const none
+  ret $_none_failure
+
+func @main(): none
+  $failure = const i32 1
+  $_initial = ffi @set_exit_code($failure)
+
+  $one = const i32 1
+  $state = new @State($one)
+  $end = new @End()
+  $cycle = new @Node($end)
+  $next_ref = ref $cycle @next
+  $_old_next = store $next_ref $cycle
+
+  $state_ptr = makeptr $state
+  $state_address = convert usize $state_ptr
+  $capture = new @Capture($state, $state, $cycle, $state_address)
+  $scheduled_address = when @inspect_capture($capture): usize
+
+  $two = const i32 2
+  $value_ref = ref $state @value
+  $_old_value = store $value_ref $two
+  $structure_ok = call @capture_is_valid($capture)
+  $value = load $value_ref
+  $value_ok = eq $value $two
+  $continuation_ok = and $structure_ok $value_ok
+
+  $left_ref = ref $capture @left
+  $left = load $left_ref
+  $left_ptr = makeptr $left
+  $continuation_address = convert usize $left_ptr
+  $checker = new @Checker($continuation_address, $continuation_ok)
+  $readonly_address = read $scheduled_address
+  $_done = when @check_split($checker, $readonly_address): none
+
+  $_none = const none
+  ret $_none

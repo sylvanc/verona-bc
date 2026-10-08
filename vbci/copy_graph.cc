@@ -122,6 +122,9 @@ namespace vbci
 
   Register copy_graph(Frame& frame, ValueBorrow root)
   {
+    if (!root.is_header())
+      return root;
+
     return GraphCopy(frame).run(root);
   }
 }
