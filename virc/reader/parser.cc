@@ -150,6 +150,9 @@ namespace virc
         "len\\b" >> [](auto& m) { m.add(Len); },
         "makeptr\\b" >> [](auto& m) { m.add(MakePtr); },
         "read\\b" >> [](auto& m) { m.add(Read); },
+        "makecallback\\b" >> [](auto& m) { m.add(MakeCallback); },
+        "codeptrcallback\\b" >> [](auto& m) { m.add(CodePtrCallback); },
+        "freecallback\\b" >> [](auto& m) { m.add(FreeCallback); },
 
         // Constants.
         "e\\b" >> [](auto& m) { m.add(Const_E); },

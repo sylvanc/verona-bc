@@ -1,0 +1,45 @@
+// Textual VIR exposes native callback construction, code-pointer extraction,
+// and release. The callback records that it ran and adds 10 to 32.
+// Expected exit code: 0.
+
+lib
+  @call_fn_ptr_ret_u64 = "call_fn_ptr_ret_u64"(ptr, u64): u64
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Callable
+  @offset: u64
+  @callback @callable_apply
+
+func @callable_apply($self: @Callable, $value: u64): u64
+  $zero = const i32 0
+  $_called = ffi @set_exit_code($zero)
+  $offset_ref = ref $self @offset
+  $offset = load $offset_ref
+  $result = add $value $offset
+  ret $result
+
+func @main(): none
+  $one = const i32 1
+  $_not_called = ffi @set_exit_code($one)
+  $ten = const u64 10
+  $callable = new @Callable($ten)
+  $callback = makecallback $callable
+  $code = codeptrcallback $callback
+  $thirty_two = const u64 32
+  $actual = ffi @call_fn_ptr_ret_u64($code, $thirty_two)
+  $_freed = freecallback $callback
+
+  $expected = const u64 42
+  $ok = eq $actual $expected
+  $keep_ref = ref $callable @offset
+  $_keep = load $keep_ref
+  cond $ok ^success ^failure
+
+^success
+  $_none_success = const none
+  ret $_none_success
+
+^failure
+  $_failure = ffi @set_exit_code($one)
+  $_none_failure = const none
+  ret $_none_failure
