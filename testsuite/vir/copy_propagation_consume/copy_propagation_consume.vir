@@ -1,0 +1,19 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+func @main(): none
+  $value = const i32 1
+  $copy = copy $value
+  drop $copy
+
+  $move_value = const i32 2
+  $move_copy = copy $move_value
+  $moved = move $move_copy
+  drop $moved
+
+  $drop_result = sub $value $value
+  $move_result = sub $move_value $move_value
+  $result = add $drop_result $move_result
+  $_set = ffi @set_exit_code($result)
+  $_none = const none
+  ret $_none

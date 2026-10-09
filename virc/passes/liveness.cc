@@ -2,9 +2,85 @@
 #include "../lang.h"
 
 #include <queue>
+#include <unordered_map>
 
 namespace virc
 {
+  static void eliminate_moves(Node top)
+  {
+    for (auto& func : *top)
+    {
+      if (func != Func)
+        continue;
+
+      std::set<std::string> var_names;
+      std::unordered_map<std::string, std::string> aliases;
+      std::vector<Node> moves;
+
+      for (auto& var : *(func / Vars))
+        var_names.insert(std::string((var / LocalId)->location().view()));
+
+      for (auto& label : *(func / Labels))
+      {
+        for (auto& stmt : *(label / Body))
+        {
+          if (stmt != Move)
+            continue;
+
+          auto dst_name = std::string((stmt / LocalId)->location().view());
+          auto src_name = std::string((stmt / Rhs)->location().view());
+
+          if (var_names.count(dst_name) || var_names.count(src_name))
+            continue;
+
+          aliases.emplace(std::move(dst_name), std::move(src_name));
+          moves.push_back(stmt);
+        }
+      }
+
+      auto resolve = [&](std::string name) {
+        std::vector<std::string> path;
+        auto it = aliases.find(name);
+
+        while (it != aliases.end())
+        {
+          path.push_back(name);
+          assert(path.size() <= aliases.size());
+          name = it->second;
+          it = aliases.find(name);
+        }
+
+        for (auto& alias : path)
+          aliases.at(alias) = name;
+
+        return name;
+      };
+
+      for (auto& [dst, src] : aliases)
+        src = resolve(src);
+
+      for (auto& move : moves)
+        move->parent()->replace(move);
+
+      std::vector<std::pair<Node, std::string>> uses;
+
+      func->traverse([&](Node& n) {
+        if (n == LocalId)
+        {
+          auto it = aliases.find(std::string(n->location().view()));
+
+          if (it != aliases.end())
+            uses.emplace_back(n, it->second);
+        }
+
+        return true;
+      });
+
+      for (auto& [use, name] : uses)
+        use->parent()->replace(use, LocalId ^ name);
+    }
+  }
+
   PassDef liveness(std::shared_ptr<Compilation> state)
   {
     PassDef p{"liveness", wfIR, dir::topdown | dir::once, {}};
@@ -67,7 +143,7 @@ namespace virc
           }
           else if (node == Freeze)
           {
-            use(node / Rhs);
+            kill(node / Rhs);
             def(node / LocalId);
           }
           else if (node->in({HeapArray, Add, Sub, Mul, Div,     Mod,  Pow, And,
@@ -471,6 +547,9 @@ namespace virc
 
         return true;
       });
+
+      if (!state->error)
+        eliminate_moves(top);
 
       return 0;
     });
