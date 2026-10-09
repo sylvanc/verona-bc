@@ -624,6 +624,15 @@ namespace vc
             return local;
           },
 
+        // Replace a typed binder with its SSA destination.
+        In(Body) *
+            (T(TypedMove)[TypedMove]
+             << (T(Ident)[Ident] * T(LocalId)[Rhs] * T(Type)[Type])) >>
+          [](Match& _) {
+            return (TypedMove ^ _(TypedMove)) << (LocalId ^ _(Ident)) << _(Rhs)
+                                             << _(Type);
+          },
+
         // Lift variable declarations. If the Var has an explicit type
         // annotation (non-TypeVar), emit a TypeAssertion. Strip the
         // type from the Var node (Var <<= Ident after ANF).

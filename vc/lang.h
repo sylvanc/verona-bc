@@ -86,6 +86,8 @@ namespace vc
   inline const auto Let = TokenDef("let", flag::lookup | flag::shadowing);
   inline const auto Var = TokenDef("var", flag::lookup | flag::shadowing);
   inline const auto TypeAssertion = TokenDef("typeassertion");
+  inline const auto TypedMove =
+    TokenDef("typedmove", flag::lookup | flag::shadowing);
   inline const auto If = TokenDef("if");
   inline const auto Else = TokenDef("else");
   inline const auto While = TokenDef("while");
@@ -244,10 +246,12 @@ namespace vc
     (wfExprIdent | Load | Call | GetRaise | SetRaise | Stack | Typetest | Unop |
      TryCallDyn) -
     Lambda - MatchExpr;
+  inline const auto wfBodySugar = wfBodyIdent | TypedMove;
 
   // clang-format off
   inline const auto wfPassSugar =
       wfPassIdent
+    | (Body <<= wfBodySugar++)
     | (When <<= Args * Type * Expr)
     | (ParamDef <<= Ident * Type)[Ident]
     | (Call <<= FuncName * Args)
@@ -258,6 +262,7 @@ namespace vc
     | (Raise <<= Expr * Type)
     | (Ref <<= ~Expr)
     | (TryCallDyn <<= Expr * wfFuncId * TypeArgs * Args)
+    | (TypedMove <<= Ident * wfSrc * Type)[Ident]
     ;
   // clang-format on
 
@@ -321,12 +326,12 @@ namespace vc
   // clang-format on
 
   inline const auto wfBodyANF = Const | ConstStr | Convert | Copy | Move |
-    RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | Stack | NewArray |
-    NewArrayConst | Load | Store | Lookup | Call | CallDyn | TryCallDyn | Var |
-    When | wfBinop | wfUnop | wfNulop | FFI | Typetest | TypeAssertion |
-    GetRaise | SetRaise | SplatOp | ArrayRefFromEnd | MakeCallback |
-    CodePtrCallback | FreeCallback | Freeze | Pin | Unpin | Merge | FFIStruct |
-    FFILoad | FFIStore | ArrayCopy | ArrayFill | ArrayCompare;
+    TypedMove | RegisterRef | FieldRef | ArrayRef | ArrayRefConst | New | Stack |
+    NewArray | NewArrayConst | Load | Store | Lookup | Call | CallDyn |
+    TryCallDyn | Var | When | wfBinop | wfUnop | wfNulop | FFI | Typetest |
+    TypeAssertion | GetRaise | SetRaise | SplatOp | ArrayRefFromEnd |
+    MakeCallback | CodePtrCallback | FreeCallback | Freeze | Pin | Unpin | Merge |
+    FFIStruct | FFILoad | FFIStore | ArrayCopy | ArrayFill | ArrayCompare;
 
   // clang-format off
   inline const auto wfPassANF =
@@ -342,6 +347,7 @@ namespace vc
     | (Convert <<= wfDst * (Type >>= wfPrimitiveType) * wfSrc)
     | (Copy <<= wfDst * wfSrc)
     | (Move <<= wfDst * wfSrc)
+    | (TypedMove <<= wfDst * wfSrc * Type)
     | (RegisterRef <<= wfDst * wfSrc)
     | (FieldRef <<= wfDst * Arg * FieldId)
     | (ArrayRef <<= wfDst * Arg * wfSrc)

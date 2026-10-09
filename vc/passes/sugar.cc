@@ -439,14 +439,17 @@ namespace vc
     // Destructure $arg into the original params.
     Node dst = Tuple;
     Node type_checks = Body;
+    Node bindings = Body;
 
     for (auto& param : *params)
     {
       if (param == ParamDef)
       {
-        // Destructure the param out of $arg.
+        // Destructure into a temporary so the arm binder is only introduced
+        // after the type test succeeds.
         auto id = param / Ident;
-        dst << (Expr << (Let << clone(id) << make_type()));
+        auto value_name = _.fresh(l_local);
+        dst << (Expr << (Let << (Ident ^ value_name) << make_type()));
 
         // Test against the param type.
         type_checks
@@ -456,9 +459,13 @@ namespace vc
                              << Not
                              << (Args
                                  << (Expr
-                                     << (Typetest << (Expr << (LocalId ^ id))
-                                                  << clone(param / Type))))))
+                                     << (Typetest
+                                         << (Expr << (LocalId ^ value_name))
+                                         << clone(param / Type))))))
                      << clone(nomatch_block)));
+
+        bindings << (TypedMove << clone(id) << (LocalId ^ value_name)
+                               << clone(param / Type));
       }
       else
       {
@@ -524,12 +531,15 @@ namespace vc
     // Emit type checks after destructuring.
     new_body << *type_checks;
 
+    // Bind typed pattern names only on the successful path.
+    new_body << *bindings;
+
     // Proceed with the original body.
     new_body << *(lambda / Body);
 
     // Create the new lambda. This will be fully desugared later.
     auto new_lambda = Lambda << new_params << new_type << new_body;
-    wfPassIdent.build_st(new_lambda);
+    wfPassSugar.build_st(new_lambda);
     return callsite << (Expr << new_lambda);
   }
 
