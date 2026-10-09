@@ -380,12 +380,18 @@ namespace vc
               {
                 local_types[(stmt / LocalId)->location()] = Array << clone(U8);
               }
+              else if (stmt == TypedMove)
+              {
+                auto dst_loc = (stmt / LocalId)->location();
+                local_types[dst_loc] = clone(stmt / Type);
+              }
               else if (stmt->in({Copy, Move}))
               {
+                auto dst_loc = (stmt / LocalId)->location();
+
                 auto src_it = local_types.find((stmt / Rhs)->location());
                 if (src_it != local_types.end())
                 {
-                  auto dst_loc = (stmt / LocalId)->location();
                   auto dst_it = local_types.find(dst_loc);
 
                   local_types[dst_loc] = (dst_it == local_types.end()) ?
@@ -672,6 +678,22 @@ namespace vc
         }
 
       } while (changed);
+
+      for (auto r : reified_functions)
+      {
+        for (auto& lbl : *(r->reification / Labels))
+        {
+          for (auto& stmt : *(lbl / Body))
+          {
+            if (stmt == TypedMove)
+            {
+              auto replacement = Move ^ stmt;
+              replacement << clone(stmt / LocalId) << clone(stmt / Rhs);
+              stmt->parent()->replace(stmt, replacement);
+            }
+          }
+        }
+      }
 
       for (auto r : deferred_typevar)
       {
@@ -2628,6 +2650,13 @@ namespace vc
           {
             reify_primitive(I64);
             local_types[(n / LocalId)->location()] = I64;
+          }
+          else if (n == TypedMove)
+          {
+            auto dst_loc = (n / LocalId)->location();
+            auto type = reify_type(n / Type, r.subst);
+            n->replace(n / Type, type);
+            local_types[dst_loc] = clone(type);
           }
           else if (n->in({Copy, Move}))
           {

@@ -2911,6 +2911,10 @@ namespace vc
     {
       recovered = clone(stmt / Type);
     }
+    else if (stmt == TypedMove)
+    {
+      recovered = clone(stmt / Type);
+    }
     else if (stmt->in({Copy, Move}))
     {
       auto src_it = env.find((stmt / Rhs)->location());
@@ -3278,6 +3282,34 @@ namespace vc
       {
         InferStmtScope stmt_scope(InferStmtFamily::ConstLike);
         merge((stmt / LocalId)->location(), clone(stmt / Type));
+      }
+      // ----- TypedMove -----
+      else if (stmt == TypedMove)
+      {
+        InferStmtScope stmt_scope(InferStmtFamily::CopyLike);
+        auto dst_loc = (stmt / LocalId)->location();
+        auto src_loc = (stmt / Rhs)->location();
+        auto expected = stmt / Type;
+
+        merge(dst_loc, clone(expected));
+        auto dst_it = env.find(dst_loc);
+        if (dst_it != env.end())
+          dst_it->second.is_fixed = true;
+
+        auto tuple_ref = ref_to_tuple.find(src_loc);
+        if (tuple_ref != ref_to_tuple.end())
+          upsert_ref_to_tuple(ref_to_tuple, dst_loc, tuple_ref->second);
+
+        refine_local_const(src_loc, expected);
+        propagate_call_constraint(
+          env, src_loc, expected, top, lookup_stmts, &all_def_stmts);
+        if (merge_bwd(src_loc, expected, true))
+        {
+          propagate_call_constraint(
+            env, src_loc, expected, top, lookup_stmts, &all_def_stmts);
+          propagate_call_node(
+            env, src_loc, top, lookup_stmts, &all_def_stmts);
+        }
       }
       // ----- Copy / Move -----
       else if (stmt->in({Copy, Move}))
