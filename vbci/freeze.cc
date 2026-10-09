@@ -215,6 +215,8 @@ namespace vbci
 
       RC arc_sum = 0;
       RC frozen_internal = 0;
+      // Frozen edges already removed from RCs by SCC collapse.
+      RC scc_internal = 0;
       frozen_set.clear();
 
       dfs.push_back(root);
@@ -247,10 +249,12 @@ namespace vbci
         if (rep_loc.is_pending())
         {
           rep->set_rc(rep->get_rc() - 1);
+          scc_internal++;
 
           while (!pending.empty() && pending.back() != rep)
           {
             scc_union(pending.back(), rep);
+            scc_internal++;
             pending.pop_back();
           }
         }
@@ -296,9 +300,11 @@ namespace vbci
       // For sub-regions, subtract the frozen parent's field ref to the
       // entry point (not a stack ref).
       RC parent_ref = is_sub ? 1 : 0;
-      assert(arc_sum >= frozen_internal + unfrozen_to_frozen + parent_ref);
+      assert(frozen_internal >= scc_internal);
+      RC frozen_cross = frozen_internal - scc_internal;
+      assert(arc_sum >= frozen_cross + unfrozen_to_frozen + parent_ref);
       RC stack_adjustment =
-        arc_sum - frozen_internal - unfrozen_to_frozen - parent_ref;
+        arc_sum - frozen_cross - unfrozen_to_frozen - parent_ref;
 
       // Clear ownership if we froze the entry point. The parent region
       // is still alive (it has stack refs that haven't been adjusted yet).
