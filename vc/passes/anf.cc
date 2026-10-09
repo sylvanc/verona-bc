@@ -853,13 +853,28 @@ namespace vc
                        << (LocalId ^ id);
           },
 
-        // Single-arg builtin operations (already a LocalId after earlier rules
-        // extract expressions to locals).
+        // Freeze preserves its source-level argument. The low-level operation
+        // consumes an explicit copy.
+        In(Expr, Lhs) * T(Freeze)[Lhs]
+            << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>
+          [](Match& _) {
+            auto copy_id = _.fresh(l_local);
+            auto frozen_id = _.fresh(l_local);
+            return Seq
+              << (Lift << Body
+                       << (Copy << (LocalId ^ copy_id) << _(Rhs)))
+              << (Lift << Body
+                       << (Freeze << (LocalId ^ frozen_id)
+                                  << (LocalId ^ copy_id)))
+              << (LocalId ^ frozen_id);
+          },
+
+        // Other single-arg builtin operations (already a LocalId after earlier
+        // rules extract expressions to locals).
         In(Expr, Lhs) *
               T(MakeCallback,
                 CodePtrCallback,
                 FreeCallback,
-                Freeze,
                 Pin,
                 Unpin)[Lhs]
             << (T(Args) << (T(Arg) << (T(ArgCopy) * T(LocalId)[Rhs]))) >>

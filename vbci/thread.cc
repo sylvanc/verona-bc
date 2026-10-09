@@ -1367,7 +1367,7 @@ namespace vbci
 
       case Op::Freeze:
       {
-        process([](Register& dst, const Register& src) INLINE {
+        process([](Register& dst, Register& src) INLINE {
           if (src->is_readonly())
             Value::error(Error::BadFreeze);
 
@@ -1377,7 +1377,8 @@ namespace vbci
               Value::error(Error::BadFreeze);
           }
 
-          dst = src;
+          Register value = std::move(src);
+          dst = std::move(value);
         });
         break;
       }

@@ -19,8 +19,8 @@ class @Pair
 func @test_simple() : i32
     $v = const i32 10
     $a = region rc @Leaf($v)
-    $_ = freeze $a
-    $ref = ref $a @val
+    $frozen = freeze $a
+    $ref = ref $frozen @val
     $r = load $ref
     ret $r
 
@@ -30,8 +30,8 @@ func @test_chain() : i32
     $leaf = region rc @Leaf($v1)
     $v2 = const i32 99
     $box = heap $leaf @Box($leaf, $v2)
-    $_ = freeze $box
-    $ref_val = ref $box @val
+    $frozen = freeze $box
+    $ref_val = ref $frozen @val
     $r = load $ref_val
     ret $r
 
@@ -41,8 +41,8 @@ func @test_forward() : i32
     $leaf = region rc @Leaf($v1)
     $v2 = const i32 88
     $box = heap $leaf @Box($leaf, $v2)
-    $_ = freeze $box
-    $ref_val = ref $box @val
+    $frozen = freeze $box
+    $ref_val = ref $frozen @val
     $r = load $ref_val
     ret $r
 
@@ -55,7 +55,7 @@ func @test_diamond() : i32
     $v2 = const i32 20
     $b2 = heap $leaf @Box($leaf, $v2)
     $pair = heap $leaf @Pair($b1, $b2)
-    $_ = freeze $pair
+    $_frozen = freeze $pair
     // Read val from b2 directly (we still hold the register).
     $ref_val = ref $b2 @val
     $r = load $ref_val
@@ -68,8 +68,8 @@ func @test_partial() : i32
     $v2 = const i32 200
     $b = heap $a @Leaf($v2)
     // Freeze only $a. $b is in the same region but not reachable from $a.
-    $_ = freeze $a
-    $ref_a = ref $a @val
+    $frozen = freeze $a
+    $ref_a = ref $frozen @val
     $ra = load $ref_a
     $ref_b = ref $b @val
     $rb = load $ref_b
@@ -80,8 +80,8 @@ func @test_partial() : i32
 func @test_frame_local() : i32
     $v = const i32 77
     $a = new @Leaf($v)
-    $_ = freeze $a
-    $ref = ref $a @val
+    $frozen = freeze $a
+    $ref = ref $frozen @val
     $r = load $ref
     ret $r
 
@@ -91,18 +91,19 @@ func @test_subregion() : i32
     $inner = region rc @Leaf($v1)
     $v2 = const i32 22
     $outer = region rc @Box($inner, $v2)
-    $_ = freeze $outer
-    $ref_val = ref $outer @val
+    $frozen = freeze $outer
+    $ref_val = ref $frozen @val
     $r = load $ref_val
     ret $r
 
-// Test 8: Freeze an already-frozen object (no-op).
+// Test 8: Freeze the same source twice by explicitly retaining it.
 func @test_double_freeze() : i32
     $v = const i32 55
     $a = region rc @Leaf($v)
-    $f1 = freeze $a
+    $a_to_freeze = copy $a
+    $_f1 = freeze $a_to_freeze
     $f2 = freeze $a
-    $ref = ref $a @val
+    $ref = ref $f2 @val
     $r = load $ref
     ret $r
 

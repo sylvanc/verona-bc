@@ -143,7 +143,7 @@ namespace virc
           }
           else if (node == Freeze)
           {
-            use(node / Rhs);
+            kill(node / Rhs);
             def(node / LocalId);
           }
           else if (node->in({HeapArray, Add, Sub, Mul, Div,     Mod,  Pow, And,
