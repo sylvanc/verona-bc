@@ -494,164 +494,21 @@ namespace virc
           for (auto& node : to_remove)
             node->parent()->replace(node);
 
-          // Phase D: Copy propagation and dead copy elimination.
-          // For SSA locals (not in Vars), if a Copy is the sole
-          // definition of dst in this label, replace all uses of dst
-          // with src within the same label body and terminator, then
-          // remove the Copy.
-          auto vars_node = func_node / Vars;
-          std::set<std::string> var_names;
-
-          for (auto& v : *vars_node)
-            var_names.insert(std::string((v / LocalId)->location().view()));
-
-          // Also treat params as non-propagatable.
-          for (auto& p : *(func_node / Params))
-            var_names.insert(std::string((p / LocalId)->location().view()));
-
-          bool prop_changed = true;
-
-          while (prop_changed)
-          {
-            prop_changed = false;
-
-            for (size_t si = 0; si < body->size(); si++)
-            {
-              auto stmt = body->at(si);
-
-              if (stmt != Copy)
-                continue;
-
-              auto dst_name = std::string((stmt / LocalId)->location().view());
-
-              // Don't propagate vars or params.
-              if (var_names.count(dst_name))
-                continue;
-
-              // Check dst is not used in other labels or terminators.
-              bool used_elsewhere = false;
-
-              for (auto& other_label : *(func_node / Labels))
-              {
-                if (other_label == label)
-                  continue;
-
-                auto other_body = other_label / Body;
-
-                for (auto& os : *other_body)
-                {
-                  os->traverse([&](Node& n) {
-                    if (
-                      n == LocalId &&
-                      std::string(n->location().view()) == dst_name)
-                      used_elsewhere = true;
-                    return !used_elsewhere;
-                  });
-
-                  if (used_elsewhere)
-                    break;
-                }
-
-                if (!used_elsewhere)
-                {
-                  (other_label / Return)->traverse([&](Node& n) {
-                    if (
-                      n == LocalId &&
-                      std::string(n->location().view()) == dst_name)
-                      used_elsewhere = true;
-                    return !used_elsewhere;
-                  });
-                }
-
-                if (used_elsewhere)
-                  break;
-              }
-
-              // Also check the current label's terminator.
-              if (!used_elsewhere)
-              {
-                auto term = label->back();
-                term->traverse([&](Node& n) {
-                  if (
-                    n == LocalId &&
-                    std::string(n->location().view()) == dst_name)
-                    used_elsewhere = true;
-                  return !used_elsewhere;
-                });
-              }
-
-              if (used_elsewhere)
-                continue;
-
-              // Check dst is not defined elsewhere in this label.
-              bool defined_elsewhere = false;
-
-              for (size_t j = 0; j < body->size(); j++)
-              {
-                if (j == si)
-                  continue;
-
-                auto other = body->at(j);
-
-                if (
-                  other->size() > 0 && other->front() == LocalId &&
-                  std::string(other->front()->location().view()) == dst_name)
-                {
-                  defined_elsewhere = true;
-                  break;
-                }
-              }
-
-              if (defined_elsewhere)
-                continue;
-
-              auto src_name = std::string((stmt / Rhs)->location().view());
-
-              // Replace all uses of dst with src in subsequent stmts.
-              auto replace_uses = [&](Node& n) {
-                std::function<void(Node&)> walk = [&](Node& node) {
-                  for (size_t i = 0; i < node->size(); i++)
-                  {
-                    auto child = node->at(i);
-
-                    if (
-                      child == LocalId &&
-                      std::string(child->location().view()) == dst_name)
-                    {
-                      node->replace(child, LocalId ^ src_name);
-                    }
-                    else if (child->size() > 0)
-                    {
-                      walk(child);
-                    }
-                  }
-                };
-                walk(n);
-              };
-
-              for (size_t j = si + 1; j < body->size(); j++)
-              {
-                auto s = body->at(j);
-                replace_uses(s);
-              }
-
-              // Remove the Copy.
-              body->erase(body->find(stmt), std::next(body->find(stmt)));
-              prop_changed = true;
-              break;
-            }
-          }
-
-          // Dead copy elimination: remove Copy(dst, src) where dst is
-          // never used in any label body or terminator.
+          // Remove Copy(dst, src) when dst is unused. This must run before
+          // liveness because generated code may copy an undefined old value
+          // into an unused result.
           std::set<std::string> all_used;
 
           for (auto& lbl : *(func_node / Labels))
           {
             for (auto& s : *(lbl / Body))
             {
-              // Skip the dst (first child) — only count uses.
-              for (size_t i = 1; i < s->size(); i++)
+              // Most statements define their first LocalId. Statements that
+              // only consume registers have no destination to skip.
+              size_t first_use =
+                s->in({Drop, AtTeardown}) ? 0 : 1;
+
+              for (size_t i = first_use; i < s->size(); i++)
               {
                 s->at(i)->traverse([&](Node& n) {
                   if (n == LocalId)
