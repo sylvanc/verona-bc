@@ -1,0 +1,34 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+// Freeze a two-node cycle in a heap region with one external register root.
+// The cycle's internal references must not be subtracted twice after SCC collapse.
+
+type @Next = @End | @Node
+
+class @End
+  @value: bool
+
+class @Node
+  @next: @Next
+
+func @main(): none
+  $true = const bool true
+  $end = new @End($true)
+  $root = region rc @Node($end)
+  $child = heap $root @Node($root)
+  $root_next = ref $root @next
+  $previous = store $root_next $child
+
+  drop $root_next
+  drop $previous
+  drop $end
+  drop $child
+
+  $frozen = freeze $root
+  drop $frozen
+
+  $success = const i32 0
+  $_ = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none
