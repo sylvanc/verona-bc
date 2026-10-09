@@ -249,7 +249,7 @@ namespace virc
     return true;
   }
 
-  std::optional<size_t> Compilation::get_field_id(Node id)
+  std::optional<size_t> Compilation::get_field_id(Node id) const
   {
     auto name = ST::di().string(id);
     auto find = field_ids.find(name);
@@ -401,6 +401,8 @@ namespace virc
 
   size_t Compilation::type_id(Node type)
   {
+    // If it's a TypeId, encode what it maps to instead.
+    // Loop to follow chained aliases (e.g., cb -> fn$N -> Union).
     while (type == TypeId)
       type = get_typealias(type) / Type;
 
@@ -431,6 +433,7 @@ namespace virc
     }
     else if (type == ClassId)
     {
+      // Class IDs are offset for primitive types.
       return *get_class_id(type) + PrimitiveTypeCount;
     }
 
@@ -480,5 +483,4 @@ namespace virc
     types.push_back(std::move(info));
     return id;
   }
-
 }

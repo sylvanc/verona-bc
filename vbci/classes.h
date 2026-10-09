@@ -27,6 +27,7 @@ namespace vbci
   {
     size_t size;
     size_t debug_info;
+    Object* singleton;
     uint32_t type_id;
 
     // Default constructor
@@ -50,5 +51,6 @@ namespace vbci
     bool calc_size();
     Function* finalizer();
     Function* method(size_t w);
+    ~Class();
   };
 }

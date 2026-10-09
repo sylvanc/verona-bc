@@ -48,7 +48,9 @@ user-invocable: false
 - Do NOT write `use "_builtin"` — it is always implicitly available.
 - Bitmask exit code pattern: `var result = 0;` then `if cond { result = result + N; }` with powers of 2. Exit 0 = all passed.
 - Compile-error tests: `exit_code.txt: 1` in `compile/`, no `run/` directory.
-- Structure: `testsuite/v/<name>/<name>.v` with golden dirs `<name>/<name>/compile/` and `<name>/<name>/run/`.
+- Structure: `testsuite/v/<name>/<name>.v` with golden dirs
+  `<name>/<name>/compile/` and `<name>/<name>/run/`. Expected compile errors
+  use `testsuite/v/compile_only/<name>/<name>.v` and have no run node.
 - FFI tests must include at least one reachable FFI call from their lib to trigger init function reification.
 
 ## Verona Source Syntax
@@ -73,7 +75,7 @@ user-invocable: false
 - Small, composable passes. Many small passes > few large ones.
 - Layered dependencies — lower layers never depend on higher ones.
 - Frontend (vc, passes 0–9): parse → structure → ident → sugar → functype → dot → application → anf → infer → reify.
-- Backend (vbcc library, passes 10–13): assignids → validids → liveness → typecheck.
+- VIRC shared pipeline: memo → assignids → validids → typecheck → optimize → liveness.
 - `assert()` liberally for invariants.
 - Errors are AST nodes, not exceptions.
 
@@ -81,14 +83,14 @@ user-invocable: false
 
 Adding a new bytecode op requires updates in ~15 places across the codebase. Use this checklist:
 
-1. **Token def**: `include/vbcc.h` (token), `include/vbci.h` (Op enum)
+1. **Contract definitions**: `include/vir.h` (token), `include/vbc/format.h` (Op enum)
 2. **Frontend WFs** in `vc/lang.h`: `wfExprDot`, `wfPassDot` (with `<<= Args`), `wfBodyANF`, `wfPassANF` (with `<<= wfDst * wfSrc`)
 3. **Frontend passes**: `dot.cc` (builtin reg), `anf.cc` (lowering), `infer.cc` (type tracking), `reify.cc` (IR transform)
-4. **Backend WFs** in `include/vbcc.h`: `wfStatement`, `wfIR`
-5. **`Def` pattern** in `vbcc/lang.h`: manually maintained list — MUST include if op has a dst `LocalId`
-6. **Liveness** in `vbcc/passes/liveness.cc`: manually categorized ops — add to correct use/def category
-7. **Bytecode** in `vbcc/bytecode.cc`: encoding handler
-8. **Type check** in `vbcc/passes/typecheck.cc`: if needed
+4. **VIRC WFs** in `include/vir.h`: `wfStatement`, `wfIR`
+5. **`Def` pattern** in `virc/lang.h`: manually maintained list — MUST include if op has a dst `LocalId`
+6. **Liveness** in `virc/passes/liveness.cc`: manually categorized ops — add to correct use/def category
+7. **VBC emission** in `virc/bytecode.cc`: encoding handler
+8. **Type check** in `virc/passes/typecheck.cc`: if needed
 9. **Interpreter** in `vbci/thread.cc`: op handler + op name in name array
 
 Missing items 5 or 6 causes "undefined register" errors in later passes, not at the registration site.

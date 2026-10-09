@@ -1,5 +1,3 @@
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/should_run.cmake")
-
 set(TESTSUITE_REGEX ".*\\.v$")
 set(TESTSUITE_DEFINE vc_test_define)
 
@@ -11,6 +9,13 @@ function(vc_test_define test)
     return()
   endif()
 
+  verona_fixture_metadata(
+    "${test}" vbc_stage llvm_stage llvm_validator fixture_labels)
+  if(vbc_stage STREQUAL "none")
+    return()
+  endif()
+  set(pipeline_labels frontend:vc backend:vbc ${fixture_labels})
+
   set(test_root "${test_dir}/${test_name}")
   set(compile_node "${test_root}/compile")
   set(run_node "${test_root}/run")
@@ -20,10 +25,8 @@ function(vc_test_define test)
   testsuite_output_path(
     final_ast NODE "${compile_node}" FILE "${test_name}_final.trieste")
 
-  verona_should_register_run(register_run "${test}")
-
   set(artifact_metadata)
-  if(register_run)
+  if(vbc_stage STREQUAL "run")
     set(artifact_metadata ARTIFACTS "${test_name}.vbc")
   endif()
 
@@ -33,18 +36,22 @@ function(vc_test_define test)
     TIMEOUT 60
     GOLDENS exit_code.txt stderr.txt stdout.txt
     ${artifact_metadata}
+    LABELS ${pipeline_labels}
     COMMAND
-      "${CMAKE_INSTALL_PREFIX}/vc/vc"
+      "${CMAKE_INSTALL_PREFIX}/vc/$<TARGET_FILE_NAME:vc>"
       build .
       -b "${bytecode}"
       -o "${final_ast}")
 
-  if(register_run)
+  if(vbc_stage STREQUAL "run")
     testsuite_add_test(
       NAME "${run_node}"
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${test_root}"
       DEPENDS "${compile_node}"
       GOLDENS exit_code.txt stderr.txt stdout.txt
-      COMMAND "${CMAKE_INSTALL_PREFIX}/vbci/vbci" "${bytecode}")
+      LABELS ${pipeline_labels}
+      COMMAND
+        "${CMAKE_INSTALL_PREFIX}/vbci/$<TARGET_FILE_NAME:vbci>"
+        "${bytecode}")
   endif()
 endfunction()

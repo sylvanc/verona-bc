@@ -10,7 +10,9 @@ if (result)
   virc::vbc::emit(result.compilation(), output);
 ```
 
-Emitters may derive output but must not mutate shared compilation state.
+When LLVM is enabled, `virc::llvm::emit()` consumes the same
+`const Compilation&`. Emitters may derive output but must not mutate shared
+compilation state.
 
 **Planned:** no public embedding compatibility is promised. There is
 intentionally no `include/virc.h`; promotion to an installed API requires a

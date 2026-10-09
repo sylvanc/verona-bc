@@ -10,15 +10,16 @@ provides output-neutral `virc::Compilation` state to peer emitters.
 | `virc_core` | Shared passes, IDs, type state, liveness, and compilation model |
 | `virc_reader` | Textual `.vir` parser and reader-only passes |
 | `virc_vbc` | VBC serialization |
+| `virc_llvm` | Optional LLVM IR emission |
 | `virc` | Standalone textual-VIR compiler |
 
 The shared pass order is defined by `virc::pipeline()` in `compile.cc`. VC appends
 that pipeline after source reification; the standalone tool prepends its reader
 passes. Emitters consume `const Compilation&` and do not own shared analysis.
 
-`virc` is the CMake executable target. It links `virc_reader` and `virc_vbc`.
-The `build` in `virc build input.vir` is a Trieste Driver subcommand, not a
-separate CMake target.
+`virc` is the CMake executable target. It links `virc_reader`, `virc_vbc`, and,
+when enabled, `virc_llvm`. The `build` in `virc build input.vir` is a Trieste
+Driver subcommand, not a separate CMake target.
 
 `virc_reader` contains the parser and normalization passes needed when a
 pipeline starts from textual `.vir`. VC already produces VIR in memory, so it
@@ -43,5 +44,5 @@ must link `virc_vbc` explicitly. New code should use only VIRC target names.
 
 See [ADR 0001](../docs/architecture/0001-virc-and-output-backends.md), the
 [VIR format](../docs/formats/vir.md), and the
-[VBC format](../docs/formats/vbc.md).
+[VC backend policy](../docs/architecture/vc-backends.md).
 Implementation details are indexed in [VIRC Internals](docs/README.md).

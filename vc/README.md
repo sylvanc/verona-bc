@@ -1,16 +1,21 @@
 # VC
 
 VC compiles Verona source into reified VIR, then hands that tree directly to
-the shared VIRC pipeline. It links `virc_core` and `virc_vbc` and emits VBC
-without invoking the standalone VIRC executable or round-tripping through
-textual VIR. VBC is the current VC output.
+the shared VIRC pipeline. It links `virc_core` and `virc_vbc` in every build;
+when `VERONA_ENABLE_LLVM_BACKEND=ON`, it also links `virc_llvm`.
+
+VBC is the default output. `vc build <source-directory> --emit llvm-ir`
+selects textual LLVM IR explicitly. VC does not invoke the standalone VIRC
+executable or round-trip through textual VIR.
 
 Frontend passes and language-specific structures live in `passes/`, `lang.h`,
 and `lang.cc`. Built-in Verona definitions live in `_builtin/`.
 
 See the [language documentation](docs/README.md),
+[compiler internals](docs/compiler/README.md),
 [compiler pipeline](docs/20-compiler-pipeline.md),
-[toolchain usage](docs/21-toolchain-usage.md).
+[toolchain usage](docs/21-toolchain-usage.md), and
+[backend policy](../docs/architecture/vc-backends.md).
 
 ## Development Notes
 

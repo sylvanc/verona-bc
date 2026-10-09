@@ -1,0 +1,118 @@
+#pragma once
+
+#include "header.h"
+#include "value.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <vrt/object.h>
+
+namespace vrt
+{
+  /** Runtime array stored immediately before its exposed elements. */
+  struct alignas(std::max_align_t) Array final : Header
+  {
+  private:
+    uintptr_t size;
+    uintptr_t stride;
+    ValueType element_value_type;
+
+    Array(
+      Location location,
+      uintptr_t type_id,
+      ValueType value_type,
+      uintptr_t size,
+      uintptr_t stride,
+      std::byte* allocation);
+
+    Field element() const;
+
+  public:
+    static Array* create(
+      std::byte* allocation,
+      Location location,
+      uintptr_t type_id,
+      ValueType value_type,
+      uintptr_t size,
+      uintptr_t stride);
+
+    static size_t size_of(uintptr_t size, uintptr_t stride);
+
+    uintptr_t content_type_id() const;
+
+    uintptr_t get_size() const
+    {
+      return size;
+    }
+
+    void set_size(uintptr_t new_size)
+    {
+      // Match VBCI: callers may only shrink an array's apparent size.
+      if (new_size < size)
+        size = new_size;
+    }
+
+    uintptr_t get_stride() const
+    {
+      return stride;
+    }
+
+    ValueType get_value_type() const
+    {
+      return element_value_type;
+    }
+
+    void* elements()
+    {
+      return this + 1;
+    }
+
+    const void* elements() const
+    {
+      return this + 1;
+    }
+
+    /** Return the address containing the encoded value at index. */
+    void* load(uintptr_t index);
+    const void* load(uintptr_t index) const;
+
+    bool is_primitive() const;
+
+    void bulk_copy(
+      uintptr_t destination_offset,
+      Array* source,
+      uintptr_t source_offset,
+      uintptr_t length);
+    void bulk_fill(uintptr_t offset, uintptr_t length, const void* fill_value);
+    int bulk_compare(
+      uintptr_t offset,
+      const Array* other,
+      uintptr_t other_offset,
+      uintptr_t length) const;
+
+    template<typename F>
+    void trace_fn(F&& function)
+    {
+      if (!is_header_type(element_value_type))
+        return;
+
+      for (uintptr_t index = 0; index < size; index++)
+      {
+        void* data_address = nullptr;
+        std::memcpy(&data_address, load(index), sizeof(data_address));
+        if (data_address != nullptr)
+          function(Value{element_value_type, data_address}.header());
+      }
+    }
+
+    void finalize();
+    void destroy_storage();
+
+    size_t allocation_size_bytes() const
+    {
+      return size_of(size, stride);
+    }
+  };
+
+}

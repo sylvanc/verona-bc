@@ -1,0 +1,32 @@
+// Coverage:
+// - Declares scalar and recursively typed fields, requiring separate nominal
+//   class declaration and layout-definition phases.
+// - Emits field, method, and class metadata and lowers ClassId values to
+//   native pointers.
+// - Adds @Point to the compiler-emitted runtime type table.
+//
+// Native VRT coverage:
+// - Registers @Point as a pointer-sized object type during program startup.
+// - Links and executes the generated program through the VRT entry point.
+//
+// Non-goals:
+// - Does not allocate @Point or make VRT consume its class descriptor.
+// - Does not exercise singleton initialization or dynamic method lookup.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Point
+  @x: i32
+  @next: @Point
+  @value @Point_value
+
+func @Point_value($self: @Point): i32
+  $result = const i32 0
+  ret $result
+
+func @main(): none
+  $result = const i32 0
+  $_exit = ffi @set_exit_code($result)
+  $_none = const none
+  ret $_none

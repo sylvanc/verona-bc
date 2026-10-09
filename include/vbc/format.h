@@ -9,6 +9,10 @@ namespace vbc
 {
   inline const auto MagicNumber = size_t(0xDEC0ADDE);
   inline const auto CurrentVersion = size_t(0);
+
+  // VBC wire-format IDs. The VBC emitter serializes these numeric values into
+  // .vbc files, and VBCI interprets them using the same assignments. This
+  // producer-consumer contract is distinct from VIRC's semantic ID contract.
   inline const auto MainFunctionId = size_t(0);
   inline const auto FinalizerMethodId = size_t(0);
   inline const auto CallbackMethodId = size_t(1);

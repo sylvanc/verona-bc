@@ -1,4 +1,4 @@
-#include "../lang.h"
+#include "../reader/reader.h"
 
 namespace virc
 {
@@ -235,12 +235,12 @@ namespace virc
           [](Match& _) { return Seq << _(Lhs) << _(Type); },
 
         // Source file and offset.
-        (T(Source) << End) * ~T(String)[String] * ~T(Int)[Int] >>
+        (T(vir::Source) << End) * ~T(String)[String] * ~T(Int)[Int] >>
           [](Match& _) {
             Node seq = Seq;
 
             if (_(String))
-              seq << (Source << _(String));
+              seq << (vir::Source << _(String));
 
             if (_(Int))
               seq << (Offset << _(Int));
@@ -364,6 +364,11 @@ namespace virc
           [](Match& _) { return Convert << _(LocalId) << _(Type) << _(Rhs); },
 
         // Object allocation.
+        Dst * T(Singleton) * T(GlobalId)[GlobalId] >>
+          [](Match& _) {
+            return Singleton << _(LocalId) << (ClassId ^ _(GlobalId));
+          },
+
         Dst * T(New) * T(GlobalId)[GlobalId] * CallArgs[Args] >>
           [](Match& _) {
             return New << _(LocalId) << (ClassId ^ _(GlobalId))
@@ -468,6 +473,9 @@ namespace virc
         Dst * T(Unpin) * T(LocalId)[Rhs] >>
           [](Match& _) { return Unpin << _(LocalId) << _(Rhs); },
 
+        Dst * T(Merge) * T(LocalId)[Lhs] * T(LocalId)[Rhs] >>
+          [](Match& _) { return Merge << _(LocalId) << _(Lhs) << _(Rhs); },
+
         Dst * T(FFIStruct) * TypePat[Type] >>
           [](Match& _) { return FFIStruct << _(LocalId) << _(Type); },
 
@@ -544,6 +552,18 @@ namespace virc
         Dst * T(Call) * T(LocalId)[Lhs] * CallArgs[Args] >>
           [](Match& _) {
             return CallDyn << _(LocalId) << _(Lhs) << callargs(_[Args]);
+          },
+
+        // Bulk array operations.
+        Dst * T(ArrayCopy)[Type] * CallArgs[Args] >>
+          [](Match& _) { return ArrayCopy << _(LocalId) << callargs(_[Args]); },
+
+        Dst * T(ArrayFill)[Type] * CallArgs[Args] >>
+          [](Match& _) { return ArrayFill << _(LocalId) << callargs(_[Args]); },
+
+        Dst * T(ArrayCompare)[Type] * CallArgs[Args] >>
+          [](Match& _) {
+            return ArrayCompare << _(LocalId) << callargs(_[Args]);
           },
 
         // FFI call.

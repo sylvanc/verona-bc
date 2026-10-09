@@ -1,16 +1,16 @@
 add_library(virc_core STATIC
-  compile.cc
+  analysis/bitset.cc
+  model/compilation.cc
+  model/name_table.cc
+  model/type_table.cc
   passes/assign_ids.cc
   passes/liveness.cc
   passes/optimize.cc
   passes/typecheck.cc
   passes/validate_ids.cc
-  analysis/bitset.cc
-  model/compilation.cc
-  model/name_table.cc
-  model/type_table.cc
   support/diagnostics.cc
   support/literals.cc
+  compile.cc
 )
 
 target_include_directories(virc_core INTERFACE
@@ -22,7 +22,7 @@ target_link_libraries(virc_core PUBLIC
   Threads::Threads
   snmalloc-new-override
   trieste::trieste
-  verona::include
+  vbc::include
 )
 
 add_subdirectory(vbc)
@@ -34,16 +34,19 @@ add_library(virc_reader STATIC
 )
 target_link_libraries(virc_reader PUBLIC virc_core)
 
+# Build-tree migration aliases for the former backend target names. These
+# expose virc_core only; consumers that emit VBC must also link virc_vbc.
 add_library(libvbcc ALIAS virc_core)
 add_library(vbc::vbcc ALIAS virc_core)
 
-add_executable(virc
-  main.cc
-)
+if(VERONA_ENABLE_LLVM_BACKEND)
+  add_subdirectory(llvm)
+endif()
 
-add_executable(vbcc
-  main.cc
-)
+# Preserve the former command name during migration. Both executables use the
+# same textual-VIR reader and output backends.
+add_executable(virc main.cc)
+add_executable(vbcc main.cc)
 
 if(MSVC)
   target_compile_options(virc_core PUBLIC /W4 /WX /wd5030 /bigobj)
@@ -58,8 +61,14 @@ foreach(tool IN ITEMS virc vbcc)
     virc_reader
     virc_vbc
   )
+
+  if(VERONA_ENABLE_LLVM_BACKEND)
+    target_compile_definitions(${tool} PRIVATE VERONA_ENABLE_LLVM_BACKEND=1)
+    target_link_libraries(${tool} virc_llvm)
+  endif()
 endforeach()
 
-install(TARGETS virc_core virc_reader ARCHIVE DESTINATION lib/virc)
+install(TARGETS virc_core virc_reader
+  ARCHIVE DESTINATION lib/virc)
 install(TARGETS virc RUNTIME DESTINATION virc)
 install(TARGETS vbcc RUNTIME DESTINATION vbcc)

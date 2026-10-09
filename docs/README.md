@@ -13,10 +13,12 @@ material.
 ## Contributors
 
 - [Architecture decisions and policies](architecture/README.md)
-- [VC compiler pipeline](../vc/docs/20-compiler-pipeline.md)
+- [VC compiler internals](../vc/docs/compiler/README.md)
 - [VIRC internals](../virc/docs/README.md)
 - [VBC emitter](../virc/vbc/README.md)
+- [LLVM emitter](../virc/llvm/README.md)
 - [VBCI interpreter](../vbci/README.md)
+- [VRT native runtime](../vrt/README.md)
 - [Testsuite](../testsuite/README.md)
 
 Language semantics belong in the language manual, cross-component contracts

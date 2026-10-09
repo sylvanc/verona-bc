@@ -2,11 +2,15 @@
 
 This repository contains an experimental Verona compiler and runtime
 toolchain. VC lowers Verona source to Verona Intermediate Representation
-(VIR), and VIRC validates and analyzes VIR before the VBC emitter produces
-Verona Bytecode (VBC).
+(VIR), and VIRC validates and analyzes VIR before a peer emitter produces
+Verona Bytecode (VBC) or LLVM IR.
 
-**Current:** VBC is the supported output and runs on VBCI. VIRC's compilation
-model is output-neutral so additional emitters can be added separately.
+**Current:** VBC is the default output and runs on VBCI. LLVM IR emission is
+available when `VERONA_ENABLE_LLVM_BACKEND=ON` and targets VRT.
+
+**Migration:** VRT does not yet replace VBCI for every runtime subsystem. The
+[runtime migration policy](docs/architecture/vbci-vrt-migration.md) records
+the boundary and sequencing rules.
 
 ## Quick Start
 
@@ -26,8 +30,9 @@ dist/vc/vc build ../testsuite/v/hello
 dist/vbci/vbci hello.vbc
 ```
 
-See [Toolchain Usage](vc/docs/21-toolchain-usage.md) for standalone VIRC
-commands.
+Set `-DVERONA_ENABLE_LLVM_BACKEND=OFF` while configuring when LLVM is not
+available. See [Toolchain Usage](vc/docs/21-toolchain-usage.md) for output
+selection and standalone VIRC commands.
 
 ## Components
 
@@ -36,8 +41,9 @@ commands.
 | [VC](vc/README.md) | Verona frontend and source-to-VIR lowering |
 | [VIRC](virc/README.md) | Shared VIR validation, analysis, and output-neutral compilation state |
 | [VBCI](vbci/README.md) | VBC loader and interpreter runtime |
+| [VRT](vrt/README.md) | Native runtime and public C ABI used by LLVM output |
 | [Interchange formats](docs/formats/README.md) | VIR and VBC contracts and compatibility |
-| [Testsuite](testsuite/README.md) | Source, VIR, VBC, and VBCI test pipelines |
+| [Testsuite](testsuite/README.md) | Source, VIR, VBC, LLVM, and runtime test pipelines |
 
 The current architecture and accepted decisions are indexed in
 [Architecture](docs/architecture/README.md). Verona language documentation is

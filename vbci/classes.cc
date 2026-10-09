@@ -8,10 +8,15 @@ namespace vbci
   {
     if (fields.empty())
     {
+      // Preserve explicit textual-VIR singleton support. VC-generated
+      // singletons use memo slots instead.
       size = sizeof(Object);
+      auto mem = new uint8_t[size];
+      singleton = Object::create(mem, *this, Location::immortal());
       return true;
     }
 
+    singleton = nullptr;
     auto& program = Program::get();
     std::vector<ffi_type*> ffi_types;
 
@@ -61,5 +66,15 @@ namespace vbci
       return nullptr;
 
     return find->second;
+  }
+
+  Class::~Class()
+  {
+    if (singleton)
+    {
+      // Don't finalize singleton objects, but collect their backing storage
+      // to keep leak checking focused on unintended retention.
+      delete[] reinterpret_cast<uint8_t*>(singleton);
+    }
   }
 }

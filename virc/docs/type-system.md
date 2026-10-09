@@ -8,9 +8,9 @@ machinery.
 
 Primitive identity is represented by `PrimitiveKind`. Compound type identity
 is represented by `TypeInfo` and dense type IDs. This model is independent of
-VBC wire tags; each output emitter owns conversion at its boundary.
+VBC wire tags and LLVM values; each emitter owns the conversion at its boundary.
 
 VIRC checking is distinct from source inference. See
-[VC type inference](../../vc/docs/18-type-inference.md) for the earlier
-source-level pass and the [VBC format](../../docs/formats/vbc.md) for the wire
-mapping.
+[VC type inference](../../vc/docs/compiler/type-inference.md) for the earlier
+source-level pass and [VBC type encoding](../vbc/docs/type-encoding.md) for the
+wire mapping.

@@ -1,0 +1,97 @@
+// See README.md for large-union dynamic-dispatch coverage.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @Many = @Class0 | @Class1 | @Class2 | @Class3 | @Class4 | @Class5 | @Class6 | @Class7 | @Class8
+
+class @Class0
+  @invoke @Class0_invoke
+
+class @Class1
+  @invoke @Class1_invoke
+
+class @Class2
+  @invoke @Class2_invoke
+
+class @Class3
+  @invoke @Class3_invoke
+
+class @Class4
+  @invoke @Class4_invoke
+
+class @Class5
+  @invoke @Class5_invoke
+
+class @Class6
+  @invoke @Class6_invoke
+
+class @Class7
+  @invoke @Class7_invoke
+
+class @Class8
+  @invoke @Class8_invoke
+
+func @Class0_invoke($self: @Class0): i32
+  $result = const i32 0
+  ret $result
+
+func @Class1_invoke($self: @Class1): i32
+  $result = const i32 1
+  ret $result
+
+func @Class2_invoke($self: @Class2): i32
+  $result = const i32 2
+  ret $result
+
+func @Class3_invoke($self: @Class3): i32
+  $result = const i32 3
+  ret $result
+
+func @Class4_invoke($self: @Class4): i32
+  $result = const i32 4
+  ret $result
+
+func @Class5_invoke($self: @Class5): i32
+  $result = const i32 5
+  ret $result
+
+func @Class6_invoke($self: @Class6): i32
+  $result = const i32 6
+  ret $result
+
+func @Class7_invoke($self: @Class7): i32
+  $result = const i32 7
+  ret $result
+
+func @Class8_invoke($self: @Class8): i32
+  $result = const i32 8
+  ret $result
+
+func @dynamic_call($receiver: @Many): i32
+  $callable = lookup $receiver @invoke
+  $result = call $callable($receiver)
+  ret $result
+
+func @main(): none
+  $first = singleton @Class0
+  $last = singleton @Class8
+
+  $first_result = call @dynamic_call($first)
+  $last_result = call @dynamic_call($last)
+  $zero = const i32 0
+  $eight = const i32 8
+  $first_ok = eq $first_result $zero
+  $last_ok = eq $last_result $eight
+  $all_ok = and $first_ok $last_ok
+  cond $all_ok ^success ^failure
+^success
+  $success_code = const i32 0
+  $_success = ffi @set_exit_code($success_code)
+  $_none_success = const none
+  ret $_none_success
+^failure
+  $failure_code = const i32 1
+  $_failure = ffi @set_exit_code($failure_code)
+  $_none_failure = const none
+  ret $_none_failure

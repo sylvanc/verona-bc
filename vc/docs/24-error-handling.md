@@ -13,7 +13,8 @@ Verona does not have exceptions or `try`/`catch`. Instead, it provides:
 - **`raise`** — non-local return from a block lambda to the enclosing function.
 - **`nomatch`** — a sentinel type for signaling the absence of a result.
 - **`else` on expressions** — handling the `nomatch` case in `if`, `match` and other fallible expressions.
-- **Runtime errors** — fatal to the current behavior (not recoverable).
+- **Runtime errors** — fatal to the current behavior (not catchable in Verona
+  source).
 
 ---
 
@@ -160,6 +161,217 @@ In the context of `when` blocks:
 - The result cown of the failed `when` block receives no value.
 
 For synchronous code (not inside a `when` block), a runtime error terminates the program.
+
+The native VRT distinguishes these language/runtime errors from corrupt
+private runtime state. A runtime error unwinds the logical frames for the
+current Verona invocation and reports a stable error code to the embedding
+boundary. The reported `vrt_error_info` also identifies the active generated
+function before its frame is unwound; its reserved instruction-site field is
+zero until the LLVM backend supplies stable site identifiers. The standalone
+LLVM executable then prints the message and exits unsuccessfully. An internal
+invariant failure cannot be handled safely and terminates immediately. This
+native boundary does not add a Verona `try`/`catch` construct: programs should
+still represent expected failures as values using unions and `nomatch`.
+
+User finalizers run behind a nested native cleanup boundary. If a finalizer
+raises a runtime error, VRT unwinds only frames created by that finalizer,
+reports the error, and continues the object's field and storage cleanup. The
+surrounding Verona invocation is not resumed at the failure site, and this
+internal containment mechanism does not provide source-level `try`/`catch`.
+
+### Native VRT Control Paths
+
+Native VRT implements a language `raise` and a runtime error as two separate
+control-flow mechanisms. Both use `setjmp`/`longjmp`, but they have different
+targets, carry different data, and maintain independent chains.
+
+| Mechanism | Payload | Destination | VRT structure |
+|---|---|---|---|
+| Language `raise` | A Verona value | Generated code in an older surviving frame | `Continuation` |
+| Runtime error | `ErrorInfo` | The innermost native invocation or cleanup scope | `ErrorBoundary` |
+
+#### Language Raise
+
+Every active logical frame has a separate `Continuation` sidecar. The sidecar
+stores the native recovery state for that frame, the raised value, and a link
+to the parent frame's continuation. A `Continuation` is created with a frame;
+an `ErrorBoundary` is not.
+
+For example, if frame B raises a value to frame A, VRT:
+
+1. Relocates the value if it must survive B's frame-local region.
+2. Destroys B and B's continuation.
+3. Preserves A and A's continuation.
+4. Stores the value in A's continuation.
+5. Jumps to A's saved continuation, where generated code consumes the value.
+
+```mermaid
+flowchart TD
+  A["Frame A + Continuation A<br/>language-raise target"]
+  B["Frame B + Continuation B"]
+  R["raise value in B"]
+  U["Unwind B"]
+  J["longjmp Continuation A::state"]
+  H["Resume generated code in A"]
+
+  A --> B --> R --> U --> J --> H
+  U -. preserves .-> A
+```
+
+The target frame must still be an active older frame. If it is absent, the
+attempt is converted to the runtime error `BadRaiseTarget`; it cannot continue
+as a language raise.
+
+#### Runtime Error
+
+Runtime errors do not resume generated code at a target frame. Instead,
+`try_invoke` and `run_cleanup` install nested `ErrorBoundary` objects. The
+`parent` links form an error-boundary chain independent of the frame and
+continuation chains. A runtime error always selects the innermost installed
+boundary.
+
+Each `ErrorBoundary` contains:
+
+- a `FrameBoundary`, identifying the logical frame and its continuation that
+  must survive unwinding;
+- `recovery`, the native jump destination for the runtime-error handler; and
+- the captured `ErrorInfo`.
+
+`FrameBoundary::continuation` is not the runtime-error jump destination. It is
+borrowed state used to verify that logical-frame unwinding restored the exact
+language-continuation state that existed when the boundary was installed.
+
+`try_invoke` starts between Verona invocations, so its frame boundary is
+`{nullptr, nullptr}`. A runtime error reaching it unwinds every logical frame
+and then returns `ErrorInfo` to the native caller.
+
+```mermaid
+flowchart TD
+  E["ErrorBoundary from try_invoke<br/>FrameBoundary = null"]
+  A["Frame A + Continuation A"]
+  B["Frame B + Continuation B"]
+  R["runtime error in B"]
+  U["Unwind B, then A"]
+  J["longjmp ErrorBoundary::recovery"]
+  N["try_invoke returns ErrorInfo"]
+
+  E --> A --> B --> R --> U --> J --> N
+```
+
+`run_cleanup` may start while a caller frame is active. It records that frame
+and its continuation in a `FrameBoundary`. If cleanup creates younger frames
+and raises a runtime error, VRT destroys only those younger frames, preserves
+the caller, and jumps to the cleanup boundary's `recovery` state.
+
+```mermaid
+flowchart TD
+  O["Outer try_invoke ErrorBoundary"]
+  A["Frame A + Continuation A"]
+  C["run_cleanup ErrorBoundary<br/>FrameBoundary = A"]
+  B["Cleanup frame B + Continuation B"]
+  R["runtime error in B"]
+  U["Unwind B; preserve A"]
+  J["longjmp cleanup ErrorBoundary::recovery"]
+  D["Report error and continue object cleanup"]
+
+  O --> A --> C --> B --> R --> U --> J --> D
+  U -. preserves .-> A
+```
+
+This nested cleanup boundary contains finalizer failures without turning them
+into catchable Verona exceptions. If no cleanup boundary is active, the outer
+`try_invoke` boundary receives the runtime error and abandons the invocation.
+
+### VBCI, LLVM, and VRT Error Responsibilities
+
+VBCI's `Error` enumeration combines three kinds of failure:
+
+- malformed or unsupported interpreter input;
+- statically detectable program errors;
+- language errors that depend on runtime values and ownership state.
+
+The native pipeline deliberately splits those responsibilities. The compiler
+rejects errors it can prove before execution, while VRT reports genuinely
+dynamic language errors through `vrt_error_info`. Private VRT invariant
+failures use `vrt::Failure` and terminate immediately; they must not be used as
+a substitute for a language error.
+
+An error name appearing in `vrt::Error` only reserves its stable ABI value. It
+is considered implemented only when an executable VRT path calls
+`vrt::raise_error` with that value.
+
+#### Implemented VRT Language Errors
+
+These errors currently unwind the active native invocation and return an
+`ErrorInfo` to `vrt_try_invoke`:
+
+| VBCI error | Native runtime condition |
+|---|---|
+| `BadRaiseTarget` | A saved raise target is not an active older stack frame. |
+| `BadAllocTarget` | A value cannot identify a valid target region for allocation or ownership transfer. |
+| `BadStore` | A write violates region ownership or graph-relocation rules. |
+| `BadStoreTarget` | A write targets immutable or immortal storage. |
+| `BadStackEscape` | A frame-local graph cannot be relocated safely while returning, raising, or otherwise escaping. |
+| `BadFreeze` | `freeze` is applied to a stack-allocated value or an arena-managed region. |
+
+> **Status:** These errors are implemented in VRT and observable at the native invocation
+> boundary. These errors remain uncatchable from Verona source.
+
+#### Errors Rejected Before Native Execution
+
+The compiler and LLVM backend handle these as diagnostics rather than emitting
+code that raises a VRT error:
+
+| VBCI error | Native pipeline handling |
+|---|---|
+| `UnknownFFI` | LLVM lowering rejects unknown or unsupported FFI symbols. |
+| `BadLabel` | ID validation rejects undefined labels. |
+| `BadField` | ID validation rejects unknown field IDs. Field-reference lowering is not yet complete. |
+| `BadRefTarget` | IR type checking rejects field or array references on incompatible values. Valid reference operations are not yet lowered by LLVM. |
+| `BadLoadTarget` | IR type checking rejects loads from non-reference values. Valid loads are not yet lowered by LLVM. |
+| `BadConversion` | IR type checking and primitive-conversion lowering reject incompatible conversions. |
+| `BadOperand` | IR type checking rejects operators applied to the wrong type family. |
+| `MismatchedTypes` | IR type checking rejects incompatible binary operands. |
+| `BadArgs` | ID validation, type checking, and call lowering validate argument arity and types. |
+| `BadType` | IR type checking validates arguments, return values, and stored value types. Runtime checks for unrestricted `dyn` values are deferred until that representation is implemented. |
+The statically resolvable form of `MethodNotFound` is also rejected by type
+checking. Its genuinely dynamic form remains a runtime TODO below.
+
+`BadRegionEntryPoint` remains in the public VRT error enum for ABI
+compatibility, but current allocation operations do not produce it. Empty
+classes allocate ordinary objects and may be used as region entry points;
+explicit immortal singleton values remain invalid region locators.
+
+#### Interpreter-Specific Errors
+
+These VBCI errors do not require corresponding VRT language errors for normal
+compiler-generated LLVM:
+
+| VBCI error | Native pipeline handling |
+|---|---|
+| `UnknownString` | VBCI uses a bytecode string table. Native code has no equivalent runtime string-ID lookup; LLVM `ConstStr` lowering is not yet implemented. |
+| `UnknownRegionType` | The VIR grammar admits only `rc` and `arena`. An invalid value supplied manually through the C ABI is corrupt runtime state. |
+| `UnknownOpcode` | The parser and well-formedness passes reject unknown VIR statements before LLVM lowering. |
+
+#### Native Runtime TODOs
+
+The following ABI values exist in `vrt::Error`, but native execution does not
+yet raise them correctly end to end:
+
+| VBCI error | Current status and required work |
+|---|---|
+| `BadArrayIndex` | Array-reference lowering is missing. Bulk array range failures currently terminate as `Failure::invalid_array_state`; user-controlled bounds failures must instead raise `BadArrayIndex`. |
+| `MethodNotFound` | Runtime lookup can return null, but an ordinary dynamic call currently reaches an internal callable check. It must raise `MethodNotFound`; `TryCallDyn` must take its non-match path. |
+| `BadMerge` | `Merge` lowering and its VRT service are not implemented. |
+| `SchedulerAlreadyRunning` | The native scheduler lifecycle is not implemented. |
+
+> **Status:** These are explicit LLVM/VRT TODOs. Merely retaining their enum
+> values preserves the intended ABI but does not constitute runtime support.
+
+The source-of-truth lists and checks are in
+[`vbci/ident.h`](../../vbci/ident.h),
+[`virc/passes/typecheck.cc`](../../virc/passes/typecheck.cc), and
+[`include/vrt/error.h`](../../include/vrt/error.h).
 
 ---
 

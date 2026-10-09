@@ -20,7 +20,7 @@ Every object lives in one of three locations:
 
 | Location | Description | Lifetime |
 |----------|-------------|----------|
-| **Stack** | Fast, scoped allocation | Current function call |
+| **Stack** | Fast, scoped allocation | Owning logical frame |
 | **Frame-local region** | Default heap allocation | Until dragged or frame exits |
 | **Heap region** | Explicit region allocation | Until region root becomes unreachable |
 
@@ -36,7 +36,15 @@ You don't need to annotate allocation locations. The rules are simple: `new` goe
 
 ### Stack Allocation
 
-Stack objects are the fastest to allocate and free. They live on the function's stack and are destroyed when the function returns. Stack objects **cannot escape their frame** — returning a stack-allocated value is a runtime error (`bad stack escape`).
+Stack objects and arrays have logical-frame lifetime. They are destroyed when
+their owning frame returns, unwinds after a raise, or is reused for a tailcall.
+The native runtime keeps them in stable-address, runtime-managed storage; they
+do not rely on the native C++ call stack for lifetime management.
+
+A value allocated by the current frame cannot be returned, raised past that
+frame, or passed through tailcall frame reuse. A callee may use, return, or
+raise a stack value owned by a surviving ancestor frame because the owner
+remains active. Violations are reported as `bad stack escape`.
 
 ### Frame-Local Regions
 
@@ -90,7 +98,9 @@ When a frame-local object is placed into a cown (via `when`), it is dragged into
 
 ### What Cannot Be Dragged
 
-- **Stack objects** cannot be dragged into any region. Attempting to store a stack object into a heap field or return it from a function produces a runtime error.
+- **Stack objects** cannot be dragged into any region. They may cross a call or
+  raise boundary only when their owning ancestor frame survives. A
+  current-frame stack value cannot cross return, raise, or tailcall reuse.
 - **Region objects with existing parents** — a region can only have one owner. Attempting to place an already-owned region into another is an error.
 
 ---
@@ -170,8 +180,13 @@ You cannot create `ref[T]` values directly. They are produced only by `ref` meth
 
 A `ref[T]` points into the same region as the object it was obtained from. Using a `ref[T]` within that region is safe. What you **cannot** do:
 
-- **Return a `ref[T]` to a stack variable** — the stack variable is destroyed when the function returns. This is caught at runtime (`bad stack escape`).
-- **Return any stack-allocated value** from a function — runtime error (`bad stack escape`).
+- **Return a `ref[T]` into the current frame's stack storage** — the referenced
+  storage is destroyed when that frame returns. A reference into a surviving
+  ancestor frame remains valid.
+- **Return, raise, or tailcall with a current-frame stack value** — runtime
+  error (`bad stack escape`).
+- **Store a stack value into a region or into older stack storage** — the value
+  could outlive its owning frame. This is caught at runtime (`bad store`).
 - **Return a frame-local value that contains a reference to a stack value** — the contained reference becomes dangling. This is caught at runtime.
 
 The compiler generates code that stores through or loads from references immediately. You should not store a `ref[T]` in a `let` or `var` for later use — the compiler's generated code handles references transiently.
@@ -208,6 +223,7 @@ The runtime detects several region and reference errors at runtime:
 | `bad type` | Subtype check failed on call argument, return value, field store, or array store. |
 | `bad array index` | Array index out of bounds. |
 | `bad args` | Wrong number of arguments to a function or constructor. |
+| `bad freeze` | Freezing a stack-allocated value or an arena-managed region. |
 
 These errors are **fatal** — the current function (or behavior, in a `when` block) terminates immediately. They indicate logic bugs, not expected failure modes.
 
@@ -215,14 +231,27 @@ These errors are **fatal** — the current function (or behavior, in a `when` bl
 
 ## 19.9 Freezing (Immutability)
 
-> **Status:** Region freezing is being designed but not yet exposed at the language level.
+`freeze(value)` returns the same value after making its reachable managed graph
+immutable. Primitive values are copied unchanged. Freezing an already immutable
+or immortal value is a no-op. `let` still constrains only a binding; `freeze`
+changes the managed objects themselves.
 
-When implemented, freezing will convert a mutable region into an **immutable snapshot** that can be shared freely:
-- No reference counting overhead for reads — immutable objects use atomic reference counting on the group.
-- No mutable references into the region can exist after freezing.
-- Immutable objects can be shared between threads without synchronization.
+The runtime discovers strongly connected components (SCCs) in the reachable
+graph. Every published SCC has one representative with an atomic reference
+count (ARC); other members point directly to that representative. References
+within an SCC do not keep it alive. References from registers, mutable objects,
+and other immutable SCCs contribute to the representative's ARC. When it
+reaches zero, the collector reclaims the whole component.
 
-Currently, all user-created objects are mutable. `let` constrains only the binding — see [Declarations §4.1](04-declarations.md) and [Gotchas §26.2](26-gotchas.md).
+Freezing may select only the reachable part of an RC region. Unreached mutable
+objects remain in that region, and their references into the frozen graph are
+included in ARC accounting. Reachable frame-local objects and heap subregions
+are also handled. The native runtime rejects stack-allocated roots and arena
+regions with `bad freeze`: arena objects deliberately omit the per-object
+counts needed to derive correct SCC reference counts.
+
+Writes into immutable storage raise `bad store target`. Reads need no locks;
+only changes to the published SCC's ARC are atomic.
 
 ---
 
@@ -239,10 +268,19 @@ See [Concurrency](15-concurrency.md) for the user-facing semantics of cowns.
 ## 19.11 Object Teardown
 
 When a region is collected or a frame is unwound, objects are torn down:
-1. Finalizers run (releasing child region references, cown references, etc.)
-2. Object memory is freed.
+1. A user-defined `final(self: T)` method runs, if present.
+2. Managed fields are dropped, releasing outgoing references.
+3. Object storage is freed.
 
-There are no user-defined destructors or finalizers in the language. Resource cleanup is managed entirely by the runtime through region deallocation and reference counting.
+Collection is two-phase: all queued objects finish steps 1 and 2 before any of
+their storage is released. This lets a finalizer inspect another object that is
+being collected in the same batch. A finalizer receives borrowed, read-only
+`self`; it cannot resurrect the object or prevent collection.
+
+If a native finalizer raises a runtime error, the runtime reports that error,
+restores the caller's cleanup boundary, and continues dropping fields and
+releasing storage. This boundary contains cleanup failures; it is not a
+source-level exception handler.
 
 ---
 
@@ -254,10 +292,10 @@ Several memory model features are actively being designed:
 
 Currently, regions are created implicitly (frame-local regions per function call, heap regions via cowns). The planned feature will allow programmers to explicitly create and manage regions, enabling patterns like sendable subgraphs and region transfer between cowns.
 
-### Region Freezing
-
-Freezing will convert a mutable region into a permanently immutable snapshot. Once frozen, the region can be shared freely without synchronization overhead. This is the mechanism for true immutability — unlike `let` (which only constrains the binding), freezing makes the object graph itself immutable.
-
 ### Compile-Time Region Safety
 
-Currently, region violations (stack escape, invalid stores, lifetime errors) are caught at **runtime**. The planned feature will catch many of these errors at **compile time** through static analysis, reducing the chance of runtime crashes and giving programmers earlier feedback.
+Most region violations (stack escape, invalid stores, lifetime errors) are
+caught at **runtime**. Empty classes still allocate objects with distinct
+headers and may be used as region entry points. Planned analysis will move
+ownership and lifetime checks that can be determined statically to compile
+time, giving programmers earlier feedback.

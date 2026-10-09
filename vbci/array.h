@@ -2,6 +2,7 @@
 
 #include "header.h"
 #include "program.h"
+#include "sanitizer.h"
 #include "writebarrier.h"
 
 #include <cstring>
@@ -226,6 +227,8 @@ namespace vbci
 
     void immortalize()
     {
+      ignore_process_lifetime_allocation(this);
+
       if (location() == Location::immortal())
         return;
 

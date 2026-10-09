@@ -1110,8 +1110,7 @@ namespace vc
     // empty-union reifications.
     void prune_empty_shape_unions()
     {
-      auto is_empty_shape = [&](const Node& type_id) -> bool
-      {
+      auto is_empty_shape = [&](const Node& type_id) -> bool {
         for (auto& key : map_order)
         {
           for (auto& cr : map[key])
@@ -1133,8 +1132,7 @@ namespace vc
       };
 
       // Prune a union node in place, returning the simplified result.
-      auto prune_union = [&](const Node& u) -> Node
-      {
+      auto prune_union = [&](const Node& u) -> Node {
         Node result = Union;
 
         for (auto& child : *u)
@@ -3418,8 +3416,7 @@ namespace vc
             // drop it. The post-shape cleanup pass (prune_empty_shape_unions)
             // handles any TypeIds that turn out to be empty after
             // resolve_shapes runs.
-            auto has_empty_shape = [&](const Node& tid) -> bool
-            {
+            auto has_empty_shape = [&](const Node& tid) -> bool {
               for (auto& key : map_order)
               {
                 for (auto& cr : map[key])
@@ -4273,7 +4270,7 @@ namespace vc
                 sym / Type, r.subst, sym / SymbolId, "FFI return type");
 
               // Add the reified symbol. Duplicate detection and type
-              // compatibility checking is done in the VIRC assign_ids pass.
+              // compatibility checking is done in the VIRC assignids pass.
               auto reified_symbols = reified_lib / Symbols;
               reified_symbols
                 << (Symbol << clone(sym / SymbolId) << clone(sym / Lhs)

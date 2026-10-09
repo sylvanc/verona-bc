@@ -1,0 +1,53 @@
+// See README.md for special-constant coverage and native-runtime boundaries.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+// Exercise SSA results, typed mutable destinations, and f64 return values.
+func @main(): none var $value: f64
+  $e = call @constant_e()
+  $e_int = convert i32 $e
+  $two = const i32 2
+  $e_error = sub $e_int $two
+
+  $pi = call @constant_pi()
+  $pi_int = convert i32 $pi
+  $three = const i32 3
+  $pi_error = sub $pi_int $three
+
+  $value = e
+  $stored_e = convert i32 $value
+  $stored_e_error = sub $stored_e $two
+  $value = pi
+  $stored_pi = convert i32 $value
+  $stored_pi_error = sub $stored_pi $three
+  $value = inf
+  $value = nan
+
+  $inf = call @constant_inf()
+  $nan = call @constant_nan()
+  drop $inf
+  drop $nan
+
+  $error0 = or $e_error $pi_error
+  $error1 = or $stored_e_error $stored_pi_error
+  $exit_code = or $error0 $error1
+  $_exit = ffi @set_exit_code($exit_code)
+  $_none = const none
+  ret $_none
+
+func @constant_e(): f64
+  $value = e
+  ret $value
+
+func @constant_pi(): f64
+  $value = pi
+  ret $value
+
+func @constant_inf(): f64
+  $value = inf
+  ret $value
+
+func @constant_nan(): f64
+  $value = nan
+  ret $value
