@@ -39,7 +39,8 @@ func @main(): none
   $state_ptr = makeptr $state
   $state_address = convert usize $state_ptr
   $continuation = new @Wrapper($state, $state_address)
-  $frozen = freeze $continuation
+  $freeze_source = copy $continuation
+  $frozen = freeze $freeze_source
 
   $continuation_ok = call @wrapper_address_is_current($continuation)
   $frozen_ok = call @wrapper_address_is_current($frozen)

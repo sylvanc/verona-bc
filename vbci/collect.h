@@ -1,8 +1,21 @@
+#pragma once
+
 // Delay deallocation to handle re-entrancy.
 
 namespace vbci
 {
   struct Header;
+
+  struct SuppressFinalizers
+  {
+    SuppressFinalizers();
+    ~SuppressFinalizers();
+
+    SuppressFinalizers(const SuppressFinalizers&) = delete;
+    SuppressFinalizers& operator=(const SuppressFinalizers&) = delete;
+
+    static bool active();
+  };
 
   template<typename T>
   void collect(T* h);

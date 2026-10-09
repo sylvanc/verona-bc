@@ -1,0 +1,46 @@
+// Copying a last-use closure capture must not finalize the discarded source.
+// The behavior marks the destination so its later finalization can be
+// distinguished from source finalization. Expected exit: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Capture
+  @copied: bool
+  @apply @run
+  @final @capture_final
+
+func @capture_final($self: @Capture): none
+  $copied_ref = ref $self @copied
+  $copied = load $copied_ref
+  cond $copied ^done ^source
+
+^source
+  $failure = const i32 1
+  $_set = ffi @set_exit_code($failure)
+  $_none_source = const none
+  ret $_none_source
+
+^done
+  $_none_done = const none
+  ret $_none_done
+
+func @run($self: @Capture): none
+  $copied_ref = ref $self @copied
+  $true = const bool true
+  $_old = store $copied_ref $true
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $success = const i32 0
+  $_initial = ffi @set_exit_code($success)
+
+  $false = const bool false
+  $capture = new @Capture($false)
+  $apply = lookup $capture @apply
+  $done = when $apply($capture): none
+  drop $done
+
+  $_none = const none
+  ret $_none

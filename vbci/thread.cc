@@ -1374,12 +1374,12 @@ namespace vbci
 
           if (src->is_header())
           {
-            auto copy = copy_graph(frame, src.borrow());
+            auto copy =
+              copy_graph_and_consume(frame, std::move(src));
 
             if (!freeze(copy->get_header()))
               Value::error(Error::BadFreeze);
 
-            src.clear();
             dst = std::move(copy);
             return;
           }
@@ -2587,7 +2587,8 @@ namespace vbci
 
     if (is_closure)
     {
-      closure_copy = copy_graph(*frame, closure_source.borrow());
+      closure_copy =
+        copy_graph_and_consume(*frame, std::move(closure_source));
 
       if (!closure_copy->is_sendable())
       {

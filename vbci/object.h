@@ -1,6 +1,7 @@
 #pragma once
 
 #include "classes.h"
+#include "collect.h"
 #include "frame.h"
 #include "header.h"
 #include "program.h"
@@ -120,7 +121,7 @@ namespace vbci
       auto fin = c.finalizer();
 
       // Pass a read-only reference to the object.
-      if (fin)
+      if (fin && !SuppressFinalizers::active())
         Thread::run_cleanup(fin, ValueTransfer(this, true));
 
       for (size_t i = 0; i < f.size(); i++)

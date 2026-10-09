@@ -57,6 +57,24 @@ namespace vbci
   static thread_local std::vector<Header*> headers_to_delete;
   static thread_local std::vector<Region*> regions_to_delete;
   static thread_local bool in_collection = false;
+  static thread_local bool suppress_finalizers = false;
+
+  SuppressFinalizers::SuppressFinalizers()
+  {
+    assert(!suppress_finalizers);
+    suppress_finalizers = true;
+  }
+
+  SuppressFinalizers::~SuppressFinalizers()
+  {
+    assert(suppress_finalizers);
+    suppress_finalizers = false;
+  }
+
+  bool SuppressFinalizers::active()
+  {
+    return suppress_finalizers;
+  }
 
   static void drain_work_list()
   {

@@ -1,6 +1,7 @@
 #include "copy_graph.h"
 
 #include "array.h"
+#include "collect.h"
 #include "frame.h"
 #include "object.h"
 #include "program.h"
@@ -120,11 +121,15 @@ namespace vbci
     };
   }
 
-  Register copy_graph(Frame& frame, ValueBorrow root)
+  Register copy_graph_and_consume(Frame& frame, Register root)
   {
-    if (!root.is_header())
+    if (!root->is_header())
       return root;
 
-    return GraphCopy(frame).run(root);
+    Register copy = GraphCopy(frame).run(root.borrow());
+
+    SuppressFinalizers suppress;
+    root.clear();
+    return copy;
   }
 }

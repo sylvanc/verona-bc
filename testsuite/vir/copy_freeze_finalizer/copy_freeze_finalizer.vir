@@ -1,0 +1,45 @@
+// A last-use freeze continues the source object's semantic lifetime in the
+// frozen copy. Reclaiming the copied source must not run its finalizer.
+// Expected exit: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Capture
+  @copied: bool
+  @post_copy @mark_copied
+  @final @capture_final
+
+func @mark_copied($self: @Capture): none
+  $copied_ref = ref $self @copied
+  $true = const bool true
+  $_old = store $copied_ref $true
+  $_none = const none
+  ret $_none
+
+func @capture_final($self: @Capture): none
+  $copied_ref = ref $self @copied
+  $copied = load $copied_ref
+  cond $copied ^done ^source
+
+^source
+  $failure = const i32 1
+  $_set = ffi @set_exit_code($failure)
+  $_none_source = const none
+  ret $_none_source
+
+^done
+  $_none_done = const none
+  ret $_none_done
+
+func @main(): none
+  $success = const i32 0
+  $_initial = ffi @set_exit_code($success)
+
+  $false = const bool false
+  $capture = new @Capture($false)
+  $frozen = freeze $capture
+  drop $frozen
+
+  $_none = const none
+  ret $_none
