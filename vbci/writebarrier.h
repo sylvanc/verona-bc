@@ -337,19 +337,23 @@ namespace vbci::writebarrier
     }
   };
 
-  inline void init(Location store_loc, void* addr, ValueType t, Register next)
+  inline Error init(Location store_loc, void* addr, ValueType t, Register next)
   {
     if (next->is_readonly())
-      Value::error(Error::BadStore);
+      return Error::BadStore;
+      //Value::error(Error::BadStore);
 
     auto ops =
       write_ops<true>().prepare_store(store_loc).prepare_in(next->location());
 
     if (!ops.ok)
-      Value::error(Error::BadAllocTarget);
+      return Error::BadAllocTarget;
+      //Value::error(Error::BadAllocTarget);
 
     if (!ops.apply_in(addr, t, std::forward<Register>(next)))
-      Value::error(Error::BadStore);
+      return Error::BadStore;
+      //Value::error(Error::BadStore);
+    return Error::Ok;
   }
 
   template<bool is_move>
@@ -380,12 +384,11 @@ namespace vbci::writebarrier
     if (loc.is_immortal() || loc.is_stack())
       return;
 
-    // RC dec, no region operation.
+    // RC dec if not immortal or on the stack
+    v.field_dec();
+
     if (loc.is_immutable())
-    {
-      v.field_dec();
       return;
-    }
 
     // Edges within a frozen SCC have already been removed from its ARC.
     // collect_scc marks all members pending before finalizing their fields.
@@ -397,10 +400,7 @@ namespace vbci::writebarrier
 
     // Frame-local regions skip stack RC accounting.
     if (r->is_frame_local())
-    {
-      v.field_dec();
       return;
-    }
 
     if (store_loc.is_stack())
     {
@@ -415,12 +415,9 @@ namespace vbci::writebarrier
     }
 
     // Internal edge within the same region — no parent to clear.
-    // Still decrement field RC so individual object collection cascades.
+    // Earlier object RC dec so individual object collection cascades.
     if (store_loc == loc)
-    {
-      v.field_dec();
       return;
-    }
 
     // Clear parent if the region has one (sub-region relationship).
     if (r->has_parent())
@@ -428,8 +425,5 @@ namespace vbci::writebarrier
       r->clear_parent();
       return;
     }
-
-    // Different region, no parent — just decrement the value's RC.
-    v.field_dec();
   }
 }

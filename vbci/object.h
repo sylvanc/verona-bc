@@ -29,6 +29,7 @@ namespace vbci
     {
       uint8_t* base = reinterpret_cast<uint8_t*>(this + 1);
       auto loc = location();
+      auto error = Error::Ok;
 
       for (size_t i = 0; i < cls.fields.size(); i++)
       {
@@ -36,12 +37,23 @@ namespace vbci
         auto& v = frame.arg(i);
 
         if (!Program::get().subtype(v->type_id(), f.type_id))
-          Value::error(Error::BadType);
-
+          error = Error::BadType;
+          // Value::error(Error::BadType);
+          
         void* addr = base + f.offset;
-        writebarrier::init(loc, addr, f.value_type, std::move(v));
+        if (error == Error::Ok){
+          error = writebarrier::init(loc, addr, f.value_type, std::move(v));
+         
+        }
+        if (error != Error::Ok)
+          memset (addr, 0, f.size); 
+        // else 
+        //   writebarrier::init(loc, addr, f.value_type, std::move(v)); 
       }
+      if (error != Error::Ok)
+        Value::error(error);
 
+        
       return *this;
     }
 

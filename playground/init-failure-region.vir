@@ -1,0 +1,13 @@
+class @A
+    @f: @B
+
+class @B 
+    @f: i32 
+
+
+func @main():none 
+    $x = const i32 42 
+    $b = stack @B($x)
+    $a = region rc @A($b)
+    $_none = const none
+    ret $_none
