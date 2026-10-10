@@ -2,9 +2,10 @@
 
 #include "array.h"
 #include "collect.h"
-#include "frame.h"
+#include "cown.h"
 #include "object.h"
 #include "program.h"
+#include "region.h"
 #include "thread.h"
 #include "traverse.h"
 
@@ -17,11 +18,11 @@ namespace vbci
   {
     struct GraphCopy
     {
-      Frame& frame;
+      Region& region;
       std::unordered_map<Header*, Header*> copies;
       std::vector<std::pair<Function*, Object*>> post_copies;
 
-      GraphCopy(Frame& frame) : frame(frame) {}
+      GraphCopy(Region& region) : region(region) {}
 
       Header* allocate(Header* source)
       {
@@ -31,13 +32,12 @@ namespace vbci
         if (program.is_array(source->get_type_id()))
         {
           auto source_array = static_cast<Array*>(source);
-          copy =
-            frame.region->array(source->get_type_id(), source_array->get_size());
+          copy = region.array(source->get_type_id(), source_array->get_size());
         }
         else
         {
           auto source_object = static_cast<Object*>(source);
-          copy = frame.region->object(source_object->cls());
+          copy = region.object(source_object->cls());
         }
 
         copies.emplace(source, copy);
@@ -103,7 +103,7 @@ namespace vbci
 
             if (auto copy = copies.find(source); copy != copies.end())
             {
-              copy->second->field_inc();
+              copy->second->reg_inc();
               return false;
             }
 
@@ -119,17 +119,36 @@ namespace vbci
         return map_value(root);
       }
     };
+
+    Register copy_graph_heap(ValueBorrow root)
+    {
+      if (!root.is_header())
+        return root;
+
+      auto loc = root.get_header()->location();
+      if (loc.is_immutable() || loc.is_immortal())
+        return root;
+
+      auto region = Region::create(RegionType::RegionRC);
+      return GraphCopy(*region).run(root);
+    }
   }
 
-  Register copy_graph_and_consume(Frame& frame, Register root)
+  Register copy_graph_and_consume(Register root)
   {
-    if (!root->is_header())
-      return root;
-
-    Register copy = GraphCopy(frame).run(root.borrow());
+    Register copy = copy_graph_heap(root.borrow());
 
     SuppressFinalizers suppress;
     root.clear();
     return copy;
+  }
+
+  void copy_graph_and_consume(Cown& cown)
+  {
+    Register copy = copy_graph_heap(cown.load());
+    Register source = cown.exchange<true>(std::move(copy));
+
+    SuppressFinalizers suppress;
+    source.clear();
   }
 }

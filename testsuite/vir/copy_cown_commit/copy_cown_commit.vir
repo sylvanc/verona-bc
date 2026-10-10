@@ -1,0 +1,152 @@
+// Acquiring a writable cown does not copy its state. The state is copied back
+// when the behavior completes, including on error. Readonly acquisitions
+// observe the committed state without another copy. Expected exit: 0.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @Next = @End | @Node
+
+class @End
+
+class @Node
+  @next: @Next
+
+class @State
+  @left: @Node
+  @right: @Node
+  @original_address: usize
+  @current_address: usize
+  @copy_count: i32
+  @execution_ok: bool
+  @value: i32
+  @post_copy @state_post_copy
+
+func @state_post_copy($self: @State): none
+  $left_ref = ref $self @left
+  $left = load $left_ref
+  $left_ptr = makeptr $left
+  $left_address = convert usize $left_ptr
+  $current_ref = ref $self @current_address
+  $_old_address = store $current_ref $left_address
+
+  $count_ref = ref $self @copy_count
+  $count = load $count_ref
+  $one = const i32 1
+  $next_count = add $count $one
+  $_old_count = store $count_ref $next_count
+
+  $_none = const none
+  ret $_none
+
+func @make_state(): @State
+  $end = new @End()
+  $node = new @Node($end)
+  $next_ref = ref $node @next
+  $_old_next = store $next_ref $node
+
+  $node_ptr = makeptr $node
+  $address = convert usize $node_ptr
+  $zero = const i32 0
+  $false = const bool false
+  $state = new @State($node, $node, $address, $address, $zero, $false, $zero)
+  ret $state
+
+func @mutate_then_error($state_ref: ref @State): none
+  $state = load $state_ref
+  $left_ref = ref $state @left
+  $left = load $left_ref
+  $left_ptr = makeptr $left
+  $left_address = convert usize $left_ptr
+
+  $original_ref = ref $state @original_address
+  $original_address = load $original_ref
+  $address_ok = eq $left_address $original_address
+
+  $count_ref = ref $state @copy_count
+  $count = load $count_ref
+  $zero = const i32 0
+  $count_ok = eq $count $zero
+  $execution_ok = and $address_ok $count_ok
+  $execution_ok_ref = ref $state @execution_ok
+  $_old_ok = store $execution_ok_ref $execution_ok
+
+  $value_ref = ref $state @value
+  $forty_two = const i32 42
+  $_old_value = store $value_ref $forty_two
+
+  $one = const usize 1
+  $array = new [i32] $one
+  $_bad_ref = ref $array $one
+  $_none = const none
+  ret $_none
+
+func @check_committed($state_ref: ref @State): none
+  $state = load $state_ref
+
+  $left_ref = ref $state @left
+  $left = load $left_ref
+  $right_ref = ref $state @right
+  $right = load $right_ref
+  $left_ptr = makeptr $left
+  $left_address = convert usize $left_ptr
+  $right_ptr = makeptr $right
+  $right_address = convert usize $right_ptr
+  $alias_ok = eq $left_address $right_address
+
+  $next_ref = ref $left @next
+  $next = load $next_ref
+  $next_ptr = makeptr $next
+  $next_address = convert usize $next_ptr
+  $cycle_ok = eq $left_address $next_address
+
+  $original_ref = ref $state @original_address
+  $original_address = load $original_ref
+  $same_original = eq $left_address $original_address
+  $disjoint = not $same_original
+  $current_ref = ref $state @current_address
+  $current_address = load $current_ref
+  $address_ok = eq $left_address $current_address
+
+  $count_ref = ref $state @copy_count
+  $count = load $count_ref
+  $one = const i32 1
+  $count_ok = eq $count $one
+  $execution_ok_ref = ref $state @execution_ok
+  $execution_ok = load $execution_ok_ref
+  $value_ref = ref $state @value
+  $value = load $value_ref
+  $forty_two = const i32 42
+  $value_ok = eq $value $forty_two
+
+  $graph_ok = and $alias_ok $cycle_ok
+  $addresses_ok = and $disjoint $address_ok
+  $copy_ok = and $count_ok $execution_ok
+  $state_ok = and $value_ok $copy_ok
+  $structure_ok = and $graph_ok $addresses_ok
+  $ok = and $structure_ok $state_ok
+  cond $ok ^success ^failure
+
+^success
+  $zero = const i32 0
+  $_success = ffi @set_exit_code($zero)
+  $_none_success = const none
+  ret $_none_success
+
+^failure
+  $failure = const i32 1
+  $_failure = ffi @set_exit_code($failure)
+  $_none_failure = const none
+  ret $_none_failure
+
+func @main(): none
+  $one = const i32 1
+  $_initial = ffi @set_exit_code($one)
+
+  $state = when @make_state(): @State
+  $_failed = when @mutate_then_error($state): none
+  $readonly_state = read $state
+  $_checked = when @check_committed($readonly_state): none
+
+  $_none = const none
+  ret $_none

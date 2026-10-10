@@ -468,6 +468,7 @@ namespace vbci
     // Populate cown arguments.
     auto num_cowns = b->get_count();
     auto result = b->acquired_cown(0);
+    Register outcome;
 
     for (size_t i = 1; i < num_cowns; i++)
     {
@@ -487,8 +488,7 @@ namespace vbci
 
     try
     {
-      // Store the function return value in the result cown.
-      Register r = result->exchange<true>(thread_run(behavior));
+      outcome = thread_run(behavior);
     }
     catch (Value& error_value)
     {
@@ -500,8 +500,17 @@ namespace vbci
         print_error_stack(log, error_value);
       }
       teardown_all();
-      Register r = result->exchange<true>(ValueImmortal(error_value));
+      outcome = ValueImmortal(error_value);
     }
+
+    for (size_t i = 1; i < num_cowns; i++)
+    {
+      if (b->acquired_mode(i) != verona::rt::AccessMode::Read)
+        copy_graph_and_consume(*b->acquired_cown(i));
+    }
+
+    // Store the function return value in the result cown.
+    Register r = result->exchange<true>(std::move(outcome));
 
 #ifndef NDEBUG
     {
@@ -1368,14 +1377,14 @@ namespace vbci
 
       case Op::Freeze:
       {
-        process([](Register& dst, Register& src, Frame& frame) INLINE {
+        process([](Register& dst, Register& src) INLINE {
           if (src->is_readonly())
             Value::error(Error::BadFreeze);
 
           if (src->is_header())
           {
             auto copy =
-              copy_graph_and_consume(frame, std::move(src));
+              copy_graph_and_consume(std::move(src));
 
             if (!freeze(copy->get_header()))
               Value::error(Error::BadFreeze);
@@ -2588,7 +2597,7 @@ namespace vbci
     if (is_closure)
     {
       closure_copy =
-        copy_graph_and_consume(*frame, std::move(closure_source));
+        copy_graph_and_consume(std::move(closure_source));
 
       if (!closure_copy->is_sendable())
       {
