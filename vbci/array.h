@@ -213,8 +213,8 @@ namespace vbci
           {
             auto v = load(i);
 
-            if (v.is_header())
-              fn(v.get_header());
+            if (auto base = v.get_base_header())
+              fn(base);
           }
           break;
         }

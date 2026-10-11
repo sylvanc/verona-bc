@@ -1,0 +1,13 @@
+// A register reference cannot escape its frame into managed storage.
+
+class @Holder
+  @reference: ref i32
+
+func @main(): none var $value
+  $value = const i32 1
+  $register_ref = ref $value
+  $holder = region rc @Holder($register_ref)
+  drop $holder
+  drop $register_ref
+  $_none = const none
+  ret $_none
