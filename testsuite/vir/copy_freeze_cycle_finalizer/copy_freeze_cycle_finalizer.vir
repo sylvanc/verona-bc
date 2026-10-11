@@ -1,0 +1,77 @@
+// A last-use freeze continues the semantic lifetime of a finalizable object
+// that is part of a cycle. The finalizer schedules an increment on a shared
+// counter and sets the exit code to its new value.
+//
+// The runtime currently exits 2 because consuming the source root does not
+// collect its cycle. Later ordinary cycle collection finalizes that source
+// cycle, in addition to the independently finalized destination copy. Backup
+// cycle detection at the ownership split would suppress the source finalizer
+// and change this result to 1. Until that is implemented, expected exit: 2.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @RootNext = @Node | none
+
+class @Root
+  @next: @RootNext
+  @final @root_final
+
+class @Node
+  @next: @Root
+
+class @Counter
+  @value: i32
+
+memo @counter_slot @counter_init
+
+func @make_counter(): @Counter
+  $zero = const i32 0
+  $counter = new @Counter($zero)
+  ret $counter
+
+func @counter_init(): cown @Counter
+  $counter = when @make_counter(): @Counter
+  ret $counter
+
+func @counter(): cown @Counter
+  $counter = memoslot @counter_slot
+  ret $counter
+
+func @increment($counter_ref: ref @Counter): none
+  $counter = load $counter_ref
+  $value_ref = ref $counter @value
+  $value = load $value_ref
+  $one = const i32 1
+  $next = add $value $one
+  $_old = store $value_ref $next
+  $_set = ffi @set_exit_code($next)
+  $_none = const none
+  ret $_none
+
+func @root_final($self: @Root): none
+  $counter = call @counter()
+  $done = when @increment($counter): none
+  drop $counter
+  drop $done
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $no_report = const i32 99
+  $_initial = ffi @set_exit_code($no_report)
+
+  $none = const none
+  $root = new @Root($none)
+  $node = new @Node($root)
+  $root_next_ref = ref $root @next
+  $node_for_store = copy $node
+  $_old = store $root_next_ref $node_for_store
+  drop $root_next_ref
+  drop $node
+
+  $frozen = freeze $root
+  drop $frozen
+
+  $_none = const none
+  ret $_none

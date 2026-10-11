@@ -1,0 +1,82 @@
+// An unreachable cycle retains the mutable source of a last-use freeze.
+// The finalizer schedules an increment on a shared counter and sets the exit
+// code to its new value.
+//
+// The runtime currently exits 2 because the unreachable garbage cycle is not
+// collected before the copy, so it continues to retain the source object.
+// Later ordinary cycle collection releases and finalizes that source, in
+// addition to the independently finalized destination copy. Backup cycle
+// detection before the ownership split would collect the garbage cycle and
+// change this result to 1. Until that is implemented, expected exit: 2.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+type @GarbageNext = @Garbage | none
+
+class @Capture
+  @final @capture_final
+
+class @Garbage
+  @next: @GarbageNext
+  @held: @Capture
+
+class @Counter
+  @value: i32
+
+memo @counter_slot @counter_init
+
+func @make_counter(): @Counter
+  $zero = const i32 0
+  $counter = new @Counter($zero)
+  ret $counter
+
+func @counter_init(): cown @Counter
+  $counter = when @make_counter(): @Counter
+  ret $counter
+
+func @counter(): cown @Counter
+  $counter = memoslot @counter_slot
+  ret $counter
+
+func @increment($counter_ref: ref @Counter): none
+  $counter = load $counter_ref
+  $value_ref = ref $counter @value
+  $value = load $value_ref
+  $one = const i32 1
+  $next = add $value $one
+  $_old = store $value_ref $next
+  $_set = ffi @set_exit_code($next)
+  $_none = const none
+  ret $_none
+
+func @capture_final($self: @Capture): none
+  $counter = call @counter()
+  $done = when @increment($counter): none
+  drop $counter
+  drop $done
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $no_report = const i32 99
+  $_initial = ffi @set_exit_code($no_report)
+
+  $capture = new @Capture()
+
+  $none = const none
+  $first = new @Garbage($none, $capture)
+  $second = new @Garbage($first, $capture)
+  $first_next_ref = ref $first @next
+  $second_for_store = copy $second
+  $_old = store $first_next_ref $second_for_store
+
+  drop $first_next_ref
+  drop $first
+  drop $second
+
+  $frozen = freeze $capture
+  drop $frozen
+
+  $_none = const none
+  ret $_none
