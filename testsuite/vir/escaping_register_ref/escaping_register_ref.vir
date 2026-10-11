@@ -1,13 +1,27 @@
 // A register reference cannot escape its frame into managed storage.
 
+class @Target
+  @value: i32
+
 class @Holder
   @reference: ref i32
 
 func @main(): none var $value
+  $one = const i32 1
+  $target = region rc @Target($one)
+  $target_ref = ref $target @value
+  $holder = heap $target @Holder($target_ref)
+
   $value = const i32 1
   $register_ref = ref $value
-  $holder = region rc @Holder($register_ref)
-  drop $holder
+  $holder_ref = ref $holder @reference
+  $previous = store $holder_ref $register_ref
+
+  drop $previous
+  drop $holder_ref
   drop $register_ref
+  drop $holder
+  drop $target_ref
+  drop $target
   $_none = const none
   ret $_none
