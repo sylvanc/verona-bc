@@ -128,18 +128,33 @@ f(3)                                 // 16
 The capture mechanism differs for `let` and `var` bindings:
 
 - **`let` captures** copy the value into a field of the lambda class. Inside the lambda body, accesses become field reads and writes on `self`.
-- **`var` captures** capture a **reference** (`ref[T]`) to the variable. Inside the lambda body, reads become loads through the reference and writes become stores, so changes are visible in the enclosing scope.
+- **`var` captures** place the binding in a managed cell. The defining scope and every closure capture the same cell object, so writes through any capture are visible through all the others. The cell can outlive the frame that declared the variable.
 
 ```verona
 main(): i32
 {
   let arr = array[i32]::fill(3);     // let-capture: copied into lambda
-  var sum = 0;                        // var-capture: captured by reference
+  var sum = 0;                        // var-capture: shared managed cell
 
   arr.each i -> { sum = sum + i }
   sum                                 // visible changes from lambda body
 }
 ```
+
+Sibling closures therefore share a captured `var`:
+
+```verona
+make_counter(): (() -> i32, () -> i32)
+{
+  var count: i32 = 0;
+  let inc = (): i32 -> { count = count + 1; count };
+  let get = (): i32 -> count;
+  (inc, get)
+}
+```
+
+Calling `inc` changes the value subsequently returned by `get`, including
+after `make_counter` has returned.
 
 ### Capturing Type Parameters
 
@@ -182,7 +197,9 @@ lambda$0
 let f = lambda$0(offset);
 ```
 
-Captured variables become fields. Captured type parameters become type parameters of the anonymous class.
+Captured `let` values become fields. A captured `var` is first lowered to a
+managed cell, and that cell becomes a field of each closure that captures it.
+Captured type parameters become type parameters of the anonymous class.
 
 ---
 
@@ -275,16 +292,17 @@ apply_fn((x) -> { x + 1 }, 5)
 
 ### Captured Variable Types
 
-Captured `var` bindings have their types propagated through the lambda's anonymous class fields. If the enclosing function's return type constrains the `var`'s type (via cascade propagation), the lambda body sees the refined type:
+Captured `var` bindings have their types propagated through the managed cell
+and the lambda's anonymous class fields. If use inside a lambda constrains the
+`var`'s type, the initializer and cell field are refined to the same type:
 
 ```verona
 main(): i32
 {
-  var sum = 0;                        // 0 defaults to u64, but...
-  // return type i32 refines sum to i32
-  // cascade propagates through ref capture to lambda
+  var sum = 0;                        // initially a default integer
+  let arr = array[i32]::fill(10);
   arr.each i -> { sum = sum + i }
-  sum                                 // i32
+  sum                                 // sum and its initializer are i32
 }
 ```
 
