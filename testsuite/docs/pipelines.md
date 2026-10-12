@@ -1,7 +1,6 @@
 # Test Pipelines
 
-The shared VBC collection files register CTest dependency graphs by input and
-output pipeline:
+The `compiler` suite registers VBC dependency graphs by frontend:
 
 | Collection | Pipeline |
 | --- | --- |
@@ -11,3 +10,6 @@ output pipeline:
 CTest node names remain stable independently of collection filenames. Build
 and run from the canonical `build/` directory with `ninja install` followed by
 `ctest --output-on-failure`.
+
+`cmake/compiler_fixtures.cmake` declares each source's terminal `VBC_STAGE`.
+The collection registers all prerequisite stages through that point.

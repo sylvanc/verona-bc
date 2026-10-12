@@ -7,16 +7,18 @@ description: Verona compiler test suite infrastructure — running tests, updati
 
 ## Test Infrastructure Overview
 
-The test suite uses Trieste's `testsuite.cmake` framework. Tests are defined in `testsuite/CMakeLists.txt`, which calls `testsuite(vbc)`. Two collection files define complete compile/run pipelines:
+`testsuite/CMakeLists.txt` calls `testsuite(compiler COLLECTIONS ...)` with two
+explicitly owned collections:
 
-| Collection | File | Pipeline | Input |
-|------------|------|----------|-------|
-| **vc** | `testsuite/vc.cmake` | Verona → bytecode → execute | `*.v` files |
-| **vir** | `testsuite/vir.cmake` | IR → bytecode → execute | `*.vir` files |
+| Collection | Pipeline | Input |
+|---|---|---|
+| `testsuite/vc-vbc.cmake` | Verona -> VC -> VBC -> VBCI | canonical `*.v` fixtures |
+| `testsuite/virc-vbc.cmake` | VIR -> VIRC -> VBC -> VBCI | canonical `*.vir` fixtures |
 
-Each collection owns its compiler invocation and registers a dependent
-interpreter node. Sources under a `compile_only/` directory register only the
-compile node.
+`testsuite/cmake/compiler_fixtures.cmake` is the authoritative feasibility
+manifest. Defaults, anchored rules, and optional exact overrides produce one
+effective `VBC_STAGE` per canonical source; collections register compile and run
+nodes through that stage.
 
 Each test produces `exit_code.txt`, `stdout.txt`, and `stderr.txt` in its output directory. The vc layer also produces per-pass `.trieste` dump files, a `*_final.trieste`, and a `.vbc` file (on success).
 
@@ -28,15 +30,11 @@ cd build && ctest --output-on-failure -j$(nproc)
 
 ### Run specific test(s) by name
 ```bash
-cd build && ctest --output-on-failure -R "^vbc/<name>" -j$(nproc)
+cd build && ctest --output-on-failure -R "^compiler/<name>" -j$(nproc)
 ```
 
-The `^vbc/` prefix matches both compile and run tests for a given name. For example, `^vbc/hello` matches:
-- `vbc/hello/hello/compile` (the compilation test)
-- `vbc/hello/hello/compile-exit_code.txt` (exit code comparison)
-- `vbc/hello/hello/compile-stdout.txt` etc.
-- `vbc/hello/hello/run` (the runtime test, if it exists)
-- `vbc/hello/hello/run-exit_code.txt` etc.
+The `^compiler/` prefix selects the compiler suite. For example,
+`^compiler/v/hello/hello/` matches its compile and run nodes.
 
 ### Run only compile or only runtime tests
 ```bash
@@ -155,7 +153,7 @@ For runtime tests with expected non-zero exit codes:
 
 ### Test execution flow
 
-1. Trieste discovers each collection file (for example, `vc.cmake`)
+1. Trieste loads the collections explicitly named by the `compiler` suite
 2. Its `TESTSUITE_DEFINE` callback registers a named node for each selected input
 3. CTest runs Trieste's node executor with the registered command
 4. stdout → `stdout.txt`, stderr → `stderr.txt`, exit code → `exit_code.txt`
@@ -171,7 +169,8 @@ For runtime tests with expected non-zero exit codes:
 
 ### Test naming convention
 
-Tests are named hierarchically: `vbc/<name>/<name>/compile` and `vbc/<name>/<name>/run`.
+Tests are named hierarchically, for example
+`compiler/v/<name>/<name>/compile` and `compiler/v/<name>/<name>/run`.
 
 Each node is one CTest test. Run nodes declare their compile node in `DEPENDS`, so
 CTest runs and verifies compilation first.
