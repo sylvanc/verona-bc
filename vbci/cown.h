@@ -164,9 +164,16 @@ namespace vbci
           auto nr = Region::create(RegionType::RegionRC);
           LOG(Trace) << "Dragging frame-local allocation to new region: " << nr;
 
+          if constexpr (is_move)
+            nr->stack_inc();
+
           if (!drag_allocation<is_move>(nr, next->get_base_header()))
           {
-            nr->free_region();
+            if constexpr (is_move)
+              nr->stack_dec();
+            else
+              nr->free_region();
+
             return false;
           }
 
@@ -192,14 +199,10 @@ namespace vbci
       {
         r->set_cown_owner(this, content.get_base_header());
 
-        // For non-dragged regions, remove the register's stack reference —
-        // the cown now owns the region. For frame-local drags, the drag
-        // already adjusted the stack RC.
+        // Remove the register's stack reference, or the temporary guard used
+        // while moving a frame-local graph. The cown now owns the region.
         if constexpr (is_move)
-        {
-          if (next_loc.is_region() && !next_loc.to_region()->is_frame_local())
-            r->stack_dec();
-        }
+          r->stack_dec();
       }
 
       return true;
