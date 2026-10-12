@@ -1,0 +1,31 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Box
+  @value: bool
+
+func @initial(): @Box
+  $true = const bool true
+  $box = new @Box($true)
+  ret $box
+
+func @replace($cown: ref @Box): none
+  $true = const bool true
+  $box = new @Box($true)
+  $previous = store $cown $box
+  $current = load $cown
+  $value_ref = ref $current @value
+  $value = load $value_ref
+  $zero = const i32 0
+  $_ = ffi @set_exit_code($zero)
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $one = const i32 1
+  $_ = ffi @set_exit_code($one)
+  $cown = when @initial(): @Box
+  $_result = when @replace($cown): none
+
+  $_none = const none
+  ret $_none
