@@ -4,6 +4,101 @@ namespace vc
 {
   // Sythetic locations.
   inline const auto l_lambda = Location("lambda");
+  inline const auto l_box = Location("box");
+  inline const auto l_box_value = Location("$value");
+  std::map<const void*, Node> boxed_var_types;
+
+  bool is_lvalue(Node node)
+  {
+    auto parent = node->parent();
+
+    if (!parent || parent != Expr || parent->size() != 1)
+      return false;
+
+    auto grandparent = parent->parent();
+    return grandparent && grandparent == Equals &&
+      grandparent->front() == parent;
+  }
+
+  void find_captured_vars(Node top, std::set<const void*>& captured_vars)
+  {
+    top->traverse([&](auto node) {
+      if (node != Lambda)
+        return true;
+
+      node->traverse([&](auto child) {
+        if (child != LocalId || !child->lookup(node).empty())
+          return child != Error;
+
+        for (auto& def : child->lookup())
+        {
+          if (def == Var)
+          {
+            captured_vars.insert(def.get());
+            break;
+          }
+        }
+
+        return child != Error;
+      });
+
+      return true;
+    });
+  }
+
+  Node box_captured_var(Match& _, Node var, Node rhs)
+  {
+    auto ident = var / Ident;
+    auto type = var / Type;
+    auto top = var->parent(Top);
+    assert(top);
+
+    std::vector<Node> uses;
+    top->traverse([&](auto node) {
+      if (node == LocalId)
+      {
+        auto defs = node->lookup();
+
+        if (std::find(defs.begin(), defs.end(), var) != defs.end())
+          uses.push_back(node);
+      }
+
+      return node != Error;
+    });
+
+    auto id = _.fresh(l_box);
+    auto free_tps = collect_free_typeparams(var);
+    std::vector<AnonClassField> fields{
+      {l_box_value, clone(type), clone(rhs)}};
+    auto box = make_anon_class(
+      id,
+      var,
+      free_tps,
+      fields,
+      Params,
+      clone(type),
+      Node{});
+    boxed_var_types[var.get()] = clone(box.type);
+
+    for (auto& use : uses)
+    {
+      auto parent = use->parent();
+      auto field =
+        FieldRef << (Expr << (LocalId ^ ident))
+                 << (FieldId ^ l_box_value);
+
+      if (is_lvalue(use))
+        parent->replace(use, Ref << (Expr << field));
+      else
+        parent->replace(use, Load << (Expr << field));
+    }
+
+    return Seq
+      << (Lift << ClassBody << box.class_def)
+      << (Equals
+          << (Expr << (Let << clone(ident) << box.type))
+          << (Expr << box.create_call));
+  }
 
   Node call_func(Node ident, Node tps, Node args)
   {
@@ -37,13 +132,14 @@ namespace vc
     {
       if (param == Expr)
         return {
-          Node{}, err(param, "Can't use a case value in a non-case lambda")};
+          Node{},
+          err(param, "Can't use a case value in a non-case lambda"),
+          Node{}};
     }
 
-    std::map<Location, std::pair<Node, bool>> freevars;
+    std::map<Location, Node> freevars;
     std::set<Location> enclosing_field_captures;
     bool has_raise = false;
-    bool has_var_capture = false;
 
     lambda->traverse([&](auto node) {
       bool ok = true;
@@ -73,13 +169,15 @@ namespace vc
             {
               if (def->in({ParamDef, Let, Var}))
               {
-                bool fv_is_var = (def == Var);
-
-                if (fv_is_var)
-                  has_var_capture = true;
-
-                fv_type = clone(def / Type);
-                freevars.emplace(loc, std::make_pair(fv_type, fv_is_var));
+                if (def == Var)
+                {
+                  auto boxed = boxed_var_types.find(def.get());
+                  assert(boxed != boxed_var_types.end());
+                  fv_type = clone(boxed->second);
+                }
+                else
+                  fv_type = clone(def / Type);
+                freevars.emplace(loc, fv_type);
                 break;
               }
             }
@@ -103,8 +201,7 @@ namespace vc
                     (child / Ident)->location() == loc)
                   {
                     fv_type = clone(child / Type);
-                    freevars.emplace(
-                      loc, std::make_pair(fv_type, false));
+                    freevars.emplace(loc, fv_type);
                     enclosing_field_captures.insert(loc);
                     break;
                   }
@@ -112,7 +209,7 @@ namespace vc
               }
 
               if (freevars.find(loc) == freevars.end())
-                freevars.emplace(loc, std::make_pair(Node{}, false));
+                freevars.emplace(loc, Node{});
             }
           }
         }
@@ -123,7 +220,7 @@ namespace vc
 
     auto id = _.fresh(l_lambda);
 
-    bool is_block = has_raise || has_var_capture;
+    bool is_block = has_raise;
 
     // Build scope info.
     auto enclosing_cls = lambda->parent(ClassDef);
@@ -157,9 +254,7 @@ namespace vc
     // Build fields from free variables.
     std::vector<AnonClassField> fields;
 
-    // For block lambdas (raising or var-capturing), add a
-    // $raise_target field that captures the current raise target
-    // at creation time.
+    // Raising lambdas capture the current raise target at creation time.
     if (is_block)
     {
       auto u64_type = Type
@@ -168,9 +263,8 @@ namespace vc
       fields.push_back({Location("$raise_target"), u64_type, Expr << GetRaise});
     }
 
-    for (auto& [freevar, fv_info] : freevars)
+    for (auto& [freevar, fv_type] : freevars)
     {
-      auto& [fv_type, fv_is_var] = fv_info;
       Node fv_resolved;
 
       if (fv_type)
@@ -183,21 +277,7 @@ namespace vc
         fv_resolved = make_type();
       }
 
-      if (fv_is_var)
-      {
-        // Capture a RegisterRef to the var.
-        // Field type is ref[T] since the field holds a reference.
-        auto ref_type = Type
-          << (TypeName << (NameElement << (Ident ^ "_builtin") << TypeArgs)
-                       << (NameElement << (Ident ^ "ref")
-                                       << (TypeArgs << clone(fv_resolved))));
-        fields.push_back(
-          {freevar,
-           ref_type,
-           Expr << (Ref << (Expr << (LocalId ^ freevar))),
-           true});
-      }
-      else if (enclosing_field_captures.count(freevar) > 0)
+      if (enclosing_field_captures.count(freevar) > 0)
       {
         // Enclosing lambda field capture: the creation-site expression
         // loads the field from the outer lambda's $self. At the creation
@@ -221,32 +301,12 @@ namespace vc
     // Build apply body: field-loading preamble + lambda body.
     Node apply_body = Body;
 
-    // Collect names needing body rewriting.
-    // var captures: rewritten through Load/Ref via $ref_ locals.
-    // let captures: rewritten to FieldRef on $self.
-    std::set<Location> ref_captures;
+    // Collect captured values that must be rewritten to fields on $self.
     std::set<Location> let_captures;
 
     for (auto& field : fields)
     {
-      if (field.is_var)
-      {
-        // Load the RegisterRef from the field into a $ref_
-        // prefixed Let. The body will be rewritten to
-        // read/write through this ref.
-        auto ref_name = Location("$ref_" + std::string(field.name.view()));
-        apply_body
-          << (Expr
-              << (Equals
-                  << (Expr << (Let << (Ident ^ ref_name) << clone(field.type)))
-                  << (Expr
-                      << (Load
-                          << (Expr
-                              << (FieldRef << (Expr << (LocalId ^ "$self"))
-                                           << (FieldId ^ field.name)))))));
-        ref_captures.insert(field.name);
-      }
-      else if (field.name.view()[0] == '$')
+      if (field.name.view()[0] == '$')
       {
         // Internal field (e.g., $raise_target): load value
         // directly into a Let with the same name.
@@ -299,23 +359,7 @@ namespace vc
       for (auto& node : to_rewrite)
       {
         auto parent = node->parent();
-
-        // Check if this is an l-value (bare LHS of Equals).
-        bool is_lvalue = false;
-
-        if (parent && parent == Expr && parent->size() == 1)
-        {
-          auto grandparent = parent->parent();
-
-          if (
-            grandparent && grandparent == Equals &&
-            grandparent->front() == parent)
-          {
-            is_lvalue = true;
-          }
-        }
-
-        if (is_lvalue)
+        if (is_lvalue(node))
         {
           // Write: replace with Ref(Expr(FieldRef)) — ANF handles Store.
           parent->replace(
@@ -334,57 +378,6 @@ namespace vc
               << (Expr
                   << (FieldRef << (Expr << (LocalId ^ "$self"))
                                << (FieldId ^ node->location()))));
-        }
-      }
-    }
-
-    // Rewrite var-captured (ref) references in the body.
-    // Reads become Load << (Expr << (LocalId ^ "$ref_x")).
-    // Writes (bare LHS of Equals) become Ref << (LocalId ^ "$ref_x").
-    if (!ref_captures.empty())
-    {
-      std::vector<Node> to_rewrite;
-      apply_body->traverse([&](auto node) {
-        if (node == LocalId && ref_captures.count(node->location()) > 0)
-          to_rewrite.push_back(node);
-        return true;
-      });
-
-      for (auto& node : to_rewrite)
-      {
-        auto ref_name =
-          Location("$ref_" + std::string(node->location().view()));
-
-        // Check if this is an l-value (LHS of Equals).
-        // Only bare assignments (LocalId is the sole child of the
-        // LHS Expr) are l-values. Compound expressions like
-        // var(i) = val are reads (the indexing produces the ref).
-        auto parent = node->parent();
-        bool is_lvalue = false;
-
-        if (parent && parent == Expr && parent->size() == 1)
-        {
-          auto grandparent = parent->parent();
-
-          if (
-            grandparent && grandparent == Equals &&
-            grandparent->front() == parent)
-          {
-            is_lvalue = true;
-          }
-        }
-
-        if (is_lvalue)
-        {
-          // Write: replace LocalId with
-          // (Ref << (Expr << (LocalId ^ "$ref_x")))
-          parent->replace(node, Ref << (Expr << (LocalId ^ ref_name)));
-        }
-        else
-        {
-          // Read: replace LocalId with
-          // (Load << (Expr << (LocalId ^ "$ref_x")))
-          parent->replace(node, Load << (Expr << (LocalId ^ ref_name)));
         }
       }
     }
@@ -545,11 +538,25 @@ namespace vc
 
   PassDef sugar()
   {
+    auto captured_vars = std::make_shared<std::set<const void*>>();
     PassDef p{
       "sugar",
       wfPassSugar,
       dir::topdown,
       {
+        // Box mutable locals captured by a lambda.
+        In(Expr) *
+            (T(Equals)
+             << ((T(Expr) << T(Var)[Var]) * T(Expr)[Rhs])) >>
+          [captured_vars](Match& _) -> Node {
+          auto var = _(Var);
+
+          if (captured_vars->count(var.get()) == 0)
+            return NoChange;
+
+          return box_captured_var(_, var, _(Rhs));
+        },
+
         // Rewrite `when` arguments.
         In(Expr) * T(When)
             << ((T(Expr)[Args] << (T(Tuple)[Tuple] * End)) * T(Type)[Type] *
@@ -719,6 +726,13 @@ namespace vc
           return Seq << _(Function) << rhs;
         },
       }};
+
+    p.pre([captured_vars](auto top) {
+      boxed_var_types.clear();
+      captured_vars->clear();
+      find_captured_vars(top, *captured_vars);
+      return top;
+    });
 
     p.post([](auto top) {
       top->traverse([&](auto node) {

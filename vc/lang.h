@@ -514,7 +514,6 @@ namespace vc
     Location name; // field / create param name
     Node type; // Type node (cloned)
     Node create_arg; // Expr for the create call argument
-    bool is_var = false; // true if captured from a Var (by reference)
   };
 
   // Result of make_anon_class.
@@ -522,11 +521,13 @@ namespace vc
   {
     Node class_def; // ClassDef to Lift into ClassBody
     Node create_call; // Call expression to create an instance
+    Node type; // Type of the created instance
   };
 
-  // Build an anonymous class with fields, a create method, and an apply
-  // method. The class mirrors the free type params from enclosing scopes.
-  // apply_body must already include field-loading preamble if needed.
+  // Build an anonymous class with fields and a create method, optionally
+  // including an apply method. The class mirrors the free type params from
+  // enclosing scopes. apply_body must already include a field-loading preamble
+  // if needed.
   AnonClass make_anon_class(
     Location id,
     Node context_node,
