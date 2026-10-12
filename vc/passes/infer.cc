@@ -12,7 +12,17 @@ namespace vc
 {
   static bool is_lambda_function(const Node& func);
 
+  static bool is_inferred_field_class(const Node& class_def)
+  {
+    if (!class_def || class_def != ClassDef)
+      return false;
+
+    auto name = (class_def / Ident)->location().view();
+    return name.rfind("lambda$", 0) == 0 || name.rfind("box$", 0) == 0;
+  }
+
   std::unordered_set<const void*> lambda_returns_omitted;
+  std::unordered_set<const void*> default_inferred_fields;
 
   static bool lambda_return_was_omitted(const Node& func)
   {
@@ -651,6 +661,39 @@ namespace vc
 
   using TypeEnv = std::map<Location, LocalTypeInfo>;
 
+  static Node default_inferred_field_for_load(
+    const Location& loc,
+    const TypeEnv& env,
+    Node top,
+    const std::map<Location, Node>& def_stmts)
+  {
+    auto load_def = def_stmts.find(loc);
+    if (load_def == def_stmts.end() || load_def->second != Load)
+      return {};
+
+    auto field_def = def_stmts.find((load_def->second / Rhs)->location());
+    if (field_def == def_stmts.end() || field_def->second != FieldRef)
+      return {};
+
+    auto field_ref = field_def->second;
+    auto obj_it = env.find(((field_ref / Arg) / Rhs)->location());
+    if (obj_it == env.end())
+      return {};
+
+    auto class_def = find_def(top, obj_it->second.type->front());
+    if (!is_inferred_field_class(class_def))
+      return {};
+
+    auto field_name = (field_ref / FieldId)->location();
+    for (auto& field : *(class_def / ClassBody))
+      if (
+        field == FieldDef && (field / Ident)->location() == field_name &&
+        default_inferred_fields.count(field.get()) > 0)
+        return field;
+
+    return {};
+  }
+
   struct PendingError
   {
     Node site;
@@ -966,6 +1009,34 @@ namespace vc
     owner->replace(old_child, new_child);
     note_infer_transfer_change();
     return true;
+  }
+
+  static bool replace_inferred_field_type(
+    const Node& field, const Node& new_type)
+  {
+    bool changed =
+      replace_if_changed(field, field / Type, clone(new_type));
+    auto class_def = field->parent(ClassDef);
+    auto field_name = (field / Ident)->location();
+
+    for (auto& child : *(class_def / ClassBody))
+    {
+      if (
+        child != Function ||
+        (child / Ident)->location().view() != "create")
+        continue;
+
+      for (auto& param : *(child / Params))
+      {
+        if ((param / Ident)->location() == field_name)
+          changed =
+            replace_if_changed(param, param / Type, clone(new_type)) ||
+            changed;
+      }
+      break;
+    }
+
+    return changed;
   }
 
   static bool refine_const_local(
@@ -2350,13 +2421,34 @@ namespace vc
       if (!compatible)
         return false;
 
-      if (current_prim && current_prim->type() == expected_prim->type())
-        return false;
-
-      it->second.type = primitive_or_ffi_type(expected_prim->type());
+      bool changed =
+        !current_prim || current_prim->type() != expected_prim->type();
+      if (changed)
+        it->second.type = primitive_or_ffi_type(expected_prim->type());
 
       if (def_stmts != nullptr)
       {
+        auto field =
+          default_inferred_field_for_load(loc, env, top, *def_stmts);
+        if (field)
+        {
+          auto field_prim = extract_primitive(field / Type);
+          bool compatible =
+            contains_typevar(field / Type) ||
+            (field_prim && field_prim->in(integer_types) &&
+             expected_prim->in(integer_types)) ||
+            (field_prim && field_prim->in(float_types) &&
+             expected_prim->in(float_types));
+
+          if (
+            compatible &&
+            replace_inferred_field_type(
+              field, primitive_or_ffi_type(expected_prim->type())))
+          {
+            changed = true;
+          }
+        }
+
         auto def_it = def_stmts->find(loc);
         if (def_it != def_stmts->end() && def_it->second == Const)
         {
@@ -2368,6 +2460,7 @@ namespace vc
             {
               const_stmt->replace(old_type, expected_prim->type());
               note_infer_transfer_change();
+              changed = true;
             }
           }
           else
@@ -2377,11 +2470,12 @@ namespace vc
             const_stmt->erase(const_stmt->begin(), const_stmt->end());
             const_stmt << dst << expected_prim->type() << lit;
             note_infer_transfer_change();
+            changed = true;
           }
         }
       }
 
-      return true;
+      return changed;
     };
     auto refine_from_expected =
       [&](const Location& loc, const Node& expected) -> bool {
@@ -2739,6 +2833,7 @@ namespace vc
         continue;
 
       Node resolved;
+      Node matching_field;
       bool allow_default_arg = false;
 
       // FieldDef takes priority.
@@ -2751,9 +2846,10 @@ namespace vc
             continue;
           if ((child / Ident)->location().view() != pname)
             continue;
+          matching_field = child;
           if (!contains_typevar(child / Type))
             resolved = child / Type;
-          else if (is_lambda_function(func_def))
+          else if (is_inferred_field_class(parent_cls))
             allow_default_arg = true;
           break;
         }
@@ -2769,6 +2865,11 @@ namespace vc
           continue;
         resolved = arg_it->second.type;
       }
+
+      if (
+        matching_field && allow_default_arg &&
+        contains_default_type(resolved))
+        default_inferred_fields.insert(matching_field.get());
 
       replace_if_changed(param, formal_type, clone(resolved));
 
@@ -3428,11 +3529,8 @@ namespace vc
                 auto field_inner = dst_it != env.end() ?
                   extract_ref_inner(dst_it->second.type) :
                   Node{};
-                auto class_ident = class_def / Ident;
-                bool lambda_field =
-                  class_ident->location().view().rfind("lambda$", 0) == 0;
                 if (
-                  lambda_field && field_inner &&
+                  is_inferred_field_class(class_def) && field_inner &&
                   !contains_typevar(field_inner) &&
                   !contains_default_type(field_inner) &&
                   !is_any_type(field_inner))
@@ -3454,7 +3552,7 @@ namespace vc
 
                   if (
                     should_refine &&
-                    replace_if_changed(f, f / Type, clone(field_inner)))
+                    replace_inferred_field_type(f, field_inner))
                     changes.forward = true;
                 }
                 break;
@@ -3985,7 +4083,11 @@ namespace vc
         {
           auto lookup_node = lookup_it->second;
           auto recv_it = env.find((lookup_node / Rhs)->location());
-          if (recv_it != env.end() && !is_default_type(recv_it->second.type))
+          bool inferred_field_receiver = default_inferred_field_for_load(
+            (lookup_node / Rhs)->location(), env, top, all_def_stmts);
+          if (
+            recv_it != env.end() && !is_default_type(recv_it->second.type) &&
+            !inferred_field_receiver)
           {
             auto hand = (lookup_node / Lhs)->type();
             auto method_ident = lookup_method_name(lookup_node);
@@ -4052,8 +4154,13 @@ namespace vc
 
           if (lookup_it != lookup_stmts.end())
           {
-            auto recv_it = env.find((lookup_it->second / Rhs)->location());
-            if (recv_it != env.end() && is_default_type(recv_it->second.type))
+            auto recv_loc = (lookup_it->second / Rhs)->location();
+            auto recv_it = env.find(recv_loc);
+            if (
+              recv_it != env.end() &&
+              (is_default_type(recv_it->second.type) ||
+              default_inferred_field_for_load(
+                 recv_loc, env, top, all_def_stmts)))
             {
               allow_arg_fallback = true;
             }
@@ -4101,8 +4208,25 @@ namespace vc
 
           if (target_prim)
           {
-            auto target_type = primitive_or_ffi_type(target_prim->type());
             auto lookup_it = lookup_stmts.find(src_loc);
+            if (
+              lookup_it != lookup_stmts.end() &&
+              default_inferred_field_for_load(
+                (lookup_it->second / Rhs)->location(),
+                env,
+                top,
+                all_def_stmts))
+            {
+              backward_refine_calldyn(
+                stmt,
+                target_prim,
+                env,
+                top,
+                lookup_stmts,
+                &all_def_stmts);
+            }
+
+            auto target_type = primitive_or_ffi_type(target_prim->type());
             if (lookup_it != lookup_stmts.end())
             {
               auto recv_loc = (lookup_it->second / Rhs)->location();
@@ -5505,6 +5629,7 @@ namespace vc
       Nodes deferred;
 
       lambda_returns_omitted.clear();
+      default_inferred_fields.clear();
       deferred_param_errors.clear();
       top->traverse([&](auto node) {
         if (

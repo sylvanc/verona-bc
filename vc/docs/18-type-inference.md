@@ -163,7 +163,11 @@ var x: i32 = 0;                      // 0 → i32
 let y = x + 1;                       // 1 → i32 (from x's type)
 ```
 
-The infer pass tracks type information per variable and propagates refinements through Copy, Move, Lookup, RegisterRef, and New/Stack operations. When a literal changes type (e.g., `u64` → `i32` due to return type refinement), the cascade updates all downstream uses, including reference types (`ref[u64]` → `ref[i32]`) and anonymous class field types.
+The infer pass tracks type information per variable and propagates refinements
+through Copy, Move, Lookup, Load, FieldRef, and allocation operations. When a
+literal changes type (for example, `u64` to `i32` due to return type
+refinement), the cascade updates all downstream uses, including managed cell
+fields and anonymous class field types.
 
 ---
 
@@ -184,19 +188,22 @@ arr.each i -> { process(i) }   // i: i32, inferred from T -> none
 
 ### Captured Variable Refinement
 
-Captured `var` bindings create reference fields in the lambda class (e.g., `ref[TypeVar]`). The compiler propagates concrete types through the capture chain:
+Captured `var` bindings create managed cells that are shared by the defining
+scope and every capturing closure. The compiler propagates concrete types
+through the cell:
 
-1. Return-type refinement resolves the `var`'s literal type in the enclosing scope
-2. Cascade propagation updates the RegisterRef and the lambda's field type
-3. The lambda's `apply` method is re-processed with the corrected field type
+1. The cell field and constructor parameter initially follow the binding's type.
+2. A concrete use in a lambda propagates backward through `Load` and `FieldRef`.
+3. The cell field, constructor parameter, and initializer are refined together.
+4. The lambda's `apply` method is re-processed with the corrected field type.
 
 ```verona
-main(): i32
+main(): none
 {
-  var sum = 0;                        // default u64, refined to i32 by return type
   let arr = array[i32]::fill(10);
-  arr.each i -> { sum = sum + i; none }  // sum: i32 inside lambda
-  sum
+  var sum = 0;                        // initially a default integer
+  arr.each i -> { sum = sum + i }     // i: i32, so sum becomes i32
+  ffi::exit_code sum
 }
 ```
 

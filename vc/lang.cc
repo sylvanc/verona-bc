@@ -326,6 +326,7 @@ namespace vc
     Node apply_body,
     bool is_block)
   {
+    assert(!is_block || apply_body);
     auto enclosing_cls = context_node->parent(ClassDef);
     assert(enclosing_cls);
     auto cls_path = scope_path(enclosing_cls);
@@ -443,15 +444,19 @@ namespace vc
     }
     else
     {
+      classbody
+        << (Function << Rhs << (Ident ^ "create") << TypeParams
+                     << create_params << self_type << Where
+                     << (Body << (Expr << (New << new_args))));
+
+      if (apply_body)
+        classbody
+          << (Function << Rhs << (Ident ^ "apply") << TypeParams
+                       << full_apply_params << apply_ret_type << Where
+                       << apply_body);
+
       class_def =
-        ClassDef << None << (Ident ^ id) << typeparams << Where
-                 << (classbody
-                     << (Function << Rhs << (Ident ^ "create") << TypeParams
-                                  << create_params << self_type << Where
-                                  << (Body << (Expr << (New << new_args))))
-                     << (Function << Rhs << (Ident ^ "apply") << TypeParams
-                                  << full_apply_params << apply_ret_type
-                                  << Where << apply_body));
+        ClassDef << None << (Ident ^ id) << typeparams << Where << classbody;
 
       create_expr =
         Call << (FuncName << *clone(fq_tn_create)
@@ -459,6 +464,6 @@ namespace vc
              << create_args;
     }
 
-    return {class_def, create_expr};
+    return {class_def, create_expr, Type << clone(fq_tn_create)};
   }
 }
