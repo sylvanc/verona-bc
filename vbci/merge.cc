@@ -18,7 +18,7 @@ namespace vbci
     if (v->is_readonly())
       return nullptr;
 
-    if (!v->is_header())
+    if (!v->get_base_header())
       return nullptr;
 
     auto loc = v->location();
@@ -37,7 +37,7 @@ namespace vbci
     if (v->is_readonly())
       return false;
 
-    if (!v->is_header())
+    if (!v->get_base_header())
       return false;
 
     return v->location().is_stack();
@@ -159,7 +159,7 @@ namespace vbci
     // a=heap, b=frame-local → drag b into a's region.
     if (!a_fl && b_fl)
     {
-      if (!drag_allocation<false>(a_r, b->get_header()))
+      if (!drag_allocation<false>(a_r, b->get_base_header()))
         Value::error(Error::BadMerge);
       return;
     }
@@ -167,7 +167,7 @@ namespace vbci
     // a=frame-local, b=heap → drag a into b's region.
     if (a_fl && !b_fl)
     {
-      if (!drag_allocation<false>(b_r, a->get_header()))
+      if (!drag_allocation<false>(b_r, a->get_base_header()))
         Value::error(Error::BadMerge);
       return;
     }

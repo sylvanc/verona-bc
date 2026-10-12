@@ -2281,7 +2281,7 @@ namespace vbci
         // Drag the frame-local allocation to the previous frame's region.
         auto& prev_frame = frames.at(frames.size() - 2);
 
-        if (!drag_allocation<false>(prev_frame.region, ret->get_header()))
+        if (!drag_allocation<false>(prev_frame.region, ret->get_base_header()))
           Value::error(Error::BadStackEscape);
       }
       else
@@ -2290,7 +2290,7 @@ namespace vbci
         auto r = Region::create(RegionType::RegionRC);
         // This is a fresh region, so we need the stack rc from the entry, so do
         // not count this as a move.
-        if (!drag_allocation<false>(r, ret->get_header()))
+        if (!drag_allocation<false>(r, ret->get_base_header()))
         {
           r->free_region();
           Value::error(Error::BadStackEscape);
@@ -2348,7 +2348,7 @@ namespace vbci
       // target frame's region so it survives intermediate teardowns.
       auto target_region = frame_region_for_stack(target);
 
-      if (!drag_allocation<false>(target_region, ret->get_header()))
+      if (!drag_allocation<false>(target_region, ret->get_base_header()))
         Value::error(Error::BadStackEscape);
     }
 

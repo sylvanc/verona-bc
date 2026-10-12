@@ -496,6 +496,23 @@ namespace vbci
     }
   }
 
+  Header* Value::get_base_header() const
+  {
+    switch (tag)
+    {
+      case ValueType::Object:
+      case ValueType::FieldRef:
+        return obj;
+
+      case ValueType::Array:
+      case ValueType::ArrayRef:
+        return arr;
+
+      default:
+        return nullptr;
+    }
+  }
+
   Object* Value::get_object() const
   {
     if (tag != ValueType::Object)
@@ -1049,7 +1066,7 @@ namespace vbci
 
             if (
               !target_region ||
-              !drag_allocation<is_move>(target_region, v->get_header()))
+              !drag_allocation<is_move>(target_region, v->get_base_header()))
               Value::error(Error::BadStoreTarget);
           }
         }

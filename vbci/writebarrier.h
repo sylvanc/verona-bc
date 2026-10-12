@@ -182,7 +182,7 @@ namespace vbci::writebarrier
       // Save the header for potential reparenting (before the register is
       // cleared during a move).
       Header* in_header =
-        (need_in_parent && in->is_header()) ? in->get_header() : nullptr;
+        need_in_parent ? in->get_base_header() : nullptr;
 
       // Drag the incoming value.
       if (need_in_drag)
@@ -190,7 +190,7 @@ namespace vbci::writebarrier
         assert(!need_in_parent);
 
         if (!drag_allocation<is_move>(
-              in_drag_value, in->get_header(), &out_clear_parent_region))
+              in_drag_value, in->get_base_header(), &out_clear_parent_region))
           return false;
 
         // If we drag a sub-region reference to the same region as the outgoing

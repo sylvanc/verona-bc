@@ -1,0 +1,31 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+// A managed object field strongly retains an interior array reference.
+
+class @Holder
+  @reference: ref i32
+
+func @main(): none
+  $len = const usize 1
+  $zero = const usize 0
+  $two = const i32 2
+  $array = region rc [i32] $len
+  $element_ref = ref $array $zero
+  $previous = store $element_ref $two
+  $holder = region rc @Holder($element_ref)
+
+  drop $previous
+  drop $element_ref
+  drop $array
+
+  $holder_ref = ref $holder @reference
+  $stored_ref = load $holder_ref
+  $observed = load $stored_ref
+  $_ = ffi @set_exit_code($observed)
+
+  drop $stored_ref
+  drop $holder_ref
+  drop $holder
+  $_none = const none
+  ret $_none

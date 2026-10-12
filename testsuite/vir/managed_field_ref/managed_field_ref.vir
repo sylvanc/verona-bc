@@ -1,0 +1,30 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+// A managed object field strongly retains an interior field reference.
+
+class @Target
+  @value: i32
+
+class @Holder
+  @reference: ref i32
+
+func @main(): none
+  $one = const i32 1
+  $target = region rc @Target($one)
+  $target_ref = ref $target @value
+  $holder = region rc @Holder($target_ref)
+
+  drop $target_ref
+  drop $target
+
+  $holder_ref = ref $holder @reference
+  $stored_ref = load $holder_ref
+  $observed = load $stored_ref
+  $_ = ffi @set_exit_code($observed)
+
+  drop $stored_ref
+  drop $holder_ref
+  drop $holder
+  $_none = const none
+  ret $_none

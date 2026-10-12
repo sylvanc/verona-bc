@@ -143,6 +143,8 @@ namespace vbci
     uint64_t get_u64() const;
     void* get_ptr() const;
     Header* get_header() const;
+    // Base allocation for direct and interior managed values, or nullptr.
+    Header* get_base_header() const;
     Object* get_object() const;
     Cown* get_cown() const;
     Array* get_array() const;

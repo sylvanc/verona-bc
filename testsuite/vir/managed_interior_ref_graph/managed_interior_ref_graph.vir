@@ -1,0 +1,100 @@
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+// Exercise interior references through dragging, aliasing, cycles, and freeze.
+
+class @Target
+  @value: i32
+
+class @Holder
+  @reference: ref i32
+
+class @Aliases
+  @first: ref i32
+  @second: ref i32
+
+class @Node
+  @next: dyn
+  @value: i32
+
+class @FrozenGraph
+  @root: @Node
+  @reference: ref i32
+
+func @make_holder(): @Holder
+  $three = const i32 3
+  $target = new @Target($three)
+  $target_ref = ref $target @value
+  $holder = new @Holder($target_ref)
+  ret $holder
+
+func @test_return_drag(): i32
+  $holder = call @make_holder()
+  $holder_ref = ref $holder @reference
+  $stored_ref = load $holder_ref
+  $observed = load $stored_ref
+  ret $observed
+
+func @test_aliasing(): i32
+  $three = const i32 3
+  $four = const i32 4
+  $target = region rc @Target($three)
+  $target_ref = ref $target @value
+  $aliases = heap $target @Aliases($target_ref, $target_ref)
+
+  drop $target_ref
+  drop $target
+
+  $first_field = ref $aliases @first
+  $second_field = ref $aliases @second
+  $first = load $first_field
+  $second = load $second_field
+  $previous = store $first $four
+  $observed = load $second
+
+  drop $previous
+  drop $second
+  drop $first
+  drop $second_field
+  drop $first_field
+  drop $aliases
+  ret $observed
+
+func @test_cycle_freeze(): i32
+  $none = const none
+  $five = const i32 5
+  $six = const i32 6
+  $root = region rc @Node($none, $five)
+  $child = heap $root @Node($root, $six)
+  $next_ref = ref $root @next
+  $previous = store $next_ref $child
+  $value_ref = ref $root @value
+  $graph = heap $root @FrozenGraph($root, $value_ref)
+
+  drop $previous
+  drop $value_ref
+  drop $next_ref
+  drop $child
+  drop $root
+
+  $frozen = freeze $graph
+  $reference_field = ref $frozen @reference
+  $stored_ref = load $reference_field
+  $observed = load $stored_ref
+
+  drop $stored_ref
+  drop $reference_field
+  drop $frozen
+  ret $observed
+
+func @main(): none
+  $dragged = call @test_return_drag()
+  $aliased = call @test_aliasing()
+  $frozen = call @test_cycle_freeze()
+  $partial = add $dragged $aliased
+  $total = add $partial $frozen
+  $expected = const i32 12
+  $result = sub $total $expected
+  $_ = ffi @set_exit_code($result)
+  $_none = const none
+  ret $_none
