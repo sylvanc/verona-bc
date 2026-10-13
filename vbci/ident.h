@@ -33,6 +33,7 @@ namespace vbci
     BadFreeze,
     BadMerge,
     SchedulerAlreadyRunning,
+    Ok
   };
 
   using PC = size_t;

@@ -759,6 +759,8 @@ namespace vbci
         cown->dec();
       return;
     }
+    auto loc = location();
+    field_dec();
 
     switch (tag)
     {
@@ -767,7 +769,6 @@ namespace vbci
       case ValueType::Array:
       case ValueType::ArrayRef:
       {
-        auto loc = location();
         if (loc.is_region() && !loc.to_region()->stack_dec())
           return;
         break;
@@ -776,8 +777,6 @@ namespace vbci
       default:
         break;
     }
-
-    field_dec();
   }
 
   void Value::field_inc() const

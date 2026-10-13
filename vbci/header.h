@@ -156,7 +156,7 @@ namespace vbci
         find(this)->reg_dec();
         return;
       }
-
+      
       // If stack_dec returns false, the region has been freed, so we can
       // return early without doing anything else.
       if (loc.is_region() && !loc.to_region()->stack_dec())
@@ -213,7 +213,12 @@ namespace vbci
 
       auto r = loc.to_region();
 
+#ifdef NDEBUG
       if (!r->is_finalizing() && (--rc == 0))
+#else
+      // Detecting rc issues in finalization (as opposed to cyclic references)
+      if ((--rc == 0) && !r->is_finalizing())
+#endif
         collect(this);
     }
   };
