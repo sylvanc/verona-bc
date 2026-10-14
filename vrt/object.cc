@@ -80,7 +80,7 @@ namespace
       vrt::Failure::invalid_object_state);
   }
 
-  bool is_singleton_class(const vrt::Class* cls)
+  [[maybe_unused]] bool is_singleton_class(const vrt::Class* cls)
   {
     return cls->singleton != nullptr;
   }
