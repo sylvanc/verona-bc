@@ -10,5 +10,5 @@ state for peer emitters.
 - [Diagnostics](diagnostics.md)
 
 The [VIR format](../../docs/formats/vir.md) owns the input contract. Backend
-implementation details for the migrated VBC emitter are documented under
-[VBC](../vbc/README.md).
+implementation details are documented under
+[VBC](../vbc/README.md) and [LLVM](../llvm/README.md).

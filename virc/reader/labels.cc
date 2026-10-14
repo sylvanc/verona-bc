@@ -1,8 +1,9 @@
-#include "../lang.h"
+#include "../reader/reader.h"
 
 namespace virc
 {
-  const auto Statement = Def / T(Drop, AtTeardown, Arg, Source, Offset);
+  const auto Statement =
+    Def / T(Drop, AtTeardown, Arg, vir::Source, Offset);
   const auto Terminator = T(Tailcall, TailcallDyn, Return, Raise, Cond, Jump);
 
   PassDef labels()

@@ -1,0 +1,27 @@
+// Coverage: new of a zero-field class creates a collectible object whose
+// finalizer runs when the object is dropped.
+// VBCI coverage: empty objects use ordinary frame-local allocation.
+// Native VRT coverage: generated new calls do not substitute the separately
+// initialized immortal singleton payload.
+// Non-goals: pairwise identity is covered by new_empty and the direct VRT
+// object API fixture.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Empty
+  @final @Empty_final
+
+func @Empty_final($_self: @Empty): none
+  $success = const i32 0
+  $_exit = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $failure = const i32 1
+  $_initial = ffi @set_exit_code($failure)
+  $object = new @Empty()
+  drop $object
+  $_none = const none
+  ret $_none

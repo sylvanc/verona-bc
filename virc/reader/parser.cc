@@ -1,9 +1,10 @@
-#include "../lang.h"
+#include "../reader/reader.h"
 
 namespace virc
 {
   const auto wfParserTokens = Lib | Type | Primitive | Class | Func | Memo |
-    Vars | Source | GlobalId | LocalId | LabelId | Equals | LParen | RParen |
+    Vars | vir::Source | GlobalId | LocalId | LabelId | Equals | LParen |
+    RParen |
     LBracket | RBracket | Comma | Colon | Union | TupleType | Vararg |
     wfRegionType | wfPrimitiveType | Dyn | Ref | Cown | wfStatement |
     wfTerminator | wfLiteral | String | RawString;
@@ -65,6 +66,7 @@ namespace virc
         // Op codes.
         "const\\b" >> [](auto& m) { m.add(Const); },
         "convert\\b" >> [](auto& m) { m.add(Convert); },
+        "singleton\\b" >> [](auto& m) { m.add(Singleton); },
         "new\\b" >> [](auto& m) { m.add(New); },
         "stack\\b" >> [](auto& m) { m.add(Stack); },
         "heap\\b" >> [](auto& m) { m.add(Heap); },
@@ -76,6 +78,7 @@ namespace virc
         "freeze\\b" >> [](auto& m) { m.add(Freeze); },
         "pin\\b" >> [](auto& m) { m.add(Pin); },
         "unpin\\b" >> [](auto& m) { m.add(Unpin); },
+        "merge\\b" >> [](auto& m) { m.add(Merge); },
         "ffistruct\\b" >> [](auto& m) { m.add(FFIStruct); },
         "ffiload\\b" >> [](auto& m) { m.add(FFILoad); },
         "ffistore\\b" >> [](auto& m) { m.add(FFIStore); },
@@ -84,6 +87,9 @@ namespace virc
         "store\\b" >> [](auto& m) { m.add(Store); },
         "lookup\\b" >> [](auto& m) { m.add(Lookup); },
         "call\\b" >> [](auto& m) { m.add(Call); },
+        "arraycopy\\b" >> [](auto& m) { m.add(ArrayCopy); },
+        "arrayfill\\b" >> [](auto& m) { m.add(ArrayFill); },
+        "arraycmp\\b" >> [](auto& m) { m.add(ArrayCompare); },
         "memoslot\\b" >> [](auto& m) { m.add(MemoSlot); },
 
         "ffi\\b" >> [](auto& m) { m.add(FFI); },
@@ -169,7 +175,7 @@ namespace virc
         "," >> [](auto& m) { m.add(Comma); },
         ":" >> [](auto& m) { m.add(Colon); },
         "\\|" >> [](auto& m) { m.add(Union); },
-        "#" >> [](auto& m) { m.add(Source); },
+        "#" >> [](auto& m) { m.add(vir::Source); },
         "\\.\\.\\." >> [](auto& m) { m.add(Vararg); },
 
         // Identifiers.

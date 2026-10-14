@@ -1,8 +1,20 @@
-cmake_minimum_required(VERSION 3.14.0)
-project(vbc VERSION 1.0.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.28)
+project(vbc VERSION 1.0.0 LANGUAGES C CXX)
+
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
 
 include(FetchContent)
+include(GNUInstallDirs)
 find_package(Threads REQUIRED)
+
+option(VERONA_ENABLE_LLVM_BACKEND "Build the LLVM backend" ON)
+
+if(VERONA_ENABLE_LLVM_BACKEND)
+  find_package(LLVM REQUIRED CONFIG)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -63,7 +75,7 @@ set(TRIESTE_BUILD_PARSERS Off)
 FetchContent_Declare(
   trieste
   GIT_REPOSITORY https://github.com/microsoft/trieste
-  GIT_TAG f4423612e7a33dd8147fa7945d3b3b7a2dd8861c
+  GIT_TAG 70a79da3772b62953ae9e6551b6976b6a7e2bba4
 )
 
 FetchContent_MakeAvailable_ExcludeFromAll(trieste)
@@ -73,10 +85,9 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 # Installation instructions
 set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/dist)
 
-add_library(verona_headers INTERFACE)
-add_library(verona::include ALIAS verona_headers)
-add_library(vbc::include ALIAS verona_headers)
-target_include_directories(verona_headers INTERFACE
+add_library(CommonIncludes INTERFACE)
+add_library(vbc::include ALIAS CommonIncludes)
+target_include_directories(CommonIncludes INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
@@ -86,6 +97,7 @@ install(CODE [[
   file(REMOVE_RECURSE ${CMAKE_INSTALL_PREFIX}/.)
   ]])
 
+add_subdirectory(vrt)
 add_subdirectory(virc)
 add_subdirectory(vbci)
 add_subdirectory(vc)

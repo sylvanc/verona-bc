@@ -4,6 +4,7 @@
 #include "frame.h"
 #include "header.h"
 #include "program.h"
+#include "sanitizer.h"
 #include "thread.h"
 #include "writebarrier.h"
 
@@ -166,6 +167,8 @@ namespace vbci
 
     void immortalize()
     {
+      ignore_process_lifetime_allocation(this);
+
       if (location() == Location::immortal())
         return;
 

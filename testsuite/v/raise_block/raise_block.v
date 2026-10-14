@@ -1,7 +1,8 @@
 // Test non-local return via raise in a lambda (block).
 // A lambda containing raise captures the raise target at creation time.
 // When the lambda is called, it restores the raise target and raises,
-// returning directly to the creating function's caller.
+// returning from find_first(): i32 to main. The raised i32 therefore matches
+// the return type of the frame targeted by the block.
 
 find_first(a: i32, b: i32, target: i32): i32
 {

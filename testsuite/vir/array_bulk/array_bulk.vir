@@ -1,0 +1,72 @@
+// See README.md for bulk-array coverage and native-runtime boundaries.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Box
+  @value: i32
+
+func @main(): none var $exit_code: i32
+  $size = const usize 4
+  $zero = const usize 0
+  $one = const usize 1
+  $two = const usize 2
+  $three = const usize 3
+  $four = const usize 4
+  $seven = const i32 7
+  $nine = const i32 9
+  $zero_i64 = const i64 0
+
+  $left = new [i32] $size
+  $right = new [i32] 4
+  $box = new @Box($seven)
+  $objects = new [@Box] 2
+  $object_copies = new [@Box] 2
+
+  $_fill_objects = arrayfill($objects, $zero, $two, $box)
+  $_copy_objects = arraycopy($object_copies, $zero, $objects, $zero, $two)
+
+  $_fill_left = arrayfill($left, $zero, $four, $seven)
+  $_fill_right = arrayfill($right, $zero, $four, $seven)
+  $initial_compare = arraycmp($left, $zero, $right, $zero, $four)
+  $initial_equal = eq $initial_compare $zero_i64
+
+  $_change_right = arrayfill($right, $one, $two, $nine)
+  $changed_compare = arraycmp($left, $zero, $right, $zero, $four)
+  $changed_different = ne $changed_compare $zero_i64
+
+  $_copy_range = arraycopy($left, $one, $right, $one, $two)
+  $copied_compare = arraycmp($left, $zero, $right, $zero, $four)
+  $copied_equal = eq $copied_compare $zero_i64
+
+  $_overlap = arraycopy($left, $zero, $left, $one, $three)
+  $_reset_right = arrayfill($right, $zero, $four, $seven)
+  $_expected_fill = arrayfill($right, $zero, $two, $nine)
+  $overlap_compare = arraycmp($left, $zero, $right, $zero, $four)
+  $overlap_equal = eq $overlap_compare $zero_i64
+
+  $_zero_copy = arraycopy($left, $four, $right, $four, $zero)
+  $_zero_fill = arrayfill($left, $four, $zero, $seven)
+  $zero_compare = arraycmp($left, $four, $right, $four, $zero)
+  $zero_equal = eq $zero_compare $zero_i64
+
+  $ok0 = and $initial_equal $changed_different
+  $ok1 = and $copied_equal $overlap_equal
+  $ok2 = and $ok0 $ok1
+  $ok = and $ok2 $zero_equal
+  cond $ok ^success ^failure
+^failure
+  $exit_code = const i32 1
+  jump ^finish
+^success
+  $exit_code = const i32 0
+  jump ^finish
+^finish
+  drop $box
+  drop $objects
+  drop $object_copies
+  drop $left
+  drop $right
+  $_exit = ffi @set_exit_code($exit_code)
+  $_none = const none
+  ret $_none

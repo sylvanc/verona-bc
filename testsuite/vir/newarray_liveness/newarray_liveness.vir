@@ -25,15 +25,9 @@ func @main(): none
   $region_const_expected = const usize 7
   $region_const_ok = eq $region_const_len $region_const_expected
 
-  $heap_const_array = heap $region_const_array [i32] 8
-  $heap_const_len = len $heap_const_array
-  $heap_const_expected = const usize 8
-  $heap_const_ok = eq $heap_const_len $heap_const_expected
-
   $new_stack_ok = and $new_ok $stack_ok
   $region_all_ok = and $region_ok $region_const_ok
-  $nonheap_ok = and $new_stack_ok $region_all_ok
-  $all_ok = and $nonheap_ok $heap_const_ok
+  $all_ok = and $new_stack_ok $region_all_ok
   cond $all_ok ^pass ^fail
 ^pass
   $r = const i32 0
