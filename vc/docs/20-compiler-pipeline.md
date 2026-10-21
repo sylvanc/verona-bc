@@ -106,7 +106,7 @@ Resolves all names to fully qualified paths from the top scope. Uses `NodeWorker
 ### Sugar (`sugar`)
 Desugars syntactic sugar:
 - `match` expressions → case lambda chains with `nomatch` subtraction and `TryCallDyn` for value tests
-- Lambdas → anonymous classes with `apply`
+- Lambdas → anonymous classes with `apply`; captured mutable bindings → shared managed cells
 - `when` blocks → validated cown access
 - Default arguments → wrapper functions
 - Auto-RHS → generated value accessors for `ref` functions
