@@ -134,13 +134,7 @@ namespace virc
 
         auto func_key =
           std::string((func_node / FunctionId)->location().view());
-        auto lookups_it = state->func_lookups.find(func_key);
-
-        // Empty lookup map for functions with no Lookup statements.
-        std::unordered_map<std::string, LookupInfo> empty_lookups;
-        auto& lookups = (lookups_it != state->func_lookups.end()) ?
-          lookups_it->second :
-          empty_lookups;
+        auto& lookups = state->func_lookups[func_key];
 
         // Collect dead lookup register names (Phase C will remove them).
         std::set<std::string> dead_lookups;
@@ -258,13 +252,15 @@ namespace virc
               if (!target)
                 continue;
 
-              // Don't inline functions that capture a raise target into an
-              // ordinary caller. Inlining would move block-lambda creation
-              // and change the captured frame. The synthetic @main wrapper is
-              // safe because it immediately delegates to main and returns.
-              if (
-                captures_raise_target(target) &&
-                (func_node / FunctionId)->location().view() != "@main")
+              // Don't inline functions that capture a raise target. Inlining
+              // would move block-lambda creation into the caller's frame,
+              // changing which frame the lambda captures as its raise target.
+              // This applies to @main as well — although @main starts as a
+              // simple delegating wrapper, earlier inlining iterations may
+              // have already inlined `main`'s body into it, after which
+              // inlining a raise-capturing callee would similarly miscapture
+              // the @main frame instead of the original caller's frame.
+              if (captures_raise_target(target))
                 continue;
 
               // Don't inline self-recursive calls.
@@ -424,11 +420,41 @@ namespace virc
 
               // Build the replacement statement list.
               std::vector<Node> inlined_stmts;
+              auto target_key =
+                std::string((target / FunctionId)->location().view());
+              auto target_lookups = state->func_lookups.find(target_key);
 
               for (auto& ts : *target_body)
               {
                 Node cloned = clone(ts);
                 remap(cloned);
+
+                // Typecheck metadata is keyed by function and lookup-result
+                // local. Preserve it when inlining alpha-renames that local,
+                // so later dynamic-call lowering remains scoped to the
+                // receiver's actual type rather than every class method with
+                // the same MethodId.
+                if (
+                  (ts == Lookup) &&
+                  (target_lookups != state->func_lookups.end()))
+                {
+                  auto old_name =
+                    std::string((ts / LocalId)->location().view());
+                  auto info = target_lookups->second.find(old_name);
+
+                  if (info != target_lookups->second.end())
+                  {
+                    auto new_name =
+                      std::string((cloned / LocalId)->location().view());
+                    lookups.insert_or_assign(
+                      new_name,
+                      LookupInfo{
+                        info->second.src_type ? clone(info->second.src_type) :
+                                                Node{},
+                        clone(info->second.method_id)});
+                  }
+                }
+
                 inlined_stmts.push_back(cloned);
               }
 

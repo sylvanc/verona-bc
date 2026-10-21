@@ -276,7 +276,7 @@ namespace vir
   inline const auto wfValueSrc = (ValueSrc >>= LocalId);
 
   // Any language that can meet the wfIR definition can be compiled to byte
-  // code. A trieste file with the pass name "VIR" can be passed to `vbcc` as an
+  // code. A trieste file with the pass name "VIR" can be passed to `virc` as an
   // input file. It will be checked, validated, and converted to byte code.
 
   // clang-format off

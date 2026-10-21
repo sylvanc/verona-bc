@@ -1,7 +1,5 @@
 #include "name_table.h"
 
-#include "../lang.h"
-
 namespace virc
 {
   ST& ST::noemit()

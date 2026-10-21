@@ -4,6 +4,10 @@ The VBC emitter serializes a read-only `virc::Compilation` into the VBC binary
 format. Its build target is `virc_vbc`; the public entry point is
 `virc::vbc::emit()`.
 
+The `virc::vbc` namespace is the repository-facing emitter facade.
+Implementation types live in `virc::vbc_backend`, while the global `::vbc`
+namespace owns the backend-neutral wire-format contract.
+
 The backend is split by responsibility:
 
 - `emitter.cc` assembles VBC sections and writes the file.

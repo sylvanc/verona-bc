@@ -1,0 +1,27 @@
+// Coverage: a zero-field object can be the entry point of a fresh RC region
+// and can locate that region for a subsequent heap allocation.
+// VBCI coverage: Region allocates a distinct empty object with a region header.
+// Native VRT coverage: region and heap allocation preserve the same locator
+// contract for an empty root.
+// Non-goals: singleton identity and arena allocation are covered elsewhere.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Empty
+
+class @Value
+  @value: i32
+
+func @consume($_value: @Value): i32
+  $success = const i32 0
+  ret $success
+
+func @main(): none
+  $root = region rc @Empty()
+  $value = const i32 42
+  $heap = heap $root @Value($value)
+  $result = call @consume($heap)
+  $_exit = ffi @set_exit_code($result)
+  $_none = const none
+  ret $_none

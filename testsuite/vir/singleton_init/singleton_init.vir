@@ -1,0 +1,31 @@
+// Coverage:
+// - Emits aligned storage and a class-descriptor data pointer for an empty
+//   nominal class.
+// - Adds the storage and class descriptor to the generated program singleton
+//   table.
+// - Lowers singleton to the precomputed data pointer and applies object
+//   ownership lowering to it.
+//
+// Native VRT coverage:
+// - Program initialization consumes the singleton table and constructs the
+//   immortal object header before entering generated main.
+// - Generated code releases the initialized data through the object runtime.
+//
+// Non-goals:
+// - Does not exercise New, Heap, Region, or dynamic method lookup.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Unit
+  @touch @Unit_touch
+
+func @Unit_touch($self: @Unit): i32
+  $result = const i32 0
+  ret $result
+
+func @main(): none
+  $unit = singleton @Unit
+  $result = call @Unit_touch($unit)
+  $_exit = ffi @set_exit_code($result)
+  ret $_exit

@@ -1,0 +1,22 @@
+// Coverage:
+// - Moves a current-frame Stack object into a direct tailcall argument.
+//
+// Native VRT coverage:
+// - Rejects the argument before logical-frame storage is reclaimed for reuse.
+//
+// Non-goals:
+// - Successful primitive tailcalls and register-reference rejection are
+//   covered by the tailcall and reference fixtures.
+
+class @Payload
+  @value: i64
+
+func @consume($payload: @Payload): none
+  drop $payload
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $value = const i64 42
+  $payload = stack @Payload($value)
+  tailcall @consume($payload)

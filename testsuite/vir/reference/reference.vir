@@ -1,0 +1,104 @@
+// See README.md for cross-backend reference coverage and non-goals.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Box
+  @value: i32
+
+func @read_ref($reference: ref i32): i32
+  $value = load $reference
+  jump ^return
+^return
+  ret $value
+
+func @tail_read_ref($reference: ref i32): i32
+  tailcall @read_ref($reference)
+
+func @make_box_ref($box: @Box): ref i32
+  $reference = ref $box @value
+  jump ^return
+^return
+  ret $reference
+
+func @raise_ref($reference: ref i32, $target: u64): ref i32
+  $_previous = setraise $target
+  raise $reference ref i32
+
+func @recover_ref($reference: ref i32): ref i32
+  $target = getraise
+  $raised = call @raise_ref($reference, $target)
+  ret $raised
+
+func @main(): none var $slot: i32
+  $one = const i32 1
+  $slot = copy $one
+  $register_ref = ref $slot
+  $two = const i32 2
+  $register_old = store $register_ref $two
+  $register_value = call @tail_read_ref($register_ref)
+  $register_after_call = load $register_ref
+  $register_old_ok = eq $register_old $one
+  $register_value_ok = eq $register_value $two
+  $register_copy_ok = eq $register_after_call $two
+
+  $seven = const i32 7
+  $box = new @Box($seven)
+  $field_ref = ref $box @value
+  $eight = const i32 8
+  $field_old = store $field_ref $eight
+  $field_value = load $field_ref
+  $field_old_ok = eq $field_old $seven
+  $field_value_ok = eq $field_value $eight
+
+  $raised_ref = call @recover_ref($field_ref)
+  $raised_value = load $raised_ref
+  $field_after_raise = load $field_ref
+  $raised_ok = eq $raised_value $eight
+  $field_copy_ok = eq $field_after_raise $eight
+
+  $nine = const i32 9
+  $returned_box = new @Box($nine)
+  $returned_ref = call @make_box_ref($returned_box)
+  $returned_value = load $returned_ref
+  $returned_ok = eq $returned_value $nine
+
+  $array = new [i32] 2
+  $index = const usize 1
+  $dynamic_ref = ref $array $index
+  $ten = const i32 10
+  $dynamic_old = store $dynamic_ref $ten
+  $dynamic_value = load $dynamic_ref
+  $zero = const i32 0
+  $dynamic_old_ok = eq $dynamic_old $zero
+  $dynamic_value_ok = eq $dynamic_value $ten
+
+  $constant_ref = ref $array 0
+  $eleven = const i32 11
+  $constant_old = store $constant_ref $eleven
+  $constant_value = load $constant_ref
+  $constant_old_ok = eq $constant_old $zero
+  $constant_value_ok = eq $constant_value $eleven
+
+  $register_values_ok = and $register_old_ok $register_value_ok
+  $register_ok = and $register_values_ok $register_copy_ok
+  $field_ok = and $field_old_ok $field_value_ok
+  $raised_values_ok = and $raised_ok $field_copy_ok
+  $box_ok = and $field_ok $raised_values_ok
+  $returned_box_ok = and $box_ok $returned_ok
+  $dynamic_ok = and $dynamic_old_ok $dynamic_value_ok
+  $constant_ok = and $constant_old_ok $constant_value_ok
+  $array_ok = and $dynamic_ok $constant_ok
+  $objects_ok = and $returned_box_ok $array_ok
+  $all = and $register_ok $objects_ok
+  cond $all ^success ^failure
+^failure
+  $failure = const i32 1
+  $_failure = ffi @set_exit_code($failure)
+  $_failure_none = const none
+  ret $_failure_none
+^success
+  $success = const i32 0
+  $_success = ffi @set_exit_code($success)
+  $_success_none = const none
+  ret $_success_none

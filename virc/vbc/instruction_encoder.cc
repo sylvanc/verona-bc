@@ -174,6 +174,10 @@ namespace virc::vbc_backend
           output << uleb(+Op::Convert) << dst(statement)
                  << uleb(+val(statement / Type)) << rhs(statement);
         }
+        else if (statement == Singleton)
+        {
+          output << uleb(+Op::Singleton) << dst(statement) << cls(statement);
+        }
         else if (statement == New)
         {
           arguments(statement / Args);

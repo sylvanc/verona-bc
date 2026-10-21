@@ -98,13 +98,10 @@ namespace vc
 
                 for (auto& child : *cls_body)
                 {
-                  if (
-                    child == FieldDef &&
-                    (child / Ident)->location() == loc)
+                  if (child == FieldDef && (child / Ident)->location() == loc)
                   {
                     fv_type = clone(child / Type);
-                    freevars.emplace(
-                      loc, std::make_pair(fv_type, false));
+                    freevars.emplace(loc, std::make_pair(fv_type, false));
                     enclosing_field_captures.insert(loc);
                     break;
                   }
@@ -213,8 +210,7 @@ namespace vc
       }
       else
       {
-        fields.push_back(
-          {freevar, fv_resolved, Expr << (LocalId ^ freevar)});
+        fields.push_back({freevar, fv_resolved, Expr << (LocalId ^ freevar)});
       }
     }
 

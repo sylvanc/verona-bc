@@ -13,6 +13,7 @@ add_executable(vbci
   program.cc
   region.cc
   region_rc.cc
+  sanitizer.cc
   stack.cc
   thread.cc
   value.cc
@@ -22,6 +23,10 @@ add_executable(vbci
 target_include_directories(vbci SYSTEM PRIVATE
   ${verona-rt_SOURCE_DIR}
   ${snmalloc_SOURCE_DIR}
+)
+
+target_include_directories(vbci PRIVATE
+  ${PROJECT_SOURCE_DIR}/vrt
 )
 
 include(CheckCCompilerFlag)
@@ -52,10 +57,11 @@ target_link_libraries(vbci
   Threads::Threads
   snmallocshim-static
   verona_rt
+  vbc::vrt
   deps::libffi
   deps::zstd
   CLI11::CLI11
-  verona::include
+  vbc::include
 )
 
 install(TARGETS vbci RUNTIME DESTINATION vbci)

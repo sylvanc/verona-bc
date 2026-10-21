@@ -6,7 +6,6 @@ namespace virc
 {
   using namespace trieste;
   using namespace vir;
-  using vir::Source;
 
   inline const auto Equals = TokenDef("=");
   inline const auto LParen = TokenDef("lparen");

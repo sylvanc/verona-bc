@@ -50,7 +50,15 @@ expected compile error, use
 - Declare FFI symbols in a `use` block with a `Lib` string
 - Call FFI wrappers as `ffi::func_name(args)` for functions in `_builtin/ffi/`
 
-### 2. Generate golden files
+### 2. Register fixture feasibility
+
+Check `testsuite/cmake/compiler_fixtures.cmake`: normal fixtures inherit
+`VBC_STAGE run` and `LLVM_STAGE none`, while `compile_only/` fixtures inherit
+`VBC_STAGE compile`. Join an explicit source group when several fixtures share
+verified backend metadata; add an exact override for one fixture's validator,
+labels, or other exceptional behavior.
+
+### 3. Generate golden files
 
 Run from the `build` directory:
 
@@ -61,34 +69,35 @@ ninja install && ninja update-dump
 
 This auto-generates the golden file directory structure:
 - `testsuite/v/$0/$0/compile/` (or `testsuite/v/compile_only/$0/$0/compile/`
-  for errors) — contains `exit_code.txt`, `stdout.txt`, `stderr.txt`, pass dump
-  files (`00_parse.trieste` through `13_typecheck.trieste`),
-  `*_final.trieste`, and `.vbc` file (success tests only)
+  for errors) — contains `exit_code.txt`, `stdout.txt`, and `stderr.txt`
 - `testsuite/v/$0/$0/run/` — contains `exit_code.txt`, `stdout.txt`, `stderr.txt` (only for success tests that produce a `.vbc`)
 
-### 3. Verify golden file completeness
+The final Trieste AST and `.vbc` are transient build artifacts. They are not
+copied into the source tree. Pass dumps are generated only when
+`--dump_passes` is requested explicitly.
+
+### 4. Verify golden file completeness
 
 Check that the golden `compile/` directory has the expected files:
-- All 14 pass dumps: `00_parse.trieste` through `13_typecheck.trieste`
-- `*_final.trieste`
 - `exit_code.txt` (value `0` for success, `1` for error, no trailing newline)
 - `stdout.txt` and `stderr.txt`
-- `*.vbc` file (success tests only)
 
-If pass dumps are missing (e.g., only 0–5 present), it usually means a WF violation in a later pass. Investigate with `dist/vc/vc build ../testsuite/v/$0 --dump_passes=dump_$0` to see which pass fails.
+To inspect pass progress, run
+`dist/vc/vc build ../testsuite/v/$0 --dump_passes=dump_$0` from `build/`.
+If dumping stops early, the next pass commonly has a WF violation.
 
-For error tests: no `run/` directory, no `.vbc` file, `exit_code.txt` = `1`.
+For error tests: no `run/` directory and `exit_code.txt` = `1`.
 
-### 4. Verify the test passes
+### 5. Verify the test passes
 
 ```bash
-cd build && ctest --output-on-failure -R "^vbc/v/$0/$0" -j$(nproc)
+cd build && ctest --output-on-failure -R "^compiler/v/$0/$0/" -j$(nproc)
 ```
 
 This should show the test passing. If it fails, check the source code and re-run `ninja update-dump`.
 For an expected compile error, use
-`"^vbc/v/compile_only/$0/$0"` instead.
+`"^compiler/v/compile_only/$0/$0"` instead.
 
-### 5. Report
+### 6. Report
 
 State the test name, whether it's a success/error/ffi test, what it tests, and the expected exit code.

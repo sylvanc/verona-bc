@@ -1,14 +1,38 @@
+// Coverage: object and array Pin/Unpin lowering, None results, and balanced
+// ownership after explicit drops.
+// Native VRT coverage: generated code calls the object and array pin/unpin
+// entry points; the final object drop runs the generated finalizer.
+// Non-goals: frame-local relocation and stack rejection are covered by the
+// direct VRT pin fixture. Cown pinning remains unsupported in native VRT.
+
 lib
   @set_exit_code = "set_exit_code"(i32): none
 
 class @Box
     @val : i32
+    @final @Box_final
+
+func @Box_final($self: @Box): none
+    $success = const i32 0
+    $_ = ffi @set_exit_code($success)
+    $_none = const none
+    ret $_none
 
 func @main(): none
+    $failure = const i32 1
+    $_initial = ffi @set_exit_code($failure)
+
     $zero = const i32 0
     $box = region rc @Box($zero)
     $p = pin $box
     $u = unpin $box
-    $_ = ffi @set_exit_code($zero)
+
+    $size = const usize 2
+    $array = new [i32] $size
+    $array_pin = pin $array
+    $array_unpin = unpin $array
+
+    drop $array
+    drop $box
     $_none = const none
     ret $_none

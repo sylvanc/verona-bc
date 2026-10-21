@@ -9,7 +9,7 @@ add_library(virc_vbc STATIC
 
 target_link_libraries(virc_vbc PUBLIC
   virc_core
-  verona::include
+  vbc::include
   deps::zstd
 )
 

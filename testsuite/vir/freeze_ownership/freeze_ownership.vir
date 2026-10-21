@@ -1,0 +1,49 @@
+// Coverage: primitive, object, and array Freeze lowering; repeated Freeze;
+// post-Freeze drop ownership; and generated finalizer execution at ARC 0.
+// Runtime coverage: VBCI provides the semantic reference, while native VRT
+// consumes object/array Freeze calls and reclaims the published immutable SCC.
+// Non-goals: SCC topology arithmetic, subregions, and arena rejection are
+// covered by the direct VRT Freeze fixture.
+
+lib
+  @set_exit_code = "set_exit_code"(i32): none
+
+class @Finalizable
+  @value: i32
+  @final @Finalizable_final
+
+func @Finalizable_final($self: @Finalizable): none
+  $success = const i32 0
+  $_exit = ffi @set_exit_code($success)
+  $_none = const none
+  ret $_none
+
+func @main(): none
+  $failure = const i32 1
+  $_initial = ffi @set_exit_code($failure)
+
+  $five = const i32 5
+  $frozen_five = freeze $five
+  $five_ok = eq $frozen_five $five
+  cond $five_ok ^managed ^finish
+^managed
+  $size = const usize 2
+  $array = new [i32] $size
+  $frozen_array = freeze $array
+  $frozen_array_again = freeze $frozen_array
+
+  $value = const i32 42
+  $object = region rc @Finalizable($value)
+  $frozen_object = freeze $object
+  $frozen_object_again = freeze $frozen_object
+
+  drop $array
+  drop $frozen_array
+  drop $frozen_array_again
+  drop $object
+  drop $frozen_object
+  drop $frozen_object_again
+  jump ^finish
+^finish
+  $_none = const none
+  ret $_none

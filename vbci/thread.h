@@ -10,10 +10,10 @@
 
 #include <bit>
 #include <functional>
-#include <sched/work.h>
 #include <source_location>
 #include <type_traits>
 #include <unordered_set>
+#include <verona.h>
 
 namespace vbci
 {
