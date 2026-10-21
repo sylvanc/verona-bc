@@ -2350,13 +2350,14 @@ namespace vc
     {
       auto recv_set = extract_receivers(recv_type);
       Nodes ret_types;
+      auto map_order_size = map_order.size();
 
-      for (auto& key : map_order)
+      for (size_t i = 0; i < map_order_size; i++)
       {
-        if (key != ClassDef)
+        if (map_order[i] != ClassDef)
           continue;
 
-        for (auto& r : map[key])
+        for (auto& r : map[map_order[i]])
         {
           if (!r.reification || !r.id)
             continue;
